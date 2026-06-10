@@ -11,7 +11,7 @@ Pactwright runs as a structured delivery workflow, not a free-for-all PR queue. 
 3. The approved contract is decomposed into briefs; implementation follows.
 4. Your PR carries an `evidence` node referencing its brief — see [`SPEC.md` §13](./SPEC.md) for what the PR description should cover.
 
-If the change touches `/specs/schema/`, the schema CODEOWNER must approve. Plan for that.
+Once the bootstrap PR ([#1](https://github.com/sb-dev/pactwright/pull/1)) is merged, schema changes will require code-owner approval; see [`SPEC.md`](./SPEC.md) §16.
 
 ### For trivial work (typos, doc clarifications, broken links)
 
@@ -19,12 +19,12 @@ Open a PR directly. Reference the file you're fixing in the description. No inte
 
 ## What to read first
 
-- [`CLAUDE.md`](./CLAUDE.md) — how Claude Code operates in this repo, including graph rules.
 - [`SPEC.md`](./SPEC.md) — full system specification. Most relevant sections for contributors:
   - §4 — graph layout (`nodes/` + `graph/edges.yaml` + `schema/`).
   - §5 — graph rules. Relationships live in the edge table only; never delete records, supersede them.
   - §11 — Claude Code operating instructions.
   - §13 — what a meaningful PR description should contain.
+  - §16 — human gates and CODEOWNERS.
 - [`SECURITY.md`](./SECURITY.md) — report security issues privately, not via public issues.
 
 ## Code of conduct

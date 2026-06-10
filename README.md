@@ -4,13 +4,11 @@ A GitHub-native AI software delivery workflow built on Claude Code, GitHub, and 
 
 ## Status
 
-**Phase 1 — graph skeleton.** The schema and `/specs` layout are in place; tooling, GitHub Actions enforcement, drift detection, the patch market, and the release loop arrive in later phases. See [`SPEC.md`](./SPEC.md) §22 for the build order.
+**Bootstrap in progress.** `main` currently holds the licence and governance scaffold only. The spec graph, schema, and Claude Code operating instructions land via the open bootstrap PR: [#1 Bootstrap GH AI-native delivery system](https://github.com/sb-dev/pactwright/pull/1). See [`SPEC.md`](./SPEC.md) §22 for the build order.
 
-## Pointers
+## Design
 
-- [`SPEC.md`](./SPEC.md) — full system specification.
-- [`CLAUDE.md`](./CLAUDE.md) — Claude Code operating rules for this repo.
-- [`/specs`](./specs) — canonical state: `nodes/`, `graph/edges.yaml`, `schema/`. Indexes and reports are generated.
+[`SPEC.md`](./SPEC.md) — full system specification.
 
 ## How to contribute
 
