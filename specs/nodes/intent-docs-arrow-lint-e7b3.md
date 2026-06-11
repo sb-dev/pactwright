@@ -27,3 +27,15 @@ brief`), inverting canonical edge direction. The narrative arrows became
 visually indistinguishable from edge arrows, so a careful reader could
 not tell whether a doc was describing time or provenance. This lint
 prevents the same drift on future doc edits.
+
+## Considerations for the contract author
+
+A naive implementation — "flag any arrow between two node-type names
+outside `specs/graph/edges.yaml`" — would false-positive on the
+now-correct CLAUDE.md lifecycle prose, which legitimately contains
+edges like `contract —proposes→ intent`. The preferred shape is to
+parse each documented arrow and verify direction against
+`specs/schema/edge-types.yaml`, flagging only wrong-direction or
+undeclared `source.type` → `target.type` pairs. Outright banning the
+glyph is a fallback that would require scope-exempting the lifecycle
+block in CLAUDE.md.

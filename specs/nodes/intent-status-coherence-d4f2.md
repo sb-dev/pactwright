@@ -34,3 +34,14 @@ approval, before any brief existed and long before any evidence existed.
 Today the `status` field is advisory — a human writes it and nothing
 checks it. This intent makes the lifecycle mechanical so the graph
 cannot silently claim work is done.
+
+## Considerations for the contract author
+
+Routing all status-coherence violations into `indexes/unresolved.yaml`
+overloads that file — the spec-tooling brief
+(`brief-spec-tooling-schema-driven-8f2d`) already uses it for
+unresolved edge endpoints. The contract must keep the two failure
+classes distinguishable: either tag each entry with a `kind` /
+`category` field, or emit status-coherence violations to a separate
+report. Mixing the two classes into one undifferentiated list is the
+failure mode to avoid.
