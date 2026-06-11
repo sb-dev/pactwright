@@ -46,38 +46,23 @@ to build, and what we've actually built.
    replaced, create the new node and add a `supersedes` edge from new → old.
    Move the old node's status to its terminal value (e.g. contract →
    `superseded`). The history must remain readable.
+4. **Arrows mean edges, not time.** An arrow (→) anywhere in this
+   repository's docs means canonical edge direction (source → target),
+   never lifecycle order. Lifecycle order is written as numbered steps.
 
-## Lifecycle
+## Lifecycle (numbered steps; each shows the edge it authors)
 
-```
- intent ──proposes──▶ contract(candidate)
-                             │
-                             │  human review records a:
-                             ▼
-                      decision ──selects──▶ contract(approved)
-                                                   │
-                                                   │  decomposed by:
-                                                   ▼
-                                                brief ──evidences──▶ evidence
-                                            (draft → approved →
-                                                implemented)
-```
+1. Intent captured (status: open)
+2. Candidate contracts proposed      contract —proposes→ intent
+3. Human selection                   decision —selects→ contract
+   (chosen contract becomes approved, siblings rejected; intent stays open)
+4. Brief written                     brief —decomposes→ contract
+5. Implementation (code only; no graph writes)
+6. Evidence prepared                 evidence —evidences→ brief
+   (brief becomes implemented; intent becomes addressed)
 
-1. **Intent** — capture *why* / *what problem*. Status starts `open`.
-2. **Candidate contracts** — one or more `contract` nodes propose ways to
-   address the intent (`proposes` edge: contract → intent). Status
-   `candidate`.
-3. **Decision** — a human picks one. Record a `decision` node and a
-   `selects` edge: decision → chosen contract. Losing candidates move to
-   `rejected`.
-4. **Approved contract** — chosen contract moves to `approved`.
-5. **Brief** — decompose the approved contract into implementable scope.
-   `decomposes` edge: brief → contract. Brief moves `draft` → `approved` →
-   `implemented`.
-6. **Evidence** — once implementation lands, attach `evidence` nodes (test
-   runs, benchmark output, links). `evidences` edge: evidence → brief.
-   Once evidence covers the brief, the originating intent moves to
-   `addressed`.
-
-**Superseding** — any node can be replaced via a `supersedes` edge of the
-same type. The superseded node is kept; only its status changes.
+Mnemonic: edges point backwards in time, from the newer record to what
+it is about — provenance, like citations. Superseding follows the same
+shape: a same-type successor points back via `supersedes` (newer
+—supersedes→ older); the superseded node stays in place, its status
+moved to its terminal value.
