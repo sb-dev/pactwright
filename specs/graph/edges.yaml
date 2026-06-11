@@ -1,0 +1,21 @@
+edges:
+  - id: edge-proposes-hardcoded-9d31
+    source: contract-spec-tooling-hardcoded-c1a4
+    type: proposes
+    target: intent-spec-index-validate-a3f1
+    created: 2026-06-11
+  - id: edge-proposes-schema-driven-4f08
+    source: contract-spec-tooling-schema-driven-b2e7
+    type: proposes
+    target: intent-spec-index-validate-a3f1
+    created: 2026-06-11
+  - id: edge-selects-schema-driven-7a12
+    source: decision-spec-tooling-schema-driven-5e8c
+    type: selects
+    target: contract-spec-tooling-schema-driven-b2e7
+    created: 2026-06-11
+  - id: edge-decomposes-spec-tooling-3c91
+    source: brief-spec-tooling-schema-driven-8f2d
+    type: decomposes
+    target: contract-spec-tooling-schema-driven-b2e7
+    created: 2026-06-11
