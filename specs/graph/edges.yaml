@@ -14,3 +14,8 @@ edges:
     type: selects
     target: contract-spec-tooling-schema-driven-b2e7
     created: 2026-06-11
+  - id: edge-decomposes-spec-tooling-3c91
+    source: brief-spec-tooling-schema-driven-8f2d
+    type: decomposes
+    target: contract-spec-tooling-schema-driven-b2e7
+    created: 2026-06-11
