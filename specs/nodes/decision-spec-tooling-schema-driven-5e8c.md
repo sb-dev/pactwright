@@ -53,3 +53,11 @@ hardcoded) to address `intent-spec-index-validate-a3f1`.
 - A `brief` decomposing the approved contract is the next step. Until
   the brief lands and evidence covers it, no implementation code
   should be written against this contract.
+
+## Addendum (pre-implementation review)
+
+Durable justification is schema honesty — shipping the hardcoded
+validator leaves `validation-rules.yaml` as a non-executable
+description. The extensibility benefit is partial: it covers new rules
+of the existing 6 kinds only; new invariant kinds require new handlers
+(out of scope).

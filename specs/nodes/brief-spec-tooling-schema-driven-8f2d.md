@@ -87,9 +87,14 @@ each rule in the order it appears. The bootstrap file must list them in
 this order, chosen so that each rule can assume the preconditions
 established by the earlier ones:
 
-1. **`required_fields` (scope: nodes)** — for each node, assert every
-   field listed in `node-types.yaml[<type>].required_fields` is present.
-   Run first: downstream rules need `id` and `type` to exist.
+1. **`required_fields` (scope: nodes)** — for each node, perform a
+   uniform frontmatter-key check that every field listed in
+   `node-types.yaml[<type>].required_fields` is present, then perform a
+   separate non-empty-body check driven by
+   `node-types.yaml[<type>].requires_body` (if `true`, assert the
+   markdown body after the frontmatter delimiter is non-empty after
+   trimming). Run first: downstream rules need `id` and `type` to
+   exist.
 2. **`required_fields` (scope: edges)** — assert each edge has `id`,
    `source`, `type`, `target`, `created`.
 3. **`enum_constraint` (scope: nodes, field: type, source:
@@ -110,6 +115,9 @@ established by the earlier ones:
    only index file `validate` writes; the rest come from `index`).
 9. **`edge_endpoint_types`** — for each edge, look up its type in
    `edge-types.yaml`, then:
+   - if rule says `source: any`, skip the source-type assertion
+     (`any` means no constraint; never compare `any` as a literal
+     type name);
    - if rule says `source: <T>`, assert `source.type === T`;
    - if rule says `target: <T>`, assert `target.type === T`;
    - if rule says `target: same_as_source`, assert
@@ -151,6 +159,8 @@ rules:
     kind: unique_field
     scope: edges
     field: id
+  # Types without status_values (e.g. decision) are skipped by this
+  # handler; they are still covered by required_fields — not unvalidated.
   - id: nodes-status-in-enum
     kind: enum_constraint
     scope: nodes
@@ -189,8 +199,11 @@ rules:
 ## Verification
 
 - `pnpm install && pnpm typecheck && pnpm test` is green.
-- `pnpm spec:index && git diff --exit-code specs/indexes/` is clean.
-- `pnpm spec:validate` exits 0 on the real `/specs` tree.
+- Locally and in CI:
+  `pnpm spec:index && git diff --exit-code specs/indexes/ && pnpm spec:validate`
+  succeeds. The implementation PR commits the generated indexes; the
+  freshness check runs before the validate gate so drift is caught as
+  drift, not as a validate failure.
 - Each `tests/fixtures/bad/<case>/` produces the exact error strings
   pinned in its `expected-errors.txt`.
 - Removing `indexes-fresh` from `validation-rules.yaml` and re-running
