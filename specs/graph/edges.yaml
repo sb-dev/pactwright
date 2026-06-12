@@ -24,3 +24,13 @@ edges:
     type: evidences
     target: brief-spec-tooling-schema-driven-8f2d
     created: 2026-06-12
+  - id: edge-proposes-thin-commands-db7f
+    source: contract-lifecycle-thin-commands-7c20
+    type: proposes
+    target: intent-claude-lifecycle-commands-f367
+    created: 2026-06-12
+  - id: edge-proposes-fat-commands-9a4e
+    source: contract-lifecycle-fat-commands-a5a8
+    type: proposes
+    target: intent-claude-lifecycle-commands-f367
+    created: 2026-06-12

@@ -10,6 +10,13 @@ incoming:
     - id: edge-selects-schema-driven-7a12
       source: decision-spec-tooling-schema-driven-5e8c
       type: selects
+  intent-claude-lifecycle-commands-f367:
+    - id: edge-proposes-fat-commands-9a4e
+      source: contract-lifecycle-fat-commands-a5a8
+      type: proposes
+    - id: edge-proposes-thin-commands-db7f
+      source: contract-lifecycle-thin-commands-7c20
+      type: proposes
   intent-spec-index-validate-a3f1:
     - id: edge-proposes-hardcoded-9d31
       source: contract-spec-tooling-hardcoded-c1a4
