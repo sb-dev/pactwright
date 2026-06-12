@@ -128,6 +128,16 @@ export function asString(value: unknown): string | undefined {
   return typeof value === "string" && value !== "" ? value : undefined;
 }
 
+/**
+ * Code-unit (UTF-16) string ordering. Every comparator that feeds emitted
+ * output uses this so all sorts in the toolchain agree — the precondition for
+ * byte-identical, deterministic files. Locale-independent and identical to the
+ * default Array#sort and `<`/`>` semantics (unlike `localeCompare`).
+ */
+export function compareStrings(a: string, b: string): number {
+  return a < b ? -1 : a > b ? 1 : 0;
+}
+
 /** Map of node id → first node declaring it (duplicates flagged by validation). */
 export function nodesById(spec: LoadedSpec): Map<string, NodeRecord> {
   const map = new Map<string, NodeRecord>();

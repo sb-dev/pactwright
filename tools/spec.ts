@@ -35,6 +35,10 @@ function main(): number {
   return 0;
 }
 
+// Load/parse failures (malformed frontmatter, unreadable YAML, missing dirs)
+// are intentional hard errors: they fail closed with exit 1 and a plain
+// `spec: <message>` line, deliberately outside the `[rule: <id>]` findings
+// channel — a graph we cannot parse cannot be meaningfully validated.
 try {
   process.exit(main());
 } catch (err) {

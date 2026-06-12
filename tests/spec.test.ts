@@ -66,6 +66,9 @@ for (const name of [
   "wrong-endpoint-type",
   "supersedes-across-types",
   "missing-required-field",
+  "duplicate-edge-id",
+  "bad-status",
+  "edge-missing-field",
 ]) {
   test(`bad/${name}: validate fails with the pinned errors`, (t) => {
     const dir = copyFixture(t, `bad/${name}`);
@@ -149,4 +152,33 @@ test("unknown subcommand: usage text on stderr, exit 2", () => {
   const result = runCli(repoRoot, "frobnicate");
   assert.equal(result.status, 2);
   assert.ok(result.stderr.includes("usage: spec <index|validate>"));
+});
+
+test("bad/malformed-node: a node without frontmatter fails closed (exit 1, no rule finding)", (t) => {
+  const dir = copyFixture(t, "bad/malformed-node");
+  const result = runCli(dir, "validate");
+  assert.equal(result.status, 1);
+  // Load/parse errors are hard failures, not [rule: <id>] findings.
+  assert.match(result.stderr, /missing YAML frontmatter/);
+  assert.deepEqual(errorLines(result.stderr), []);
+});
+
+test("validate persists findings to specs/reports/validation.yaml", (t) => {
+  const dir = copyFixture(t, "bad/missing-required-field");
+  assert.equal(runCli(dir, "index").status, 0);
+  assert.equal(runCli(dir, "validate").status, 1);
+  const report = load(
+    fs.readFileSync(path.join(dir, "specs", "reports", "validation.yaml"), "utf8"),
+  ) as { rule: string; kind: string; subject: string; detail: string }[];
+  assert.ok(Array.isArray(report));
+  assert.ok(
+    report.some(
+      (f) =>
+        f.rule === "nodes-required-fields" &&
+        f.kind === "required_fields" &&
+        f.subject === "intent-nostatus-3333" &&
+        f.detail === "node intent-nostatus-3333 missing required field: status",
+    ),
+    `report missing the expected finding:\n${JSON.stringify(report, null, 2)}`,
+  );
 });

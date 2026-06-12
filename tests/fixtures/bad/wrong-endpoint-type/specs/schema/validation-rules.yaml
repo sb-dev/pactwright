@@ -13,12 +13,10 @@ rules:
     kind: enum_constraint
     scope: nodes
     field: type
-    source: node-types.yaml
   - id: edges-type-declared
     kind: enum_constraint
     scope: edges
     field: type
-    source: edge-types.yaml
   - id: nodes-id-unique
     kind: unique_field
     scope: nodes
@@ -33,7 +31,6 @@ rules:
     kind: enum_constraint
     scope: nodes
     field: status
-    source: node-types.yaml
   - id: edges-references-resolve
     kind: references_resolve
     scope: edges

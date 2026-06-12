@@ -1,0 +1,1 @@
+[rule: nodes-status-in-enum] node intent-badstatus-2222 status=frozen not in [open, addressed, rejected]

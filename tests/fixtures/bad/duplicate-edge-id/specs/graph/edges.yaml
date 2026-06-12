@@ -1,0 +1,11 @@
+edges:
+  - id: edge-dup-1111
+    source: contract-x-aaaa
+    type: proposes
+    target: intent-y-bbbb
+    created: 2026-06-11
+  - id: edge-dup-1111
+    source: contract-x-aaaa
+    type: proposes
+    target: intent-y-bbbb
+    created: 2026-06-11

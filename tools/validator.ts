@@ -1,6 +1,6 @@
 import * as fs from "node:fs";
 import * as path from "node:path";
-import { asString, type LoadedSpec, type Rule } from "./loader.ts";
+import { asString, compareStrings, type LoadedSpec, type Rule } from "./loader.ts";
 import { toYaml } from "./yaml.ts";
 import uniqueField from "./handlers/unique_field.ts";
 import requiredFields from "./handlers/required_fields.ts";
@@ -33,10 +33,10 @@ export function formatFinding(finding: Finding): string {
 
 function compareFindings(a: Finding, b: Finding): number {
   return (
-    a.rule.localeCompare(b.rule) ||
-    a.kind.localeCompare(b.kind) ||
-    a.subject.localeCompare(b.subject) ||
-    a.detail.localeCompare(b.detail)
+    compareStrings(a.rule, b.rule) ||
+    compareStrings(a.kind, b.kind) ||
+    compareStrings(a.subject, b.subject) ||
+    compareStrings(a.detail, b.detail)
   );
 }
 

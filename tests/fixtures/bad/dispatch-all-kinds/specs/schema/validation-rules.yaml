@@ -7,7 +7,6 @@ rules:
     kind: enum_constraint
     scope: nodes
     field: type
-    source: node-types.yaml
   - id: nodes-id-unique
     kind: unique_field
     scope: nodes

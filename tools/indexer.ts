@@ -1,6 +1,6 @@
 import * as fs from "node:fs";
 import * as path from "node:path";
-import { asString, type LoadedSpec } from "./loader.ts";
+import { asString, compareStrings, type LoadedSpec } from "./loader.ts";
 import { toYaml } from "./yaml.ts";
 
 /**
@@ -37,7 +37,7 @@ export type IndexFileName = (typeof INDEX_FILES)[number];
 
 function compareEntries(a: { id: string; type: string }, b: { id: string; type: string }): number {
   // Sort by (type, then edge id) so relationship kinds read contiguously.
-  return a.type < b.type ? -1 : a.type > b.type ? 1 : a.id < b.id ? -1 : a.id > b.id ? 1 : 0;
+  return compareStrings(a.type, b.type) || compareStrings(a.id, b.id);
 }
 
 export function buildIndexes(spec: LoadedSpec): Indexes {
@@ -60,7 +60,7 @@ export function buildIndexes(spec: LoadedSpec): Indexes {
   }
   for (const ids of Object.values(byType)) ids.sort();
 
-  for (const edge of spec.edges) {
+  spec.edges.forEach((edge, i) => {
     const id = asString(edge["id"]) ?? "";
     const type = asString(edge["type"]) ?? "";
     const source = asString(edge["source"]);
@@ -75,19 +75,22 @@ export function buildIndexes(spec: LoadedSpec): Indexes {
       (outgoing[source] ??= []).push({ id, type, target: "" });
     }
 
+    // An edge missing its own id is still named by position, so the entry
+    // points somewhere actionable instead of an empty string.
+    const edgeRef = id !== "" ? id : `specs/graph/edges.yaml[${i}]`;
     for (const endpoint of ["source", "target"] as const) {
       const value = asString(edge[endpoint]);
       if (value !== undefined && !knownIds.has(value)) {
-        unresolved.push({ edge: id, missing: endpoint, value });
+        unresolved.push({ edge: edgeRef, missing: endpoint, value });
       }
     }
-  }
+  });
 
   for (const entries of Object.values(incoming)) entries.sort(compareEntries);
   for (const entries of Object.values(outgoing)) entries.sort(compareEntries);
   unresolved.sort(
     (a, b) =>
-      a.edge.localeCompare(b.edge) || a.missing.localeCompare(b.missing) || a.value.localeCompare(b.value),
+      compareStrings(a.edge, b.edge) || compareStrings(a.missing, b.missing) || compareStrings(a.value, b.value),
   );
 
   return { incoming, outgoing, byType, unresolved };

@@ -1,6 +1,10 @@
 import { asString, type LoadedSpec, type Rule } from "../loader.ts";
 import type { Finding } from "../validator.ts";
 
+// Edges have one fixed shape across all edge types, so their required fields
+// are a constant here rather than schema-derived like node required_fields
+// (edge-types.yaml declares endpoint rules, not field lists). If edge types
+// ever diverge in shape, move this into edge-types.yaml.
 const EDGE_REQUIRED_FIELDS = ["id", "source", "type", "target", "created"];
 
 function present(value: unknown): boolean {
