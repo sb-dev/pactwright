@@ -9,6 +9,7 @@ by-type:
   evidence:
     - evidence-spec-tooling-schema-driven-9c4e
   intent:
+    - intent-claude-lifecycle-commands-f367
     - intent-docs-arrow-lint-e7b3
     - intent-spec-index-validate-a3f1
     - intent-status-coherence-d4f2
