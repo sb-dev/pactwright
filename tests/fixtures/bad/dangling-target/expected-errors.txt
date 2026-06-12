@@ -1,0 +1,1 @@
+[rule: edges-references-resolve] edge edge-foo-1234 target intent-missing-zzzz does not resolve

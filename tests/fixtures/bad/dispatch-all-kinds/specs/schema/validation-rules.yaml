@@ -1,0 +1,22 @@
+# Synthetic rule set for the dispatch test: each kind exactly once.
+rules:
+  - id: nodes-required-fields
+    kind: required_fields
+    scope: nodes
+  - id: nodes-type-declared
+    kind: enum_constraint
+    scope: nodes
+    field: type
+    source: node-types.yaml
+  - id: nodes-id-unique
+    kind: unique_field
+    scope: nodes
+    field: id
+  - id: edges-references-resolve
+    kind: references_resolve
+    scope: edges
+    fields: [source, target]
+  - id: edges-endpoint-types
+    kind: edge_endpoint_types
+  - id: indexes-fresh
+    kind: indexes_fresh

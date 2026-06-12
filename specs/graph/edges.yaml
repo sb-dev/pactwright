@@ -19,3 +19,8 @@ edges:
     type: decomposes
     target: contract-spec-tooling-schema-driven-b2e7
     created: 2026-06-11
+  - id: edge-evidences-spec-tooling-5d7c
+    source: evidence-spec-tooling-schema-driven-9c4e
+    type: evidences
+    target: brief-spec-tooling-schema-driven-8f2d
+    created: 2026-06-12

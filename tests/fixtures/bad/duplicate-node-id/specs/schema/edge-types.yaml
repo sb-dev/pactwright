@@ -1,0 +1,28 @@
+# Edge type definitions for the specs graph.
+# Every entry in /specs/graph/edges.yaml must have a `type` matching one of
+# the keys below, and its source/target nodes must conform to the rules.
+#
+# Edge ID convention: edge-<slug>-<4 hex chars>
+#   e.g. edge-cli-flag-parsing-9c2e
+
+edge_types:
+  proposes:
+    source: contract
+    target: intent
+
+  selects:
+    source: decision
+    target: contract
+
+  decomposes:
+    source: brief
+    target: contract
+
+  evidences:
+    source: evidence
+    target: brief
+
+  supersedes:
+    # same-type → same-type: source.type must equal target.type
+    source: any
+    target: same_as_source

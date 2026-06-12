@@ -1,0 +1,6 @@
+edges:
+  - id: edge-drift-cccc
+    source: contract-drift-bbbb
+    type: proposes
+    target: intent-drift-aaaa
+    created: 2026-06-11

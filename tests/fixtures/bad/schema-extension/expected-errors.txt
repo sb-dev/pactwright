@@ -1,0 +1,1 @@
+[rule: nodes-title-unique] duplicate node title Duplicate title in specs/nodes/intent-title-a-aaaa.md, specs/nodes/intent-title-b-bbbb.md

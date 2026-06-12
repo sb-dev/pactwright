@@ -1,0 +1,6 @@
+edges:
+  - id: edge-super-2222
+    source: contract-x-aaaa
+    type: supersedes
+    target: intent-y-bbbb
+    created: 2026-06-11

@@ -1,0 +1,9 @@
+incoming:
+  intent-missing-eeee:
+    - id: edge-dangle-dddd
+      source: contract-ok-ffff
+      type: proposes
+  intent-nocreated-aaaa:
+    - id: edge-wrongtype-gggg
+      source: intent-dup-cccc
+      type: proposes

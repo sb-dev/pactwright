@@ -1,0 +1,5 @@
+outgoing:
+  contract-drift-bbbb:
+    - id: edge-drift-cccc
+      target: intent-drift-aaaa
+      type: proposes

@@ -1,0 +1,4 @@
+unresolved:
+  - edge: edge-dangle-dddd
+    missing: target
+    value: intent-missing-eeee

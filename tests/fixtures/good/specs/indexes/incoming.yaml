@@ -1,0 +1,5 @@
+incoming:
+  intent-good-aaaa:
+    - id: edge-good-cccc
+      source: contract-good-bbbb
+      type: proposes
