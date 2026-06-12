@@ -1,0 +1,5 @@
+outgoing:
+  contract-toggle-bbbb:
+    - id: edge-toggle-cccc
+      target: intent-toggle-aaaa
+      type: proposes

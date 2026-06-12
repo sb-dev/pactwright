@@ -2,7 +2,7 @@
 id: brief-spec-tooling-schema-driven-8f2d
 type: brief
 title: Implement schema-driven spec:index and spec:validate
-status: approved
+status: implemented
 created: 2026-06-11
 ---
 

@@ -1,0 +1,1 @@
+[rule: edges-endpoint-types] edge edge-wrong-src-1111 type=proposes requires source.type=contract, got brief

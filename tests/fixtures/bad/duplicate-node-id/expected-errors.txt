@@ -1,0 +1,1 @@
+[rule: nodes-id-unique] duplicate node id intent-x-7f3a in specs/nodes/intent-x-7f3a.md, specs/nodes/intent-x-copy-7f3a.md

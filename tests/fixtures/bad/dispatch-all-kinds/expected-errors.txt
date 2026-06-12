@@ -1,0 +1,6 @@
+[rule: edges-endpoint-types] edge edge-wrongtype-gggg type=proposes requires source.type=contract, got intent
+[rule: edges-references-resolve] edge edge-dangle-dddd target intent-missing-eeee does not resolve
+[rule: indexes-fresh] indexes drifted: by-type.yaml
+[rule: nodes-id-unique] duplicate node id intent-dup-cccc in specs/nodes/intent-dup-cccc.md, specs/nodes/intent-dup-copy-cccc.md
+[rule: nodes-required-fields] node intent-nocreated-aaaa missing required field: created
+[rule: nodes-type-declared] node gadget-x-bbbb type=gadget not declared in node-types.yaml

@@ -1,0 +1,6 @@
+edges:
+  - id: edge-foo-1234
+    source: contract-x-aaaa
+    type: proposes
+    target: intent-missing-zzzz
+    created: 2026-06-11

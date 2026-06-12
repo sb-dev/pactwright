@@ -1,0 +1,36 @@
+# Node type definitions for the specs graph.
+# Every file in /specs/nodes/ must have frontmatter whose `type` matches one
+# of the keys below, and must include every frontmatter key listed in
+# required_fields. If `requires_body: true`, the markdown body after the
+# frontmatter delimiter must also be non-empty. For types that declare
+# status_values, the `status` field is constrained to that enum.
+#
+# Node ID convention: <type>-<slug>-<4 hex chars>
+#   e.g. intent-spec-tooling-7f3a
+
+node_types:
+  intent:
+    required_fields: [id, type, title, status, created]
+    requires_body:   true
+    status_values:   [open, addressed, rejected]
+
+  contract:
+    required_fields: [id, type, title, status, created]
+    requires_body:   true
+    status_values:   [candidate, approved, rejected, superseded]
+
+  brief:
+    required_fields: [id, type, title, status, created]
+    requires_body:   true
+    status_values:   [draft, approved, implemented]
+
+  evidence:
+    required_fields: [id, type, title, status, created]
+    requires_body:   true
+    status_values:   [draft, final]
+
+  decision:
+    # decision nodes have no status — the act of recording the decision
+    # is itself the terminal state. They carry `decided_by` instead.
+    required_fields: [id, type, title, decided_by, created]
+    requires_body:   true

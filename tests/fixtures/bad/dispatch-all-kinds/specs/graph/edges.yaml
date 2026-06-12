@@ -1,0 +1,11 @@
+edges:
+  - id: edge-dangle-dddd
+    source: contract-ok-ffff
+    type: proposes
+    target: intent-missing-eeee
+    created: 2026-06-11
+  - id: edge-wrongtype-gggg
+    source: intent-dup-cccc
+    type: proposes
+    target: intent-nocreated-aaaa
+    created: 2026-06-11

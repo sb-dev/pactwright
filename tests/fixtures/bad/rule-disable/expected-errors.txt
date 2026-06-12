@@ -1,0 +1,1 @@
+[rule: indexes-fresh] indexes drifted: by-type.yaml

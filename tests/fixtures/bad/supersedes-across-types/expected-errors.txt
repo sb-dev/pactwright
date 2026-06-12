@@ -1,0 +1,1 @@
+[rule: edges-endpoint-types] edge edge-super-2222 type=supersedes requires target.type == source.type (contract), got intent

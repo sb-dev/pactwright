@@ -32,6 +32,12 @@ venv/
 .ruff_cache/
 *.egg-info/
 
+# Generated spec reports (indexes/ stays committed; reports/ does not)
+specs/reports/
+
+# Test scratch dirs
+.tmp-spec-test-*/
+
 # Environment
 .env
 .env.local

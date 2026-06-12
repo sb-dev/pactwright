@@ -1,0 +1,1 @@
+[rule: nodes-required-fields] node intent-nostatus-3333 missing required field: status

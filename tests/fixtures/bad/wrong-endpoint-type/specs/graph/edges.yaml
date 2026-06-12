@@ -1,0 +1,6 @@
+edges:
+  - id: edge-wrong-src-1111
+    source: brief-x-aaaa
+    type: proposes
+    target: intent-y-bbbb
+    created: 2026-06-11

@@ -2,7 +2,7 @@
 id: intent-spec-index-validate-a3f1
 type: intent
 title: Build spec:index and spec:validate tooling for the /specs graph
-status: open
+status: addressed
 created: 2026-06-11
 ---
 

@@ -1,0 +1,6 @@
+edges:
+  - id: edge-toggle-cccc
+    source: contract-toggle-bbbb
+    type: proposes
+    target: intent-toggle-aaaa
+    created: 2026-06-11
