@@ -1,4 +1,8 @@
 incoming:
+  brief-ci-gate-spec-tool-0852:
+    - id: edge-evidences-ci-gate-spec-tool-760c
+      source: evidence-ci-gate-spec-tool-693d
+      type: evidences
   brief-lifecycle-thin-commands-705d:
     - id: edge-evidences-thin-commands-a06a
       source: evidence-lifecycle-thin-commands-8296

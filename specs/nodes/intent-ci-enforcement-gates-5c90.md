@@ -2,7 +2,7 @@
 id: intent-ci-enforcement-gates-5c90
 type: intent
 title: Enforce spec-graph gates and human approval via GitHub Actions
-status: open
+status: addressed
 created: 2026-06-13
 ---
 

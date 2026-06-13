@@ -2,7 +2,7 @@
 id: brief-ci-gate-spec-tool-0852
 type: brief
 title: Implement the graph-aware PR gate, schema migration, and CI workflows
-status: draft
+status: implemented
 created: 2026-06-13
 ---
 

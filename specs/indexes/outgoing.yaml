@@ -51,6 +51,10 @@ outgoing:
     - id: edge-selects-schema-driven-7a12
       target: contract-spec-tooling-schema-driven-b2e7
       type: selects
+  evidence-ci-gate-spec-tool-693d:
+    - id: edge-evidences-ci-gate-spec-tool-760c
+      target: brief-ci-gate-spec-tool-0852
+      type: evidences
   evidence-lifecycle-thin-commands-8296:
     - id: edge-evidences-thin-commands-a06a
       target: brief-lifecycle-thin-commands-705d
