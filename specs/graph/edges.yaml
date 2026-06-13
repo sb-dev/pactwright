@@ -74,3 +74,8 @@ edges:
     type: selects
     target: contract-ci-gate-spec-tool-5039
     created: 2026-06-13
+  - id: edge-decomposes-ci-gate-spec-tool-2060
+    source: brief-ci-gate-spec-tool-0852
+    type: decomposes
+    target: contract-ci-gate-spec-tool-5039
+    created: 2026-06-13

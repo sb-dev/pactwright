@@ -8,6 +8,9 @@ incoming:
       source: evidence-spec-tooling-schema-driven-9c4e
       type: evidences
   contract-ci-gate-spec-tool-5039:
+    - id: edge-decomposes-ci-gate-spec-tool-2060
+      source: brief-ci-gate-spec-tool-0852
+      type: decomposes
     - id: edge-selects-ci-gate-spec-tool-0333
       source: decision-ci-gate-spec-tool-6d2b
       type: selects
