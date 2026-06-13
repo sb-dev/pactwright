@@ -1,1 +1,3 @@
+# Schema changes and contract nodes require review by the graph owner.
 /specs/schema/ @sb-dev
+/specs/nodes/contract-* @sb-dev

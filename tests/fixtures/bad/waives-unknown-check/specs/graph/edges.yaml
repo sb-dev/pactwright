@@ -1,0 +1,6 @@
+edges:
+  - id: edge-waives-bad-2222
+    source: override-waiver-1111
+    type: waives
+    target: no-such-check
+    created: 2026-06-13

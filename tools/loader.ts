@@ -38,6 +38,8 @@ export interface LoadedSpec {
   nodeTypes: Record<string, NodeTypeDef>;
   edgeTypes: Record<string, EdgeTypeDef>;
   rules: Rule[];
+  /** Named-check ids from schema/checks.yaml; `[]` when the file is absent. */
+  checks: string[];
 }
 
 const FRONTMATTER = /^---\r?\n([\s\S]*?)\r?\n---(\r?\n|$)/;
@@ -120,7 +122,16 @@ export function loadSpec(specsRoot: string = path.join(process.cwd(), "specs")):
     "rules",
   ) as Rule[];
 
-  return { root, nodes, edges, nodeTypes, edgeTypes, rules };
+  // checks.yaml is optional: absent in older graphs and in test fixtures, so
+  // a missing file yields an empty registry rather than a load failure.
+  const checksFile = path.join(root, "schema", "checks.yaml");
+  const checks = fs.existsSync(checksFile)
+    ? asList(asRecord(readYamlFile(checksFile), checksFile, "document")["checks"], checksFile, "checks")
+        .map((c) => asString(c))
+        .filter((c): c is string => c !== undefined)
+    : [];
+
+  return { root, nodes, edges, nodeTypes, edgeTypes, rules, checks };
 }
 
 /** Frontmatter/edge field as a non-empty string, else undefined. */

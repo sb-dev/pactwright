@@ -69,6 +69,7 @@ for (const name of [
   "duplicate-edge-id",
   "bad-status",
   "edge-missing-field",
+  "waives-unknown-check",
 ]) {
   test(`bad/${name}: validate fails with the pinned errors`, (t) => {
     const dir = copyFixture(t, `bad/${name}`);
@@ -148,10 +149,17 @@ test("bad/dispatch-all-kinds: each kind dispatches and produces exactly one erro
   }
 });
 
+test("good-waives: an override waiving the pr-evidence named check validates", (t) => {
+  const dir = copyFixture(t, "good-waives");
+  assert.equal(runCli(dir, "index").status, 0);
+  const result = runCli(dir, "validate");
+  assert.equal(result.status, 0, `expected validate to pass, got:\n${result.stderr}`);
+});
+
 test("unknown subcommand: usage text on stderr, exit 2", () => {
   const result = runCli(repoRoot, "frobnicate");
   assert.equal(result.status, 2);
-  assert.ok(result.stderr.includes("usage: spec <index|validate>"));
+  assert.ok(result.stderr.includes("usage: spec <index|validate|gate>"));
 });
 
 test("bad/malformed-node: a node without frontmatter fails closed (exit 1, no rule finding)", (t) => {
