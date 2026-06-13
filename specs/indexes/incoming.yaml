@@ -4,6 +4,9 @@ incoming:
       source: evidence-spec-tooling-schema-driven-9c4e
       type: evidences
   contract-lifecycle-thin-commands-7c20:
+    - id: edge-decomposes-thin-commands-8b79
+      source: brief-lifecycle-thin-commands-705d
+      type: decomposes
     - id: edge-selects-thin-commands-8069
       source: decision-lifecycle-thin-commands-41c8
       type: selects

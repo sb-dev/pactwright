@@ -39,3 +39,8 @@ edges:
     type: selects
     target: contract-lifecycle-thin-commands-7c20
     created: 2026-06-13
+  - id: edge-decomposes-thin-commands-8b79
+    source: brief-lifecycle-thin-commands-705d
+    type: decomposes
+    target: contract-lifecycle-thin-commands-7c20
+    created: 2026-06-13

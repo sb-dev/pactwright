@@ -1,4 +1,8 @@
 outgoing:
+  brief-lifecycle-thin-commands-705d:
+    - id: edge-decomposes-thin-commands-8b79
+      target: contract-lifecycle-thin-commands-7c20
+      type: decomposes
   brief-spec-tooling-schema-driven-8f2d:
     - id: edge-decomposes-spec-tooling-3c91
       target: contract-spec-tooling-schema-driven-b2e7

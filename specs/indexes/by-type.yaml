@@ -1,5 +1,6 @@
 by-type:
   brief:
+    - brief-lifecycle-thin-commands-705d
     - brief-spec-tooling-schema-driven-8f2d
   contract:
     - contract-lifecycle-fat-commands-a5a8
