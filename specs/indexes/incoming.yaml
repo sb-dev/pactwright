@@ -17,6 +17,10 @@ incoming:
     - id: edge-selects-schema-driven-7a12
       source: decision-spec-tooling-schema-driven-5e8c
       type: selects
+  intent-capture-smoke-test-46d5:
+    - id: edge-supersedes-capture-smoke-3f0a
+      source: intent-capture-smoke-superseded-e7f8
+      type: supersedes
   intent-claude-lifecycle-commands-f367:
     - id: edge-proposes-fat-commands-9a4e
       source: contract-lifecycle-fat-commands-a5a8

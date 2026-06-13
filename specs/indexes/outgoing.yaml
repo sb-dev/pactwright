@@ -35,3 +35,7 @@ outgoing:
     - id: edge-evidences-spec-tooling-5d7c
       target: brief-spec-tooling-schema-driven-8f2d
       type: evidences
+  intent-capture-smoke-superseded-e7f8:
+    - id: edge-supersedes-capture-smoke-3f0a
+      target: intent-capture-smoke-test-46d5
+      type: supersedes

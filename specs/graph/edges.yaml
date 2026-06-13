@@ -44,3 +44,8 @@ edges:
     type: decomposes
     target: contract-lifecycle-thin-commands-7c20
     created: 2026-06-13
+  - id: edge-supersedes-capture-smoke-3f0a
+    source: intent-capture-smoke-superseded-e7f8
+    type: supersedes
+    target: intent-capture-smoke-test-46d5
+    created: 2026-06-13

@@ -13,6 +13,8 @@ by-type:
   evidence:
     - evidence-spec-tooling-schema-driven-9c4e
   intent:
+    - intent-capture-smoke-superseded-e7f8
+    - intent-capture-smoke-test-46d5
     - intent-claude-lifecycle-commands-f367
     - intent-docs-arrow-lint-e7b3
     - intent-spec-index-validate-a3f1
