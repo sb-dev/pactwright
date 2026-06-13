@@ -1,8 +1,20 @@
 outgoing:
+  brief-lifecycle-thin-commands-705d:
+    - id: edge-decomposes-thin-commands-8b79
+      target: contract-lifecycle-thin-commands-7c20
+      type: decomposes
   brief-spec-tooling-schema-driven-8f2d:
     - id: edge-decomposes-spec-tooling-3c91
       target: contract-spec-tooling-schema-driven-b2e7
       type: decomposes
+  contract-lifecycle-fat-commands-a5a8:
+    - id: edge-proposes-fat-commands-9a4e
+      target: intent-claude-lifecycle-commands-f367
+      type: proposes
+  contract-lifecycle-thin-commands-7c20:
+    - id: edge-proposes-thin-commands-db7f
+      target: intent-claude-lifecycle-commands-f367
+      type: proposes
   contract-spec-tooling-hardcoded-c1a4:
     - id: edge-proposes-hardcoded-9d31
       target: intent-spec-index-validate-a3f1
@@ -11,11 +23,23 @@ outgoing:
     - id: edge-proposes-schema-driven-4f08
       target: intent-spec-index-validate-a3f1
       type: proposes
+  decision-lifecycle-thin-commands-41c8:
+    - id: edge-selects-thin-commands-8069
+      target: contract-lifecycle-thin-commands-7c20
+      type: selects
   decision-spec-tooling-schema-driven-5e8c:
     - id: edge-selects-schema-driven-7a12
       target: contract-spec-tooling-schema-driven-b2e7
       type: selects
+  evidence-lifecycle-thin-commands-8296:
+    - id: edge-evidences-thin-commands-a06a
+      target: brief-lifecycle-thin-commands-705d
+      type: evidences
   evidence-spec-tooling-schema-driven-9c4e:
     - id: edge-evidences-spec-tooling-5d7c
       target: brief-spec-tooling-schema-driven-8f2d
       type: evidences
+  intent-capture-smoke-superseded-e7f8:
+    - id: edge-supersedes-capture-smoke-3f0a
+      target: intent-capture-smoke-test-46d5
+      type: supersedes

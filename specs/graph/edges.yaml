@@ -24,3 +24,33 @@ edges:
     type: evidences
     target: brief-spec-tooling-schema-driven-8f2d
     created: 2026-06-12
+  - id: edge-proposes-thin-commands-db7f
+    source: contract-lifecycle-thin-commands-7c20
+    type: proposes
+    target: intent-claude-lifecycle-commands-f367
+    created: 2026-06-12
+  - id: edge-proposes-fat-commands-9a4e
+    source: contract-lifecycle-fat-commands-a5a8
+    type: proposes
+    target: intent-claude-lifecycle-commands-f367
+    created: 2026-06-12
+  - id: edge-selects-thin-commands-8069
+    source: decision-lifecycle-thin-commands-41c8
+    type: selects
+    target: contract-lifecycle-thin-commands-7c20
+    created: 2026-06-13
+  - id: edge-decomposes-thin-commands-8b79
+    source: brief-lifecycle-thin-commands-705d
+    type: decomposes
+    target: contract-lifecycle-thin-commands-7c20
+    created: 2026-06-13
+  - id: edge-supersedes-capture-smoke-3f0a
+    source: intent-capture-smoke-superseded-e7f8
+    type: supersedes
+    target: intent-capture-smoke-test-46d5
+    created: 2026-06-13
+  - id: edge-evidences-thin-commands-a06a
+    source: evidence-lifecycle-thin-commands-8296
+    type: evidences
+    target: brief-lifecycle-thin-commands-705d
+    created: 2026-06-13

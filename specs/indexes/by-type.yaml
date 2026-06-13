@@ -1,14 +1,22 @@
 by-type:
   brief:
+    - brief-lifecycle-thin-commands-705d
     - brief-spec-tooling-schema-driven-8f2d
   contract:
+    - contract-lifecycle-fat-commands-a5a8
+    - contract-lifecycle-thin-commands-7c20
     - contract-spec-tooling-hardcoded-c1a4
     - contract-spec-tooling-schema-driven-b2e7
   decision:
+    - decision-lifecycle-thin-commands-41c8
     - decision-spec-tooling-schema-driven-5e8c
   evidence:
+    - evidence-lifecycle-thin-commands-8296
     - evidence-spec-tooling-schema-driven-9c4e
   intent:
+    - intent-capture-smoke-superseded-e7f8
+    - intent-capture-smoke-test-46d5
+    - intent-claude-lifecycle-commands-f367
     - intent-docs-arrow-lint-e7b3
     - intent-spec-index-validate-a3f1
     - intent-status-coherence-d4f2
