@@ -2,7 +2,7 @@
 id: contract-ci-gate-spec-tool-5039
 type: contract
 title: Graph-aware PR gate as a tools/spec.ts subcommand
-status: candidate
+status: approved
 created: 2026-06-13
 ---
 

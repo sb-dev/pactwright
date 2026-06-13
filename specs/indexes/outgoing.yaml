@@ -35,6 +35,10 @@ outgoing:
     - id: edge-proposes-schema-driven-4f08
       target: intent-spec-index-validate-a3f1
       type: proposes
+  decision-ci-gate-spec-tool-6d2b:
+    - id: edge-selects-ci-gate-spec-tool-0333
+      target: contract-ci-gate-spec-tool-5039
+      type: selects
   decision-lifecycle-thin-commands-41c8:
     - id: edge-selects-thin-commands-8069
       target: contract-lifecycle-thin-commands-7c20

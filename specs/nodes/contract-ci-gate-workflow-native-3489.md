@@ -2,7 +2,7 @@
 id: contract-ci-gate-workflow-native-3489
 type: contract
 title: Workflow-native PR gate; tools/spec.ts stays diff-agnostic
-status: candidate
+status: rejected
 created: 2026-06-13
 ---
 

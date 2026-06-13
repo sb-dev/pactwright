@@ -2,7 +2,7 @@
 id: contract-ci-gate-checks-as-nodes-2d49
 type: contract
 title: Checks-as-nodes with platform-enforced blocking
-status: candidate
+status: rejected
 created: 2026-06-13
 ---
 

@@ -7,6 +7,10 @@ incoming:
     - id: edge-evidences-spec-tooling-5d7c
       source: evidence-spec-tooling-schema-driven-9c4e
       type: evidences
+  contract-ci-gate-spec-tool-5039:
+    - id: edge-selects-ci-gate-spec-tool-0333
+      source: decision-ci-gate-spec-tool-6d2b
+      type: selects
   contract-lifecycle-thin-commands-7c20:
     - id: edge-decomposes-thin-commands-8b79
       source: brief-lifecycle-thin-commands-705d
