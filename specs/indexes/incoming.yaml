@@ -25,6 +25,16 @@ incoming:
     - id: edge-supersedes-capture-smoke-3f0a
       source: intent-capture-smoke-superseded-e7f8
       type: supersedes
+  intent-ci-enforcement-gates-5c90:
+    - id: edge-proposes-ci-gate-checks-as-nodes-111b
+      source: contract-ci-gate-checks-as-nodes-2d49
+      type: proposes
+    - id: edge-proposes-ci-gate-spec-tool-65c3
+      source: contract-ci-gate-spec-tool-5039
+      type: proposes
+    - id: edge-proposes-ci-gate-workflow-native-513e
+      source: contract-ci-gate-workflow-native-3489
+      type: proposes
   intent-claude-lifecycle-commands-f367:
     - id: edge-proposes-fat-commands-9a4e
       source: contract-lifecycle-fat-commands-a5a8

@@ -54,3 +54,18 @@ edges:
     type: evidences
     target: brief-lifecycle-thin-commands-705d
     created: 2026-06-13
+  - id: edge-proposes-ci-gate-spec-tool-65c3
+    source: contract-ci-gate-spec-tool-5039
+    type: proposes
+    target: intent-ci-enforcement-gates-5c90
+    created: 2026-06-13
+  - id: edge-proposes-ci-gate-workflow-native-513e
+    source: contract-ci-gate-workflow-native-3489
+    type: proposes
+    target: intent-ci-enforcement-gates-5c90
+    created: 2026-06-13
+  - id: edge-proposes-ci-gate-checks-as-nodes-111b
+    source: contract-ci-gate-checks-as-nodes-2d49
+    type: proposes
+    target: intent-ci-enforcement-gates-5c90
+    created: 2026-06-13
