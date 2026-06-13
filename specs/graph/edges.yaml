@@ -49,3 +49,8 @@ edges:
     type: supersedes
     target: intent-capture-smoke-test-46d5
     created: 2026-06-13
+  - id: edge-evidences-thin-commands-a06a
+    source: evidence-lifecycle-thin-commands-8296
+    type: evidences
+    target: brief-lifecycle-thin-commands-705d
+    created: 2026-06-13

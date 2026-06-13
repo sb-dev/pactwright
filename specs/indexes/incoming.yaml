@@ -1,4 +1,8 @@
 incoming:
+  brief-lifecycle-thin-commands-705d:
+    - id: edge-evidences-thin-commands-a06a
+      source: evidence-lifecycle-thin-commands-8296
+      type: evidences
   brief-spec-tooling-schema-driven-8f2d:
     - id: edge-evidences-spec-tooling-5d7c
       source: evidence-spec-tooling-schema-driven-9c4e

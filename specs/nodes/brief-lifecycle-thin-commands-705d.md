@@ -2,7 +2,7 @@
 id: brief-lifecycle-thin-commands-705d
 type: brief
 title: Implement thin lifecycle commands delegating to four fat agents
-status: approved
+status: implemented
 created: 2026-06-13
 ---
 

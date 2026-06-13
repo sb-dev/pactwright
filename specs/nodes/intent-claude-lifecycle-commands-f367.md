@@ -2,7 +2,7 @@
 id: intent-claude-lifecycle-commands-f367
 type: intent
 title: Add Claude Code agents and slash commands covering every lifecycle step
-status: open
+status: addressed
 created: 2026-06-12
 ---
 
