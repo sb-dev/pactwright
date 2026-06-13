@@ -1,5 +1,6 @@
 by-type:
   brief:
+    - brief-ci-gate-spec-tool-0852
     - brief-lifecycle-thin-commands-705d
     - brief-spec-tooling-schema-driven-8f2d
   contract:

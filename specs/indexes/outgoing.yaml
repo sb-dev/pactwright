@@ -1,4 +1,8 @@
 outgoing:
+  brief-ci-gate-spec-tool-0852:
+    - id: edge-decomposes-ci-gate-spec-tool-2060
+      target: contract-ci-gate-spec-tool-5039
+      type: decomposes
   brief-lifecycle-thin-commands-705d:
     - id: edge-decomposes-thin-commands-8b79
       target: contract-lifecycle-thin-commands-7c20
