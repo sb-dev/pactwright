@@ -69,3 +69,8 @@ edges:
     type: proposes
     target: intent-ci-enforcement-gates-5c90
     created: 2026-06-13
+  - id: edge-selects-ci-gate-spec-tool-0333
+    source: decision-ci-gate-spec-tool-6d2b
+    type: selects
+    target: contract-ci-gate-spec-tool-5039
+    created: 2026-06-13
