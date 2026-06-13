@@ -3,6 +3,9 @@ by-type:
     - brief-lifecycle-thin-commands-705d
     - brief-spec-tooling-schema-driven-8f2d
   contract:
+    - contract-ci-gate-checks-as-nodes-2d49
+    - contract-ci-gate-spec-tool-5039
+    - contract-ci-gate-workflow-native-3489
     - contract-lifecycle-fat-commands-a5a8
     - contract-lifecycle-thin-commands-7c20
     - contract-spec-tooling-hardcoded-c1a4

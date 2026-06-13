@@ -7,6 +7,18 @@ outgoing:
     - id: edge-decomposes-spec-tooling-3c91
       target: contract-spec-tooling-schema-driven-b2e7
       type: decomposes
+  contract-ci-gate-checks-as-nodes-2d49:
+    - id: edge-proposes-ci-gate-checks-as-nodes-111b
+      target: intent-ci-enforcement-gates-5c90
+      type: proposes
+  contract-ci-gate-spec-tool-5039:
+    - id: edge-proposes-ci-gate-spec-tool-65c3
+      target: intent-ci-enforcement-gates-5c90
+      type: proposes
+  contract-ci-gate-workflow-native-3489:
+    - id: edge-proposes-ci-gate-workflow-native-513e
+      target: intent-ci-enforcement-gates-5c90
+      type: proposes
   contract-lifecycle-fat-commands-a5a8:
     - id: edge-proposes-fat-commands-9a4e
       target: intent-claude-lifecycle-commands-f367
