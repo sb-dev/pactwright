@@ -27,7 +27,8 @@ graph-maintainer is the sole writer of `specs/nodes/` and
 - `.claude/agents/spec-critic.md` — adversarial Critique drafting.
 - `.claude/agents/contract-reviewer.md` — approval support.
 - `.claude/commands/`: `capture-intent.md`, `propose-contracts.md`
-  (user exemplar, verbatim), `review-contracts.md`,
+  (user exemplar; validation-gate line added after PR review),
+  `review-contracts.md`,
   `approve-contract.md`, `write-brief.md`, `implement-brief.md`,
   `prepare-evidence.md`, `update-spec-graph.md` — all 9–13 lines.
 - `.gitignore` — un-anticipated enabling change: the blanket `.claude/`

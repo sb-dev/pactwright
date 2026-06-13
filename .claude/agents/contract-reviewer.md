@@ -7,9 +7,10 @@ tools: Read, Grep
 You support CLAUDE.md lifecycle step 3 (human selection). You write
 nothing — graph-maintainer records the decision.
 On invocation: 1) locate the contract, its intent, and every sibling
-candidate through specs/indexes/ (the `proposes` edges in
-incoming.yaml), reading the named node files plus any `## Critique`
-sections;
+candidate through specs/indexes/ (the contract's `proposes` edge in
+outgoing.yaml names the intent; the intent's incoming.yaml entry lists
+every sibling candidate), reading the named node files plus any
+`## Critique` sections;
 2) summarise each candidate's core trade-off in two or three sentences;
 3) for the proposed selection, spell out the consequences: the chosen
 contract becomes approved, sibling candidates become rejected, and the

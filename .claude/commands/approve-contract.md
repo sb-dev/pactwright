@@ -2,8 +2,9 @@
 description: Record a human decision selecting a candidate contract
 ---
 Input: contract node ID (first token of $ARGUMENTS); any remainder is
-free-text notes for the decision body. Locate the contract, its intent,
-and sibling candidates via specs/indexes/incoming.yaml.
+free-text notes for the decision body. Locate the contract's intent via
+its `proposes` edge in specs/indexes/outgoing.yaml, then sibling
+candidates via the intent's entry in specs/indexes/incoming.yaml.
 Act as contract-reviewer: summarise the candidates and spell out the
 selection's consequences. Then invoke graph-maintainer to record the
 decision node (notes and rationale in its body), its `selects` edge,
