@@ -7,7 +7,9 @@ Thumbs.db
 .idea/
 *.swp
 *.swo
-.claude/
+.claude/*
+!.claude/agents/
+!.claude/commands/
 
 # Node
 node_modules/
