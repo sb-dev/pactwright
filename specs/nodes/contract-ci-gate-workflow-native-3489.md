@@ -101,3 +101,29 @@ relaxed for `waives` only.
 - `pnpm spec:validate` green on the real tree post-migration.
 - CODEOWNERS handle + branch-protection required-check confirmation
   (documented).
+
+## Critique
+
+- **The core implementation is left undecided.** The gate may be a committed
+  `tools/pr-evidence.mjs` *or* `yq`+`bash` — very different artifacts with
+  different drift, portability, and test stories. A brief cannot proceed
+  until one is chosen; as written this is a fork, not a contract.
+- **Self-undermining premise.** The headline benefit is "tools/spec.ts stays
+  pure," but the stated drift mitigation is "factor a shared module imported
+  by both," which reintroduces shared graph code and erodes the very purity
+  that justifies the candidate. The tension is acknowledged but unresolved.
+- **Silent waiver failure.** Relaxing node-resolution for `waives` targets
+  means a mistyped check name (`pr-evidnce`) passes validation, the gate
+  never matches it, and the PR is blocked with no diagnostic pointing at the
+  typo. Unlike an allowlist, nothing catches an unrecognised target.
+- **`yq` portability.** GitHub runners ship a different `yq` than many
+  developers expect (Go vs Python forks with incompatible syntax); a
+  `yq`-based step risks "works in CI, breaks locally" or vice-versa. The
+  contract pins neither tool nor version.
+- **Duplicated traversal, no shared types.** A CI-only `.mjs` re-implements
+  the brief → contract → `status: approved` resolution that `tools/spec.ts`
+  already encodes, in a file with no shared types — exactly the drift the
+  validator exists to prevent, reintroduced at the gate.
+- **Shared gaps inherited:** `expires` is unread; the gate is trivially
+  satisfiable by an unrelated `evidences` edge; the `paths-ignore` vs.
+  required-status-check interaction is unaddressed (as in the siblings).

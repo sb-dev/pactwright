@@ -111,3 +111,35 @@ check nodes.
   or API check) and that requiring `pr-evidence` is what makes example 2's
   "blocked" claim true.
 - `pnpm spec:validate` green post-migration including the seed check nodes.
+
+## Critique
+
+- **May contradict the intent's own wording.** The intent defines `waives`
+  as `override → any node or named check` — the "or" distinguishes nodes
+  from checks. Modelling checks *as* nodes collapses that distinction; the
+  candidate reinterprets the intent rather than implementing it, which a
+  reviewer should confirm is wanted.
+- **Acceptance is not file-verifiable.** With workflows "signal-only" and
+  blocking delegated to branch protection, acceptance #2 ("a PR changing
+  code with no evidence edge is blocked") cannot be satisfied by anything in
+  the repository — it depends on out-of-repo admin settings the contract
+  itself calls not fully reproducible. The deliverable can be fully merged
+  and still not meet its own acceptance.
+- **Ergonomics regression for the override author.** Check nodes are
+  `check-pr-evidence-<hex>`, but the gate matches "target node id is
+  `check-pr-evidence`." Either the id must drop the hex suffix (breaking the
+  `<type>-<slug>-<4hex>` convention) or the human writing the `waives` edge
+  must look up the exact seeded id — worse than a literal `pr-evidence`
+  string. The id mismatch is unresolved.
+- **Largest scope creep of the three.** A new `check` node type, seed nodes,
+  `docs/branch-protection.md`, an optional ruleset JSON, and a meta-workflow
+  to assert settings — substantially more than "add `override`/`waives` and
+  four workflows," much of it to compensate for moving enforcement off-repo.
+- **New node type compounds the convention break.** `check` (no status, no
+  created) is a second type after `override` departing from the node
+  conventions; the graph accretes special-shaped nodes.
+- **Audit trail conflates live and dead waivers.** `incoming.yaml` for the
+  check node accumulates every override ever made, with no pruning and no use
+  of `expires`; the "free audit trail" mixes active and stale waivers.
+- **Shared gaps inherited:** `expires` is unread; the gate is trivially
+  satisfiable by an unrelated `evidences` edge.

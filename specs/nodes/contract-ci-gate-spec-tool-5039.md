@@ -129,3 +129,36 @@ names that a `waives` target may resolve to instead of a node.
   an override+waives pair is added.
 - Confirm the CODEOWNERS handle and that branch protection marks
   `pr-evidence` a required check (documented step).
+
+## Critique
+
+- **Local `spec:gate` has no defined base.** The subcommand defaults the
+  base ref to "the PR base," which does not exist outside CI. The contract
+  never says what `pnpm spec:gate` does on a developer's machine — error, or
+  diff against an `origin/main` merge-base? Until pinned, the "runnable
+  locally" benefit is unspecified behaviour.
+- **"Named check" string is underspecified.** The allowlist mixes what may
+  be workflow filenames, job names, and GitHub check-run names
+  (`ci, spec-index, spec-validate, pr-evidence`). A `waives` edge "naming
+  check pr-evidence" must match one exact string; the contract does not say
+  which namespace that string lives in, so a brief cannot implement the
+  match deterministically.
+- **`expires` is required but never read.** The override carries a mandatory
+  `expires` field, yet no clause in the gate consults it. An expired
+  override still waives. Either the gate must reject overrides past
+  `expires`, or the field is decorative — the contract should say which.
+- **The gate is trivially satisfiable.** The pass rule accepts *any* added
+  `evidences` edge to *any* approved contract — it is not tied to the code
+  the PR actually changes. A contributor can add a throwaway `evidences`
+  edge pointing at an old approved contract and pass without real evidence
+  for this change. The contract implements the intent literally but should
+  name this gap (or propose binding evidence to the diff).
+- **Skipped-required-check pitfall, unaddressed.** Path filtering via
+  `paths-ignore` means `pr-evidence` never runs on specs-only/docs-only PRs;
+  if it is also a *required* status check, GitHub blocks those PRs waiting on
+  a check that never reports. The contract relies on branch protection for
+  "blocked" but does not resolve this interaction (the usual fix — an
+  always-running job reporting neutral/success — is absent).
+- **The allowlist is a second source of truth** for check names that must be
+  kept in lockstep with the actual workflow/check names; the contract names
+  the risk but offers no mechanism to keep them in sync.
