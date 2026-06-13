@@ -34,3 +34,8 @@ edges:
     type: proposes
     target: intent-claude-lifecycle-commands-f367
     created: 2026-06-12
+  - id: edge-selects-thin-commands-8069
+    source: decision-lifecycle-thin-commands-41c8
+    type: selects
+    target: contract-lifecycle-thin-commands-7c20
+    created: 2026-06-13

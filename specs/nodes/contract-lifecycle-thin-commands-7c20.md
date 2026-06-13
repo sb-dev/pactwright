@@ -2,7 +2,7 @@
 id: contract-lifecycle-thin-commands-7c20
 type: contract
 title: Thin slash commands delegating to four fat agents
-status: candidate
+status: approved
 created: 2026-06-12
 ---
 

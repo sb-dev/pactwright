@@ -19,6 +19,10 @@ outgoing:
     - id: edge-proposes-schema-driven-4f08
       target: intent-spec-index-validate-a3f1
       type: proposes
+  decision-lifecycle-thin-commands-41c8:
+    - id: edge-selects-thin-commands-8069
+      target: contract-lifecycle-thin-commands-7c20
+      type: selects
   decision-spec-tooling-schema-driven-5e8c:
     - id: edge-selects-schema-driven-7a12
       target: contract-spec-tooling-schema-driven-b2e7

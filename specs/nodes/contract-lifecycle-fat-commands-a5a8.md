@@ -2,7 +2,7 @@
 id: contract-lifecycle-fat-commands-a5a8
 type: contract
 title: Self-contained slash commands with no agent layer
-status: candidate
+status: rejected
 created: 2026-06-12
 ---
 
