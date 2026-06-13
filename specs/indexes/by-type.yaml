@@ -16,6 +16,7 @@ by-type:
   intent:
     - intent-capture-smoke-superseded-e7f8
     - intent-capture-smoke-test-46d5
+    - intent-ci-enforcement-approval-gates-b8c1
     - intent-claude-lifecycle-commands-f367
     - intent-docs-arrow-lint-e7b3
     - intent-spec-index-validate-a3f1
