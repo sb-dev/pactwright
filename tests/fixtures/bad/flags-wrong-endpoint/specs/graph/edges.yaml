@@ -1,0 +1,6 @@
+edges:
+  - id: edge-flag-wrong-1111
+    source: drift-finding-x-aaaa
+    type: flags
+    target: intent-y-bbbb
+    created: 2026-06-11

@@ -20,8 +20,10 @@ export interface NodeTypeDef {
 }
 
 export interface EdgeTypeDef {
-  source?: string;
-  target?: string;
+  // A single allowed type, a list of allowed types, `any`, or (target only)
+  // `same_as_source`. edge_endpoint_types enforces it.
+  source?: string | string[];
+  target?: string | string[];
 }
 
 export interface Rule {
@@ -40,6 +42,9 @@ export interface LoadedSpec {
   rules: Rule[];
   /** Named-check ids from schema/checks.yaml; `[]` when the file is absent. */
   checks: string[];
+  /** Sensitive globs from schema/validation-rules.yaml `sensitive_paths`; `[]`
+   * when absent. Read by `spec:check-diff`, not by a validation rule. */
+  sensitivePaths: string[];
 }
 
 const FRONTMATTER = /^---\r?\n([\s\S]*?)\r?\n---(\r?\n|$)/;
@@ -116,11 +121,13 @@ export function loadSpec(specsRoot: string = path.join(process.cwd(), "specs")):
   ) as Record<string, EdgeTypeDef>;
 
   const rulesFile = path.join(root, "schema", "validation-rules.yaml");
-  const rules = asList(
-    asRecord(readYamlFile(rulesFile), rulesFile, "document")["rules"],
-    rulesFile,
-    "rules",
-  ) as Rule[];
+  const rulesDoc = asRecord(readYamlFile(rulesFile), rulesFile, "document");
+  const rules = asList(rulesDoc["rules"], rulesFile, "rules") as Rule[];
+  // sensitive_paths is optional data (not a rule): absent → empty, so older
+  // graphs and fixtures without it load cleanly.
+  const sensitivePaths = asList(rulesDoc["sensitive_paths"], rulesFile, "sensitive_paths")
+    .map((p) => asString(p))
+    .filter((p): p is string => p !== undefined);
 
   // checks.yaml is optional: absent in older graphs and in test fixtures, so
   // a missing file yields an empty registry rather than a load failure.
@@ -131,7 +138,7 @@ export function loadSpec(specsRoot: string = path.join(process.cwd(), "specs")):
         .filter((c): c is string => c !== undefined)
     : [];
 
-  return { root, nodes, edges, nodeTypes, edgeTypes, rules, checks };
+  return { root, nodes, edges, nodeTypes, edgeTypes, rules, checks, sensitivePaths };
 }
 
 /** Frontmatter/edge field as a non-empty string, else undefined. */
@@ -147,6 +154,13 @@ export function asString(value: unknown): string | undefined {
  */
 export function compareStrings(a: string, b: string): number {
   return a < b ? -1 : a > b ? 1 : 0;
+}
+
+/** A capability node's owned globs (its `paths` frontmatter list); `[]` if absent
+ * or malformed. Shared by `check-diff` and `drift-map`. */
+export function capabilityPaths(node: NodeRecord): string[] {
+  const p = node.data["paths"];
+  return Array.isArray(p) ? p.filter((x): x is string => typeof x === "string") : [];
 }
 
 /** Map of node id → first node declaring it (duplicates flagged by validation). */

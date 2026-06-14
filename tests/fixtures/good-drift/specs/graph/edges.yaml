@@ -1,0 +1,11 @@
+edges:
+  - id: edge-touches-1111
+    source: evidence-x-bbbb
+    type: touches
+    target: capability-x-aaaa
+    created: 2026-06-11
+  - id: edge-flags-2222
+    source: drift-finding-x-cccc
+    type: flags
+    target: capability-x-aaaa
+    created: 2026-06-11

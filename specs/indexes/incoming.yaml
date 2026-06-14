@@ -3,6 +3,10 @@ incoming:
     - id: edge-evidences-ci-gate-spec-tool-760c
       source: evidence-ci-gate-spec-tool-693d
       type: evidences
+  brief-drift-tool-assisted-d4ee:
+    - id: edge-evidences-drift-tool-assisted-3e58
+      source: evidence-drift-tool-assisted-3e58
+      type: evidences
   brief-lifecycle-thin-commands-705d:
     - id: edge-evidences-thin-commands-a06a
       source: evidence-lifecycle-thin-commands-8296
@@ -17,6 +21,13 @@ incoming:
       type: decomposes
     - id: edge-selects-ci-gate-spec-tool-0333
       source: decision-ci-gate-spec-tool-6d2b
+      type: selects
+  contract-drift-tool-assisted-7173:
+    - id: edge-decomposes-drift-tool-assisted-6cd6
+      source: brief-drift-tool-assisted-d4ee
+      type: decomposes
+    - id: edge-selects-drift-tool-assisted-d5e2
+      source: decision-drift-tool-assisted-d5e2
       type: selects
   contract-lifecycle-thin-commands-7c20:
     - id: edge-decomposes-thin-commands-8b79
@@ -52,6 +63,16 @@ incoming:
       type: proposes
     - id: edge-proposes-thin-commands-db7f
       source: contract-lifecycle-thin-commands-7c20
+      type: proposes
+  intent-drift-detection-c7b1:
+    - id: edge-proposes-drift-agent-native-bafa
+      source: contract-drift-agent-native-bafa
+      type: proposes
+    - id: edge-proposes-drift-deterministic-4a3a
+      source: contract-drift-deterministic-4a3a
+      type: proposes
+    - id: edge-proposes-drift-tool-assisted-7173
+      source: contract-drift-tool-assisted-7173
       type: proposes
   intent-spec-index-validate-a3f1:
     - id: edge-proposes-hardcoded-9d31

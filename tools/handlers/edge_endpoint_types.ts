@@ -24,17 +24,19 @@ export default function edgeEndpointTypes(rule: Rule, spec: LoadedSpec): Finding
     const sourceType = sourceNode !== undefined ? asString(sourceNode.data["type"]) : undefined;
     const targetType = targetNode !== undefined ? asString(targetNode.data["type"]) : undefined;
 
-    const sourceRule = asString(def.source);
-    if (sourceRule !== undefined && sourceRule !== "any" && sourceType !== undefined && sourceType !== sourceRule) {
+    // source: a concrete type, a list of allowed types, or `any` (no constraint).
+    const sourceRule = def.source;
+    if (sourceRule !== undefined && sourceRule !== "any" && sourceType !== undefined && !allows(sourceRule, sourceType)) {
       findings.push({
         rule: ruleId,
         kind: "edge_endpoint_types",
         subject,
-        detail: `edge ${subject} type=${edgeType} requires source.type=${sourceRule}, got ${sourceType}`,
+        detail: `edge ${subject} type=${edgeType} requires source.type=${label(sourceRule)}, got ${sourceType}`,
       });
     }
 
-    const targetRule = asString(def.target);
+    // target: a concrete type, a list, `any` (skip), or `same_as_source`.
+    const targetRule = def.target;
     if (targetRule === undefined || targetRule === "any" || targetType === undefined) return;
     if (targetRule === "same_as_source") {
       if (sourceType !== undefined && targetType !== sourceType) {
@@ -45,14 +47,26 @@ export default function edgeEndpointTypes(rule: Rule, spec: LoadedSpec): Finding
           detail: `edge ${subject} type=${edgeType} requires target.type == source.type (${sourceType}), got ${targetType}`,
         });
       }
-    } else if (targetType !== targetRule) {
+      return;
+    }
+    if (!allows(targetRule, targetType)) {
       findings.push({
         rule: ruleId,
         kind: "edge_endpoint_types",
         subject,
-        detail: `edge ${subject} type=${edgeType} requires target.type=${targetRule}, got ${targetType}`,
+        detail: `edge ${subject} type=${edgeType} requires target.type=${label(targetRule)}, got ${targetType}`,
       });
     }
   });
   return findings;
+}
+
+/** Does a node type satisfy an endpoint rule that is a single type or a list? */
+function allows(rule: string | string[], nodeType: string): boolean {
+  return Array.isArray(rule) ? rule.includes(nodeType) : nodeType === rule;
+}
+
+/** Human-readable form of an endpoint rule for error messages. */
+function label(rule: string | string[]): string {
+  return Array.isArray(rule) ? `[${rule.join(", ")}]` : rule;
 }

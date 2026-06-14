@@ -10,3 +10,5 @@ checks:
   - spec-index
   - spec-validate
   - pr-evidence
+  - check-diff
+  - drift

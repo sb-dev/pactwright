@@ -41,3 +41,17 @@ node_types:
     # `created` is allowed but not required; `expires` bounds its validity.
     required_fields: [id, type, title, reason, approved_by, expires]
     requires_body:   true
+
+  capability:
+    # Owns repo path globs via `paths`; the unit a drift diff maps to.
+    # No retire lifecycle yet, so the only status is `active`.
+    required_fields: [id, type, title, status, paths]
+    requires_body:   true
+    status_values:   [active]
+
+  drift-finding:
+    # A detected divergence between a diff's observable behaviour and the
+    # linked contract/brief; created by /detect-drift, triaged by a human.
+    required_fields: [id, type, title, status]
+    requires_body:   true
+    status_values:   [open, resolved, accepted]

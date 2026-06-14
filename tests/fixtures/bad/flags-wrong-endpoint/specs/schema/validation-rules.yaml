@@ -1,7 +1,3 @@
-# Cross-cutting graph invariants, run by `pnpm spec:validate` in the order
-# listed. Each rule's kind maps to a handler in tools/handlers/; rule
-# parameters live here. Ordered so each rule can assume the preconditions
-# established by the earlier ones.
 rules:
   - id: nodes-required-fields
     kind: required_fields
@@ -25,8 +21,6 @@ rules:
     kind: unique_field
     scope: edges
     field: id
-  # Types without status_values (e.g. decision) are skipped by this
-  # handler; they are still covered by required_fields — not unvalidated.
   - id: nodes-status-in-enum
     kind: enum_constraint
     scope: nodes
@@ -39,10 +33,3 @@ rules:
     kind: edge_endpoint_types
   - id: indexes-fresh
     kind: indexes_fresh
-
-# Repo globs whose modification is "sensitive": a PR touching one of these must
-# carry a linked approved contract (bound to the capability that owns the path)
-# or an override, enforced by the diff-aware `spec:check-diff` (not a validate
-# rule — read as data by the script). Start with one glob (SPEC §19).
-sensitive_paths:
-  - specs/schema/**
