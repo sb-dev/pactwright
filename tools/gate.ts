@@ -26,12 +26,30 @@ export interface GateResult {
   reason: string;
 }
 
-/** Normalize a frontmatter date (js-yaml may parse it as a Date or a string)
- * to a `YYYY-MM-DD` string, which sorts lexically. `undefined` if unparseable. */
+/**
+ * Normalize a frontmatter date to a `YYYY-MM-DD` string, which sorts lexically.
+ * Returns `undefined` if the value is not a real calendar date.
+ *
+ * The shape regex alone is not enough: `2099-99-99` matches `\d{4}-\d{2}-\d{2}`
+ * yet names no real day. So after the shape check we round-trip the components
+ * through `Date.UTC` and require them to survive unchanged — rejecting
+ * impossible months/days (`2099-99-99`, `2026-02-30`). `fromYaml` parses with
+ * CORE_SCHEMA, so dates reach us as strings (an unquoted `2099-99-99` is no
+ * longer overflow-coerced into a far-future `Date`); the `Date` branch is a
+ * defensive fallback for any caller that still passes a parsed `Date`.
+ */
 function toDateString(value: unknown): string | undefined {
-  if (value instanceof Date) return value.toISOString().slice(0, 10);
-  if (typeof value === "string" && /^\d{4}-\d{2}-\d{2}/.test(value)) return value.slice(0, 10);
-  return undefined;
+  let raw: string | undefined;
+  if (value instanceof Date) raw = value.toISOString().slice(0, 10);
+  else if (typeof value === "string") raw = value.slice(0, 10);
+  else return undefined;
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(raw)) return undefined;
+  const [y, m, d] = raw.split("-").map(Number);
+  const dt = new Date(Date.UTC(y, m - 1, d));
+  if (dt.getUTCFullYear() !== y || dt.getUTCMonth() !== m - 1 || dt.getUTCDate() !== d) {
+    return undefined;
+  }
+  return raw;
 }
 
 /**
@@ -57,7 +75,15 @@ export function evaluateGate(spec: LoadedSpec, input: GateInput): GateResult {
       if (asString(inner["source"]) !== briefId) continue;
       const contractId = asString(inner["target"]);
       const contract = contractId !== undefined ? byId.get(contractId) : undefined;
-      if (contract !== undefined && asString(contract.data["status"]) === "approved") {
+      // Mirror clause (b)'s type guard: require the `decomposes` target to be a
+      // `contract`, not merely a node that happens to be `approved`. Redundant
+      // with `edge_endpoint_types` on a validated graph, but `spec:gate` runs
+      // without a prior `spec:validate`, so check it here too.
+      if (
+        contract !== undefined &&
+        asString(contract.data["type"]) === "contract" &&
+        asString(contract.data["status"]) === "approved"
+      ) {
         return {
           pass: true,
           reason: `added evidences edge ${id} -> brief ${briefId} -> approved contract ${contractId}`,
@@ -102,7 +128,16 @@ export function evaluateGate(spec: LoadedSpec, input: GateInput): GateResult {
 
 function git(args: string[]): { status: number; stdout: string; stderr: string } {
   const r = spawnSync("git", args, { encoding: "utf8" });
-  return { status: r.status ?? 1, stdout: r.stdout ?? "", stderr: r.stderr ?? "" };
+  // A failed spawn or a signal (status === null) is never a legitimate "command
+  // ran and reported"; coercing it to a number here once let callers read it as
+  // an ordinary non-zero exit and silently treat a base path as "absent". Throw
+  // so the gate fails closed instead. A real non-zero exit is returned for
+  // callers that inspect it (resolveBase, rev-parse, the ls-tree presence test).
+  if (r.error) throw new Error(`git ${args.join(" ")}: ${r.error.message}`);
+  if (r.status === null) {
+    throw new Error(`git ${args.join(" ")}: terminated by signal ${r.signal ?? "unknown"}`);
+  }
+  return { status: r.status, stdout: r.stdout ?? "", stderr: r.stderr ?? "" };
 }
 
 /** Base ref to diff against: `$GATE_BASE` (e.g. the PR base sha), else the
@@ -134,9 +169,23 @@ export function resolveBase(): string {
 
 /** Edge ids in edges.yaml at `base`; empty if the file did not exist there. */
 function baseEdgeIds(base: string): Set<string> {
-  const r = git(["show", `${base}:specs/graph/edges.yaml`]);
+  const path = "specs/graph/edges.yaml";
   const ids = new Set<string>();
-  if (r.status !== 0) return ids;
+  // Distinguish "file legitimately absent at base" (→ empty, all head edges are
+  // new) from an infra error (→ throw, fail closed). For a verified base commit
+  // `ls-tree` always exits 0; empty stdout means the path is absent. If it IS
+  // present, a non-zero `git show` is unexpected (unreadable object) → throw,
+  // rather than the old behaviour of treating it as absent and over-counting
+  // added edges.
+  const listed = git(["ls-tree", base, "--", path]);
+  if (listed.status !== 0) {
+    throw new Error(`git ls-tree ${base} -- ${path}: ${listed.stderr.trim() || `exit ${listed.status}`}`);
+  }
+  if (listed.stdout.trim() === "") return ids;
+  const r = git(["show", `${base}:${path}`]);
+  if (r.status !== 0) {
+    throw new Error(`git show ${base}:${path}: ${r.stderr.trim() || `exit ${r.status}`}`);
+  }
   const doc = fromYaml(r.stdout);
   const edges = doc !== null && typeof doc === "object" ? (doc as Record<string, unknown>)["edges"] : undefined;
   if (Array.isArray(edges)) {
@@ -162,8 +211,15 @@ export function addedEdgeIds(spec: LoadedSpec, base: string): Set<string> {
 
 export function addedNodeIds(spec: LoadedSpec, base: string): Set<string> {
   const r = git(["ls-tree", "-r", "--name-only", base, "specs/nodes"]);
+  // For a verified base, ls-tree exits 0 even when specs/nodes never existed
+  // (empty output). A non-zero status is therefore an infra error, not an
+  // absent dir: throw so the gate fails closed instead of treating every node
+  // as "added" (which could let a pre-existing override waive).
+  if (r.status !== 0) {
+    throw new Error(`git ls-tree ${base} specs/nodes: ${r.stderr.trim() || `exit ${r.status}`}`);
+  }
   const baseFiles = new Set(
-    r.status === 0 ? r.stdout.split("\n").map((l) => l.trim()).filter((l) => l !== "") : [],
+    r.stdout.split("\n").map((l) => l.trim()).filter((l) => l !== ""),
   );
   const added = new Set<string>();
   for (const node of spec.nodes) {

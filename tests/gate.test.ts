@@ -33,6 +33,8 @@ const nodes = [
   node("evidence-x-0004", "evidence", { status: "draft" }),
   node("override-x-0005", "override", { reason: "r", approved_by: "a", expires: "2099-01-01" }),
   node("override-old-0006", "override", { reason: "r", approved_by: "a", expires: "2020-01-01" }),
+  node("override-noexp-0007", "override", { reason: "r", approved_by: "a" }),
+  node("override-badexp-0008", "override", { reason: "r", approved_by: "a", expires: "2099-99-99" }),
 ];
 const decomposes = edge("e-dec", "decomposes", "brief-x-0003", "contract-x-0001");
 
@@ -115,4 +117,46 @@ test("no added evidence and no override: fails", () => {
     today: TODAY,
   });
   assert.equal(result.pass, false);
+});
+
+test("clause (b): an override with no 'expires' does not waive (near-miss message)", () => {
+  const w = edge("e-w", "waives", "override-noexp-0007", "pr-evidence");
+  const result = evaluateGate(spec(nodes, [w]), {
+    addedEdgeIds: new Set(["e-w"]),
+    addedNodeIds: new Set(["override-noexp-0007"]),
+    today: TODAY,
+  });
+  assert.equal(result.pass, false);
+  assert.match(result.reason, /missing or unparseable/);
+});
+
+test("clause (b): an override with a calendar-invalid 'expires' does not waive", () => {
+  // `2099-99-99` matches the YYYY-MM-DD shape but names no real day, so the
+  // strict calendar check rejects it rather than letting it waive forever.
+  const w = edge("e-w", "waives", "override-badexp-0008", "pr-evidence");
+  const result = evaluateGate(spec(nodes, [w]), {
+    addedEdgeIds: new Set(["e-w"]),
+    addedNodeIds: new Set(["override-badexp-0008"]),
+    today: TODAY,
+  });
+  assert.equal(result.pass, false);
+  assert.match(result.reason, /missing or unparseable/);
+});
+
+test("clause (a): a brief decomposing an approved NON-contract node does not pass", () => {
+  // The target is `status: approved` but `type: intent`, not `contract`; the
+  // type guard must reject it (robust even when spec:validate hasn't run).
+  const localNodes = [
+    node("brief-z-0010", "brief", { status: "draft" }),
+    node("evidence-z-0011", "evidence", { status: "draft" }),
+    node("intent-approved-0012", "intent", { status: "approved" }),
+  ];
+  const dec = edge("e-dec", "decomposes", "brief-z-0010", "intent-approved-0012");
+  const ev = edge("e-ev", "evidences", "evidence-z-0011", "brief-z-0010");
+  const result = evaluateGate(spec(localNodes, [dec, ev]), {
+    addedEdgeIds: new Set(["e-ev"]),
+    addedNodeIds: new Set(),
+    today: TODAY,
+  });
+  assert.equal(result.pass, false, result.reason);
 });

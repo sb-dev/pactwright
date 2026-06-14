@@ -154,6 +154,16 @@ test("good-waives: an override waiving the pr-evidence named check validates", (
   assert.equal(runCli(dir, "index").status, 0);
   const result = runCli(dir, "validate");
   assert.equal(result.status, 0, `expected validate to pass, got:\n${result.stderr}`);
+  // The new `override` node type appears under its own `by-type` group, the
+  // index where the gate's waiver path is auditable (acceptance example 4).
+  const byType = load(
+    fs.readFileSync(path.join(dir, "specs", "indexes", "by-type.yaml"), "utf8"),
+  ) as { "by-type": Record<string, string[]> };
+  assert.deepEqual(
+    byType["by-type"].override,
+    ["override-waiver-3333"],
+    `expected override-waiver-3333 under by-type: override, got:\n${JSON.stringify(byType, null, 2)}`,
+  );
 });
 
 test("unknown subcommand: usage text on stderr, exit 2", () => {

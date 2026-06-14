@@ -17,13 +17,16 @@ pass" + "Require branches to be up to date"):
 | --- | --- | --- |
 | `ci` | `ci.yml` | `pnpm test`, `pnpm typecheck`, `pnpm lint` on every PR |
 | `spec-index` | `spec-index.yml` | committed `specs/indexes/` match a fresh `pnpm spec:index` |
-| `spec-validate` | `spec-validate.yml` | `pnpm spec:validate` on PRs touching `specs/**` |
+| `spec-validate` | `spec-validate.yml` | runs on every PR; validates with `pnpm spec:validate` when `specs/**` changed, otherwise reports success |
 | `pr-evidence` | `pr-evidence.yml` | every code PR carries an `evidences` edge to an approved contract, or an `override` waiving the `pr-evidence` check |
 
-`pr-evidence` and `spec-validate` decide internally whether a given PR is in
-scope (e.g. a docs-only PR is skipped inside the job and still reports
-success), so they are safe to mark **required** without stranding
-out-of-scope PRs on a check that never reports.
+`pr-evidence` and `spec-validate` run on **every** PR and decide scope *inside*
+the job (`pr-evidence` skips a specs/docs-only PR; `spec-validate` skips a PR
+that touches no `specs/**`), reporting success when out of scope. Because they
+always report, they are safe to mark **required**. A check that filters at the
+event level (a workflow-level `paths:` filter) must **not** be made required: on
+a PR it never runs for, no status is posted and GitHub blocks the PR forever
+waiting on it.
 
 ## Required reviews (CODEOWNERS)
 
@@ -32,6 +35,16 @@ graph owner (`@sb-dev`) to review changes under:
 
 - `/specs/schema/` — node/edge/validation schema
 - `/specs/nodes/contract-*` — contract nodes
+- `/specs/nodes/override-*` — gate-waiver nodes
+
+**Override integrity depends on this last rule plus required code-owner
+review.** `spec:gate` clause (b) waives `pr-evidence` on any author-added
+`override` node and does **not** authenticate the override's `approved_by`
+field — that field is *provenance* (free-text record of who signed off), not an
+authorization check. The only thing that makes a waiver an *independent* human
+approval rather than a self-issued one is that adding an `override` node trips
+the CODEOWNERS rule above and blocks the PR until the graph owner reviews it. If
+"Require review from Code Owners" is off, the override path is self-serve.
 
 ## How `pr-evidence` is satisfied
 

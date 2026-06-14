@@ -54,8 +54,15 @@ is implemented. Implementation commit: `b2d0f0f` on branch
    CLI fixture validates green.
 5. **Index drift** — covered by the existing `indexes-fresh` rule /
    `bad/index-drift` test and the `spec-index.yml` `git diff --exit-code` step.
-6. **Skips** — `pr-evidence.yml` decides the specs-only/docs-only skip inside
-   the job (early exit 0); `spec-validate.yml` is `paths: ['specs/**']`.
+6. **Skips** — both `pr-evidence.yml` and `spec-validate.yml` run on **every**
+   PR and decide scope *inside* the job (early exit 0 / report success when out
+   of scope). Note: contract `…5039`'s Scope and acceptance example #6 describe
+   `spec-validate` as event-level `paths: ['specs/**']` and `pr-evidence` via
+   workflow-level `paths-ignore`; the as-built supersedes both with in-job
+   scoping per decision amendment 4 — so a literal re-run of example #6 (a
+   docs/specs-only PR expecting the workflow not to *fire*) is **not** a
+   regression: the workflow fires and reports success without running the gate
+   (see "Review-round hardening" below).
 
 ## Amendment-driven hardening verified
 
@@ -67,6 +74,51 @@ is implemented. Implementation commit: `b2d0f0f` on branch
   whole graph look "added").
 - **named check pinned** — a `waives → spec-validate` (wrong check) unit test
   does not satisfy the `pr-evidence` gate.
+
+## Review-round hardening (PR #4 review)
+
+Folded in from the adversarial self-review on PR #4. All within the approved
+contract/brief (several map to its own Critique and decision amendments 3/4);
+no new contract required.
+
+- **`spec-validate` made required-safe** (🔴 High) — dropped the event-level
+  `paths: ['specs/**']` filter; `spec-validate.yml` now runs on every PR and
+  skips *inside* the job (mirrors `pr-evidence.yml`), so the required check
+  always reports and can never strand a code-only PR. Closes the contract's own
+  "skipped-required-check pitfall" for `spec-validate`; `docs/branch-protection.md`
+  updated to match and to warn that event-level path-filtered checks must not be
+  required.
+- **Override no longer self-approvable** (🟠 Medium) — `.github/CODEOWNERS`
+  adds `/specs/nodes/override-* @sb-dev`; since clause (b) requires an added
+  `override` *node*, this forces independent code-owner review on any waiver.
+  `docs/branch-protection.md` documents that override integrity depends on that
+  rule + required code-owner review, and that `approved_by` is provenance, not
+  authentication.
+- **Git adapter fails closed** (🟠 Medium / 🟡 Low) — `tools/gate.ts` `git()`
+  now throws on a failed spawn / signal (no more `?? 1`); `baseEdgeIds` proves
+  file presence via `ls-tree` before `git show` and throws on an unexpected
+  failure; `addedNodeIds` throws on a non-zero `ls-tree`. An infra error now
+  fails the gate instead of emptying the base set and passing open.
+- **`expires` calendar-checked** (⚪ nit) — `tools/yaml.ts` `fromYaml` parses
+  with CORE_SCHEMA (dates as strings, no `!!timestamp` overflow-normalization),
+  and `toDateString` round-trips the date components, rejecting impossible
+  values like `2099-99-99` (quoted or unquoted) that previously waived far into
+  the future. Inert on output: indexes/reports carry no dates, so regenerated
+  files stay byte-identical (`spec:index` diff clean).
+- **Clause (a) type guard** (⚪ nit) — the `decomposes` target must now be
+  `type: contract`, not merely a node that is `approved` (mirrors clause (b)).
+- **Coverage added** — new `tests/gate-io.test.ts` exercises the git adapter
+  and `spec:gate` CLI end-to-end in throwaway git repos (`resolveBase` throw on
+  bad base, `addedEdgeIds`/`addedNodeIds` vs real refs, `runGate` pass/fail, CLI
+  exit codes, and a **fail-closed** test that a broken `git` yields exit 1 not
+  PASS); `tests/gate.test.ts` adds missing/invalid-`expires` and non-contract
+  clause-(a) cases; the `good-waives` test now asserts `override` under
+  `by-type`.
+
+Re-verified: `pnpm test` → `# tests 40 / # pass 40 / # fail 0`;
+`pnpm typecheck`, `pnpm lint` clean; `pnpm spec:validate` →
+`OK — 10 rules, 0 errors`; `pnpm spec:index` + `git diff --exit-code
+specs/indexes/` clean (CORE_SCHEMA leaves index bytes identical).
 
 ## Known v1 limitation (accepted in the decision)
 
