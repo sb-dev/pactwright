@@ -37,6 +37,13 @@ rules:
     fields: [source, target]
   - id: edges-endpoint-types
     kind: edge_endpoint_types
+  # A capability's `paths` must be a non-empty string list (required_fields
+  # only proves presence): a scalar/typo'd `paths:` would silently own nothing.
+  - id: capability-paths-shape
+    kind: list_field
+    scope: nodes
+    type: capability
+    field: paths
   - id: indexes-fresh
     kind: indexes_fresh
 

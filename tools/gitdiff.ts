@@ -108,7 +108,21 @@ export function addedNodeIds(spec: LoadedSpec, base: string): Set<string> {
 }
 
 /** Repo-relative paths the PR changes: `git diff --name-only <base>...HEAD`
- * (the conventional PR diff, from the merge-base to HEAD). Fails closed. */
+ * (the conventional PR diff, from the merge-base to HEAD). Fails closed.
+ *
+ * Note the deliberate base asymmetry with `addedNodeIds`/`addedEdgeIds`, which
+ * compare against the base *tip* (`ls-tree base` / `show base:path`):
+ *   - Three-dot here is correct for a file diff — two-dot `<base>..HEAD` would
+ *     report files that advanced on `main` after the fork point as "changed",
+ *     even when this PR never touched them.
+ *   - The `added*` helpers stay on the base tip rather than routing through an
+ *     extra `git merge-base` (which would add a shallow-checkout failure mode in
+ *     CI for no behavioural gain): the never-delete invariant makes the
+ *     divergence benign. A node/edge added on `main` after the fork is absent
+ *     from HEAD, so it is never miscounted as "added"; and this PR's own
+ *     additions are always absent from the base tip, so they always are. The two
+ *     measures only diverge if `main` advances past the fork point, and then
+ *     only in a way that cannot flip a gate verdict. */
 export function changedFiles(base: string): string[] {
   const r = git(["diff", "--name-only", `${base}...HEAD`]);
   if (r.status !== 0) {

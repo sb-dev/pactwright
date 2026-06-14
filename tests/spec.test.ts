@@ -71,6 +71,7 @@ for (const name of [
   "bad-status",
   "edge-missing-field",
   "waives-unknown-check",
+  "capability-bad-paths",
 ]) {
   test(`bad/${name}: validate fails with the pinned errors`, (t) => {
     const dir = copyFixture(t, `bad/${name}`);

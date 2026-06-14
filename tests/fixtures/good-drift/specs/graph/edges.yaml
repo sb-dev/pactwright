@@ -9,3 +9,9 @@ edges:
     type: flags
     target: capability-x-aaaa
     created: 2026-06-11
+  # flags also targets evidence (the other list member): covers it directly.
+  - id: edge-flags-3333
+    source: drift-finding-x-cccc
+    type: flags
+    target: evidence-x-bbbb
+    created: 2026-06-11

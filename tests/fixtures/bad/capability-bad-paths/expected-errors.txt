@@ -1,0 +1,1 @@
+[rule: capability-paths-shape] node capability-bad-0001 field 'paths' must be a non-empty list of strings

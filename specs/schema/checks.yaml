@@ -11,4 +11,5 @@ checks:
   - spec-validate
   - pr-evidence
   - check-diff
+  # reserved — no spec:drift subcommand yet; waivable but currently unenforced
   - drift

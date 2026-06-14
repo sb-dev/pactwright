@@ -6,6 +6,7 @@ import * as path from "node:path";
 import { fileURLToPath } from "node:url";
 import { loadSpec } from "../tools/loader.ts";
 import { addedEdgeIds, addedNodeIds, resolveBase, runGate } from "../tools/gate.ts";
+import { changedFiles } from "../tools/gitdiff.ts";
 
 // End-to-end coverage for the git adapter (`resolveBase` / `addedEdgeIds` /
 // `addedNodeIds` / `runGate`) and the `spec:gate` CLI — the layer that the pure
@@ -109,6 +110,21 @@ test("addedEdgeIds/addedNodeIds report only what the PR adds over the base", (t)
     const spec = loadSpec();
     assert.deepEqual([...addedEdgeIds(spec, base)], ["edge-ev-0002"]); // decomposes was present at base
     assert.deepEqual([...addedNodeIds(spec, base)], ["evidence-pr-0003"]); // contract/brief were present at base
+  });
+});
+
+test("changedFiles lists the files a follow-up commit adds/modifies over the base", (t) => {
+  const { dir, base } = makeBaseRepo(t);
+  // changedFiles diffs commit-to-commit (<base>...HEAD), not the working tree,
+  // so the "PR" must be a real commit on top of the base — modify a tracked
+  // node and add a new file, then commit.
+  fs.appendFileSync(path.join(dir, "specs", "nodes", "contract-base-0001.md"), "\nedit\n");
+  fs.mkdirSync(path.join(dir, "tools"), { recursive: true });
+  fs.writeFileSync(path.join(dir, "tools", "added.txt"), "new\n");
+  git(dir, ["add", "-A"]);
+  git(dir, ["commit", "-qm", "pr"]);
+  inRepo(dir, base, () => {
+    assert.deepEqual(changedFiles(base).sort(), ["specs/nodes/contract-base-0001.md", "tools/added.txt"]);
   });
 });
 
