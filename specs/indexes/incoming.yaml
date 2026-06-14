@@ -1,4 +1,8 @@
 incoming:
+  brief-ci-gate-spec-tool-0852:
+    - id: edge-evidences-ci-gate-spec-tool-760c
+      source: evidence-ci-gate-spec-tool-693d
+      type: evidences
   brief-lifecycle-thin-commands-705d:
     - id: edge-evidences-thin-commands-a06a
       source: evidence-lifecycle-thin-commands-8296
@@ -7,6 +11,13 @@ incoming:
     - id: edge-evidences-spec-tooling-5d7c
       source: evidence-spec-tooling-schema-driven-9c4e
       type: evidences
+  contract-ci-gate-spec-tool-5039:
+    - id: edge-decomposes-ci-gate-spec-tool-2060
+      source: brief-ci-gate-spec-tool-0852
+      type: decomposes
+    - id: edge-selects-ci-gate-spec-tool-0333
+      source: decision-ci-gate-spec-tool-6d2b
+      type: selects
   contract-lifecycle-thin-commands-7c20:
     - id: edge-decomposes-thin-commands-8b79
       source: brief-lifecycle-thin-commands-705d
@@ -25,6 +36,16 @@ incoming:
     - id: edge-supersedes-capture-smoke-3f0a
       source: intent-capture-smoke-superseded-e7f8
       type: supersedes
+  intent-ci-enforcement-gates-5c90:
+    - id: edge-proposes-ci-gate-checks-as-nodes-111b
+      source: contract-ci-gate-checks-as-nodes-2d49
+      type: proposes
+    - id: edge-proposes-ci-gate-spec-tool-65c3
+      source: contract-ci-gate-spec-tool-5039
+      type: proposes
+    - id: edge-proposes-ci-gate-workflow-native-513e
+      source: contract-ci-gate-workflow-native-3489
+      type: proposes
   intent-claude-lifecycle-commands-f367:
     - id: edge-proposes-fat-commands-9a4e
       source: contract-lifecycle-fat-commands-a5a8

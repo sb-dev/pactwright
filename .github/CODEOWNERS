@@ -1,1 +1,8 @@
+# Schema changes and contract nodes require review by the graph owner.
 /specs/schema/ @sb-dev
+/specs/nodes/contract-* @sb-dev
+# Override nodes are the gate's escape hatch: spec:gate clause (b) waives the
+# pr-evidence check on an author-added override, and never authenticates its
+# `approved_by` field. Requiring code-owner review on override-* is what makes a
+# waiver an independent human approval rather than a self-issued one.
+/specs/nodes/override-* @sb-dev

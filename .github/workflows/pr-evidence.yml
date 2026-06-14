@@ -1,0 +1,48 @@
+name: pr-evidence
+
+# Runs on every PR (no path filter) so the required check always reports. The
+# specs-only / docs-only skip is decided inside the job; out-of-scope PRs
+# report success rather than stranding on a check that never runs.
+on:
+  pull_request:
+
+jobs:
+  pr-evidence:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Determine scope
+        id: scope
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+        run: |
+          changed="$(git diff --name-only "$BASE_SHA"...HEAD)"
+          echo "changed files:"
+          echo "$changed"
+          if [ -z "$changed" ]; then
+            echo "skip=true" >> "$GITHUB_OUTPUT"
+          elif echo "$changed" | grep -qvE '^(specs|docs)/'; then
+            echo "code changes present; gate applies"
+            echo "skip=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "only specs/ or docs/ touched; skipping"
+            echo "skip=true" >> "$GITHUB_OUTPUT"
+          fi
+      - uses: pnpm/action-setup@v4
+        if: steps.scope.outputs.skip != 'true'
+        with:
+          version: 9
+      - uses: actions/setup-node@v4
+        if: steps.scope.outputs.skip != 'true'
+        with:
+          node-version: 22
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+        if: steps.scope.outputs.skip != 'true'
+      - name: Evidence-or-override gate
+        if: steps.scope.outputs.skip != 'true'
+        env:
+          GATE_BASE: ${{ github.event.pull_request.base.sha }}
+        run: pnpm spec:gate

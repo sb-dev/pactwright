@@ -1,0 +1,45 @@
+name: spec-validate
+
+# Runs on every PR (no event-level path filter) so the required check always
+# reports. A workflow-level `paths:` filter would skip the run entirely on a
+# code-only PR, never posting a `spec-validate` status — and a required check
+# that never reports strands the PR. So scope is decided INSIDE the job (mirror
+# pr-evidence.yml): PRs not touching specs/** report success without validating.
+on:
+  pull_request:
+
+jobs:
+  spec-validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Determine scope
+        id: scope
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+        run: |
+          changed="$(git diff --name-only "$BASE_SHA"...HEAD)"
+          echo "changed files:"
+          echo "$changed"
+          if echo "$changed" | grep -qE '^specs/'; then
+            echo "specs/ touched; validating"
+            echo "skip=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "no specs/ changes; skipping"
+            echo "skip=true" >> "$GITHUB_OUTPUT"
+          fi
+      - uses: pnpm/action-setup@v4
+        if: steps.scope.outputs.skip != 'true'
+        with:
+          version: 9
+      - uses: actions/setup-node@v4
+        if: steps.scope.outputs.skip != 'true'
+        with:
+          node-version: 22
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+        if: steps.scope.outputs.skip != 'true'
+      - run: pnpm spec:validate
+        if: steps.scope.outputs.skip != 'true'
