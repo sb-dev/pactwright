@@ -127,7 +127,7 @@ Added by later phases:
 
 The graph starts with the core set and grows from real changes. Do not design the full taxonomy upfront; every type above beyond the core set arrives with the phase that needs it.
 
-The traceability requirement is unchanged: every meaningful change can be traced, by following edges, from intent → candidate contracts → decision → approved contract → brief → candidate patches → selected patch → evidence → release → post-deploy learning.
+The traceability requirement is unchanged: every meaningful change can be traced from intent to post-deploy learning by walking the edge table. Canonical edges point in provenance direction — from the newer record to the thing it is about (contract proposes intent, brief decomposes contract, evidence evidences brief, release includes evidence, finding learns-from release) — so forward, lifecycle-order traversal is done through the generated `incoming.yaml` index, never by authoring forward edges.
 
 The graph is not maintained manually. Claude Code and the Graph Maintainer update nodes and edges as part of the delivery workflow. Humans review and approve the meaning of those changes.
 
@@ -137,6 +137,7 @@ The graph is not maintained manually. Claude Code and the Graph Maintainer updat
 * All relationships live in `graph/edges.yaml` as typed edge records: id, source, type, target, created, optional status and metadata (reason, confidence, evidence, author).
 * IDs are stable and branch-safe for both nodes and edges: `<type>-<slug>-<short-hash>`, minted at creation. No fragile counters like `CC-001` — two branches can mint IDs concurrently without collision.
 * Edges are authored once, in one direction, in the edge table. Reverse lookups are never authored; they are generated into `indexes/incoming.yaml`.
+* Documentation convention: an arrow (→) in any document in the repository means canonical edge direction (source → target), never lifecycle or narrative order. Lifecycle order is written as numbered steps. Mnemonic: edges point backwards in time, from the newer record to what it is about — provenance, like citations.
 * The schema governs the graph: allowed node types, required fields, allowed edge types, allowed source → target combinations. A node or edge the schema does not allow is a validation failure, not a convention question.
 * Schema changes are contracts. They travel through the same lifecycle as code changes and are gated by CODEOWNERS.
 * Do not delete operational memory. Supersede old records via `supersedes` edges and status changes.
@@ -194,7 +195,7 @@ The human then decides whether to:
 * Reject all candidates
 * Defer the work
 
-The selection is recorded as a `decision` node with a `selects` edge to the chosen contract. The chosen contract's status becomes approved; siblings become rejected; the intent becomes addressed.
+The selection is recorded as a `decision` node with a `selects` edge to the chosen contract. The chosen contract's status becomes approved; siblings become rejected. The intent stays open — it becomes addressed only when final evidence covers a brief decomposing the approved contract. Statuses never duplicate what the edge table already encodes: "approved but not yet delivered" is readable from an open intent with a `selects` decision among its `proposes` edges.
 
 This is what makes the human decision gate meaningful.
 
@@ -546,7 +547,7 @@ First:
 
 Then:
 
-* `spec:validate` — checks unique node and edge IDs, edge endpoint existence, schema-allowed node and edge types, allowed source → target combinations, required fields, index freshness. Deterministic, non-zero exit on failure, suitable for pre-merge.
+* `spec:validate` — checks unique node and edge IDs, edge endpoint existence, schema-allowed node and edge types, allowed source → target combinations, required fields, index freshness. Deterministic, non-zero exit on failure, suitable for pre-merge. Semantic rules accumulate here as findings prove them out — e.g., intent status coherence (`addressed` iff covered by final evidence through the evidences/decomposes/proposes chain) and a docs lint reserving arrows for edge direction.
 
 Then:
 
@@ -598,6 +599,8 @@ A `post-deploy-finding` node, linked by `learns-from`, captures:
 Every divergence spawns a follow-up intent node automatically, re-entering the lifecycle.
 
 The system is incomplete if learning stops at merge.
+
+Learning is also not only post-deploy. Any finding during review or operation — by a human or an agent — is captured as an intent node with its origin recorded in the body, and enters the proposal market like any other intent. Conversations are not delivery records; the graph is.
 
 ## 22. Build Order
 
@@ -688,4 +691,3 @@ Humans make the trade-off decisions.
 The graph is continuously maintained and validated by the workflow so it remains reliable context for Claude Code.
 
 The system is not a single pipeline: it is a GitHub-native proposal-and-patch market where agents generate options, critics expose trade-offs, reviewers compare implementations, and humans approve the best direction — with every option, decision, and outcome recorded as nodes and edges.
-
