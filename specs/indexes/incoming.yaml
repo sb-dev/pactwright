@@ -15,6 +15,34 @@ incoming:
     - id: edge-evidences-spec-tooling-5d7c
       source: evidence-spec-tooling-schema-driven-9c4e
       type: evidences
+  capability-ci-enforcement-3e4f:
+    - id: edge-touches-ci-gate-ci-enforcement-a2c3
+      source: evidence-ci-gate-spec-tool-693d
+      type: touches
+    - id: edge-touches-drift-ci-enforcement-a7b8
+      source: evidence-drift-tool-assisted-3e58
+      type: touches
+  capability-lifecycle-commands-4f5a:
+    - id: edge-touches-drift-lifecycle-commands-a8c9
+      source: evidence-drift-tool-assisted-3e58
+      type: touches
+    - id: edge-touches-lifecycle-commands-a4e5
+      source: evidence-lifecycle-thin-commands-8296
+      type: touches
+  capability-spec-schema-2c3d:
+    - id: edge-touches-ci-gate-spec-schema-a3d4
+      source: evidence-ci-gate-spec-tool-693d
+      type: touches
+    - id: edge-touches-drift-spec-schema-a6a7
+      source: evidence-drift-tool-assisted-3e58
+      type: touches
+  capability-spec-tooling-1a2b:
+    - id: edge-touches-drift-spec-tooling-a5f6
+      source: evidence-drift-tool-assisted-3e58
+      type: touches
+    - id: edge-touches-spec-tooling-evidence-a1b2
+      source: evidence-spec-tooling-schema-driven-9c4e
+      type: touches
   contract-ci-gate-spec-tool-5039:
     - id: edge-decomposes-ci-gate-spec-tool-2060
       source: brief-ci-gate-spec-tool-0852
