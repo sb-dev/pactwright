@@ -84,3 +84,73 @@ edges:
     type: evidences
     target: brief-ci-gate-spec-tool-0852
     created: 2026-06-13
+  - id: edge-proposes-drift-tool-assisted-7173
+    source: contract-drift-tool-assisted-7173
+    type: proposes
+    target: intent-drift-detection-c7b1
+    created: 2026-06-14
+  - id: edge-proposes-drift-agent-native-bafa
+    source: contract-drift-agent-native-bafa
+    type: proposes
+    target: intent-drift-detection-c7b1
+    created: 2026-06-14
+  - id: edge-proposes-drift-deterministic-4a3a
+    source: contract-drift-deterministic-4a3a
+    type: proposes
+    target: intent-drift-detection-c7b1
+    created: 2026-06-14
+  - id: edge-selects-drift-tool-assisted-d5e2
+    source: decision-drift-tool-assisted-d5e2
+    type: selects
+    target: contract-drift-tool-assisted-7173
+    created: 2026-06-14
+  - id: edge-decomposes-drift-tool-assisted-6cd6
+    source: brief-drift-tool-assisted-d4ee
+    type: decomposes
+    target: contract-drift-tool-assisted-7173
+    created: 2026-06-14
+  - id: edge-evidences-drift-tool-assisted-3e58
+    source: evidence-drift-tool-assisted-3e58
+    type: evidences
+    target: brief-drift-tool-assisted-d4ee
+    created: 2026-06-14
+  - id: edge-touches-spec-tooling-evidence-a1b2
+    source: evidence-spec-tooling-schema-driven-9c4e
+    type: touches
+    target: capability-spec-tooling-1a2b
+    created: 2026-06-15
+  - id: edge-touches-ci-gate-ci-enforcement-a2c3
+    source: evidence-ci-gate-spec-tool-693d
+    type: touches
+    target: capability-ci-enforcement-3e4f
+    created: 2026-06-15
+  - id: edge-touches-ci-gate-spec-schema-a3d4
+    source: evidence-ci-gate-spec-tool-693d
+    type: touches
+    target: capability-spec-schema-2c3d
+    created: 2026-06-15
+  - id: edge-touches-lifecycle-commands-a4e5
+    source: evidence-lifecycle-thin-commands-8296
+    type: touches
+    target: capability-lifecycle-commands-4f5a
+    created: 2026-06-15
+  - id: edge-touches-drift-spec-tooling-a5f6
+    source: evidence-drift-tool-assisted-3e58
+    type: touches
+    target: capability-spec-tooling-1a2b
+    created: 2026-06-15
+  - id: edge-touches-drift-spec-schema-a6a7
+    source: evidence-drift-tool-assisted-3e58
+    type: touches
+    target: capability-spec-schema-2c3d
+    created: 2026-06-15
+  - id: edge-touches-drift-ci-enforcement-a7b8
+    source: evidence-drift-tool-assisted-3e58
+    type: touches
+    target: capability-ci-enforcement-3e4f
+    created: 2026-06-15
+  - id: edge-touches-drift-lifecycle-commands-a8c9
+    source: evidence-drift-tool-assisted-3e58
+    type: touches
+    target: capability-lifecycle-commands-4f5a
+    created: 2026-06-15

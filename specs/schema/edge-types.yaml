@@ -33,3 +33,13 @@ edge_types:
     # (references_resolve treats a known check name as resolved for `waives`).
     source: override
     target: any
+
+  touches:
+    source: evidence
+    target: capability
+
+  flags:
+    # drift-finding → evidence | capability. The target is a list of allowed
+    # node types; edge_endpoint_types enforces membership.
+    source: drift-finding
+    target: [evidence, capability]

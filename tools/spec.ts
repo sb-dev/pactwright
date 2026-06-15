@@ -1,21 +1,29 @@
 import { loadSpec } from "./loader.ts";
 import { writeIndexes } from "./indexer.ts";
 import { runGate } from "./gate.ts";
+import { runCheckDiff } from "./checkdiff.ts";
+import { runDriftMap } from "./driftmap.ts";
 import { formatFinding, runValidation, writeReport } from "./validator.ts";
 
-const USAGE = `usage: spec <index|validate|gate>
+const USAGE = `usage: spec <index|validate|gate|check-diff|drift-map>
 
-  index     regenerate the four files under specs/indexes/
-  validate  run the rules in specs/schema/validation-rules.yaml;
-            findings are persisted to specs/reports/validation.yaml
-  gate      pass/fail the PR evidence-or-override gate for the current diff
-            (base ref from $GATE_BASE, else merge-base with origin/HEAD)
+  index       regenerate the four files under specs/indexes/
+  validate    run the rules in specs/schema/validation-rules.yaml;
+              findings are persisted to specs/reports/validation.yaml
+  gate        pass/fail the PR evidence-or-override gate for the current diff
+              (base ref from $GATE_BASE, else merge-base with origin/HEAD)
+  check-diff  pass/fail the sensitive-paths gate: a touched sensitive_paths
+              glob needs a linked approved contract (bound to the owning
+              capability) or an override; same base ref as gate
+  drift-map   print the deterministic diff→capability drift packets (JSON)
 
 exit codes: 0 success, 1 validation/load/gate failure, 2 usage error`;
 
+const SUBCOMMANDS = ["index", "validate", "gate", "check-diff", "drift-map"];
+
 function main(): number {
   const subcommand = process.argv[2];
-  if (subcommand !== "index" && subcommand !== "validate" && subcommand !== "gate") {
+  if (subcommand === undefined || !SUBCOMMANDS.includes(subcommand)) {
     console.error(USAGE);
     return 2;
   }
@@ -35,6 +43,21 @@ function main(): number {
     }
     console.error(`spec:gate: FAIL — ${result.reason}`);
     return 1;
+  }
+
+  if (subcommand === "check-diff") {
+    const result = runCheckDiff(spec);
+    if (result.pass) {
+      console.log(`spec:check-diff: PASS — ${result.reason}`);
+      return 0;
+    }
+    console.error(`spec:check-diff: FAIL — ${result.reason}`);
+    return 1;
+  }
+
+  if (subcommand === "drift-map") {
+    console.log(JSON.stringify(runDriftMap(spec), null, 2));
+    return 0;
   }
 
   const findings = runValidation(spec);

@@ -1,0 +1,40 @@
+rules:
+  - id: nodes-required-fields
+    kind: required_fields
+    scope: nodes
+  - id: edges-required-fields
+    kind: required_fields
+    scope: edges
+  - id: nodes-type-declared
+    kind: enum_constraint
+    scope: nodes
+    field: type
+  - id: edges-type-declared
+    kind: enum_constraint
+    scope: edges
+    field: type
+  - id: nodes-id-unique
+    kind: unique_field
+    scope: nodes
+    field: id
+  - id: edges-id-unique
+    kind: unique_field
+    scope: edges
+    field: id
+  - id: nodes-status-in-enum
+    kind: enum_constraint
+    scope: nodes
+    field: status
+  - id: edges-references-resolve
+    kind: references_resolve
+    scope: edges
+    fields: [source, target]
+  - id: edges-endpoint-types
+    kind: edge_endpoint_types
+  - id: capability-paths-shape
+    kind: list_field
+    scope: nodes
+    type: capability
+    field: paths
+  - id: indexes-fresh
+    kind: indexes_fresh

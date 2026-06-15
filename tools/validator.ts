@@ -8,6 +8,7 @@ import enumConstraint from "./handlers/enum_constraint.ts";
 import referencesResolve from "./handlers/references_resolve.ts";
 import edgeEndpointTypes from "./handlers/edge_endpoint_types.ts";
 import indexesFresh from "./handlers/indexes_fresh.ts";
+import listField from "./handlers/list_field.ts";
 
 export interface Finding {
   rule: string;
@@ -25,6 +26,7 @@ const HANDLERS: Record<string, Handler> = {
   references_resolve: referencesResolve,
   edge_endpoint_types: edgeEndpointTypes,
   indexes_fresh: indexesFresh,
+  list_field: listField,
 };
 
 export function formatFinding(finding: Finding): string {

@@ -64,12 +64,14 @@ for (const name of [
   "dangling-target",
   "duplicate-node-id",
   "wrong-endpoint-type",
+  "flags-wrong-endpoint",
   "supersedes-across-types",
   "missing-required-field",
   "duplicate-edge-id",
   "bad-status",
   "edge-missing-field",
   "waives-unknown-check",
+  "capability-bad-paths",
 ]) {
   test(`bad/${name}: validate fails with the pinned errors`, (t) => {
     const dir = copyFixture(t, `bad/${name}`);
@@ -166,10 +168,24 @@ test("good-waives: an override waiving the pr-evidence named check validates", (
   );
 });
 
+test("good-drift: capability/touches/flags validate and group in by-type", (t) => {
+  const dir = copyFixture(t, "good-drift");
+  assert.equal(runCli(dir, "index").status, 0);
+  const result = runCli(dir, "validate");
+  assert.equal(result.status, 0, `expected validate to pass, got:\n${result.stderr}`);
+  // The new types appear under their own `by-type` groups, and the
+  // `flags → capability` list-target edge passes endpoint validation.
+  const byType = load(
+    fs.readFileSync(path.join(dir, "specs", "indexes", "by-type.yaml"), "utf8"),
+  ) as { "by-type": Record<string, string[]> };
+  assert.deepEqual(byType["by-type"].capability, ["capability-x-aaaa"]);
+  assert.deepEqual(byType["by-type"]["drift-finding"], ["drift-finding-x-cccc"]);
+});
+
 test("unknown subcommand: usage text on stderr, exit 2", () => {
   const result = runCli(repoRoot, "frobnicate");
   assert.equal(result.status, 2);
-  assert.ok(result.stderr.includes("usage: spec <index|validate|gate>"));
+  assert.ok(result.stderr.includes("usage: spec <index|validate|gate|check-diff|drift-map>"));
 });
 
 test("bad/malformed-node: a node without frontmatter fails closed (exit 1, no rule finding)", (t) => {

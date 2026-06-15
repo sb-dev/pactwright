@@ -3,6 +3,10 @@ outgoing:
     - id: edge-decomposes-ci-gate-spec-tool-2060
       target: contract-ci-gate-spec-tool-5039
       type: decomposes
+  brief-drift-tool-assisted-d4ee:
+    - id: edge-decomposes-drift-tool-assisted-6cd6
+      target: contract-drift-tool-assisted-7173
+      type: decomposes
   brief-lifecycle-thin-commands-705d:
     - id: edge-decomposes-thin-commands-8b79
       target: contract-lifecycle-thin-commands-7c20
@@ -22,6 +26,18 @@ outgoing:
   contract-ci-gate-workflow-native-3489:
     - id: edge-proposes-ci-gate-workflow-native-513e
       target: intent-ci-enforcement-gates-5c90
+      type: proposes
+  contract-drift-agent-native-bafa:
+    - id: edge-proposes-drift-agent-native-bafa
+      target: intent-drift-detection-c7b1
+      type: proposes
+  contract-drift-deterministic-4a3a:
+    - id: edge-proposes-drift-deterministic-4a3a
+      target: intent-drift-detection-c7b1
+      type: proposes
+  contract-drift-tool-assisted-7173:
+    - id: edge-proposes-drift-tool-assisted-7173
+      target: intent-drift-detection-c7b1
       type: proposes
   contract-lifecycle-fat-commands-a5a8:
     - id: edge-proposes-fat-commands-9a4e
@@ -43,6 +59,10 @@ outgoing:
     - id: edge-selects-ci-gate-spec-tool-0333
       target: contract-ci-gate-spec-tool-5039
       type: selects
+  decision-drift-tool-assisted-d5e2:
+    - id: edge-selects-drift-tool-assisted-d5e2
+      target: contract-drift-tool-assisted-7173
+      type: selects
   decision-lifecycle-thin-commands-41c8:
     - id: edge-selects-thin-commands-8069
       target: contract-lifecycle-thin-commands-7c20
@@ -55,14 +75,42 @@ outgoing:
     - id: edge-evidences-ci-gate-spec-tool-760c
       target: brief-ci-gate-spec-tool-0852
       type: evidences
+    - id: edge-touches-ci-gate-ci-enforcement-a2c3
+      target: capability-ci-enforcement-3e4f
+      type: touches
+    - id: edge-touches-ci-gate-spec-schema-a3d4
+      target: capability-spec-schema-2c3d
+      type: touches
+  evidence-drift-tool-assisted-3e58:
+    - id: edge-evidences-drift-tool-assisted-3e58
+      target: brief-drift-tool-assisted-d4ee
+      type: evidences
+    - id: edge-touches-drift-ci-enforcement-a7b8
+      target: capability-ci-enforcement-3e4f
+      type: touches
+    - id: edge-touches-drift-lifecycle-commands-a8c9
+      target: capability-lifecycle-commands-4f5a
+      type: touches
+    - id: edge-touches-drift-spec-schema-a6a7
+      target: capability-spec-schema-2c3d
+      type: touches
+    - id: edge-touches-drift-spec-tooling-a5f6
+      target: capability-spec-tooling-1a2b
+      type: touches
   evidence-lifecycle-thin-commands-8296:
     - id: edge-evidences-thin-commands-a06a
       target: brief-lifecycle-thin-commands-705d
       type: evidences
+    - id: edge-touches-lifecycle-commands-a4e5
+      target: capability-lifecycle-commands-4f5a
+      type: touches
   evidence-spec-tooling-schema-driven-9c4e:
     - id: edge-evidences-spec-tooling-5d7c
       target: brief-spec-tooling-schema-driven-8f2d
       type: evidences
+    - id: edge-touches-spec-tooling-evidence-a1b2
+      target: capability-spec-tooling-1a2b
+      type: touches
   intent-capture-smoke-superseded-e7f8:
     - id: edge-supersedes-capture-smoke-3f0a
       target: intent-capture-smoke-test-46d5

@@ -1,0 +1,34 @@
+node_types:
+  intent:
+    required_fields: [id, type, title, status, created]
+    requires_body:   true
+    status_values:   [open, addressed, rejected]
+
+  contract:
+    required_fields: [id, type, title, status, created]
+    requires_body:   true
+    status_values:   [candidate, approved, rejected, superseded]
+
+  brief:
+    required_fields: [id, type, title, status, created]
+    requires_body:   true
+    status_values:   [draft, approved, implemented]
+
+  evidence:
+    required_fields: [id, type, title, status, created]
+    requires_body:   true
+    status_values:   [draft, final]
+
+  decision:
+    required_fields: [id, type, title, decided_by, created]
+    requires_body:   true
+
+  capability:
+    required_fields: [id, type, title, status, paths]
+    requires_body:   true
+    status_values:   [active]
+
+  drift-finding:
+    required_fields: [id, type, title, status]
+    requires_body:   true
+    status_values:   [open, resolved, accepted]

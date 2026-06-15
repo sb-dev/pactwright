@@ -1,0 +1,1 @@
+[rule: edges-endpoint-types] edge edge-flag-wrong-1111 type=flags requires target.type=[evidence, capability], got intent

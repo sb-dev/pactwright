@@ -22,6 +22,7 @@ function spec(nodes: NodeRecord[], edges: EdgeRecord[]): LoadedSpec {
     edgeTypes: {},
     rules: [],
     checks: ["ci", "spec-index", "spec-validate", "pr-evidence"],
+    sensitivePaths: [],
   };
 }
 

@@ -37,5 +37,19 @@ rules:
     fields: [source, target]
   - id: edges-endpoint-types
     kind: edge_endpoint_types
+  # A capability's `paths` must be a non-empty string list (required_fields
+  # only proves presence): a scalar/typo'd `paths:` would silently own nothing.
+  - id: capability-paths-shape
+    kind: list_field
+    scope: nodes
+    type: capability
+    field: paths
   - id: indexes-fresh
     kind: indexes_fresh
+
+# Repo globs whose modification is "sensitive": a PR touching one of these must
+# carry a linked approved contract (bound to the capability that owns the path)
+# or an override, enforced by the diff-aware `spec:check-diff` (not a validate
+# rule — read as data by the script). Start with one glob (SPEC §19).
+sensitive_paths:
+  - specs/schema/**

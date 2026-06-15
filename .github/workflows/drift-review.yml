@@ -1,0 +1,50 @@
+name: drift-review
+
+# Warn-only drift detection on every PR — nothing here fails the build yet. The
+# deterministic sensitive-paths gate (spec:check-diff) runs with
+# continue-on-error so it annotates without blocking; flip it to BLOCKING by
+# removing `continue-on-error: true` from its step once it has behaved correctly
+# on ~5 real PRs (see docs/drift-detection.md). The semantic /detect-drift
+# judgment is warn-only and, until a Claude Code action is wired with pinned
+# credentials, is run manually.
+on:
+  pull_request:
+
+jobs:
+  drift-review:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+
+      # Deterministic layer — graduates to blocking FIRST (drop continue-on-error).
+      - name: Sensitive-paths gate (warn-only)
+        continue-on-error: true
+        env:
+          GATE_BASE: ${{ github.event.pull_request.base.sha }}
+        run: pnpm spec:check-diff
+
+      # Deterministic diff→capability packets, surfaced for the reviewer.
+      - name: Drift map (informational)
+        continue-on-error: true
+        env:
+          GATE_BASE: ${{ github.event.pull_request.base.sha }}
+        run: pnpm spec:drift-map
+
+      # Semantic layer — Claude-assisted /detect-drift, warn-only. Wire this to a
+      # Claude Code action once credentials/model are pinned (amendment 10);
+      # until then run `/detect-drift <pr-number>` manually and record findings
+      # via graph-maintainer. See docs/drift-detection.md.
+      - name: Semantic drift review (warn-only, manual until pinned)
+        run: |
+          echo "Run /detect-drift ${{ github.event.pull_request.number }} (warn-only)."
+          echo "See docs/drift-detection.md for the blocking-flip criteria."
