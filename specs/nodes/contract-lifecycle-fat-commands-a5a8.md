@@ -4,6 +4,7 @@ type: contract
 title: Self-contained slash commands with no agent layer
 status: rejected
 created: 2026-06-12
+class: 2
 ---
 
 ## Problem interpretation

@@ -9,6 +9,8 @@ import referencesResolve from "./handlers/references_resolve.ts";
 import edgeEndpointTypes from "./handlers/edge_endpoint_types.ts";
 import indexesFresh from "./handlers/indexes_fresh.ts";
 import listField from "./handlers/list_field.ts";
+import classRange from "./handlers/class_range.ts";
+import classMarketQuorum from "./handlers/class_market_quorum.ts";
 
 export interface Finding {
   rule: string;
@@ -27,6 +29,8 @@ const HANDLERS: Record<string, Handler> = {
   edge_endpoint_types: edgeEndpointTypes,
   indexes_fresh: indexesFresh,
   list_field: listField,
+  class_range: classRange,
+  class_market_quorum: classMarketQuorum,
 };
 
 export function formatFinding(finding: Finding): string {

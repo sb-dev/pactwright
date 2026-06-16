@@ -4,6 +4,7 @@ type: contract
 title: Work-class routing enforced by command discipline (no new gate)
 status: rejected
 created: 2026-06-16
+class: 2
 ---
 
 ## Problem interpretation

@@ -4,6 +4,7 @@ type: intent
 title: Detect drift between code changes and the spec graph
 status: addressed
 created: 2026-06-14
+class: 2
 ---
 
 Add drift detection.

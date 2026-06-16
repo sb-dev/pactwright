@@ -4,6 +4,7 @@ type: intent
 title: Add work-class routing and scope-integrity rules
 status: open
 created: 2026-06-16
+class: 3
 ---
 
 Add work-class routing and scope-integrity rules.

@@ -4,6 +4,7 @@ type: contract
 title: spec:index + spec:validate as a single hardcoded TS script
 status: rejected
 created: 2026-06-11
+class: 2
 ---
 
 ## Problem interpretation

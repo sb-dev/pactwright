@@ -4,6 +4,7 @@ type: contract
 title: Work-class routing enforced by a spec:validate graph invariant
 status: approved
 created: 2026-06-16
+class: 3
 ---
 
 This intent (`intent-work-class-routing-b9c4`) is itself multi-surface — it edits the schema (`node-types.yaml`), the validator (`tools/`), `CLAUDE.md`, and the lifecycle commands at once. Under its own routing table that makes it a **Class 3** change, which is precisely why this proposal market carries ≥2 candidate contracts (this is candidate **B** of three). The three candidates share an identical common core and differ only in how one acceptance criterion — *a Class 3 intent cannot be approved until ≥2 candidate contracts exist* — is enforced.

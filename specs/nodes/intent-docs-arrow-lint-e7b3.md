@@ -4,6 +4,7 @@ type: intent
 title: Lint arrow semantics in repository markdown
 status: open
 created: 2026-06-11
+class: 2
 ---
 
 ## Rule

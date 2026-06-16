@@ -4,6 +4,7 @@ type: contract
 title: Tool-assisted drift — tools/spec.ts maps the diff to capabilities; Claude judges the residual
 status: approved
 created: 2026-06-14
+class: 2
 ---
 
 ## Problem interpretation

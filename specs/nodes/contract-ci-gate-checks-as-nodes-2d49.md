@@ -4,6 +4,7 @@ type: contract
 title: Checks-as-nodes with platform-enforced blocking
 status: rejected
 created: 2026-06-13
+class: 2
 ---
 
 ## Problem interpretation

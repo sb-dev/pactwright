@@ -4,6 +4,7 @@ type: contract
 title: spec:index + spec:validate driven by validation-rules.yaml
 status: approved
 created: 2026-06-11
+class: 2
 ---
 
 ## Problem interpretation

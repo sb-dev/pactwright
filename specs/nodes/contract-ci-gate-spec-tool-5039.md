@@ -4,6 +4,7 @@ type: contract
 title: Graph-aware PR gate as a tools/spec.ts subcommand
 status: approved
 created: 2026-06-13
+class: 2
 ---
 
 ## Problem interpretation

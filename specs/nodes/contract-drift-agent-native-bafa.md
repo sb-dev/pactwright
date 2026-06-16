@@ -4,6 +4,7 @@ type: contract
 title: Agent-native drift — a drift-reviewer subagent maps and judges; only spec:check-diff is new tooling
 status: rejected
 created: 2026-06-14
+class: 2
 ---
 
 ## Problem interpretation

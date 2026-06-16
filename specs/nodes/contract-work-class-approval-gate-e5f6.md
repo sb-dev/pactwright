@@ -4,6 +4,7 @@ type: contract
 title: Work-class routing enforced by a diff-aware approval gate
 status: rejected
 created: 2026-06-16
+class: 2
 ---
 
 This intent is multi-surface — it edits `specs/schema/node-types.yaml`, the `spec:validate` handler set under `tools/handlers/`, `CLAUDE.md`, and the `.claude/commands/` lifecycle commands. Under its own proposed routing table that is the definition of **Class 3**, which is exactly why this proposal market carries three candidate contracts rather than one. This candidate (C) delivers the full fixed common core shared by all three siblings and adds a **diff-aware approval gate** — a new pure `(spec, input) => {pass, reason}` function in the established `tools/gate.ts` / `tools/checkdiff.ts` family, run by a new `spec:` subcommand — to machine-enforce "a Class-3 intent cannot be approved until ≥2 candidate contracts exist."

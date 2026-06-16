@@ -4,6 +4,7 @@ type: contract
 title: Thin slash commands delegating to four fat agents
 status: approved
 created: 2026-06-12
+class: 2
 ---
 
 ## Problem interpretation

@@ -4,6 +4,7 @@ type: intent
 title: Enforce intent lifecycle status mechanically via spec:validate
 status: open
 created: 2026-06-11
+class: 2
 ---
 
 ## Rule

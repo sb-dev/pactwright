@@ -4,6 +4,7 @@ type: contract
 title: Workflow-native PR gate; tools/spec.ts stays diff-agnostic
 status: rejected
 created: 2026-06-13
+class: 2
 ---
 
 ## Problem interpretation
