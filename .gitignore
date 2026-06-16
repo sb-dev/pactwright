@@ -44,3 +44,6 @@ specs/reports/
 .env
 .env.local
 .env.*.local
+
+# Docs
+drafts
