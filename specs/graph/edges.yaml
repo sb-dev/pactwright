@@ -179,3 +179,8 @@ edges:
     type: decomposes
     target: contract-work-class-validate-invariant-c3d4
     created: 2026-06-17
+  - id: edge-evidences-work-class-routing-c7e1
+    source: evidence-work-class-routing-f0a3
+    type: evidences
+    target: brief-work-class-routing-9a1c
+    created: 2026-06-17

@@ -131,6 +131,10 @@ outgoing:
     - id: edge-touches-spec-tooling-evidence-a1b2
       target: capability-spec-tooling-1a2b
       type: touches
+  evidence-work-class-routing-f0a3:
+    - id: edge-evidences-work-class-routing-c7e1
+      target: brief-work-class-routing-9a1c
+      type: evidences
   intent-capture-smoke-superseded-e7f8:
     - id: edge-supersedes-capture-smoke-3f0a
       target: intent-capture-smoke-test-46d5

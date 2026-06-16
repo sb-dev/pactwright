@@ -2,7 +2,7 @@
 id: brief-work-class-routing-9a1c
 type: brief
 title: Implement work-class routing — class field, integer range rule, market-quorum invariant, backfill, CLAUDE.md routing + scope-integrity, class-aware commands
-status: draft
+status: implemented
 created: 2026-06-17
 ---
 This brief decomposes `contract-work-class-validate-invariant-c3d4` (status: approved), honoring the 7 binding corrections in `decision-work-class-routing-4d7a`, which OVERRIDE any stale prose in the contract body (notably the contract's now-dropped `2.0`-rejection claim and its status-blind candidate count). CODE steps below are written by the implementer; the 22-node `class` backfill is a GRAPH WRITE performed by graph-maintainer, the sole writer of `specs/nodes/` and `specs/graph/edges.yaml`. The ordering exists to keep `pnpm spec:validate` green: because making `class` a required field reds every intent/contract that lacks it, the schema edit and the full backfill are **one inseparable commit** — schema-first staging is forbidden. Steps are labelled CODE or GRAPH WRITE; Step 1 contains both because schema + handlers + rule entries + backfill ship atomically.

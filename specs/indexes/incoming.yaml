@@ -15,6 +15,10 @@ incoming:
     - id: edge-evidences-spec-tooling-5d7c
       source: evidence-spec-tooling-schema-driven-9c4e
       type: evidences
+  brief-work-class-routing-9a1c:
+    - id: edge-evidences-work-class-routing-c7e1
+      source: evidence-work-class-routing-f0a3
+      type: evidences
   capability-ci-enforcement-3e4f:
     - id: edge-touches-ci-gate-ci-enforcement-a2c3
       source: evidence-ci-gate-spec-tool-693d
