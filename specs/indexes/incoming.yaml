@@ -71,6 +71,13 @@ incoming:
     - id: edge-selects-schema-driven-7a12
       source: decision-spec-tooling-schema-driven-5e8c
       type: selects
+  contract-work-class-validate-invariant-c3d4:
+    - id: edge-decomposes-work-class-routing-b3e2
+      source: brief-work-class-routing-9a1c
+      type: decomposes
+    - id: edge-selects-work-class-validate-invariant-6a9c
+      source: decision-work-class-routing-4d7a
+      type: selects
   intent-capture-smoke-test-46d5:
     - id: edge-supersedes-capture-smoke-3f0a
       source: intent-capture-smoke-superseded-e7f8
@@ -108,4 +115,14 @@ incoming:
       type: proposes
     - id: edge-proposes-schema-driven-4f08
       source: contract-spec-tooling-schema-driven-b2e7
+      type: proposes
+  intent-work-class-routing-b9c4:
+    - id: edge-proposes-work-class-approval-gate-3f4c
+      source: contract-work-class-approval-gate-e5f6
+      type: proposes
+    - id: edge-proposes-work-class-command-discipline-1f2a
+      source: contract-work-class-command-discipline-a1b2
+      type: proposes
+    - id: edge-proposes-work-class-validate-invariant-2f3b
+      source: contract-work-class-validate-invariant-c3d4
       type: proposes

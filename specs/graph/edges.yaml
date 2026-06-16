@@ -154,3 +154,28 @@ edges:
     type: touches
     target: capability-lifecycle-commands-4f5a
     created: 2026-06-15
+  - id: edge-proposes-work-class-command-discipline-1f2a
+    source: contract-work-class-command-discipline-a1b2
+    type: proposes
+    target: intent-work-class-routing-b9c4
+    created: 2026-06-16
+  - id: edge-proposes-work-class-validate-invariant-2f3b
+    source: contract-work-class-validate-invariant-c3d4
+    type: proposes
+    target: intent-work-class-routing-b9c4
+    created: 2026-06-16
+  - id: edge-proposes-work-class-approval-gate-3f4c
+    source: contract-work-class-approval-gate-e5f6
+    type: proposes
+    target: intent-work-class-routing-b9c4
+    created: 2026-06-16
+  - id: edge-selects-work-class-validate-invariant-6a9c
+    source: decision-work-class-routing-4d7a
+    type: selects
+    target: contract-work-class-validate-invariant-c3d4
+    created: 2026-06-16
+  - id: edge-decomposes-work-class-routing-b3e2
+    source: brief-work-class-routing-9a1c
+    type: decomposes
+    target: contract-work-class-validate-invariant-c3d4
+    created: 2026-06-17
