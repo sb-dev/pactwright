@@ -31,6 +31,13 @@ rules:
     kind: enum_constraint
     scope: nodes
     field: status
+  # `class` is a required integer field on intent + contract (work-class routing).
+  # required_fields proves presence; this constrains it to the routing classes.
+  - id: nodes-class-in-range
+    kind: class_range
+    scope: nodes
+    types: [intent, contract]
+    values: [0, 1, 2, 3]
   - id: edges-references-resolve
     kind: references_resolve
     scope: edges
@@ -44,6 +51,12 @@ rules:
     scope: nodes
     type: capability
     field: paths
+  # A selected (selects-edged) class-2+ intent must have >=2 live (non-superseded)
+  # candidate contracts. Runs after edges-references-resolve so endpoints resolve;
+  # the handler also defensively skips any that do not. The work-class quorum
+  # backstop: an under-proposed class-2+ approval cannot stand in a green graph.
+  - id: class-market-quorum
+    kind: class_market_quorum
   - id: indexes-fresh
     kind: indexes_fresh
 

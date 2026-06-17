@@ -4,6 +4,7 @@ type: contract
 title: Deterministic structural drift — tools/spec.ts flags structural signals; no LLM in the detection loop
 status: rejected
 created: 2026-06-14
+class: 2
 ---
 
 ## Problem interpretation

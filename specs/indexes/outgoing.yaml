@@ -15,6 +15,10 @@ outgoing:
     - id: edge-decomposes-spec-tooling-3c91
       target: contract-spec-tooling-schema-driven-b2e7
       type: decomposes
+  brief-work-class-routing-9a1c:
+    - id: edge-decomposes-work-class-routing-b3e2
+      target: contract-work-class-validate-invariant-c3d4
+      type: decomposes
   contract-ci-gate-checks-as-nodes-2d49:
     - id: edge-proposes-ci-gate-checks-as-nodes-111b
       target: intent-ci-enforcement-gates-5c90
@@ -55,6 +59,18 @@ outgoing:
     - id: edge-proposes-schema-driven-4f08
       target: intent-spec-index-validate-a3f1
       type: proposes
+  contract-work-class-approval-gate-e5f6:
+    - id: edge-proposes-work-class-approval-gate-3f4c
+      target: intent-work-class-routing-b9c4
+      type: proposes
+  contract-work-class-command-discipline-a1b2:
+    - id: edge-proposes-work-class-command-discipline-1f2a
+      target: intent-work-class-routing-b9c4
+      type: proposes
+  contract-work-class-validate-invariant-c3d4:
+    - id: edge-proposes-work-class-validate-invariant-2f3b
+      target: intent-work-class-routing-b9c4
+      type: proposes
   decision-ci-gate-spec-tool-6d2b:
     - id: edge-selects-ci-gate-spec-tool-0333
       target: contract-ci-gate-spec-tool-5039
@@ -70,6 +86,10 @@ outgoing:
   decision-spec-tooling-schema-driven-5e8c:
     - id: edge-selects-schema-driven-7a12
       target: contract-spec-tooling-schema-driven-b2e7
+      type: selects
+  decision-work-class-routing-4d7a:
+    - id: edge-selects-work-class-validate-invariant-6a9c
+      target: contract-work-class-validate-invariant-c3d4
       type: selects
   evidence-ci-gate-spec-tool-693d:
     - id: edge-evidences-ci-gate-spec-tool-760c
@@ -111,6 +131,10 @@ outgoing:
     - id: edge-touches-spec-tooling-evidence-a1b2
       target: capability-spec-tooling-1a2b
       type: touches
+  evidence-work-class-routing-f0a3:
+    - id: edge-evidences-work-class-routing-c7e1
+      target: brief-work-class-routing-9a1c
+      type: evidences
   intent-capture-smoke-superseded-e7f8:
     - id: edge-supersedes-capture-smoke-3f0a
       target: intent-capture-smoke-test-46d5

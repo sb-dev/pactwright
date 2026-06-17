@@ -4,6 +4,7 @@ type: intent
 title: Record of the /capture-intent smoke test (supersedes throwaway)
 status: rejected
 created: 2026-06-13
+class: 0
 ---
 
 Supersedes `intent-capture-smoke-test-46d5`, the throwaway created to

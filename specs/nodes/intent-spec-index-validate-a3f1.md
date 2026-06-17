@@ -4,6 +4,7 @@ type: intent
 title: Build spec:index and spec:validate tooling for the /specs graph
 status: addressed
 created: 2026-06-11
+class: 2
 ---
 
 ## Problem

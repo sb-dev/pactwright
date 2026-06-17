@@ -10,12 +10,12 @@
 
 node_types:
   intent:
-    required_fields: [id, type, title, status, created]
+    required_fields: [id, type, title, status, created, class]
     requires_body:   true
     status_values:   [open, addressed, rejected]
 
   contract:
-    required_fields: [id, type, title, status, created]
+    required_fields: [id, type, title, status, created, class]
     requires_body:   true
     status_values:   [candidate, approved, rejected, superseded]
 

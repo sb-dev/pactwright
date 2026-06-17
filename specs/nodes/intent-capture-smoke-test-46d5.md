@@ -4,6 +4,7 @@ type: intent
 title: Throwaway smoke test of /capture-intent multi-line input
 status: rejected
 created: 2026-06-13
+class: 0
 ---
 
 This is a throwaway intent created to smoke-test the `/capture-intent`

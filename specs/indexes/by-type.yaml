@@ -4,6 +4,7 @@ by-type:
     - brief-drift-tool-assisted-d4ee
     - brief-lifecycle-thin-commands-705d
     - brief-spec-tooling-schema-driven-8f2d
+    - brief-work-class-routing-9a1c
   capability:
     - capability-ci-enforcement-3e4f
     - capability-lifecycle-commands-4f5a
@@ -20,16 +21,21 @@ by-type:
     - contract-lifecycle-thin-commands-7c20
     - contract-spec-tooling-hardcoded-c1a4
     - contract-spec-tooling-schema-driven-b2e7
+    - contract-work-class-approval-gate-e5f6
+    - contract-work-class-command-discipline-a1b2
+    - contract-work-class-validate-invariant-c3d4
   decision:
     - decision-ci-gate-spec-tool-6d2b
     - decision-drift-tool-assisted-d5e2
     - decision-lifecycle-thin-commands-41c8
     - decision-spec-tooling-schema-driven-5e8c
+    - decision-work-class-routing-4d7a
   evidence:
     - evidence-ci-gate-spec-tool-693d
     - evidence-drift-tool-assisted-3e58
     - evidence-lifecycle-thin-commands-8296
     - evidence-spec-tooling-schema-driven-9c4e
+    - evidence-work-class-routing-f0a3
   intent:
     - intent-capture-smoke-superseded-e7f8
     - intent-capture-smoke-test-46d5
@@ -39,3 +45,4 @@ by-type:
     - intent-drift-detection-c7b1
     - intent-spec-index-validate-a3f1
     - intent-status-coherence-d4f2
+    - intent-work-class-routing-b9c4

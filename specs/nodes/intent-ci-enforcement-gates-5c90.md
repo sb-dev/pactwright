@@ -4,6 +4,7 @@ type: intent
 title: Enforce spec-graph gates and human approval via GitHub Actions
 status: addressed
 created: 2026-06-13
+class: 2
 ---
 
 Add GitHub Actions enforcement and human approval gates.
