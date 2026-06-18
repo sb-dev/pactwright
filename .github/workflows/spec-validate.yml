@@ -30,7 +30,7 @@ jobs:
             echo "no specs/ changes; skipping"
             echo "skip=true" >> "$GITHUB_OUTPUT"
           fi
-      - uses: pnpm/action-setup@v4
+      - uses: pnpm/action-setup@v6
         if: steps.scope.outputs.skip != 'true'
         with:
           version: 9
