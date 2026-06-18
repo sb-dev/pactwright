@@ -55,6 +55,9 @@ incoming:
       source: decision-ci-gate-spec-tool-6d2b
       type: selects
   contract-critics-literal-panel-1c4a:
+    - id: edge-decomposes-critics-literal-panel-d44f
+      source: brief-critics-literal-panel-b5c6
+      type: decomposes
     - id: edge-selects-critics-literal-panel-a2d8
       source: decision-critics-literal-panel-9c4f
       type: selects

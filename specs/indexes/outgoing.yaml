@@ -3,6 +3,10 @@ outgoing:
     - id: edge-decomposes-ci-gate-spec-tool-2060
       target: contract-ci-gate-spec-tool-5039
       type: decomposes
+  brief-critics-literal-panel-b5c6:
+    - id: edge-decomposes-critics-literal-panel-d44f
+      target: contract-critics-literal-panel-1c4a
+      type: decomposes
   brief-drift-tool-assisted-d4ee:
     - id: edge-decomposes-drift-tool-assisted-6cd6
       target: contract-drift-tool-assisted-7173
