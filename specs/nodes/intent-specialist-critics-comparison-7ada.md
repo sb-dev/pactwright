@@ -2,7 +2,7 @@
 id: intent-specialist-critics-comparison-7ada
 type: intent
 title: Add specialist critics and a durable proposal comparison
-status: open
+status: addressed
 created: 2026-06-17
 class: 3
 ---

@@ -209,3 +209,8 @@ edges:
     type: decomposes
     target: contract-critics-literal-panel-1c4a
     created: 2026-06-18
+  - id: edge-evidences-critics-literal-panel-f4b1
+    source: evidence-critics-literal-panel-e2a7
+    type: evidences
+    target: brief-critics-literal-panel-b5c6
+    created: 2026-06-18

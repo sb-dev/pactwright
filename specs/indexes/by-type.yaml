@@ -37,6 +37,7 @@ by-type:
     - decision-work-class-routing-4d7a
   evidence:
     - evidence-ci-gate-spec-tool-693d
+    - evidence-critics-literal-panel-e2a7
     - evidence-drift-tool-assisted-3e58
     - evidence-lifecycle-thin-commands-8296
     - evidence-spec-tooling-schema-driven-9c4e

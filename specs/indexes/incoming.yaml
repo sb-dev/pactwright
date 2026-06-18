@@ -3,6 +3,10 @@ incoming:
     - id: edge-evidences-ci-gate-spec-tool-760c
       source: evidence-ci-gate-spec-tool-693d
       type: evidences
+  brief-critics-literal-panel-b5c6:
+    - id: edge-evidences-critics-literal-panel-f4b1
+      source: evidence-critics-literal-panel-e2a7
+      type: evidences
   brief-drift-tool-assisted-d4ee:
     - id: edge-evidences-drift-tool-assisted-3e58
       source: evidence-drift-tool-assisted-3e58

@@ -57,6 +57,14 @@ rules:
   # backstop: an under-proposed class-2+ approval cannot stand in a green graph.
   - id: class-market-quorum
     kind: class_market_quorum
+  # A selected (selects-edged) class-2+ intent whose SELECTED CONTRACT was
+  # created on/after `comparison_required_from` must have a comparison node whose
+  # `compares` edges cover every live (non-superseded) candidate of that intent
+  # and number >=2 distinct targets. Runs after class-market-quorum so the
+  # live-candidate set is meaningful; contracts created before the cutoff (and
+  # class-<=1 intents) are grandfathered. The cutoff is top-level data below.
+  - id: comparison-required
+    kind: comparison_required
   - id: indexes-fresh
     kind: indexes_fresh
 
@@ -66,3 +74,10 @@ rules:
 # rule — read as data by the script). Start with one glob (SPEC §19).
 sensitive_paths:
   - specs/schema/**
+
+# The date from which the proposal-comparison gate (`comparison-required`) is
+# enforced. A selected class-2+ intent whose SELECTED CONTRACT's `created` is
+# strictly before this is grandfathered (no comparison node required); absent or
+# malformed disables the gate. Top-level scalar data (not a rule), read by the
+# loader and consumed by the handler — mirrors `sensitive_paths`' read-as-data.
+comparison_required_from: "2026-06-18"

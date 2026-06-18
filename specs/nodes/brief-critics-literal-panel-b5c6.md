@@ -2,7 +2,7 @@
 id:      brief-critics-literal-panel-b5c6
 type:    brief
 title:   "Implement specialist critics + durable proposal comparison — comparison node/compares edge/comparison-required rule (atomic), nine bespoke critic agents, prose+command routing"
-status:  draft
+status:  implemented
 created: 2026-06-18
 ---
 This brief decomposes `contract-critics-literal-panel-1c4a` (status: approved, class 3), honoring the 7 binding directives in `decision-critics-literal-panel-9c4f`, which OVERRIDE any stale prose in the contract body — notably the contract's claim that the coverage predicate is "identical to `class_market_quorum`'s live-candidate predicate" (directive 1: that closure returns a *number*; coverage is genuinely NEW set logic) and its shown cutoff compare that normalizes only `C.created` (directive 2: normalize BOTH operands through `toDateString`). As a class-3 change this brief decomposes the work into three **lanes**; the per-lane patch market is available. It remains ONE brief node.

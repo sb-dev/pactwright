@@ -45,6 +45,10 @@ export interface LoadedSpec {
   /** Sensitive globs from schema/validation-rules.yaml `sensitive_paths`; `[]`
    * when absent. Read by `spec:check-diff`, not by a validation rule. */
   sensitivePaths: string[];
+  /** Top-level scalar from schema/validation-rules.yaml `comparison_required_from`;
+   * `undefined` when absent/empty/non-string. Read only by the `comparison-required`
+   * rule to grandfather contracts created before the cutoff. */
+  comparisonRequiredFrom?: string;
 }
 
 const FRONTMATTER = /^---\r?\n([\s\S]*?)\r?\n---(\r?\n|$)/;
@@ -128,6 +132,9 @@ export function loadSpec(specsRoot: string = path.join(process.cwd(), "specs")):
   const sensitivePaths = asList(rulesDoc["sensitive_paths"], rulesFile, "sensitive_paths")
     .map((p) => asString(p))
     .filter((p): p is string => p !== undefined);
+  // comparison_required_from is a top-level scalar (not a rule, not a list):
+  // absent/empty/non-string → undefined → the comparison-required gate is off.
+  const comparisonRequiredFrom = asString(rulesDoc["comparison_required_from"]);
 
   // checks.yaml is optional: absent in older graphs and in test fixtures, so
   // a missing file yields an empty registry rather than a load failure.
@@ -138,7 +145,7 @@ export function loadSpec(specsRoot: string = path.join(process.cwd(), "specs")):
         .filter((c): c is string => c !== undefined)
     : [];
 
-  return { root, nodes, edges, nodeTypes, edgeTypes, rules, checks, sensitivePaths };
+  return { root, nodes, edges, nodeTypes, edgeTypes, rules, checks, sensitivePaths, comparisonRequiredFrom };
 }
 
 /** Frontmatter/edge field as a non-empty string, else undefined. */

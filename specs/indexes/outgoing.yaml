@@ -121,6 +121,10 @@ outgoing:
     - id: edge-touches-ci-gate-spec-schema-a3d4
       target: capability-spec-schema-2c3d
       type: touches
+  evidence-critics-literal-panel-e2a7:
+    - id: edge-evidences-critics-literal-panel-f4b1
+      target: brief-critics-literal-panel-b5c6
+      type: evidences
   evidence-drift-tool-assisted-3e58:
     - id: edge-evidences-drift-tool-assisted-3e58
       target: brief-drift-tool-assisted-d4ee
