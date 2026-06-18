@@ -11,6 +11,7 @@ import indexesFresh from "./handlers/indexes_fresh.ts";
 import listField from "./handlers/list_field.ts";
 import classRange from "./handlers/class_range.ts";
 import classMarketQuorum from "./handlers/class_market_quorum.ts";
+import comparisonRequired from "./handlers/comparison_required.ts";
 
 export interface Finding {
   rule: string;
@@ -31,6 +32,7 @@ const HANDLERS: Record<string, Handler> = {
   list_field: listField,
   class_range: classRange,
   class_market_quorum: classMarketQuorum,
+  comparison_required: comparisonRequired,
 };
 
 export function formatFinding(finding: Finding): string {

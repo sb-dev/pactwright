@@ -101,6 +101,54 @@ a green graph / cannot merge.** `/propose-contracts` and `/approve-contract`
 also refuse up front in the normal path; the validation rule is the
 unbypassable backstop, not the only line of defence.
 
+### Critic routing
+
+`/review-contracts` routes critics by the intent's `class` and the candidates'
+declared scope — there is no code diff at proposal time, so routing reads each
+candidate's `## Scope`, never a diff:
+
+- **Class 0–1** — `spec-critic` only.
+- **Class 2** — `spec-critic` plus the specialist critics whose surface the
+  candidates' scope touches (when scope is ambiguous, route in *more* critics,
+  never fewer):
+  - UI: `ux-critic`
+  - payments or personal data: `security-privacy-critic` and `compliance-risk-critic`
+  - schema or service-boundary: `architecture-critic`
+  - testing: `qa-test-critic`
+  - runtime or ops: `reliability-ops-critic`
+  - cost or maintainability: `cost-maintainability-critic`
+  - release or rollout: `release-critic`
+  - product or value: `product-critic`
+- **Class 3** — `spec-critic` plus the full specialist panel (all nine),
+  regardless of apparent surface.
+
+Anything touching security, privacy, compliance, payments, production-sensitive
+paths, or multiple surfaces is already **Class 3** by the table above, so the
+full panel is the backstop for the class-2 scope-text heuristic. A perspective
+routed in but finding nothing is recorded as an explicit "no concern on this
+axis" — distinct from an axis never routed, so silence is never read as a clean
+bill.
+
+### Proposal comparison
+
+A class-2+ review ends by recording exactly **one** `comparison` node per market
+(`comparison —compares→ contract`, one edge per live candidate). Its body holds
+the candidate trade-off table, the critic findings grouped by perspective, and
+the case against each candidate; that body structure is a command/graph-maintainer
+convention, not a validation rule. The comparison is the durable record of *why
+the losers lost* — `/approve-contract`'s `decision` cites it, and it is never
+superseded by selection; re-running `/review-contracts` replaces the existing
+comparison rather than authoring a second.
+
+The gate is dated. `comparison_required_from` (in `schema/validation-rules.yaml`,
+currently `2026-06-18`) is the cutoff: a `selects` decision on a Class 2 or 3
+contract **created on or after** the cutoff is valid only if a `comparison` node
+already covers the live candidate set with at least two `compares` edges —
+machine-enforced by the `comparison-required` validation rule. Contracts created
+**before** the cutoff, and any class-≤1 selection, are grandfathered: the rule
+skips them, so every pre-cutoff selection stays green with no comparison and **no
+backfill** is performed.
+
 The optional free-text `produced_by` field records the agent or human that
 authored a node body. It is provenance plumbing for future agent scorecards,
 never a gate: it may be absent or hold any value, and no validation rule reads

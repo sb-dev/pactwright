@@ -3,6 +3,10 @@ outgoing:
     - id: edge-decomposes-ci-gate-spec-tool-2060
       target: contract-ci-gate-spec-tool-5039
       type: decomposes
+  brief-critics-literal-panel-b5c6:
+    - id: edge-decomposes-critics-literal-panel-d44f
+      target: contract-critics-literal-panel-1c4a
+      type: decomposes
   brief-drift-tool-assisted-d4ee:
     - id: edge-decomposes-drift-tool-assisted-6cd6
       target: contract-drift-tool-assisted-7173
@@ -30,6 +34,18 @@ outgoing:
   contract-ci-gate-workflow-native-3489:
     - id: edge-proposes-ci-gate-workflow-native-513e
       target: intent-ci-enforcement-gates-5c90
+      type: proposes
+  contract-critics-literal-panel-1c4a:
+    - id: edge-proposes-critics-literal-panel-4b8d
+      target: intent-specialist-critics-comparison-7ada
+      type: proposes
+  contract-critics-named-thin-rubric-3e6c:
+    - id: edge-proposes-critics-named-thin-rubric-6daf
+      target: intent-specialist-critics-comparison-7ada
+      type: proposes
+  contract-critics-registry-driven-2d5b:
+    - id: edge-proposes-critics-registry-driven-5c9e
+      target: intent-specialist-critics-comparison-7ada
       type: proposes
   contract-drift-agent-native-bafa:
     - id: edge-proposes-drift-agent-native-bafa
@@ -75,6 +91,10 @@ outgoing:
     - id: edge-selects-ci-gate-spec-tool-0333
       target: contract-ci-gate-spec-tool-5039
       type: selects
+  decision-critics-literal-panel-9c4f:
+    - id: edge-selects-critics-literal-panel-a2d8
+      target: contract-critics-literal-panel-1c4a
+      type: selects
   decision-drift-tool-assisted-d5e2:
     - id: edge-selects-drift-tool-assisted-d5e2
       target: contract-drift-tool-assisted-7173
@@ -101,6 +121,10 @@ outgoing:
     - id: edge-touches-ci-gate-spec-schema-a3d4
       target: capability-spec-schema-2c3d
       type: touches
+  evidence-critics-literal-panel-e2a7:
+    - id: edge-evidences-critics-literal-panel-f4b1
+      target: brief-critics-literal-panel-b5c6
+      type: evidences
   evidence-drift-tool-assisted-3e58:
     - id: edge-evidences-drift-tool-assisted-3e58
       target: brief-drift-tool-assisted-d4ee

@@ -184,3 +184,33 @@ edges:
     type: evidences
     target: brief-work-class-routing-9a1c
     created: 2026-06-17
+  - id: edge-proposes-critics-literal-panel-4b8d
+    source: contract-critics-literal-panel-1c4a
+    type: proposes
+    target: intent-specialist-critics-comparison-7ada
+    created: 2026-06-17
+  - id: edge-proposes-critics-registry-driven-5c9e
+    source: contract-critics-registry-driven-2d5b
+    type: proposes
+    target: intent-specialist-critics-comparison-7ada
+    created: 2026-06-17
+  - id: edge-proposes-critics-named-thin-rubric-6daf
+    source: contract-critics-named-thin-rubric-3e6c
+    type: proposes
+    target: intent-specialist-critics-comparison-7ada
+    created: 2026-06-17
+  - id: edge-selects-critics-literal-panel-a2d8
+    source: decision-critics-literal-panel-9c4f
+    type: selects
+    target: contract-critics-literal-panel-1c4a
+    created: 2026-06-18
+  - id: edge-decomposes-critics-literal-panel-d44f
+    source: brief-critics-literal-panel-b5c6
+    type: decomposes
+    target: contract-critics-literal-panel-1c4a
+    created: 2026-06-18
+  - id: edge-evidences-critics-literal-panel-f4b1
+    source: evidence-critics-literal-panel-e2a7
+    type: evidences
+    target: brief-critics-literal-panel-b5c6
+    created: 2026-06-18

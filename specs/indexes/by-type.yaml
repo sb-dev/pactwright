@@ -1,6 +1,7 @@
 by-type:
   brief:
     - brief-ci-gate-spec-tool-0852
+    - brief-critics-literal-panel-b5c6
     - brief-drift-tool-assisted-d4ee
     - brief-lifecycle-thin-commands-705d
     - brief-spec-tooling-schema-driven-8f2d
@@ -14,6 +15,9 @@ by-type:
     - contract-ci-gate-checks-as-nodes-2d49
     - contract-ci-gate-spec-tool-5039
     - contract-ci-gate-workflow-native-3489
+    - contract-critics-literal-panel-1c4a
+    - contract-critics-named-thin-rubric-3e6c
+    - contract-critics-registry-driven-2d5b
     - contract-drift-agent-native-bafa
     - contract-drift-deterministic-4a3a
     - contract-drift-tool-assisted-7173
@@ -26,12 +30,14 @@ by-type:
     - contract-work-class-validate-invariant-c3d4
   decision:
     - decision-ci-gate-spec-tool-6d2b
+    - decision-critics-literal-panel-9c4f
     - decision-drift-tool-assisted-d5e2
     - decision-lifecycle-thin-commands-41c8
     - decision-spec-tooling-schema-driven-5e8c
     - decision-work-class-routing-4d7a
   evidence:
     - evidence-ci-gate-spec-tool-693d
+    - evidence-critics-literal-panel-e2a7
     - evidence-drift-tool-assisted-3e58
     - evidence-lifecycle-thin-commands-8296
     - evidence-spec-tooling-schema-driven-9c4e
@@ -44,5 +50,6 @@ by-type:
     - intent-docs-arrow-lint-e7b3
     - intent-drift-detection-c7b1
     - intent-spec-index-validate-a3f1
+    - intent-specialist-critics-comparison-7ada
     - intent-status-coherence-d4f2
     - intent-work-class-routing-b9c4

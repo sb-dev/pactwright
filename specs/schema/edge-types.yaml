@@ -34,6 +34,13 @@ edge_types:
     source: override
     target: any
 
+  compares:
+    # comparison → contract. /review-contracts authors one `compares` edge per
+    # live candidate, linking the market's comparison node to each contract it
+    # weighs; `comparison-required` checks they cover the live candidate set.
+    source: comparison
+    target: contract
+
   touches:
     source: evidence
     target: capability

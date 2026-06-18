@@ -55,3 +55,13 @@ node_types:
     required_fields: [id, type, title, status]
     requires_body:   true
     status_values:   [open, resolved, accepted]
+
+  comparison:
+    # A durable, regenerable record of one proposal market: the candidate
+    # trade-off table, critic findings grouped by perspective, and the case
+    # against each candidate. Authored by /review-contracts, cited by the
+    # decision, never lifecycled or class-routed — so it carries NO status
+    # (nodes-status-in-enum skips status-less types, like decision/override)
+    # and NO class (nodes-class-in-range is scoped [intent, contract]).
+    required_fields: [id, type, title, created]
+    requires_body:   true
