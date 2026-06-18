@@ -221,3 +221,35 @@ test("(h2) unresolved selects/compares endpoints are skipped, no throw", () => {
   // Neither compares edge qualifies → covered = {} → finding (not a throw).
   assert.equal(findings.length, 1);
 });
+
+// (i) a compares target that resolves and is LIVE but proposes a DIFFERENT intent
+// does not count toward this market's coverage (the proposesIntent filter, lines 64-70).
+// Single live candidate is intentional: it isolates the >=2 count bar so a regressed
+// filter (which would count c-x) flips the result. class-market-quorum is a separate rule
+// and is not exercised here.
+test("(i) a live compares target proposing a different intent does not count", () => {
+  const findings = comparisonRequired(
+    RULE,
+    spec(
+      [
+        intent("i", 3),
+        intent("j", 2),
+        contract("c-a", "approved", "2026-06-18"), // only live candidate of i, selected
+        contract("c-x", "approved", "2026-06-18"), // live, but proposes j (wrong market)
+        comparison("cmp"),
+      ],
+      [
+        proposes("c-a", "i"),
+        proposes("c-x", "j"),
+        selects("s1", "c-a"),
+        compares("k1", "cmp", "c-a"),
+        compares("k2", "cmp", "c-x"), // wrong-market target: must be excluded
+      ],
+      CUT,
+    ),
+  );
+  // covered(i) = {c-a} (c-x excluded) → size 1 < 2 → finding.
+  // If the filter regressed: covered = {c-a, c-x}, size 2 → no finding (test would fail).
+  assert.equal(findings.length, 1);
+  assert.match(findings[0].detail, /c-a/);
+});

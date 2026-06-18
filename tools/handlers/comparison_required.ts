@@ -73,10 +73,8 @@ export default function comparisonRequired(rule: Rule, spec: LoadedSpec): Findin
     return covered;
   };
 
-  spec.edges.forEach((edge, i) => {
+  spec.edges.forEach((edge) => {
     if (asString(edge["type"]) !== "selects") return;
-    const subject = asString(edge["id"]) ?? `specs/graph/edges.yaml[${i}]`;
-    void subject; // findings are keyed on the intent; subject kept for parity
     const contractId = asString(edge["target"]);
     if (contractId === undefined) return;
     const contract = byId.get(contractId);
