@@ -49,6 +49,7 @@ by-type:
     - intent-claude-lifecycle-commands-f367
     - intent-docs-arrow-lint-e7b3
     - intent-drift-detection-c7b1
+    - intent-lane-model-integration-a1f7
     - intent-spec-index-validate-a3f1
     - intent-specialist-critics-comparison-7ada
     - intent-status-coherence-d4f2
