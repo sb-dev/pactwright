@@ -31,6 +31,18 @@ outgoing:
     - id: edge-proposes-ci-gate-workflow-native-513e
       target: intent-ci-enforcement-gates-5c90
       type: proposes
+  contract-critics-literal-panel-1c4a:
+    - id: edge-proposes-critics-literal-panel-4b8d
+      target: intent-specialist-critics-comparison-7ada
+      type: proposes
+  contract-critics-named-thin-rubric-3e6c:
+    - id: edge-proposes-critics-named-thin-rubric-6daf
+      target: intent-specialist-critics-comparison-7ada
+      type: proposes
+  contract-critics-registry-driven-2d5b:
+    - id: edge-proposes-critics-registry-driven-5c9e
+      target: intent-specialist-critics-comparison-7ada
+      type: proposes
   contract-drift-agent-native-bafa:
     - id: edge-proposes-drift-agent-native-bafa
       target: intent-drift-detection-c7b1
@@ -74,6 +86,10 @@ outgoing:
   decision-ci-gate-spec-tool-6d2b:
     - id: edge-selects-ci-gate-spec-tool-0333
       target: contract-ci-gate-spec-tool-5039
+      type: selects
+  decision-critics-literal-panel-9c4f:
+    - id: edge-selects-critics-literal-panel-a2d8
+      target: contract-critics-literal-panel-1c4a
       type: selects
   decision-drift-tool-assisted-d5e2:
     - id: edge-selects-drift-tool-assisted-d5e2

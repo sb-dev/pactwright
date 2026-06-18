@@ -54,6 +54,10 @@ incoming:
     - id: edge-selects-ci-gate-spec-tool-0333
       source: decision-ci-gate-spec-tool-6d2b
       type: selects
+  contract-critics-literal-panel-1c4a:
+    - id: edge-selects-critics-literal-panel-a2d8
+      source: decision-critics-literal-panel-9c4f
+      type: selects
   contract-drift-tool-assisted-7173:
     - id: edge-decomposes-drift-tool-assisted-6cd6
       source: brief-drift-tool-assisted-d4ee
@@ -119,6 +123,16 @@ incoming:
       type: proposes
     - id: edge-proposes-schema-driven-4f08
       source: contract-spec-tooling-schema-driven-b2e7
+      type: proposes
+  intent-specialist-critics-comparison-7ada:
+    - id: edge-proposes-critics-literal-panel-4b8d
+      source: contract-critics-literal-panel-1c4a
+      type: proposes
+    - id: edge-proposes-critics-named-thin-rubric-6daf
+      source: contract-critics-named-thin-rubric-3e6c
+      type: proposes
+    - id: edge-proposes-critics-registry-driven-5c9e
+      source: contract-critics-registry-driven-2d5b
       type: proposes
   intent-work-class-routing-b9c4:
     - id: edge-proposes-work-class-approval-gate-3f4c
