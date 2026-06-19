@@ -23,6 +23,13 @@ outgoing:
     - id: edge-decomposes-work-class-routing-b3e2
       target: contract-work-class-validate-invariant-c3d4
       type: decomposes
+  comparison-lane-integration-8d3c:
+    - id: edge-compares-lane-integration-convention-3f1a
+      target: contract-lane-integration-convention-body-4c1f
+      type: compares
+    - id: edge-compares-lane-integration-validated-4a2b
+      target: contract-lane-integration-validated-body-7b2e
+      type: compares
   contract-ci-gate-checks-as-nodes-2d49:
     - id: edge-proposes-ci-gate-checks-as-nodes-111b
       target: intent-ci-enforcement-gates-5c90
@@ -58,6 +65,14 @@ outgoing:
   contract-drift-tool-assisted-7173:
     - id: edge-proposes-drift-tool-assisted-7173
       target: intent-drift-detection-c7b1
+      type: proposes
+  contract-lane-integration-convention-body-4c1f:
+    - id: edge-proposes-lane-integration-convention-1d8e
+      target: intent-lane-model-integration-a1f7
+      type: proposes
+  contract-lane-integration-validated-body-7b2e:
+    - id: edge-proposes-lane-integration-validated-2e9f
+      target: intent-lane-model-integration-a1f7
       type: proposes
   contract-lifecycle-fat-commands-a5a8:
     - id: edge-proposes-fat-commands-9a4e

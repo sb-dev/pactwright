@@ -11,6 +11,8 @@ by-type:
     - capability-lifecycle-commands-4f5a
     - capability-spec-schema-2c3d
     - capability-spec-tooling-1a2b
+  comparison:
+    - comparison-lane-integration-8d3c
   contract:
     - contract-ci-gate-checks-as-nodes-2d49
     - contract-ci-gate-spec-tool-5039
@@ -21,6 +23,8 @@ by-type:
     - contract-drift-agent-native-bafa
     - contract-drift-deterministic-4a3a
     - contract-drift-tool-assisted-7173
+    - contract-lane-integration-convention-body-4c1f
+    - contract-lane-integration-validated-body-7b2e
     - contract-lifecycle-fat-commands-a5a8
     - contract-lifecycle-thin-commands-7c20
     - contract-spec-tooling-hardcoded-c1a4
