@@ -2,7 +2,7 @@
 id: intent-lane-model-integration-a1f7
 type: intent
 title: Add lane model, integration node, and evidence-to-capability wiring
-status: open
+status: addressed
 created: 2026-06-18
 class: 3
 ---

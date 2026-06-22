@@ -10,7 +10,9 @@ by-type:
   capability:
     - capability-ci-enforcement-3e4f
     - capability-lifecycle-commands-4f5a
+    - capability-spec-docs-8c1d
     - capability-spec-schema-2c3d
+    - capability-spec-tests-3a6e
     - capability-spec-tooling-1a2b
   comparison:
     - comparison-lane-integration-8d3c
@@ -37,6 +39,7 @@ by-type:
     - decision-ci-gate-spec-tool-6d2b
     - decision-critics-literal-panel-9c4f
     - decision-drift-tool-assisted-d5e2
+    - decision-graph-data-unowned-2f7b
     - decision-lane-integration-9f3b
     - decision-lifecycle-thin-commands-41c8
     - decision-spec-tooling-schema-driven-5e8c
@@ -45,6 +48,7 @@ by-type:
     - evidence-ci-gate-spec-tool-693d
     - evidence-critics-literal-panel-e2a7
     - evidence-drift-tool-assisted-3e58
+    - evidence-lane-integration-9b4c
     - evidence-lifecycle-thin-commands-8296
     - evidence-spec-tooling-schema-driven-9c4e
     - evidence-work-class-routing-f0a3

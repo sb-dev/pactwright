@@ -2,7 +2,7 @@
 id: intent-status-coherence-d4f2
 type: intent
 title: Enforce intent lifecycle status mechanically via spec:validate
-status: open
+status: addressed
 created: 2026-06-11
 class: 2
 ---

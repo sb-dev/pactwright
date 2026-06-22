@@ -11,6 +11,10 @@ incoming:
     - id: edge-evidences-drift-tool-assisted-3e58
       source: evidence-drift-tool-assisted-3e58
       type: evidences
+  brief-lane-integration-5e2d:
+    - id: edge-evidences-lane-integration-3d7a
+      source: evidence-lane-integration-9b4c
+      type: evidences
   brief-lifecycle-thin-commands-705d:
     - id: edge-evidences-thin-commands-a06a
       source: evidence-lifecycle-thin-commands-8296
@@ -34,8 +38,15 @@ incoming:
     - id: edge-touches-drift-lifecycle-commands-a8c9
       source: evidence-drift-tool-assisted-3e58
       type: touches
+    - id: edge-touches-lane-integration-lifecycle-7a1d
+      source: evidence-lane-integration-9b4c
+      type: touches
     - id: edge-touches-lifecycle-commands-a4e5
       source: evidence-lifecycle-thin-commands-8296
+      type: touches
+  capability-spec-docs-8c1d:
+    - id: edge-touches-lane-integration-docs-8b2e
+      source: evidence-lane-integration-9b4c
       type: touches
   capability-spec-schema-2c3d:
     - id: edge-touches-ci-gate-spec-schema-a3d4
@@ -44,9 +55,19 @@ incoming:
     - id: edge-touches-drift-spec-schema-a6a7
       source: evidence-drift-tool-assisted-3e58
       type: touches
+    - id: edge-touches-lane-integration-schema-6f9c
+      source: evidence-lane-integration-9b4c
+      type: touches
+  capability-spec-tests-3a6e:
+    - id: edge-touches-lane-integration-tests-9c3f
+      source: evidence-lane-integration-9b4c
+      type: touches
   capability-spec-tooling-1a2b:
     - id: edge-touches-drift-spec-tooling-a5f6
       source: evidence-drift-tool-assisted-3e58
+      type: touches
+    - id: edge-touches-lane-integration-tooling-5e8b
+      source: evidence-lane-integration-9b4c
       type: touches
     - id: edge-touches-spec-tooling-evidence-a1b2
       source: evidence-spec-tooling-schema-driven-9c4e

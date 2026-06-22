@@ -2,7 +2,7 @@
 id: brief-lane-integration-5e2d
 type: brief
 title: Lane model, integration node, and coverage-coherence rule (bootstrap single brief)
-status: draft
+status: implemented
 created: 2026-06-20
 produced_by: "/write-brief"
 ---

@@ -164,6 +164,25 @@ outgoing:
     - id: edge-touches-drift-spec-tooling-a5f6
       target: capability-spec-tooling-1a2b
       type: touches
+  evidence-lane-integration-9b4c:
+    - id: edge-evidences-lane-integration-3d7a
+      target: brief-lane-integration-5e2d
+      type: evidences
+    - id: edge-touches-lane-integration-docs-8b2e
+      target: capability-spec-docs-8c1d
+      type: touches
+    - id: edge-touches-lane-integration-lifecycle-7a1d
+      target: capability-lifecycle-commands-4f5a
+      type: touches
+    - id: edge-touches-lane-integration-schema-6f9c
+      target: capability-spec-schema-2c3d
+      type: touches
+    - id: edge-touches-lane-integration-tests-9c3f
+      target: capability-spec-tests-3a6e
+      type: touches
+    - id: edge-touches-lane-integration-tooling-5e8b
+      target: capability-spec-tooling-1a2b
+      type: touches
   evidence-lifecycle-thin-commands-8296:
     - id: edge-evidences-thin-commands-a06a
       target: brief-lifecycle-thin-commands-705d
