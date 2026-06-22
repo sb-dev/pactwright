@@ -49,6 +49,10 @@ export interface LoadedSpec {
    * `undefined` when absent/empty/non-string. Read only by the `comparison-required`
    * rule to grandfather contracts created before the cutoff. */
   comparisonRequiredFrom?: string;
+  /** Top-level scalar from schema/validation-rules.yaml `coverage_coherence_from`;
+   * `undefined` when absent/empty/non-string. Read only by the `coverage-coherence`
+   * rule to grandfather contracts selected before the cutoff. */
+  coverageCoherenceFrom?: string;
 }
 
 const FRONTMATTER = /^---\r?\n([\s\S]*?)\r?\n---(\r?\n|$)/;
@@ -135,6 +139,9 @@ export function loadSpec(specsRoot: string = path.join(process.cwd(), "specs")):
   // comparison_required_from is a top-level scalar (not a rule, not a list):
   // absent/empty/non-string → undefined → the comparison-required gate is off.
   const comparisonRequiredFrom = asString(rulesDoc["comparison_required_from"]);
+  // coverage_coherence_from mirrors comparison_required_from: a top-level scalar
+  // cutoff; absent/empty/non-string → undefined → the coverage-coherence gate is off.
+  const coverageCoherenceFrom = asString(rulesDoc["coverage_coherence_from"]);
 
   // checks.yaml is optional: absent in older graphs and in test fixtures, so
   // a missing file yields an empty registry rather than a load failure.
@@ -145,7 +152,7 @@ export function loadSpec(specsRoot: string = path.join(process.cwd(), "specs")):
         .filter((c): c is string => c !== undefined)
     : [];
 
-  return { root, nodes, edges, nodeTypes, edgeTypes, rules, checks, sensitivePaths, comparisonRequiredFrom };
+  return { root, nodes, edges, nodeTypes, edgeTypes, rules, checks, sensitivePaths, comparisonRequiredFrom, coverageCoherenceFrom };
 }
 
 /** Frontmatter/edge field as a non-empty string, else undefined. */

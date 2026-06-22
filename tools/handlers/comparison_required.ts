@@ -1,6 +1,7 @@
 import { asString, nodesById, type LoadedSpec, type Rule } from "../loader.ts";
 import { toDateString } from "../gate.ts";
 import type { Finding } from "../validator.ts";
+import { intentsForContract, liveProposingContracts } from "./coverage_traversal.ts";
 
 /**
  * A selected (`selects`-edged) intent of `class >= 2` whose SELECTED CONTRACT
@@ -31,22 +32,6 @@ export default function comparisonRequired(rule: Rule, spec: LoadedSpec): Findin
   // Cutoff normalized once; absent/malformed → gate disabled (fail-open).
   const cut = toDateString(spec.comparisonRequiredFrom);
   if (cut === undefined) return findings;
-
-  // Live (non-superseded) candidate contract ids that `proposes` the intent.
-  const liveCandidateSet = (intentId: string): Set<string> => {
-    const live = new Set<string>();
-    for (const edge of spec.edges) {
-      if (asString(edge["type"]) !== "proposes") continue;
-      if (asString(edge["target"]) !== intentId) continue;
-      const sourceId = asString(edge["source"]);
-      if (sourceId === undefined) continue;
-      const source = byId.get(sourceId);
-      if (source === undefined) continue; // unresolved: references_resolve owns it
-      if (asString(source.data["status"]) === "superseded") continue;
-      live.add(sourceId);
-    }
-    return live;
-  };
 
   // Distinct contract ids covered by a `compares` edge that also `proposes` the
   // intent and is live — the qualifying covered set for this market.
@@ -85,10 +70,7 @@ export default function comparisonRequired(rule: Rule, spec: LoadedSpec): Findin
     if (c === undefined) return; // absent/unparseable created: fail-open skip
     if (c < cut) return; // selected contract predates the cutoff: grandfathered
 
-    const intentIds = spec.edges
-      .filter((e) => asString(e["type"]) === "proposes" && asString(e["source"]) === contractId)
-      .map((e) => asString(e["target"]))
-      .filter((id): id is string => id !== undefined);
+    const intentIds = intentsForContract(spec, contractId);
 
     for (const intentId of intentIds) {
       const intent = byId.get(intentId);
@@ -96,7 +78,7 @@ export default function comparisonRequired(rule: Rule, spec: LoadedSpec): Findin
       const cls = intent.data["class"];
       if (typeof cls !== "number" || cls < 2) continue; // class < 2 needs no comparison
 
-      const live = liveCandidateSet(intentId);
+      const live = liveProposingContracts(spec, byId, intentId);
       const covered = coveredSet(intentId);
       const uncovered = [...live].filter((id) => !covered.has(id));
 
