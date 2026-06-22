@@ -2,7 +2,7 @@
 id: contract-lane-integration-validated-body-7b2e
 type: contract
 title: Lane model and integration node (integration body machine-validated)
-status: candidate
+status: rejected
 created: 2026-06-19
 class: 3
 ---

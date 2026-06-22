@@ -2,7 +2,7 @@
 id: contract-lane-integration-convention-body-4c1f
 type: contract
 title: Lane model and integration node (integration body by agent + convention)
-status: candidate
+status: approved
 created: 2026-06-19
 class: 3
 ---

@@ -234,3 +234,13 @@ edges:
     type: compares
     target: contract-lane-integration-validated-body-7b2e
     created: 2026-06-19
+  - id: edge-selects-lane-integration-convention-7c4d
+    source: decision-lane-integration-9f3b
+    type: selects
+    target: contract-lane-integration-convention-body-4c1f
+    created: 2026-06-20
+  - id: edge-decomposes-lane-integration-6b3f
+    source: brief-lane-integration-5e2d
+    type: decomposes
+    target: contract-lane-integration-convention-body-4c1f
+    created: 2026-06-20

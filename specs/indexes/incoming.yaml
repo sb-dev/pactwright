@@ -76,6 +76,12 @@ incoming:
     - id: edge-compares-lane-integration-convention-3f1a
       source: comparison-lane-integration-8d3c
       type: compares
+    - id: edge-decomposes-lane-integration-6b3f
+      source: brief-lane-integration-5e2d
+      type: decomposes
+    - id: edge-selects-lane-integration-convention-7c4d
+      source: decision-lane-integration-9f3b
+      type: selects
   contract-lane-integration-validated-body-7b2e:
     - id: edge-compares-lane-integration-validated-4a2b
       source: comparison-lane-integration-8d3c

@@ -11,6 +11,10 @@ outgoing:
     - id: edge-decomposes-drift-tool-assisted-6cd6
       target: contract-drift-tool-assisted-7173
       type: decomposes
+  brief-lane-integration-5e2d:
+    - id: edge-decomposes-lane-integration-6b3f
+      target: contract-lane-integration-convention-body-4c1f
+      type: decomposes
   brief-lifecycle-thin-commands-705d:
     - id: edge-decomposes-thin-commands-8b79
       target: contract-lifecycle-thin-commands-7c20
@@ -113,6 +117,10 @@ outgoing:
   decision-drift-tool-assisted-d5e2:
     - id: edge-selects-drift-tool-assisted-d5e2
       target: contract-drift-tool-assisted-7173
+      type: selects
+  decision-lane-integration-9f3b:
+    - id: edge-selects-lane-integration-convention-7c4d
+      target: contract-lane-integration-convention-body-4c1f
       type: selects
   decision-lifecycle-thin-commands-41c8:
     - id: edge-selects-thin-commands-8069

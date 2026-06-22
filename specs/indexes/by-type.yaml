@@ -3,6 +3,7 @@ by-type:
     - brief-ci-gate-spec-tool-0852
     - brief-critics-literal-panel-b5c6
     - brief-drift-tool-assisted-d4ee
+    - brief-lane-integration-5e2d
     - brief-lifecycle-thin-commands-705d
     - brief-spec-tooling-schema-driven-8f2d
     - brief-work-class-routing-9a1c
@@ -36,6 +37,7 @@ by-type:
     - decision-ci-gate-spec-tool-6d2b
     - decision-critics-literal-panel-9c4f
     - decision-drift-tool-assisted-d5e2
+    - decision-lane-integration-9f3b
     - decision-lifecycle-thin-commands-41c8
     - decision-spec-tooling-schema-driven-5e8c
     - decision-work-class-routing-4d7a
