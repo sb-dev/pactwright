@@ -166,6 +166,16 @@ incoming:
     - id: edge-proposes-lane-integration-validated-2e9f
       source: contract-lane-integration-validated-body-7b2e
       type: proposes
+  intent-patch-market-synthesis-3b1e:
+    - id: edge-proposes-patch-market-ci-gate-b2d8
+      source: contract-patch-market-ci-gate-6b7e
+      type: proposes
+    - id: edge-proposes-patch-market-reuse-evidence-gate-c3e9
+      source: contract-patch-market-reuse-evidence-gate-c3f8
+      type: proposes
+    - id: edge-proposes-patch-market-validate-authoritative-a1c7
+      source: contract-patch-market-validate-authoritative-9d41
+      type: proposes
   intent-spec-index-validate-a3f1:
     - id: edge-proposes-hardcoded-9d31
       source: contract-spec-tooling-hardcoded-c1a4

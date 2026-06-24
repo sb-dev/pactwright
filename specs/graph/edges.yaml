@@ -274,3 +274,18 @@ edges:
     type: touches
     target: capability-spec-tests-3a6e
     created: 2026-06-20
+  - id: edge-proposes-patch-market-validate-authoritative-a1c7
+    source: contract-patch-market-validate-authoritative-9d41
+    type: proposes
+    target: intent-patch-market-synthesis-3b1e
+    created: 2026-06-24
+  - id: edge-proposes-patch-market-ci-gate-b2d8
+    source: contract-patch-market-ci-gate-6b7e
+    type: proposes
+    target: intent-patch-market-synthesis-3b1e
+    created: 2026-06-24
+  - id: edge-proposes-patch-market-reuse-evidence-gate-c3e9
+    source: contract-patch-market-reuse-evidence-gate-c3f8
+    type: proposes
+    target: intent-patch-market-synthesis-3b1e
+    created: 2026-06-24
