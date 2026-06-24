@@ -19,6 +19,30 @@ outgoing:
     - id: edge-decomposes-thin-commands-8b79
       target: contract-lifecycle-thin-commands-7c20
       type: decomposes
+  brief-patch-market-ci-d8a4:
+    - id: edge-decomposes-patch-market-ci-4d5c
+      target: contract-patch-market-ci-gate-6b7e
+      type: decomposes
+  brief-patch-market-commands-c5f3:
+    - id: edge-decomposes-patch-market-commands-3c4d
+      target: contract-patch-market-ci-gate-6b7e
+      type: decomposes
+  brief-patch-market-docs-e2b5:
+    - id: edge-decomposes-patch-market-docs-5e6b
+      target: contract-patch-market-ci-gate-6b7e
+      type: decomposes
+  brief-patch-market-gate-b7e2:
+    - id: edge-decomposes-patch-market-gate-2b3e
+      target: contract-patch-market-ci-gate-6b7e
+      type: decomposes
+  brief-patch-market-schema-a4d1:
+    - id: edge-decomposes-patch-market-schema-1a2f
+      target: contract-patch-market-ci-gate-6b7e
+      type: decomposes
+  brief-patch-market-tests-f6c7:
+    - id: edge-decomposes-patch-market-tests-6f7a
+      target: contract-patch-market-ci-gate-6b7e
+      type: decomposes
   brief-spec-tooling-schema-driven-8f2d:
     - id: edge-decomposes-spec-tooling-3c91
       target: contract-spec-tooling-schema-driven-b2e7

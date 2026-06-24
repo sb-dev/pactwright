@@ -5,6 +5,12 @@ by-type:
     - brief-drift-tool-assisted-d4ee
     - brief-lane-integration-5e2d
     - brief-lifecycle-thin-commands-705d
+    - brief-patch-market-ci-d8a4
+    - brief-patch-market-commands-c5f3
+    - brief-patch-market-docs-e2b5
+    - brief-patch-market-gate-b7e2
+    - brief-patch-market-schema-a4d1
+    - brief-patch-market-tests-f6c7
     - brief-spec-tooling-schema-driven-8f2d
     - brief-work-class-routing-9a1c
   capability:

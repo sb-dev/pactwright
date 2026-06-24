@@ -309,3 +309,33 @@ edges:
     type: selects
     target: contract-patch-market-ci-gate-6b7e
     created: 2026-06-24
+  - id: edge-decomposes-patch-market-schema-1a2f
+    source: brief-patch-market-schema-a4d1
+    type: decomposes
+    target: contract-patch-market-ci-gate-6b7e
+    created: 2026-06-24
+  - id: edge-decomposes-patch-market-gate-2b3e
+    source: brief-patch-market-gate-b7e2
+    type: decomposes
+    target: contract-patch-market-ci-gate-6b7e
+    created: 2026-06-24
+  - id: edge-decomposes-patch-market-commands-3c4d
+    source: brief-patch-market-commands-c5f3
+    type: decomposes
+    target: contract-patch-market-ci-gate-6b7e
+    created: 2026-06-24
+  - id: edge-decomposes-patch-market-ci-4d5c
+    source: brief-patch-market-ci-d8a4
+    type: decomposes
+    target: contract-patch-market-ci-gate-6b7e
+    created: 2026-06-24
+  - id: edge-decomposes-patch-market-docs-5e6b
+    source: brief-patch-market-docs-e2b5
+    type: decomposes
+    target: contract-patch-market-ci-gate-6b7e
+    created: 2026-06-24
+  - id: edge-decomposes-patch-market-tests-6f7a
+    source: brief-patch-market-tests-f6c7
+    type: decomposes
+    target: contract-patch-market-ci-gate-6b7e
+    created: 2026-06-24
