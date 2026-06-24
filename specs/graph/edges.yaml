@@ -304,3 +304,8 @@ edges:
     type: compares
     target: contract-patch-market-reuse-evidence-gate-c3f8
     created: 2026-06-24
+  - id: edge-selects-patch-market-ci-gate-7d4c
+    source: decision-patch-market-ci-gate-8a2f
+    type: selects
+    target: contract-patch-market-ci-gate-6b7e
+    created: 2026-06-24

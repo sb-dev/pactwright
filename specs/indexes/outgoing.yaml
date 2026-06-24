@@ -148,6 +148,10 @@ outgoing:
     - id: edge-selects-thin-commands-8069
       target: contract-lifecycle-thin-commands-7c20
       type: selects
+  decision-patch-market-ci-gate-8a2f:
+    - id: edge-selects-patch-market-ci-gate-7d4c
+      target: contract-patch-market-ci-gate-6b7e
+      type: selects
   decision-spec-tooling-schema-driven-5e8c:
     - id: edge-selects-schema-driven-7a12
       target: contract-spec-tooling-schema-driven-b2e7

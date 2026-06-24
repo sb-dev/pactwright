@@ -2,7 +2,7 @@
 id: contract-patch-market-reuse-evidence-gate-c3f8
 type: contract
 title: Lane-aware patch market — fold the multi-patch merge gate into the existing pr-evidence/spec:gate path (no new workflow; maximal reuse; deviates from the intent's literal patch-comparison.yml)
-status: candidate
+status: rejected
 created: 2026-06-24
 class: 3
 ---

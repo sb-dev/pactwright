@@ -2,7 +2,7 @@
 id: contract-patch-market-validate-authoritative-9d41
 type: contract
 title: Lane-aware patch market — graph-validate-authoritative (multi-patch merge gate as a spec:validate rule; patch-comparison.yml thin-runs validate)
-status: candidate
+status: rejected
 created: 2026-06-24
 class: 3
 ---

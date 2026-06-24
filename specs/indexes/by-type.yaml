@@ -46,6 +46,7 @@ by-type:
     - decision-graph-data-unowned-2f7b
     - decision-lane-integration-9f3b
     - decision-lifecycle-thin-commands-41c8
+    - decision-patch-market-ci-gate-8a2f
     - decision-spec-tooling-schema-driven-5e8c
     - decision-work-class-routing-4d7a
   evidence:

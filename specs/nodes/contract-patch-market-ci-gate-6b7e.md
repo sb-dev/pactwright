@@ -2,7 +2,7 @@
 id: contract-patch-market-ci-gate-6b7e
 type: contract
 title: Lane-aware patch market — dedicated diff-aware CI gate (new spec:patch-gate + patch-comparison.yml + patch-comparison named check, mirroring pr-evidence; validate stays pure)
-status: candidate
+status: approved
 created: 2026-06-24
 class: 3
 ---
