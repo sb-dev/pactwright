@@ -32,3 +32,11 @@ test("liveSourcesByEdge is generic over edge type (decomposes, excluding superse
   );
   assert.deepEqual([...liveSourcesByEdge(s, nodesById(s), "decomposes", "c")], ["b1"]);
 });
+
+// F6 — duplicate `proposes` triples (same source/type/target, only the edge id differs) dedup
+// to ONE intent. Before F6 the raw array returned ["i","i"], duplicating findings across the
+// quorum/comparison/coherence consumers.
+test("F6: duplicate proposes triple dedups to a single intent", () => {
+  const s = spec([], [E("e1", "c", "proposes", "i"), E("e2", "c", "proposes", "i")]);
+  assert.deepEqual(intentsForContract(s, "c"), ["i"]);
+});

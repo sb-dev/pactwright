@@ -1,6 +1,6 @@
 import { asString, nodesById, type LoadedSpec, type Rule } from "../loader.ts";
 import { toDateString } from "../gate.ts";
-import { intentsForContract, liveSourcesByEdge } from "./coverage_traversal.ts";
+import { intentsForContract, liveProposingContracts, liveSourcesByEdge } from "./coverage_traversal.ts";
 import type { Finding } from "../validator.ts";
 
 /**
@@ -20,16 +20,20 @@ import type { Finding } from "../validator.ts";
  *    acceptance (a two-lane change cannot mark its intent addressed until a final
  *    integration integrates final evidence for both lanes).
  *
- * The intent's `status` must then agree with coverage in BOTH directions:
- * `addressed`-but-uncovered and covered-but-not-`addressed` are each findings. The
- * d4f2 single-lane coherence special case is subsumed here; d4f2 itself has no
+ * The status of the intent THIS contract was selected for must then agree with
+ * coverage in BOTH directions: `addressed`-but-uncovered and covered-but-not-
+ * `addressed` are each findings. An intent that a DIFFERENT selected contract won
+ * (this contract is only a losing candidate that still `proposes` it) is not judged
+ * here. The d4f2 single-lane coherence special case is subsumed; d4f2 itself has no
  * `selects` edge, so it is structurally out of this rule's reach (its transition is
  * a separate, decision-recorded manual edit — by design, not by this rule).
  *
- * Invariant: at most one `integration` may cover a contract's briefs; a second
- * (e.g. a botched /integrate retry) is a finding, so a forked coverage artifact
- * surfaces red rather than silently. Endpoints that do not resolve are defensively
- * skipped.
+ * Integration-count invariants: a single-/zero-brief contract completes via its lone
+ * final evidence and must carry NO integration; a multi-brief contract is covered by
+ * EXACTLY one final integration (a second — e.g. a botched /integrate retry — is a
+ * finding). Superseded integrations and a superseded selected contract are filtered
+ * out (live-set semantics, CLAUDE.md rule 3). Endpoints that do not resolve are
+ * defensively skipped.
  */
 export default function coverageCoherence(rule: Rule, spec: LoadedSpec): Finding[] {
   const ruleId = String(rule.id);
@@ -39,6 +43,26 @@ export default function coverageCoherence(rule: Rule, spec: LoadedSpec): Finding
   if (cut === undefined) return findings; // fail-open: no cutoff → gate off
 
   const byId = nodesById(spec);
+
+  // Node ids retired via a `supersedes` edge (newer→older). The older TARGET keeps
+  // its terminal status (the `integration` enum has no `superseded` value), so it
+  // must be filtered out of the live integration set explicitly — mirroring
+  // liveSourcesByEdge's superseded-source skip (CLAUDE.md rule 3).
+  const supersededTargets = new Set(
+    spec.edges
+      .filter((e) => asString(e["type"]) === "supersedes")
+      .map((e) => asString(e["target"]))
+      .filter((t): t is string => t !== undefined),
+  );
+
+  // Contract ids some `decision` has selected (targets of `selects` edges); used to
+  // scope coherence to the intent THIS contract actually won (F3).
+  const selectedContracts = new Set(
+    spec.edges
+      .filter((e) => asString(e["type"]) === "selects")
+      .map((e) => asString(e["target"]))
+      .filter((t): t is string => t !== undefined),
+  );
 
   // Final evidence ids that `evidences` the given brief.
   const finalEvidenceForBrief = (briefId: string): Set<string> => {
@@ -83,6 +107,7 @@ export default function coverageCoherence(rule: Rule, spec: LoadedSpec): Finding
     if (contractId === undefined) return;
     const contract = byId.get(contractId);
     if (contract === undefined) return; // unresolved: references_resolve owns it
+    if (asString(contract.data["status"]) === "superseded") return; // superseded selected contract: out of scope (F4)
 
     // Grandfather on the SELECTED CONTRACT's `created`.
     const c = toDateString(contract.data["created"]);
@@ -98,13 +123,23 @@ export default function coverageCoherence(rule: Rule, spec: LoadedSpec): Finding
       if (asString(node.data["type"]) !== "integration") continue;
       const intId = asString(node.data["id"]);
       if (intId === undefined) continue;
+      if (supersededTargets.has(intId)) continue; // superseded integration: not live (F1)
       const covered = briefsCoveredByIntegration(intId);
       if (![...covered].some((b) => liveBriefs.has(b))) continue; // not tied to this contract
       integrationsForContract.set(intId, { status: asString(node.data["status"]), briefs: covered });
     }
 
-    // One-integration-per-contract invariant.
-    if (integrationsForContract.size > 1) {
+    // Integration-count invariants: a single-/zero-brief contract completes via its
+    // lone final evidence and must carry NO integration (F5); a multi-brief contract
+    // may carry at most one.
+    if (liveBriefs.size <= 1 && integrationsForContract.size >= 1) {
+      findings.push({
+        rule: ruleId,
+        kind: "coverage_coherence",
+        subject: contractId,
+        detail: `contract ${contractId} has ${liveBriefs.size} live brief(s) but carries ${integrationsForContract.size} integration node(s) [${[...integrationsForContract.keys()].sort().join(", ")}] (a single-/zero-brief contract completes via its lone final evidence and must carry none)`,
+      });
+    } else if (integrationsForContract.size > 1) {
       findings.push({
         rule: ruleId,
         kind: "coverage_coherence",
@@ -128,7 +163,10 @@ export default function coverageCoherence(rule: Rule, spec: LoadedSpec): Finding
         : `single brief ${briefId} has ${finals.size} final evidence (exactly one required)`;
     } else {
       const fullFinal = [...integrationsForContract.entries()].filter(
-        ([, v]) => v.status === "final" && [...liveBriefs].every((b) => v.briefs.has(b)),
+        ([, v]) =>
+          v.status === "final" &&
+          v.briefs.size === liveBriefs.size &&
+          [...liveBriefs].every((b) => v.briefs.has(b)),
       );
       covered = fullFinal.length === 1;
       reason = covered
@@ -136,10 +174,17 @@ export default function coverageCoherence(rule: Rule, spec: LoadedSpec): Finding
         : `${liveBriefs.size} live briefs require exactly one final integration covering every lane (found ${fullFinal.length})`;
     }
 
-    // Bidirectional coherence with each proposed intent's status.
+    // Bidirectional coherence with the intent THIS contract was selected for.
     for (const intentId of intentsForContract(spec, contractId)) {
       const intent = byId.get(intentId);
       if (intent === undefined) continue;
+      // Scope to the won intent: if another SELECTED contract also proposes this
+      // intent, its market was won elsewhere — don't judge it against this contract
+      // (F3). A losing candidate keeps its live `proposes` edge (CLAUDE.md rule 3).
+      const wonElsewhere = [...liveProposingContracts(spec, byId, intentId)].some(
+        (pc) => pc !== contractId && selectedContracts.has(pc),
+      );
+      if (wonElsewhere) continue;
       const addressed = asString(intent.data["status"]) === "addressed";
       if (addressed && !covered) {
         findings.push({

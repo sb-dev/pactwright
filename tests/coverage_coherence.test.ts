@@ -376,3 +376,179 @@ test("fail-open: absent/malformed cutoff disables the gate", () => {
 test("unresolved endpoints skipped, no throw", () => {
   assert.deepEqual(coverageCoherence(RULE, spec([], [selects("contract-missing")], CUT)), []);
 });
+
+// --- Regression tests for six just-landed correctness fixes (F1-F6). ---
+
+// A superseded contract node (its terminal status keeps it in the graph but out of the live set).
+const supersededContract = (id: string, created: string): NodeRecord =>
+  node({ id, type: "contract", status: "superseded", created });
+// A `supersedes` edge (newer→older); the older TARGET is retired from the live set.
+const supersedes = (newer: string, older: string): EdgeRecord => ({
+  id: `e-sup-${newer}-${older}`,
+  source: newer,
+  type: "supersedes",
+  target: older,
+});
+
+// F1 — a superseded integration is filtered, so two FINAL integrations on a multi-brief
+// contract count as ONE. Before F1 both finals counted → size>1 one-integration finding
+// (a false red on a legitimate rule-3 supersede of a retried /integrate).
+test("F1: a superseded integration does not count toward the one-integration invariant", () => {
+  const f = coverageCoherence(
+    RULE,
+    spec(
+      [
+        intent("i", "addressed"),
+        contract("c", POST),
+        brief("b1"),
+        brief("b2"),
+        evidence("e1", "final"),
+        evidence("e2", "final"),
+        integration("intOld", "final"),
+        integration("intNew", "final"),
+      ],
+      [
+        proposes("c", "i"),
+        selects("c"),
+        decomposes("b1", "c"),
+        decomposes("b2", "c"),
+        evidences("e1", "b1"),
+        evidences("e2", "b2"),
+        integrates("intOld", "e1"),
+        integrates("intOld", "e2"),
+        integrates("intNew", "e1"),
+        integrates("intNew", "e2"),
+        supersedes("intNew", "intOld"), // intOld retired → only intNew is live
+      ],
+      CUT,
+    ),
+  );
+  assert.deepEqual(f, []); // one live integration covers both lanes; addressed → consistent
+});
+
+// F2 — coverage requires the final integration's covered set to EQUAL the live-brief set.
+// An integration that also integrates a FOREIGN brief (not decomposing this contract) has a
+// covered set ⊋ the live set, so it does not cover. Before F2 the subset test passed →
+// `c` wrongly covered → no finding (a false green).
+test("F2: an integration covering own briefs plus a foreign brief does not cover (set equality)", () => {
+  const f = coverageCoherence(
+    RULE,
+    spec(
+      [
+        intent("i", "addressed"),
+        contract("c", POST),
+        brief("b1"),
+        brief("b2"),
+        brief("bx"), // foreign brief — does NOT decompose c
+        evidence("e1", "final"),
+        evidence("e2", "final"),
+        evidence("ex", "final"),
+        integration("int", "final"),
+      ],
+      [
+        proposes("c", "i"),
+        selects("c"),
+        decomposes("b1", "c"),
+        decomposes("b2", "c"),
+        evidences("e1", "b1"),
+        evidences("e2", "b2"),
+        evidences("ex", "bx"),
+        integrates("int", "e1"),
+        integrates("int", "e2"),
+        integrates("int", "ex"), // covered set = {b1,b2,bx} ⊋ {b1,b2} → not equal → not covered
+      ],
+      CUT,
+    ),
+  );
+  assert.equal(f.length, 1);
+  assert.equal(f[0].subject, "i"); // addressed but its contract is not covered (set ≠ live-brief set)
+});
+
+// F3 — an intent whose market a DIFFERENT selected contract won is not judged against this
+// (losing-candidate) contract. Before F3, `c` covered + `iB` open fired a false-positive
+// "iB not addressed but selected contract c is covered" — but c only LOST iB's market.
+test("F3: an intent won by a different selected contract is skipped for this contract", () => {
+  const f = coverageCoherence(
+    RULE,
+    spec(
+      [
+        intent("iA", "addressed"),
+        intent("iB", "open"),
+        contract("c", POST),
+        contract("cOther", POST),
+        brief("bC"),
+        evidence("evC", "final"),
+      ],
+      [
+        proposes("c", "iA"),
+        proposes("c", "iB"), // c is a losing candidate for iB
+        selects("c"),
+        decomposes("bC", "c"),
+        evidences("evC", "bC"), // c is covered (single brief, one final evidence)
+        proposes("cOther", "iB"),
+        selects("cOther"), // cOther won iB's market
+      ],
+      CUT,
+    ),
+  );
+  assert.deepEqual(f, []); // iB skipped for c (won elsewhere); iA covered+addressed → consistent
+});
+
+// F4 — a `selects`-target contract whose own status is `superseded` is skipped entirely.
+// Before F4, the superseded (uncovered) cOld was evaluated → false-red
+// "i addressed but selected contract cOld not covered" on a legitimate rule-3 supersede.
+test("F4: a superseded selected contract is skipped", () => {
+  const f = coverageCoherence(
+    RULE,
+    spec(
+      [
+        intent("i", "addressed"),
+        supersededContract("cOld", POST), // selected but superseded → skipped, no coverage
+        contract("cNew", POST),
+        brief("bNew"),
+        evidence("evNew", "final"),
+      ],
+      [
+        proposes("cOld", "i"),
+        selects("cOld"),
+        proposes("cNew", "i"),
+        selects("cNew"),
+        decomposes("bNew", "cNew"),
+        evidences("evNew", "bNew"), // cNew covered (single brief, one final evidence)
+      ],
+      CUT,
+    ),
+  );
+  // cOld skipped (superseded); liveProposingContracts(i) excludes cOld so F3 does not skip i
+  // for cNew; cNew covered + i addressed → consistent.
+  assert.deepEqual(f, []);
+});
+
+// F5 — a single-/zero-brief contract carrying ANY integration node is a finding
+// (subject = contractId, detail "must carry none"). Before F5 the single-brief path ignored
+// integrations, so one stray integration was silently accepted (only a SECOND would have red).
+test("F5: a stray integration on a single-brief contract is a finding", () => {
+  const f = coverageCoherence(
+    RULE,
+    spec(
+      [
+        intent("i", "addressed"),
+        contract("c", POST),
+        brief("b"),
+        evidence("ev", "final"),
+        integration("int", "final"),
+      ],
+      [
+        proposes("c", "i"),
+        selects("c"),
+        decomposes("b", "c"),
+        evidences("ev", "b"), // single-brief covered
+        integrates("int", "ev"), // stray integration tied to b
+      ],
+      CUT,
+    ),
+  );
+  assert.equal(f.length, 1);
+  assert.equal(f[0].subject, "c");
+  assert.match(f[0].detail, /must carry none/);
+});
