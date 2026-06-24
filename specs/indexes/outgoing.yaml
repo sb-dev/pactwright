@@ -34,6 +34,16 @@ outgoing:
     - id: edge-compares-lane-integration-validated-4a2b
       target: contract-lane-integration-validated-body-7b2e
       type: compares
+  comparison-patch-market-synthesis-7b1d:
+    - id: edge-compares-patch-market-ci-gate-6e1b
+      target: contract-patch-market-ci-gate-6b7e
+      type: compares
+    - id: edge-compares-patch-market-reuse-evidence-gate-8c3f
+      target: contract-patch-market-reuse-evidence-gate-c3f8
+      type: compares
+    - id: edge-compares-patch-market-validate-authoritative-4d2a
+      target: contract-patch-market-validate-authoritative-9d41
+      type: compares
   contract-ci-gate-checks-as-nodes-2d49:
     - id: edge-proposes-ci-gate-checks-as-nodes-111b
       target: intent-ci-enforcement-gates-5c90

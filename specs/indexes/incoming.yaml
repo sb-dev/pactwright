@@ -114,6 +114,18 @@ incoming:
     - id: edge-selects-thin-commands-8069
       source: decision-lifecycle-thin-commands-41c8
       type: selects
+  contract-patch-market-ci-gate-6b7e:
+    - id: edge-compares-patch-market-ci-gate-6e1b
+      source: comparison-patch-market-synthesis-7b1d
+      type: compares
+  contract-patch-market-reuse-evidence-gate-c3f8:
+    - id: edge-compares-patch-market-reuse-evidence-gate-8c3f
+      source: comparison-patch-market-synthesis-7b1d
+      type: compares
+  contract-patch-market-validate-authoritative-9d41:
+    - id: edge-compares-patch-market-validate-authoritative-4d2a
+      source: comparison-patch-market-synthesis-7b1d
+      type: compares
   contract-spec-tooling-schema-driven-b2e7:
     - id: edge-decomposes-spec-tooling-3c91
       source: brief-spec-tooling-schema-driven-8f2d

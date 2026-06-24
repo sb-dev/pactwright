@@ -16,6 +16,7 @@ by-type:
     - capability-spec-tooling-1a2b
   comparison:
     - comparison-lane-integration-8d3c
+    - comparison-patch-market-synthesis-7b1d
   contract:
     - contract-ci-gate-checks-as-nodes-2d49
     - contract-ci-gate-spec-tool-5039

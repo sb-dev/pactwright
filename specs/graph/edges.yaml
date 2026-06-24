@@ -289,3 +289,18 @@ edges:
     type: proposes
     target: intent-patch-market-synthesis-3b1e
     created: 2026-06-24
+  - id: edge-compares-patch-market-validate-authoritative-4d2a
+    source: comparison-patch-market-synthesis-7b1d
+    type: compares
+    target: contract-patch-market-validate-authoritative-9d41
+    created: 2026-06-24
+  - id: edge-compares-patch-market-ci-gate-6e1b
+    source: comparison-patch-market-synthesis-7b1d
+    type: compares
+    target: contract-patch-market-ci-gate-6b7e
+    created: 2026-06-24
+  - id: edge-compares-patch-market-reuse-evidence-gate-8c3f
+    source: comparison-patch-market-synthesis-7b1d
+    type: compares
+    target: contract-patch-market-reuse-evidence-gate-c3f8
+    created: 2026-06-24
