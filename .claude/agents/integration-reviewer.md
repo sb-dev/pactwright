@@ -29,8 +29,11 @@ graph-maintainer; remind the caller the mutating step ends with
 `pnpm spec:index && pnpm spec:validate` and must not commit on red.
 
 This file is the SINGLE CANONICAL source of the required `integration_sections`
-keys — the `integration-sections-keys` validation rule and CLAUDE.md reference it;
-do not re-list the keys anywhere else:
+keys. The `integration-sections-keys` validation rule
+(`specs/schema/validation-rules.yaml`) necessarily embeds a literal copy of the keys
+(a `closed_key_set` rule reads them from its own `keys:` field), kept byte-equal to
+the list below by the `lane_integration_meta` test so any drift fails the suite, not
+production. CLAUDE.md references this file. Do not re-list the keys in any OTHER place:
 
 ```yaml
 integration_sections:

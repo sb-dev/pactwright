@@ -200,5 +200,7 @@ every live brief, and **declares** the required sections of a well-typed shape â
 does **not** prove the combined tests ran or the verdict is sound; that substance is
 the `integration-reviewer` agent's judgement, recorded in the body. The single
 canonical list of required section keys lives in
-`.claude/agents/integration-reviewer.md`; the `integration-sections-keys` rule and
-this document reference it rather than re-listing the keys.
+`.claude/agents/integration-reviewer.md`; this document references it rather than
+re-listing the keys. The `integration-sections-keys` rule necessarily embeds a
+literal copy (a `closed_key_set` reads its own `keys:` field), kept byte-equal to
+the canonical list by the `lane_integration_meta` drift test.
