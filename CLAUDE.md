@@ -153,3 +153,54 @@ The optional free-text `produced_by` field records the agent or human that
 authored a node body. It is provenance plumbing for future agent scorecards,
 never a gate: it may be absent or hold any value, and no validation rule reads
 it.
+
+## Lane model and integration
+
+Class 3 multi-surface work **decomposes into lanes** — one `brief` per surface,
+each carrying an optional `lane` field; Class 2 *may*. A `brief` with no `lane` is
+an unlaned single brief (the default). The lane catalog and what each owns:
+
+| Lane | Owns |
+|------|------|
+| `product-spec` | product/UX specification and acceptance |
+| `domain-backend` | domain logic and backend services |
+| `frontend-ui` | UI and client code |
+| `data-migration` | schema/data migrations |
+| `api-integration` | API surfaces and third-party integration |
+| `test-verification` | the verification lane (tests) |
+| `observability-release` | telemetry, runtime, release |
+| `docs-spec` | documentation and governing docs |
+
+`/decompose-lanes <contract-id> <lanes>` creates the laned briefs; `/write-brief`
+remains for a single unlaned brief. The `lane` value is constrained to this catalog
+by the `brief-lane-valid` validation rule.
+
+Three rules govern lanes and completion:
+
+1. **Verification is always its own lane.** Any multi-lane change includes a
+   `test-verification` lane, owned by the `test-writer` agent (via `/write-tests`) —
+   never the same invocation that implemented the code under test.
+2. **Single-brief contracts skip integration.** A contract decomposed into one brief
+   is completed by that brief's lone **final** `evidence`; there is no `integration`
+   node. A multi-lane change is completed by a final `integration` node (via
+   `/integrate`) — the contract's coverage artifact and the release's `includes`
+   target. The `coverage-coherence` rule enforces this: a multi-brief contract cannot
+   mark its intent `addressed` until a final integration `integrates` a final evidence
+   for every live lane.
+3. **Every evidence records `touches`.** `/prepare-evidence` authors `touches` edges
+   (source = evidence) to each capability the change's diff falls under; a diff
+   touching paths no capability owns is a coverage gap resolved in the **same PR**
+   (extend/create a capability, or record the paths intentionally unowned), never
+   ignored.
+
+The `integration` node's body carries the prose; its `integration_sections`
+frontmatter list is the machine-checked completeness signal. **Honest bound:** a
+green graph asserts the integration node exists, is wired to a final evidence for
+every live brief, and **declares** the required sections of a well-typed shape — it
+does **not** prove the combined tests ran or the verdict is sound; that substance is
+the `integration-reviewer` agent's judgement, recorded in the body. The single
+canonical list of required section keys lives in
+`.claude/agents/integration-reviewer.md`; this document references it rather than
+re-listing the keys. The `integration-sections-keys` rule necessarily embeds a
+literal copy (a `closed_key_set` reads its own `keys:` field), kept byte-equal to
+the canonical list by the `lane_integration_meta` drift test.

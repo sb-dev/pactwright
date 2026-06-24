@@ -11,6 +11,10 @@ incoming:
     - id: edge-evidences-drift-tool-assisted-3e58
       source: evidence-drift-tool-assisted-3e58
       type: evidences
+  brief-lane-integration-5e2d:
+    - id: edge-evidences-lane-integration-3d7a
+      source: evidence-lane-integration-9b4c
+      type: evidences
   brief-lifecycle-thin-commands-705d:
     - id: edge-evidences-thin-commands-a06a
       source: evidence-lifecycle-thin-commands-8296
@@ -34,8 +38,15 @@ incoming:
     - id: edge-touches-drift-lifecycle-commands-a8c9
       source: evidence-drift-tool-assisted-3e58
       type: touches
+    - id: edge-touches-lane-integration-lifecycle-7a1d
+      source: evidence-lane-integration-9b4c
+      type: touches
     - id: edge-touches-lifecycle-commands-a4e5
       source: evidence-lifecycle-thin-commands-8296
+      type: touches
+  capability-spec-docs-8c1d:
+    - id: edge-touches-lane-integration-docs-8b2e
+      source: evidence-lane-integration-9b4c
       type: touches
   capability-spec-schema-2c3d:
     - id: edge-touches-ci-gate-spec-schema-a3d4
@@ -44,9 +55,19 @@ incoming:
     - id: edge-touches-drift-spec-schema-a6a7
       source: evidence-drift-tool-assisted-3e58
       type: touches
+    - id: edge-touches-lane-integration-schema-6f9c
+      source: evidence-lane-integration-9b4c
+      type: touches
+  capability-spec-tests-3a6e:
+    - id: edge-touches-lane-integration-tests-9c3f
+      source: evidence-lane-integration-9b4c
+      type: touches
   capability-spec-tooling-1a2b:
     - id: edge-touches-drift-spec-tooling-a5f6
       source: evidence-drift-tool-assisted-3e58
+      type: touches
+    - id: edge-touches-lane-integration-tooling-5e8b
+      source: evidence-lane-integration-9b4c
       type: touches
     - id: edge-touches-spec-tooling-evidence-a1b2
       source: evidence-spec-tooling-schema-driven-9c4e
@@ -72,6 +93,20 @@ incoming:
     - id: edge-selects-drift-tool-assisted-d5e2
       source: decision-drift-tool-assisted-d5e2
       type: selects
+  contract-lane-integration-convention-body-4c1f:
+    - id: edge-compares-lane-integration-convention-3f1a
+      source: comparison-lane-integration-8d3c
+      type: compares
+    - id: edge-decomposes-lane-integration-6b3f
+      source: brief-lane-integration-5e2d
+      type: decomposes
+    - id: edge-selects-lane-integration-convention-7c4d
+      source: decision-lane-integration-9f3b
+      type: selects
+  contract-lane-integration-validated-body-7b2e:
+    - id: edge-compares-lane-integration-validated-4a2b
+      source: comparison-lane-integration-8d3c
+      type: compares
   contract-lifecycle-thin-commands-7c20:
     - id: edge-decomposes-thin-commands-8b79
       source: brief-lifecycle-thin-commands-705d
@@ -123,6 +158,13 @@ incoming:
       type: proposes
     - id: edge-proposes-drift-tool-assisted-7173
       source: contract-drift-tool-assisted-7173
+      type: proposes
+  intent-lane-model-integration-a1f7:
+    - id: edge-proposes-lane-integration-convention-1d8e
+      source: contract-lane-integration-convention-body-4c1f
+      type: proposes
+    - id: edge-proposes-lane-integration-validated-2e9f
+      source: contract-lane-integration-validated-body-7b2e
       type: proposes
   intent-spec-index-validate-a3f1:
     - id: edge-proposes-hardcoded-9d31

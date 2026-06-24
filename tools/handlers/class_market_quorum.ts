@@ -1,5 +1,6 @@
 import { asString, nodesById, type LoadedSpec, type Rule } from "../loader.ts";
 import type { Finding } from "../validator.ts";
+import { intentsForContract, liveProposingContracts } from "./coverage_traversal.ts";
 
 /**
  * A selected (`selects`-edged) intent of `class >= 2` must have at least two
@@ -23,30 +24,13 @@ export default function classMarketQuorum(rule: Rule, spec: LoadedSpec): Finding
   const byId = nodesById(spec);
   const findings: Finding[] = [];
 
-  const liveCandidates = (intentId: string): number => {
-    let count = 0;
-    for (const edge of spec.edges) {
-      if (asString(edge["type"]) !== "proposes") continue;
-      if (asString(edge["target"]) !== intentId) continue;
-      const sourceId = asString(edge["source"]);
-      const source = sourceId !== undefined ? byId.get(sourceId) : undefined;
-      if (source === undefined) continue; // unresolved source: skip, references_resolve owns it
-      if (asString(source.data["status"]) === "superseded") continue;
-      count += 1;
-    }
-    return count;
-  };
-
   spec.edges.forEach((edge, i) => {
     if (asString(edge["type"]) !== "selects") return;
     const subject = asString(edge["id"]) ?? `specs/graph/edges.yaml[${i}]`;
     const contractId = asString(edge["target"]);
     if (contractId === undefined || byId.get(contractId) === undefined) return; // unresolved: skip
 
-    const intentIds = spec.edges
-      .filter((e) => asString(e["type"]) === "proposes" && asString(e["source"]) === contractId)
-      .map((e) => asString(e["target"]))
-      .filter((id): id is string => id !== undefined);
+    const intentIds = intentsForContract(spec, contractId);
 
     if (intentIds.length === 0) {
       findings.push({
@@ -63,7 +47,7 @@ export default function classMarketQuorum(rule: Rule, spec: LoadedSpec): Finding
       if (intent === undefined) continue; // unresolved: skip
       const cls = intent.data["class"];
       if (typeof cls !== "number" || cls < 2) continue; // class < 2 imposes no quorum
-      const count = liveCandidates(intentId);
+      const count = liveProposingContracts(spec, byId, intentId).size;
       if (count < 2) {
         findings.push({
           rule: ruleId,

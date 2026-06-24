@@ -1,0 +1,31 @@
+edges:
+  - id: edge-prop-uncov-9a01
+    source: contract-uncov-2222
+    type: proposes
+    target: intent-uncov-1111
+    created: 2026-06-19
+  - id: edge-sel-uncov-9a02
+    source: decision-uncov-e777
+    type: selects
+    target: contract-uncov-2222
+    created: 2026-06-19
+  - id: edge-dec-uncov-a-9a03
+    source: brief-uncov-a333
+    type: decomposes
+    target: contract-uncov-2222
+    created: 2026-06-19
+  - id: edge-dec-uncov-b-9a04
+    source: brief-uncov-b444
+    type: decomposes
+    target: contract-uncov-2222
+    created: 2026-06-19
+  - id: edge-ev-uncov-a-9a05
+    source: evidence-uncov-c555
+    type: evidences
+    target: brief-uncov-a333
+    created: 2026-06-19
+  - id: edge-ev-uncov-b-9a06
+    source: evidence-uncov-d666
+    type: evidences
+    target: brief-uncov-b444
+    created: 2026-06-19

@@ -3,14 +3,19 @@ by-type:
     - brief-ci-gate-spec-tool-0852
     - brief-critics-literal-panel-b5c6
     - brief-drift-tool-assisted-d4ee
+    - brief-lane-integration-5e2d
     - brief-lifecycle-thin-commands-705d
     - brief-spec-tooling-schema-driven-8f2d
     - brief-work-class-routing-9a1c
   capability:
     - capability-ci-enforcement-3e4f
     - capability-lifecycle-commands-4f5a
+    - capability-spec-docs-8c1d
     - capability-spec-schema-2c3d
+    - capability-spec-tests-3a6e
     - capability-spec-tooling-1a2b
+  comparison:
+    - comparison-lane-integration-8d3c
   contract:
     - contract-ci-gate-checks-as-nodes-2d49
     - contract-ci-gate-spec-tool-5039
@@ -21,6 +26,8 @@ by-type:
     - contract-drift-agent-native-bafa
     - contract-drift-deterministic-4a3a
     - contract-drift-tool-assisted-7173
+    - contract-lane-integration-convention-body-4c1f
+    - contract-lane-integration-validated-body-7b2e
     - contract-lifecycle-fat-commands-a5a8
     - contract-lifecycle-thin-commands-7c20
     - contract-spec-tooling-hardcoded-c1a4
@@ -32,6 +39,8 @@ by-type:
     - decision-ci-gate-spec-tool-6d2b
     - decision-critics-literal-panel-9c4f
     - decision-drift-tool-assisted-d5e2
+    - decision-graph-data-unowned-2f7b
+    - decision-lane-integration-9f3b
     - decision-lifecycle-thin-commands-41c8
     - decision-spec-tooling-schema-driven-5e8c
     - decision-work-class-routing-4d7a
@@ -39,6 +48,7 @@ by-type:
     - evidence-ci-gate-spec-tool-693d
     - evidence-critics-literal-panel-e2a7
     - evidence-drift-tool-assisted-3e58
+    - evidence-lane-integration-9b4c
     - evidence-lifecycle-thin-commands-8296
     - evidence-spec-tooling-schema-driven-9c4e
     - evidence-work-class-routing-f0a3
@@ -49,7 +59,9 @@ by-type:
     - intent-claude-lifecycle-commands-f367
     - intent-docs-arrow-lint-e7b3
     - intent-drift-detection-c7b1
+    - intent-lane-model-integration-a1f7
     - intent-spec-index-validate-a3f1
     - intent-specialist-critics-comparison-7ada
     - intent-status-coherence-d4f2
+    - intent-unbacked-addressed-guard-8c4e
     - intent-work-class-routing-b9c4

@@ -12,6 +12,8 @@ import listField from "./handlers/list_field.ts";
 import classRange from "./handlers/class_range.ts";
 import classMarketQuorum from "./handlers/class_market_quorum.ts";
 import comparisonRequired from "./handlers/comparison_required.ts";
+import closedKeySet from "./handlers/closed_key_set.ts";
+import coverageCoherence from "./handlers/coverage_coherence.ts";
 
 export interface Finding {
   rule: string;
@@ -33,6 +35,8 @@ const HANDLERS: Record<string, Handler> = {
   class_range: classRange,
   class_market_quorum: classMarketQuorum,
   comparison_required: comparisonRequired,
+  closed_key_set: closedKeySet,
+  coverage_coherence: coverageCoherence,
 };
 
 export function formatFinding(finding: Finding): string {

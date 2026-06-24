@@ -1,0 +1,1 @@
+[rule: coverage-coherence] intent intent-uncov-1111 is addressed but its selected contract contract-uncov-2222 is not covered

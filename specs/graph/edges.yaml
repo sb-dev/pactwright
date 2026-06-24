@@ -214,3 +214,63 @@ edges:
     type: evidences
     target: brief-critics-literal-panel-b5c6
     created: 2026-06-18
+  - id: edge-proposes-lane-integration-convention-1d8e
+    source: contract-lane-integration-convention-body-4c1f
+    type: proposes
+    target: intent-lane-model-integration-a1f7
+    created: 2026-06-19
+  - id: edge-proposes-lane-integration-validated-2e9f
+    source: contract-lane-integration-validated-body-7b2e
+    type: proposes
+    target: intent-lane-model-integration-a1f7
+    created: 2026-06-19
+  - id: edge-compares-lane-integration-convention-3f1a
+    source: comparison-lane-integration-8d3c
+    type: compares
+    target: contract-lane-integration-convention-body-4c1f
+    created: 2026-06-19
+  - id: edge-compares-lane-integration-validated-4a2b
+    source: comparison-lane-integration-8d3c
+    type: compares
+    target: contract-lane-integration-validated-body-7b2e
+    created: 2026-06-19
+  - id: edge-selects-lane-integration-convention-7c4d
+    source: decision-lane-integration-9f3b
+    type: selects
+    target: contract-lane-integration-convention-body-4c1f
+    created: 2026-06-20
+  - id: edge-decomposes-lane-integration-6b3f
+    source: brief-lane-integration-5e2d
+    type: decomposes
+    target: contract-lane-integration-convention-body-4c1f
+    created: 2026-06-20
+  - id: edge-evidences-lane-integration-3d7a
+    source: evidence-lane-integration-9b4c
+    type: evidences
+    target: brief-lane-integration-5e2d
+    created: 2026-06-20
+  - id: edge-touches-lane-integration-tooling-5e8b
+    source: evidence-lane-integration-9b4c
+    type: touches
+    target: capability-spec-tooling-1a2b
+    created: 2026-06-20
+  - id: edge-touches-lane-integration-schema-6f9c
+    source: evidence-lane-integration-9b4c
+    type: touches
+    target: capability-spec-schema-2c3d
+    created: 2026-06-20
+  - id: edge-touches-lane-integration-lifecycle-7a1d
+    source: evidence-lane-integration-9b4c
+    type: touches
+    target: capability-lifecycle-commands-4f5a
+    created: 2026-06-20
+  - id: edge-touches-lane-integration-docs-8b2e
+    source: evidence-lane-integration-9b4c
+    type: touches
+    target: capability-spec-docs-8c1d
+    created: 2026-06-20
+  - id: edge-touches-lane-integration-tests-9c3f
+    source: evidence-lane-integration-9b4c
+    type: touches
+    target: capability-spec-tests-3a6e
+    created: 2026-06-20
