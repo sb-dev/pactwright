@@ -27,8 +27,12 @@ export function liveSourcesByEdge(
   byId: Map<string, NodeRecord>,
   edgeType: string,
   targetId: string,
-  excludeStatus: string | undefined = "superseded",
+  excludeStatus: string | readonly string[] | undefined = "superseded",
 ): Set<string> {
+  const excluded =
+    excludeStatus === undefined
+      ? undefined
+      : new Set(typeof excludeStatus === "string" ? [excludeStatus] : excludeStatus);
   const live = new Set<string>();
   for (const edge of spec.edges) {
     if (asString(edge["type"]) !== edgeType) continue;
@@ -37,7 +41,10 @@ export function liveSourcesByEdge(
     if (sourceId === undefined) continue;
     const source = byId.get(sourceId);
     if (source === undefined) continue; // unresolved: references_resolve owns it
-    if (excludeStatus !== undefined && asString(source.data["status"]) === excludeStatus) continue;
+    if (excluded !== undefined) {
+      const status = asString(source.data["status"]);
+      if (status !== undefined && excluded.has(status)) continue;
+    }
     live.add(sourceId);
   }
   return live;
@@ -66,4 +73,76 @@ export function intentsForContract(spec: LoadedSpec, contractId: string): string
     if (target !== undefined) out.add(target);
   }
   return [...out];
+}
+
+/**
+ * Patch-market traversal primitives — the single source of truth for "who competes
+ * for a brief" and "is its market resolved", shared by the diff-aware patch gate
+ * (`tools/patch_gate.ts`) and the `selected_patch_comparison` validation rule so the
+ * two cannot drift apart (the panel's two-places-drift concern).
+ */
+
+/** All distinct patch ids that `competes-for` the brief, STATUS-BLIND. The
+ * historical competitor set: it includes a `selected` winner and `superseded`
+ * losers, both of which legitimately competed. Unlike a contract proposal market,
+ * patch losers go `superseded` (not `rejected`) at selection, so a superseded-
+ * excluding walk would wrongly drop the very losers a comparison had to weigh. */
+export function competingPatches(
+  spec: LoadedSpec,
+  byId: Map<string, NodeRecord>,
+  briefId: string,
+): Set<string> {
+  // An EMPTY exclude set, never `undefined`: `liveSourcesByEdge`'s `excludeStatus`
+  // has a `"superseded"` DEFAULT, and passing `undefined` would trigger it — here
+  // we want a genuinely status-blind walk that keeps superseded losers.
+  return liveSourcesByEdge(spec, byId, "competes-for", briefId, []);
+}
+
+/** LIVE (candidate) competitors of the brief: excludes a `selected` winner AND
+ * `superseded` losers. The open market — what the patch gate counts to decide a
+ * brief still has a market to resolve. */
+export function liveCompetitors(
+  spec: LoadedSpec,
+  byId: Map<string, NodeRecord>,
+  briefId: string,
+): Set<string> {
+  return liveSourcesByEdge(spec, byId, "competes-for", briefId, ["superseded", "selected"]);
+}
+
+/** Distinct competing patches of the brief that a resolved `comparison` node
+ * `compares` — the durable-record coverage set. */
+export function comparedCompetitors(
+  spec: LoadedSpec,
+  byId: Map<string, NodeRecord>,
+  briefId: string,
+): Set<string> {
+  const competing = competingPatches(spec, byId, briefId);
+  const covered = new Set<string>();
+  for (const edge of spec.edges) {
+    if (asString(edge["type"]) !== "compares") continue;
+    const sourceId = asString(edge["source"]);
+    const source = sourceId !== undefined ? byId.get(sourceId) : undefined;
+    if (source === undefined || asString(source.data["type"]) !== "comparison") continue; // unresolved/wrong source
+    const targetId = asString(edge["target"]);
+    if (targetId !== undefined && competing.has(targetId)) covered.add(targetId);
+  }
+  return covered;
+}
+
+/** A brief's patch market is RESOLVED iff a comparison covers >=2 of its competing
+ * patches AND some `decision` has `selects`-ed one of those competitors. The shared
+ * verdict the patch gate uses to let a winner's merge through. */
+export function patchMarketResolved(
+  spec: LoadedSpec,
+  byId: Map<string, NodeRecord>,
+  briefId: string,
+): boolean {
+  if (comparedCompetitors(spec, byId, briefId).size < 2) return false;
+  const competing = competingPatches(spec, byId, briefId);
+  for (const edge of spec.edges) {
+    if (asString(edge["type"]) !== "selects") continue;
+    const target = asString(edge["target"]);
+    if (target !== undefined && competing.has(target)) return true;
+  }
+  return false;
 }

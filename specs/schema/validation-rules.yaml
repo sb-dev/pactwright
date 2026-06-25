@@ -103,6 +103,19 @@ rules:
   # contracts selected before `coverage_coherence_from` are grandfathered.
   - id: coverage-coherence
     kind: coverage_coherence
+  # A synthesis patch (any patch with a `synthesizes` edge) must combine >=2 distinct
+  # parent patches — a single-parent synthesis is just that patch, and across-lane
+  # combination is integration, never synthesis. Runs after edges-references-resolve
+  # so parents resolve.
+  - id: synthesis-parentage
+    kind: synthesis_parentage
+  # A selected patch (the patch market's winner) must have a durable comparison: the
+  # brief it `competes-for` carries a comparison whose `compares` edges cover >=2 of
+  # the brief's competing patches, leaving no live candidate uncompared. The patch
+  # analogue of comparison-required; competitors are counted status-blind because
+  # patch losers go `superseded` at selection. Runs after edges-references-resolve.
+  - id: selected-patch-comparison
+    kind: selected_patch_comparison
   - id: indexes-fresh
     kind: indexes_fresh
 

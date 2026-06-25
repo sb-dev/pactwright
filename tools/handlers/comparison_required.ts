@@ -64,6 +64,7 @@ export default function comparisonRequired(rule: Rule, spec: LoadedSpec): Findin
     if (contractId === undefined) return;
     const contract = byId.get(contractId);
     if (contract === undefined) return; // unresolved: references_resolve owns it
+    if (asString(contract.data["type"]) !== "contract") return; // selects → patch handled by selected_patch_comparison
 
     // Grandfather on the SELECTED CONTRACT's `created` (not the intent's).
     const c = toDateString(contract.data["created"]);

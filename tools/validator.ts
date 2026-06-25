@@ -14,6 +14,8 @@ import classMarketQuorum from "./handlers/class_market_quorum.ts";
 import comparisonRequired from "./handlers/comparison_required.ts";
 import closedKeySet from "./handlers/closed_key_set.ts";
 import coverageCoherence from "./handlers/coverage_coherence.ts";
+import synthesisParentage from "./handlers/synthesis_parentage.ts";
+import selectedPatchComparison from "./handlers/selected_patch_comparison.ts";
 
 export interface Finding {
   rule: string;
@@ -37,6 +39,8 @@ const HANDLERS: Record<string, Handler> = {
   comparison_required: comparisonRequired,
   closed_key_set: closedKeySet,
   coverage_coherence: coverageCoherence,
+  synthesis_parentage: synthesisParentage,
+  selected_patch_comparison: selectedPatchComparison,
 };
 
 export function formatFinding(finding: Finding): string {

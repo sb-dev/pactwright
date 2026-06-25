@@ -186,7 +186,7 @@ test("good-drift: capability/touches/flags validate and group in by-type", (t) =
 test("unknown subcommand: usage text on stderr, exit 2", () => {
   const result = runCli(repoRoot, "frobnicate");
   assert.equal(result.status, 2);
-  assert.ok(result.stderr.includes("usage: spec <index|validate|gate|check-diff|drift-map>"));
+  assert.ok(result.stderr.includes("usage: spec <index|validate|gate|check-diff|patch-gate|drift-map>"));
 });
 
 test("bad/malformed-node: a node without frontmatter fails closed (exit 1, no rule finding)", (t) => {
