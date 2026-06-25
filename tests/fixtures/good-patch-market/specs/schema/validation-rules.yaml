@@ -1,0 +1,140 @@
+# Cross-cutting graph invariants, run by `pnpm spec:validate` in the order
+# listed. Each rule's kind maps to a handler in tools/handlers/; rule
+# parameters live here. Ordered so each rule can assume the preconditions
+# established by the earlier ones.
+rules:
+  - id: nodes-required-fields
+    kind: required_fields
+    scope: nodes
+  - id: edges-required-fields
+    kind: required_fields
+    scope: edges
+  - id: nodes-type-declared
+    kind: enum_constraint
+    scope: nodes
+    field: type
+  - id: edges-type-declared
+    kind: enum_constraint
+    scope: edges
+    field: type
+  - id: nodes-id-unique
+    kind: unique_field
+    scope: nodes
+    field: id
+  - id: edges-id-unique
+    kind: unique_field
+    scope: edges
+    field: id
+  # Types without status_values (e.g. decision) are skipped by this
+  # handler; they are still covered by required_fields — not unvalidated.
+  - id: nodes-status-in-enum
+    kind: enum_constraint
+    scope: nodes
+    field: status
+  # `class` is a required integer field on intent + contract (work-class routing).
+  # required_fields proves presence; this constrains it to the routing classes.
+  - id: nodes-class-in-range
+    kind: class_range
+    scope: nodes
+    types: [intent, contract]
+    values: [0, 1, 2, 3]
+  - id: edges-references-resolve
+    kind: references_resolve
+    scope: edges
+    fields: [source, target]
+  - id: edges-endpoint-types
+    kind: edge_endpoint_types
+  # A capability's `paths` must be a non-empty string list (required_fields
+  # only proves presence): a scalar/typo'd `paths:` would silently own nothing.
+  - id: capability-paths-shape
+    kind: list_field
+    scope: nodes
+    type: capability
+    field: paths
+  # A selected (selects-edged) class-2+ intent must have >=2 live (non-superseded)
+  # candidate contracts. Runs after edges-references-resolve so endpoints resolve;
+  # the handler also defensively skips any that do not. The work-class quorum
+  # backstop: an under-proposed class-2+ approval cannot stand in a green graph.
+  - id: class-market-quorum
+    kind: class_market_quorum
+  # A selected (selects-edged) class-2+ intent whose SELECTED CONTRACT was
+  # created on/after `comparison_required_from` must have a comparison node whose
+  # `compares` edges cover every live (non-superseded) candidate of that intent
+  # and number >=2 distinct targets. Runs after class-market-quorum so the
+  # live-candidate set is meaningful; contracts created before the cutoff (and
+  # class-<=1 intents) are grandfathered. The cutoff is top-level data below.
+  - id: comparison-required
+    kind: comparison_required
+  # An integration node's `integration_sections` must be a non-empty list of
+  # non-empty strings (required_fields only proves presence) — the completeness
+  # floor, reusing the same handler as capability `paths`.
+  - id: integration-sections-list
+    kind: list_field
+    scope: nodes
+    type: integration
+    field: integration_sections
+  # ...and that list's value-set must equal the closed set of required section keys
+  # exactly (every key present, no extras/duplicates). The structured completeness
+  # signal for a multi-lane integration — presence of a well-typed shape, NOT proof
+  # the combined tests ran. The canonical vocabulary lives in
+  # .claude/agents/integration-reviewer.md; keep `keys` byte-equal to it.
+  - id: integration-sections-keys
+    kind: closed_key_set
+    scope: nodes
+    type: integration
+    field: integration_sections
+    mode: set
+    keys: [combined-outputs, combined-test-run, compliance-verdict, rollback-sequencing, combined-risk, follow-ups, scope-integrity]
+  # A brief's optional `lane`, if present, must be one of the lane catalog values
+  # (enum_constraint covers only type/status, so this is closed_key_set in
+  # membership mode). Unset is allowed (an unlaned single brief).
+  - id: brief-lane-valid
+    kind: closed_key_set
+    scope: nodes
+    type: brief
+    field: lane
+    mode: member
+    keys: [product-spec, domain-backend, frontend-ui, data-migration, api-integration, test-verification, observability-release, docs-spec]
+  # A selected contract must be COVERED and its intent's `status` must agree with
+  # coverage in both directions. Single-brief: exactly one final evidence. Multi-
+  # brief: one final integration node integrating final evidence for every live
+  # brief (a two-lane change cannot be addressed without it). Runs after
+  # edges-references-resolve (walks selects/decomposes/evidences/integrates);
+  # contracts selected before `coverage_coherence_from` are grandfathered.
+  - id: coverage-coherence
+    kind: coverage_coherence
+  # A synthesis patch (any patch with a `synthesizes` edge) must combine >=2 distinct
+  # parent patches — a single-parent synthesis is just that patch, and across-lane
+  # combination is integration, never synthesis. Runs after edges-references-resolve
+  # so parents resolve.
+  - id: synthesis-parentage
+    kind: synthesis_parentage
+  # A selected patch (the patch market's winner) must have a durable comparison: the
+  # brief it `competes-for` carries a comparison whose `compares` edges cover >=2 of
+  # the brief's competing patches, leaving no live candidate uncompared. The patch
+  # analogue of comparison-required; competitors are counted status-blind because
+  # patch losers go `superseded` at selection. Runs after edges-references-resolve.
+  - id: selected-patch-comparison
+    kind: selected_patch_comparison
+  - id: indexes-fresh
+    kind: indexes_fresh
+
+# Repo globs whose modification is "sensitive": a PR touching one of these must
+# carry a linked approved contract (bound to the capability that owns the path)
+# or an override, enforced by the diff-aware `spec:check-diff` (not a validate
+# rule — read as data by the script). Start with one glob (SPEC §19).
+sensitive_paths:
+  - specs/schema/**
+
+# The date from which the proposal-comparison gate (`comparison-required`) is
+# enforced. A selected class-2+ intent whose SELECTED CONTRACT's `created` is
+# strictly before this is grandfathered (no comparison node required); absent or
+# malformed disables the gate. Top-level scalar data (not a rule), read by the
+# loader and consumed by the handler — mirrors `sensitive_paths`' read-as-data.
+comparison_required_from: "2026-06-18"
+
+# The date from which the coverage-coherence gate is enforced. A selected contract
+# whose `created` is strictly before this is grandfathered; absent/malformed
+# disables the gate. Top-level scalar (not a rule), read by the loader — mirrors
+# `comparison_required_from`.
+coverage_coherence_from: "2026-06-18"

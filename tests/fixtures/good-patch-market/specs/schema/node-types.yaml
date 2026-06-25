@@ -1,0 +1,99 @@
+# Node type definitions for the specs graph.
+# Every file in /specs/nodes/ must have frontmatter whose `type` matches one
+# of the keys below, and must include every frontmatter key listed in
+# required_fields. If `requires_body: true`, the markdown body after the
+# frontmatter delimiter must also be non-empty. For types that declare
+# status_values, the `status` field is constrained to that enum.
+#
+# Node ID convention: <type>-<slug>-<4 hex chars>
+#   e.g. intent-spec-tooling-7f3a
+
+node_types:
+  intent:
+    required_fields: [id, type, title, status, created, class]
+    requires_body:   true
+    status_values:   [open, addressed, rejected]
+
+  contract:
+    required_fields: [id, type, title, status, created, class]
+    requires_body:   true
+    status_values:   [candidate, approved, rejected, superseded]
+
+  brief:
+    # Optional `lane` enum, validated by the `brief-lane-valid` rule (a
+    # closed_key_set membership check — enum_constraint covers only type/status):
+    #   product-spec | domain-backend | frontend-ui | data-migration |
+    #   api-integration | test-verification | observability-release | docs-spec
+    # Unset means an unlaned single brief and is allowed; not in required_fields.
+    # Optional `patch_market: true` boolean flag, set by /propose-patches when a
+    # patch market is opened on this brief. Unvalidated (like `produced_by`) and
+    # not in required_fields; absence means no market.
+    required_fields: [id, type, title, status, created]
+    requires_body:   true
+    status_values:   [draft, approved, implemented]
+
+  evidence:
+    required_fields: [id, type, title, status, created]
+    requires_body:   true
+    status_values:   [draft, final]
+
+  decision:
+    # decision nodes have no status — the act of recording the decision
+    # is itself the terminal state. They carry `decided_by` instead.
+    required_fields: [id, type, title, decided_by, created]
+    requires_body:   true
+
+  override:
+    # A human-signed waiver. Like `decision`, it has no status — the act of
+    # recording it (with an approver and an expiry) is the terminal state.
+    # `created` is allowed but not required; `expires` bounds its validity.
+    required_fields: [id, type, title, reason, approved_by, expires]
+    requires_body:   true
+
+  capability:
+    # Owns repo path globs via `paths`; the unit a drift diff maps to.
+    # No retire lifecycle yet, so the only status is `active`.
+    required_fields: [id, type, title, status, paths]
+    requires_body:   true
+    status_values:   [active]
+
+  drift-finding:
+    # A detected divergence between a diff's observable behaviour and the
+    # linked contract/brief; created by /detect-drift, triaged by a human.
+    required_fields: [id, type, title, status]
+    requires_body:   true
+    status_values:   [open, resolved, accepted]
+
+  comparison:
+    # A durable, regenerable record of one proposal market: the candidate
+    # trade-off table, critic findings grouped by perspective, and the case
+    # against each candidate. Authored by /review-contracts, cited by the
+    # decision, never lifecycled or class-routed — so it carries NO status
+    # (nodes-status-in-enum skips status-less types, like decision/override)
+    # and NO class (nodes-class-in-range is scoped [intent, contract]).
+    required_fields: [id, type, title, created]
+    requires_body:   true
+
+  integration:
+    # The contract-level coverage artifact for a multi-lane change. Combines the
+    # per-lane final evidence; `final` only when /integrate has covered every lane.
+    # `integration_sections` is a flat list of the required section keys the body
+    # covers — the machine-checked completeness signal (presence of a well-typed
+    # shape, NOT proof the combined tests ran); the narrative body carries the prose.
+    # The section keys are pinned by the integration-sections-keys rule; their single
+    # canonical vocabulary lives in .claude/agents/integration-reviewer.md.
+    required_fields: [id, type, title, status, created, integration_sections]
+    requires_body:   true
+    status_values:   [draft, final]
+
+  patch:
+    # A candidate implementation of one lane (or single) brief in the patch market.
+    # /propose-patches creates one patch per strategy on branch
+    # patch/<brief-slug>/<strategy>; patches compete via `competes-for` edges to the
+    # brief, are weighed in one `comparison`, and a human `/select-patch` records a
+    # `decision —selects→ patch`. `branch` is byte-equal to the created git branch;
+    # `strategy` is the strategy token (or `synthesis`). A synthesis patch carries
+    # `synthesizes` edges to its parent patches. The body is the evidence summary.
+    required_fields: [id, type, title, status, branch, strategy, created]
+    requires_body:   true
+    status_values:   [candidate, selected, superseded]

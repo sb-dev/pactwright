@@ -1,0 +1,17 @@
+# Named checks that an `override` may waive via a `waives` edge whose target
+# is the check id (rather than a node id). This is the single registry of
+# check identifiers: `references_resolve` treats a `waives` target listed here
+# as resolved, and `spec:gate` matches the `pr-evidence` literal against it.
+#
+# These ids are the logical check names, independent of workflow filenames or
+# GitHub job names.
+checks:
+  - ci
+  - spec-index
+  - spec-validate
+  - pr-evidence
+  - check-diff
+  # the diff-aware patch-market merge gate (spec:patch-gate / patch-comparison.yml)
+  - patch-comparison
+  # reserved — no spec:drift subcommand yet; waivable but currently unenforced
+  - drift
