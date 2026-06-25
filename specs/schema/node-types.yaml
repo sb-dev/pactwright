@@ -25,6 +25,9 @@ node_types:
     #   product-spec | domain-backend | frontend-ui | data-migration |
     #   api-integration | test-verification | observability-release | docs-spec
     # Unset means an unlaned single brief and is allowed; not in required_fields.
+    # Optional `patch_market: true` boolean flag, set by /propose-patches when a
+    # patch market is opened on this brief. Unvalidated (like `produced_by`) and
+    # not in required_fields; absence means no market.
     required_fields: [id, type, title, status, created]
     requires_body:   true
     status_values:   [draft, approved, implemented]
@@ -82,3 +85,15 @@ node_types:
     required_fields: [id, type, title, status, created, integration_sections]
     requires_body:   true
     status_values:   [draft, final]
+
+  patch:
+    # A candidate implementation of one lane (or single) brief in the patch market.
+    # /propose-patches creates one patch per strategy on branch
+    # patch/<brief-slug>/<strategy>; patches compete via `competes-for` edges to the
+    # brief, are weighed in one `comparison`, and a human `/select-patch` records a
+    # `decision —selects→ patch`. `branch` is byte-equal to the created git branch;
+    # `strategy` is the strategy token (or `synthesis`). A synthesis patch carries
+    # `synthesizes` edges to its parent patches. The body is the evidence summary.
+    required_fields: [id, type, title, status, branch, strategy, created]
+    requires_body:   true
+    status_values:   [candidate, selected, superseded]

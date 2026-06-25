@@ -11,8 +11,11 @@ edge_types:
     target: intent
 
   selects:
+    # decision → contract | patch. The human selection: a contract (proposal
+    # market) or a patch (patch market). The target is a list of allowed node
+    # types; edge_endpoint_types enforces membership.
     source: decision
-    target: contract
+    target: [contract, patch]
 
   decomposes:
     source: brief
@@ -35,11 +38,12 @@ edge_types:
     target: any
 
   compares:
-    # comparison → contract. /review-contracts authors one `compares` edge per
-    # live candidate, linking the market's comparison node to each contract it
-    # weighs; `comparison-required` checks they cover the live candidate set.
+    # comparison → contract | patch. /review-contracts authors one `compares` edge
+    # per live candidate contract; /compare-patches authors one per live candidate
+    # patch. `comparison-required` checks contract coverage; `selected_patch_comparison`
+    # checks patch coverage. The target is a list; edge_endpoint_types enforces it.
     source: comparison
-    target: contract
+    target: [contract, patch]
 
   touches:
     source: evidence
@@ -57,3 +61,17 @@ edge_types:
     # coverage-coherence checks they cover every live brief of the contract.
     source: integration
     target: evidence
+
+  competes-for:
+    # patch → brief. /propose-patches authors one per candidate patch, tying it to
+    # the lane (or single) brief it competes for. A brief with >1 live competes-for
+    # edge is a patch market the patch-comparison gate guards.
+    source: patch
+    target: brief
+
+  synthesizes:
+    # patch → patch. A synthesis patch points at each parent patch it combines;
+    # `synthesis_parentage` requires >=2. Within-lane only — across-lane combination
+    # is integration, never synthesis.
+    source: patch
+    target: patch

@@ -11,5 +11,7 @@ checks:
   - spec-validate
   - pr-evidence
   - check-diff
+  # the diff-aware patch-market merge gate (spec:patch-gate / patch-comparison.yml)
+  - patch-comparison
   # reserved — no spec:drift subcommand yet; waivable but currently unenforced
   - drift
