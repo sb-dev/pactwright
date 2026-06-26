@@ -2,7 +2,7 @@
 id: brief-patch-market-commands-c5f3
 type: brief
 title: Patch-market commands — /propose-patches, /compare-patches, /synthesize-patches, /select-patch with GitHub draft-PR orchestration and closing status-reports
-status: draft
+status: implemented
 created: 2026-06-24
 lane: api-integration
 produced_by: "/decompose-lanes"

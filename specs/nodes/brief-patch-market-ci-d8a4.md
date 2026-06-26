@@ -2,7 +2,7 @@
 id: brief-patch-market-ci-d8a4
 type: brief
 title: Patch-market CI gate — patch-comparison.yml required check (fires on the code merge) + branch-protection wiring docs
-status: draft
+status: implemented
 created: 2026-06-24
 lane: observability-release
 produced_by: "/decompose-lanes"

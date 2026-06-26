@@ -2,7 +2,7 @@
 id: brief-patch-market-gate-b7e2
 type: brief
 title: Patch-market validator + diff-aware gate — spec:patch-gate, two structural rules, one shared resolved-predicate, and the five panel fixes
-status: draft
+status: implemented
 created: 2026-06-24
 lane: domain-backend
 produced_by: "/decompose-lanes"

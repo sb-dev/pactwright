@@ -61,6 +61,12 @@ by-type:
     - evidence-drift-tool-assisted-3e58
     - evidence-lane-integration-9b4c
     - evidence-lifecycle-thin-commands-8296
+    - evidence-patch-market-ci-4a5b
+    - evidence-patch-market-commands-3f4a
+    - evidence-patch-market-docs-5b6c
+    - evidence-patch-market-gate-2e3f
+    - evidence-patch-market-schema-1d2e
+    - evidence-patch-market-tests-6c7d
     - evidence-spec-tooling-schema-driven-9c4e
     - evidence-work-class-routing-f0a3
   intent:

@@ -4,7 +4,7 @@ type: capability
 title: Spec graph tooling
 status: active
 created: 2026-06-15
-paths: [tools/**]
+paths: [tools/**, package.json]
 ---
 
 Owns the spec-graph tooling under `tools/` (index, validate, gate, drift).

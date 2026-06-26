@@ -2,7 +2,7 @@
 id: brief-patch-market-schema-a4d1
 type: brief
 title: Patch-market schema migration — patch node, competes-for/synthesizes edges, widened compares/selects targets, patch_market brief flag, patch-comparison check
-status: draft
+status: implemented
 created: 2026-06-24
 lane: data-migration
 produced_by: "/decompose-lanes"

@@ -2,7 +2,7 @@
 id: brief-patch-market-docs-e2b5
 type: brief
 title: Patch-market governance docs — CLAUDE.md patch-market section, by-class row, synthesis-vs-integration, scope-integrity in patch review
-status: draft
+status: implemented
 created: 2026-06-24
 lane: docs-spec
 produced_by: "/decompose-lanes"

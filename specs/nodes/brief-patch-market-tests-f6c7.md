@@ -2,7 +2,7 @@
 id: brief-patch-market-tests-f6c7
 type: brief
 title: Patch-market verification lane — tests for the gate, the two structural rules, the live-competitor parity test, and schema-for-free checks
-status: draft
+status: implemented
 created: 2026-06-24
 lane: test-verification
 produced_by: "/decompose-lanes"

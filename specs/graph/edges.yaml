@@ -339,3 +339,78 @@ edges:
     type: decomposes
     target: contract-patch-market-ci-gate-6b7e
     created: 2026-06-24
+  - id: edge-evidences-patch-market-schema-7a1b
+    source: evidence-patch-market-schema-1d2e
+    type: evidences
+    target: brief-patch-market-schema-a4d1
+    created: 2026-06-25
+  - id: edge-evidences-patch-market-gate-8b2c
+    source: evidence-patch-market-gate-2e3f
+    type: evidences
+    target: brief-patch-market-gate-b7e2
+    created: 2026-06-25
+  - id: edge-evidences-patch-market-commands-9c3d
+    source: evidence-patch-market-commands-3f4a
+    type: evidences
+    target: brief-patch-market-commands-c5f3
+    created: 2026-06-25
+  - id: edge-evidences-patch-market-ci-0d4e
+    source: evidence-patch-market-ci-4a5b
+    type: evidences
+    target: brief-patch-market-ci-d8a4
+    created: 2026-06-25
+  - id: edge-evidences-patch-market-docs-1e5f
+    source: evidence-patch-market-docs-5b6c
+    type: evidences
+    target: brief-patch-market-docs-e2b5
+    created: 2026-06-25
+  - id: edge-evidences-patch-market-tests-2f6a
+    source: evidence-patch-market-tests-6c7d
+    type: evidences
+    target: brief-patch-market-tests-f6c7
+    created: 2026-06-25
+  - id: edge-touches-patch-market-schema-spec-schema-3a7b
+    source: evidence-patch-market-schema-1d2e
+    type: touches
+    target: capability-spec-schema-2c3d
+    created: 2026-06-25
+  - id: edge-touches-patch-market-gate-spec-tooling-4b8c
+    source: evidence-patch-market-gate-2e3f
+    type: touches
+    target: capability-spec-tooling-1a2b
+    created: 2026-06-25
+  - id: edge-touches-patch-market-gate-spec-schema-5c9d
+    source: evidence-patch-market-gate-2e3f
+    type: touches
+    target: capability-spec-schema-2c3d
+    created: 2026-06-25
+  - id: edge-touches-patch-market-gate-spec-tests-6d0e
+    source: evidence-patch-market-gate-2e3f
+    type: touches
+    target: capability-spec-tests-3a6e
+    created: 2026-06-25
+  - id: edge-touches-patch-market-commands-lifecycle-commands-7e1f
+    source: evidence-patch-market-commands-3f4a
+    type: touches
+    target: capability-lifecycle-commands-4f5a
+    created: 2026-06-25
+  - id: edge-touches-patch-market-ci-ci-enforcement-8f2a
+    source: evidence-patch-market-ci-4a5b
+    type: touches
+    target: capability-ci-enforcement-3e4f
+    created: 2026-06-25
+  - id: edge-touches-patch-market-ci-spec-docs-9a3b
+    source: evidence-patch-market-ci-4a5b
+    type: touches
+    target: capability-spec-docs-8c1d
+    created: 2026-06-25
+  - id: edge-touches-patch-market-docs-spec-docs-0b4c
+    source: evidence-patch-market-docs-5b6c
+    type: touches
+    target: capability-spec-docs-8c1d
+    created: 2026-06-25
+  - id: edge-touches-patch-market-tests-spec-tests-1c5d
+    source: evidence-patch-market-tests-6c7d
+    type: touches
+    target: capability-spec-tests-3a6e
+    created: 2026-06-25
