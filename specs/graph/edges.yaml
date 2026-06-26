@@ -414,3 +414,33 @@ edges:
     type: touches
     target: capability-spec-tests-3a6e
     created: 2026-06-25
+  - id: edge-integrates-patch-market-schema-2a6e
+    source: integration-patch-market-9e4d
+    type: integrates
+    target: evidence-patch-market-schema-1d2e
+    created: 2026-06-25
+  - id: edge-integrates-patch-market-gate-3b7f
+    source: integration-patch-market-9e4d
+    type: integrates
+    target: evidence-patch-market-gate-2e3f
+    created: 2026-06-25
+  - id: edge-integrates-patch-market-commands-4c8a
+    source: integration-patch-market-9e4d
+    type: integrates
+    target: evidence-patch-market-commands-3f4a
+    created: 2026-06-25
+  - id: edge-integrates-patch-market-ci-5d9b
+    source: integration-patch-market-9e4d
+    type: integrates
+    target: evidence-patch-market-ci-4a5b
+    created: 2026-06-25
+  - id: edge-integrates-patch-market-docs-6e0c
+    source: integration-patch-market-9e4d
+    type: integrates
+    target: evidence-patch-market-docs-5b6c
+    created: 2026-06-25
+  - id: edge-integrates-patch-market-tests-7f1d
+    source: integration-patch-market-9e4d
+    type: integrates
+    target: evidence-patch-market-tests-6c7d
+    created: 2026-06-25

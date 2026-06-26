@@ -69,6 +69,8 @@ by-type:
     - evidence-patch-market-tests-6c7d
     - evidence-spec-tooling-schema-driven-9c4e
     - evidence-work-class-routing-f0a3
+  integration:
+    - integration-patch-market-9e4d
   intent:
     - intent-capture-smoke-superseded-e7f8
     - intent-capture-smoke-test-46d5

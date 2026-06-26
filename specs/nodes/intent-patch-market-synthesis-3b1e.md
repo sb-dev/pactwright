@@ -2,7 +2,7 @@
 id: intent-patch-market-synthesis-3b1e
 type: intent
 title: Add the lane-aware patch market and synthesis
-status: open
+status: addressed
 created: 2026-06-24
 class: 3
 ---

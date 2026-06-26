@@ -212,6 +212,30 @@ incoming:
     - id: edge-selects-work-class-validate-invariant-6a9c
       source: decision-work-class-routing-4d7a
       type: selects
+  evidence-patch-market-ci-4a5b:
+    - id: edge-integrates-patch-market-ci-5d9b
+      source: integration-patch-market-9e4d
+      type: integrates
+  evidence-patch-market-commands-3f4a:
+    - id: edge-integrates-patch-market-commands-4c8a
+      source: integration-patch-market-9e4d
+      type: integrates
+  evidence-patch-market-docs-5b6c:
+    - id: edge-integrates-patch-market-docs-6e0c
+      source: integration-patch-market-9e4d
+      type: integrates
+  evidence-patch-market-gate-2e3f:
+    - id: edge-integrates-patch-market-gate-3b7f
+      source: integration-patch-market-9e4d
+      type: integrates
+  evidence-patch-market-schema-1d2e:
+    - id: edge-integrates-patch-market-schema-2a6e
+      source: integration-patch-market-9e4d
+      type: integrates
+  evidence-patch-market-tests-6c7d:
+    - id: edge-integrates-patch-market-tests-7f1d
+      source: integration-patch-market-9e4d
+      type: integrates
   intent-capture-smoke-test-46d5:
     - id: edge-supersedes-capture-smoke-3f0a
       source: intent-capture-smoke-superseded-e7f8

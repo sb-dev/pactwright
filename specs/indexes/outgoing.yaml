@@ -302,6 +302,25 @@ outgoing:
     - id: edge-evidences-work-class-routing-c7e1
       target: brief-work-class-routing-9a1c
       type: evidences
+  integration-patch-market-9e4d:
+    - id: edge-integrates-patch-market-ci-5d9b
+      target: evidence-patch-market-ci-4a5b
+      type: integrates
+    - id: edge-integrates-patch-market-commands-4c8a
+      target: evidence-patch-market-commands-3f4a
+      type: integrates
+    - id: edge-integrates-patch-market-docs-6e0c
+      target: evidence-patch-market-docs-5b6c
+      type: integrates
+    - id: edge-integrates-patch-market-gate-3b7f
+      target: evidence-patch-market-gate-2e3f
+      type: integrates
+    - id: edge-integrates-patch-market-schema-2a6e
+      target: evidence-patch-market-schema-1d2e
+      type: integrates
+    - id: edge-integrates-patch-market-tests-7f1d
+      target: evidence-patch-market-tests-6c7d
+      type: integrates
   intent-capture-smoke-superseded-e7f8:
     - id: edge-supersedes-capture-smoke-3f0a
       target: intent-capture-smoke-test-46d5
