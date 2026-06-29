@@ -82,6 +82,9 @@ test("(b) a comparison covering only one competitor (<2) → 1 finding", () => {
   assert.equal(findings[0].rule, "selected-patch-comparison");
   assert.equal(findings[0].kind, "selected_patch_comparison");
   assert.equal(findings[0].subject, "brief-w");
+  // No live candidate here (win=selected, lose=superseded) — only the <2-coverage bar
+  // fails — so the "leaving live candidate(s) {…}" clause must be ABSENT.
+  assert.doesNotMatch(findings[0].detail, /leaving live candidate/);
 });
 
 // (b') a LIVE candidate competitor left uncovered → finding (coverage, not just count).
@@ -109,7 +112,9 @@ test("(b') a live candidate competitor uncovered → finding even when >=2 other
   // covered size is 2, but patch-stillin is a LIVE candidate left uncovered → finding.
   assert.equal(findings.length, 1);
   assert.equal(findings[0].subject, "brief-w");
-  assert.match(findings[0].detail, /patch-stillin/);
+  // Discriminating: the detail must NAME patch-stillin as THE uncovered live candidate,
+  // not merely list it among competitors (which would match even if the signal were dropped).
+  assert.match(findings[0].detail, /leaving live candidate\(s\) \{patch-stillin\} uncovered/);
 });
 
 // Fix 2 here: a `selected` competitor is excluded from the live (uncovered) set, so

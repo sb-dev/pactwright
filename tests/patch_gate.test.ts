@@ -34,6 +34,7 @@ const patch = (id: string, status: string, branch: string, strategy = "alpha"): 
   node(id, "patch", { status, branch, strategy });
 const brief = (id: string): NodeRecord => node(id, "brief", { status: "draft" });
 const comparison = (id: string): NodeRecord => node(id, "comparison");
+const decision = (id: string): NodeRecord => node(id, "decision");
 const competesFor = (id: string, patchId: string, briefId: string): EdgeRecord =>
   edge(id, "competes-for", patchId, briefId);
 const compares = (id: string, comparisonId: string, patchId: string): EdgeRecord =>
@@ -67,7 +68,7 @@ test("(a) multi-patch brief with no comparison/selects fails — the market is u
   assert.equal(r.pass, false, r.reason);
   // The reason names the unresolved market and its competitor count.
   assert.match(r.reason, /brief-widget-0001/);
-  assert.match(r.reason, /no comparison\+selects/);
+  assert.match(r.reason, /market is not resolved/);
 });
 
 // ---------------------------------------------------------------------------
@@ -76,6 +77,7 @@ test("(a) multi-patch brief with no comparison/selects fails — the market is u
 test("(b) a comparison covering both competitors plus a selects decision passes", () => {
   const nodes = [
     brief("brief-widget-0001"),
+    decision("decision-d"),
     patch("patch-alpha-0002", "selected", "patch/widget/alpha"),
     patch("patch-beta-0003", "superseded", "patch/widget/beta"),
     comparison("comparison-widget-0004"),
@@ -147,12 +149,15 @@ test("(c) a non-patch head branch that maps to no patch node passes — unrelate
   assert.match(r.reason, /not a patch-market merge/);
 });
 
-test("(c) an undefined head branch that maps to no patch node passes (detached HEAD, no env)", () => {
+test("(c) an undefined head branch FAILS CLOSED — a merge queue / detached HEAD cannot skip the gate", () => {
+  // When the head branch cannot be determined (no $GITHUB_HEAD_REF, detached HEAD —
+  // e.g. a `merge_group:` run) the gate cannot prove the merge skipped no market, so
+  // it fails closed rather than waving every PR through unconditionally.
   const nodes = [brief("brief-widget-0001"), patch("patch-alpha-0002", "candidate", "patch/widget/alpha")];
   const edges = [competesFor("e-cf1", "patch-alpha-0002", "brief-widget-0001")];
   const r = evaluatePatchGate(spec(nodes, edges), { ...baseInput, headBranch: undefined });
-  assert.equal(r.pass, true, r.reason);
-  assert.match(r.reason, /not a patch-market merge/);
+  assert.equal(r.pass, false, r.reason);
+  assert.match(r.reason, /cannot determine the PR head branch/);
 });
 
 // ---------------------------------------------------------------------------
@@ -237,7 +242,7 @@ test("(d) a pre-existing override (not added in this PR) does not waive", () => 
     addedEdgeIds: new Set(),
   });
   assert.equal(r.pass, false, r.reason);
-  assert.match(r.reason, /no comparison\+selects/);
+  assert.match(r.reason, /market is not resolved/);
 });
 
 test("(d) an override waiving a DIFFERENT check does not waive patch-comparison", () => {

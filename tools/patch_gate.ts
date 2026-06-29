@@ -2,19 +2,23 @@ import { spawnSync } from "node:child_process";
 import { asString, nodesById, type LoadedSpec, type NodeRecord } from "./loader.ts";
 import { type GateResult, toDateString } from "./gate.ts";
 import { addedEdgeIds, addedNodeIds, resolveBase } from "./gitdiff.ts";
-import { competingPatches, patchMarketResolved } from "./handlers/coverage_traversal.ts";
+import { briefsForPatch, competingPatches, patchMarketResolved } from "./handlers/coverage_traversal.ts";
 
 /**
  * The patch-comparison gate (`spec:patch-gate`). A diff-aware merge gate: when a PR
  * merges a patch branch whose brief runs a market (>1 competing patch), the graph
  * must already carry a comparison covering those patches AND a `selects` decision on
- * one of them — else an unexpired override waiving `patch-comparison`. The verdict
- * (`evaluatePatchGate`) is a pure function of the HEAD graph plus the PR's head
- * branch and added-id sets, so it is unit-testable without git.
+ * one of them, with no live candidate left uncovered — else an unexpired override
+ * waiving `patch-comparison`. The verdict (`evaluatePatchGate`) is a pure function of
+ * the HEAD graph plus the PR's head branch and added-id sets, so it is unit-testable
+ * without git.
  *
  * Mirrors `tools/gate.ts`/`checkdiff.ts`: it reuses `gitdiff.ts` and `toDateString`,
- * and shares the "who competes / is the market resolved" traversal with the
- * `selected_patch_comparison` validation rule (one source of truth — no drift).
+ * and shares the "who competes / which briefs / is the market resolved" traversal
+ * (`briefsForPatch`/`competingPatches`/`patchMarketResolved`) with the
+ * `selected_patch_comparison` validation rule. Because `patchMarketResolved` now
+ * encodes the rule's exact clean condition, the gate cannot pass a graph that rule
+ * would red (one source of truth — no drift).
  */
 
 /** The literal a `waives` edge must target to waive this gate (a named check, not
@@ -68,20 +72,36 @@ function patchComparisonOverride(
 
 /**
  * Pass iff the PR is not a patch-market merge that skipped the market. Concretely:
+ *  - the head branch cannot be determined (no `$GITHUB_HEAD_REF`, detached HEAD) →
+ *    FAIL CLOSED (a merge queue / detached run must not silently skip the gate);
  *  - the head branch maps to no patch node and is not a `patch/...` branch → PASS
  *    (an unrelated PR);
  *  - the head branch is a `patch/...` branch we cannot map to exactly one patch and
  *    its single brief → FAIL CLOSED (never silently let an unmapped patch merge);
  *  - the mapped brief runs no market (<=1 competing patch) → PASS;
- *  - the market is resolved (comparison covers >=2 competitors AND one is selected)
- *    → PASS;
+ *  - the market is resolved (comparison covers >=2 competitors, a decision selects
+ *    one, AND no live candidate is left uncovered) → PASS;
  *  - else require an unexpired override waiving patch-comparison, else FAIL.
  */
 export function evaluatePatchGate(spec: LoadedSpec, input: PatchGateInput): GateResult {
   const { headBranch } = input;
   const byId = nodesById(spec);
 
-  const isPatchBranch = headBranch !== undefined && headBranch.startsWith("patch/");
+  // Fail closed when the head branch is undeterminable: unlike a known non-patch
+  // branch, we cannot tell whether this is a patch-market merge, so passing would
+  // let one slip through (e.g. a `merge_group:` run where `$GITHUB_HEAD_REF` is
+  // absent and `git rev-parse --abbrev-ref HEAD` yields `HEAD`). Matches gitdiff.ts.
+  if (headBranch === undefined) {
+    return {
+      pass: false,
+      reason:
+        "cannot determine the PR head branch (no $GITHUB_HEAD_REF and HEAD is detached) — " +
+        "failing closed so a patch-market merge cannot skip the gate (run on a pull_request, " +
+        "set GITHUB_HEAD_REF, or add an override waiving patch-comparison)",
+    };
+  }
+
+  const isPatchBranch = headBranch.startsWith("patch/");
   const matching = spec.nodes.filter(
     (n) => asString(n.data["type"]) === "patch" && asString(n.data["branch"]) === headBranch,
   );
@@ -103,13 +123,7 @@ export function evaluatePatchGate(spec: LoadedSpec, input: PatchGateInput): Gate
   }
   const patchId = asString(matching[0].data["id"]) ?? matching[0].file;
 
-  const briefIds = new Set<string>();
-  for (const edge of spec.edges) {
-    if (asString(edge["type"]) !== "competes-for") continue;
-    if (asString(edge["source"]) !== patchId) continue;
-    const t = asString(edge["target"]);
-    if (t !== undefined && byId.get(t) !== undefined) briefIds.add(t);
-  }
+  const briefIds = briefsForPatch(spec, byId, patchId);
   if (briefIds.size !== 1) {
     return {
       pass: false,
@@ -126,7 +140,7 @@ export function evaluatePatchGate(spec: LoadedSpec, input: PatchGateInput): Gate
   if (patchMarketResolved(spec, byId, briefId)) {
     return {
       pass: true,
-      reason: `brief ${briefId}'s patch market is resolved (a comparison covers >=2 of ${competing.size} competitors and a selects decision exists)`,
+      reason: `brief ${briefId}'s patch market is resolved (a comparison covers >=2 of ${competing.size} competitors, a decision selects one, and no live candidate is left uncovered)`,
     };
   }
 
@@ -135,12 +149,15 @@ export function evaluatePatchGate(spec: LoadedSpec, input: PatchGateInput): Gate
   const tail = ov.nearMiss !== undefined ? ` — ${ov.nearMiss}` : "";
   return {
     pass: false,
-    reason: `brief ${briefId} has ${competing.size} competing patches but the graph carries no comparison+selects resolving the market${tail}`,
+    reason:
+      `brief ${briefId} has ${competing.size} competing patches but its market is not resolved ` +
+      `(needs a comparison covering >=2 competitors, a decision selects one, and no live candidate left uncovered)${tail}`,
   };
 }
 
 /** The PR head branch: `$GITHUB_HEAD_REF` (set on GitHub PR runs), else the local
- * branch name. `undefined` in a detached HEAD with no env — a non-patch context. */
+ * branch name. `undefined` in a detached HEAD with no env, which `evaluatePatchGate`
+ * treats as FAIL CLOSED (a context where it cannot prove the merge skipped no market). */
 function resolveHeadBranch(): string | undefined {
   const env = process.env.GITHUB_HEAD_REF;
   if (env !== undefined && env.trim() !== "") return env.trim();

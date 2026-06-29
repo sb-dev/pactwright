@@ -82,6 +82,27 @@ export function intentsForContract(spec: LoadedSpec, contractId: string): string
  * two cannot drift apart (the panel's two-places-drift concern).
  */
 
+/** Distinct, RESOLVABLE brief ids that the patch `competes-for` — the inverse of the
+ * competes-for walk (patch→brief, not brief→patch). The `byId.get(t) !== undefined`
+ * filter drops unresolvable targets (`edges-references-resolve` owns reporting those).
+ * Lifted here so the gate and the `selected_patch_comparison` rule share ONE patch→brief
+ * resolution instead of copying the walk in two places. (Cannot reuse
+ * `liveSourcesByEdge`, which matches by `target`; this matches by `source`.) */
+export function briefsForPatch(
+  spec: LoadedSpec,
+  byId: Map<string, NodeRecord>,
+  patchId: string,
+): Set<string> {
+  const briefIds = new Set<string>();
+  for (const edge of spec.edges) {
+    if (asString(edge["type"]) !== "competes-for") continue;
+    if (asString(edge["source"]) !== patchId) continue;
+    const t = asString(edge["target"]);
+    if (t !== undefined && byId.get(t) !== undefined) briefIds.add(t);
+  }
+  return briefIds;
+}
+
 /** All distinct patch ids that `competes-for` the brief, STATUS-BLIND. The
  * historical competitor set: it includes a `selected` winner and `superseded`
  * losers, both of which legitimately competed. Unlike a contract proposal market,
@@ -130,17 +151,30 @@ export function comparedCompetitors(
 }
 
 /** A brief's patch market is RESOLVED iff a comparison covers >=2 of its competing
- * patches AND some `decision` has `selects`-ed one of those competitors. The shared
- * verdict the patch gate uses to let a winner's merge through. */
+ * patches, NO live (candidate) competitor is left uncovered, AND some `decision` has
+ * `selects`-ed one of those competitors. This is the SAME verdict the
+ * `selected_patch_comparison` rule reds on (covered >= 2 AND no uncovered live) — so
+ * the diff-aware patch gate cannot pass a graph that rule would red. The `decision`
+ * source-type guard mirrors `comparedCompetitors`'s `comparison` guard and makes this
+ * function conform to its own contract ("some DECISION has selects-ed one"); a
+ * non-decision `selects` source is already a `edges-endpoint-types` validate failure. */
 export function patchMarketResolved(
   spec: LoadedSpec,
   byId: Map<string, NodeRecord>,
   briefId: string,
 ): boolean {
-  if (comparedCompetitors(spec, byId, briefId).size < 2) return false;
+  const covered = comparedCompetitors(spec, byId, briefId);
+  if (covered.size < 2) return false;
+  // No live (candidate) competitor may be left uncovered — mirror the rule exactly.
+  for (const live of liveCompetitors(spec, byId, briefId)) {
+    if (!covered.has(live)) return false;
+  }
   const competing = competingPatches(spec, byId, briefId);
   for (const edge of spec.edges) {
     if (asString(edge["type"]) !== "selects") continue;
+    const sourceId = asString(edge["source"]);
+    const source = sourceId !== undefined ? byId.get(sourceId) : undefined;
+    if (source === undefined || asString(source.data["type"]) !== "decision") continue;
     const target = asString(edge["target"]);
     if (target !== undefined && competing.has(target)) return true;
   }

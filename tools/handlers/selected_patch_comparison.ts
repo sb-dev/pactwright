@@ -1,6 +1,6 @@
 import { asString, nodesById, type LoadedSpec, type Rule } from "../loader.ts";
 import type { Finding } from "../validator.ts";
-import { comparedCompetitors, competingPatches, liveCompetitors } from "./coverage_traversal.ts";
+import { briefsForPatch, comparedCompetitors, competingPatches, liveCompetitors } from "./coverage_traversal.ts";
 
 /**
  * A `selects`-edged PATCH (the patch market's winner) must have a durable
@@ -28,13 +28,7 @@ export default function selectedPatchComparison(rule: Rule, spec: LoadedSpec): F
     if (patch === undefined) continue; // unresolved: references_resolve owns it
     if (asString(patch.data["type"]) !== "patch") continue; // contract selection: comparison_required's job
 
-    const briefIds = new Set<string>();
-    for (const e of spec.edges) {
-      if (asString(e["type"]) !== "competes-for") continue;
-      if (asString(e["source"]) !== patchId) continue;
-      const t = asString(e["target"]);
-      if (t !== undefined && byId.get(t) !== undefined) briefIds.add(t);
-    }
+    const briefIds = briefsForPatch(spec, byId, patchId);
 
     if (briefIds.size === 0) {
       findings.push({
@@ -49,17 +43,22 @@ export default function selectedPatchComparison(rule: Rule, spec: LoadedSpec): F
     for (const briefId of briefIds) {
       const competing = competingPatches(spec, byId, briefId);
       const covered = comparedCompetitors(spec, byId, briefId);
-      const uncoveredLive = [...liveCompetitors(spec, byId, briefId)].filter((p) => !covered.has(p));
+      const uncoveredLive = [...liveCompetitors(spec, byId, briefId)].filter((p) => !covered.has(p)).sort();
       if (covered.size < 2 || uncoveredLive.length > 0) {
         const competingList = [...competing].sort().join(", ") || "(none)";
         const coveredList = [...covered].sort().join(", ") || "(none)";
+        // Name the live candidate(s) left uncovered so the message identifies WHICH
+        // patch failed coverage, not merely that some did (the full competing set is
+        // also listed, but that does not single out the offender).
+        const uncoveredClause =
+          uncoveredLive.length > 0 ? `, leaving live candidate(s) {${uncoveredLive.join(", ")}} uncovered` : "";
         findings.push({
           rule: ruleId,
           kind: "selected_patch_comparison",
           subject: briefId,
           detail:
             `brief ${briefId} has a selected patch ${patchId} but its comparison covers ` +
-            `{${coveredList}} of competing patches {${competingList}} via compares edges ` +
+            `{${coveredList}} of competing patches {${competingList}} via compares edges${uncoveredClause} ` +
             `(a comparison must cover >=2 competitors and leave no live candidate uncovered)`,
         });
       }
