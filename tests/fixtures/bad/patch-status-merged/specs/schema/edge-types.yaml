@@ -1,0 +1,49 @@
+# Edge type definitions for the specs graph.
+edge_types:
+  proposes:
+    source: contract
+    target: intent
+
+  selects:
+    source: decision
+    target: [contract, patch]
+
+  decomposes:
+    source: brief
+    target: contract
+
+  evidences:
+    source: evidence
+    target: brief
+
+  supersedes:
+    source: any
+    target: same_as_source
+
+  waives:
+    source: override
+    target: any
+
+  compares:
+    source: comparison
+    target: [contract, patch]
+
+  touches:
+    source: evidence
+    target: capability
+
+  flags:
+    source: drift-finding
+    target: [evidence, capability]
+
+  integrates:
+    source: integration
+    target: evidence
+
+  competes-for:
+    source: patch
+    target: brief
+
+  synthesizes:
+    source: patch
+    target: patch

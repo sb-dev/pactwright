@@ -1,0 +1,11 @@
+by-type:
+  brief:
+    - brief-widget-a1b2
+  comparison:
+    - comparison-widget-090a
+  decision:
+    - decision-widget-0b0c
+  patch:
+    - patch-alpha-c3d4
+    - patch-beta-e5f6
+    - patch-synthesis-0708

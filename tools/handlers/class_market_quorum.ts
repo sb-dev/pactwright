@@ -28,7 +28,10 @@ export default function classMarketQuorum(rule: Rule, spec: LoadedSpec): Finding
     if (asString(edge["type"]) !== "selects") return;
     const subject = asString(edge["id"]) ?? `specs/graph/edges.yaml[${i}]`;
     const contractId = asString(edge["target"]);
-    if (contractId === undefined || byId.get(contractId) === undefined) return; // unresolved: skip
+    if (contractId === undefined) return;
+    const contract = byId.get(contractId);
+    if (contract === undefined) return; // unresolved: skip
+    if (asString(contract.data["type"]) !== "contract") return; // selects → patch: a patch market, not the proposal market
 
     const intentIds = intentsForContract(spec, contractId);
 

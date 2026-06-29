@@ -2,10 +2,11 @@ import { loadSpec } from "./loader.ts";
 import { writeIndexes } from "./indexer.ts";
 import { runGate } from "./gate.ts";
 import { runCheckDiff } from "./checkdiff.ts";
+import { runPatchGate } from "./patch_gate.ts";
 import { runDriftMap } from "./driftmap.ts";
 import { formatFinding, runValidation, writeReport } from "./validator.ts";
 
-const USAGE = `usage: spec <index|validate|gate|check-diff|drift-map>
+const USAGE = `usage: spec <index|validate|gate|check-diff|patch-gate|drift-map>
 
   index       regenerate the four files under specs/indexes/
   validate    run the rules in specs/schema/validation-rules.yaml;
@@ -15,11 +16,15 @@ const USAGE = `usage: spec <index|validate|gate|check-diff|drift-map>
   check-diff  pass/fail the sensitive-paths gate: a touched sensitive_paths
               glob needs a linked approved contract (bound to the owning
               capability) or an override; same base ref as gate
+  patch-gate  pass/fail the patch-market merge gate: a PR merging a patch whose
+              brief runs a market (>1 competing patch) needs a comparison + a
+              selects decision (or an override); base from $GATE_BASE, head from
+              $GITHUB_HEAD_REF
   drift-map   print the deterministic diff→capability drift packets (JSON)
 
 exit codes: 0 success, 1 validation/load/gate failure, 2 usage error`;
 
-const SUBCOMMANDS = ["index", "validate", "gate", "check-diff", "drift-map"];
+const SUBCOMMANDS = ["index", "validate", "gate", "check-diff", "patch-gate", "drift-map"];
 
 function main(): number {
   const subcommand = process.argv[2];
@@ -52,6 +57,16 @@ function main(): number {
       return 0;
     }
     console.error(`spec:check-diff: FAIL — ${result.reason}`);
+    return 1;
+  }
+
+  if (subcommand === "patch-gate") {
+    const result = runPatchGate(spec);
+    if (result.pass) {
+      console.log(`spec:patch-gate: PASS — ${result.reason}`);
+      return 0;
+    }
+    console.error(`spec:patch-gate: FAIL — ${result.reason}`);
     return 1;
   }
 

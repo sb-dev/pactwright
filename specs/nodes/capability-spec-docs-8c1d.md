@@ -3,7 +3,7 @@ id: capability-spec-docs-8c1d
 type: capability
 title: Governing documentation
 status: active
-paths: [CLAUDE.md]
+paths: [CLAUDE.md, docs/**]
 ---
 
 Owns the governing-doctrine document `CLAUDE.md` — the repository's

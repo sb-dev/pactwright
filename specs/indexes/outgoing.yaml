@@ -19,6 +19,30 @@ outgoing:
     - id: edge-decomposes-thin-commands-8b79
       target: contract-lifecycle-thin-commands-7c20
       type: decomposes
+  brief-patch-market-ci-d8a4:
+    - id: edge-decomposes-patch-market-ci-4d5c
+      target: contract-patch-market-ci-gate-6b7e
+      type: decomposes
+  brief-patch-market-commands-c5f3:
+    - id: edge-decomposes-patch-market-commands-3c4d
+      target: contract-patch-market-ci-gate-6b7e
+      type: decomposes
+  brief-patch-market-docs-e2b5:
+    - id: edge-decomposes-patch-market-docs-5e6b
+      target: contract-patch-market-ci-gate-6b7e
+      type: decomposes
+  brief-patch-market-gate-b7e2:
+    - id: edge-decomposes-patch-market-gate-2b3e
+      target: contract-patch-market-ci-gate-6b7e
+      type: decomposes
+  brief-patch-market-schema-a4d1:
+    - id: edge-decomposes-patch-market-schema-1a2f
+      target: contract-patch-market-ci-gate-6b7e
+      type: decomposes
+  brief-patch-market-tests-f6c7:
+    - id: edge-decomposes-patch-market-tests-6f7a
+      target: contract-patch-market-ci-gate-6b7e
+      type: decomposes
   brief-spec-tooling-schema-driven-8f2d:
     - id: edge-decomposes-spec-tooling-3c91
       target: contract-spec-tooling-schema-driven-b2e7
@@ -33,6 +57,16 @@ outgoing:
       type: compares
     - id: edge-compares-lane-integration-validated-4a2b
       target: contract-lane-integration-validated-body-7b2e
+      type: compares
+  comparison-patch-market-synthesis-7b1d:
+    - id: edge-compares-patch-market-ci-gate-6e1b
+      target: contract-patch-market-ci-gate-6b7e
+      type: compares
+    - id: edge-compares-patch-market-reuse-evidence-gate-8c3f
+      target: contract-patch-market-reuse-evidence-gate-c3f8
+      type: compares
+    - id: edge-compares-patch-market-validate-authoritative-4d2a
+      target: contract-patch-market-validate-authoritative-9d41
       type: compares
   contract-ci-gate-checks-as-nodes-2d49:
     - id: edge-proposes-ci-gate-checks-as-nodes-111b
@@ -86,6 +120,18 @@ outgoing:
     - id: edge-proposes-thin-commands-db7f
       target: intent-claude-lifecycle-commands-f367
       type: proposes
+  contract-patch-market-ci-gate-6b7e:
+    - id: edge-proposes-patch-market-ci-gate-b2d8
+      target: intent-patch-market-synthesis-3b1e
+      type: proposes
+  contract-patch-market-reuse-evidence-gate-c3f8:
+    - id: edge-proposes-patch-market-reuse-evidence-gate-c3e9
+      target: intent-patch-market-synthesis-3b1e
+      type: proposes
+  contract-patch-market-validate-authoritative-9d41:
+    - id: edge-proposes-patch-market-validate-authoritative-a1c7
+      target: intent-patch-market-synthesis-3b1e
+      type: proposes
   contract-spec-tooling-hardcoded-c1a4:
     - id: edge-proposes-hardcoded-9d31
       target: intent-spec-index-validate-a3f1
@@ -125,6 +171,10 @@ outgoing:
   decision-lifecycle-thin-commands-41c8:
     - id: edge-selects-thin-commands-8069
       target: contract-lifecycle-thin-commands-7c20
+      type: selects
+  decision-patch-market-ci-gate-8a2f:
+    - id: edge-selects-patch-market-ci-gate-7d4c
+      target: contract-patch-market-ci-gate-6b7e
       type: selects
   decision-spec-tooling-schema-driven-5e8c:
     - id: edge-selects-schema-driven-7a12
@@ -190,6 +240,57 @@ outgoing:
     - id: edge-touches-lifecycle-commands-a4e5
       target: capability-lifecycle-commands-4f5a
       type: touches
+  evidence-patch-market-ci-4a5b:
+    - id: edge-evidences-patch-market-ci-0d4e
+      target: brief-patch-market-ci-d8a4
+      type: evidences
+    - id: edge-touches-patch-market-ci-ci-enforcement-8f2a
+      target: capability-ci-enforcement-3e4f
+      type: touches
+    - id: edge-touches-patch-market-ci-spec-docs-9a3b
+      target: capability-spec-docs-8c1d
+      type: touches
+  evidence-patch-market-commands-3f4a:
+    - id: edge-evidences-patch-market-commands-9c3d
+      target: brief-patch-market-commands-c5f3
+      type: evidences
+    - id: edge-touches-patch-market-commands-lifecycle-commands-7e1f
+      target: capability-lifecycle-commands-4f5a
+      type: touches
+  evidence-patch-market-docs-5b6c:
+    - id: edge-evidences-patch-market-docs-1e5f
+      target: brief-patch-market-docs-e2b5
+      type: evidences
+    - id: edge-touches-patch-market-docs-spec-docs-0b4c
+      target: capability-spec-docs-8c1d
+      type: touches
+  evidence-patch-market-gate-2e3f:
+    - id: edge-evidences-patch-market-gate-8b2c
+      target: brief-patch-market-gate-b7e2
+      type: evidences
+    - id: edge-touches-patch-market-gate-spec-schema-5c9d
+      target: capability-spec-schema-2c3d
+      type: touches
+    - id: edge-touches-patch-market-gate-spec-tests-6d0e
+      target: capability-spec-tests-3a6e
+      type: touches
+    - id: edge-touches-patch-market-gate-spec-tooling-4b8c
+      target: capability-spec-tooling-1a2b
+      type: touches
+  evidence-patch-market-schema-1d2e:
+    - id: edge-evidences-patch-market-schema-7a1b
+      target: brief-patch-market-schema-a4d1
+      type: evidences
+    - id: edge-touches-patch-market-schema-spec-schema-3a7b
+      target: capability-spec-schema-2c3d
+      type: touches
+  evidence-patch-market-tests-6c7d:
+    - id: edge-evidences-patch-market-tests-2f6a
+      target: brief-patch-market-tests-f6c7
+      type: evidences
+    - id: edge-touches-patch-market-tests-spec-tests-1c5d
+      target: capability-spec-tests-3a6e
+      type: touches
   evidence-spec-tooling-schema-driven-9c4e:
     - id: edge-evidences-spec-tooling-5d7c
       target: brief-spec-tooling-schema-driven-8f2d
@@ -201,6 +302,25 @@ outgoing:
     - id: edge-evidences-work-class-routing-c7e1
       target: brief-work-class-routing-9a1c
       type: evidences
+  integration-patch-market-9e4d:
+    - id: edge-integrates-patch-market-ci-5d9b
+      target: evidence-patch-market-ci-4a5b
+      type: integrates
+    - id: edge-integrates-patch-market-commands-4c8a
+      target: evidence-patch-market-commands-3f4a
+      type: integrates
+    - id: edge-integrates-patch-market-docs-6e0c
+      target: evidence-patch-market-docs-5b6c
+      type: integrates
+    - id: edge-integrates-patch-market-gate-3b7f
+      target: evidence-patch-market-gate-2e3f
+      type: integrates
+    - id: edge-integrates-patch-market-schema-2a6e
+      target: evidence-patch-market-schema-1d2e
+      type: integrates
+    - id: edge-integrates-patch-market-tests-7f1d
+      target: evidence-patch-market-tests-6c7d
+      type: integrates
   intent-capture-smoke-superseded-e7f8:
     - id: edge-supersedes-capture-smoke-3f0a
       target: intent-capture-smoke-test-46d5
