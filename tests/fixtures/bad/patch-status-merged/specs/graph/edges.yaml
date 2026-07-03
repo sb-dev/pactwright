@@ -1,0 +1,6 @@
+edges:
+  - id: edge-competes-merged-1001
+    source: patch-merged-c3d4
+    type: competes-for
+    target: brief-widget-a1b2
+    created: 2026-06-20

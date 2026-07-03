@@ -27,8 +27,12 @@ export function liveSourcesByEdge(
   byId: Map<string, NodeRecord>,
   edgeType: string,
   targetId: string,
-  excludeStatus: string | undefined = "superseded",
+  excludeStatus: string | readonly string[] | undefined = "superseded",
 ): Set<string> {
+  const excluded =
+    excludeStatus === undefined
+      ? undefined
+      : new Set(typeof excludeStatus === "string" ? [excludeStatus] : excludeStatus);
   const live = new Set<string>();
   for (const edge of spec.edges) {
     if (asString(edge["type"]) !== edgeType) continue;
@@ -37,7 +41,10 @@ export function liveSourcesByEdge(
     if (sourceId === undefined) continue;
     const source = byId.get(sourceId);
     if (source === undefined) continue; // unresolved: references_resolve owns it
-    if (excludeStatus !== undefined && asString(source.data["status"]) === excludeStatus) continue;
+    if (excluded !== undefined) {
+      const status = asString(source.data["status"]);
+      if (status !== undefined && excluded.has(status)) continue;
+    }
     live.add(sourceId);
   }
   return live;
@@ -66,4 +73,110 @@ export function intentsForContract(spec: LoadedSpec, contractId: string): string
     if (target !== undefined) out.add(target);
   }
   return [...out];
+}
+
+/**
+ * Patch-market traversal primitives — the single source of truth for "who competes
+ * for a brief" and "is its market resolved", shared by the diff-aware patch gate
+ * (`tools/patch_gate.ts`) and the `selected_patch_comparison` validation rule so the
+ * two cannot drift apart (the panel's two-places-drift concern).
+ */
+
+/** Distinct, RESOLVABLE brief ids that the patch `competes-for` — the inverse of the
+ * competes-for walk (patch→brief, not brief→patch). The `byId.get(t) !== undefined`
+ * filter drops unresolvable targets (`edges-references-resolve` owns reporting those).
+ * Lifted here so the gate and the `selected_patch_comparison` rule share ONE patch→brief
+ * resolution instead of copying the walk in two places. (Cannot reuse
+ * `liveSourcesByEdge`, which matches by `target`; this matches by `source`.) */
+export function briefsForPatch(
+  spec: LoadedSpec,
+  byId: Map<string, NodeRecord>,
+  patchId: string,
+): Set<string> {
+  const briefIds = new Set<string>();
+  for (const edge of spec.edges) {
+    if (asString(edge["type"]) !== "competes-for") continue;
+    if (asString(edge["source"]) !== patchId) continue;
+    const t = asString(edge["target"]);
+    if (t !== undefined && byId.get(t) !== undefined) briefIds.add(t);
+  }
+  return briefIds;
+}
+
+/** All distinct patch ids that `competes-for` the brief, STATUS-BLIND. The
+ * historical competitor set: it includes a `selected` winner and `superseded`
+ * losers, both of which legitimately competed. Unlike a contract proposal market,
+ * patch losers go `superseded` (not `rejected`) at selection, so a superseded-
+ * excluding walk would wrongly drop the very losers a comparison had to weigh. */
+export function competingPatches(
+  spec: LoadedSpec,
+  byId: Map<string, NodeRecord>,
+  briefId: string,
+): Set<string> {
+  // An EMPTY exclude set, never `undefined`: `liveSourcesByEdge`'s `excludeStatus`
+  // has a `"superseded"` DEFAULT, and passing `undefined` would trigger it — here
+  // we want a genuinely status-blind walk that keeps superseded losers.
+  return liveSourcesByEdge(spec, byId, "competes-for", briefId, []);
+}
+
+/** LIVE (candidate) competitors of the brief: excludes a `selected` winner AND
+ * `superseded` losers. The open market — what the patch gate counts to decide a
+ * brief still has a market to resolve. */
+export function liveCompetitors(
+  spec: LoadedSpec,
+  byId: Map<string, NodeRecord>,
+  briefId: string,
+): Set<string> {
+  return liveSourcesByEdge(spec, byId, "competes-for", briefId, ["superseded", "selected"]);
+}
+
+/** Distinct competing patches of the brief that a resolved `comparison` node
+ * `compares` — the durable-record coverage set. */
+export function comparedCompetitors(
+  spec: LoadedSpec,
+  byId: Map<string, NodeRecord>,
+  briefId: string,
+): Set<string> {
+  const competing = competingPatches(spec, byId, briefId);
+  const covered = new Set<string>();
+  for (const edge of spec.edges) {
+    if (asString(edge["type"]) !== "compares") continue;
+    const sourceId = asString(edge["source"]);
+    const source = sourceId !== undefined ? byId.get(sourceId) : undefined;
+    if (source === undefined || asString(source.data["type"]) !== "comparison") continue; // unresolved/wrong source
+    const targetId = asString(edge["target"]);
+    if (targetId !== undefined && competing.has(targetId)) covered.add(targetId);
+  }
+  return covered;
+}
+
+/** A brief's patch market is RESOLVED iff a comparison covers >=2 of its competing
+ * patches, NO live (candidate) competitor is left uncovered, AND some `decision` has
+ * `selects`-ed one of those competitors. This is the SAME verdict the
+ * `selected_patch_comparison` rule reds on (covered >= 2 AND no uncovered live) — so
+ * the diff-aware patch gate cannot pass a graph that rule would red. The `decision`
+ * source-type guard mirrors `comparedCompetitors`'s `comparison` guard and makes this
+ * function conform to its own contract ("some DECISION has selects-ed one"); a
+ * non-decision `selects` source is already a `edges-endpoint-types` validate failure. */
+export function patchMarketResolved(
+  spec: LoadedSpec,
+  byId: Map<string, NodeRecord>,
+  briefId: string,
+): boolean {
+  const covered = comparedCompetitors(spec, byId, briefId);
+  if (covered.size < 2) return false;
+  // No live (candidate) competitor may be left uncovered — mirror the rule exactly.
+  for (const live of liveCompetitors(spec, byId, briefId)) {
+    if (!covered.has(live)) return false;
+  }
+  const competing = competingPatches(spec, byId, briefId);
+  for (const edge of spec.edges) {
+    if (asString(edge["type"]) !== "selects") continue;
+    const sourceId = asString(edge["source"]);
+    const source = sourceId !== undefined ? byId.get(sourceId) : undefined;
+    if (source === undefined || asString(source.data["type"]) !== "decision") continue;
+    const target = asString(edge["target"]);
+    if (target !== undefined && competing.has(target)) return true;
+  }
+  return false;
 }

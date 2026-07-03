@@ -1,0 +1,33 @@
+name: patch-comparison
+
+# This workflow only COMPUTES and REPORTS the patch-comparison gate verdict; it
+# blocks nothing on its own. BLOCKING depends on the repo-admin branch-protection
+# required-check setting marking `patch-comparison` required (see
+# docs/branch-protection.md) — that setting is repo-admin state, not reproducible
+# from files in this repo. Unlike pr-evidence.yml, this workflow does NOT skip
+# specs-only / docs-only PRs: the gate itself must run on EVERY PR (including the
+# code-merge PR) and decide pass/fail, so the required check always reports. The
+# diff-aware gate passes a PR with no live multi-patch market, so marking it
+# required cannot strand a non-market PR.
+on:
+  pull_request:
+
+jobs:
+  patch-comparison:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - name: Patch-comparison gate
+        env:
+          GATE_BASE: ${{ github.event.pull_request.base.sha }}
+        run: pnpm spec:patch-gate

@@ -73,6 +73,9 @@ for (const name of [
   "waives-unknown-check",
   "capability-bad-paths",
   "uncovered-multi-brief",
+  "patch-synthesis-one-parent",
+  "patch-status-merged",
+  "competes-for-bad-endpoints",
 ]) {
   test(`bad/${name}: validate fails with the pinned errors`, (t) => {
     const dir = copyFixture(t, `bad/${name}`);
@@ -183,10 +186,46 @@ test("good-drift: capability/touches/flags validate and group in by-type", (t) =
   assert.deepEqual(byType["by-type"]["drift-finding"], ["drift-finding-x-cccc"]);
 });
 
+test("good-patch-market: a resolved patch market validates and indexes are byte-identical", (t) => {
+  const dir = copyFixture(t, "good-patch-market");
+  // Index regenerates and is byte-identical to the committed fixture indexes
+  // (the spec:index output is deterministic — same shape as the `good` byte check).
+  assert.equal(runCli(dir, "index").status, 0);
+  for (const name of INDEX_FILES) {
+    const regenerated = fs.readFileSync(path.join(dir, "specs", "indexes", name), "utf8");
+    const committed = fs.readFileSync(path.join(fixtures, "good-patch-market", "specs", "indexes", name), "utf8");
+    assert.equal(regenerated, committed, `${name} differs from committed fixture`);
+  }
+  // The full rule set (incl. synthesis-parentage + selected-patch-comparison) passes.
+  const result = runCli(dir, "validate");
+  assert.equal(result.status, 0, `expected validate to pass, got:\n${result.stderr}`);
+
+  // Schema-for-free: the new `patch` node type groups under by-type, and the
+  // `competes-for`/`synthesizes` edges appear in the relationship indexes — so a
+  // `compares`/`selects → patch` edge validates as a list-target endpoint.
+  const byType = load(
+    fs.readFileSync(path.join(dir, "specs", "indexes", "by-type.yaml"), "utf8"),
+  ) as { "by-type": Record<string, string[]> };
+  assert.deepEqual(byType["by-type"].patch, ["patch-alpha-c3d4", "patch-beta-e5f6", "patch-synthesis-0708"]);
+
+  // The edge types live in outgoing.yaml keyed by source; assert the new
+  // relationship kinds (competes-for, synthesizes) and a selects → patch are present.
+  const outgoing = load(
+    fs.readFileSync(path.join(dir, "specs", "indexes", "outgoing.yaml"), "utf8"),
+  ) as { outgoing: Record<string, { id: string; type: string; target: string }[]> };
+  const allOut = Object.values(outgoing.outgoing).flat();
+  const types = new Set(allOut.map((e) => e.type));
+  assert.ok(types.has("competes-for"), "competes-for edge missing from outgoing index");
+  assert.ok(types.has("synthesizes"), "synthesizes edge missing from outgoing index");
+  // A selects edge whose target is a patch validated cleanly (widened list target).
+  const selectsToPatch = allOut.find((e) => e.type === "selects" && e.target === "patch-synthesis-0708");
+  assert.ok(selectsToPatch !== undefined, "selects → patch edge missing from outgoing index");
+});
+
 test("unknown subcommand: usage text on stderr, exit 2", () => {
   const result = runCli(repoRoot, "frobnicate");
   assert.equal(result.status, 2);
-  assert.ok(result.stderr.includes("usage: spec <index|validate|gate|check-diff|drift-map>"));
+  assert.ok(result.stderr.includes("usage: spec <index|validate|gate|check-diff|patch-gate|drift-map>"));
 });
 
 test("bad/malformed-node: a node without frontmatter fails closed (exit 1, no rule finding)", (t) => {

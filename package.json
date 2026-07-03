@@ -7,6 +7,7 @@
     "spec:validate": "tsx tools/spec.ts validate",
     "spec:gate": "tsx tools/spec.ts gate",
     "spec:check-diff": "tsx tools/spec.ts check-diff",
+    "spec:patch-gate": "tsx tools/spec.ts patch-gate",
     "spec:drift-map": "tsx tools/spec.ts drift-map",
     "test": "node --test --import tsx tests/*.test.ts",
     "typecheck": "tsc --noEmit",

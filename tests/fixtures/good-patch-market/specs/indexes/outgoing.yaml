@@ -1,0 +1,39 @@
+outgoing:
+  comparison-widget-090a:
+    - id: edge-compares-alpha-1006
+      target: patch-alpha-c3d4
+      type: compares
+    - id: edge-compares-beta-1007
+      target: patch-beta-e5f6
+      type: compares
+    - id: edge-compares-synth-1008
+      target: patch-synthesis-0708
+      type: compares
+  decision-widget-0b0c:
+    - id: edge-selects-synth-100b
+      target: patch-synthesis-0708
+      type: selects
+  patch-alpha-c3d4:
+    - id: edge-competes-alpha-1001
+      target: brief-widget-a1b2
+      type: competes-for
+  patch-beta-e5f6:
+    - id: edge-competes-beta-1002
+      target: brief-widget-a1b2
+      type: competes-for
+  patch-synthesis-0708:
+    - id: edge-competes-synth-1003
+      target: brief-widget-a1b2
+      type: competes-for
+    - id: edge-supersedes-alpha-1009
+      target: patch-alpha-c3d4
+      type: supersedes
+    - id: edge-supersedes-beta-100a
+      target: patch-beta-e5f6
+      type: supersedes
+    - id: edge-synthesizes-alpha-1004
+      target: patch-alpha-c3d4
+      type: synthesizes
+    - id: edge-synthesizes-beta-1005
+      target: patch-beta-e5f6
+      type: synthesizes

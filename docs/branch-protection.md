@@ -19,6 +19,7 @@ pass" + "Require branches to be up to date"):
 | `spec-index` | `spec-index.yml` | committed `specs/indexes/` match a fresh `pnpm spec:index` |
 | `spec-validate` | `spec-validate.yml` | runs on every PR; validates with `pnpm spec:validate` when `specs/**` changed, otherwise reports success |
 | `pr-evidence` | `pr-evidence.yml` | every code PR carries an `evidences` edge to an approved contract, or an `override` waiving the `pr-evidence` check |
+| `patch-comparison` | `patch-comparison.yml` | a multi-patch brief's merge PR must carry a comparison + a `selects` decision, or a non-expired `waives → patch-comparison` override; the diff-aware `spec:patch-gate` blocks the merge otherwise |
 
 `pr-evidence` and `spec-validate` run on **every** PR and decide scope *inside*
 the job (`pr-evidence` skips a specs/docs-only PR; `spec-validate` skips a PR
@@ -27,6 +28,14 @@ always report, they are safe to mark **required**. A check that filters at the
 event level (a workflow-level `paths:` filter) must **not** be made required: on
 a PR it never runs for, no status is posted and GitHub blocks the PR forever
 waiting on it.
+
+`patch-comparison` likewise runs on **every** PR (no event-level `paths:` filter
+and no specs-only in-job skip — the gate runs even on a specs-only patch-market
+PR) and reports **success** when no patch market applies, so it is safe to mark
+**required**: a non-market PR is never stranded. The named `patch-comparison`
+check blocks nothing until a repo admin enables it under "Require status checks
+to pass"; until that admin step lands, the workflow runs and reports but blocks
+no merge.
 
 ## Required reviews (CODEOWNERS)
 

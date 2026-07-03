@@ -1,0 +1,16 @@
+edges:
+  - id: edge-competes-parent-1001
+    source: patch-parent-c3d4
+    type: competes-for
+    target: brief-widget-a1b2
+    created: 2026-06-20
+  - id: edge-competes-synth-1002
+    source: patch-synthesis-0708
+    type: competes-for
+    target: brief-widget-a1b2
+    created: 2026-06-20
+  - id: edge-synthesizes-parent-1003
+    source: patch-synthesis-0708
+    type: synthesizes
+    target: patch-parent-c3d4
+    created: 2026-06-20

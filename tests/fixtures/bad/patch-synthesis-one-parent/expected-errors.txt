@@ -1,0 +1,1 @@
+[rule: synthesis-parentage] synthesis patch patch-synthesis-0708 has 1 distinct parent patch(es) via synthesizes edges (>=2 required)

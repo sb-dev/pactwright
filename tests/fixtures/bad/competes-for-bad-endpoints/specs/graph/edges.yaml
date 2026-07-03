@@ -1,0 +1,13 @@
+edges:
+  # Bad SOURCE: a competes-for from an intent (must be a patch).
+  - id: edge-competes-badsrc-1001
+    source: intent-widget-a1b2
+    type: competes-for
+    target: brief-widget-e5f6
+    created: 2026-06-20
+  # Bad TARGET: a competes-for to a contract (must be a brief).
+  - id: edge-competes-badtgt-1002
+    source: patch-alpha-0708
+    type: competes-for
+    target: contract-widget-c3d4
+    created: 2026-06-20

@@ -1,0 +1,53 @@
+# Node type definitions for the specs graph.
+node_types:
+  intent:
+    required_fields: [id, type, title, status, created, class]
+    requires_body:   true
+    status_values:   [open, addressed, rejected]
+
+  contract:
+    required_fields: [id, type, title, status, created, class]
+    requires_body:   true
+    status_values:   [candidate, approved, rejected, superseded]
+
+  brief:
+    required_fields: [id, type, title, status, created]
+    requires_body:   true
+    status_values:   [draft, approved, implemented]
+
+  evidence:
+    required_fields: [id, type, title, status, created]
+    requires_body:   true
+    status_values:   [draft, final]
+
+  decision:
+    required_fields: [id, type, title, decided_by, created]
+    requires_body:   true
+
+  override:
+    required_fields: [id, type, title, reason, approved_by, expires]
+    requires_body:   true
+
+  capability:
+    required_fields: [id, type, title, status, paths]
+    requires_body:   true
+    status_values:   [active]
+
+  drift-finding:
+    required_fields: [id, type, title, status]
+    requires_body:   true
+    status_values:   [open, resolved, accepted]
+
+  comparison:
+    required_fields: [id, type, title, created]
+    requires_body:   true
+
+  integration:
+    required_fields: [id, type, title, status, created, integration_sections]
+    requires_body:   true
+    status_values:   [draft, final]
+
+  patch:
+    required_fields: [id, type, title, status, branch, strategy, created]
+    requires_body:   true
+    status_values:   [candidate, selected, superseded]

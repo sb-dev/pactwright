@@ -107,6 +107,7 @@ export default function coverageCoherence(rule: Rule, spec: LoadedSpec): Finding
     if (contractId === undefined) return;
     const contract = byId.get(contractId);
     if (contract === undefined) return; // unresolved: references_resolve owns it
+    if (asString(contract.data["type"]) !== "contract") return; // selects → patch: not a contract-coverage concern
     if (asString(contract.data["status"]) === "superseded") return; // superseded selected contract: out of scope (F4)
 
     // Grandfather on the SELECTED CONTRACT's `created`.

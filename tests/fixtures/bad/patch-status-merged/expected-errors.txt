@@ -1,0 +1,1 @@
+[rule: nodes-status-in-enum] node patch-merged-c3d4 status=merged not in [candidate, selected, superseded]

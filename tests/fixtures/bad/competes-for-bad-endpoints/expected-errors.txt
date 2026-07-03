@@ -1,0 +1,2 @@
+[rule: edges-endpoint-types] edge edge-competes-badsrc-1001 type=competes-for requires source.type=patch, got intent
+[rule: edges-endpoint-types] edge edge-competes-badtgt-1002 type=competes-for requires target.type=brief, got contract

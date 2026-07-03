@@ -1,0 +1,56 @@
+edges:
+  - id: edge-competes-alpha-1001
+    source: patch-alpha-c3d4
+    type: competes-for
+    target: brief-widget-a1b2
+    created: 2026-06-20
+  - id: edge-competes-beta-1002
+    source: patch-beta-e5f6
+    type: competes-for
+    target: brief-widget-a1b2
+    created: 2026-06-20
+  - id: edge-competes-synth-1003
+    source: patch-synthesis-0708
+    type: competes-for
+    target: brief-widget-a1b2
+    created: 2026-06-20
+  - id: edge-synthesizes-alpha-1004
+    source: patch-synthesis-0708
+    type: synthesizes
+    target: patch-alpha-c3d4
+    created: 2026-06-20
+  - id: edge-synthesizes-beta-1005
+    source: patch-synthesis-0708
+    type: synthesizes
+    target: patch-beta-e5f6
+    created: 2026-06-20
+  - id: edge-compares-alpha-1006
+    source: comparison-widget-090a
+    type: compares
+    target: patch-alpha-c3d4
+    created: 2026-06-20
+  - id: edge-compares-beta-1007
+    source: comparison-widget-090a
+    type: compares
+    target: patch-beta-e5f6
+    created: 2026-06-20
+  - id: edge-compares-synth-1008
+    source: comparison-widget-090a
+    type: compares
+    target: patch-synthesis-0708
+    created: 2026-06-20
+  - id: edge-supersedes-alpha-1009
+    source: patch-synthesis-0708
+    type: supersedes
+    target: patch-alpha-c3d4
+    created: 2026-06-20
+  - id: edge-supersedes-beta-100a
+    source: patch-synthesis-0708
+    type: supersedes
+    target: patch-beta-e5f6
+    created: 2026-06-20
+  - id: edge-selects-synth-100b
+    source: decision-widget-0b0c
+    type: selects
+    target: patch-synthesis-0708
+    created: 2026-06-20

@@ -204,3 +204,57 @@ canonical list of required section keys lives in
 re-listing the keys. The `integration-sections-keys` rule necessarily embeds a
 literal copy (a `closed_key_set` reads its own `keys:` field), kept byte-equal to
 the canonical list by the `lane_integration_meta` drift test.
+
+### Patch market
+
+Where the proposal market compares whole-contract candidates for one intent, the
+**patch market** compares competing *implementations* for one lane. It runs **per
+lane brief**: candidate `patch` nodes compete **within a single lane**, and patch
+comparison judges **that lane in isolation** against the lane brief's slice of the
+contract. **Cross-lane fit is never judged in patch comparison — it is judged at
+integration** (the `integration` node documented above, which combines every live
+lane into the contract's coverage artifact). A patch market is opened by
+`/propose-patches <brief-id>` on a lane brief (or a single unlaned brief): the
+command sets `patch_market: true` on that brief and creates one `patch` node per
+implementation strategy, each carrying a `competes-for` edge to that brief.
+
+The patch market is routed by class, elaborating the `Patch market` column of the
+work-class routing table (just as `### Critic routing` elaborates the `Critics`
+column) — the column's four cells stay authoritative and the prose only spells them
+out:
+
+- **Class 0–1** — a single patch, **no market** (one implementation, no competing
+  candidates; matches the column's `none` cells).
+- **Class 2** — a patch market is **optional per brief** (matches `optional per
+  brief`).
+- **Class 3** — a patch market is **available per lane** (matches `available per
+  lane`).
+
+Within a lane, competing candidate patches may be combined into a **synthesis
+patch** — a `patch` on branch `patch/<brief-slug>/synthesis` carrying `synthesizes`
+edges to each parent patch it combines and a `competes-for` edge to the **same** lane
+brief — authored by `/synthesize-patches`. A synthesis patch combines ≥2 parents (the
+structural `synthesis_parentage` rule enforces this). Synthesis stays **within one
+lane**: across-lane combination is **never** synthesis — it is the `integration` node
+already documented above. Keep the two crisply separate — synthesis is the within-lane
+operation, integration is the across-lane one.
+
+A class-2+ patch review ends by recording exactly **one** `comparison` node per lane
+market (`comparison —compares→ patch`, one edge per live competitor) — the per-lane,
+per-brief analogue of the contract-level `### Proposal comparison`. It is the durable
+record the `/select-patch` `decision` cites, it is **never superseded by selection**,
+and re-running `/compare-patches` **replaces** the existing comparison rather than
+authoring a second.
+
+Patch review carries the Phase-6 scope-integrity rules: a patch comparison that
+reveals the approved contract or brief was wrong follows scope-integrity **rule 5**
+(supersede the brief, capture a follow-up intent, or return to human approval) — it
+never widens scope silently inside the winning patch. Rule 5 already names "patch"
+review; this is a pointer to it, not a restatement.
+
+**Honest bound:** a green `patch-comparison` check asserts that a covering
+`comparison` node and a `selects` decision **exist** for the lane's live competitors
+(or a non-expired `waives → patch-comparison` override is present) — not that the
+comparison was substantive. The gate's full mechanism (the fail-closed PR→brief
+mapping, override expiry, and the dated wiring) is enforced by the `patch-comparison`
+CI gate; see the domain-backend and observability-release lanes' artifacts.
