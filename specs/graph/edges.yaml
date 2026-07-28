@@ -444,3 +444,18 @@ edges:
     type: integrates
     target: evidence-patch-market-tests-6c7d
     created: 2026-06-25
+  - id: edge-conveyor-prose-proposes-61b3
+    source: contract-conveyor-prose-f6fe
+    type: proposes
+    target: intent-self-guiding-delivery-loop-6d79
+    created: 2026-07-27
+  - id: edge-conveyor-derived-proposes-047c
+    source: contract-conveyor-derived-4c8c
+    type: proposes
+    target: intent-self-guiding-delivery-loop-6d79
+    created: 2026-07-27
+  - id: edge-conveyor-pinned-proposes-c74a
+    source: contract-conveyor-pinned-8df4
+    type: proposes
+    target: intent-self-guiding-delivery-loop-6d79
+    created: 2026-07-27

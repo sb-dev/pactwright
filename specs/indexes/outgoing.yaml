@@ -80,6 +80,18 @@ outgoing:
     - id: edge-proposes-ci-gate-workflow-native-513e
       target: intent-ci-enforcement-gates-5c90
       type: proposes
+  contract-conveyor-derived-4c8c:
+    - id: edge-conveyor-derived-proposes-047c
+      target: intent-self-guiding-delivery-loop-6d79
+      type: proposes
+  contract-conveyor-pinned-8df4:
+    - id: edge-conveyor-pinned-proposes-c74a
+      target: intent-self-guiding-delivery-loop-6d79
+      type: proposes
+  contract-conveyor-prose-f6fe:
+    - id: edge-conveyor-prose-proposes-61b3
+      target: intent-self-guiding-delivery-loop-6d79
+      type: proposes
   contract-critics-literal-panel-1c4a:
     - id: edge-proposes-critics-literal-panel-4b8d
       target: intent-specialist-critics-comparison-7ada

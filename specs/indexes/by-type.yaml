@@ -27,6 +27,9 @@ by-type:
     - contract-ci-gate-checks-as-nodes-2d49
     - contract-ci-gate-spec-tool-5039
     - contract-ci-gate-workflow-native-3489
+    - contract-conveyor-derived-4c8c
+    - contract-conveyor-pinned-8df4
+    - contract-conveyor-prose-f6fe
     - contract-critics-literal-panel-1c4a
     - contract-critics-named-thin-rubric-3e6c
     - contract-critics-registry-driven-2d5b
@@ -80,6 +83,7 @@ by-type:
     - intent-drift-detection-c7b1
     - intent-lane-model-integration-a1f7
     - intent-patch-market-synthesis-3b1e
+    - intent-self-guiding-delivery-loop-6d79
     - intent-spec-index-validate-a3f1
     - intent-specialist-critics-comparison-7ada
     - intent-status-coherence-d4f2
