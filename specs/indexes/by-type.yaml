@@ -51,6 +51,7 @@ by-type:
     - contract-work-class-validate-invariant-c3d4
   decision:
     - decision-ci-gate-spec-tool-6d2b
+    - decision-conveyor-derived-5a91
     - decision-critics-literal-panel-9c4f
     - decision-drift-tool-assisted-d5e2
     - decision-graph-data-unowned-2f7b

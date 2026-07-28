@@ -134,6 +134,9 @@ incoming:
     - id: edge-conveyor-compares-derived-867c
       source: comparison-conveyor-market-890e
       type: compares
+    - id: edge-conveyor-selects-derived-9c30
+      source: decision-conveyor-derived-5a91
+      type: selects
   contract-conveyor-pinned-8df4:
     - id: edge-conveyor-compares-pinned-58d7
       source: comparison-conveyor-market-890e

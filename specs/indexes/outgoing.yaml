@@ -178,6 +178,10 @@ outgoing:
     - id: edge-selects-ci-gate-spec-tool-0333
       target: contract-ci-gate-spec-tool-5039
       type: selects
+  decision-conveyor-derived-5a91:
+    - id: edge-conveyor-selects-derived-9c30
+      target: contract-conveyor-derived-4c8c
+      type: selects
   decision-critics-literal-panel-9c4f:
     - id: edge-selects-critics-literal-panel-a2d8
       target: contract-critics-literal-panel-1c4a

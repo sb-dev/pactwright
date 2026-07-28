@@ -474,3 +474,8 @@ edges:
     type: compares
     target: contract-conveyor-pinned-8df4
     created: 2026-07-28
+  - id: edge-conveyor-selects-derived-9c30
+    source: decision-conveyor-derived-5a91
+    type: selects
+    target: contract-conveyor-derived-4c8c
+    created: 2026-07-28

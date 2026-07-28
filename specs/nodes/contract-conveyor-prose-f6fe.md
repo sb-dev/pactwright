@@ -2,7 +2,7 @@
 id: contract-conveyor-prose-f6fe
 type: contract
 title: Self-guiding delivery loop (prose conveyor — each command owns its closing print)
-status: candidate
+status: rejected
 created: 2026-07-27
 class: 3
 ---

@@ -2,7 +2,7 @@
 id: contract-conveyor-derived-4c8c
 type: contract
 title: Self-guiding delivery loop (derived conveyor — one next-step resolver in code)
-status: candidate
+status: approved
 created: 2026-07-27
 class: 3
 ---

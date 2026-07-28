@@ -2,7 +2,7 @@
 id: contract-conveyor-pinned-8df4
 type: contract
 title: Self-guiding delivery loop (pinned conveyor — declarative lifecycle table, drift-pinned)
-status: candidate
+status: rejected
 created: 2026-07-27
 class: 3
 ---
