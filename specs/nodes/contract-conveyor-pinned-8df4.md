@@ -257,3 +257,60 @@ fenced ```yaml `conveyor:` block; `conveyor_pin.test.ts` pins block, table, and 
    **Mitigation:** every write is marker-scoped, the workflow non-blocking, local runs dry.
 8. **`/detect-drift 4` may surface real drift.** It maps a Phase-4 diff against capabilities seeded
    one PR later, non-deterministically. **Mitigation:** rule 5 — record it, capture a follow-up.
+
+## Critique (spec)
+
+Concern. Pinned table's static terminal field contradicts its own conditional-terminality
+correction; Acceptance 3's machine-check has no second code path to compare. Full finding, with
+evidence, in `comparison-conveyor-market-890e`.
+
+## Critique (product)
+
+Concern. Highest design cost of the three, lands at A's guarantee on the acceptance it cites;
+Acceptance 3 cannot fail. Full finding in `comparison-conveyor-market-890e`.
+
+## Critique (ux)
+
+Concern. No stated precedence between fenced block and contradicting prose, and the pinned unlaned
+route walks the operator past verification with only a caveat. Full finding in
+`comparison-conveyor-market-890e`.
+
+## Critique (architecture)
+
+Concern. `specs/schema/` placement drags every future routing edit under the sensitive-paths gate;
+the rejected `.claude/` alternative is fixed by C's own negation line. Full finding in
+`comparison-conveyor-market-890e`.
+
+## Critique (security-privacy)
+
+Concern. Risk 7's "local runs dry" contradicts the local best-effort sync, voiding the stated
+mitigation for mass-closing real issues. Full finding in `comparison-conveyor-market-890e`.
+
+## Critique (compliance-risk)
+
+Concern. `lifecycle.yaml` under `specs/schema/**` silently routes every future routing edit through
+the sensitive-paths gate and CODEOWNERS, unrecorded. Full finding in
+`comparison-conveyor-market-890e`.
+
+## Critique (qa-test)
+
+Concern. Acceptance 3's "machine-checked" single derivation cannot exist as described, and optional
+`lifecycle` lets new unit tests pass vacuously. Full finding in `comparison-conveyor-market-890e`.
+
+## Critique (reliability-ops)
+
+Concern. Optional lifecycle load fails open silently, the pin never reads the prose agents follow,
+and it edits live coverage-coherence handlers. Full finding in
+`comparison-conveyor-market-890e`.
+
+## Critique (cost-maintainability)
+
+Concern. Routing data lands inside `sensitive_paths`, so every future routing edit needs a contract
+or override; the pin covers the block, not the prose. Full finding in
+`comparison-conveyor-market-890e`.
+
+## Critique (release)
+
+Concern. Routing under `specs/schema/` makes every future routing edit trip C's own newly-blocking
+`check-diff` gate and CODEOWNERS review; cost unweighed. Full finding in
+`comparison-conveyor-market-890e`.

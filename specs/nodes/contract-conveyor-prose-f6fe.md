@@ -257,3 +257,61 @@ Review-only, recorded in the integration body:
    first-class sub-issue or blocked-by command. Mitigations: the clause is an explicit rewrite in
    Scope; the sync planner is pure and unit-tested, its `gh` shell thin and never blocking; a
    dependency-hint cycle is caught by acceptance 2's acyclicity assertion.
+
+## Critique (spec)
+
+Concern. Prose conveyor is coherent, but its coverage-walk reuse claim is false and its stated
+divergence mitigation contradicts its own fourteen-paragraph scope. Full finding, with evidence,
+in `comparison-conveyor-market-890e`.
+
+## Critique (product)
+
+Concern. Builds `deriveStatus` then bars the print path from calling it: pays for routing twice,
+guarantees neither, while claiming cheapest. Full finding in `comparison-conveyor-market-890e`.
+
+## Critique (ux)
+
+Concern. Prose/derivation disagreement has no stated tiebreak, and the BLOCKED `/write-tests` line
+is paste-shaped with no recoverable action named. Full finding in
+`comparison-conveyor-market-890e`.
+
+## Critique (architecture)
+
+Concern. Routing exists twice over two different representations, and the index A's one
+graph-derived print reads carries no status field. Full finding in
+`comparison-conveyor-market-890e`.
+
+## Critique (security-privacy)
+
+Concern. Nine Bash grants declared but unfenced in Scope, and prose routing leaves no chokepoint to
+reject a hostile id. Full finding in `comparison-conveyor-market-890e`.
+
+## Critique (compliance-risk)
+
+Concern. Presence-only print check leaves class-3 lane and verification obligations unverified, and
+two independent next-step records make the audit trail ambiguous. Full finding in
+`comparison-conveyor-market-890e`.
+
+## Critique (qa-test)
+
+Concern. Presence-only pin, Behaviour 2's no-placeholder invariant left unchecked, and Scope 5's
+read-only-reuse claim is false against the repo. Full finding in
+`comparison-conveyor-market-890e`.
+
+## Critique (reliability-ops)
+
+Concern. Silent two-expression divergence has no detector and unbounded MTTD; a cheap
+print-versus-`deriveStatus` identity test would close it without a new artifact. Full finding in
+`comparison-conveyor-market-890e`.
+
+## Critique (cost-maintainability)
+
+Concern. Fourteen prose copies plus a second TypeScript derivation, pinned only for presence;
+adding a lifecycle step in six months drifts silently. Full finding in
+`comparison-conveyor-market-890e`.
+
+## Critique (release)
+
+Concern. Routing hotfixes stay cheap on non-sensitive paths, but no gate ever reds a conveyor
+regression and acceptance 4 can break CI irreparably. Full finding in
+`comparison-conveyor-market-890e`.

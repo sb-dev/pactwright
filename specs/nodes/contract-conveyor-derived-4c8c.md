@@ -256,3 +256,61 @@ command files, none meeting the bar today — it sizes to 14, not 9.
    stable surface here. *Mitigation:* best-effort — warn, never block; the graph stays truth.
 6. **The PR #4 `/detect-drift` run is non-deterministic** — it maps that diff against capabilities
    seeded one PR later. *Mitigation:* record what it yields; a finding routes to a follow-up.
+
+## Critique (spec)
+
+Concern. Derived routing cannot express the implementation hop (no graph write), leaves the
+strategy-tension marker unauthored, and duplicates coverage semantics it claims to reuse. Full
+finding, with evidence, in `comparison-conveyor-market-890e`.
+
+## Critique (product)
+
+Concern. Resolver removes ID recall, not the duty to run and transcribe it; real advantage,
+honestly bounded, not structurally impossible. Full finding in `comparison-conveyor-market-890e`.
+
+## Critique (ux)
+
+Concern. No derivable brief-to-`prepare-evidence` hop (implementation writes no graph state),
+partial derivation looks complete, and the named throw-fallback carries no next steps. Full finding
+in `comparison-conveyor-market-890e`.
+
+## Critique (architecture)
+
+Concern. One resolver is right, but `.claude/**` gains a runtime dependency on `tools/**`, and the
+class-routing literal pins TypeScript to CLAUDE.md prose. Full finding in
+`comparison-conveyor-market-890e`.
+
+## Critique (security-privacy)
+
+Concern. No risk entry for the nine Bash grants; verbatim NEXT-block transcription pastes
+unvalidated graph ids straight into an operator shell. Full finding in
+`comparison-conveyor-market-890e`.
+
+## Critique (compliance-risk)
+
+Concern. "IDs resolved not recalled" is prose-enforced with no artifact proving `spec:status` ran;
+the PR #4 verdict lacks any acceptance criterion. Full finding in
+`comparison-conveyor-market-890e`.
+
+## Critique (qa-test)
+
+Concern. Nothing pins that a command still calls the resolver, issue-sync idempotence has no oracle,
+and Scope 2's reuse claim is false. Full finding in `comparison-conveyor-market-890e`.
+
+## Critique (reliability-ops)
+
+Concern. Single runtime dependency whose stated `trails.md` fallback shares its failure domain; a
+hand-typed NEXT block is indistinguishable from a resolved one. Full finding in
+`comparison-conveyor-market-890e`.
+
+## Critique (cost-maintainability)
+
+Concern. One routing source makes the six-month change one edit; costs are a new module, tooling
+coupling, and unbounded verbatim transcription in fourteen prompts. Full finding in
+`comparison-conveyor-market-890e`.
+
+## Critique (release)
+
+Concern. Single resolver eases future routing releases, but the `trails.md` fallback shares the
+loader failure and view determinism is not time-invariant. Full finding in
+`comparison-conveyor-market-890e`.

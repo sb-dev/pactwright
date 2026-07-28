@@ -130,6 +130,18 @@ incoming:
     - id: edge-selects-ci-gate-spec-tool-0333
       source: decision-ci-gate-spec-tool-6d2b
       type: selects
+  contract-conveyor-derived-4c8c:
+    - id: edge-conveyor-compares-derived-867c
+      source: comparison-conveyor-market-890e
+      type: compares
+  contract-conveyor-pinned-8df4:
+    - id: edge-conveyor-compares-pinned-58d7
+      source: comparison-conveyor-market-890e
+      type: compares
+  contract-conveyor-prose-f6fe:
+    - id: edge-conveyor-compares-prose-8844
+      source: comparison-conveyor-market-890e
+      type: compares
   contract-critics-literal-panel-1c4a:
     - id: edge-decomposes-critics-literal-panel-d44f
       source: brief-critics-literal-panel-b5c6

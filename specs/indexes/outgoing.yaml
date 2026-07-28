@@ -51,6 +51,16 @@ outgoing:
     - id: edge-decomposes-work-class-routing-b3e2
       target: contract-work-class-validate-invariant-c3d4
       type: decomposes
+  comparison-conveyor-market-890e:
+    - id: edge-conveyor-compares-derived-867c
+      target: contract-conveyor-derived-4c8c
+      type: compares
+    - id: edge-conveyor-compares-pinned-58d7
+      target: contract-conveyor-pinned-8df4
+      type: compares
+    - id: edge-conveyor-compares-prose-8844
+      target: contract-conveyor-prose-f6fe
+      type: compares
   comparison-lane-integration-8d3c:
     - id: edge-compares-lane-integration-convention-3f1a
       target: contract-lane-integration-convention-body-4c1f

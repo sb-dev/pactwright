@@ -459,3 +459,18 @@ edges:
     type: proposes
     target: intent-self-guiding-delivery-loop-6d79
     created: 2026-07-27
+  - id: edge-conveyor-compares-prose-8844
+    source: comparison-conveyor-market-890e
+    type: compares
+    target: contract-conveyor-prose-f6fe
+    created: 2026-07-28
+  - id: edge-conveyor-compares-derived-867c
+    source: comparison-conveyor-market-890e
+    type: compares
+    target: contract-conveyor-derived-4c8c
+    created: 2026-07-28
+  - id: edge-conveyor-compares-pinned-58d7
+    source: comparison-conveyor-market-890e
+    type: compares
+    target: contract-conveyor-pinned-8df4
+    created: 2026-07-28

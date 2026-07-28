@@ -21,6 +21,7 @@ by-type:
     - capability-spec-tests-3a6e
     - capability-spec-tooling-1a2b
   comparison:
+    - comparison-conveyor-market-890e
     - comparison-lane-integration-8d3c
     - comparison-patch-market-synthesis-7b1d
   contract:
