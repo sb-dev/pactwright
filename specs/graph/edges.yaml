@@ -479,3 +479,38 @@ edges:
     type: selects
     target: contract-conveyor-derived-4c8c
     created: 2026-07-28
+  - id: edge-decomposes-conveyor-resolver-1b3d
+    source: brief-conveyor-resolver-3f7a
+    type: decomposes
+    target: contract-conveyor-derived-4c8c
+    created: 2026-07-28
+  - id: edge-decomposes-conveyor-schema-graph-2c4e
+    source: brief-conveyor-schema-graph-8b2e
+    type: decomposes
+    target: contract-conveyor-derived-4c8c
+    created: 2026-07-28
+  - id: edge-decomposes-conveyor-commands-3d5f
+    source: brief-conveyor-commands-c14d
+    type: decomposes
+    target: contract-conveyor-derived-4c8c
+    created: 2026-07-28
+  - id: edge-decomposes-conveyor-ci-4e6a
+    source: brief-conveyor-ci-6a9f
+    type: decomposes
+    target: contract-conveyor-derived-4c8c
+    created: 2026-07-28
+  - id: edge-decomposes-conveyor-lane-catalog-5f7b
+    source: brief-conveyor-lane-catalog-2d5b
+    type: decomposes
+    target: contract-conveyor-derived-4c8c
+    created: 2026-07-28
+  - id: edge-decomposes-conveyor-docs-6a8c
+    source: brief-conveyor-docs-9e31
+    type: decomposes
+    target: contract-conveyor-derived-4c8c
+    created: 2026-07-28
+  - id: edge-decomposes-conveyor-tests-7b9d
+    source: brief-conveyor-tests-4c86
+    type: decomposes
+    target: contract-conveyor-derived-4c8c
+    created: 2026-07-28

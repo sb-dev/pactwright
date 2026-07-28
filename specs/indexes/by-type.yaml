@@ -1,6 +1,13 @@
 by-type:
   brief:
     - brief-ci-gate-spec-tool-0852
+    - brief-conveyor-ci-6a9f
+    - brief-conveyor-commands-c14d
+    - brief-conveyor-docs-9e31
+    - brief-conveyor-lane-catalog-2d5b
+    - brief-conveyor-resolver-3f7a
+    - brief-conveyor-schema-graph-8b2e
+    - brief-conveyor-tests-4c86
     - brief-critics-literal-panel-b5c6
     - brief-drift-tool-assisted-d4ee
     - brief-lane-integration-5e2d
