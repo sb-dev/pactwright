@@ -10,6 +10,16 @@
 
 node_types:
   intent:
+    # LIVE INTENT — the single definition; every consumer (tools/conveyor.ts,
+    # spec:status, status.md, trails.md, CLAUDE.md) points here and does not
+    # restate it. An intent is LIVE iff its `status` is `open` AND it is not the
+    # target of a `supersedes` edge. The edge clause is load-bearing because
+    # status_values below declares no `superseded` value: a superseded intent
+    # lands at its terminal value (`rejected`) per CLAUDE.md rule 3, so the status
+    # clause alone covers only a COMPLETED supersession, and the edge clause
+    # covers the window before that flip — which is what lets a parked intent
+    # print nothing. Honest bound: this is prose in a comment, not a rule; nothing
+    # machine-enforces that a consumer implements it.
     required_fields: [id, type, title, status, created, class]
     requires_body:   true
     status_values:   [open, addressed, rejected]
@@ -21,13 +31,23 @@ node_types:
 
   brief:
     # Optional `lane` enum, validated by the `brief-lane-valid` rule (a
-    # closed_key_set membership check — enum_constraint covers only type/status):
-    #   product-spec | domain-backend | frontend-ui | data-migration |
-    #   api-integration | test-verification | observability-release | docs-spec
+    # closed_key_set membership check — enum_constraint covers only type/status).
+    # The catalog is deliberately NOT enumerated here: `brief-lane-valid`'s
+    # `keys:` in validation-rules.yaml is the machine-authoritative list, and the
+    # CLAUDE.md lane table plus the `.claude/lanes/` catalog are the human-readable
+    # one; the lane drift test pins them equal.
     # Unset means an unlaned single brief and is allowed; not in required_fields.
     # Optional `patch_market: true` boolean flag, set by /propose-patches when a
     # patch market is opened on this brief. Unvalidated (like `produced_by`) and
     # not in required_fields; absence means no market.
+    # Optional `owner` string: the agent /decompose-lanes' lane market assigned to
+    # implement this brief, named from that lane's catalog file `eligible_agents`.
+    # Unvalidated (like `produced_by` and `patch_market`) and not in
+    # required_fields — no rule reads it; the live-graph check is a drift test.
+    # Absence is legal and means UNASSIGNED, never an error: an unlaned single
+    # brief, a brief written before the lane market existed, or a lane whose
+    # market recorded no assignment. Consumers treat an absent `owner` as
+    # unassigned.
     required_fields: [id, type, title, status, created]
     requires_body:   true
     status_values:   [draft, approved, implemented]
