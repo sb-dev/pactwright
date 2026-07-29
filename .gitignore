@@ -7,9 +7,17 @@ Thumbs.db
 .idea/
 *.swp
 *.swo
+# `.claude/*` denies EVERYTHING under `.claude/`, so local-only state
+# (settings.local.json, scheduled_tasks.lock) stays out of the repo by default.
+# Every directory that must be committed needs its own `!.claude/<dir>/` line
+# immediately below. A new subdirectory added WITHOUT one is invisible to git
+# and to CI — `git add -A` silently skips it, and every test asserting over it
+# passes vacuously rather than failing. Verify with `git check-ignore -v <path>`:
+# exit 1 means the path is committable, exit 0 names the denying rule.
 .claude/*
 !.claude/agents/
 !.claude/commands/
+!.claude/lanes/
 
 # Node
 node_modules/
