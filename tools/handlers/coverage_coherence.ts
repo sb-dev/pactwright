@@ -1,6 +1,12 @@
 import { asString, nodesById, type LoadedSpec, type Rule } from "../loader.ts";
 import { toDateString } from "../gate.ts";
-import { intentsForContract, liveProposingContracts, liveSourcesByEdge } from "./coverage_traversal.ts";
+import {
+  briefsCoveredByIntegration,
+  finalEvidenceForBrief,
+  intentsForContract,
+  liveBriefsForContract,
+  liveProposingContracts,
+} from "./coverage_traversal.ts";
 import type { Finding } from "../validator.ts";
 
 /**
@@ -64,42 +70,10 @@ export default function coverageCoherence(rule: Rule, spec: LoadedSpec): Finding
       .filter((t): t is string => t !== undefined),
   );
 
-  // Final evidence ids that `evidences` the given brief.
-  const finalEvidenceForBrief = (briefId: string): Set<string> => {
-    const out = new Set<string>();
-    for (const e of spec.edges) {
-      if (asString(e["type"]) !== "evidences") continue;
-      if (asString(e["target"]) !== briefId) continue;
-      const evId = asString(e["source"]);
-      if (evId === undefined) continue;
-      const ev = byId.get(evId);
-      if (ev === undefined) continue; // unresolved
-      if (asString(ev.data["status"]) !== "final") continue;
-      out.add(evId);
-    }
-    return out;
-  };
-
-  // Brief ids whose FINAL evidence an integration node `integrates`
-  // (integration -> integrates -> evidence -> evidences -> brief).
-  const briefsCoveredByIntegration = (integrationId: string): Set<string> => {
-    const briefs = new Set<string>();
-    for (const e of spec.edges) {
-      if (asString(e["type"]) !== "integrates") continue;
-      if (asString(e["source"]) !== integrationId) continue;
-      const evId = asString(e["target"]);
-      if (evId === undefined) continue;
-      const ev = byId.get(evId);
-      if (ev === undefined || asString(ev.data["status"]) !== "final") continue;
-      for (const ee of spec.edges) {
-        if (asString(ee["type"]) !== "evidences") continue;
-        if (asString(ee["source"]) !== evId) continue;
-        const briefId = asString(ee["target"]);
-        if (briefId !== undefined) briefs.add(briefId);
-      }
-    }
-    return briefs;
-  };
+  // `finalEvidenceForBrief` and `briefsCoveredByIntegration` were private closures
+  // here until A11 lifted them into `coverage_traversal.ts`, so the conveyor resolver
+  // reads the SAME walks this rule does and `spec:status` cannot print `/integrate`
+  // for a contract this rule would red. Pure refactor: semantics are bit-identical.
 
   spec.edges.forEach((edge) => {
     if (asString(edge["type"]) !== "selects") return;
@@ -116,7 +90,7 @@ export default function coverageCoherence(rule: Rule, spec: LoadedSpec): Finding
     if (c < cut) return; // predates the cutoff: grandfathered
 
     // Live (non-superseded) briefs decomposing the contract.
-    const liveBriefs = liveSourcesByEdge(spec, byId, "decomposes", contractId);
+    const liveBriefs = liveBriefsForContract(spec, byId, contractId);
 
     // Integration nodes covering at least one of this contract's live briefs.
     const integrationsForContract = new Map<string, { status: string | undefined; briefs: Set<string> }>();
@@ -125,7 +99,7 @@ export default function coverageCoherence(rule: Rule, spec: LoadedSpec): Finding
       const intId = asString(node.data["id"]);
       if (intId === undefined) continue;
       if (supersededTargets.has(intId)) continue; // superseded integration: not live (F1)
-      const covered = briefsCoveredByIntegration(intId);
+      const covered = briefsCoveredByIntegration(spec, byId, intId);
       if (![...covered].some((b) => liveBriefs.has(b))) continue; // not tied to this contract
       integrationsForContract.set(intId, { status: asString(node.data["status"]), briefs: covered });
     }
@@ -157,7 +131,7 @@ export default function coverageCoherence(rule: Rule, spec: LoadedSpec): Finding
       reason = "has no live brief decomposing it";
     } else if (liveBriefs.size === 1) {
       const [briefId] = [...liveBriefs];
-      const finals = finalEvidenceForBrief(briefId);
+      const finals = finalEvidenceForBrief(spec, byId, briefId);
       covered = finals.size === 1;
       reason = covered
         ? `single brief ${briefId} has one final evidence`

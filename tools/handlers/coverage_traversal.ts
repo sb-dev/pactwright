@@ -59,6 +59,69 @@ export function liveProposingContracts(
   return liveSourcesByEdge(spec, byId, "proposes", intentId);
 }
 
+/** Live (non-`superseded`) brief ids that `decomposes` the contract — the live-lane
+ * set. Named alias for the `decomposes` case of `liveSourcesByEdge`, mirroring
+ * `liveProposingContracts`, so the resolver and the `coverage-coherence` rule cannot
+ * count lanes differently (A11). */
+export function liveBriefsForContract(
+  spec: LoadedSpec,
+  byId: Map<string, NodeRecord>,
+  contractId: string,
+): Set<string> {
+  return liveSourcesByEdge(spec, byId, "decomposes", contractId);
+}
+
+/** FINAL evidence ids that `evidences` the brief. A `draft` evidence never counts.
+ *
+ * Deliberately a STATUS-BLIND walk plus an explicit `status === "final"` INCLUSION
+ * filter, not an exclusion. `liveSourcesByEdge`'s `excludeStatus` skips a node only
+ * when its status is defined AND excluded, so an exclusion-based spelling
+ * (`["draft"]`) would wrongly ADMIT a status-less evidence node. The empty exclude
+ * list is required, never `undefined` — `undefined` triggers the `"superseded"`
+ * default (see `competingPatches`). Lifted from `coverage_coherence.ts` (A11) so the
+ * conveyor resolver and that rule share one definition of "covered". */
+export function finalEvidenceForBrief(
+  spec: LoadedSpec,
+  byId: Map<string, NodeRecord>,
+  briefId: string,
+): Set<string> {
+  const out = new Set<string>();
+  for (const evId of liveSourcesByEdge(spec, byId, "evidences", briefId, [])) {
+    const ev = byId.get(evId);
+    if (ev === undefined) continue; // unresolved: references_resolve owns it
+    if (asString(ev.data["status"]) !== "final") continue;
+    out.add(evId);
+  }
+  return out;
+}
+
+/** Brief ids whose FINAL evidence an integration node `integrates` — the two-hop walk
+ * integration —`integrates`→ evidence —`evidences`→ brief, with a `final` filter on
+ * the MIDDLE node. Not expressible as a single `liveSourcesByEdge` call, which is why
+ * A11 lifts it bodily rather than composing it. Lifted from `coverage_coherence.ts`. */
+export function briefsCoveredByIntegration(
+  spec: LoadedSpec,
+  byId: Map<string, NodeRecord>,
+  integrationId: string,
+): Set<string> {
+  const briefs = new Set<string>();
+  for (const e of spec.edges) {
+    if (asString(e["type"]) !== "integrates") continue;
+    if (asString(e["source"]) !== integrationId) continue;
+    const evId = asString(e["target"]);
+    if (evId === undefined) continue;
+    const ev = byId.get(evId);
+    if (ev === undefined || asString(ev.data["status"]) !== "final") continue;
+    for (const ee of spec.edges) {
+      if (asString(ee["type"]) !== "evidences") continue;
+      if (asString(ee["source"]) !== evId) continue;
+      const briefId = asString(ee["target"]);
+      if (briefId !== undefined) briefs.add(briefId);
+    }
+  }
+  return briefs;
+}
+
 /** DISTINCT intent ids a contract `proposes` (the proposes-walk from a contract).
  * Deduped via a `Set` so duplicate `proposes` triples (only the edge `id` is unique
  * — no rule dedups the source/type/target triple) yield one intent, not duplicate

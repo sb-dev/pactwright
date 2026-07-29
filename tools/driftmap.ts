@@ -28,6 +28,12 @@ export interface DriftPacket {
   approvedContract: string | null;
   briefs: NodeRef[];
   priorEvidence: { id: string; title: string }[];
+  /** The `decision` nodes that `selects` a reachable contract (CC-10(c)). The drift
+   * gate judges a diff against the EFFECTIVE contract — the approved contract PLUS
+   * its selecting decision's amendments — so a packet carrying only the contract
+   * lets the gate judge against half of it. Shaped like `priorEvidence`, not
+   * `NodeRef`: a `decision` carries no `status` at all, so `ref()` would emit `""`. */
+  decisions: { id: string; title: string }[];
   /** `linked` iff at least one contract is reachable, else `unlinked`. */
   linkState: "linked" | "unlinked";
 }
@@ -90,6 +96,12 @@ export function buildDriftMap(spec: LoadedSpec, changed: string[]): DriftMapResu
     const briefIds = targetsOf(spec, "evidences", evidenceIds);
     const contractIds = targetsOf(spec, "decomposes", briefIds);
     const approvedContract = contractIds.find((id) => asString(byId.get(id)?.data["status"]) === "approved") ?? null;
+    // CC-10(c): the contract's selecting decision. The `selects` target is
+    // `[contract, patch]`, so the `decision` type guard is real, not decoration —
+    // a patch selection must not leak a patch id into this field.
+    const decisionIds = sourcesOf(spec, "selects", contractIds).filter(
+      (id) => asString(byId.get(id)?.data["type"]) === "decision",
+    );
 
     packets.push({
       capability: capId,
@@ -99,6 +111,7 @@ export function buildDriftMap(spec: LoadedSpec, changed: string[]): DriftMapResu
       approvedContract,
       briefs: briefIds.map((id) => ref(byId, id)),
       priorEvidence: evidenceIds.map((id) => ({ id, title: title(byId, id) })),
+      decisions: decisionIds.map((id) => ({ id, title: title(byId, id) })),
       linkState: contractIds.length > 0 ? "linked" : "unlinked",
     });
   }
