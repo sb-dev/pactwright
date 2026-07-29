@@ -1,12 +1,22 @@
 name: drift-review
 
-# Warn-only drift detection on every PR — nothing here fails the build yet. The
-# deterministic sensitive-paths gate (spec:check-diff) runs with
-# continue-on-error so it annotates without blocking; flip it to BLOCKING by
-# removing `continue-on-error: true` from its step once it has behaved correctly
-# on ~5 real PRs (see docs/drift-detection.md). The semantic /detect-drift
-# judgment is warn-only and, until a Claude Code action is wired with pinned
-# credentials, is run manually.
+# Drift detection on every PR, in three layers with DIFFERENT enforcement:
+#
+#   1. The deterministic sensitive-paths gate (spec:check-diff) is BLOCKING — its
+#      failure fails this job. It graduated from warn-only after behaving correctly
+#      on ~5 real PRs (the criterion recorded in docs/drift-detection.md). Its
+#      waiver path is an `override` node plus a `waives → check-diff` edge, the
+#      check id registered in specs/schema/checks.yaml.
+#   2. The Drift map step is INFORMATIONAL and keeps its own `continue-on-error:
+#      true` deliberately — it is a reporter, not a gate. Do not "clean up" the
+#      survivor for symmetry with layer 1.
+#   3. The semantic /detect-drift judgment stays WARN-ONLY and, until a Claude Code
+#      action is wired with pinned credentials, is run manually.
+#
+# HONEST BOUND: a failing job here BLOCKS NO MERGE until a repo admin marks
+# `drift-review` a required status check (see docs/branch-protection.md). That
+# setting is repo-admin state, not reproducible from files in this repo. Red is not
+# blocked.
 on:
   pull_request:
 
@@ -26,9 +36,10 @@ jobs:
           cache: pnpm
       - run: pnpm install --frozen-lockfile
 
-      # Deterministic layer — graduates to blocking FIRST (drop continue-on-error).
-      - name: Sensitive-paths gate (warn-only)
-        continue-on-error: true
+      # Deterministic layer — BLOCKING. A touched sensitive_paths glob needs a
+      # linked approved contract (bound to the owning capability) or an override;
+      # waivable by an `override` node plus a `waives → check-diff` edge.
+      - name: Sensitive-paths gate (blocking)
         env:
           GATE_BASE: ${{ github.event.pull_request.base.sha }}
         run: pnpm spec:check-diff

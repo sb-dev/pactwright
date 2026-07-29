@@ -1,0 +1,116 @@
+name: issue-sync
+
+# One-way projection: the spec graph -> GitHub issues. Issues are a VIEW, never a
+# graph input (no node frontmatter references an issue), so this workflow only ever
+# reads the graph and writes issues.
+#
+# BEST-EFFORT BY DESIGN — it WARNS, it never blocks, and the graph stays truth. Its
+# `continue-on-error: true` is PERMANENT and is NOT a graduation candidate, in
+# deliberate contrast to the one drift-review.yml loses in this same change: a GATE
+# that has earned enforcement fails CLOSED, while a MUTATOR into a lossy external
+# system fails SAFE. `issue-sync` must never be added to the required-check list in
+# docs/branch-protection.md.
+#
+# APPLY IS OPT-IN. The sync mutates only when ISSUE_SYNC_APPLY is set; absent,
+# empty or misspelled, it plans and prints and changes nothing. So a local
+# `pnpm spec:issue-sync` (e.g. /decompose-lanes' best-effort invocation) runs DRY,
+# and the authoritative apply happens here, post-merge. That is also the correct
+# semantics: issues project MERGED graph state, so a lane brief that never lands
+# never gets an issue.
+#
+# NO IN-REPO PRECEDENT: no other workflow in this repository declares `permissions:`
+# at any level, references a secret, or sets `concurrency:`/`timeout-minutes:`. This
+# file declares its own model from first principles rather than copying one.
+
+on:
+  push:
+    branches: [main]
+    # An event-level `paths:` filter is safe here ONLY because this is never a
+    # required check — docs/branch-protection.md bans event-level filtering for
+    # required checks, since a PR the workflow never runs for would wait forever.
+    paths:
+      - 'specs/nodes/**'
+      - 'specs/graph/**'
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: Plan only; make no issue mutations
+        type: boolean
+        default: true
+  # CC-5's self-healing trigger. NOTE: GitHub disables `schedule:` after ~60 days of
+  # repository inactivity, so a silent stop must never be read as "no drift".
+  schedule:
+    - cron: '17 6 * * 1'
+
+# Declaring any permissions block sets every UNLISTED scope to `none`.
+permissions:
+  contents: read
+  issues: write
+
+# A scheduled run and a merge-triggered run must not interleave one run's listing
+# with another's mutations. `cancel-in-progress: false` because an in-flight run is
+# never cancelled mid-mutation.
+concurrency:
+  group: issue-sync
+  cancel-in-progress: false
+
+jobs:
+  issue-sync:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+
+      # The sync aborts BEFORE any mutation when the `gh` listing is incomplete or
+      # errored — the fail-closed doctrine of tools/gitdiff.ts applied to a paginated
+      # listing. No flag here downgrades that abort, and a failed run is never
+      # retried blindly.
+      #
+      # CC-3, scoped secrets: the GraphQL sub-issue and blocked-by mutations are the
+      # least stable surface here. They are attempted with the BUILT-IN token; a
+      # permission or availability rejection is reported as `failed` and warns. No
+      # PAT secret is introduced — a repo secret held by a post-merge workflow on
+      # main, with no review gate between a graph edit and a token use, is a
+      # privilege expansion this contract does not authorize. If the built-in token
+      # proves insufficient, adding one is a follow-up intent under rule 5.
+      - name: Sync graph to issues
+        id: sync
+        continue-on-error: true
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_REPO: ${{ github.repository }}
+          # Apply on push and schedule; on dispatch only when dry_run is false.
+          ISSUE_SYNC_APPLY: ${{ (github.event_name == 'push' || github.event_name == 'schedule' || (github.event_name == 'workflow_dispatch' && inputs.dry_run == false)) && '1' || '' }}
+        run: pnpm spec:issue-sync --repo "$GH_REPO" | tee /tmp/issue-sync.log
+
+      # CC-5's durable per-run record, in tools/spec.ts's report shape. Runs even on
+      # failure so a failed run still leaves evidence.
+      - name: Report
+        if: always()
+        run: |
+          set -uo pipefail
+          echo "## issue-sync" >> "$GITHUB_STEP_SUMMARY"
+          echo "- event: ${{ github.event_name }}" >> "$GITHUB_STEP_SUMMARY"
+          echo "- mode: ${{ env.ISSUE_SYNC_APPLY == '1' && 'apply' || 'dry-run' }}" >> "$GITHUB_STEP_SUMMARY"
+          if [ -s /tmp/issue-sync.log ]; then
+            echo '```' >> "$GITHUB_STEP_SUMMARY"
+            cat /tmp/issue-sync.log >> "$GITHUB_STEP_SUMMARY"
+            echo '```' >> "$GITHUB_STEP_SUMMARY"
+          else
+            echo "- no output captured" >> "$GITHUB_STEP_SUMMARY"
+          fi
+          if [ "${{ steps.sync.outcome }}" != "success" ]; then
+            echo "::warning title=issue-sync::the sync step did not succeed; the graph remains the source of truth"
+          elif grep -qE '[1-9][0-9]* failed' /tmp/issue-sync.log 2>/dev/null; then
+            echo "::warning title=issue-sync::the sync reported failed items; see the step summary"
+          fi
+        env:
+          ISSUE_SYNC_APPLY: ${{ (github.event_name == 'push' || github.event_name == 'schedule' || (github.event_name == 'workflow_dispatch' && inputs.dry_run == false)) && '1' || '' }}

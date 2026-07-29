@@ -363,7 +363,7 @@ _none_
 
 | id | title | status | lane | owner |
 |---|---|---|---|---|
-| `brief-conveyor-ci-6a9f` | Conveyor CI surface — issue-sync workflow, A9 transcription check, sensitive-paths gate graduation, decision-* CODEOWNERS | draft | observability-release | — |
+| `brief-conveyor-ci-6a9f` | Conveyor CI surface — issue-sync workflow, A9 transcription check, sensitive-paths gate graduation, decision-* CODEOWNERS | implemented | observability-release | — |
 | `brief-conveyor-commands-c14d` | Conveyor command chain — resolver NEXT block, marked degraded fallback, retargeted critic routing, and the type-wrong /prepare-evidence hop, across the 15 command files | draft | api-integration | — |
 | `brief-conveyor-docs-9e31` | Conveyor governing docs — CLAUDE.md step-5 amendment (A7), output-attention and mix-and-match conventions, lifecycle completeness, the conveyor subsection, and the README/CONTRIBUTING/branch-protection/drift-detection repairs | draft | docs-spec | — |
 | `brief-conveyor-lane-catalog-2d5b` | Lane market surface — eight .claude/lanes catalog files, the .gitignore negation that admits them, seven implementer agents, four agent corrections | draft | product-spec | — |

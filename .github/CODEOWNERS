@@ -1,6 +1,12 @@
-# Schema changes and contract nodes require review by the graph owner.
+# Schema changes and the node paths that bind an approved contract — contract,
+# decision and override nodes — require review by the graph owner.
 /specs/schema/ @sb-dev
 /specs/nodes/contract-* @sb-dev
+# Decision nodes now carry BINDING amendments: the effective contract is the
+# approved contract PLUS its selecting decision's grafts and mandatory fixes, so an
+# unreviewed decision edit silently rewrites an approved contract's effective text
+# without touching the contract file at all.
+/specs/nodes/decision-* @sb-dev
 # Override nodes are the gate's escape hatch: spec:gate clause (b) waives the
 # pr-evidence check on an author-added override, and never authenticates its
 # `approved_by` field. Requiring code-owner review on override-* is what makes a

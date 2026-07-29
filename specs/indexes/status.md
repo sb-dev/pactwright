@@ -34,8 +34,7 @@ stage: `intent-selected`
 
 next:
 
-- `/implement-brief brief-conveyor-ci-6a9f` — _paste_ — brief is `draft` and carries no open patch market
-- consider whether this lane deserves a patch market — the brief carries no `## Strategy tension` section — _action_ — class 3 permits a patch market (available per lane); no marker is recorded, and the resolver never infers tension
+- `/prepare-evidence brief-conveyor-ci-6a9f` — _paste_ — brief is `implemented`; evidence is the next lifecycle record
 - `/implement-brief brief-conveyor-commands-c14d` — _paste_ — brief is `draft` and carries no open patch market
 - consider whether this lane deserves a patch market — the brief carries no `## Strategy tension` section — _action_ — class 3 permits a patch market (available per lane); no marker is recorded, and the resolver never infers tension
 - `/implement-brief brief-conveyor-docs-9e31` — _paste_ — brief is `draft` and carries no open patch market
@@ -51,7 +50,7 @@ next:
 
 | brief | lane | owner | wave | issue | status | next |
 |---|---|---|---|---|---|---|
-| `brief-conveyor-ci-6a9f` | observability-release | — | — | not synced | draft | `/implement-brief brief-conveyor-ci-6a9f` |
+| `brief-conveyor-ci-6a9f` | observability-release | — | — | not synced | implemented | `/prepare-evidence brief-conveyor-ci-6a9f` |
 | `brief-conveyor-commands-c14d` | api-integration | — | — | not synced | draft | `/implement-brief brief-conveyor-commands-c14d` |
 | `brief-conveyor-docs-9e31` | docs-spec | — | — | not synced | draft | `/implement-brief brief-conveyor-docs-9e31` |
 | `brief-conveyor-lane-catalog-2d5b` | product-spec | — | — | not synced | draft | `/implement-brief brief-conveyor-lane-catalog-2d5b` |

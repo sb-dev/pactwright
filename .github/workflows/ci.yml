@@ -19,3 +19,72 @@ jobs:
       - run: pnpm test
       - run: pnpm typecheck
       - run: pnpm lint
+
+      # A9 — the transcription check. Sited as a STEP in `ci` deliberately: a check
+      # name is the JOB id, so a new workflow or a new job would create a check that
+      # is NOT required and would block nothing until an out-of-diff admin action.
+      # `ci` is already required (docs/branch-protection.md), so only a step here is
+      # enforced on merge day. Accepted costs, not claimed away: `ci`'s blast radius
+      # grows, a transcription mismatch now blocks every merge, and this verdict
+      # shares the `ci` check name with test/typecheck/lint — mitigated by the step
+      # name, an ::error:: annotation and a step-summary block, never by weakening
+      # the step to non-fatal.
+      #
+      # HONEST BOUND: this proves the recorded block is byte-identical to what the
+      # resolver produces for the recorded graph, and that spec:status runs against
+      # the live graph. It does NOT prove a human ran spec:status when they wrote the
+      # block — a hand-typed byte-equal block passes. Closing that needs a run stamp
+      # or digest; this change does not take it, and adding one is a follow-up intent
+      # under rule 5, never a silent addition.
+      #
+      # CROSS-LANE INTERFACE (reconcile at integration): the NEXT-block sentinels are
+      # whatever tools/conveyor.ts actually renders — the resolver is the authority.
+      # As shipped it opens with a line starting `NEXT ` and closes with a line that
+      # is exactly `END`. The transcript fixtures under tests/fixtures/conveyor-
+      # transcript/ are the test-verification lane's; legs 1 and 2 are RED until they
+      # land, which is correct and must NOT be "fixed" by skipping on an absent dir.
+      - name: Transcription check (A9) — printed NEXT blocks vs spec:status
+        run: |
+          set -uo pipefail
+          FIXTURES=tests/fixtures/conveyor-transcript
+          fail() { echo "::error title=A9 transcription check::$1"; echo "- FAIL: $1" >> "$GITHUB_STEP_SUMMARY"; exit 1; }
+          echo "## A9 transcription check" >> "$GITHUB_STEP_SUMMARY"
+
+          # Leg 3 first: it needs no fixture, so the step has non-vacuous value even
+          # before the fixtures land.
+          live=$(pnpm -s spec:status 2>&1) || fail "spec:status failed against the live graph"
+          echo "$live" | grep -q '^NEXT ' || fail "live spec:status output carries no NEXT sentinel"
+          echo "$live" | grep -qx 'END' || fail "live spec:status output carries no END sentinel"
+          echo "- OK: live-graph smoke (leg 3)" >> "$GITHUB_STEP_SUMMARY"
+
+          # Leg 1: completeness / anti-vacuity. Every chain command must be
+          # represented. An absent or empty fixture set is a FAILURE, never a skip.
+          [ -d "$FIXTURES" ] || fail "transcript fixture directory $FIXTURES is absent (leg 1)"
+          cases=$(find "$FIXTURES" -mindepth 1 -maxdepth 1 -type d | sort)
+          [ -n "$cases" ] || fail "transcript fixture directory $FIXTURES is empty (leg 1)"
+          missing=""
+          for cmd in $(git ls-files .claude/commands | xargs -n1 basename | sed 's/\.md$//' \
+                        | grep -vx detect-drift | grep -vx update-spec-graph); do
+            [ -d "$FIXTURES/$cmd" ] || missing="$missing $cmd"
+          done
+          [ -z "$missing" ] || fail "no transcript fixture for chain command(s):$missing (leg 1)"
+          echo "- OK: completeness (leg 1)" >> "$GITHUB_STEP_SUMMARY"
+
+          # Leg 2: replay each recorded block against its recorded graph.
+          for case in $cases; do
+            cmd=$(basename "$case")
+            [ -f "$case/node-id" ] || fail "$cmd: fixture has no node-id file (leg 2)"
+            [ -f "$case/expected-next.txt" ] || fail "$cmd: fixture has no expected-next.txt (leg 2)"
+            [ -d "$case/specs" ] || fail "$cmd: fixture has no recorded specs/ graph (leg 2)"
+            node_id=$(cat "$case/node-id")
+            tmp=$(mktemp -d)
+            cp -r "$case/specs" "$tmp/specs"
+            actual=$( cd "$tmp" && node --import tsx "$GITHUB_WORKSPACE/tools/spec.ts" status "$node_id" 2>&1 )
+            rm -rf "$tmp"
+            echo "$actual" | grep -q '^NEXT ' || fail "$cmd: replayed output carries no NEXT sentinel (leg 2)"
+            if ! diff -u "$case/expected-next.txt" <(printf '%s\n' "$actual") > /tmp/a9.diff; then
+              echo '```diff' >> "$GITHUB_STEP_SUMMARY"; cat /tmp/a9.diff >> "$GITHUB_STEP_SUMMARY"; echo '```' >> "$GITHUB_STEP_SUMMARY"
+              fail "$cmd: recorded NEXT block differs from spec:status output (leg 2)"
+            fi
+          done
+          echo "- OK: fixture replay (leg 2)" >> "$GITHUB_STEP_SUMMARY"

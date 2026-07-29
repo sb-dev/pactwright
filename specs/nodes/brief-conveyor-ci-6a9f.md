@@ -2,7 +2,7 @@
 id: brief-conveyor-ci-6a9f
 type: brief
 title: Conveyor CI surface — issue-sync workflow, A9 transcription check, sensitive-paths gate graduation, decision-* CODEOWNERS
-status: draft
+status: implemented
 created: 2026-07-28
 lane: observability-release
 produced_by: "/decompose-lanes"
