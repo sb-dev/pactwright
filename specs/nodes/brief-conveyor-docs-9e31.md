@@ -2,7 +2,7 @@
 id: brief-conveyor-docs-9e31
 type: brief
 title: Conveyor governing docs — CLAUDE.md step-5 amendment (A7), output-attention and mix-and-match conventions, lifecycle completeness, the conveyor subsection, and the README/CONTRIBUTING/branch-protection/drift-detection repairs
-status: draft
+status: implemented
 created: 2026-07-28
 lane: docs-spec
 produced_by: "/decompose-lanes"

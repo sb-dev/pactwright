@@ -60,17 +60,57 @@ to build, and what we've actually built.
      widen the current contract silently.
    - *Selected work changes the intended behaviour* — stop and return to
      human approval. A new `decision` node is required before proceeding.
+6. **graph-maintainer is the sole writer of the graph.** Only
+   `graph-maintainer` writes `specs/nodes/` and `specs/graph/edges.yaml`.
+   Every command that changes the graph delegates to it; commands and other
+   agents *propose* nodes, edges and status changes and hand them over. A
+   command that edits a graph file directly has bypassed the one place the
+   invariants are enforced, however correct its content.
+7. **Recording an override.** A waiver is an `override` node carrying
+   `reason`, `approved_by` and `expires` (the fields
+   `specs/schema/node-types.yaml` requires), plus a `waives` edge whose
+   target is a check id registered in `specs/schema/checks.yaml`. **Honest
+   bound:** `approved_by` is *provenance*, never authentication — nothing
+   verifies it. What makes a waiver an independent approval is that adding
+   an `override-*` node trips CODEOWNERS review; the mechanism is documented
+   in `docs/branch-protection.md`.
+8. **Drift is detected, then routed — never absorbed.** Divergence between a
+   merged diff and the graph is found by `/detect-drift <pr-number|branch>`
+   over the deterministic `spec:check-diff` and `spec:drift-map` layers
+   (`docs/drift-detection.md`). A real divergence is recorded as a
+   `drift-finding` node via graph-maintainer and is a **rule 5 event**.
 
 ## Lifecycle (numbered steps; each shows the edge it authors)
 
-1. Intent captured (status: open)
+1. Intent captured (status: open)                  `/capture-intent`
 2. Candidate contracts proposed      contract —proposes→ intent
-3. Human selection                   decision —selects→ contract
+                                                   `/propose-contracts`
+3. Review and comparison (class 2+)  comparison —compares→ contract
+   (one edge per live candidate; the comparison is never superseded by
+   selection)                                      `/review-contracts`
+4. Human selection                   decision —selects→ contract
    (chosen contract becomes approved, siblings rejected; intent stays open)
-4. Brief written                     brief —decomposes→ contract
-5. Implementation (code only; no graph writes)
-6. Evidence prepared                 evidence —evidences→ brief
-   (brief becomes implemented; intent becomes addressed)
+                                                   `/approve-contract`
+5. Brief written                     brief —decomposes→ contract
+                                     `/write-brief` or `/decompose-lanes`
+6. Implementation                                  `/implement-brief`
+   Writes code and project files, and performs **exactly one** graph write:
+   the brief moves to `implemented`, through graph-maintainer (rule 6), which
+   makes the implementation-to-evidence hop derivable rather than recalled.
+   This amends the step's former code-only wording and is a change of
+   intended behaviour approved under rule 5 by
+   `decision-conveyor-derived-5a91`.
+7. Evidence prepared                 evidence —evidences→ brief
+   (the intent becomes `addressed` only when its contract is covered — for a
+   multi-brief contract that means the final `integration` of step 8, per
+   `coverage-coherence`)                           `/prepare-evidence`
+8. Integration (multi-lane only)     integration —integrates→ evidence
+   (one edge per live lane's final evidence)       `/integrate`
+
+The four patch-market commands — `/propose-patches`, `/compare-patches`,
+`/synthesize-patches` and `/select-patch` — are deliberately **not** numbered
+steps: they are a per-lane sub-loop inside the implementation step, documented
+in `### Patch market`.
 
 Mnemonic: edges point backwards in time, from the newer record to what
 it is about — provenance, like citations. Superseding follows the same
@@ -183,8 +223,8 @@ Three rules govern lanes and completion:
 2. **Single-brief contracts skip integration.** A contract decomposed into one brief
    is completed by that brief's lone **final** `evidence`; there is no `integration`
    node. A multi-lane change is completed by a final `integration` node (via
-   `/integrate`) — the contract's coverage artifact and the release's `includes`
-   target. The `coverage-coherence` rule enforces this: a multi-brief contract cannot
+   `/integrate`) — the contract's coverage artifact. The `coverage-coherence` rule
+   enforces this: a multi-brief contract cannot
    mark its intent `addressed` until a final integration `integrates` a final evidence
    for every live lane.
 3. **Every evidence records `touches`.** `/prepare-evidence` authors `touches` edges
@@ -258,3 +298,85 @@ review; this is a pointer to it, not a restatement.
 comparison was substantive. The gate's full mechanism (the fail-closed PR→brief
 mapping, override expiry, and the dated wiring) is enforced by the `patch-comparison`
 CI gate; see the domain-backend and observability-release lanes' artifacts.
+
+## The conveyor
+
+`tools/conveyor.ts`'s `nextSteps(spec, nodeId)` is the **single source of routing
+truth**. `spec:status` is its read-only surface, `trails.md` and `status.md` are
+rendered from the same derivation, and every chain command's closing report
+reproduces the resolver's machine-stable `NEXT` block **verbatim** — "verbatim"
+binding the block only, with the command's own judgement content required *around*
+it, never inside it. There are not three producers, so the three consumers cannot
+diverge; every printed id is resolved from `edges.yaml` rather than recalled.
+
+**The degraded path is real and is marked.** Each chain command retains a static,
+**template-shaped** fallback print in its own markdown, used only when the resolver
+itself is unavailable. It carries **no** resolved ids — its placeholders are
+required, not defects — and it is explicitly labelled the resolver-unavailable path
+so it never becomes a second authoritative routing source. A failed *graph write* is
+a different case: that prints findings, remediation and explicitly **no** next step.
+
+Two standing bounds:
+
+- **The conveyor prints, never executes.** A printed command still obeys its class's
+  standing rules; a recommendation is never an exemption.
+- **Terminality is derived from graph shape**, never declared per command. The PR
+  action is terminal only for an unlaned single brief; a multi-lane contract's last
+  lane `/prepare-evidence` is followed by `/integrate`.
+
+`spec:status` reports per **live intent**. That term has exactly one definition, in
+the `intent` block of `specs/schema/node-types.yaml`; this document points at it and
+writes no second copy.
+
+**Recording a paste-only acceptance claim.** An acceptance that says a change runs
+end to end by paste alone must name **the run that discharges it**, record that run's
+verdict in the final `integration` node's `combined-test-run` section
+(cross-referenced from `compliance-verdict`), and name the **remediation if it
+fails** — a `drift-finding` plus a rule 5 route. A change does not reach a final
+integration on a failed run. A claim with no named run, no recorded verdict and no
+remediation is not an acceptance criterion.
+
+### Output attention
+
+The reader's attention is the budget these conventions spend. They are **guidance,
+not gates**: no validation rule reads any of them and no length is machine-checked.
+
+- Critic findings live **only** in the `comparison` node. `/review-contracts` writes
+  a one-line-per-axis verdict pointer onto each candidate, not a full critique
+  section — except at class 0–1, where no comparison exists and the critique has
+  nowhere else to live.
+- Contract bodies stay pure spec; target ≤250 lines.
+- Node prose hard-wraps at 100 columns.
+- Binding amendments and mandatory fixes are **numbered markdown lists**, never
+  inline enumerations — the list is the discharge key a later integration enumerates.
+- A comparison body opens with a verdict table of ≤10 rows whose cells are ≤15 words,
+  with the shared-core prose outside the table
+  (exemplar: `comparison-patch-market-synthesis-7b1d`).
+- A decision body takes the `decision-patch-market-ci-gate-8a2f` shape — a
+  SELECTED/REJECTED lead line, amendments as a numbered list, ≤120 lines, and a
+  closing next-step print.
+
+### The effective contract
+
+**The effective contract is the approved contract plus its selecting decision's
+amendments.** The base candidate, the grafts taken from named siblings, and the
+mandatory fixes are all binding, and a change that satisfies the contract body while
+dropping an amendment is not done.
+
+- `/write-brief` and `/decompose-lanes` carry those amendments into every brief they
+  draft, naming each by its identifier.
+- Every review judged against the approved contract reads the contract **and** its
+  selecting decision together — `contract-reviewer`, `integration-reviewer` and drift
+  review included.
+- **The approved contract body is never edited.** Amendments live in the decision.
+- An amendment that would change intended behaviour returns to human approval under
+  rule 5, recorded as a new `decision` before it is implemented.
+
+`decision-patch-market-ci-gate-8a2f` is the precedent this formalizes;
+`decision-conveyor-derived-5a91` is its current instance.
+
+**Discharge.** An `integration` node's `compliance-verdict` section enumerates each
+amendment of the selecting decision and names that amendment's **discharging brief**
+— for `contract-conveyor-derived-4c8c` that is 32 items. The canonical
+`integration_sections` key list lives in `.claude/agents/integration-reviewer.md`;
+this document points at it rather than re-listing the keys.

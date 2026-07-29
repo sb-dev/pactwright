@@ -10,16 +10,17 @@ Configure the default branch (`main`) with:
 
 ## Required status checks
 
-These four checks must pass before a PR can merge ("Require status checks to
+These six checks must pass before a PR can merge ("Require status checks to
 pass" + "Require branches to be up to date"):
 
 | Check | Workflow | Enforces |
 | --- | --- | --- |
-| `ci` | `ci.yml` | `pnpm test`, `pnpm typecheck`, `pnpm lint` on every PR |
+| `ci` | `ci.yml` | `pnpm test`, `pnpm typecheck`, `pnpm lint`, and the A9 transcription check (printed `NEXT` blocks vs `spec:status`) on every PR |
 | `spec-index` | `spec-index.yml` | committed `specs/indexes/` match a fresh `pnpm spec:index` |
 | `spec-validate` | `spec-validate.yml` | runs on every PR; validates with `pnpm spec:validate` when `specs/**` changed, otherwise reports success |
 | `pr-evidence` | `pr-evidence.yml` | every code PR carries an `evidences` edge to an approved contract, or an `override` waiving the `pr-evidence` check |
 | `patch-comparison` | `patch-comparison.yml` | a multi-patch brief's merge PR must carry a comparison + a `selects` decision, or a non-expired `waives → patch-comparison` override; the diff-aware `spec:patch-gate` blocks the merge otherwise |
+| `drift-review` | `drift-review.yml` | the deterministic sensitive-paths gate (`spec:check-diff`): a touched `sensitive_paths` glob needs a linked approved contract or an override. Blocking. The semantic `/detect-drift` layer in the same workflow stays warn-only |
 
 `pr-evidence` and `spec-validate` run on **every** PR and decide scope *inside*
 the job (`pr-evidence` skips a specs/docs-only PR; `spec-validate` skips a PR
@@ -37,6 +38,21 @@ check blocks nothing until a repo admin enables it under "Require status checks
 to pass"; until that admin step lands, the workflow runs and reports but blocks
 no merge.
 
+`drift-review` triggers on `pull_request:` with **no** event-level `paths:`
+filter, so it always runs and always reports — safe to mark required under the
+rule above. Its deterministic sensitive-paths step graduated from warn-only to
+blocking after behaving correctly on ~5 real PRs, and is waivable by an
+`override` node with a `waives → check-diff` edge. The same honest bound applies
+as to `patch-comparison`: after the graduation the job goes **red** on a
+violating PR but blocks no merge until a repo admin marks `drift-review`
+required. Red is not blocked, and that admin step is repo state, not
+reproducible from files in this repository.
+
+Note that the **Check** column above holds GitHub status-check names (which are
+job ids), a different namespace from the waivable check ids registered in
+`specs/schema/checks.yaml` — where the drift gate is registered as `check-diff`,
+not `drift-review`. A row here is not a registry claim.
+
 ## Required reviews (CODEOWNERS)
 
 Enable "Require review from Code Owners". `.github/CODEOWNERS` requires the
@@ -44,6 +60,8 @@ graph owner (`@sb-dev`) to review changes under:
 
 - `/specs/schema/` — node/edge/validation schema
 - `/specs/nodes/contract-*` — contract nodes
+- `/specs/nodes/decision-*` — decision nodes, which carry the binding
+  amendments that make up a contract's *effective* text
 - `/specs/nodes/override-*` — gate-waiver nodes
 
 **Override integrity depends on this last rule plus required code-owner

@@ -29,17 +29,24 @@ capability reaches its governing contract through
 changed file owned by no capability appears in `uncovered`; close coverage holes
 by adding or widening a capability's `paths`.
 
-## Warn-only, then blocking
+## Enforcement, layer by layer
 
-`drift-review.yml` runs on every PR and is **warn-only**: `spec:check-diff` runs
-with `continue-on-error: true` (it annotates but never fails the build) and the
-semantic step never fails.
+`drift-review.yml` runs on every PR and its three layers are enforced
+differently — the workflow as a whole is **not** "no longer warn-only":
 
-- Flip the **deterministic** `check-diff` layer to blocking — remove
-  `continue-on-error: true` from its step — only after it has behaved correctly
-  on ~5 real PRs.
-- The **semantic** `/detect-drift` layer stays warn-only longer; before making
-  it blocking, pin the CI Claude step (action, credential, model).
+- The **deterministic** `check-diff` layer is **blocking**: its step no longer
+  carries `continue-on-error: true`, so a violation fails the job. It graduated
+  after behaving correctly on ~5 real PRs, the criterion recorded here before
+  the flip.
+- The **Drift map** step keeps its own `continue-on-error: true` deliberately.
+  It is a reporter, not a gate, and that line is not a graduation candidate.
+- The **semantic** `/detect-drift` layer stays warn-only; before making it
+  blocking, pin the CI Claude step (action, credential, model).
+
+**Honest bound:** after the graduation the job goes **red** on a violating PR
+but blocks no merge until a repo admin marks `drift-review` a required status
+check (see `docs/branch-protection.md`). Red is not blocked, and that setting is
+repo-admin state, not reproducible from files in this repository.
 
 Every blocking check must remain waivable by an `override` node with a
 `waives → check-diff` edge (the `check-diff` and `drift` check names are
