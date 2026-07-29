@@ -62,6 +62,9 @@ incoming:
       source: evidence-patch-market-ci-4a5b
       type: touches
   capability-lifecycle-commands-4f5a:
+    - id: edge-touches-critics-literal-panel-lifecycle-commands-d4a9
+      source: evidence-critics-literal-panel-e2a7
+      type: touches
     - id: edge-touches-drift-lifecycle-commands-a8c9
       source: evidence-drift-tool-assisted-3e58
       type: touches
@@ -74,7 +77,13 @@ incoming:
     - id: edge-touches-patch-market-commands-lifecycle-commands-7e1f
       source: evidence-patch-market-commands-3f4a
       type: touches
+    - id: edge-touches-work-class-routing-lifecycle-commands-c4b7
+      source: evidence-work-class-routing-f0a3
+      type: touches
   capability-spec-docs-8c1d:
+    - id: edge-touches-critics-literal-panel-spec-docs-d3c7
+      source: evidence-critics-literal-panel-e2a7
+      type: touches
     - id: edge-touches-lane-integration-docs-8b2e
       source: evidence-lane-integration-9b4c
       type: touches
@@ -84,9 +93,15 @@ incoming:
     - id: edge-touches-patch-market-docs-spec-docs-0b4c
       source: evidence-patch-market-docs-5b6c
       type: touches
+    - id: edge-touches-work-class-routing-spec-docs-c3a5
+      source: evidence-work-class-routing-f0a3
+      type: touches
   capability-spec-schema-2c3d:
     - id: edge-touches-ci-gate-spec-schema-a3d4
       source: evidence-ci-gate-spec-tool-693d
+      type: touches
+    - id: edge-touches-critics-literal-panel-spec-schema-d2b5
+      source: evidence-critics-literal-panel-e2a7
       type: touches
     - id: edge-touches-drift-spec-schema-a6a7
       source: evidence-drift-tool-assisted-3e58
@@ -100,7 +115,13 @@ incoming:
     - id: edge-touches-patch-market-schema-spec-schema-3a7b
       source: evidence-patch-market-schema-1d2e
       type: touches
+    - id: edge-touches-work-class-routing-spec-schema-c2b3
+      source: evidence-work-class-routing-f0a3
+      type: touches
   capability-spec-tests-3a6e:
+    - id: edge-touches-critics-literal-panel-spec-tests-d6b1
+      source: evidence-critics-literal-panel-e2a7
+      type: touches
     - id: edge-touches-lane-integration-tests-9c3f
       source: evidence-lane-integration-9b4c
       type: touches
@@ -110,7 +131,13 @@ incoming:
     - id: edge-touches-patch-market-tests-spec-tests-1c5d
       source: evidence-patch-market-tests-6c7d
       type: touches
+    - id: edge-touches-work-class-routing-spec-tests-c5d9
+      source: evidence-work-class-routing-f0a3
+      type: touches
   capability-spec-tooling-1a2b:
+    - id: edge-touches-critics-literal-panel-spec-tooling-d1a3
+      source: evidence-critics-literal-panel-e2a7
+      type: touches
     - id: edge-touches-drift-spec-tooling-a5f6
       source: evidence-drift-tool-assisted-3e58
       type: touches
@@ -122,6 +149,9 @@ incoming:
       type: touches
     - id: edge-touches-spec-tooling-evidence-a1b2
       source: evidence-spec-tooling-schema-driven-9c4e
+      type: touches
+    - id: edge-touches-work-class-routing-spec-tooling-c2a1
+      source: evidence-work-class-routing-f0a3
       type: touches
   contract-ci-gate-spec-tool-5039:
     - id: edge-decomposes-ci-gate-spec-tool-2060

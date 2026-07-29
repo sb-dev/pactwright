@@ -61,6 +61,7 @@ by-type:
     - decision-conveyor-derived-5a91
     - decision-critics-literal-panel-9c4f
     - decision-drift-tool-assisted-d5e2
+    - decision-gitignore-unowned-6b3d
     - decision-graph-data-unowned-2f7b
     - decision-lane-integration-9f3b
     - decision-lifecycle-thin-commands-41c8
@@ -90,7 +91,9 @@ by-type:
     - intent-claude-lifecycle-commands-f367
     - intent-docs-arrow-lint-e7b3
     - intent-drift-detection-c7b1
+    - intent-implement-brief-graph-lane-b3f5
     - intent-lane-model-integration-a1f7
+    - intent-malformed-cutoff-finding-b3d7
     - intent-patch-market-synthesis-3b1e
     - intent-self-guiding-delivery-loop-6d79
     - intent-spec-index-validate-a3f1
@@ -98,3 +101,4 @@ by-type:
     - intent-status-coherence-d4f2
     - intent-unbacked-addressed-guard-8c4e
     - intent-work-class-routing-b9c4
+    - intent-write-tests-unlaned-brief-b3d8

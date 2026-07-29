@@ -252,6 +252,21 @@ outgoing:
     - id: edge-evidences-critics-literal-panel-f4b1
       target: brief-critics-literal-panel-b5c6
       type: evidences
+    - id: edge-touches-critics-literal-panel-lifecycle-commands-d4a9
+      target: capability-lifecycle-commands-4f5a
+      type: touches
+    - id: edge-touches-critics-literal-panel-spec-docs-d3c7
+      target: capability-spec-docs-8c1d
+      type: touches
+    - id: edge-touches-critics-literal-panel-spec-schema-d2b5
+      target: capability-spec-schema-2c3d
+      type: touches
+    - id: edge-touches-critics-literal-panel-spec-tests-d6b1
+      target: capability-spec-tests-3a6e
+      type: touches
+    - id: edge-touches-critics-literal-panel-spec-tooling-d1a3
+      target: capability-spec-tooling-1a2b
+      type: touches
   evidence-drift-tool-assisted-3e58:
     - id: edge-evidences-drift-tool-assisted-3e58
       target: brief-drift-tool-assisted-d4ee
@@ -356,6 +371,21 @@ outgoing:
     - id: edge-evidences-work-class-routing-c7e1
       target: brief-work-class-routing-9a1c
       type: evidences
+    - id: edge-touches-work-class-routing-lifecycle-commands-c4b7
+      target: capability-lifecycle-commands-4f5a
+      type: touches
+    - id: edge-touches-work-class-routing-spec-docs-c3a5
+      target: capability-spec-docs-8c1d
+      type: touches
+    - id: edge-touches-work-class-routing-spec-schema-c2b3
+      target: capability-spec-schema-2c3d
+      type: touches
+    - id: edge-touches-work-class-routing-spec-tests-c5d9
+      target: capability-spec-tests-3a6e
+      type: touches
+    - id: edge-touches-work-class-routing-spec-tooling-c2a1
+      target: capability-spec-tooling-1a2b
+      type: touches
   integration-patch-market-9e4d:
     - id: edge-integrates-patch-market-ci-5d9b
       target: evidence-patch-market-ci-4a5b
