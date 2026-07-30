@@ -574,3 +574,13 @@ edges:
     type: touches
     target: capability-spec-schema-2c3d
     created: 2026-07-30
+  - id: edge-evidences-conveyor-ci-1f44
+    source: evidence-conveyor-ci-4b73
+    type: evidences
+    target: brief-conveyor-ci-6a9f
+    created: 2026-07-30
+  - id: edge-touches-conveyor-ci-ci-enforcement-2a55
+    source: evidence-conveyor-ci-4b73
+    type: touches
+    target: capability-ci-enforcement-3e4f
+    created: 2026-07-30

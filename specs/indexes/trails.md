@@ -375,6 +375,7 @@ _none_
 
 | id | title | status |
 |---|---|---|
+| `evidence-conveyor-ci-4b73` | Observability-release lane implemented — issue-sync workflow, A9 transcription check (now manifest-correct and verified), sensitive-paths gate graduation, decision-* CODEOWNERS | final |
 | `evidence-conveyor-schema-graph-7c41` | Data-migration lane implemented — optional owner on brief, lane-list pointer, live-intent definition, and the five Scope-14 graph migrations | final |
 
 ### integration

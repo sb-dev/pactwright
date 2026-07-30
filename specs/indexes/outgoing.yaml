@@ -248,6 +248,13 @@ outgoing:
     - id: edge-touches-ci-gate-spec-schema-a3d4
       target: capability-spec-schema-2c3d
       type: touches
+  evidence-conveyor-ci-4b73:
+    - id: edge-evidences-conveyor-ci-1f44
+      target: brief-conveyor-ci-6a9f
+      type: evidences
+    - id: edge-touches-conveyor-ci-ci-enforcement-2a55
+      target: capability-ci-enforcement-3e4f
+      type: touches
   evidence-conveyor-schema-graph-7c41:
     - id: edge-evidences-conveyor-schema-graph-8d21
       target: brief-conveyor-schema-graph-8b2e

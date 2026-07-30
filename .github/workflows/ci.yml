@@ -37,54 +37,94 @@ jobs:
       # or digest; this change does not take it, and adding one is a follow-up intent
       # under rule 5, never a silent addition.
       #
-      # CROSS-LANE INTERFACE (reconcile at integration): the NEXT-block sentinels are
-      # whatever tools/conveyor.ts actually renders — the resolver is the authority.
-      # As shipped it opens with a line starting `NEXT ` and closes with a line that
-      # is exactly `END`. The transcript fixtures under tests/fixtures/conveyor-
-      # transcript/ are the test-verification lane's; legs 1 and 2 are RED until they
-      # land, which is correct and must NOT be "fixed" by skipping on an absent dir.
+      # FIXTURE CONTRACT (settled by a human decision, 2026-07-30): the transcript
+      # fixture is ONE shared recorded graph under tests/fixtures/conveyor-transcript/
+      # plus a transcript.yaml manifest — a top-level list of {command, node, block}.
+      # An earlier draft of this step read a per-command-directory layout; the
+      # test-verification lane's brief owns the fixture and specifies the manifest, so
+      # the manifest wins and this step was corrected to match. The NEXT-block
+      # sentinels are whatever tools/conveyor.ts actually renders — the resolver is the
+      # authority. As shipped it opens with a line starting `NEXT ` and closes with a
+      # line that is exactly `END`.
       - name: Transcription check (A9) — printed NEXT blocks vs spec:status
         run: |
           set -uo pipefail
-          FIXTURES=tests/fixtures/conveyor-transcript
-          fail() { echo "::error title=A9 transcription check::$1"; echo "- FAIL: $1" >> "$GITHUB_STEP_SUMMARY"; exit 1; }
-          echo "## A9 transcription check" >> "$GITHUB_STEP_SUMMARY"
+          cat > /tmp/a9.ts <<'A9_EOF'
+          import { spawnSync } from "node:child_process";
+          import * as fs from "node:fs";
+          import * as path from "node:path";
+          import { load } from "js-yaml";
 
-          # Leg 3 first: it needs no fixture, so the step has non-vacuous value even
-          # before the fixtures land.
-          live=$(pnpm -s spec:status 2>&1) || fail "spec:status failed against the live graph"
-          echo "$live" | grep -q '^NEXT ' || fail "live spec:status output carries no NEXT sentinel"
-          echo "$live" | grep -qx 'END' || fail "live spec:status output carries no END sentinel"
-          echo "- OK: live-graph smoke (leg 3)" >> "$GITHUB_STEP_SUMMARY"
+          const FIXTURE = "tests/fixtures/conveyor-transcript";
+          const summary = process.env["GITHUB_STEP_SUMMARY"];
+          const say = (s: string): void => { if (summary) fs.appendFileSync(summary, s + "\n"); console.log(s); };
+          const fail = (why: string): never => {
+            console.log(`::error title=A9 transcription check::${why}`);
+            say(`- FAIL: ${why}`);
+            process.exit(1);
+          };
+          say("## A9 transcription check");
 
-          # Leg 1: completeness / anti-vacuity. Every chain command must be
-          # represented. An absent or empty fixture set is a FAILURE, never a skip.
-          [ -d "$FIXTURES" ] || fail "transcript fixture directory $FIXTURES is absent (leg 1)"
-          cases=$(find "$FIXTURES" -mindepth 1 -maxdepth 1 -type d | sort)
-          [ -n "$cases" ] || fail "transcript fixture directory $FIXTURES is empty (leg 1)"
-          missing=""
-          for cmd in $(git ls-files .claude/commands | xargs -n1 basename | sed 's/\.md$//' \
-                        | grep -vx detect-drift | grep -vx update-spec-graph); do
-            [ -d "$FIXTURES/$cmd" ] || missing="$missing $cmd"
-          done
-          [ -z "$missing" ] || fail "no transcript fixture for chain command(s):$missing (leg 1)"
-          echo "- OK: completeness (leg 1)" >> "$GITHUB_STEP_SUMMARY"
+          const status = (cwd: string, nodeId?: string): { code: number; out: string } => {
+            const args = ["--import", "tsx", path.resolve("tools/spec.ts"), "status"];
+            if (nodeId !== undefined) args.push(nodeId);
+            const r = spawnSync(process.execPath, args, { cwd, encoding: "utf8", shell: false });
+            return { code: r.status ?? 1, out: (r.stdout ?? "") + (r.stderr ?? "") };
+          };
 
-          # Leg 2: replay each recorded block against its recorded graph.
-          for case in $cases; do
-            cmd=$(basename "$case")
-            [ -f "$case/node-id" ] || fail "$cmd: fixture has no node-id file (leg 2)"
-            [ -f "$case/expected-next.txt" ] || fail "$cmd: fixture has no expected-next.txt (leg 2)"
-            [ -d "$case/specs" ] || fail "$cmd: fixture has no recorded specs/ graph (leg 2)"
-            node_id=$(cat "$case/node-id")
-            tmp=$(mktemp -d)
-            cp -r "$case/specs" "$tmp/specs"
-            actual=$( cd "$tmp" && node --import tsx "$GITHUB_WORKSPACE/tools/spec.ts" status "$node_id" 2>&1 )
-            rm -rf "$tmp"
-            echo "$actual" | grep -q '^NEXT ' || fail "$cmd: replayed output carries no NEXT sentinel (leg 2)"
-            if ! diff -u "$case/expected-next.txt" <(printf '%s\n' "$actual") > /tmp/a9.diff; then
-              echo '```diff' >> "$GITHUB_STEP_SUMMARY"; cat /tmp/a9.diff >> "$GITHUB_STEP_SUMMARY"; echo '```' >> "$GITHUB_STEP_SUMMARY"
-              fail "$cmd: recorded NEXT block differs from spec:status output (leg 2)"
-            fi
-          done
-          echo "- OK: fixture replay (leg 2)" >> "$GITHUB_STEP_SUMMARY"
+          // Leg 3 first — needs no fixture, so the step has non-vacuous value even
+          // before the fixtures land.
+          const live = status(process.cwd());
+          if (live.code !== 0) fail("spec:status failed against the live graph (leg 3)");
+          if (!/^NEXT /m.test(live.out)) fail("live spec:status output carries no NEXT sentinel (leg 3)");
+          if (!/^END$/m.test(live.out)) fail("live spec:status output carries no END sentinel (leg 3)");
+          say("- OK: live-graph smoke (leg 3)");
+
+          // Leg 1 — completeness / anti-vacuity. An absent or empty manifest is a
+          // FAILURE, never a skip: that is the vacuous pass this leg exists to stop.
+          if (!fs.existsSync(FIXTURE)) fail(`transcript fixture ${FIXTURE} is absent (leg 1)`);
+          const manifestPath = path.join(FIXTURE, "transcript.yaml");
+          if (!fs.existsSync(manifestPath)) fail(`${manifestPath} is absent (leg 1)`);
+          const raw: unknown = load(fs.readFileSync(manifestPath, "utf8"));
+          if (!Array.isArray(raw) || raw.length === 0) fail(`${manifestPath} is empty or not a list (leg 1)`);
+          const entries = raw as { command?: string; node?: string; block?: string }[];
+          for (const [i, e] of entries.entries()) {
+            if (!e.command || !e.node || !e.block) fail(`manifest entry ${i} lacks command/node/block (leg 1)`);
+          }
+          const ls = spawnSync("git", ["ls-files", ".claude/commands"], { encoding: "utf8", shell: false });
+          if (ls.status !== 0) fail("git ls-files .claude/commands failed (leg 1)");
+          const chain = (ls.stdout ?? "").split("\n").filter(Boolean)
+            .map((f) => path.basename(f, ".md"))
+            .filter((c) => c !== "detect-drift" && c !== "update-spec-graph");
+          if (chain.length === 0) fail("no chain command files found (leg 1)");
+          const covered = new Set(entries.map((e) => e.command));
+          const missing = chain.filter((c) => !covered.has(c));
+          if (missing.length > 0) fail(`no transcript entry for chain command(s): ${missing.join(", ")} (leg 1)`);
+          say(`- OK: completeness — ${chain.length} chain commands, ${entries.length} recorded blocks (leg 1)`);
+
+          // Leg 2 — replay each recorded block against the recorded graph.
+          // The scratch copy MUST live inside the repository: `--import tsx` resolves
+          // through ./node_modules, so a dir under os.tmpdir() makes every spawn exit
+          // 1 with ERR_MODULE_NOT_FOUND. tests/spec.test.ts documents the same trap.
+          const tmp = fs.mkdtempSync(path.join(process.cwd(), ".a9-replay-"));
+          fs.cpSync(path.join(FIXTURE, "specs"), path.join(tmp, "specs"), { recursive: true });
+          let replayed = 0;
+          for (const e of entries) {
+            const r = status(tmp, e.node);
+            if (r.code !== 0) fail(`${e.command}/${e.node}: spec:status exited ${r.code} (leg 2)`);
+            if (!/^NEXT /m.test(r.out)) fail(`${e.command}/${e.node}: replayed output carries no NEXT sentinel (leg 2)`);
+            if (r.out !== e.block) {
+              say("```diff");
+              say(`--- recorded (${e.command}/${e.node})`);
+              for (const l of (e.block ?? "").split("\n")) say(`-${l}`);
+              say("+++ actual");
+              for (const l of r.out.split("\n")) say(`+${l}`);
+              say("```");
+              fail(`${e.command}/${e.node}: recorded NEXT block differs from spec:status output (leg 2)`);
+            }
+            replayed += 1;
+          }
+          fs.rmSync(tmp, { recursive: true, force: true });
+          say(`- OK: fixture replay — ${replayed} blocks byte-identical (leg 2)`);
+          A9_EOF
+          node --import tsx /tmp/a9.ts
