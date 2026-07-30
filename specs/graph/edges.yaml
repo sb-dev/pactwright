@@ -629,3 +629,13 @@ edges:
     type: supersedes
     target: decision-gitignore-unowned-6b3d
     created: 2026-07-30
+  - id: edge-evidences-conveyor-tests-4e73
+    source: evidence-conveyor-tests-6b2f
+    type: evidences
+    target: brief-conveyor-tests-4c86
+    created: 2026-07-30
+  - id: edge-touches-conveyor-tests-spec-tests-8f05
+    source: evidence-conveyor-tests-6b2f
+    type: touches
+    target: capability-spec-tests-3a6e
+    created: 2026-07-30

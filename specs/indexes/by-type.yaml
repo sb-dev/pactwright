@@ -77,6 +77,7 @@ by-type:
     - evidence-conveyor-lane-catalog-3d84
     - evidence-conveyor-resolver-2f18
     - evidence-conveyor-schema-graph-7c41
+    - evidence-conveyor-tests-6b2f
     - evidence-critics-literal-panel-e2a7
     - evidence-drift-tool-assisted-3e58
     - evidence-lane-integration-9b4c

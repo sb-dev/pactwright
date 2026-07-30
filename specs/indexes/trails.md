@@ -369,7 +369,7 @@ _none_
 | `brief-conveyor-lane-catalog-2d5b` | Lane market surface — eight .claude/lanes catalog files, the .gitignore negation that admits them, seven implementer agents, four agent corrections | implemented | product-spec | — |
 | `brief-conveyor-resolver-3f7a` | Conveyor resolver and tooling — nextSteps/deriveStage/CONVEYOR_CLASS_ROUTING, spec:status, the trails+status views, the planIssueSync seam, and the A11 traversal consolidation | implemented | domain-backend | — |
 | `brief-conveyor-schema-graph-8b2e` | Conveyor schema and graph data — optional owner on brief, lane-list pointer, live-intent definition, and the five Scope-14 data migrations | implemented | data-migration | — |
-| `brief-conveyor-tests-4c86` | Conveyor verification lane — the thirteen-leg lane-union pin, the resolver-invocation pin, conveyor routing, view time-invariance and the transcript regression fixture | draft | test-verification | — |
+| `brief-conveyor-tests-4c86` | Conveyor verification lane — the thirteen-leg lane-union pin, the resolver-invocation pin, conveyor routing, view time-invariance and the transcript regression fixture | implemented | test-verification | — |
 
 ### evidence
 
@@ -381,6 +381,7 @@ _none_
 | `evidence-conveyor-lane-catalog-3d84` | Product-spec lane implemented — the eight-file lane catalog and the .gitignore negation that admits it, seven implementer agents, four agent corrections, and the .gitattributes merge rule | final |
 | `evidence-conveyor-resolver-2f18` | Domain-backend lane implemented — the conveyor resolver, spec:status, the trails+status views, the planIssueSync seam, the A11 consolidation, and three defects the verification lane found | final |
 | `evidence-conveyor-schema-graph-7c41` | Data-migration lane implemented — optional owner on brief, lane-list pointer, live-intent definition, and the five Scope-14 graph migrations | final |
+| `evidence-conveyor-tests-6b2f` | Test-verification lane implemented — the thirteen-leg lane union pin, the A6 resolver-invocation pin with its negative leg, the conveyor routing matrix, the four CC-8 view legs and the CC-12 transcript replay | final |
 
 ### integration
 

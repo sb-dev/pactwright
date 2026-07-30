@@ -294,6 +294,13 @@ outgoing:
     - id: edge-touches-conveyor-schema-graph-spec-schema-9e32
       target: capability-spec-schema-2c3d
       type: touches
+  evidence-conveyor-tests-6b2f:
+    - id: edge-evidences-conveyor-tests-4e73
+      target: brief-conveyor-tests-4c86
+      type: evidences
+    - id: edge-touches-conveyor-tests-spec-tests-8f05
+      target: capability-spec-tests-3a6e
+      type: touches
   evidence-critics-literal-panel-e2a7:
     - id: edge-evidences-critics-literal-panel-f4b1
       target: brief-critics-literal-panel-b5c6

@@ -13,7 +13,7 @@ import {
   type Stage,
   type Step,
 } from "../tools/conveyor.ts";
-import { serializeStatus, serializeTrails } from "../tools/indexer.ts";
+import { serializeIndexes, serializeStatus, serializeTrails } from "../tools/indexer.ts";
 import { loadSpec, type EdgeRecord, type LoadedSpec, type NodeRecord } from "../tools/loader.ts";
 
 /**
@@ -27,7 +27,9 @@ import { loadSpec, type EdgeRecord, type LoadedSpec, type NodeRecord } from "../
  *  - the A12 `CONVEYOR_CLASS_ROUTING` byte-equality pin (SETTLED TO PIN by
  *    `brief-conveyor-resolver-3f7a`; the read-CLAUDE.md-as-data branch is not live
  *    work and is deliberately not written here);
- *  - the CC-8 view legs (determinism, clock-freedom, totality);
+ *  - the CC-8 view legs (leg 1 byte-identity/determinism, leg 2 time-invariance under
+ *    two far-apart fake clocks, leg 3 the no-dated-cell leg, leg 4 totality, plus the
+ *    static clock-freedom source grep);
  *  - the CC-12 transcript replay against `tests/fixtures/conveyor-transcript/`.
  *
  * HONEST BOUNDS, recorded here because the brief requires them recorded in the test
@@ -1063,6 +1065,182 @@ test("CC-8 serializeTrails/serializeStatus are byte-identical across two calls o
   assert.ok(serializeStatus(transcriptSpec).includes("intent-fresh-0a01"));
 });
 
+/**
+ * The spec set legs 2 and 3 run over. `rendersRows` records which of them actually
+ * renders intent sections and table rows, so the anti-vacuity assertions can be strict
+ * where content exists without falsely demanding rows from a fixture that has no live
+ * intent (`good-patch-market` renders `_no live intents_` today, by design).
+ *
+ * The live tree is first on purpose: `specs/indexes/` is the directory
+ * `.github/workflows/spec-index.yml:21` runs `git diff --exit-code` over on EVERY pull
+ * request, so it is the tree a clock byte or a dated cell would actually freeze.
+ */
+const VIEW_SPECS: { name: string; spec: LoadedSpec; rendersRows: boolean }[] = [
+  { name: "live specs/", spec: loadSpec(path.join(repoRoot, "specs")), rendersRows: true },
+  { name: "conveyor-transcript", spec: transcriptSpec, rendersRows: true },
+  { name: "fixtures/good", spec: loadSpec(path.join(fixtures, "good", "specs")), rendersRows: true },
+  {
+    name: "fixtures/good-patch-market",
+    spec: loadSpec(path.join(fixtures, "good-patch-market", "specs")),
+    rendersRows: false,
+  },
+];
+
+test("CC-8 leg 2 time-invariance: both views are byte-equal under two far-apart fake clocks", (t) => {
+  // Leg 1 (byte-identity across two calls) is NOT time-invariance, and this leg exists
+  // because the release panel's finding is exactly that: two calls a millisecond apart
+  // agree even if the serializer stamps `new Date()`. These two clocks are fifteen years
+  // apart, so a stamped view cannot agree with itself across them.
+  //
+  // `t.mock.timers` is a NEW technique in this repo — nothing else under `tests/` uses it.
+  // CI runs Node 22 (`.github/workflows/ci.yml:16`), which supports it. Only the `Date`
+  // api is faked: timers are left real so the test runner's own scheduling is untouched.
+  const EPOCH_2020 = Date.UTC(2020, 0, 2, 3, 4, 5, 678);
+  const EPOCH_2035 = Date.UTC(2035, 10, 17, 22, 33, 44, 987);
+  assert.ok(EPOCH_2035 - EPOCH_2020 > 5000 * 24 * 3600 * 1000, "the two clocks must be genuinely far apart");
+
+  // Every spec is loaded at module scope, i.e. BEFORE any clock is faked, so this
+  // measures the SERIALIZERS under a clock and never the loader's parse of a fake date.
+  function viewsUnderClock(now: number): Map<string, string> {
+    t.mock.timers.enable({ apis: ["Date"], now });
+    try {
+      // The fake clock is really installed. Without this the leg could compare two runs
+      // under the same real clock and pass while asserting nothing.
+      assert.equal(new Date().getTime(), now, "mock.timers did not install the fake Date");
+      assert.equal(Date.now(), now, "mock.timers did not install the fake Date.now");
+      const out = new Map<string, string>();
+      for (const { name, spec: s } of VIEW_SPECS) {
+        out.set(`${name}:trails.md`, serializeTrails(s));
+        out.set(`${name}:status.md`, serializeStatus(s));
+        // `serializeIndexes` carries the remaining four index files and reaches
+        // `tools/yaml.ts` through `toYaml` — the module the static clock-freedom leg
+        // below does not scan. See the honest bound recorded there.
+        for (const [file, text] of Object.entries(serializeIndexes(s))) out.set(`${name}:indexes/${file}`, text);
+      }
+      return out;
+    } finally {
+      t.mock.timers.reset();
+    }
+  }
+
+  // MUST-FIRE control: a rendering that DOES read the clock differs across these two
+  // epochs. Without this, a `mock.timers` call that silently pinned both runs to the same
+  // instant would make the byte-equality below unfalsifiable. `tools/` is another lane's
+  // surface, so the control is a local stand-in, not a mutation of the real serializer.
+  function stampUnderClock(now: number): string {
+    t.mock.timers.enable({ apis: ["Date"], now });
+    try {
+      return `# Status\ngenerated ${new Date().toISOString()}\n`;
+    } finally {
+      t.mock.timers.reset();
+    }
+  }
+  assert.notEqual(
+    stampUnderClock(EPOCH_2020),
+    stampUnderClock(EPOCH_2035),
+    "the two fake clocks are indistinguishable, so the byte-equality below proves nothing",
+  );
+
+  const past = viewsUnderClock(EPOCH_2020);
+  const future = viewsUnderClock(EPOCH_2035);
+  assert.deepEqual([...future.keys()], [...past.keys()]);
+  for (const [key, text] of past) {
+    assert.equal(future.get(key), text, `${key} differs between the 2020 clock and the 2035 clock`);
+  }
+
+  // ANTI-VACUITY. A serializer that returned "" (or threw and was swallowed) under both
+  // clocks must not be able to pass this leg, so the compared bytes are checked to be
+  // real renderings.
+  assert.equal(past.size, VIEW_SPECS.length * 8, "each spec contributes both views plus the six index files");
+  for (const { name, rendersRows } of VIEW_SPECS) {
+    const trails = past.get(`${name}:trails.md`) ?? "";
+    const status = past.get(`${name}:status.md`) ?? "";
+    assert.match(trails, /^# Trails\n/, `${name}: trails.md is not a rendered view`);
+    assert.match(status, /^# Status\n/, `${name}: status.md is not a rendered view`);
+    assert.ok(trails.endsWith("\n") && status.endsWith("\n"), `${name}: a view must end in a newline`);
+    // The two views are also the two entries `serializeIndexes` re-exports, so a
+    // divergence between the direct call and the bundle is caught here too.
+    assert.equal(past.get(`${name}:indexes/trails.md`), trails, `${name}: serializeIndexes disagrees on trails.md`);
+    assert.equal(past.get(`${name}:indexes/status.md`), status, `${name}: serializeIndexes disagrees on status.md`);
+    if (!rendersRows) continue;
+    assert.match(trails, /^## [a-z]+-[a-z0-9-]*-[0-9a-f]{4} — /m, `${name}: trails.md rendered no intent section`);
+    assert.ok(trails.includes("| id | title | status |"), `${name}: trails.md rendered no table`);
+    assert.match(status, /^## [a-z]+-[a-z0-9-]*-[0-9a-f]{4} — /m, `${name}: status.md rendered no intent section`);
+    assert.ok(status.includes("next:"), `${name}: status.md rendered no next step`);
+  }
+  // And the live tree — the one CI diffs — is substantial, not a stub.
+  assert.ok((past.get("live specs/:trails.md") ?? "").length > 5000, "the live trails.md view is implausibly small");
+  assert.ok((past.get("live specs/:status.md") ?? "").length > 1000, "the live status.md view is implausibly small");
+});
+
+/**
+ * Leg 3's pattern. Behaviour 8 declares the view columns as `id`, `title`, `status`
+ * (open-work rows plus the next step) — there is no `created` column, so no view cell
+ * should ever carry a date.
+ *
+ * This leg is NOT redundant with the static clock-freedom leg, and the difference is the
+ * point: clock-freedom proves the code never READS a clock; this leg catches a date
+ * arriving from DATA. `tools/indexer.ts:152` renders `cell(n.data["title"])` verbatim into
+ * both views, so a dated node title lands in `specs/indexes/` and then reds
+ * `.github/workflows/spec-index.yml:21`'s `git diff --exit-code specs/indexes/` on every
+ * later PR. No amount of clock-freedom prevents that.
+ *
+ * STATED RESIDUAL (the brief's terms, kept verbatim in substance): a node *title*
+ * containing a date reds this leg. That is the intended trade, and the remediation is to
+ * RENAME THE NODE, never to weaken the leg.
+ */
+const DATED_CELL = /\d{4}-\d{2}-\d{2}/;
+
+test("CC-8 leg 3 no dated cell: neither serialized view contains a YYYY-MM-DD substring", () => {
+  function assertUndated(label: string, text: string): void {
+    const offending = text.split("\n").findIndex((line) => DATED_CELL.test(line));
+    assert.equal(
+      offending,
+      -1,
+      `${label}:${offending + 1} carries a date, which freezes spec-index.yml's diff on every later PR — ` +
+        `remediation is to RENAME the dated node, never to weaken this leg: ${text.split("\n")[offending]}`,
+    );
+  }
+
+  for (const { name, spec: s } of VIEW_SPECS) {
+    assertUndated(`${name} trails.md`, serializeTrails(s));
+    assertUndated(`${name} status.md`, serializeStatus(s));
+  }
+
+  // The COMMITTED live bytes as well, not only the freshly serialized ones: those bytes
+  // are what `spec-index.yml` diffs. `indexes-fresh` keeps the two equal, so this is a
+  // cheap second reading of the same invariant from the artifact side.
+  for (const view of ["trails.md", "status.md"]) {
+    const p = path.join(repoRoot, "specs", "indexes", view);
+    const committed = fs.readFileSync(p, "utf8");
+    assertUndated(`committed specs/indexes/${view}`, committed);
+    // Anti-vacuity: an empty or missing file would otherwise pass by containing nothing.
+    assert.ok(committed.length > 100, `specs/indexes/${view} is implausibly small`);
+  }
+
+  // MUST-FIRE control: the pattern actually catches a dated title, so this leg is not a
+  // regex that can never match. A synthetic intent titled with a date reds it.
+  const dated = spec([node("intent-dated-0d01", "intent", { status: "open", class: 1, title: "Ship by 2026-07-30" })], []);
+  assert.match(serializeTrails(dated), DATED_CELL);
+  assert.match(serializeStatus(dated), DATED_CELL);
+  assert.throws(() => assertUndated("synthetic dated-title graph", serializeTrails(dated)), /carries a date/);
+});
+
+/**
+ * HONEST BOUND on the static leg below, recorded rather than glossed: it scans exactly
+ * `tools/conveyor.ts` and `tools/indexer.ts`. The view code path also reaches
+ * `tools/loader.ts` and `tools/yaml.ts` (`indexer.ts:3,5` import both), which this scan
+ * does NOT cover — a live `Date` read introduced there would pass this leg.
+ *
+ * CHOICE MADE, stated so the next reader does not have to guess: the scan is left at the
+ * two view modules and is NOT widened. Widening would extend this leg's per-file
+ * anti-vacuity clause (`mentions > 0`) to two more `domain-backend`-owned modules, so a
+ * benign doc-comment rewording in another lane's file would red this lane's suite. The
+ * bound is closed BEHAVIOURALLY instead, by leg 2 above: its comparison set runs
+ * `serializeIndexes`, which reaches `tools/yaml.ts` through `toYaml`, over specs loaded
+ * by `tools/loader.ts` — under two clocks fifteen years apart. A live clock read anywhere
+ * in that path that reached the bytes would red leg 2.
+ */
 test("CC-8 the view code path is clock-free: only doc-comment mentions of Date/env/locale survive", () => {
   const CLOCKY = ["Date", "process.env", "localeCompare", "toLocale"];
   for (const rel of ["tools/conveyor.ts", "tools/indexer.ts"]) {

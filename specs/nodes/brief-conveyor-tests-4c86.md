@@ -2,7 +2,7 @@
 id: brief-conveyor-tests-4c86
 type: brief
 title: Conveyor verification lane — the thirteen-leg lane-union pin, the resolver-invocation pin, conveyor routing, view time-invariance and the transcript regression fixture
-status: draft
+status: implemented
 created: 2026-07-28
 lane: test-verification
 produced_by: "/decompose-lanes"
