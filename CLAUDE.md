@@ -219,7 +219,13 @@ Three rules govern lanes and completion:
 
 1. **Verification is always its own lane.** Any multi-lane change includes a
    `test-verification` lane, owned by the `test-writer` agent (via `/write-tests`) —
-   never the same invocation that implemented the code under test.
+   never the same invocation that implemented the code under test. `/write-tests`
+   carries the same **exactly one** graph write `/implement-brief` does — the brief
+   moves to `implemented`, through graph-maintainer — so this lane's hop to evidence
+   is derived rather than recalled. That extension of A7 to a second command is a
+   change of intended behaviour approved under rule 5 by
+   `decision-write-tests-flip-7f14`. The agent still writes nothing under `specs/`:
+   the command orchestrates the write, `test-writer` never performs one.
 2. **Single-brief contracts skip integration.** A contract decomposed into one brief
    is completed by that brief's lone **final** `evidence`; there is no `integration`
    node. A multi-lane change is completed by a final `integration` node (via
@@ -308,6 +314,15 @@ reproduces the resolver's machine-stable `NEXT` block **verbatim** — "verbatim
 binding the block only, with the command's own judgement content required *around*
 it, never inside it. There are not three producers, so the three consumers cannot
 diverge; every printed id is resolved from `edges.yaml` rather than recalled.
+
+**Two commands carry the single graph write, not one** — `/implement-brief` and
+`/write-tests` — because a `test-verification` brief may not go through the former,
+so without the second the resolver had nothing to key on and reprinted the command
+just run. The bound on what that cost, recorded so the fix is not read as larger than
+it was: `/prepare-evidence` already flips a laned brief to `implemented` if it is not
+already, so the window in which the status was stale was **one command wide**, never
+permanent. The defect was a one-step ordering gap, not a missing fact. A **third**
+command acquiring that write needs its own decision.
 
 **The degraded path is real and is marked.** Each chain command retains a static,
 **template-shaped** fallback print in its own markdown, used only when the resolver

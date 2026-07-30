@@ -45,6 +45,48 @@ import { loadSpec, type EdgeRecord, type LoadedSpec, type NodeRecord } from "../
  *    representative, stay reviewer judgement (contract Acceptance 8).
  */
 
+/**
+ * THE SINGLE-GRAPH-WRITE CLAUSE SET (`brief-write-tests-flip-4e19`, step 5;
+ * `decision-write-tests-flip-7f14` amendments 1, 2, 3, 4, 14 and 16, plus
+ * `comparison-write-tests-market-6e83`'s common-core finding 1). The invariant is
+ * recorded HERE because this is where the pin lives, not only in the decision.
+ *
+ * THE SET IS CLOSED AND HAS EXACTLY TWO MEMBERS: `implement-brief.md` and
+ * `write-tests.md`. These are the only chain command files whose non-fallback text may
+ * carry the `EXACTLY ONE GRAPH WRITE:` clause, and the set-equality leg below asserts
+ * that both directions hold — a third command acquiring the clause reds, and either
+ * member losing it reds. Amendment 14's distinction is load-bearing and is NOT the same
+ * count: the commands that may write a brief to `implemented` are THREE
+ * (`/implement-brief`, `/prepare-evidence`, `/write-tests`); the CLAUSE set is two. The
+ * pin is on the clause set only. A third member needs its own decision.
+ *
+ * FAILURE DIRECTION, chosen deliberately (amendment 2), stated here in the same words
+ * the clause carries: if the flip is skipped the brief stays at its pre-implementation
+ * status and `/write-tests` reprints itself — EXACTLY today's behaviour, which is the
+ * weaker of the two failure modes. Nothing routes forward on an unwritten lane. The
+ * stronger failure mode (a lane marked `implemented` whose suite was never green) is
+ * the one this design refuses to risk.
+ *
+ * THE BOUND ON THE DEFECT (finding 1), recorded so no reader takes the overstatement as
+ * endorsed: `/prepare-evidence` ALREADY flips a laned brief to `implemented`
+ * (`prepare-evidence.md:9-13`), so the stale `draft` window was ONE COMMAND WIDE, never
+ * permanent. The defect this pin protects against is a one-step ORDERING gap, not a
+ * missing fact.
+ *
+ * HONEST BOUND ON WHICH LEGS BELOW HAVE POWER OVER THIS CHANGE, admitted rather than
+ * argued away (finding 12; contract Acceptance 3's "admitted weakness"):
+ *
+ *  - The Acceptance-2 routing legs (`test-lane-implemented`, `implemented-market-late`,
+ *    `implemented-tension`) pin `tools/conveyor.ts`'s `:521`-before-`:574` ordering —
+ *    the `status === "implemented"` early return that precedes the lane and market
+ *    branches. That ordering is NOT touched by this change, so those three legs are
+ *    green with the whole diff reverted. They record behaviour; they do not guard it.
+ *  - The COMMAND-FILE legs (clause literals, relative order, clause-set equality) and
+ *    their negative leg are the ONLY legs with power over this diff. Everything the
+ *    change actually alters lives in `.claude/commands/write-tests.md`, and those legs
+ *    are what red when it regresses.
+ */
+
 const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const fixtures = path.join(repoRoot, "tests", "fixtures");
 
@@ -258,6 +300,45 @@ const gImplemented = spec(
   [edge("e-dec", "decomposes", "brief-impl-0132", "contract-impl-0131")],
 );
 
+/** Acceptance 2 (`brief-write-tests-flip-4e19` step 5.1) — the shape `/write-tests`'s
+ * single graph write PRODUCES: an approved class-2 contract, a `decomposes` edge, and a
+ * `lane: test-verification` brief at `implemented` with no evidence yet. This is the
+ * state the flip leaves behind, and the state the resolver must route OUT of. */
+const gTestLaneImplemented = spec(
+  [
+    node("contract-testimpl-0191", "contract", { status: "approved", class: 2 }),
+    node("brief-testimpl-0192", "brief", { status: "implemented", lane: "test-verification" }),
+  ],
+  [edge("e-dec", "decomposes", "brief-testimpl-0192", "contract-testimpl-0191")],
+);
+
+/** Amendment 20 (step 5.2) — the SAME implemented verification-lane brief, with a patch
+ * market opened AFTERWARDS (`patch_market: true`, no competitors, no comparison). */
+const gImplementedMarketLate = spec(
+  [
+    node("contract-late-0201", "contract", { status: "approved", class: 2 }),
+    node("brief-late-0202", "brief", {
+      status: "implemented",
+      lane: "test-verification",
+      patch_market: true,
+    }),
+  ],
+  [edge("e-dec", "decomposes", "brief-late-0202", "contract-late-0201")],
+);
+
+/** Amendment 16 (step 5.3) — the SAME implemented verification-lane brief whose BODY
+ * carries the `## Strategy tension` marker that `gTension` above routes on. */
+const gImplementedTension = spec(
+  [
+    node("contract-impltension-0211", "contract", { status: "approved", class: 2 }),
+    withBody(
+      node("brief-impltension-0212", "brief", { status: "implemented", lane: "test-verification" }),
+      "intro\n\n## Strategy tension\n\ntwo defensible shapes\n",
+    ),
+  ],
+  [edge("e-dec", "decomposes", "brief-impltension-0212", "contract-impltension-0211")],
+);
+
 /** Evidence precedence — a brief at `implemented` that ALSO carries final evidence,
  * with a sibling lane outstanding. It must route through its contract's coverage and
  * never reprint /prepare-evidence for itself. */
@@ -365,6 +446,9 @@ const CORPUS: { name: string; spec: LoadedSpec }[] = [
   { name: "last-lane", spec: gLastLane },
   { name: "full-coverage", spec: gFullCoverage },
   { name: "malformed", spec: gMalformed },
+  { name: "test-lane-implemented", spec: gTestLaneImplemented },
+  { name: "implemented-market-late", spec: gImplementedMarketLate },
+  { name: "implemented-tension", spec: gImplementedTension },
 ];
 
 function idsOf(s: LoadedSpec): string[] {
@@ -570,6 +654,78 @@ test("A7 a brief at `implemented` routes to /prepare-evidence <brief-id> as a pa
   assert.equal(s.rendered, "/prepare-evidence brief-impl-0132");
   assert.match(s.why, /implemented/, "`why` names the status field A7 keys on");
   assert.equal(deriveStage(gImplemented, "brief-impl-0132"), "brief-implemented");
+});
+
+test("Acceptance 2: an `implemented` test-verification brief routes to /prepare-evidence, never back to /write-tests", () => {
+  // The loop `/write-tests`'s single graph write closes. Before the flip existed, this
+  // brief sat at `draft` and the resolver reprinted `/write-tests` for the very lane
+  // whose tests had just been written. ADMITTED WEAKNESS, per the file header: this leg
+  // pins `conveyor.ts`'s `implemented`-before-lane ordering, which the command-file
+  // change does not touch, so it is green with that diff reverted. It records the
+  // routing the flip DEPENDS on; the command-file legs below are what guard the change.
+  const steps = nextSteps(gTestLaneImplemented, "brief-testimpl-0192");
+  const s = only(steps);
+  assert.equal(s.command, "prepare-evidence");
+  assert.equal(s.kind, "paste");
+  assert.deepEqual(s.args, ["brief-testimpl-0192"]);
+  assert.equal(s.rendered, "/prepare-evidence brief-testimpl-0192");
+  assert.match(s.why, /implemented/, "`why` names the status field the flip produces");
+  assert.equal(
+    steps.some((x) => x.command === "write-tests"),
+    false,
+    "an already-written verification lane must never be told to write its own tests again",
+  );
+  assert.equal(deriveStage(gTestLaneImplemented, "brief-testimpl-0192"), "brief-implemented");
+  // The `lane: test-verification` value is still on the node — the routing changed
+  // because the STATUS changed, not because the lane went away. `gTestLane` above keeps
+  // the `draft` half of this pair green and untouched.
+  assert.equal(only(nextSteps(gTestLane, "brief-tests-0072")).command, "write-tests");
+});
+
+test("amendment 20: a market opened AFTER the flip still prints /prepare-evidence, never /compare-patches", () => {
+  // Behaviour 5 reads as a guarantee it does not hold, and amendment 20 corrects it in
+  // the clause text: `conveyor.ts`'s `implemented` branch returns UNCONDITIONALLY before
+  // the market branches, so `patch_market: true` arriving later cannot reopen the market
+  // hops. Pinned cheaply here so the correction is not only prose.
+  const steps = nextSteps(gImplementedMarketLate, "brief-late-0202");
+  const s = only(steps);
+  assert.equal(s.command, "prepare-evidence");
+  assert.equal(s.kind, "paste");
+  assert.deepEqual(s.args, ["brief-late-0202"]);
+  for (const forbidden of ["compare-patches", "synthesize-patches", "select-patch", "propose-patches"]) {
+    assert.equal(
+      steps.some((x) => x.command === forbidden),
+      false,
+      `an \`implemented\` brief must not be offered /${forbidden} by a market opened afterwards`,
+    );
+  }
+  assert.equal(deriveStage(gImplementedMarketLate, "brief-late-0202"), "brief-implemented");
+  // Anti-vacuity: the same `patch_market: true` field on a DRAFT brief does open the
+  // market hops, so this leg is about the status, not about an inert field.
+  assert.deepEqual(commands(nextSteps(gMarketOpen, "brief-pm-0102")), ["compare-patches", "synthesize-patches"]);
+});
+
+test("amendment 16 RECORDS the early-return consequence: an `implemented` brief loses its /propose-patches offer", () => {
+  // THIS LEG RECORDS BEHAVIOUR; IT DOES NOT ENDORSE IT AS DESIRABLE. Because
+  // `conveyor.ts:521` returns on `implemented` before `:574` reads the body, a brief
+  // carrying `## Strategy tension` silently loses the `/propose-patches` offer once the
+  // flip lands. Amendment 16 requires this DOCUMENTED and forbids changing it here:
+  // changing it is a second rule-5 event and is not approved. If a later change makes
+  // this leg red, the remediation is a decision — not a quiet edit to this assertion.
+  const steps = nextSteps(gImplementedTension, "brief-impltension-0212");
+  const s = only(steps);
+  assert.equal(s.command, "prepare-evidence");
+  assert.deepEqual(s.args, ["brief-impltension-0212"]);
+  assert.equal(
+    steps.some((x) => x.command === "propose-patches"),
+    false,
+    "recorded consequence: the marker is not read once the brief is `implemented`",
+  );
+  // The marker IS in the body — the offer is lost to the early return, not to an absent
+  // section. Both halves are asserted so the leg cannot pass on a typo'd fixture.
+  const brief = gImplementedTension.nodes.find((n) => n.data["id"] === "brief-impltension-0212");
+  assert.match(brief?.body ?? "", /^##\s+Strategy tension\s*$/m);
+  assert.deepEqual(commands(nextSteps(gTension, "brief-tension-0082")), ["implement-brief", "propose-patches"]);
 });
 
 test("evidence precedence: a brief carrying FINAL evidence never reprints /prepare-evidence for itself", () => {
@@ -938,6 +1094,237 @@ test("A6 NEGATIVE LEG: excising the resolver clause while leaving the fallback i
       `${file}: A6.3 failed to notice a resolver mention inside the fallback`,
     );
   }
+});
+
+// ---------------------------------------------------------------------------
+// Acceptance 3 / amendments 1, 4, 11 and 17 — the single-graph-write CLAUSE pins.
+// The literals below are the clause literal contract of `brief-write-tests-flip-4e19`
+// (`## Pinned decisions`), byte-identical to what the command file must carry; the
+// command file and this file are ONE negotiated pair and neither may vary them
+// unilaterally. They are scanned with the SAME `exciseFallbacks` the A6 legs use, so a
+// clause that lives only in a resolver-unavailable fallback cannot satisfy any of them.
+// ---------------------------------------------------------------------------
+
+/** Literal 1 — the clause's label token. */
+const FLIP_CLAUSE_TOKEN = "EXACTLY ONE GRAPH WRITE:";
+/** Literal 6's second term — the print label the clause must precede. */
+const NEXT_BLOCK_TOKEN = "NEXT BLOCK:";
+/** Amendment 4 / amendment 14 — the CLOSED clause set, sorted as `chainCommandFiles()`
+ * returns it. Two members, and the count is the clause set's, not the set of commands
+ * that may write `implemented` (which is three). See the file header. */
+const FLIP_CLAUSE_FILES = ["implement-brief.md", "write-tests.md"];
+
+/** Literals 1-5 of `write-tests.md`'s clause literal contract, each asserted as an exact
+ * substring of the NON-fallback text. Literal 4's two labels are distinct strings and
+ * neither is a substring of the other; that is proved explicitly in the leg below rather
+ * than assumed by listing them here. */
+const WRITE_TESTS_LITERALS = [
+  // 1 — the flip clause itself.
+  FLIP_CLAUSE_TOKEN,
+  // 2 — the echo clause and the exact phrase amendment 9 requires inside it: the
+  // OBSERVED runner exit status, never the agent's narration of it.
+  "ECHO BEFORE MUTATING:",
+  "the test runner's own exit status",
+  // 3 — the mutating step's closing validate, the graph-write idiom rule 6 requires.
+  "The mutating step ends with `pnpm spec:index && pnpm spec:validate`",
+  // 4 — both red labels: the failed GRAPH WRITE and the red VERIFICATION SUITE.
+  "ON RED:",
+  "ON RED SUITE:",
+  // 5 — amendment 13's re-entrancy clause, mirroring `prepare-evidence.md:24-28`.
+  "IDEMPOTENT / RE-ENTRANT:",
+];
+
+const WRITE_TESTS_FILE = "write-tests.md";
+
+function readCommand(file: string): string {
+  return fs.readFileSync(path.join(commandsDir, file), "utf8");
+}
+
+/** The presence predicate the negative leg drives red: which pinned literals are ABSENT
+ * from a candidate text's non-fallback region. Green is `[]`. */
+function missingLiterals(text: string): string[] {
+  const nonFallback = exciseFallbacks(text);
+  return WRITE_TESTS_LITERALS.filter((lit) => !nonFallback.includes(lit));
+}
+
+/** Amendment 4's predicate, parameterised by a reader so the negative leg can run it
+ * over a mutated `write-tests.md` without writing a byte to disk. */
+function flipClauseFiles(read: (file: string) => string = readCommand): string[] {
+  return chainCommandFiles().filter((f) => exciseFallbacks(read(f)).includes(FLIP_CLAUSE_TOKEN));
+}
+
+/** Literal 6's ordering term: the index of the first line CONTAINING a token, over the
+ * whole file (both tokens sit outside the fallback, which the presence leg pins). */
+function firstLineIndex(text: string, token: string): number {
+  return text.split("\n").findIndex((l) => l.includes(token));
+}
+
+/** A label line as these command files actually write it: ALL-CAPS token, colon, then
+ * the clause's prose on the SAME line. Deliberately NOT `LABEL_LINE` (which is anchored
+ * at `$` and matches only a bare delimiter such as `FALLBACK (RESOLVER UNAVAILABLE):`);
+ * this one bounds a clause paragraph. */
+const LABEL_PREFIX = /^[A-Z][A-Z0-9 /()-]*:/;
+
+/** The half-open [start, end) line range of the flip-clause BLOCK: its label line
+ * through to the next label line (or EOF). The negative leg deletes and relocates this
+ * whole block, not just the token, so a mutation cannot be "survived" by leftover prose. */
+function flipClauseBlock(lines: string[]): { start: number; end: number } {
+  const start = lines.findIndex((l) => l.includes(FLIP_CLAUSE_TOKEN));
+  assert.ok(start >= 0, "there is no flip-clause block to excise");
+  let end = start + 1;
+  while (end < lines.length && !LABEL_PREFIX.test(lines[end])) end++;
+  return { start, end };
+}
+
+test("Acceptance 3: write-tests.md carries every literal of the clause contract, OUTSIDE its fallback", () => {
+  const text = readCommand(WRITE_TESTS_FILE);
+  // Literals 1-5.
+  assert.deepEqual(missingLiterals(text), [], `${WRITE_TESTS_FILE}: pinned clause literals missing outside the fallback`);
+
+  // Literal 4's DISTINGUISHABILITY, which is the half a bare presence check cannot give:
+  // `ON RED:` (a failed graph write) and `ON RED SUITE:` (a red verification suite) are
+  // two labels with two different remediations, and neither search may be satisfied by
+  // the other's text.
+  assert.equal("ON RED SUITE:".includes("ON RED:"), false, "the two red labels must be distinguishable as strings");
+  assert.equal("ON RED:".includes("ON RED SUITE:"), false);
+  const nonFallback = exciseFallbacks(text);
+  assert.ok(
+    nonFallback.split("ON RED SUITE:").join("").includes("ON RED:"),
+    "`ON RED:` must exist independently of `ON RED SUITE:`, not merely as a prefix of it",
+  );
+  const redSuiteLines = nonFallback.split("\n").filter((l) => l.includes("ON RED SUITE:"));
+  const redWriteLines = nonFallback.split("\n").filter((l) => l.includes("ON RED:"));
+  assert.equal(redSuiteLines.length, 1, "exactly one red-SUITE clause");
+  assert.equal(redWriteLines.length, 1, "exactly one failed-graph-write clause");
+  assert.notDeepEqual(redSuiteLines, redWriteLines, "the two red clauses must be two distinct lines");
+  // Amendment 12's named remediation lives in the red-SUITE clause, so the label is not
+  // a bare word: no flip, and a `drift-finding` routed under rule 5.
+  const suiteClause = nonFallback.slice(nonFallback.indexOf("ON RED SUITE:"));
+  assert.match(suiteClause.split("IDEMPOTENT")[0], /drift-finding/);
+  assert.match(suiteClause.split("IDEMPOTENT")[0], /rule 5/);
+
+  // Literal 6 — RELATIVE ORDER, not mere presence (amendment 17). Placing the clause
+  // where `KNOWN GAP` sat would instruct the command to print its NEXT block BEFORE it
+  // flips, and the pre-flip block is `/write-tests <brief-id>` — reproducing the exact
+  // bug with the clause present. Mutation precedes print, as in `implement-brief.md`.
+  const flipAt = firstLineIndex(text, FLIP_CLAUSE_TOKEN);
+  const nextBlockAt = firstLineIndex(text, NEXT_BLOCK_TOKEN);
+  assert.ok(flipAt >= 0 && nextBlockAt >= 0, "both tokens must be present to compare their order");
+  assert.ok(
+    flipAt < nextBlockAt,
+    `${WRITE_TESTS_FILE}: the flip clause is at line ${flipAt + 1} and NEXT BLOCK: at line ${nextBlockAt + 1} — ` +
+      "the mutation must precede the print, or the command prints the pre-flip next step",
+  );
+
+  // Literal 7 — the HONEST negative (amendment 11). Only `by hand` is grepped: `:27`
+  // and `:33` legitimately name `/prepare-evidence`, so a command-name absence leg would
+  // be unsatisfiable and is deliberately not written.
+  assert.equal(
+    nonFallback.includes("by hand"),
+    false,
+    "the clause must route the write through graph-maintainer; `by hand` has no place in it",
+  );
+
+  // Literal 8's spirit, cheaply: the precondition block and the fallback still say what
+  // the brief's Out-of-scope 1 promises they say, so "unchanged byte-for-byte" is not
+  // left entirely to review.
+  assert.ok(text.includes("REFUSAL REPORT"), "the refusal report must survive the clause insertion");
+  assert.ok(exciseFallbacks(text).includes("performs no graph writes"), "the AGENT still performs no graph writes");
+  assert.ok(fallbackRegions(text).some((r) => r.includes("/prepare-evidence <brief-id>")), "the fallback is unchanged");
+});
+
+test("amendment 4: exactly two chain commands carry the single-graph-write clause", () => {
+  // Nothing pinned this before, repo-wide: the only live hit was `implement-brief.md:18`
+  // and every other match was spec-graph prose. So this leg RETROACTIVELY protects A7's
+  // clause as well as this change, and it is a SET EQUALITY — a third command acquiring
+  // the clause reds it just as loudly as either member losing it. A third member is a
+  // separate decision (amendment 14 / the brief's Non-scope), never a quiet edit here.
+  assert.deepEqual(flipClauseFiles(), FLIP_CLAUSE_FILES);
+  // Both members are real files inside the scanned set, so the equality cannot hold
+  // vacuously over a set that stopped being scanned.
+  for (const f of FLIP_CLAUSE_FILES) {
+    assert.ok(chainCommandFiles().includes(f), `${f} is pinned but is not a scanned chain command`);
+    assert.ok(fs.existsSync(path.join(commandsDir, f)), `${f} does not exist`);
+  }
+});
+
+test("CLAUSE NEGATIVE LEG (amendment 1): deleting, MOVING or hiding the clause each reds a named pin", () => {
+  // Both-ways falsifiability, in the `A6 NEGATIVE LEG` idiom above: every mutation is in
+  // memory and NO command file is written by this lane. Each mutation names the pin it
+  // must red, so none of the three legs above can be vacuous.
+  const text = readCommand(WRITE_TESTS_FILE);
+  const lines = text.split("\n");
+  assert.deepEqual(missingLiterals(text), [], "precondition — the presence pin passes today");
+  assert.deepEqual(flipClauseFiles(), FLIP_CLAUSE_FILES, "precondition — the set-equality pin passes today");
+
+  const { start, end } = flipClauseBlock(lines);
+  assert.ok(end > start + 1, "the clause block must be more than its label line");
+  const blockLines = lines.slice(start, end);
+  assert.ok(blockLines.join("\n").includes("graph-maintainer"), "the excised block is the clause, not a stray line");
+  const strippedLines = [...lines.slice(0, start), ...lines.slice(end)];
+  const stripped = strippedLines.join("\n");
+  const readStripped = (f: string): string => (f === WRITE_TESTS_FILE ? stripped : readCommand(f));
+
+  // (a) THE CLAUSE IS DELETED — the command reverts to instructing no graph write.
+  assert.deepEqual(
+    missingLiterals(stripped),
+    [FLIP_CLAUSE_TOKEN],
+    "the presence pin stayed green with the clause block deleted — it is vacuous",
+  );
+  assert.deepEqual(
+    flipClauseFiles(readStripped),
+    ["implement-brief.md"],
+    "the set-equality pin stayed green with write-tests.md's clause deleted — it is vacuous",
+  );
+  // The mutation is surgical: the fallback region is byte-identical, so what reds above
+  // is the missing clause and not a mangled file.
+  assert.deepEqual(
+    fallbackRegions(stripped),
+    fallbackRegions(text),
+    "the negative mutation must leave the fallback region byte-identical",
+  );
+  // And the A6 pin is untouched by it, so these two pins stay independent.
+  assert.ok(exciseFallbacks(stripped).includes(RESOLVER_TOKEN), "A6's resolver pin must be unaffected");
+
+  // (b) THE CLAUSE IS PRESENT BUT LATE — amendment 17's failure mode, and the one a
+  // presence-only pin would wave through: the command prints its NEXT block from the
+  // PRE-flip status and reproduces the original bug with the clause in the file.
+  const nbAt = strippedLines.findIndex((l) => l.includes(NEXT_BLOCK_TOKEN));
+  assert.ok(nbAt >= 0, "no NEXT BLOCK: line to move the clause below");
+  const moved = [...strippedLines.slice(0, nbAt + 1), ...blockLines, ...strippedLines.slice(nbAt + 1)].join("\n");
+  // MUST-FIRE control: presence and set-equality are GREEN on this mutation, so the
+  // ordering leg is the only thing that can catch it.
+  assert.deepEqual(missingLiterals(moved), [], "the moved clause is still present — order is what must red");
+  assert.deepEqual(flipClauseFiles((f) => (f === WRITE_TESTS_FILE ? moved : readCommand(f))), FLIP_CLAUSE_FILES);
+  assert.ok(
+    firstLineIndex(moved, FLIP_CLAUSE_TOKEN) > firstLineIndex(moved, NEXT_BLOCK_TOKEN),
+    "the ordering pin stayed green with the clause moved below NEXT BLOCK: — it is vacuous",
+  );
+
+  // (c) THE CLAUSE IS HIDDEN IN THE FALLBACK — A1's rule applied to this pin: the
+  // resolver-unavailable region is a degraded print, never a routing or mutation source,
+  // so a clause that lives only there does not instruct anything.
+  const injectedLines = [...strippedLines];
+  const openIdx = injectedLines.indexOf(FALLBACK_OPEN);
+  assert.ok(openIdx >= 0, "no fallback region to inject into");
+  injectedLines.splice(openIdx + 1, 0, ...blockLines);
+  const injected = injectedLines.join("\n");
+  assert.deepEqual(
+    missingLiterals(injected),
+    [FLIP_CLAUSE_TOKEN],
+    "the presence pin was satisfied by fallback prose — exactly what A1 says must not satisfy it",
+  );
+  assert.deepEqual(
+    flipClauseFiles((f) => (f === WRITE_TESTS_FILE ? injected : readCommand(f))),
+    ["implement-brief.md"],
+    "the set-equality pin was satisfied by fallback prose",
+  );
+  // Anti-vacuity for (c): the clause really did land inside the region, so the pin reds
+  // because the region is EXCISED and not because the injection missed.
+  assert.ok(
+    fallbackRegions(injected).some((r) => r.includes(FLIP_CLAUSE_TOKEN)),
+    "the injected clause did not land inside the fallback region",
+  );
 });
 
 // ---------------------------------------------------------------------------

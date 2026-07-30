@@ -271,3 +271,25 @@ edges:
     type: integrates
     target: evidence-done-tests-1c08
     created: 2026-06-11
+  # Trail I — a verification lane written but not yet evidenced: `implemented` with
+  # no evidence, so the resolver returns on the status before the lane branch.
+  - id: edge-tested-proposes-1d11
+    source: contract-tested-1d02
+    type: proposes
+    target: intent-tested-1d01
+    created: 2026-06-11
+  - id: edge-tested-alt-proposes-1d12
+    source: contract-tested-alt-1d03
+    type: proposes
+    target: intent-tested-1d01
+    created: 2026-06-11
+  - id: edge-tested-selects-1d13
+    source: decision-tested-1d04
+    type: selects
+    target: contract-tested-1d02
+    created: 2026-06-11
+  - id: edge-tested-decomposes-1d14
+    source: brief-tested-1d05
+    type: decomposes
+    target: contract-tested-1d02
+    created: 2026-06-11

@@ -2,7 +2,7 @@
 id: brief-write-tests-flip-4e19
 type: brief
 title: Extend A7's single graph write to /write-tests — command clauses, the CLAUDE.md record, the clause-set and negative-leg pins, and transcript trail I
-status: draft
+status: implemented
 created: 2026-07-30
 produced_by: "/write-brief"
 ---

@@ -19,7 +19,7 @@
 # hand-written. Regenerate the same way if the resolver's rendering changes —
 # and treat a diff as a finding to explain, not a file to overwrite blindly.
 #
-# The recorded graph is eight trails, A-H, named in each node's body:
+# The recorded graph is nine trails, A-I, named in each node's body:
 #   A  a just-captured class-1 intent with no candidate            (2.1)
 #   B  a class-3 proposal market with no comparison                (2.2)
 #   C  a class-3 market compared but not selected                  (2.3)
@@ -33,6 +33,11 @@
 #      and a final integration's terminal PR action are recorded. The graph is
 #      dated 2026-06-11, before both dated gates, so coverage-coherence does not
 #      fire on that in-between state; `spec:validate` is green on this fixture.
+#   I  a verification lane WRITTEN but not yet evidenced: `implemented` with no
+#      evidence, so the resolver returns on the status before it reaches the lane
+#      branch and prints `/prepare-evidence` instead of reprinting `/write-tests`
+#      (2.5, A7). No other trail carries that state — trail F's tests lane is
+#      `draft` and trail H's is already evidenced, so neither can record it.
 #
 # The `command` set below covers all fourteen chain commands (`.claude/commands/*.md`
 # minus detect-drift.md and update-spec-graph.md), so the artifact cannot rot into a
@@ -96,12 +101,20 @@
     paste /prepare-evidence brief-laned-docs-0f08
     END
 
+# REGENERATED 2026-07-30: repointed from `brief-laned-tests-0f06` to trail I's
+# `brief-tested-1d05`, and re-recorded. The old block was NOT the bug — for a `draft`
+# brief it was the correct pre-run output. What was stale is this manifest's own
+# post-run semantics: an entry records the block a command printed in its CLOSING
+# report, i.e. AFTER the command ran, and `/write-tests` now leaves its brief at
+# `implemented`. So the entry needed a node in the post-run state, not a rewritten
+# block. `0f06` deliberately stays `draft`, which keeps the three other entries that
+# print its step byte-identical and preserves the fixture's only four recordings of
+# the 2.5(c) judgement reminder.
 - command: write-tests
-  node: brief-laned-tests-0f06
+  node: brief-tested-1d05
   block: |
-    NEXT brief-laned-tests-0f06 brief-open
-    paste /write-tests brief-laned-tests-0f06
-    action consider whether this lane deserves a patch market — the brief carries no `## Strategy tension` section
+    NEXT brief-tested-1d05 brief-implemented
+    paste /prepare-evidence brief-tested-1d05
     END
 
 - command: propose-patches

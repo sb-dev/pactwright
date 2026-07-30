@@ -634,7 +634,7 @@ _none_
 
 | id | title | status | lane | owner |
 |---|---|---|---|---|
-| `brief-write-tests-flip-4e19` | Extend A7's single graph write to /write-tests — command clauses, the CLAUDE.md record, the clause-set and negative-leg pins, and transcript trail I | draft | — | — |
+| `brief-write-tests-flip-4e19` | Extend A7's single graph write to /write-tests — command clauses, the CLAUDE.md record, the clause-set and negative-leg pins, and transcript trail I | implemented | — | — |
 
 ### evidence
 
