@@ -76,8 +76,12 @@ stage: `intent-selected`
 
 next:
 
-- `/write-brief contract-write-tests-flip-3a71` — _paste_ — class 2 does not require lanes; a single unlaned brief fits
-- `/decompose-lanes contract-write-tests-flip-3a71 '<lanes>'` — _template_ — alternative: class 2 permits lanes (optional)
+- `/implement-brief brief-write-tests-flip-4e19` — _paste_ — brief is `draft` and carries no open patch market
+- consider whether this lane deserves a patch market — the brief carries no `## Strategy tension` section — _action_ — class 2 permits a patch market (optional per brief); no marker is recorded, and the resolver never infers tension
+
+| brief | lane | owner | wave | issue | status | next |
+|---|---|---|---|---|---|---|
+| `brief-write-tests-flip-4e19` | — | — | — | not synced | draft | `/implement-brief brief-write-tests-flip-4e19` |
 
 ## intent-write-tests-unlaned-brief-b3d8 — Define `/write-tests` for an unlaned single brief without weakening separation of duties
 

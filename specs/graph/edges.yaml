@@ -714,3 +714,8 @@ edges:
     type: selects
     target: contract-write-tests-flip-3a71
     created: 2026-07-30
+  - id: edge-decomposes-write-tests-flip-c5f2
+    source: brief-write-tests-flip-4e19
+    type: decomposes
+    target: contract-write-tests-flip-3a71
+    created: 2026-07-30

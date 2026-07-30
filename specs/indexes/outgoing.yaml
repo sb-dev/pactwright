@@ -79,6 +79,10 @@ outgoing:
     - id: edge-decomposes-work-class-routing-b3e2
       target: contract-work-class-validate-invariant-c3d4
       type: decomposes
+  brief-write-tests-flip-4e19:
+    - id: edge-decomposes-write-tests-flip-c5f2
+      target: contract-write-tests-flip-3a71
+      type: decomposes
   comparison-conveyor-market-890e:
     - id: edge-conveyor-compares-derived-867c
       target: contract-conveyor-derived-4c8c
