@@ -79,6 +79,10 @@ incoming:
     - id: edge-evidences-work-class-routing-c7e1
       source: evidence-work-class-routing-f0a3
       type: evidences
+  brief-write-tests-flip-4e19:
+    - id: edge-evidences-write-tests-flip-e1a7
+      source: evidence-write-tests-flip-6a24
+      type: evidences
   capability-ci-enforcement-3e4f:
     - id: edge-touches-ci-gate-ci-enforcement-a2c3
       source: evidence-ci-gate-spec-tool-693d
@@ -117,6 +121,9 @@ incoming:
     - id: edge-touches-work-class-routing-lifecycle-commands-c4b7
       source: evidence-work-class-routing-f0a3
       type: touches
+    - id: edge-touches-write-tests-commands-d3b8
+      source: evidence-write-tests-flip-6a24
+      type: touches
   capability-spec-docs-8c1d:
     - id: edge-touches-conveyor-docs-spec-docs-4d77
       source: evidence-conveyor-docs-5e91
@@ -135,6 +142,9 @@ incoming:
       type: touches
     - id: edge-touches-work-class-routing-spec-docs-c3a5
       source: evidence-work-class-routing-f0a3
+      type: touches
+    - id: edge-touches-write-tests-docs-f2c5
+      source: evidence-write-tests-flip-6a24
       type: touches
   capability-spec-schema-2c3d:
     - id: edge-touches-ci-gate-spec-schema-a3d4
@@ -179,6 +189,9 @@ incoming:
       type: touches
     - id: edge-touches-work-class-routing-spec-tests-c5d9
       source: evidence-work-class-routing-f0a3
+      type: touches
+    - id: edge-touches-write-tests-tests-a9d6
+      source: evidence-write-tests-flip-6a24
       type: touches
   capability-spec-tooling-1a2b:
     - id: edge-touches-conveyor-resolver-spec-tooling-7c99

@@ -608,7 +608,7 @@ _none_
 _none_
 
 
-## intent-write-tests-status-flip-2b64 — Close the paste-only chain for a test-verification lane without weakening separation of duties (open)
+## intent-write-tests-status-flip-2b64 — Close the paste-only chain for a test-verification lane without weakening separation of duties (addressed)
 
 ### contracts
 
@@ -638,7 +638,9 @@ _none_
 
 ### evidence
 
-_none_
+| id | title | status |
+|---|---|---|
+| `evidence-write-tests-flip-6a24` | Write-tests status flip implemented — the clause block placed before the print, the CLAUDE.md record, six pins with a negative leg proved to bite, and transcript trail I | final |
 
 ### integration
 

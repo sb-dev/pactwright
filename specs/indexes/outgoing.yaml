@@ -473,6 +473,19 @@ outgoing:
     - id: edge-touches-work-class-routing-spec-tooling-c2a1
       target: capability-spec-tooling-1a2b
       type: touches
+  evidence-write-tests-flip-6a24:
+    - id: edge-evidences-write-tests-flip-e1a7
+      target: brief-write-tests-flip-4e19
+      type: evidences
+    - id: edge-touches-write-tests-commands-d3b8
+      target: capability-lifecycle-commands-4f5a
+      type: touches
+    - id: edge-touches-write-tests-docs-f2c5
+      target: capability-spec-docs-8c1d
+      type: touches
+    - id: edge-touches-write-tests-tests-a9d6
+      target: capability-spec-tests-3a6e
+      type: touches
   integration-conveyor-derived-4d19:
     - id: edge-integrates-conveyor-ci-4c15
       target: evidence-conveyor-ci-4b73

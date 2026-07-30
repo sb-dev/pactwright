@@ -98,6 +98,7 @@ by-type:
     - evidence-patch-market-tests-6c7d
     - evidence-spec-tooling-schema-driven-9c4e
     - evidence-work-class-routing-f0a3
+    - evidence-write-tests-flip-6a24
   integration:
     - integration-conveyor-derived-4d19
     - integration-patch-market-9e4d
