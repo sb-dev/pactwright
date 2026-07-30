@@ -517,6 +517,33 @@ _none_
 _none_
 
 
+## intent-wave-persistence-5c93 — Persist each lane brief's wave assignment as an optional `wave` frontmatter field (open)
+
+### contracts
+
+_none_
+
+### comparison
+
+_none_
+
+### decision
+
+_none_
+
+### briefs
+
+_none_
+
+### evidence
+
+_none_
+
+### integration
+
+_none_
+
+
 ## intent-work-class-routing-b9c4 — Add work-class routing and scope-integrity rules (addressed)
 
 ### contracts

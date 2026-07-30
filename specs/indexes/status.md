@@ -54,6 +54,14 @@ next:
 
 - `/propose-contracts intent-unbacked-addressed-guard-8c4e` — _paste_ — intent is open with no live `proposes` candidate
 
+## intent-wave-persistence-5c93 — Persist each lane brief's wave assignment as an optional `wave` frontmatter field
+
+stage: `intent-open`
+
+next:
+
+- `/propose-contracts intent-wave-persistence-5c93` — _paste_ — intent is open with no live `proposes` candidate
+
 ## intent-write-tests-status-flip-2b64 — Close the paste-only chain for a test-verification lane without weakening separation of duties
 
 stage: `intent-open`
