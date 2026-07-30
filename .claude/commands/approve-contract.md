@@ -12,7 +12,7 @@ approved (the `class-market-quorum` validation rule is the backstop).
 Act as contract-reviewer: summarise the candidates and spell out the
 selection's consequences. Then invoke graph-maintainer to record the
 decision node (body per the DECISION BODY TEMPLATE below), its `selects` edge,
-and the status changes of CLAUDE.md lifecycle step 3. The decision body must
+and the status changes of CLAUDE.md's Human-selection lifecycle step. The decision body must
 record the accepted trade-off and why each rejected candidate lost; and for
 a selection of a Class 2 or 3 contract created on or after
 `comparison_required_from`, it must cite the market's `comparison` node id

@@ -71,6 +71,7 @@ by-type:
   evidence:
     - evidence-ci-gate-spec-tool-693d
     - evidence-conveyor-ci-4b73
+    - evidence-conveyor-commands-8a52
     - evidence-conveyor-docs-5e91
     - evidence-conveyor-resolver-2f18
     - evidence-conveyor-schema-graph-7c41

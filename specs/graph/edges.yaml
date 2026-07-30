@@ -604,3 +604,13 @@ edges:
     type: touches
     target: capability-spec-tooling-1a2b
     created: 2026-07-30
+  - id: edge-evidences-conveyor-commands-9d11
+    source: evidence-conveyor-commands-8a52
+    type: evidences
+    target: brief-conveyor-commands-c14d
+    created: 2026-07-30
+  - id: edge-touches-conveyor-commands-lifecycle-commands-0e22
+    source: evidence-conveyor-commands-8a52
+    type: touches
+    target: capability-lifecycle-commands-4f5a
+    created: 2026-07-30

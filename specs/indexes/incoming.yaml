@@ -7,6 +7,10 @@ incoming:
     - id: edge-evidences-conveyor-ci-1f44
       source: evidence-conveyor-ci-4b73
       type: evidences
+  brief-conveyor-commands-c14d:
+    - id: edge-evidences-conveyor-commands-9d11
+      source: evidence-conveyor-commands-8a52
+      type: evidences
   brief-conveyor-docs-9e31:
     - id: edge-evidences-conveyor-docs-3c66
       source: evidence-conveyor-docs-5e91
@@ -81,6 +85,9 @@ incoming:
       source: evidence-patch-market-ci-4a5b
       type: touches
   capability-lifecycle-commands-4f5a:
+    - id: edge-touches-conveyor-commands-lifecycle-commands-0e22
+      source: evidence-conveyor-commands-8a52
+      type: touches
     - id: edge-touches-critics-literal-panel-lifecycle-commands-d4a9
       source: evidence-critics-literal-panel-e2a7
       type: touches

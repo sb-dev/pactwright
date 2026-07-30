@@ -2,7 +2,7 @@
 id: brief-conveyor-commands-c14d
 type: brief
 title: Conveyor command chain — resolver NEXT block, marked degraded fallback, retargeted critic routing, and the type-wrong /prepare-evidence hop, across the 15 command files
-status: draft
+status: implemented
 created: 2026-07-28
 lane: api-integration
 produced_by: "/decompose-lanes"

@@ -24,10 +24,10 @@ evidence hop derivable: the resolver keys on the RESULTING `implemented` status 
 emit `/prepare-evidence`, closing the loop where this command used to reprint itself.
 This changes intended behaviour and is approved under CLAUDE.md scope-integrity
 rule 5 by `decision-conveyor-derived-5a91` (amendment A7, `## Rule-5 declaration`).
-The matching amendment of CLAUDE.md lifecycle step 5 — which still reads
-"Implementation (code only; no graph writes)" — is the `docs-spec` lane's edit, not
-this command's; until it lands, this command knowingly runs ahead of the governing
-document under that recorded approval.
+CLAUDE.md's lifecycle Implementation step documents this single write, so the command
+and the governing document now agree. (They did not for one intra-PR window: this
+clause was written while that step still said "code only; no graph writes", and the
+`docs-spec` lane closed the gap.)
 
 ECHO BEFORE MUTATING: print the brief id and its current status, so the operator sees
 what is about to change.
