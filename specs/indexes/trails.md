@@ -368,12 +368,14 @@ _none_
 | `brief-conveyor-docs-9e31` | Conveyor governing docs — CLAUDE.md step-5 amendment (A7), output-attention and mix-and-match conventions, lifecycle completeness, the conveyor subsection, and the README/CONTRIBUTING/branch-protection/drift-detection repairs | implemented | docs-spec | — |
 | `brief-conveyor-lane-catalog-2d5b` | Lane market surface — eight .claude/lanes catalog files, the .gitignore negation that admits them, seven implementer agents, four agent corrections | draft | product-spec | — |
 | `brief-conveyor-resolver-3f7a` | Conveyor resolver and tooling — nextSteps/deriveStage/CONVEYOR_CLASS_ROUTING, spec:status, the trails+status views, the planIssueSync seam, and the A11 traversal consolidation | draft | domain-backend | — |
-| `brief-conveyor-schema-graph-8b2e` | Conveyor schema and graph data — optional owner on brief, lane-list pointer, live-intent definition, and the five Scope-14 data migrations | draft | data-migration | — |
+| `brief-conveyor-schema-graph-8b2e` | Conveyor schema and graph data — optional owner on brief, lane-list pointer, live-intent definition, and the five Scope-14 data migrations | implemented | data-migration | — |
 | `brief-conveyor-tests-4c86` | Conveyor verification lane — the thirteen-leg lane-union pin, the resolver-invocation pin, conveyor routing, view time-invariance and the transcript regression fixture | draft | test-verification | — |
 
 ### evidence
 
-_none_
+| id | title | status |
+|---|---|---|
+| `evidence-conveyor-schema-graph-7c41` | Data-migration lane implemented — optional owner on brief, lane-list pointer, live-intent definition, and the five Scope-14 graph migrations | final |
 
 ### integration
 

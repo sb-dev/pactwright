@@ -2,7 +2,7 @@
 id: brief-conveyor-schema-graph-8b2e
 type: brief
 title: Conveyor schema and graph data — optional owner on brief, lane-list pointer, live-intent definition, and the five Scope-14 data migrations
-status: draft
+status: implemented
 created: 2026-07-28
 lane: data-migration
 produced_by: "/decompose-lanes"

@@ -3,6 +3,10 @@ incoming:
     - id: edge-evidences-ci-gate-spec-tool-760c
       source: evidence-ci-gate-spec-tool-693d
       type: evidences
+  brief-conveyor-schema-graph-8b2e:
+    - id: edge-evidences-conveyor-schema-graph-8d21
+      source: evidence-conveyor-schema-graph-7c41
+      type: evidences
   brief-critics-literal-panel-b5c6:
     - id: edge-evidences-critics-literal-panel-f4b1
       source: evidence-critics-literal-panel-e2a7
@@ -99,6 +103,9 @@ incoming:
   capability-spec-schema-2c3d:
     - id: edge-touches-ci-gate-spec-schema-a3d4
       source: evidence-ci-gate-spec-tool-693d
+      type: touches
+    - id: edge-touches-conveyor-schema-graph-spec-schema-9e32
+      source: evidence-conveyor-schema-graph-7c41
       type: touches
     - id: edge-touches-critics-literal-panel-spec-schema-d2b5
       source: evidence-critics-literal-panel-e2a7

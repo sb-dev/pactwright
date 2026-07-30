@@ -564,3 +564,13 @@ edges:
     type: touches
     target: capability-spec-tests-3a6e
     created: 2026-07-29
+  - id: edge-evidences-conveyor-schema-graph-8d21
+    source: evidence-conveyor-schema-graph-7c41
+    type: evidences
+    target: brief-conveyor-schema-graph-8b2e
+    created: 2026-07-30
+  - id: edge-touches-conveyor-schema-graph-spec-schema-9e32
+    source: evidence-conveyor-schema-graph-7c41
+    type: touches
+    target: capability-spec-schema-2c3d
+    created: 2026-07-30

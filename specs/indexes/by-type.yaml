@@ -70,6 +70,7 @@ by-type:
     - decision-work-class-routing-4d7a
   evidence:
     - evidence-ci-gate-spec-tool-693d
+    - evidence-conveyor-schema-graph-7c41
     - evidence-critics-literal-panel-e2a7
     - evidence-drift-tool-assisted-3e58
     - evidence-lane-integration-9b4c
