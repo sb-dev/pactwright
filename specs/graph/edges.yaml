@@ -614,3 +614,18 @@ edges:
     type: touches
     target: capability-lifecycle-commands-4f5a
     created: 2026-07-30
+  - id: edge-evidences-conveyor-lane-catalog-5c31
+    source: evidence-conveyor-lane-catalog-3d84
+    type: evidences
+    target: brief-conveyor-lane-catalog-2d5b
+    created: 2026-07-30
+  - id: edge-touches-conveyor-lane-catalog-lifecycle-commands-7a48
+    source: evidence-conveyor-lane-catalog-3d84
+    type: touches
+    target: capability-lifecycle-commands-4f5a
+    created: 2026-07-30
+  - id: edge-supersedes-root-vcs-config-unowned-b93e
+    source: decision-root-vcs-config-unowned-9f26
+    type: supersedes
+    target: decision-gitignore-unowned-6b3d
+    created: 2026-07-30

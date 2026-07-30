@@ -2,7 +2,7 @@
 id: brief-conveyor-lane-catalog-2d5b
 type: brief
 title: Lane market surface — eight .claude/lanes catalog files, the .gitignore negation that admits them, seven implementer agents, four agent corrections
-status: draft
+status: implemented
 created: 2026-07-28
 lane: product-spec
 produced_by: "/decompose-lanes"

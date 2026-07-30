@@ -15,6 +15,10 @@ incoming:
     - id: edge-evidences-conveyor-docs-3c66
       source: evidence-conveyor-docs-5e91
       type: evidences
+  brief-conveyor-lane-catalog-2d5b:
+    - id: edge-evidences-conveyor-lane-catalog-5c31
+      source: evidence-conveyor-lane-catalog-3d84
+      type: evidences
   brief-conveyor-resolver-3f7a:
     - id: edge-evidences-conveyor-resolver-6b88
       source: evidence-conveyor-resolver-2f18
@@ -87,6 +91,9 @@ incoming:
   capability-lifecycle-commands-4f5a:
     - id: edge-touches-conveyor-commands-lifecycle-commands-0e22
       source: evidence-conveyor-commands-8a52
+      type: touches
+    - id: edge-touches-conveyor-lane-catalog-lifecycle-commands-7a48
+      source: evidence-conveyor-lane-catalog-3d84
       type: touches
     - id: edge-touches-critics-literal-panel-lifecycle-commands-d4a9
       source: evidence-critics-literal-panel-e2a7
@@ -313,6 +320,10 @@ incoming:
     - id: edge-selects-work-class-validate-invariant-6a9c
       source: decision-work-class-routing-4d7a
       type: selects
+  decision-gitignore-unowned-6b3d:
+    - id: edge-supersedes-root-vcs-config-unowned-b93e
+      source: decision-root-vcs-config-unowned-9f26
+      type: supersedes
   evidence-patch-market-ci-4a5b:
     - id: edge-integrates-patch-market-ci-5d9b
       source: integration-patch-market-9e4d

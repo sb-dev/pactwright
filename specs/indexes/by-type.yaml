@@ -66,6 +66,7 @@ by-type:
     - decision-lane-integration-9f3b
     - decision-lifecycle-thin-commands-41c8
     - decision-patch-market-ci-gate-8a2f
+    - decision-root-vcs-config-unowned-9f26
     - decision-spec-tooling-schema-driven-5e8c
     - decision-work-class-routing-4d7a
   evidence:
@@ -73,6 +74,7 @@ by-type:
     - evidence-conveyor-ci-4b73
     - evidence-conveyor-commands-8a52
     - evidence-conveyor-docs-5e91
+    - evidence-conveyor-lane-catalog-3d84
     - evidence-conveyor-resolver-2f18
     - evidence-conveyor-schema-graph-7c41
     - evidence-critics-literal-panel-e2a7

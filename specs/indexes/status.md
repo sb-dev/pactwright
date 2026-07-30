@@ -34,19 +34,17 @@ stage: `intent-selected`
 
 next:
 
-- `/implement-brief brief-conveyor-lane-catalog-2d5b` — _paste_ — brief is `draft` and carries no open patch market
-- consider whether this lane deserves a patch market — the brief carries no `## Strategy tension` section — _action_ — class 3 permits a patch market (available per lane); no marker is recorded, and the resolver never infers tension
 - `/write-tests brief-conveyor-tests-4c86` — _paste_ — brief carries `lane: test-verification`; its tests are written by test-writer
 - consider whether this lane deserves a patch market — the brief carries no `## Strategy tension` section — _action_ — class 3 permits a patch market (available per lane); no marker is recorded, and the resolver never infers tension
 
 | brief | lane | owner | wave | issue | status | next |
 |---|---|---|---|---|---|---|
-| `brief-conveyor-ci-6a9f` | observability-release | — | — | not synced | implemented | `/implement-brief brief-conveyor-lane-catalog-2d5b` |
-| `brief-conveyor-commands-c14d` | api-integration | — | — | not synced | implemented | `/implement-brief brief-conveyor-lane-catalog-2d5b` |
-| `brief-conveyor-docs-9e31` | docs-spec | — | — | not synced | implemented | `/implement-brief brief-conveyor-lane-catalog-2d5b` |
-| `brief-conveyor-lane-catalog-2d5b` | product-spec | — | — | not synced | draft | `/implement-brief brief-conveyor-lane-catalog-2d5b` |
-| `brief-conveyor-resolver-3f7a` | domain-backend | — | — | not synced | implemented | `/implement-brief brief-conveyor-lane-catalog-2d5b` |
-| `brief-conveyor-schema-graph-8b2e` | data-migration | — | — | not synced | implemented | `/implement-brief brief-conveyor-lane-catalog-2d5b` |
+| `brief-conveyor-ci-6a9f` | observability-release | — | — | not synced | implemented | `/write-tests brief-conveyor-tests-4c86` |
+| `brief-conveyor-commands-c14d` | api-integration | — | — | not synced | implemented | `/write-tests brief-conveyor-tests-4c86` |
+| `brief-conveyor-docs-9e31` | docs-spec | — | — | not synced | implemented | `/write-tests brief-conveyor-tests-4c86` |
+| `brief-conveyor-lane-catalog-2d5b` | product-spec | — | — | not synced | implemented | `/write-tests brief-conveyor-tests-4c86` |
+| `brief-conveyor-resolver-3f7a` | domain-backend | — | — | not synced | implemented | `/write-tests brief-conveyor-tests-4c86` |
+| `brief-conveyor-schema-graph-8b2e` | data-migration | — | — | not synced | implemented | `/write-tests brief-conveyor-tests-4c86` |
 | `brief-conveyor-tests-4c86` | test-verification | — | — | not synced | draft | `/write-tests brief-conveyor-tests-4c86` |
 
 ## intent-unbacked-addressed-guard-8c4e — Flag intents marked `addressed` without edge-backed provenance

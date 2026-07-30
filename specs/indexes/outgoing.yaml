@@ -230,6 +230,10 @@ outgoing:
     - id: edge-selects-patch-market-ci-gate-7d4c
       target: contract-patch-market-ci-gate-6b7e
       type: selects
+  decision-root-vcs-config-unowned-9f26:
+    - id: edge-supersedes-root-vcs-config-unowned-b93e
+      target: decision-gitignore-unowned-6b3d
+      type: supersedes
   decision-spec-tooling-schema-driven-5e8c:
     - id: edge-selects-schema-driven-7a12
       target: contract-spec-tooling-schema-driven-b2e7
@@ -268,6 +272,13 @@ outgoing:
       type: evidences
     - id: edge-touches-conveyor-docs-spec-docs-4d77
       target: capability-spec-docs-8c1d
+      type: touches
+  evidence-conveyor-lane-catalog-3d84:
+    - id: edge-evidences-conveyor-lane-catalog-5c31
+      target: brief-conveyor-lane-catalog-2d5b
+      type: evidences
+    - id: edge-touches-conveyor-lane-catalog-lifecycle-commands-7a48
+      target: capability-lifecycle-commands-4f5a
       type: touches
   evidence-conveyor-resolver-2f18:
     - id: edge-evidences-conveyor-resolver-6b88

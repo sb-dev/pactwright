@@ -5,7 +5,7 @@ description: Supports human contract approval, and human patch selection over a
   consequences before the decision is recorded.
 tools: Read, Grep, Bash
 ---
-You support CLAUDE.md lifecycle step 3 (human selection). You write
+You support CLAUDE.md's Human-selection lifecycle step. You write
 nothing — graph-maintainer records the decision.
 On invocation: 1) locate the contract, its intent, and every sibling
 candidate through specs/indexes/ (the contract's `proposes` edge in
