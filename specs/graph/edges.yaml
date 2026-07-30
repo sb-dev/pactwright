@@ -584,3 +584,13 @@ edges:
     type: touches
     target: capability-ci-enforcement-3e4f
     created: 2026-07-30
+  - id: edge-evidences-conveyor-docs-3c66
+    source: evidence-conveyor-docs-5e91
+    type: evidences
+    target: brief-conveyor-docs-9e31
+    created: 2026-07-30
+  - id: edge-touches-conveyor-docs-spec-docs-4d77
+    source: evidence-conveyor-docs-5e91
+    type: touches
+    target: capability-spec-docs-8c1d
+    created: 2026-07-30

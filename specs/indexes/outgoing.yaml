@@ -255,6 +255,13 @@ outgoing:
     - id: edge-touches-conveyor-ci-ci-enforcement-2a55
       target: capability-ci-enforcement-3e4f
       type: touches
+  evidence-conveyor-docs-5e91:
+    - id: edge-evidences-conveyor-docs-3c66
+      target: brief-conveyor-docs-9e31
+      type: evidences
+    - id: edge-touches-conveyor-docs-spec-docs-4d77
+      target: capability-spec-docs-8c1d
+      type: touches
   evidence-conveyor-schema-graph-7c41:
     - id: edge-evidences-conveyor-schema-graph-8d21
       target: brief-conveyor-schema-graph-8b2e
