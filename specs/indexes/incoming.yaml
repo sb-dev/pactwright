@@ -335,6 +335,9 @@ incoming:
     - id: edge-compares-write-tests-flip-9b41
       source: comparison-write-tests-market-6e83
       type: compares
+    - id: edge-selects-write-tests-flip-b8d3
+      source: decision-write-tests-flip-7f14
+      type: selects
   contract-write-tests-market-5e26:
     - id: edge-compares-write-tests-market-5a3e
       source: comparison-write-tests-market-6e83

@@ -73,6 +73,7 @@ by-type:
     - decision-root-vcs-config-unowned-9f26
     - decision-spec-tooling-schema-driven-5e8c
     - decision-work-class-routing-4d7a
+    - decision-write-tests-flip-7f14
   drift-finding:
     - drift-finding-write-tests-no-flip-7e52
   evidence:

@@ -2,7 +2,7 @@
 id: contract-write-tests-market-5e26
 type: contract
 title: Treat the test-verification lane branch as terminal-once-run (ordered two-step print, no flip, no probe)
-status: candidate
+status: rejected
 created: 2026-07-30
 class: 2
 produced_by: "/propose-contracts"

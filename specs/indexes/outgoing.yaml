@@ -264,6 +264,10 @@ outgoing:
     - id: edge-selects-work-class-validate-invariant-6a9c
       target: contract-work-class-validate-invariant-c3d4
       type: selects
+  decision-write-tests-flip-7f14:
+    - id: edge-selects-write-tests-flip-b8d3
+      target: contract-write-tests-flip-3a71
+      type: selects
   drift-finding-write-tests-no-flip-7e52:
     - id: edge-flags-write-tests-no-flip-8e46
       target: evidence-conveyor-commands-8a52

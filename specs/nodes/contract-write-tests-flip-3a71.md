@@ -2,7 +2,7 @@
 id: contract-write-tests-flip-3a71
 type: contract
 title: Extend A7's single graph write to /write-tests (command-file change, no resolver change)
-status: candidate
+status: approved
 created: 2026-07-30
 class: 2
 produced_by: "/propose-contracts"

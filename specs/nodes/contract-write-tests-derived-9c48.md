@@ -2,7 +2,7 @@
 id: contract-write-tests-derived-9c48
 type: contract
 title: Derive the test-verification hop from the lane's test artifacts (injected resolver probe, no graph write)
-status: candidate
+status: rejected
 created: 2026-07-30
 class: 2
 produced_by: "/propose-contracts"

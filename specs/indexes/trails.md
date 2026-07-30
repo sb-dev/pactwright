@@ -614,9 +614,9 @@ _none_
 
 | id | title | status |
 |---|---|---|
-| `contract-write-tests-derived-9c48` | Derive the test-verification hop from the lane's test artifacts (injected resolver probe, no graph write) | candidate |
-| `contract-write-tests-flip-3a71` | Extend A7's single graph write to /write-tests (command-file change, no resolver change) | candidate |
-| `contract-write-tests-market-5e26` | Treat the test-verification lane branch as terminal-once-run (ordered two-step print, no flip, no probe) | candidate |
+| `contract-write-tests-derived-9c48` | Derive the test-verification hop from the lane's test artifacts (injected resolver probe, no graph write) | rejected |
+| `contract-write-tests-flip-3a71` | Extend A7's single graph write to /write-tests (command-file change, no resolver change) | approved |
+| `contract-write-tests-market-5e26` | Treat the test-verification lane branch as terminal-once-run (ordered two-step print, no flip, no probe) | rejected |
 
 ### comparison
 
@@ -626,7 +626,9 @@ _none_
 
 ### decision
 
-_none_
+| id | title | status |
+|---|---|---|
+| `decision-write-tests-flip-7f14` | Select Candidate A (extend A7's flip to /write-tests) for the write-tests status-flip market, grafting B and C | — |
 
 ### briefs
 

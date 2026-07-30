@@ -709,3 +709,8 @@ edges:
     type: compares
     target: contract-write-tests-market-5e26
     created: 2026-07-30
+  - id: edge-selects-write-tests-flip-b8d3
+    source: decision-write-tests-flip-7f14
+    type: selects
+    target: contract-write-tests-flip-3a71
+    created: 2026-07-30

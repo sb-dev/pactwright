@@ -72,13 +72,12 @@ next:
 
 ## intent-write-tests-status-flip-2b64 — Close the paste-only chain for a test-verification lane without weakening separation of duties
 
-stage: `intent-compared`
+stage: `intent-selected`
 
 next:
 
-- `/approve-contract contract-write-tests-derived-9c48 '<amendments>'` — _template_ — a comparison covers the live candidates and no `selects` decision exists yet
-- `/approve-contract contract-write-tests-flip-3a71 '<amendments>'` — _template_ — a comparison covers the live candidates and no `selects` decision exists yet
-- `/approve-contract contract-write-tests-market-5e26 '<amendments>'` — _template_ — a comparison covers the live candidates and no `selects` decision exists yet
+- `/write-brief contract-write-tests-flip-3a71` — _paste_ — class 2 does not require lanes; a single unlaned brief fits
+- `/decompose-lanes contract-write-tests-flip-3a71 '<lanes>'` — _template_ — alternative: class 2 permits lanes (optional)
 
 ## intent-write-tests-unlaned-brief-b3d8 — Define `/write-tests` for an unlaned single brief without weakening separation of duties
 
