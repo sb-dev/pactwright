@@ -739,3 +739,18 @@ edges:
     type: touches
     target: capability-spec-tests-3a6e
     created: 2026-07-30
+  - id: edge-proposes-unbacked-addressed-edge-9a5c
+    source: contract-unbacked-addressed-edge-5b71
+    type: proposes
+    target: intent-unbacked-addressed-guard-8c4e
+    created: 2026-07-30
+  - id: edge-proposes-unbacked-addressed-dated-6c19
+    source: contract-unbacked-addressed-dated-2e94
+    type: proposes
+    target: intent-unbacked-addressed-guard-8c4e
+    created: 2026-07-30
+  - id: edge-proposes-unbacked-addressed-waiver-b4e2
+    source: contract-unbacked-addressed-waiver-8d36
+    type: proposes
+    target: intent-unbacked-addressed-guard-8c4e
+    created: 2026-07-30

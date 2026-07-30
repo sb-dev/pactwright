@@ -204,6 +204,18 @@ outgoing:
     - id: edge-proposes-schema-driven-4f08
       target: intent-spec-index-validate-a3f1
       type: proposes
+  contract-unbacked-addressed-dated-2e94:
+    - id: edge-proposes-unbacked-addressed-dated-6c19
+      target: intent-unbacked-addressed-guard-8c4e
+      type: proposes
+  contract-unbacked-addressed-edge-5b71:
+    - id: edge-proposes-unbacked-addressed-edge-9a5c
+      target: intent-unbacked-addressed-guard-8c4e
+      type: proposes
+  contract-unbacked-addressed-waiver-8d36:
+    - id: edge-proposes-unbacked-addressed-waiver-b4e2
+      target: intent-unbacked-addressed-guard-8c4e
+      type: proposes
   contract-work-class-approval-gate-e5f6:
     - id: edge-proposes-work-class-approval-gate-3f4c
       target: intent-work-class-routing-b9c4

@@ -56,11 +56,11 @@ next:
 
 ## intent-unbacked-addressed-guard-8c4e — Flag intents marked `addressed` without edge-backed provenance
 
-stage: `intent-open`
+stage: `intent-proposed`
 
 next:
 
-- `/propose-contracts intent-unbacked-addressed-guard-8c4e` — _paste_ — intent is open with no live `proposes` candidate
+- `/review-contracts intent-unbacked-addressed-guard-8c4e` — _paste_ — class 2 requires a proposal market (required (≥2 candidates)); no comparison covers the candidates yet
 
 ## intent-wave-persistence-5c93 — Persist each lane brief's wave assignment as an optional `wave` frontmatter field
 

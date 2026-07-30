@@ -492,6 +492,16 @@ incoming:
     - id: edge-proposes-critics-registry-driven-5c9e
       source: contract-critics-registry-driven-2d5b
       type: proposes
+  intent-unbacked-addressed-guard-8c4e:
+    - id: edge-proposes-unbacked-addressed-dated-6c19
+      source: contract-unbacked-addressed-dated-2e94
+      type: proposes
+    - id: edge-proposes-unbacked-addressed-edge-9a5c
+      source: contract-unbacked-addressed-edge-5b71
+      type: proposes
+    - id: edge-proposes-unbacked-addressed-waiver-b4e2
+      source: contract-unbacked-addressed-waiver-8d36
+      type: proposes
   intent-work-class-routing-b9c4:
     - id: edge-proposes-work-class-approval-gate-3f4c
       source: contract-work-class-approval-gate-e5f6

@@ -521,7 +521,11 @@ _none_
 
 ### contracts
 
-_none_
+| id | title | status |
+|---|---|---|
+| `contract-unbacked-addressed-dated-2e94` | Unbacked `addressed` guard behind a dated `unbacked_addressed_from` cutoff (no new vocabulary) | candidate |
+| `contract-unbacked-addressed-edge-5b71` | Unbacked `addressed` guard, with subsumption expressed as a `subsumes` edge (decision → intent) | candidate |
+| `contract-unbacked-addressed-waiver-8d36` | Unbacked `addressed` guard, with the d4f2 exception as a signed expiring `override` | candidate |
 
 ### comparison
 
