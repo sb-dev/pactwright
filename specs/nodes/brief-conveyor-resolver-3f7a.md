@@ -2,7 +2,7 @@
 id: brief-conveyor-resolver-3f7a
 type: brief
 title: Conveyor resolver and tooling — nextSteps/deriveStage/CONVEYOR_CLASS_ROUTING, spec:status, the trails+status views, the planIssueSync seam, and the A11 traversal consolidation
-status: draft
+status: implemented
 created: 2026-07-28
 lane: domain-backend
 produced_by: "/decompose-lanes"

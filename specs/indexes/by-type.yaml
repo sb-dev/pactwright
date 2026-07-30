@@ -72,6 +72,7 @@ by-type:
     - evidence-ci-gate-spec-tool-693d
     - evidence-conveyor-ci-4b73
     - evidence-conveyor-docs-5e91
+    - evidence-conveyor-resolver-2f18
     - evidence-conveyor-schema-graph-7c41
     - evidence-critics-literal-panel-e2a7
     - evidence-drift-tool-assisted-3e58

@@ -11,6 +11,10 @@ incoming:
     - id: edge-evidences-conveyor-docs-3c66
       source: evidence-conveyor-docs-5e91
       type: evidences
+  brief-conveyor-resolver-3f7a:
+    - id: edge-evidences-conveyor-resolver-6b88
+      source: evidence-conveyor-resolver-2f18
+      type: evidences
   brief-conveyor-schema-graph-8b2e:
     - id: edge-evidences-conveyor-schema-graph-8d21
       source: evidence-conveyor-schema-graph-7c41
@@ -156,6 +160,9 @@ incoming:
       source: evidence-work-class-routing-f0a3
       type: touches
   capability-spec-tooling-1a2b:
+    - id: edge-touches-conveyor-resolver-spec-tooling-7c99
+      source: evidence-conveyor-resolver-2f18
+      type: touches
     - id: edge-touches-critics-literal-panel-spec-tooling-d1a3
       source: evidence-critics-literal-panel-e2a7
       type: touches

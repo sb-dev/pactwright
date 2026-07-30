@@ -594,3 +594,13 @@ edges:
     type: touches
     target: capability-spec-docs-8c1d
     created: 2026-07-30
+  - id: edge-evidences-conveyor-resolver-6b88
+    source: evidence-conveyor-resolver-2f18
+    type: evidences
+    target: brief-conveyor-resolver-3f7a
+    created: 2026-07-30
+  - id: edge-touches-conveyor-resolver-spec-tooling-7c99
+    source: evidence-conveyor-resolver-2f18
+    type: touches
+    target: capability-spec-tooling-1a2b
+    created: 2026-07-30

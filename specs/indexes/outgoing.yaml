@@ -262,6 +262,13 @@ outgoing:
     - id: edge-touches-conveyor-docs-spec-docs-4d77
       target: capability-spec-docs-8c1d
       type: touches
+  evidence-conveyor-resolver-2f18:
+    - id: edge-evidences-conveyor-resolver-6b88
+      target: brief-conveyor-resolver-3f7a
+      type: evidences
+    - id: edge-touches-conveyor-resolver-spec-tooling-7c99
+      target: capability-spec-tooling-1a2b
+      type: touches
   evidence-conveyor-schema-graph-7c41:
     - id: edge-evidences-conveyor-schema-graph-8d21
       target: brief-conveyor-schema-graph-8b2e

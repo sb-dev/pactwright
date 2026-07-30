@@ -367,7 +367,7 @@ _none_
 | `brief-conveyor-commands-c14d` | Conveyor command chain — resolver NEXT block, marked degraded fallback, retargeted critic routing, and the type-wrong /prepare-evidence hop, across the 15 command files | draft | api-integration | — |
 | `brief-conveyor-docs-9e31` | Conveyor governing docs — CLAUDE.md step-5 amendment (A7), output-attention and mix-and-match conventions, lifecycle completeness, the conveyor subsection, and the README/CONTRIBUTING/branch-protection/drift-detection repairs | implemented | docs-spec | — |
 | `brief-conveyor-lane-catalog-2d5b` | Lane market surface — eight .claude/lanes catalog files, the .gitignore negation that admits them, seven implementer agents, four agent corrections | draft | product-spec | — |
-| `brief-conveyor-resolver-3f7a` | Conveyor resolver and tooling — nextSteps/deriveStage/CONVEYOR_CLASS_ROUTING, spec:status, the trails+status views, the planIssueSync seam, and the A11 traversal consolidation | draft | domain-backend | — |
+| `brief-conveyor-resolver-3f7a` | Conveyor resolver and tooling — nextSteps/deriveStage/CONVEYOR_CLASS_ROUTING, spec:status, the trails+status views, the planIssueSync seam, and the A11 traversal consolidation | implemented | domain-backend | — |
 | `brief-conveyor-schema-graph-8b2e` | Conveyor schema and graph data — optional owner on brief, lane-list pointer, live-intent definition, and the five Scope-14 data migrations | implemented | data-migration | — |
 | `brief-conveyor-tests-4c86` | Conveyor verification lane — the thirteen-leg lane-union pin, the resolver-invocation pin, conveyor routing, view time-invariance and the transcript regression fixture | draft | test-verification | — |
 
@@ -377,6 +377,7 @@ _none_
 |---|---|---|
 | `evidence-conveyor-ci-4b73` | Observability-release lane implemented — issue-sync workflow, A9 transcription check (now manifest-correct and verified), sensitive-paths gate graduation, decision-* CODEOWNERS | final |
 | `evidence-conveyor-docs-5e91` | Docs-spec lane implemented — CLAUDE.md A7 amendment and lifecycle completion, the conveyor / output-attention / effective-contract sections, and the README/CONTRIBUTING/branch-protection/drift-detection repairs | final |
+| `evidence-conveyor-resolver-2f18` | Domain-backend lane implemented — the conveyor resolver, spec:status, the trails+status views, the planIssueSync seam, the A11 consolidation, and three defects the verification lane found | final |
 | `evidence-conveyor-schema-graph-7c41` | Data-migration lane implemented — optional owner on brief, lane-list pointer, live-intent definition, and the five Scope-14 graph migrations | final |
 
 ### integration
