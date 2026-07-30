@@ -612,11 +612,17 @@ _none_
 
 ### contracts
 
-_none_
+| id | title | status |
+|---|---|---|
+| `contract-write-tests-derived-9c48` | Derive the test-verification hop from the lane's test artifacts (injected resolver probe, no graph write) | candidate |
+| `contract-write-tests-flip-3a71` | Extend A7's single graph write to /write-tests (command-file change, no resolver change) | candidate |
+| `contract-write-tests-market-5e26` | Treat the test-verification lane branch as terminal-once-run (ordered two-step print, no flip, no probe) | candidate |
 
 ### comparison
 
-_none_
+| id | title | status |
+|---|---|---|
+| `comparison-write-tests-market-6e83` | Write-tests status-flip market — three candidates compared across ten routed perspectives | — |
 
 ### decision
 

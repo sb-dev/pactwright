@@ -106,6 +106,16 @@ outgoing:
     - id: edge-compares-patch-market-validate-authoritative-4d2a
       target: contract-patch-market-validate-authoritative-9d41
       type: compares
+  comparison-write-tests-market-6e83:
+    - id: edge-compares-write-tests-derived-4c7d
+      target: contract-write-tests-derived-9c48
+      type: compares
+    - id: edge-compares-write-tests-flip-9b41
+      target: contract-write-tests-flip-3a71
+      type: compares
+    - id: edge-compares-write-tests-market-5a3e
+      target: contract-write-tests-market-5e26
+      type: compares
   contract-ci-gate-checks-as-nodes-2d49:
     - id: edge-proposes-ci-gate-checks-as-nodes-111b
       target: intent-ci-enforcement-gates-5c90
@@ -201,6 +211,18 @@ outgoing:
   contract-work-class-validate-invariant-c3d4:
     - id: edge-proposes-work-class-validate-invariant-2f3b
       target: intent-work-class-routing-b9c4
+      type: proposes
+  contract-write-tests-derived-9c48:
+    - id: edge-proposes-write-tests-derived-7d59
+      target: intent-write-tests-status-flip-2b64
+      type: proposes
+  contract-write-tests-flip-3a71:
+    - id: edge-proposes-write-tests-flip-4b12
+      target: intent-write-tests-status-flip-2b64
+      type: proposes
+  contract-write-tests-market-5e26:
+    - id: edge-proposes-write-tests-market-2c83
+      target: intent-write-tests-status-flip-2b64
       type: proposes
   decision-ci-gate-spec-tool-6d2b:
     - id: edge-selects-ci-gate-spec-tool-0333

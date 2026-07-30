@@ -327,6 +327,18 @@ incoming:
     - id: edge-selects-work-class-validate-invariant-6a9c
       source: decision-work-class-routing-4d7a
       type: selects
+  contract-write-tests-derived-9c48:
+    - id: edge-compares-write-tests-derived-4c7d
+      source: comparison-write-tests-market-6e83
+      type: compares
+  contract-write-tests-flip-3a71:
+    - id: edge-compares-write-tests-flip-9b41
+      source: comparison-write-tests-market-6e83
+      type: compares
+  contract-write-tests-market-5e26:
+    - id: edge-compares-write-tests-market-5a3e
+      source: comparison-write-tests-market-6e83
+      type: compares
   decision-gitignore-unowned-6b3d:
     - id: edge-supersedes-root-vcs-config-unowned-b93e
       source: decision-root-vcs-config-unowned-9f26
@@ -470,4 +482,14 @@ incoming:
       type: proposes
     - id: edge-proposes-work-class-validate-invariant-2f3b
       source: contract-work-class-validate-invariant-c3d4
+      type: proposes
+  intent-write-tests-status-flip-2b64:
+    - id: edge-proposes-write-tests-derived-7d59
+      source: contract-write-tests-derived-9c48
+      type: proposes
+    - id: edge-proposes-write-tests-flip-4b12
+      source: contract-write-tests-flip-3a71
+      type: proposes
+    - id: edge-proposes-write-tests-market-2c83
+      source: contract-write-tests-market-5e26
       type: proposes

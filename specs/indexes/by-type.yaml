@@ -31,6 +31,7 @@ by-type:
     - comparison-conveyor-market-890e
     - comparison-lane-integration-8d3c
     - comparison-patch-market-synthesis-7b1d
+    - comparison-write-tests-market-6e83
   contract:
     - contract-ci-gate-checks-as-nodes-2d49
     - contract-ci-gate-spec-tool-5039
@@ -56,6 +57,9 @@ by-type:
     - contract-work-class-approval-gate-e5f6
     - contract-work-class-command-discipline-a1b2
     - contract-work-class-validate-invariant-c3d4
+    - contract-write-tests-derived-9c48
+    - contract-write-tests-flip-3a71
+    - contract-write-tests-market-5e26
   decision:
     - decision-ci-gate-spec-tool-6d2b
     - decision-conveyor-derived-5a91

@@ -679,3 +679,33 @@ edges:
     type: flags
     target: evidence-conveyor-commands-8a52
     created: 2026-07-30
+  - id: edge-proposes-write-tests-flip-4b12
+    source: contract-write-tests-flip-3a71
+    type: proposes
+    target: intent-write-tests-status-flip-2b64
+    created: 2026-07-30
+  - id: edge-proposes-write-tests-derived-7d59
+    source: contract-write-tests-derived-9c48
+    type: proposes
+    target: intent-write-tests-status-flip-2b64
+    created: 2026-07-30
+  - id: edge-proposes-write-tests-market-2c83
+    source: contract-write-tests-market-5e26
+    type: proposes
+    target: intent-write-tests-status-flip-2b64
+    created: 2026-07-30
+  - id: edge-compares-write-tests-flip-9b41
+    source: comparison-write-tests-market-6e83
+    type: compares
+    target: contract-write-tests-flip-3a71
+    created: 2026-07-30
+  - id: edge-compares-write-tests-derived-4c7d
+    source: comparison-write-tests-market-6e83
+    type: compares
+    target: contract-write-tests-derived-9c48
+    created: 2026-07-30
+  - id: edge-compares-write-tests-market-5a3e
+    source: comparison-write-tests-market-6e83
+    type: compares
+    target: contract-write-tests-market-5e26
+    created: 2026-07-30
