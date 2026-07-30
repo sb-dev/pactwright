@@ -242,6 +242,10 @@ outgoing:
     - id: edge-selects-work-class-validate-invariant-6a9c
       target: contract-work-class-validate-invariant-c3d4
       type: selects
+  drift-finding-write-tests-no-flip-7e52:
+    - id: edge-flags-write-tests-no-flip-8e46
+      target: evidence-conveyor-commands-8a52
+      type: flags
   evidence-ci-gate-spec-tool-693d:
     - id: edge-evidences-ci-gate-spec-tool-760c
       target: brief-ci-gate-spec-tool-0852
@@ -439,6 +443,28 @@ outgoing:
     - id: edge-touches-work-class-routing-spec-tooling-c2a1
       target: capability-spec-tooling-1a2b
       type: touches
+  integration-conveyor-derived-4d19:
+    - id: edge-integrates-conveyor-ci-4c15
+      target: evidence-conveyor-ci-4b73
+      type: integrates
+    - id: edge-integrates-conveyor-commands-3b09
+      target: evidence-conveyor-commands-8a52
+      type: integrates
+    - id: edge-integrates-conveyor-docs-6d73
+      target: evidence-conveyor-docs-5e91
+      type: integrates
+    - id: edge-integrates-conveyor-lane-catalog-5a2e
+      target: evidence-conveyor-lane-catalog-3d84
+      type: integrates
+    - id: edge-integrates-conveyor-resolver-1a4c
+      target: evidence-conveyor-resolver-2f18
+      type: integrates
+    - id: edge-integrates-conveyor-schema-graph-2d61
+      target: evidence-conveyor-schema-graph-7c41
+      type: integrates
+    - id: edge-integrates-conveyor-tests-7f38
+      target: evidence-conveyor-tests-6b2f
+      type: integrates
   integration-patch-market-9e4d:
     - id: edge-integrates-patch-market-ci-5d9b
       target: evidence-patch-market-ci-4a5b

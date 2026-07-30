@@ -385,7 +385,9 @@ _none_
 
 ### integration
 
-_none_
+| id | title | status |
+|---|---|---|
+| `integration-conveyor-derived-4d19` | Self-guiding delivery loop — seven lanes integrated (draft; paste-only acceptance failed on one lane) | draft |
 
 
 ## intent-spec-index-validate-a3f1 — Build spec:index and spec:validate tooling for the /specs graph (addressed)
@@ -546,6 +548,33 @@ _none_
 | id | title | status |
 |---|---|---|
 | `evidence-work-class-routing-f0a3` | Work-class routing implemented — validation green, tests pass | final |
+
+### integration
+
+_none_
+
+
+## intent-write-tests-status-flip-2b64 — Close the paste-only chain for a test-verification lane without weakening separation of duties (open)
+
+### contracts
+
+_none_
+
+### comparison
+
+_none_
+
+### decision
+
+_none_
+
+### briefs
+
+_none_
+
+### evidence
+
+_none_
 
 ### integration
 

@@ -331,6 +331,37 @@ incoming:
     - id: edge-supersedes-root-vcs-config-unowned-b93e
       source: decision-root-vcs-config-unowned-9f26
       type: supersedes
+  evidence-conveyor-ci-4b73:
+    - id: edge-integrates-conveyor-ci-4c15
+      source: integration-conveyor-derived-4d19
+      type: integrates
+  evidence-conveyor-commands-8a52:
+    - id: edge-flags-write-tests-no-flip-8e46
+      source: drift-finding-write-tests-no-flip-7e52
+      type: flags
+    - id: edge-integrates-conveyor-commands-3b09
+      source: integration-conveyor-derived-4d19
+      type: integrates
+  evidence-conveyor-docs-5e91:
+    - id: edge-integrates-conveyor-docs-6d73
+      source: integration-conveyor-derived-4d19
+      type: integrates
+  evidence-conveyor-lane-catalog-3d84:
+    - id: edge-integrates-conveyor-lane-catalog-5a2e
+      source: integration-conveyor-derived-4d19
+      type: integrates
+  evidence-conveyor-resolver-2f18:
+    - id: edge-integrates-conveyor-resolver-1a4c
+      source: integration-conveyor-derived-4d19
+      type: integrates
+  evidence-conveyor-schema-graph-7c41:
+    - id: edge-integrates-conveyor-schema-graph-2d61
+      source: integration-conveyor-derived-4d19
+      type: integrates
+  evidence-conveyor-tests-6b2f:
+    - id: edge-integrates-conveyor-tests-7f38
+      source: integration-conveyor-derived-4d19
+      type: integrates
   evidence-patch-market-ci-4a5b:
     - id: edge-integrates-patch-market-ci-5d9b
       source: integration-patch-market-9e4d

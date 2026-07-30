@@ -639,3 +639,43 @@ edges:
     type: touches
     target: capability-spec-tests-3a6e
     created: 2026-07-30
+  - id: edge-integrates-conveyor-resolver-1a4c
+    source: integration-conveyor-derived-4d19
+    type: integrates
+    target: evidence-conveyor-resolver-2f18
+    created: 2026-07-30
+  - id: edge-integrates-conveyor-schema-graph-2d61
+    source: integration-conveyor-derived-4d19
+    type: integrates
+    target: evidence-conveyor-schema-graph-7c41
+    created: 2026-07-30
+  - id: edge-integrates-conveyor-commands-3b09
+    source: integration-conveyor-derived-4d19
+    type: integrates
+    target: evidence-conveyor-commands-8a52
+    created: 2026-07-30
+  - id: edge-integrates-conveyor-ci-4c15
+    source: integration-conveyor-derived-4d19
+    type: integrates
+    target: evidence-conveyor-ci-4b73
+    created: 2026-07-30
+  - id: edge-integrates-conveyor-lane-catalog-5a2e
+    source: integration-conveyor-derived-4d19
+    type: integrates
+    target: evidence-conveyor-lane-catalog-3d84
+    created: 2026-07-30
+  - id: edge-integrates-conveyor-docs-6d73
+    source: integration-conveyor-derived-4d19
+    type: integrates
+    target: evidence-conveyor-docs-5e91
+    created: 2026-07-30
+  - id: edge-integrates-conveyor-tests-7f38
+    source: integration-conveyor-derived-4d19
+    type: integrates
+    target: evidence-conveyor-tests-6b2f
+    created: 2026-07-30
+  - id: edge-flags-write-tests-no-flip-8e46
+    source: drift-finding-write-tests-no-flip-7e52
+    type: flags
+    target: evidence-conveyor-commands-8a52
+    created: 2026-07-30

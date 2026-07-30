@@ -69,6 +69,8 @@ by-type:
     - decision-root-vcs-config-unowned-9f26
     - decision-spec-tooling-schema-driven-5e8c
     - decision-work-class-routing-4d7a
+  drift-finding:
+    - drift-finding-write-tests-no-flip-7e52
   evidence:
     - evidence-ci-gate-spec-tool-693d
     - evidence-conveyor-ci-4b73
@@ -91,6 +93,7 @@ by-type:
     - evidence-spec-tooling-schema-driven-9c4e
     - evidence-work-class-routing-f0a3
   integration:
+    - integration-conveyor-derived-4d19
     - integration-patch-market-9e4d
   intent:
     - intent-capture-smoke-superseded-e7f8
@@ -109,4 +112,5 @@ by-type:
     - intent-status-coherence-d4f2
     - intent-unbacked-addressed-guard-8c4e
     - intent-work-class-routing-b9c4
+    - intent-write-tests-status-flip-2b64
     - intent-write-tests-unlaned-brief-b3d8
