@@ -1,0 +1,200 @@
+# CC-12 — the transcript regression fixture's manifest.
+#
+# One shared recorded graph (specs/{schema,nodes,graph}/, deliberately NO
+# specs/indexes/ — following good-drift/good-waives, the indexes are generated at
+# test time, which keeps "exactly five index-bearing fixtures" true) plus this
+# manifest. Each entry is one recorded closing NEXT block:
+#
+#   command  the chain command whose closing report printed this block
+#   node     the node id it asked the resolver about. This follows each command
+#            file's own `pnpm spec:status <...>` argument — <intent-id> for
+#            capture-intent/propose-contracts/review-contracts, <contract-id> for
+#            approve-contract/decompose-lanes/integrate, <brief-id> for the rest.
+#   block    the exact bytes the resolver printed: a line beginning `NEXT `, one
+#            line per Step (`<kind> <rendered>`), then a line that is exactly `END`.
+#
+# EVERY block below was produced by running
+#   node_modules/.bin/tsx tools/spec.ts status <node-id>
+# with cwd set to a copy of this fixture, and pasted verbatim. None was
+# hand-written. Regenerate the same way if the resolver's rendering changes —
+# and treat a diff as a finding to explain, not a file to overwrite blindly.
+#
+# The recorded graph is eight trails, A-H, named in each node's body:
+#   A  a just-captured class-1 intent with no candidate            (2.1)
+#   B  a class-3 proposal market with no comparison                (2.2)
+#   C  a class-3 market compared but not selected                  (2.3)
+#   D  a class-1 contract with one unlaned draft brief             (2.5)
+#   E  an approved class-3 contract with no brief                  (2.4)
+#   F  two-plus-one lanes in flight: evidenced / implemented / draft (2.5, 2.9, A7)
+#   G  three lane briefs of one class-2 contract, one market open and
+#      uncompared, one compared and unselected, one resolved       (2.6, 2.7, 2.8)
+#   H  three lanes all finally evidenced, with an integration that covers only
+#      two of them — deliberately, so that BOTH the last-lane `/integrate` hop
+#      and a final integration's terminal PR action are recorded. The graph is
+#      dated 2026-06-11, before both dated gates, so coverage-coherence does not
+#      fire on that in-between state; `spec:validate` is green on this fixture.
+#
+# The `command` set below covers all fourteen chain commands (`.claude/commands/*.md`
+# minus detect-drift.md and update-spec-graph.md), so the artifact cannot rot into a
+# one-command sample. Three commands carry a SECOND entry, on the node whose block
+# shows the hop the command file's own node choice hides.
+#
+# HONEST BOUND: this is a regression artifact for what the resolver WOULD print for
+# a recorded graph state. It does not prove a live command ran the resolver. A6 pins
+# that each command file instructs the agent to run it; A9's CI transcription job
+# covers the run.
+
+- command: capture-intent
+  node: intent-fresh-0a01
+  block: |
+    NEXT intent-fresh-0a01 intent-open
+    paste /propose-contracts intent-fresh-0a01
+    END
+
+- command: propose-contracts
+  node: intent-market-0b01
+  block: |
+    NEXT intent-market-0b01 intent-proposed
+    paste /review-contracts intent-market-0b01
+    END
+
+- command: review-contracts
+  node: intent-review-0c01
+  block: |
+    NEXT intent-review-0c01 intent-compared
+    template /approve-contract contract-review-alpha-0c02 '<amendments>'
+    template /approve-contract contract-review-beta-0c03 '<amendments>'
+    END
+
+- command: approve-contract
+  node: contract-lanes-0e02
+  block: |
+    NEXT contract-lanes-0e02 contract-approved
+    template /decompose-lanes contract-lanes-0e02 '<lanes>'
+    END
+
+- command: write-brief
+  node: brief-single-0d04
+  block: |
+    NEXT brief-single-0d04 brief-open
+    paste /implement-brief brief-single-0d04
+    END
+
+- command: decompose-lanes
+  node: contract-laned-0f02
+  block: |
+    NEXT contract-laned-0f02 contract-decomposed
+    paste /prepare-evidence brief-laned-docs-0f08
+    paste /write-tests brief-laned-tests-0f06
+    action consider whether this lane deserves a patch market — the brief carries no `## Strategy tension` section
+    END
+
+- command: implement-brief
+  node: brief-laned-docs-0f08
+  block: |
+    NEXT brief-laned-docs-0f08 brief-implemented
+    paste /prepare-evidence brief-laned-docs-0f08
+    END
+
+- command: write-tests
+  node: brief-laned-tests-0f06
+  block: |
+    NEXT brief-laned-tests-0f06 brief-open
+    paste /write-tests brief-laned-tests-0f06
+    action consider whether this lane deserves a patch market — the brief carries no `## Strategy tension` section
+    END
+
+- command: propose-patches
+  node: brief-patch-open-1a05
+  block: |
+    NEXT brief-patch-open-1a05 brief-market
+    paste /compare-patches brief-patch-open-1a05
+    template /synthesize-patches brief-patch-open-1a05 "<patch-ids>" "<instruction>"
+    END
+
+# Same node as propose-patches: synthesize-patches leaves the market open and
+# uncompared, so the graph state — and therefore the printed block — is the same
+# one. Recorded separately because the coverage leg reads the `command` set.
+- command: synthesize-patches
+  node: brief-patch-open-1a05
+  block: |
+    NEXT brief-patch-open-1a05 brief-market
+    paste /compare-patches brief-patch-open-1a05
+    template /synthesize-patches brief-patch-open-1a05 "<patch-ids>" "<instruction>"
+    END
+
+- command: compare-patches
+  node: brief-patch-compared-1a09
+  block: |
+    NEXT brief-patch-compared-1a09 brief-market
+    template /select-patch patch-compared-alpha-1a0a "<rationale>"
+    template /select-patch patch-compared-beta-1a0b "<rationale>"
+    END
+
+# select-patch.md tells the agent to run `pnpm spec:status <brief-id>`, so this is
+# the block it actually prints. REGENERATED 2026-07-30: the block previously recorded
+# here was `paste /implement-brief brief-patch-won-1a0d` plus the patch-market
+# judgement reminder — the pre-fix output, where a brief whose market already had a
+# `selects`-ed winner fell through to /implement-brief and reprinted work the winning
+# patch had already done. `tools/conveyor.ts` now routes a RESOLVED market to
+# /prepare-evidence, so the brief's block and the winning patch's block below agree.
+- command: select-patch
+  node: brief-patch-won-1a0d
+  block: |
+    NEXT brief-patch-won-1a0d brief-market
+    paste /prepare-evidence brief-patch-won-1a0d
+    END
+
+# Behaviour 2.8, asked of the PATCH: the winner resolves to /prepare-evidence with
+# the BRIEF id, through `competes-for` — never a branch name.
+- command: select-patch
+  node: patch-won-alpha-1a0e
+  block: |
+    NEXT patch-won-alpha-1a0e patch-selected
+    paste /prepare-evidence brief-patch-won-1a0d
+    END
+
+# prepare-evidence.md resolves for <brief-id>. REGENERATED 2026-07-30: the block
+# previously recorded here was `paste /prepare-evidence brief-laned-backend-0f05` —
+# the pre-fix output, where a brief already carrying FINAL evidence printed stage
+# `brief-evidenced` beside a step telling the operator to prepare that same evidence
+# again (stage and step disagreeing). `tools/conveyor.ts` now consults final evidence
+# BEFORE status, so an evidenced brief routes through its contract's coverage: the
+# outstanding siblings' own steps, which is why this block equals the one recorded for
+# `evidence-laned-backend-0f07` below.
+- command: prepare-evidence
+  node: brief-laned-backend-0f05
+  block: |
+    NEXT brief-laned-backend-0f05 brief-evidenced
+    paste /prepare-evidence brief-laned-docs-0f08
+    paste /write-tests brief-laned-tests-0f06
+    action consider whether this lane deserves a patch market — the brief carries no `## Strategy tension` section
+    END
+
+# The same lane asked of its EVIDENCE: a final evidence with siblings outstanding
+# routes to the blocking lanes, never to integration (A5).
+- command: prepare-evidence
+  node: evidence-laned-backend-0f07
+  block: |
+    NEXT evidence-laned-backend-0f07 evidence-final
+    paste /prepare-evidence brief-laned-docs-0f08
+    paste /write-tests brief-laned-tests-0f06
+    action consider whether this lane deserves a patch market — the brief carries no `## Strategy tension` section
+    END
+
+# integrate.md resolves for <contract-id>: every live lane carries final evidence
+# and no integration covers them all, so the contract completes only via /integrate.
+- command: integrate
+  node: contract-done-1c02
+  block: |
+    NEXT contract-done-1c02 contract-decomposed
+    paste /integrate contract-done-1c02
+    END
+
+# The integration node itself, once final: the terminal PR action.
+- command: integrate
+  node: integration-done-1c09
+  block: |
+    NEXT integration-done-1c09 integration-final
+    action open or update the PR for this change — the integration is final
+    END

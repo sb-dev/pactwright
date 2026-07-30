@@ -1,1 +1,3 @@
 [rule: indexes-fresh] indexes drifted: by-type.yaml
+[rule: indexes-fresh] indexes drifted: status.md
+[rule: indexes-fresh] indexes drifted: trails.md

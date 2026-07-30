@@ -1,0 +1,273 @@
+# The recorded graph's relationships. Arrows point backwards in time, from the
+# newer record to what it is about. Every node is dated 2026-06-11 so both dated
+# gates are grandfathered — see specs/schema/validation-rules.yaml.
+edges:
+  # Trail B — a class-3 proposal market with no comparison yet.
+  - id: edge-market-alpha-0b11
+    source: contract-market-alpha-0b02
+    type: proposes
+    target: intent-market-0b01
+    created: 2026-06-11
+  - id: edge-market-beta-0b12
+    source: contract-market-beta-0b03
+    type: proposes
+    target: intent-market-0b01
+    created: 2026-06-11
+
+  # Trail C — a class-3 market whose comparison covers both live candidates.
+  - id: edge-review-alpha-0c11
+    source: contract-review-alpha-0c02
+    type: proposes
+    target: intent-review-0c01
+    created: 2026-06-11
+  - id: edge-review-beta-0c12
+    source: contract-review-beta-0c03
+    type: proposes
+    target: intent-review-0c01
+    created: 2026-06-11
+  - id: edge-review-cmp-alpha-0c13
+    source: comparison-review-0c04
+    type: compares
+    target: contract-review-alpha-0c02
+    created: 2026-06-11
+  - id: edge-review-cmp-beta-0c14
+    source: comparison-review-0c04
+    type: compares
+    target: contract-review-beta-0c03
+    created: 2026-06-11
+
+  # Trail D — a class-1 contract with one unlaned brief.
+  - id: edge-single-proposes-0d11
+    source: contract-single-0d02
+    type: proposes
+    target: intent-single-0d01
+    created: 2026-06-11
+  - id: edge-single-selects-0d12
+    source: decision-single-0d03
+    type: selects
+    target: contract-single-0d02
+    created: 2026-06-11
+  - id: edge-single-decomposes-0d13
+    source: brief-single-0d04
+    type: decomposes
+    target: contract-single-0d02
+    created: 2026-06-11
+
+  # Trail E — an approved class-3 contract with no brief yet.
+  - id: edge-lanes-proposes-0e11
+    source: contract-lanes-0e02
+    type: proposes
+    target: intent-lanes-0e01
+    created: 2026-06-11
+  - id: edge-lanes-alt-proposes-0e12
+    source: contract-lanes-alt-0e03
+    type: proposes
+    target: intent-lanes-0e01
+    created: 2026-06-11
+  - id: edge-lanes-selects-0e13
+    source: decision-lanes-0e04
+    type: selects
+    target: contract-lanes-0e02
+    created: 2026-06-11
+
+  # Trail F — two lanes in flight: backend implemented and evidenced, tests draft.
+  - id: edge-laned-proposes-0f11
+    source: contract-laned-0f02
+    type: proposes
+    target: intent-laned-0f01
+    created: 2026-06-11
+  - id: edge-laned-alt-proposes-0f12
+    source: contract-laned-alt-0f03
+    type: proposes
+    target: intent-laned-0f01
+    created: 2026-06-11
+  - id: edge-laned-selects-0f13
+    source: decision-laned-0f04
+    type: selects
+    target: contract-laned-0f02
+    created: 2026-06-11
+  - id: edge-laned-backend-0f14
+    source: brief-laned-backend-0f05
+    type: decomposes
+    target: contract-laned-0f02
+    created: 2026-06-11
+  - id: edge-laned-tests-0f15
+    source: brief-laned-tests-0f06
+    type: decomposes
+    target: contract-laned-0f02
+    created: 2026-06-11
+  - id: edge-laned-docs-0f17
+    source: brief-laned-docs-0f08
+    type: decomposes
+    target: contract-laned-0f02
+    created: 2026-06-11
+  - id: edge-laned-evidences-0f16
+    source: evidence-laned-backend-0f07
+    type: evidences
+    target: brief-laned-backend-0f05
+    created: 2026-06-11
+
+  # Trail G — three lane briefs of one class-2 contract, each at a different
+  # point in its patch market.
+  - id: edge-patch-proposes-1a11
+    source: contract-patch-1a02
+    type: proposes
+    target: intent-patch-1a01
+    created: 2026-06-11
+  - id: edge-patch-alt-proposes-1a12
+    source: contract-patch-alt-1a03
+    type: proposes
+    target: intent-patch-1a01
+    created: 2026-06-11
+  - id: edge-patch-selects-1a13
+    source: decision-patch-1a04
+    type: selects
+    target: contract-patch-1a02
+    created: 2026-06-11
+  - id: edge-patch-open-brief-1a14
+    source: brief-patch-open-1a05
+    type: decomposes
+    target: contract-patch-1a02
+    created: 2026-06-11
+  - id: edge-patch-open-alpha-1a15
+    source: patch-open-alpha-1a06
+    type: competes-for
+    target: brief-patch-open-1a05
+    created: 2026-06-11
+  - id: edge-patch-open-beta-1a16
+    source: patch-open-beta-1a07
+    type: competes-for
+    target: brief-patch-open-1a05
+    created: 2026-06-11
+  - id: edge-patch-open-synth-1a17
+    source: patch-open-synthesis-1a08
+    type: competes-for
+    target: brief-patch-open-1a05
+    created: 2026-06-11
+  - id: edge-patch-synth-alpha-1a18
+    source: patch-open-synthesis-1a08
+    type: synthesizes
+    target: patch-open-alpha-1a06
+    created: 2026-06-11
+  - id: edge-patch-synth-beta-1a19
+    source: patch-open-synthesis-1a08
+    type: synthesizes
+    target: patch-open-beta-1a07
+    created: 2026-06-11
+  - id: edge-patch-cmp-brief-1a1a
+    source: brief-patch-compared-1a09
+    type: decomposes
+    target: contract-patch-1a02
+    created: 2026-06-11
+  - id: edge-patch-cmp-alpha-1a1b
+    source: patch-compared-alpha-1a0a
+    type: competes-for
+    target: brief-patch-compared-1a09
+    created: 2026-06-11
+  - id: edge-patch-cmp-beta-1a1c
+    source: patch-compared-beta-1a0b
+    type: competes-for
+    target: brief-patch-compared-1a09
+    created: 2026-06-11
+  - id: edge-patch-cmp-covers-alpha-1a1d
+    source: comparison-patch-1a0c
+    type: compares
+    target: patch-compared-alpha-1a0a
+    created: 2026-06-11
+  - id: edge-patch-cmp-covers-beta-1a1e
+    source: comparison-patch-1a0c
+    type: compares
+    target: patch-compared-beta-1a0b
+    created: 2026-06-11
+  - id: edge-patch-won-brief-1a1f
+    source: brief-patch-won-1a0d
+    type: decomposes
+    target: contract-patch-1a02
+    created: 2026-06-11
+  - id: edge-patch-won-alpha-1b11
+    source: patch-won-alpha-1a0e
+    type: competes-for
+    target: brief-patch-won-1a0d
+    created: 2026-06-11
+  - id: edge-patch-won-beta-1b12
+    source: patch-won-beta-1a0f
+    type: competes-for
+    target: brief-patch-won-1a0d
+    created: 2026-06-11
+  - id: edge-patch-won-covers-alpha-1b13
+    source: comparison-patchwon-1b01
+    type: compares
+    target: patch-won-alpha-1a0e
+    created: 2026-06-11
+  - id: edge-patch-won-covers-beta-1b14
+    source: comparison-patchwon-1b01
+    type: compares
+    target: patch-won-beta-1a0f
+    created: 2026-06-11
+  - id: edge-patch-won-selects-1b15
+    source: decision-patchwon-1b02
+    type: selects
+    target: patch-won-alpha-1a0e
+    created: 2026-06-11
+  - id: edge-patch-won-supersedes-1b16
+    source: patch-won-alpha-1a0e
+    type: supersedes
+    target: patch-won-beta-1a0f
+    created: 2026-06-11
+
+  # Trail H — both lanes finally evidenced and covered by a final integration.
+  - id: edge-done-proposes-1c11
+    source: contract-done-1c02
+    type: proposes
+    target: intent-done-1c01
+    created: 2026-06-11
+  - id: edge-done-alt-proposes-1c12
+    source: contract-done-alt-1c03
+    type: proposes
+    target: intent-done-1c01
+    created: 2026-06-11
+  - id: edge-done-selects-1c13
+    source: decision-done-1c04
+    type: selects
+    target: contract-done-1c02
+    created: 2026-06-11
+  - id: edge-done-backend-1c14
+    source: brief-done-backend-1c05
+    type: decomposes
+    target: contract-done-1c02
+    created: 2026-06-11
+  - id: edge-done-tests-1c15
+    source: brief-done-tests-1c06
+    type: decomposes
+    target: contract-done-1c02
+    created: 2026-06-11
+  - id: edge-done-docs-1c1a
+    source: brief-done-docs-1c0a
+    type: decomposes
+    target: contract-done-1c02
+    created: 2026-06-11
+  - id: edge-done-ev-docs-1c1b
+    source: evidence-done-docs-1c0b
+    type: evidences
+    target: brief-done-docs-1c0a
+    created: 2026-06-11
+  - id: edge-done-ev-backend-1c16
+    source: evidence-done-backend-1c07
+    type: evidences
+    target: brief-done-backend-1c05
+    created: 2026-06-11
+  - id: edge-done-ev-tests-1c17
+    source: evidence-done-tests-1c08
+    type: evidences
+    target: brief-done-tests-1c06
+    created: 2026-06-11
+  - id: edge-done-int-backend-1c18
+    source: integration-done-1c09
+    type: integrates
+    target: evidence-done-backend-1c07
+    created: 2026-06-11
+  - id: edge-done-int-tests-1c19
+    source: integration-done-1c09
+    type: integrates
+    target: evidence-done-tests-1c08
+    created: 2026-06-11
