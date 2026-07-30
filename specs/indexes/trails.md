@@ -94,6 +94,33 @@ _none_
 _none_
 
 
+## intent-ci-gate-evidence-real-run-8f27 — Require evidence for a CI-gated artifact to cite a real CI run, not a local re-enactment (open)
+
+### contracts
+
+_none_
+
+### comparison
+
+_none_
+
+### decision
+
+_none_
+
+### briefs
+
+_none_
+
+### evidence
+
+_none_
+
+### integration
+
+_none_
+
+
 ## intent-claude-lifecycle-commands-f367 — Add Claude Code agents and slash commands covering every lifecycle step (addressed)
 
 ### contracts
