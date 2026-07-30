@@ -2,7 +2,7 @@ import { spawnSync } from "node:child_process";
 import * as path from "node:path";
 import { fileURLToPath } from "node:url";
 import { asString, compareStrings, loadSpec, nodesById, type LoadedSpec, type NodeRecord } from "./loader.ts";
-import { finalEvidenceForBrief, liveBriefsForContract } from "./handlers/coverage_traversal.ts";
+import { finalEvidenceForBrief, liveBriefsForContract, liveSourcesByEdge } from "./handlers/coverage_traversal.ts";
 
 /**
  * One-way graph → GitHub issue projection: one issue per lane brief, one parent per
@@ -112,14 +112,27 @@ function projectTitle(node: NodeRecord, nodeId: string): string {
   return lane === undefined ? title : `[${lane}] ${title}`;
 }
 
-/** Nodes that get an issue: every live lane brief, plus its contract as the parent. */
+/**
+ * Nodes that get an issue: every lane brief of a decomposed contract, plus its
+ * contract as the parent.
+ *
+ * The brief walk is deliberately STATUS-BLIND (an empty exclude list, never
+ * `undefined`, which would trigger `liveSourcesByEdge`'s `"superseded"` default).
+ * Using the live set here would drop a `superseded` brief from the target set BEFORE
+ * `shouldClose` could see it, making CC-4(3)'s collapsed-lane branch unreachable —
+ * a collapsed lane is superseded and never evidenced, so its issue would stay open
+ * forever. That is the whole reason the second half of CC-4(3) exists.
+ *
+ * `shouldClose` still uses the LIVE brief set for a contract's own coverage test: a
+ * collapsed lane must not hold its parent contract's issue open.
+ */
 function syncTargets(spec: LoadedSpec, byId: Map<string, NodeRecord>): string[] {
   const out = new Set<string>();
   for (const node of spec.nodes) {
     if (asString(node.data["type"]) !== "contract") continue;
     const contractId = asString(node.data["id"]);
     if (contractId === undefined) continue;
-    const briefs = liveBriefsForContract(spec, byId, contractId);
+    const briefs = liveSourcesByEdge(spec, byId, "decomposes", contractId, []);
     if (briefs.size === 0) continue;
     out.add(contractId);
     for (const b of briefs) out.add(b);

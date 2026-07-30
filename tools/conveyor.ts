@@ -500,16 +500,41 @@ function briefSteps(
   const status = asString(node.data["status"]);
   const lane = asString(node.data["lane"]);
 
-  // A7 (resolver half) — implementation now writes one graph state change, and the
+  // EVIDENCE FIRST — this ordering is load-bearing, not incidental. `deriveStage`
+  // consults final evidence before status, so testing `implemented` first here made
+  // an already-evidenced brief print stage `brief-evidenced` alongside a step of
+  // `/prepare-evidence` — stage and step disagreeing, and `/prepare-evidence`
+  // reprinting itself after it had already run. That is the very loop A7 exists to
+  // close, one step further along. An evidenced brief routes through its contract's
+  // coverage instead, where terminality is computed from the live lane set (A5).
+  if (finalEvidenceForBrief(spec, byId, id).size > 0) {
+    const evidencedContract = contractForBrief(spec, byId, id);
+    if (evidencedContract !== undefined) {
+      return contractCoverageSteps(spec, byId, evidencedContract, liveBriefsForContract(spec, byId, evidencedContract));
+    }
+    return [noStep(`brief ${id} carries final evidence but resolves to no single contract`)];
+  }
+
+  // A7 (resolver half) — implementation writes one graph state change, and the
   // resolver keys on it. This is what closes the loop where `/implement-brief`
-  // reprinted itself. Until `api-integration` ships the flip, this rule is
-  // unreachable in practice — a sequencing fact, not a reason to omit the rule.
+  // reprinted itself.
   if (status === "implemented") {
     return [pasteStep("prepare-evidence", [id], "brief is `implemented`; evidence is the next lifecycle record")];
   }
 
   const competitors = competingPatches(spec, byId, id);
   const marketOpen = competitors.size > 0 || node.data["patch_market"] === true;
+
+  // A RESOLVED market is not an absent one. A brief whose market has a `selects`-ed
+  // winner must not fall through to `/implement-brief` — its implementation is the
+  // winning patch, already written, so the next record is evidence. `select-patch.md`
+  // prints `spec:status <brief-id>`, so this is the branch that command actually
+  // reaches.
+  if (marketOpen && patchMarketResolved(spec, byId, id)) {
+    return [
+      pasteStep("prepare-evidence", [id], "this brief's patch market is resolved — a `selects` decision named its winner"),
+    ];
+  }
 
   if (marketOpen) {
     // 2.7 — a covering comparison exists and nothing is selected: enumerate, never rank.
