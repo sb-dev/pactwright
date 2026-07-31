@@ -2,7 +2,7 @@
 id: contract-unbacked-addressed-edge-5b71
 type: contract
 title: Unbacked `addressed` guard, with subsumption expressed as a `subsumes` edge (decision → intent)
-status: candidate
+status: approved
 created: 2026-07-30
 class: 2
 produced_by: "/propose-contracts"

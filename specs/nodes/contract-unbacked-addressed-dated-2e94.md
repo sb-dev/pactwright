@@ -2,7 +2,7 @@
 id: contract-unbacked-addressed-dated-2e94
 type: contract
 title: Unbacked `addressed` guard behind a dated `unbacked_addressed_from` cutoff (no new vocabulary)
-status: candidate
+status: rejected
 created: 2026-07-30
 class: 2
 produced_by: "/propose-contracts"

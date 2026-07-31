@@ -341,6 +341,9 @@ incoming:
     - id: edge-compares-unbacked-addressed-edge-3e7c
       source: comparison-unbacked-addressed-7c48
       type: compares
+    - id: edge-selects-unbacked-addressed-edge-4f2c
+      source: decision-unbacked-addressed-edge-9d3f
+      type: selects
   contract-unbacked-addressed-waiver-8d36:
     - id: edge-compares-unbacked-addressed-waiver-6a2f
       source: comparison-unbacked-addressed-7c48

@@ -523,9 +523,9 @@ _none_
 
 | id | title | status |
 |---|---|---|
-| `contract-unbacked-addressed-dated-2e94` | Unbacked `addressed` guard behind a dated `unbacked_addressed_from` cutoff (no new vocabulary) | candidate |
-| `contract-unbacked-addressed-edge-5b71` | Unbacked `addressed` guard, with subsumption expressed as a `subsumes` edge (decision → intent) | candidate |
-| `contract-unbacked-addressed-waiver-8d36` | Unbacked `addressed` guard, with the d4f2 exception as a signed expiring `override` | candidate |
+| `contract-unbacked-addressed-dated-2e94` | Unbacked `addressed` guard behind a dated `unbacked_addressed_from` cutoff (no new vocabulary) | rejected |
+| `contract-unbacked-addressed-edge-5b71` | Unbacked `addressed` guard, with subsumption expressed as a `subsumes` edge (decision → intent) | approved |
+| `contract-unbacked-addressed-waiver-8d36` | Unbacked `addressed` guard, with the d4f2 exception as a signed expiring `override` | rejected |
 
 ### comparison
 
@@ -535,7 +535,9 @@ _none_
 
 ### decision
 
-_none_
+| id | title | status |
+|---|---|---|
+| `decision-unbacked-addressed-edge-9d3f` | Select the `subsumes`-edge guard for unbacked `addressed` intents, with sixteen amendments | — |
 
 ### briefs
 

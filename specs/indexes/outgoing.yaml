@@ -286,6 +286,10 @@ outgoing:
     - id: edge-selects-schema-driven-7a12
       target: contract-spec-tooling-schema-driven-b2e7
       type: selects
+  decision-unbacked-addressed-edge-9d3f:
+    - id: edge-selects-unbacked-addressed-edge-4f2c
+      target: contract-unbacked-addressed-edge-5b71
+      type: selects
   decision-work-class-routing-4d7a:
     - id: edge-selects-work-class-validate-invariant-6a9c
       target: contract-work-class-validate-invariant-c3d4

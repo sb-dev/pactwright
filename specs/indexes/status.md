@@ -56,13 +56,12 @@ next:
 
 ## intent-unbacked-addressed-guard-8c4e — Flag intents marked `addressed` without edge-backed provenance
 
-stage: `intent-compared`
+stage: `intent-selected`
 
 next:
 
-- `/approve-contract contract-unbacked-addressed-dated-2e94 '<amendments>'` — _template_ — a comparison covers the live candidates and no `selects` decision exists yet
-- `/approve-contract contract-unbacked-addressed-edge-5b71 '<amendments>'` — _template_ — a comparison covers the live candidates and no `selects` decision exists yet
-- `/approve-contract contract-unbacked-addressed-waiver-8d36 '<amendments>'` — _template_ — a comparison covers the live candidates and no `selects` decision exists yet
+- `/write-brief contract-unbacked-addressed-edge-5b71` — _paste_ — class 2 does not require lanes; a single unlaned brief fits
+- `/decompose-lanes contract-unbacked-addressed-edge-5b71 '<lanes>'` — _template_ — alternative: class 2 permits lanes (optional)
 
 ## intent-wave-persistence-5c93 — Persist each lane brief's wave assignment as an optional `wave` frontmatter field
 

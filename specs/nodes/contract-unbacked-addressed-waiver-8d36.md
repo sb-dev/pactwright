@@ -2,7 +2,7 @@
 id: contract-unbacked-addressed-waiver-8d36
 type: contract
 title: Unbacked `addressed` guard, with the d4f2 exception as a signed expiring `override`
-status: candidate
+status: rejected
 created: 2026-07-30
 class: 2
 produced_by: "/propose-contracts"

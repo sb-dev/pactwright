@@ -769,3 +769,8 @@ edges:
     type: compares
     target: contract-unbacked-addressed-waiver-8d36
     created: 2026-07-31
+  - id: edge-selects-unbacked-addressed-edge-4f2c
+    source: decision-unbacked-addressed-edge-9d3f
+    type: selects
+    target: contract-unbacked-addressed-edge-5b71
+    created: 2026-07-31
