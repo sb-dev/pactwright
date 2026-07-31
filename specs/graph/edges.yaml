@@ -774,3 +774,8 @@ edges:
     type: selects
     target: contract-unbacked-addressed-edge-5b71
     created: 2026-07-31
+  - id: edge-decomposes-unbacked-addressed-edge-8d41
+    source: brief-unbacked-addressed-edge-6b73
+    type: decomposes
+    target: contract-unbacked-addressed-edge-5b71
+    created: 2026-07-31

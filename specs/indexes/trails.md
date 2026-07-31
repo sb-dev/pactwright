@@ -541,7 +541,9 @@ _none_
 
 ### briefs
 
-_none_
+| id | title | status | lane | owner |
+|---|---|---|---|---|
+| `brief-unbacked-addressed-edge-6b73` | Implement the unbacked-addressed guard — singleton-market backing, the `subsumes` edge type, and its trail section | draft | — | — |
 
 ### evidence
 

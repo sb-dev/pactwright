@@ -19,6 +19,7 @@ by-type:
     - brief-patch-market-schema-a4d1
     - brief-patch-market-tests-f6c7
     - brief-spec-tooling-schema-driven-8f2d
+    - brief-unbacked-addressed-edge-6b73
     - brief-work-class-routing-9a1c
     - brief-write-tests-flip-4e19
   capability:

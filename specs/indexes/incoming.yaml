@@ -341,6 +341,9 @@ incoming:
     - id: edge-compares-unbacked-addressed-edge-3e7c
       source: comparison-unbacked-addressed-7c48
       type: compares
+    - id: edge-decomposes-unbacked-addressed-edge-8d41
+      source: brief-unbacked-addressed-edge-6b73
+      type: decomposes
     - id: edge-selects-unbacked-addressed-edge-4f2c
       source: decision-unbacked-addressed-edge-9d3f
       type: selects

@@ -75,6 +75,10 @@ outgoing:
     - id: edge-decomposes-spec-tooling-3c91
       target: contract-spec-tooling-schema-driven-b2e7
       type: decomposes
+  brief-unbacked-addressed-edge-6b73:
+    - id: edge-decomposes-unbacked-addressed-edge-8d41
+      target: contract-unbacked-addressed-edge-5b71
+      type: decomposes
   brief-work-class-routing-9a1c:
     - id: edge-decomposes-work-class-routing-b3e2
       target: contract-work-class-validate-invariant-c3d4
