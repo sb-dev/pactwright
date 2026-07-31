@@ -529,7 +529,9 @@ _none_
 
 ### comparison
 
-_none_
+| id | title | status |
+|---|---|---|
+| `comparison-unbacked-addressed-7c48` | Unbacked `addressed` guard — three exception mechanisms compared across ten routed perspectives | — |
 
 ### decision
 

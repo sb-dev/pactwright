@@ -110,6 +110,16 @@ outgoing:
     - id: edge-compares-patch-market-validate-authoritative-4d2a
       target: contract-patch-market-validate-authoritative-9d41
       type: compares
+  comparison-unbacked-addressed-7c48:
+    - id: edge-compares-unbacked-addressed-dated-5b0d
+      target: contract-unbacked-addressed-dated-2e94
+      type: compares
+    - id: edge-compares-unbacked-addressed-edge-3e7c
+      target: contract-unbacked-addressed-edge-5b71
+      type: compares
+    - id: edge-compares-unbacked-addressed-waiver-6a2f
+      target: contract-unbacked-addressed-waiver-8d36
+      type: compares
   comparison-write-tests-market-6e83:
     - id: edge-compares-write-tests-derived-4c7d
       target: contract-write-tests-derived-9c48

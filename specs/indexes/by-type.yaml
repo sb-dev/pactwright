@@ -32,6 +32,7 @@ by-type:
     - comparison-conveyor-market-890e
     - comparison-lane-integration-8d3c
     - comparison-patch-market-synthesis-7b1d
+    - comparison-unbacked-addressed-7c48
     - comparison-write-tests-market-6e83
   contract:
     - contract-ci-gate-checks-as-nodes-2d49

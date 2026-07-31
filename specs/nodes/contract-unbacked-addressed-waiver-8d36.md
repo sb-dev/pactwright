@@ -187,3 +187,70 @@ of check identifiers" and lists `ci`, `spec-index`, `spec-validate`, `pr-evidenc
    sensitive-paths gate needs the approved contract link and the
    `touches → capability-spec-schema-2c3d` edge in the **same** diff. *Mitigation:* pinned as
    within-PR ordering in the brief.
+
+## Critique (spec)
+
+Concern. C generalizes the waiver namespace without generalizing the mechanism — every rule id
+becomes waivable and resolvable while only the new handler honours a waiver — and the two-edge
+idiom bounds the subject but not the cardinality. Full finding in
+`comparison-unbacked-addressed-7c48`.
+
+## Critique (security-privacy)
+
+Concern. C's waiver is the first override consumer that is not diff-scoped — `gate.ts:106`,
+`checkdiff.ts:47` and `patch_gate.ts:55` all require the override in `addedNodeIds`, C requires
+nothing — so once the first override merges, a later PR widens it to another intent with one
+`waives` edge in `edges.yaml`, untouched by `/specs/nodes/override-*` review. Full finding in
+`comparison-unbacked-addressed-7c48`.
+
+## Critique (compliance-risk)
+
+Concern. C mis-states its own blast radius: no validation handler reads overrides, so the registry
+extension yields legible, indexed waivers that waive nothing — records asserting exemptions never
+granted. Full finding in `comparison-unbacked-addressed-7c48`.
+
+## Critique (architecture)
+
+Concern. `today: string` on `LoadedSpec` is a non-optional field on the struct 18 test files build
+as object literals, and it relocates the clock from the PR-scoped gate boundary into the shared
+loader — the opposite seam from the `GateInput.today` C cites as its precedent. Full finding in
+`comparison-unbacked-addressed-7c48`.
+
+## Critique (ux)
+
+Concern. The expired-override finding is specified without the intent id and `formatFinding` drops
+`subject`, so on the day it fires the operator reads a red line naming an override and two dates
+but never the intent it excuses. Full finding in `comparison-unbacked-addressed-7c48`.
+
+## Critique (qa-test)
+
+Concern. Acceptance 4's "no `new Date(` under `tools/handlers/`" grep is satisfied by putting the
+clock in `tools/loader.ts`, so every CLI-driven test still reads the wall clock. Full finding in
+`comparison-unbacked-addressed-7c48`.
+
+## Critique (product)
+
+Concern. C excuses one node by making every validation rule waivable — including the
+`class-market-quorum` backstop CLAUDE.md calls unbypassable — and its headline "cannot quietly
+become permanent" property is untested and unbounded against renewal. Full finding in
+`comparison-unbacked-addressed-7c48`.
+
+## Critique (reliability-ops)
+
+Concern. C does not mirror `GateInput.today` but inverts it: all three existing expiry consumers
+are scoped to `addedNodeIds`, so a lapsed override is inert today, whereas C makes one a dated
+repo-wide required-check failure that cannot be revoked or switched off in a single edit. Full
+finding in `comparison-unbacked-addressed-7c48`.
+
+## Critique (release)
+
+Concern. The existing override-expiry precedents (`gate.ts:114`, `checkdiff.ts:55`) are diff-scoped
+and die with their PR, whereas C's override is re-read by every `spec:validate` forever and reds
+`main` unattended on 2027-01-31 with no warning and no named renewer. Full finding in
+`comparison-unbacked-addressed-7c48`.
+
+## Critique (cost-maintainability)
+
+Concern. C generalizes the `waives` registry to make every current and future validation rule
+waivable forever, and makes `spec:validate` time-dependent so a green graph reds with no commit.
+Full finding in `comparison-unbacked-addressed-7c48`.

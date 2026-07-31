@@ -754,3 +754,18 @@ edges:
     type: proposes
     target: intent-unbacked-addressed-guard-8c4e
     created: 2026-07-30
+  - id: edge-compares-unbacked-addressed-edge-3e7c
+    source: comparison-unbacked-addressed-7c48
+    type: compares
+    target: contract-unbacked-addressed-edge-5b71
+    created: 2026-07-31
+  - id: edge-compares-unbacked-addressed-dated-5b0d
+    source: comparison-unbacked-addressed-7c48
+    type: compares
+    target: contract-unbacked-addressed-dated-2e94
+    created: 2026-07-31
+  - id: edge-compares-unbacked-addressed-waiver-6a2f
+    source: comparison-unbacked-addressed-7c48
+    type: compares
+    target: contract-unbacked-addressed-waiver-8d36
+    created: 2026-07-31

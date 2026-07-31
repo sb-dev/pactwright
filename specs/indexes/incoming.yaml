@@ -333,6 +333,18 @@ incoming:
     - id: edge-selects-schema-driven-7a12
       source: decision-spec-tooling-schema-driven-5e8c
       type: selects
+  contract-unbacked-addressed-dated-2e94:
+    - id: edge-compares-unbacked-addressed-dated-5b0d
+      source: comparison-unbacked-addressed-7c48
+      type: compares
+  contract-unbacked-addressed-edge-5b71:
+    - id: edge-compares-unbacked-addressed-edge-3e7c
+      source: comparison-unbacked-addressed-7c48
+      type: compares
+  contract-unbacked-addressed-waiver-8d36:
+    - id: edge-compares-unbacked-addressed-waiver-6a2f
+      source: comparison-unbacked-addressed-7c48
+      type: compares
   contract-work-class-validate-invariant-c3d4:
     - id: edge-decomposes-work-class-routing-b3e2
       source: brief-work-class-routing-9a1c

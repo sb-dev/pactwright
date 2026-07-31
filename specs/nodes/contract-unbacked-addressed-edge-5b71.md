@@ -172,3 +172,68 @@ The shared core, identical in A, B and C:
    sensitive-paths gate needs the approved contract link and the
    `touches → capability-spec-schema-2c3d` edge in the **same** diff. *Mitigation:* pinned as
    within-PR ordering in the brief.
+
+## Critique (spec)
+
+Concern. The one `subsumes` edge A ships anchors d4f2 on `evidence-lane-integration-9b4c` — the
+very "evidence body that evidences a DIFFERENT intent" the parent intent names as the
+anti-pattern — and Scope 1 re-derives a coverage verdict Out-of-scope 1 forbids. Full finding in
+`comparison-unbacked-addressed-7c48`.
+
+## Critique (security-privacy)
+
+Concern. The escape is a one-line `edges.yaml` addition reusing any already-merged decision that
+selected covered work, and `specs/graph/` matches no CODEOWNERS rule and no `sensitive_paths`
+glob, so the human-in-the-loop A claims in Trade-off 5 does not exist for the operation that
+grants the exception. Full finding in `comparison-unbacked-addressed-7c48`.
+
+## Critique (compliance-risk)
+
+Concern. The escape hatch lands in `specs/graph/edges.yaml`, which `.github/CODEOWNERS` does not
+cover, so A's stated human-in-the-loop mitigation does not fire in the case it is meant to cover.
+Full finding in `comparison-unbacked-addressed-7c48`.
+
+## Critique (architecture)
+
+Concern. `subsumes` declares as one edge the endpoint of the existing
+decision —selects→ contract —proposes→ intent chain, and `serializeTrails` (`tools/indexer.ts:182-189`)
+reads only that chain — so the exception A calls "queryable" still renders `_none_` in every
+section of d4f2's `trails.md` entry. Full finding in `comparison-unbacked-addressed-7c48`.
+
+## Critique (ux)
+
+Concern. The exception lands only in machine-shaped `incoming.yaml`/`outgoing.yaml` while
+`trails.md`'s d4f2 section still prints six `_none_` blocks, so the reader's first stop is
+unchanged and now actively wrong. Full finding in `comparison-unbacked-addressed-7c48`.
+
+## Critique (qa-test)
+
+Concern. Acceptance 4's fixture proves endpoint enforcement only against that fixture's own schema
+copy, so a typo'd real `subsumes` declaration ships unenforced and green. Full finding in
+`comparison-unbacked-addressed-7c48`.
+
+## Critique (product)
+
+Concern. A's escape hatch is one line in `specs/graph/edges.yaml` sourced from any existing
+decision — a path no CODEOWNERS rule covers — so it converts a prose excuse into a typed excuse
+without raising the cost of issuing one. Full finding in `comparison-unbacked-addressed-7c48`.
+
+## Critique (reliability-ops)
+
+Concern. The escape hatch is entirely unreviewed and untraceable — `.github/CODEOWNERS` has no
+entry for `/specs/graph/`, so authoring a `subsumes` edge from an already-merged decision is a
+one-line unreviewed edit and withdrawing one is a delete that leaves no record. Full finding in
+`comparison-unbacked-addressed-7c48`.
+
+## Critique (release)
+
+Concern. The `subsumes` edge is undeclarable after a code revert, so a `git revert` that leaves it
+in `edges.yaml` reds `edges-type-declared` on every later run, and A's rollback is an unstated
+three-artifact, two-actor operation. Full finding in `comparison-unbacked-addressed-7c48`.
+
+## Critique (cost-maintainability)
+
+Concern. A ships a permanent, unexpiring new edge type (`subsumes`) that every future reader, agent
+and tool must learn, with no cap on reuse — and is not the cheapest to delete, since retiring the
+type means first proving no other `subsumes` edge exists anywhere. Full finding in
+`comparison-unbacked-addressed-7c48`.

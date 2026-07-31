@@ -167,3 +167,70 @@ B adds a fifth clause: the rule is **dated**, and the date is the whole exceptio
    sensitive-paths gate needs the approved contract link and the
    `touches → capability-spec-schema-2c3d` edge in the **same** diff. *Mitigation:* pinned as
    within-PR ordering in the brief.
+
+## Critique (spec)
+
+Concern. Acceptance 2 and the shipped schema comment are false on the live graph (the `2026-06-12`
+cutoff grandfathers two addressed intents, not one), and keying on the intent's `created` leaves
+the zero-edge open intent `intent-docs-arrow-lint-e7b3` permanently exempt. Full finding in
+`comparison-unbacked-addressed-7c48`.
+
+## Critique (security-privacy)
+
+Concern. B's Behaviour 5 ("there is no escape clause") is contradicted by its own Behaviour 2,
+which skips any addressed intent whose `created` fails `toDateString`, so a one-character
+malformation in an intent file — a path no CODEOWNERS rule covers — silently exempts that intent on
+a green graph. Full finding in `comparison-unbacked-addressed-7c48`.
+
+## Critique (compliance-risk)
+
+Concern. No query over the graph has "d4f2" as its answer, and the cutoff exempts two live
+addressed intents from evaluation rather than the one its acceptance names. Full finding in
+`comparison-unbacked-addressed-7c48`.
+
+## Critique (architecture)
+
+Concern. The third `_from` scalar grandfathers on a different node's `created` than the two
+precedents it cites, so it is a third hand-copy of a fail-open idiom that an open finding
+(`intent-malformed-cutoff-finding-b3d7`) already names as defective, not a third use of one
+mechanism. Full finding in `comparison-unbacked-addressed-7c48`.
+
+## Critique (ux)
+
+Concern. The exemption is invisible in every operator surface — no finding, no index entry, and a
+green `spec:validate` line that reads identically whether the guard ran or a one-character typo
+disabled it. Full finding in `comparison-unbacked-addressed-7c48`.
+
+## Critique (qa-test)
+
+Concern. Acceptance 2's "grandfathers exactly one addressed intent" is already false on today's
+graph — `intent-spec-index-validate-a3f1` is also `addressed` and `created: 2026-06-11`. Full
+finding in `comparison-unbacked-addressed-7c48`.
+
+## Critique (product)
+
+Concern. The cutoff keys on the intent's `created`, leaving `intent-docs-arrow-lint-e7b3`
+(`2026-06-11`, open, zero incoming edges) permanently flippable to `addressed` with the guard
+silent, while Acceptance 2's named-set test is scoped to today's addressed intents and passes
+either way. Full finding in `comparison-unbacked-addressed-7c48`.
+
+## Critique (reliability-ops)
+
+Concern. B ships three zero-output silent-disable paths — malformed scalar, malformed intent
+`created`, backdated `created` — two of which its own acceptance pins as correct behaviour, and it
+has no bounded break-glass when the rule false-positives. Full finding in
+`comparison-unbacked-addressed-7c48`.
+
+## Critique (release)
+
+Concern. `unbacked_addressed_from: "2026-06-12"` grandfathers TWO live addressed intents
+(`intent-status-coherence-d4f2` and `intent-spec-index-validate-a3f1`, both `created: 2026-06-11`),
+so B's Acceptance 2 named-set test reds on day one and no cutoff value can fix it. Full finding in
+`comparison-unbacked-addressed-7c48`.
+
+## Critique (cost-maintainability)
+
+Concern. B adds a third dated fail-open scalar to the exact surface
+`intent-malformed-cutoff-finding-b3d7` already flags as broken, without fixing it — and authors
+four loader assertions whose purpose is to be reversed when that intent lands. Full finding in
+`comparison-unbacked-addressed-7c48`.
