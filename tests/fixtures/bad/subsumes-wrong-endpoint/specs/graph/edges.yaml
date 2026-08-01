@@ -1,0 +1,10 @@
+edges:
+  # brief —subsumes→ intent. The type IS declared in this fixture's edge-types.yaml
+  # copy (an undeclared type is skipped by edge_endpoint_types), and the target IS a
+  # valid intent — so the only thing wrong is the source type, which is what the
+  # pinned error names.
+  - id: edge-subwrong-9c01
+    source: brief-subwrong-2222
+    type: subsumes
+    target: intent-subwrong-1111
+    created: 2026-07-01

@@ -119,6 +119,12 @@ for (const name of [
   "patch-synthesis-one-parent",
   "patch-status-merged",
   "competes-for-bad-endpoints",
+  // Amendment 9: this array is the ONLY enumeration of bad fixtures — there is no
+  // readdirSync over tests/fixtures/bad anywhere in the repo, so a fixture omitted
+  // here sits on disk and is silently never run. Both entries below are new; add
+  // every future fixture directory name here in the same commit that creates it.
+  "unbacked-addressed",
+  "subsumes-wrong-endpoint",
 ]) {
   test(`bad/${name}: validate fails with the pinned errors`, (t) => {
     const dir = copyFixture(t, `bad/${name}`);

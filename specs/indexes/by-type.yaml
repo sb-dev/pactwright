@@ -78,6 +78,7 @@ by-type:
     - decision-patch-market-ci-gate-8a2f
     - decision-root-vcs-config-unowned-9f26
     - decision-spec-tooling-schema-driven-5e8c
+    - decision-status-coherence-subsumed-3c7e
     - decision-unbacked-addressed-edge-9d3f
     - decision-work-class-routing-4d7a
     - decision-write-tests-flip-7f14

@@ -41,7 +41,12 @@ test("dispatch-pinning: new kinds dispatch (never 'unknown kind')", () => {
     checks: [],
     sensitivePaths: [],
   });
-  for (const kind of ["closed_key_set", "coverage_coherence"]) {
+  // This loop is the REAL dispatch oracle for a new kind: it is hard-coded and does
+  // not enumerate HANDLERS, and `bad/dispatch-all-kinds` deliberately does not carry
+  // `unbacked_addressed` (its two-sided pin reds both when an unmapped rule fires and
+  // when a mapped key does not). A kind missing from HANDLERS surfaces here as an
+  // "unknown kind" finding rather than as a crash.
+  for (const kind of ["closed_key_set", "coverage_coherence", "unbacked_addressed"]) {
     const findings = runValidation(base([{ id: `r-${kind}`, kind }]));
     assert.ok(!findings.some((f) => /unknown kind/.test(f.detail)), `${kind} must be registered in HANDLERS`);
   }

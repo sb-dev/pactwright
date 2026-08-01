@@ -1,0 +1,14 @@
+edges:
+  # Live `proposes` edges, and deliberately NO `selects` edge anywhere in the graph.
+  # `coverage-coherence` opens with a `selects` scan and is therefore structurally
+  # blind to this intent; `unbacked-addressed` walks addressed intents and reaches it.
+  - id: edge-prop-unbacked-a-9b01
+    source: contract-unbacked-a222
+    type: proposes
+    target: intent-unbacked-1111
+    created: 2026-07-01
+  - id: edge-prop-unbacked-b-9b02
+    source: contract-unbacked-b333
+    type: proposes
+    target: intent-unbacked-1111
+    created: 2026-07-01

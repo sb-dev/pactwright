@@ -138,6 +138,81 @@ export function intentsForContract(spec: LoadedSpec, contractId: string): string
   return [...out];
 }
 
+/** Contract ids some `decision` has `selects`-ed. THE authoritative spelling of
+ * "selected" for every rule that needs one (A8): both endpoints resolve through
+ * `byId` and both are type-checked, so a `selects` edge whose source id does not
+ * resolve confers nothing here. That edge is already an `edges-references-resolve`
+ * finding, and rule order alone must not decide backing — `runValidation` never
+ * short-circuits, so an earlier rule REPORTS an unresolved endpoint without
+ * removing it.
+ *
+ * Two spellings of this walk were available and they are NOT equivalent: a raw
+ * `selects`-target scan (the function-local const this replaces) and this resolving
+ * walk disagree on an edge with a typo'd decision id — raw says "selected", resolving
+ * says "not selected". Every "no double-report" acceptance criterion rests on
+ * `unbacked-addressed` and `coverage-coherence` meaning the SAME thing by selected,
+ * so the choice is made once, here, and both rules call it.
+ *
+ * The target type-check also filters `selects → patch`, which `coverage_coherence.ts`
+ * handles after the fact at its own walk. STATUS-BLIND on purpose: "was it selected"
+ * is a historical fact; liveness is the caller's concern. */
+export function selectedContracts(spec: LoadedSpec, byId: Map<string, NodeRecord>): Set<string> {
+  const out = new Set<string>();
+  for (const edge of spec.edges) {
+    if (asString(edge["type"]) !== "selects") continue;
+    const sourceId = asString(edge["source"]);
+    if (sourceId === undefined) continue;
+    const source = byId.get(sourceId);
+    if (source === undefined) continue; // unresolved: references_resolve owns it
+    if (asString(source.data["type"]) !== "decision") continue;
+    const targetId = asString(edge["target"]);
+    if (targetId === undefined) continue;
+    const target = byId.get(targetId);
+    if (target === undefined) continue; // unresolved: references_resolve owns it
+    if (asString(target.data["type"]) !== "contract") continue; // selects → patch
+    out.add(targetId);
+  }
+  return out;
+}
+
+/** Live contract ids that BACK the intent: selected, live, `proposes` it — AND
+ * marketing NOTHING ELSE. The singleton clause is the whole of A6 and is why this
+ * is one named function rather than an inlined intersection.
+ *
+ * Why singleton: a `selects` edge names a CONTRACT, not an intent, so it can only be
+ * read as endorsing an intent when the contract markets exactly one. Without the
+ * clause, backing is satisfied by any live contract that both proposes the intent and
+ * is a `selects` target ANYWHERE in the graph — and `proposes` carries no cardinality
+ * constraint (`specs/schema/edge-types.yaml`), while `specs/graph/edges.yaml` is
+ * reached by no `.github/CODEOWNERS` rule and no `sensitive_paths` glob. One appended
+ * line from any already-selected contract would then back any intent, which is cheaper
+ * than the `subsumes` escape hatch (that needs a `decision-*` node, a CODEOWNERS-covered
+ * path). With the clause, that same appended line costs the laundering contract its OWN
+ * previously-green intent: the market becomes ambiguous and BOTH intents red.
+ *
+ * `intentsForContract` dedups via a `Set`, so duplicate `proposes` triples do not break
+ * singleton-ness. `liveProposingContracts` already excludes `superseded` sources.
+ *
+ * Honest bound: the remaining grant path is a NEW `specs/nodes/contract-*.md` proposing
+ * only the target intent plus a `selects` edge. `.github/CODEOWNERS` covers the contract
+ * file; the edge half is unreviewed. `class-market-quorum` raises the class-2+ case to
+ * two reviewed contract files. Nothing counts or caps how often this is done. */
+export function backingContracts(
+  spec: LoadedSpec,
+  byId: Map<string, NodeRecord>,
+  intentId: string,
+): Set<string> {
+  const selected = selectedContracts(spec, byId);
+  const backing = new Set<string>();
+  for (const contractId of liveProposingContracts(spec, byId, intentId)) {
+    if (!selected.has(contractId)) continue;
+    const markets = intentsForContract(spec, contractId);
+    if (markets.length !== 1 || markets[0] !== intentId) continue; // ambiguous market: backs neither
+    backing.add(contractId);
+  }
+  return backing;
+}
+
 /**
  * Patch-market traversal primitives — the single source of truth for "who competes
  * for a brief" and "is its market resolved", shared by the diff-aware patch gate

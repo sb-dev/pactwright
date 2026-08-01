@@ -103,48 +103,10 @@ rules:
   # contracts selected before `coverage_coherence_from` are grandfathered.
   - id: coverage-coherence
     kind: coverage_coherence
-  # An `addressed` intent must be BACKED: some live contract markets it AND NOTHING
-  # ELSE, and a decision selected that contract. The iteration is INVERTED relative to
-  # coverage-coherence (walks addressed intents, not selects edges), which is the whole
-  # mechanism — an intent no `selects` edge reaches is invisible to that rule, so a flip
-  # made by prose alone is uncatchable without this one. The standing exception is a
-  # `decision --subsumes--> intent` edge, honoured only when that decision selects a
-  # COVERED contract, so the escape is anchored to delivered work.
-  #
-  # SINGLETON CLAUSE: a backing contract must market exactly one intent. A `selects` edge
-  # names a CONTRACT, not an intent, so it endorses an intent only when the contract
-  # markets one. Without the clause, appending a single `proposes` edge from any
-  # already-selected contract would back any intent — and specs/graph/edges.yaml is
-  # covered by no CODEOWNERS rule and no sensitive_paths glob, making that cheaper than
-  # the `subsumes` hatch, which needs a decision node on a reviewed path. With it, that
-  # same edge reds BOTH intents. Residual grant path, stated not hidden: a NEW
-  # contract-*.md proposing only the target intent plus a `selects` edge; the contract
-  # file is CODEOWNERS-covered, the edge half is not, and class-market-quorum raises the
-  # class-2+ case to two reviewed contract files. Nothing counts or caps this.
-  #
-  # HONEST BOUND: green asserts PROVENANCE, never coverage. Coverage stays
-  # coverage-coherence's verdict, grandfathered on the selected contract's `created`
-  # against coverage_coherence_from — so an addressed intent whose selected contract
-  # predates that date is checked for coverage by NEITHER rule. As of this rule landing
-  # that is six of the ten addressed intents (intent-spec-index-validate-a3f1,
-  # intent-claude-lifecycle-commands-f367, intent-ci-enforcement-gates-5c90,
-  # intent-drift-detection-c7b1, intent-work-class-routing-b9c4,
-  # intent-specialist-critics-comparison-7ada).
+  # Present so this fixture runs the shipped rule set, not a trimmed one. Its intent
+  # is `open`, so this rule is silent here and the only red is the endpoint one.
   - id: unbacked-addressed
     kind: unbacked_addressed
-  # A synthesis patch (any patch with a `synthesizes` edge) must combine >=2 distinct
-  # parent patches — a single-parent synthesis is just that patch, and across-lane
-  # combination is integration, never synthesis. Runs after edges-references-resolve
-  # so parents resolve.
-  - id: synthesis-parentage
-    kind: synthesis_parentage
-  # A selected patch (the patch market's winner) must have a durable comparison: the
-  # brief it `competes-for` carries a comparison whose `compares` edges cover >=2 of
-  # the brief's competing patches, leaving no live candidate uncompared. The patch
-  # analogue of comparison-required; competitors are counted status-blind because
-  # patch losers go `superseded` at selection. Runs after edges-references-resolve.
-  - id: selected-patch-comparison
-    kind: selected_patch_comparison
   - id: indexes-fresh
     kind: indexes_fresh
 

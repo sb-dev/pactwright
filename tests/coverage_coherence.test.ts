@@ -9,7 +9,11 @@ function node(data: Record<string, unknown>): NodeRecord {
 function spec(nodes: NodeRecord[], edges: EdgeRecord[], coverageCoherenceFrom?: string): LoadedSpec {
   return {
     root: "",
-    nodes,
+    // `selects()` below hard-codes `source: "decision-d"` and no test builds that node.
+    // The lifted `selectedContracts` RESOLVES and type-checks the `selects` source, so
+    // without this record every test's selected set is empty and F3 flips to a finding.
+    // A decision carrying no edges of its own is inert for every other assertion here.
+    nodes: [...nodes, node({ id: "decision-d", type: "decision" })],
     edges,
     nodeTypes: {},
     edgeTypes: {},

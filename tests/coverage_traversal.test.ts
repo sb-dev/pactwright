@@ -1,11 +1,13 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import {
+  backingContracts,
   briefsForPatch,
   intentsForContract,
   liveProposingContracts,
   liveSourcesByEdge,
   patchMarketResolved,
+  selectedContracts,
 } from "../tools/handlers/coverage_traversal.ts";
 import { nodesById } from "../tools/loader.ts";
 import type { EdgeRecord, LoadedSpec, NodeRecord } from "../tools/loader.ts";
@@ -45,6 +47,68 @@ test("liveSourcesByEdge is generic over edge type (decomposes, excluding superse
 test("F6: duplicate proposes triple dedups to a single intent", () => {
   const s = spec([], [E("e1", "c", "proposes", "i"), E("e2", "c", "proposes", "i")]);
   assert.deepEqual(intentsForContract(s, "c"), ["i"]);
+});
+
+// A8 — `selectedContracts` is THE authoritative spelling of "selected", shared by
+// coverage-coherence and unbacked-addressed so the two rules cannot mean different
+// things by it. It is the RESOLVING walk, not the raw `selects`-target scan it
+// replaced, and the two disagree on exactly the edges pinned below.
+test("selectedContracts resolves and type-checks BOTH endpoints of every selects edge", () => {
+  const s = spec(
+    [
+      node({ id: "dec", type: "decision" }),
+      node({ id: "c1", type: "contract", status: "approved" }),
+      node({ id: "c2", type: "contract", status: "superseded" }),
+      node({ id: "p1", type: "patch" }),
+      node({ id: "notdec", type: "brief" }),
+      node({ id: "c3", type: "contract", status: "approved" }),
+    ],
+    [
+      E("s1", "dec", "selects", "c1"),
+      E("s2", "dec", "selects", "c2"), // STATUS-BLIND on purpose: "was it selected" is historical
+      E("s3", "dec", "selects", "p1"), // selects → patch: target is not a contract, excluded
+      E("s4", "dec-missing", "selects", "c3"), // unresolved SOURCE confers nothing (the raw scan disagreed)
+      E("s5", "notdec", "selects", "c3"), // resolved but not a `decision`: excluded
+      E("s6", "dec", "proposes", "c3"), // not a selects edge at all
+    ],
+  );
+  assert.deepEqual([...selectedContracts(s, nodesById(s))].sort(), ["c1", "c2"]);
+});
+
+// A6, the singleton clause — the whole of the laundering defence, asserted on the
+// predicate itself rather than only through the rule. A contract that markets two
+// intents backs NEITHER, so appending one `proposes` line to an already-selected
+// contract costs it its own previously-green intent instead of laundering the new one.
+test("backingContracts: a selected contract marketing TWO intents backs neither", () => {
+  const s = spec(
+    [node({ id: "dec", type: "decision" }), node({ id: "c", type: "contract", status: "approved" })],
+    [E("p1", "c", "proposes", "i1"), E("p2", "c", "proposes", "i2"), E("s1", "dec", "selects", "c")],
+  );
+  assert.deepEqual([...backingContracts(s, nodesById(s), "i1")], []);
+  assert.deepEqual([...backingContracts(s, nodesById(s), "i2")], []);
+});
+
+test("backingContracts: a selected, live contract marketing exactly ONE intent backs it", () => {
+  const s = spec(
+    [node({ id: "dec", type: "decision" }), node({ id: "c", type: "contract", status: "approved" })],
+    [E("p1", "c", "proposes", "i1"), E("s1", "dec", "selects", "c")],
+  );
+  assert.deepEqual([...backingContracts(s, nodesById(s), "i1")], ["c"]);
+});
+
+test("backingContracts: an UNSELECTED singleton proposer backs nothing (the A9 discriminator)", () => {
+  // Drops only the `selects` edge from the case above. An implementation that degrades
+  // to `liveProposingContracts(i).size > 0` returns {"c"} here.
+  const s = spec([node({ id: "c", type: "contract", status: "approved" })], [E("p1", "c", "proposes", "i1")]);
+  assert.deepEqual([...backingContracts(s, nodesById(s), "i1")], []);
+});
+
+test("backingContracts: a SUPERSEDED selected singleton proposer backs nothing", () => {
+  const s = spec(
+    [node({ id: "dec", type: "decision" }), node({ id: "c", type: "contract", status: "superseded" })],
+    [E("p1", "c", "proposes", "i1"), E("s1", "dec", "selects", "c")],
+  );
+  assert.deepEqual([...backingContracts(s, nodesById(s), "i1")], []);
 });
 
 // briefsForPatch — the shared inverse competes-for walk (patch→brief), one source of

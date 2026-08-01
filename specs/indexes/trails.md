@@ -17,6 +17,10 @@ _none_
 
 _none_
 
+### subsumed by
+
+_none_
+
 ### briefs
 
 _none_
@@ -41,6 +45,10 @@ _none_
 _none_
 
 ### decision
+
+_none_
+
+### subsumed by
 
 _none_
 
@@ -77,6 +85,10 @@ _none_
 |---|---|---|
 | `decision-ci-gate-spec-tool-6d2b` | Select the graph-aware PR gate (spec:gate in tools/spec.ts) | — |
 
+### subsumed by
+
+_none_
+
 ### briefs
 
 | id | title | status | lane | owner |
@@ -105,6 +117,10 @@ _none_
 _none_
 
 ### decision
+
+_none_
+
+### subsumed by
 
 _none_
 
@@ -140,6 +156,10 @@ _none_
 |---|---|---|
 | `decision-lifecycle-thin-commands-41c8` | Select thin commands + fat agents for lifecycle tooling | — |
 
+### subsumed by
+
+_none_
+
 ### briefs
 
 | id | title | status | lane | owner |
@@ -168,6 +188,10 @@ _none_
 _none_
 
 ### decision
+
+_none_
+
+### subsumed by
 
 _none_
 
@@ -204,6 +228,10 @@ _none_
 |---|---|---|
 | `decision-drift-tool-assisted-d5e2` | Select the tool-assisted drift hybrid (spec.ts mapping + Claude residual), synthesizing B and C grafts | — |
 
+### subsumed by
+
+_none_
+
 ### briefs
 
 | id | title | status | lane | owner |
@@ -232,6 +260,10 @@ _none_
 _none_
 
 ### decision
+
+_none_
+
+### subsumed by
 
 _none_
 
@@ -268,6 +300,11 @@ _none_
 | id | title | status |
 |---|---|---|
 | `decision-lane-integration-9f3b` | Select the convention-body lane-model contract (A) with a recorded structured-frontmatter body refinement | — |
+| `decision-status-coherence-subsumed-3c7e` | The lane-integration delivery accounts for the status-coherence intent — anchoring its subsumption | — |
+
+### subsumed by
+
+_none_
 
 ### briefs
 
@@ -297,6 +334,10 @@ _none_
 _none_
 
 ### decision
+
+_none_
+
+### subsumed by
 
 _none_
 
@@ -334,6 +375,10 @@ _none_
 | id | title | status |
 |---|---|---|
 | `decision-patch-market-ci-gate-8a2f` | Select Candidate B (dedicated diff-aware CI gate) for the lane-aware patch market, grafting A and C | — |
+
+### subsumed by
+
+_none_
 
 ### briefs
 
@@ -386,6 +431,10 @@ _none_
 |---|---|---|
 | `decision-conveyor-derived-5a91` | Select Candidate B (derived conveyor) for the self-guiding delivery loop, grafting A and C | — |
 
+### subsumed by
+
+_none_
+
 ### briefs
 
 | id | title | status | lane | owner |
@@ -436,6 +485,10 @@ _none_
 |---|---|---|
 | `decision-spec-tooling-schema-driven-5e8c` | Select schema-driven validator for spec:index + spec:validate | — |
 
+### subsumed by
+
+_none_
+
 ### briefs
 
 | id | title | status | lane | owner |
@@ -473,6 +526,10 @@ _none_
 |---|---|---|
 | `decision-critics-literal-panel-9c4f` | Select literal-panel as the base for specialist critics + durable comparison | — |
 
+### subsumed by
+
+_none_
+
 ### briefs
 
 | id | title | status | lane | owner |
@@ -503,6 +560,12 @@ _none_
 ### decision
 
 _none_
+
+### subsumed by
+
+| id | title | status |
+|---|---|---|
+| `decision-status-coherence-subsumed-3c7e` | The lane-integration delivery accounts for the status-coherence intent — anchoring its subsumption | — |
 
 ### briefs
 
@@ -539,11 +602,15 @@ _none_
 |---|---|---|
 | `decision-unbacked-addressed-edge-9d3f` | Select the `subsumes`-edge guard for unbacked `addressed` intents, with sixteen amendments | — |
 
+### subsumed by
+
+_none_
+
 ### briefs
 
 | id | title | status | lane | owner |
 |---|---|---|---|---|
-| `brief-unbacked-addressed-edge-6b73` | Implement the unbacked-addressed guard — singleton-market backing, the `subsumes` edge type, and its trail section | draft | — | — |
+| `brief-unbacked-addressed-edge-6b73` | Implement the unbacked-addressed guard — singleton-market backing, the `subsumes` edge type, and its trail section | implemented | — | — |
 
 ### evidence
 
@@ -565,6 +632,10 @@ _none_
 _none_
 
 ### decision
+
+_none_
+
+### subsumed by
 
 _none_
 
@@ -600,6 +671,10 @@ _none_
 | id | title | status |
 |---|---|---|
 | `decision-work-class-routing-4d7a` | Select Candidate B (validate-time spec:validate invariant) for work-class routing | — |
+
+### subsumed by
+
+_none_
 
 ### briefs
 
@@ -640,6 +715,10 @@ _none_
 |---|---|---|
 | `decision-write-tests-flip-7f14` | Select Candidate A (extend A7's flip to /write-tests) for the write-tests status-flip market, grafting B and C | — |
 
+### subsumed by
+
+_none_
+
 ### briefs
 
 | id | title | status | lane | owner |
@@ -668,6 +747,10 @@ _none_
 _none_
 
 ### decision
+
+_none_
+
+### subsumed by
 
 _none_
 

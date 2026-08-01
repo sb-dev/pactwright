@@ -1,0 +1,68 @@
+# Edge type definitions for the specs graph.
+# Every entry in /specs/graph/edges.yaml must have a `type` matching one of
+# the keys below, and its source/target nodes must conform to the rules.
+#
+# Edge ID convention: edge-<slug>-<4 hex chars>
+#   e.g. edge-cli-flag-parsing-9c2e
+
+edge_types:
+  proposes:
+    source: contract
+    target: intent
+
+  selects:
+    source: decision
+    target: contract
+
+  decomposes:
+    source: brief
+    target: contract
+
+  evidences:
+    source: evidence
+    target: brief
+
+  supersedes:
+    # same-type → same-type: source.type must equal target.type
+    source: any
+    target: same_as_source
+
+  subsumes:
+    # decision → intent. The cross-type provenance edge: a decision records that it
+    # accounts for an intent that ran no market of its own. Read only by the
+    # `unbacked-addressed` rule, and only when the same decision selects a COVERED
+    # contract. Declared here so this fixture's red is the rule's, not an
+    # undeclared-edge-type red.
+    source: decision
+    target: intent
+
+  waives:
+    # A human override waiving a node or a named check. `target: any` permits
+    # either an ordinary node id OR a named check from specs/schema/checks.yaml
+    # (references_resolve treats a known check name as resolved for `waives`).
+    source: override
+    target: any
+
+  compares:
+    # comparison → contract. /review-contracts authors one `compares` edge per
+    # live candidate, linking the market's comparison node to each contract it
+    # weighs; `comparison-required` checks they cover the live candidate set.
+    source: comparison
+    target: contract
+
+  touches:
+    source: evidence
+    target: capability
+
+  flags:
+    # drift-finding → evidence | capability. The target is a list of allowed
+    # node types; edge_endpoint_types enforces membership.
+    source: drift-finding
+    target: [evidence, capability]
+
+  integrates:
+    # integration → evidence. /integrate authors one `integrates` edge per lane,
+    # linking the contract's integration node to each lane's final evidence;
+    # coverage-coherence checks they cover every live brief of the contract.
+    source: integration
+    target: evidence

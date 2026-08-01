@@ -2,7 +2,7 @@
 id: brief-unbacked-addressed-edge-6b73
 type: brief
 title: Implement the unbacked-addressed guard — singleton-market backing, the `subsumes` edge type, and its trail section
-status: draft
+status: implemented
 created: 2026-07-31
 produced_by: "/write-brief"
 ---

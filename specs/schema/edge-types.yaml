@@ -30,6 +30,15 @@ edge_types:
     source: any
     target: same_as_source
 
+  subsumes:
+    # decision → intent. The CROSS-TYPE provenance edge: a decision records that it
+    # accounts for an intent that ran no market of its own. Unlike `supersedes` it
+    # changes NO node's status and confers no lifecycle shortcut — it is read only by
+    # the `unbacked-addressed` rule, which honours it only when the same decision
+    # `selects` a contract that is COVERED (the escape is anchored to delivered work).
+    source: decision
+    target: intent
+
   waives:
     # A human override waiving a node or a named check. `target: any` permits
     # either an ordinary node id OR a named check from specs/schema/checks.yaml

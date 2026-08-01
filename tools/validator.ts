@@ -16,6 +16,7 @@ import closedKeySet from "./handlers/closed_key_set.ts";
 import coverageCoherence from "./handlers/coverage_coherence.ts";
 import synthesisParentage from "./handlers/synthesis_parentage.ts";
 import selectedPatchComparison from "./handlers/selected_patch_comparison.ts";
+import unbackedAddressed from "./handlers/unbacked_addressed.ts";
 
 export interface Finding {
   rule: string;
@@ -41,6 +42,7 @@ const HANDLERS: Record<string, Handler> = {
   coverage_coherence: coverageCoherence,
   synthesis_parentage: synthesisParentage,
   selected_patch_comparison: selectedPatchComparison,
+  unbacked_addressed: unbackedAddressed,
 };
 
 export function formatFinding(finding: Finding): string {

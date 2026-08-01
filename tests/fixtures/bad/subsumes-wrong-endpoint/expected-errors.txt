@@ -1,0 +1,1 @@
+[rule: edges-endpoint-types] edge edge-subwrong-9c01 type=subsumes requires source.type=decision, got brief

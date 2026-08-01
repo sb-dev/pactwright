@@ -282,6 +282,9 @@ incoming:
     - id: edge-selects-lane-integration-convention-7c4d
       source: decision-lane-integration-9f3b
       type: selects
+    - id: edge-selects-status-coherence-subsumed-9c15
+      source: decision-status-coherence-subsumed-3c7e
+      type: selects
   contract-lane-integration-validated-body-7b2e:
     - id: edge-compares-lane-integration-validated-4a2b
       source: comparison-lane-integration-8d3c
@@ -510,6 +513,10 @@ incoming:
     - id: edge-proposes-critics-registry-driven-5c9e
       source: contract-critics-registry-driven-2d5b
       type: proposes
+  intent-status-coherence-d4f2:
+    - id: edge-subsumes-status-coherence-2d38
+      source: decision-status-coherence-subsumed-3c7e
+      type: subsumes
   intent-unbacked-addressed-guard-8c4e:
     - id: edge-proposes-unbacked-addressed-dated-6c19
       source: contract-unbacked-addressed-dated-2e94

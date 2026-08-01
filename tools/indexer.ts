@@ -178,11 +178,18 @@ export function serializeTrails(spec: LoadedSpec): string {
     const briefs = new Set(viewSourcesOf(spec, "decomposes", contracts));
     const evidence = new Set(viewSourcesOf(spec, "evidences", briefs));
     const integrations = viewSourcesOf(spec, "integrates", evidence);
+    // Decisions that SUBSUME this intent. Seeded by the intent itself, not by
+    // `contracts` — a subsumed intent has no contract to hang the trail on, which is
+    // exactly the case the `unbacked-addressed` rule exists to make visible. Without
+    // this section such an intent renders every heading `_none_`, and the reader's
+    // first stop asserts nothing exists while the graph carries a `subsumes` edge.
+    const subsumers = viewSourcesOf(spec, "subsumes", new Set([id]));
 
     const sections: [string, string[], ((n: NodeRecord) => string) | undefined][] = [
       ["contracts", [...contracts].sort(compareStrings), undefined],
       ["comparison", comparisons, undefined],
       ["decision", decisions, undefined],
+      ["subsumed by", subsumers, undefined],
       ["briefs", [...briefs].sort(compareStrings), (n) => `${cell(n.data["lane"])} | ${cell(n.data["owner"])} |`],
       ["evidence", [...evidence].sort(compareStrings), undefined],
       ["integration", integrations, undefined],

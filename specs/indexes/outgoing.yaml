@@ -290,6 +290,13 @@ outgoing:
     - id: edge-selects-schema-driven-7a12
       target: contract-spec-tooling-schema-driven-b2e7
       type: selects
+  decision-status-coherence-subsumed-3c7e:
+    - id: edge-selects-status-coherence-subsumed-9c15
+      target: contract-lane-integration-convention-body-4c1f
+      type: selects
+    - id: edge-subsumes-status-coherence-2d38
+      target: intent-status-coherence-d4f2
+      type: subsumes
   decision-unbacked-addressed-edge-9d3f:
     - id: edge-selects-unbacked-addressed-edge-4f2c
       target: contract-unbacked-addressed-edge-5b71

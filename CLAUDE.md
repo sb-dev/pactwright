@@ -46,6 +46,14 @@ to build, and what we've actually built.
    replaced, create the new node and add a `supersedes` edge from new → old.
    Move the old node's status to its terminal value (e.g. contract →
    `superseded`). The history must remain readable.
+   **`subsumes` is the cross-type companion, and it is not supersession.**
+   `decision —subsumes→ intent` records that a decision accounts for an intent
+   which ran no market of its own. Unlike `supersedes` (`source: any`,
+   `target: same_as_source`, and a status consequence two consumers read) it is
+   heterogeneous and changes **no** node's status. It is read by exactly one
+   rule, `unbacked-addressed`, and only when the subsuming decision `selects` a
+   contract that is **covered** — the escape is anchored to delivered work and
+   cannot be conjured from a decision that delivered nothing.
 4. **Arrows mean edges, not time.** An arrow (→) anywhere in this
    repository's docs means canonical edge direction (source → target),
    never lifecycle order. Lifecycle order is written as numbered steps.
@@ -116,7 +124,22 @@ Mnemonic: edges point backwards in time, from the newer record to what
 it is about — provenance, like citations. Superseding follows the same
 shape: a same-type successor points back via `supersedes` (newer
 —supersedes→ older); the superseded node stays in place, its status
-moved to its terminal value.
+moved to its terminal value. `subsumes` (decision —subsumes→ intent) points
+backwards the same way and is the one provenance edge that crosses types
+without touching status; see rule 3.
+
+**Backing, and its honest bound.** An `addressed` intent must be *backed* — some
+live contract markets it **and nothing else**, and a decision selected that
+contract — enforced by the `unbacked-addressed` validation rule, which walks
+addressed intents rather than `selects` edges so an intent no `selects` edge
+reaches is still reached. The singleton clause is load-bearing: a `selects` edge
+names a **contract**, not an intent, so it endorses an intent only when the
+contract markets one; without it, appending a single `proposes` edge from any
+already-selected contract would back any intent. **The bound:** green asserts
+*provenance*, never *coverage*. Coverage remains `coverage-coherence`'s verdict
+and stays grandfathered at `coverage_coherence_from`, so an addressed intent
+whose selected contract predates that cutoff is checked for coverage by neither
+rule.
 
 ## Work-class routing
 

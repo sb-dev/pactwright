@@ -1,0 +1,1 @@
+[rule: unbacked-addressed] intent intent-unbacked-1111 is addressed but no selected contract markets it (2 live proposing contract(s), 0 selected): revert intent-unbacked-1111 to `open` until a decision selects a contract that proposes it, or record a decision that subsumes intent-unbacked-1111 and is anchored to covered work

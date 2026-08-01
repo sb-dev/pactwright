@@ -6,6 +6,7 @@ import {
   intentsForContract,
   liveBriefsForContract,
   liveProposingContracts,
+  selectedContracts,
 } from "./coverage_traversal.ts";
 import type { Finding } from "../validator.ts";
 
@@ -61,14 +62,13 @@ export default function coverageCoherence(rule: Rule, spec: LoadedSpec): Finding
       .filter((t): t is string => t !== undefined),
   );
 
-  // Contract ids some `decision` has selected (targets of `selects` edges); used to
-  // scope coherence to the intent THIS contract actually won (F3).
-  const selectedContracts = new Set(
-    spec.edges
-      .filter((e) => asString(e["type"]) === "selects")
-      .map((e) => asString(e["target"]))
-      .filter((t): t is string => t !== undefined),
-  );
+  // Contract ids some `decision` has selected; used to scope coherence to the intent
+  // THIS contract actually won (F3). Lifted into `coverage_traversal.ts` by A8 so this
+  // rule and `unbacked-addressed` cannot mean different things by "selected" — the
+  // lifted walk RESOLVES and type-checks both endpoints, where this const was a raw
+  // target scan. Semantics differ only for a `selects` edge whose source does not
+  // resolve to a `decision`, which `edges-references-resolve` already reports.
+  const selected = selectedContracts(spec, byId);
 
   // `finalEvidenceForBrief` and `briefsCoveredByIntegration` were private closures
   // here until A11 lifted them into `coverage_traversal.ts`, so the conveyor resolver
@@ -157,7 +157,7 @@ export default function coverageCoherence(rule: Rule, spec: LoadedSpec): Finding
       // intent, its market was won elsewhere — don't judge it against this contract
       // (F3). A losing candidate keeps its live `proposes` edge (CLAUDE.md rule 3).
       const wonElsewhere = [...liveProposingContracts(spec, byId, intentId)].some(
-        (pc) => pc !== contractId && selectedContracts.has(pc),
+        (pc) => pc !== contractId && selected.has(pc),
       );
       if (wonElsewhere) continue;
       const addressed = asString(intent.data["status"]) === "addressed";
