@@ -116,6 +116,7 @@ by-type:
     - intent-ci-enforcement-gates-5c90
     - intent-ci-gate-evidence-real-run-8f27
     - intent-claude-lifecycle-commands-f367
+    - intent-covered-walk-shared-4b19
     - intent-docs-arrow-lint-e7b3
     - intent-drift-detection-c7b1
     - intent-implement-brief-graph-lane-b3f5

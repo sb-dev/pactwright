@@ -12,6 +12,14 @@ next:
 
 - `/propose-contracts intent-ci-gate-evidence-real-run-8f27` — _paste_ — intent is open with no live `proposes` candidate
 
+## intent-covered-walk-shared-4b19 — Share one definition of "covered" between coverage-coherence and unbacked-addressed
+
+stage: `intent-open`
+
+next:
+
+- `/propose-contracts intent-covered-walk-shared-4b19` — _paste_ — intent is open with no live `proposes` candidate
+
 ## intent-docs-arrow-lint-e7b3 — Lint arrow semantics in repository markdown
 
 stage: `intent-open`

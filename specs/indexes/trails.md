@@ -177,6 +177,37 @@ _none_
 _none_
 
 
+## intent-covered-walk-shared-4b19 — Share one definition of "covered" between coverage-coherence and unbacked-addressed (open)
+
+### contracts
+
+_none_
+
+### comparison
+
+_none_
+
+### decision
+
+_none_
+
+### subsumed by
+
+_none_
+
+### briefs
+
+_none_
+
+### evidence
+
+_none_
+
+### integration
+
+_none_
+
+
 ## intent-docs-arrow-lint-e7b3 — Lint arrow semantics in repository markdown (open)
 
 ### contracts
