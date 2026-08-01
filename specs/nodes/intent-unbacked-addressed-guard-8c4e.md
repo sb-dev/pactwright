@@ -2,7 +2,7 @@
 id: intent-unbacked-addressed-guard-8c4e
 type: intent
 title: Flag intents marked `addressed` without edge-backed provenance
-status: open
+status: addressed
 created: 2026-06-23
 class: 2
 ---

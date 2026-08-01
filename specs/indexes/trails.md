@@ -580,7 +580,7 @@ _none_
 _none_
 
 
-## intent-unbacked-addressed-guard-8c4e — Flag intents marked `addressed` without edge-backed provenance (open)
+## intent-unbacked-addressed-guard-8c4e — Flag intents marked `addressed` without edge-backed provenance (addressed)
 
 ### contracts
 
@@ -614,7 +614,9 @@ _none_
 
 ### evidence
 
-_none_
+| id | title | status |
+|---|---|---|
+| `evidence-unbacked-addressed-edge-8f52` | Unbacked-addressed guard implemented — the singleton predicate proved to close the laundering path, the anchored subsumption, and the trail section | final |
 
 ### integration
 

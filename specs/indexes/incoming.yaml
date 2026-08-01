@@ -75,6 +75,10 @@ incoming:
     - id: edge-evidences-spec-tooling-5d7c
       source: evidence-spec-tooling-schema-driven-9c4e
       type: evidences
+  brief-unbacked-addressed-edge-6b73:
+    - id: edge-evidences-unbacked-addressed-edge-3e17
+      source: evidence-unbacked-addressed-edge-8f52
+      type: evidences
   brief-work-class-routing-9a1c:
     - id: edge-evidences-work-class-routing-c7e1
       source: evidence-work-class-routing-f0a3
@@ -140,6 +144,9 @@ incoming:
     - id: edge-touches-patch-market-docs-spec-docs-0b4c
       source: evidence-patch-market-docs-5b6c
       type: touches
+    - id: edge-touches-unbacked-addressed-docs-9a03
+      source: evidence-unbacked-addressed-edge-8f52
+      type: touches
     - id: edge-touches-work-class-routing-spec-docs-c3a5
       source: evidence-work-class-routing-f0a3
       type: touches
@@ -168,6 +175,9 @@ incoming:
     - id: edge-touches-patch-market-schema-spec-schema-3a7b
       source: evidence-patch-market-schema-1d2e
       type: touches
+    - id: edge-touches-unbacked-addressed-schema-7d29
+      source: evidence-unbacked-addressed-edge-8f52
+      type: touches
     - id: edge-touches-work-class-routing-spec-schema-c2b3
       source: evidence-work-class-routing-f0a3
       type: touches
@@ -186,6 +196,9 @@ incoming:
       type: touches
     - id: edge-touches-patch-market-tests-spec-tests-1c5d
       source: evidence-patch-market-tests-6c7d
+      type: touches
+    - id: edge-touches-unbacked-addressed-tests-6c58
+      source: evidence-unbacked-addressed-edge-8f52
       type: touches
     - id: edge-touches-work-class-routing-spec-tests-c5d9
       source: evidence-work-class-routing-f0a3
@@ -211,6 +224,9 @@ incoming:
       type: touches
     - id: edge-touches-spec-tooling-evidence-a1b2
       source: evidence-spec-tooling-schema-driven-9c4e
+      type: touches
+    - id: edge-touches-unbacked-addressed-tooling-2b44
+      source: evidence-unbacked-addressed-edge-8f52
       type: touches
     - id: edge-touches-work-class-routing-spec-tooling-c2a1
       source: evidence-work-class-routing-f0a3

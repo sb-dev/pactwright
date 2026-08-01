@@ -54,18 +54,6 @@ next:
 | `brief-conveyor-schema-graph-8b2e` | data-migration | — | — | not synced | implemented | `/integrate contract-conveyor-derived-4c8c` |
 | `brief-conveyor-tests-4c86` | test-verification | — | — | not synced | implemented | `/integrate contract-conveyor-derived-4c8c` |
 
-## intent-unbacked-addressed-guard-8c4e — Flag intents marked `addressed` without edge-backed provenance
-
-stage: `intent-selected`
-
-next:
-
-- `/prepare-evidence brief-unbacked-addressed-edge-6b73` — _paste_ — brief is `implemented`; evidence is the next lifecycle record
-
-| brief | lane | owner | wave | issue | status | next |
-|---|---|---|---|---|---|---|
-| `brief-unbacked-addressed-edge-6b73` | — | — | — | not synced | implemented | `/prepare-evidence brief-unbacked-addressed-edge-6b73` |
-
 ## intent-wave-persistence-5c93 — Persist each lane brief's wave assignment as an optional `wave` frontmatter field
 
 stage: `intent-open`

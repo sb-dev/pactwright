@@ -789,3 +789,28 @@ edges:
     type: subsumes
     target: intent-status-coherence-d4f2
     created: 2026-07-31
+  - id: edge-evidences-unbacked-addressed-edge-3e17
+    source: evidence-unbacked-addressed-edge-8f52
+    type: evidences
+    target: brief-unbacked-addressed-edge-6b73
+    created: 2026-07-31
+  - id: edge-touches-unbacked-addressed-schema-7d29
+    source: evidence-unbacked-addressed-edge-8f52
+    type: touches
+    target: capability-spec-schema-2c3d
+    created: 2026-07-31
+  - id: edge-touches-unbacked-addressed-tooling-2b44
+    source: evidence-unbacked-addressed-edge-8f52
+    type: touches
+    target: capability-spec-tooling-1a2b
+    created: 2026-07-31
+  - id: edge-touches-unbacked-addressed-tests-6c58
+    source: evidence-unbacked-addressed-edge-8f52
+    type: touches
+    target: capability-spec-tests-3a6e
+    created: 2026-07-31
+  - id: edge-touches-unbacked-addressed-docs-9a03
+    source: evidence-unbacked-addressed-edge-8f52
+    type: touches
+    target: capability-spec-docs-8c1d
+    created: 2026-07-31

@@ -491,6 +491,22 @@ outgoing:
     - id: edge-touches-spec-tooling-evidence-a1b2
       target: capability-spec-tooling-1a2b
       type: touches
+  evidence-unbacked-addressed-edge-8f52:
+    - id: edge-evidences-unbacked-addressed-edge-3e17
+      target: brief-unbacked-addressed-edge-6b73
+      type: evidences
+    - id: edge-touches-unbacked-addressed-docs-9a03
+      target: capability-spec-docs-8c1d
+      type: touches
+    - id: edge-touches-unbacked-addressed-schema-7d29
+      target: capability-spec-schema-2c3d
+      type: touches
+    - id: edge-touches-unbacked-addressed-tests-6c58
+      target: capability-spec-tests-3a6e
+      type: touches
+    - id: edge-touches-unbacked-addressed-tooling-2b44
+      target: capability-spec-tooling-1a2b
+      type: touches
   evidence-work-class-routing-f0a3:
     - id: edge-evidences-work-class-routing-c7e1
       target: brief-work-class-routing-9a1c
