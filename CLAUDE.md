@@ -131,8 +131,10 @@ intent. That combination has no instance in the graph today, and `/approve-contr
 narrow-scope check is where it is caught: refuse `scope: narrow` on a contract whose own
 `class` is 3, whatever its intent says.
 
-**Honest bound.** `scope` is author-declared and unverified, exactly like `class` —
-nothing checks that a contract calling itself narrow is narrow. Two things back it:
+**Honest bound.** The **value** is machine-checked — `contract-scope-valid` makes a
+typo like `narow` a finding rather than a silent no-op. The **claim** is not, and
+cannot be: nothing checks that a contract calling itself narrow is narrow, exactly as
+nothing checks `class`. Two things back the claim:
 the contract body must carry the rationale, and `/specs/nodes/contract-*` is
 CODEOWNERS-covered, so the declaration cannot merge unreviewed. A reviewer who judges
 the declaration wrong asks for the market; that judgement is not automatable and is

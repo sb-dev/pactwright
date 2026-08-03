@@ -94,6 +94,21 @@ rules:
     field: integration_sections
     mode: set
     keys: [combined-outputs, combined-test-run, compliance-verdict, rollback-sequencing, combined-risk, follow-ups, scope-integrity]
+  # A contract's optional `scope`, if present, must be a recognised value — today
+  # only `narrow`, the narrow-scope reduction of the work-class routing table.
+  # Unset is allowed and is the default (an ordinary market). Without this, a typo
+  # like `scope: narow` silently means "ordinary market": it fails CLOSED, so the
+  # author pays full process rather than escaping it, but nothing says why the
+  # quorum rule is still firing. Same shape as brief-lane-valid below.
+  # HONEST BOUND: this checks the VALUE, never the CLAIM. `scope: narrow` on a
+  # sprawling change is still accepted here; review is what judges that.
+  - id: contract-scope-valid
+    kind: closed_key_set
+    scope: nodes
+    type: contract
+    field: scope
+    mode: member
+    keys: [narrow]
   # A brief's optional `lane`, if present, must be one of the lane catalog values
   # (enum_constraint covers only type/status, so this is closed_key_set in
   # membership mode). Unset is allowed (an unlaned single brief).

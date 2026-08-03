@@ -90,6 +90,27 @@ Proved against the live graph in a scratch copy, not asserted:
    rather than code: CLAUDE.md's narrow-scope section states which class counts, and
    `/approve-contract` must refuse `scope: narrow` on a contract whose own `class` is 3.
 
+## Follow-up closed: honest bound 5
+
+Bound 5 above — `scope` has no value validation — was closed in the same working session, under this
+decision rather than under a new one, because this decision already named the fix as the right
+follow-up and identified its precedent.
+
+`contract-scope-valid` now validates the field: `kind: closed_key_set`, `mode: member`,
+`keys: [narrow]`, the same shape `brief-lane-valid` uses for a brief's optional `lane`. Pure config —
+no handler code, since `closed_key_set` already skips an absent field, which is what keeps an unset
+`scope` legal as the default. Rule count 20 → 21.
+
+Proved on the live graph, not asserted: `scope: narow` on a real contract yields exactly one
+`[rule: contract-scope-valid]` finding naming that node and the expected value; correcting it to
+`narrow` returns green; removing the field returns green.
+
+**Bound 5 as written above remains accurate about the state it described, and is left unedited.**
+What changed is that the VALUE is now machine-checked. The CLAIM is not, and cannot be — `scope:
+narrow` on a sprawling change is still accepted by every rule. Bound 1 is therefore unchanged and
+still governs: what backs the claim is the rationale the contract body carries, the
+`/approve-contract` check, and CODEOWNERS review. Bound 6 is untouched and still open.
+
 ## Consequences
 
 - `intent-routing-cost-narrow-scope-5d2c` → `addressed` (the change is implemented and verified)

@@ -22,11 +22,13 @@ node_types:
     # definition and narrowness must not reduce it. Absence means an ordinary market
     # and is the default; `narrow` is the only meaningful value.
     #
-    # Unvalidated as to truth, like `class` itself: nothing checks that a contract
-    # calling itself narrow is narrow. The contract body must carry the rationale, and
-    # `/specs/nodes/contract-*` is CODEOWNERS-covered so the declaration cannot merge
-    # unreviewed. Not in required_fields — `required_fields` checks presence only and
-    # never rejects extra keys, which is how `produced_by` already exists.
+    # The VALUE is machine-checked by `contract-scope-valid` (closed_key_set, member
+    # mode), so a typo like `narow` is a finding rather than a silent no-op. The CLAIM
+    # is not, and cannot be: nothing checks that a contract calling itself narrow is
+    # narrow, exactly as nothing checks `class`. The contract body must carry the
+    # rationale, and `/specs/nodes/contract-*` is CODEOWNERS-covered so the declaration
+    # cannot merge unreviewed. Not in required_fields — `required_fields` checks presence
+    # only and never rejects extra keys, which is how `produced_by` already exists.
     required_fields: [id, type, title, status, created, class]
     requires_body:   true
     status_values:   [candidate, approved, rejected, superseded]
