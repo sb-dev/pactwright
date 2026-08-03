@@ -1,0 +1,11 @@
+edges:
+  - id: edge-prop-narrow-9b01
+    source: contract-narrow-2222
+    type: proposes
+    target: intent-narrow-1111
+    created: 2026-07-01
+  - id: edge-sel-narrow-9b02
+    source: decision-narrow-3333
+    type: selects
+    target: contract-narrow-2222
+    created: 2026-07-01

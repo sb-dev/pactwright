@@ -15,6 +15,18 @@ node_types:
     status_values:   [open, addressed, rejected]
 
   contract:
+    # Optional `scope: narrow` string, declaring that this contract's change is
+    # confined enough to earn a single-candidate market. Read by `class-market-quorum`
+    # and `comparison-required`, which both skip a selected contract carrying it when
+    # the intent's class is EXACTLY 2 — class 3 is high-risk or multi-surface by
+    # definition and narrowness must not reduce it. Absence means an ordinary market
+    # and is the default; `narrow` is the only meaningful value.
+    #
+    # Unvalidated as to truth, like `class` itself: nothing checks that a contract
+    # calling itself narrow is narrow. The contract body must carry the rationale, and
+    # `/specs/nodes/contract-*` is CODEOWNERS-covered so the declaration cannot merge
+    # unreviewed. Not in required_fields — `required_fields` checks presence only and
+    # never rejects extra keys, which is how `produced_by` already exists.
     required_fields: [id, type, title, status, created, class]
     requires_body:   true
     status_values:   [candidate, approved, rejected, superseded]

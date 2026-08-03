@@ -1,0 +1,2 @@
+[rule: class-market-quorum] intent intent-narrow-1111 (class 3) has a selected contract but only 1 live candidate proposes edge(s) (>=2 required)
+[rule: comparison-required] intent intent-narrow-1111 (class 3) has a post-cutoff selected contract contract-narrow-2222 (created 2026-07-01 >= 2026-06-18) but its comparison covers {(none)} of live candidates {contract-narrow-2222} via 0 distinct compares edge(s) (every live candidate must be covered and >=2 required)

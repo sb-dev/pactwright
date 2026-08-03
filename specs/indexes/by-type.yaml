@@ -53,6 +53,7 @@ by-type:
     - decision-lane-integration-9f3b
     - decision-lifecycle-thin-commands-41c8
     - decision-patch-market-ci-gate-8a2f
+    - decision-routing-cost-narrow-scope-8e4b
     - decision-spec-tooling-schema-driven-5e8c
     - decision-work-class-routing-4d7a
   evidence:
@@ -80,6 +81,7 @@ by-type:
     - intent-drift-detection-c7b1
     - intent-lane-model-integration-a1f7
     - intent-patch-market-synthesis-3b1e
+    - intent-routing-cost-narrow-scope-5d2c
     - intent-spec-index-validate-a3f1
     - intent-specialist-critics-comparison-7ada
     - intent-status-coherence-d4f2

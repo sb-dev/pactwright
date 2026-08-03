@@ -1,0 +1,13 @@
+# Partial copy: only the edge types this fixture uses.
+edge_types:
+  proposes:
+    source: contract
+    target: intent
+
+  selects:
+    source: decision
+    target: contract
+
+  supersedes:
+    source: any
+    target: same_as_source

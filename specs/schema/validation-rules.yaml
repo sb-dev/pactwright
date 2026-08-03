@@ -55,6 +55,10 @@ rules:
   # candidate contracts. Runs after edges-references-resolve so endpoints resolve;
   # the handler also defensively skips any that do not. The work-class quorum
   # backstop: an under-proposed class-2+ approval cannot stand in a green graph.
+  # NARROW-SCOPE REDUCTION: skipped when the SELECTED CONTRACT declares
+  # `scope: narrow` and the intent's class is EXACTLY 2 — never at class 3, which is
+  # high-risk or multi-surface by definition. The declaration is author-made and
+  # unverified (like `class`); review is what backs it. See CLAUDE.md.
   - id: class-market-quorum
     kind: class_market_quorum
   # A selected (selects-edged) class-2+ intent whose SELECTED CONTRACT was
@@ -63,6 +67,11 @@ rules:
   # and number >=2 distinct targets. Runs after class-market-quorum so the
   # live-candidate set is meaningful; contracts created before the cutoff (and
   # class-<=1 intents) are grandfathered. The cutoff is top-level data below.
+  # NARROW-SCOPE REDUCTION: skipped on the same `scope: narrow` + class-2 predicate
+  # as class-market-quorum, AND ONLY when the market has fewer than 2 live
+  # candidates. A market that actually ran >=2 candidates still owes its comparison
+  # however it is labelled — the reduction excuses a market that never happened, not
+  # one that did.
   - id: comparison-required
     kind: comparison_required
   # An integration node's `integration_sections` must be a non-empty list of

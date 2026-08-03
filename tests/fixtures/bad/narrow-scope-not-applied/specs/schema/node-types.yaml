@@ -1,0 +1,20 @@
+# Partial copy: only the node types this fixture uses.
+node_types:
+  intent:
+    required_fields: [id, type, title, status, created, class]
+    requires_body:   true
+    status_values:   [open, addressed, rejected]
+
+  contract:
+    # Optional `scope: narrow` — the narrow-scope reduction. Read by
+    # class-market-quorum and comparison-required, which skip a selected contract
+    # carrying it ONLY when the intent's class is exactly 2. Not in required_fields
+    # (required_fields checks presence and never rejects extra keys), so a class-3
+    # contract may carry it — and this fixture proves carrying it changes nothing.
+    required_fields: [id, type, title, status, created, class]
+    requires_body:   true
+    status_values:   [candidate, approved, rejected, superseded]
+
+  decision:
+    required_fields: [id, type, title, decided_by, created]
+    requires_body:   true

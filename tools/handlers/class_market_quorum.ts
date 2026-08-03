@@ -18,6 +18,21 @@ import { intentsForContract, liveProposingContracts } from "./coverage_traversal
  * independently. Endpoints that do not resolve are defensively skipped here —
  * `edges-references-resolve` reports them but does not remove them, so rule order
  * alone is not enough.
+ *
+ * NARROW-SCOPE REDUCTION. The quorum is skipped when the SELECTED CONTRACT declares
+ * `scope: narrow` and the intent's class is EXACTLY 2. The routing table sizes process
+ * by risk alone, so a one-file class-2 change paid the same market as a cross-cutting
+ * one; the declaration lets a genuinely narrow change run a single-candidate market
+ * without misstating its risk by demoting it to class 1.
+ *
+ * Deliberately class 2 ONLY: class 3 is high-risk or multi-surface by definition and
+ * narrowness must not reduce it. Read off the CONTRACT, not the intent — the contract
+ * is what declares its own blast radius, and it is the artifact CODEOWNERS covers.
+ *
+ * HONEST BOUND: the declaration is author-made and unverified, exactly like `class`
+ * itself. Nothing here checks that a contract calling itself narrow is narrow. What
+ * backs it is review — `/specs/nodes/contract-*` is CODEOWNERS-covered, so the
+ * declaration cannot merge unseen — and the rationale the contract body must carry.
  */
 export default function classMarketQuorum(rule: Rule, spec: LoadedSpec): Finding[] {
   const ruleId = String(rule.id);
@@ -50,6 +65,8 @@ export default function classMarketQuorum(rule: Rule, spec: LoadedSpec): Finding
       if (intent === undefined) continue; // unresolved: skip
       const cls = intent.data["class"];
       if (typeof cls !== "number" || cls < 2) continue; // class < 2 imposes no quorum
+      // Narrow-scope reduction: class 2 only, declared on the selected contract.
+      if (cls === 2 && asString(contract.data["scope"]) === "narrow") continue;
       const count = liveProposingContracts(spec, byId, intentId).size;
       if (count < 2) {
         findings.push({

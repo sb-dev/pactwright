@@ -32,7 +32,12 @@ only the named node files. Read the intent's `class`.
    `comparison` already covers this market, REPLACE it (regenerate its body and
    re-author its `compares` edges to the current live candidate set) rather than
    author a second; never leave two comparison nodes for one market. A class-0/1
-   review records no comparison — there is no market to compare.
+   review records no comparison — there is no market to compare. A class-2 market
+   whose single candidate declares `scope: narrow` records no comparison either,
+   for the same reason: one candidate is nothing to compare against. Route
+   `spec-critic` plus the ONE specialist owning the touched surface, and keep the
+   critique on the candidate body as at class 0–1, since no comparison exists to
+   hold it.
 5. graph-maintainer then appends the critiques, writes (or replaces) the
    comparison, regenerates indexes, and validates; the mutating step ends with
    `pnpm spec:index && pnpm spec:validate` and nothing is committed on red.

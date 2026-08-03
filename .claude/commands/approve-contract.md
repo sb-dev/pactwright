@@ -9,6 +9,17 @@ Pre-check the work-class quorum: if the intent's `class` is ≥2 and it has
 fewer than two live (non-superseded) candidate contracts, refuse to record
 the selection and report why — an under-proposed class-≥2 intent cannot be
 approved (the `class-market-quorum` validation rule is the backstop).
+NARROW-SCOPE EXCEPTION: that refusal does NOT apply when the intent is class 2
+(exactly) and the contract being selected declares `scope: narrow` — the quorum
+rule skips it too. Before accepting the reduction, CONFIRM the contract body
+states the rationale for it; a `scope: narrow` declaration with no stated reason
+is a defect, so report it and refuse rather than approving silently. The
+declaration is author-made and unverified — if the change does not look narrow,
+say so and ask for the market instead of recording the selection.
+Also REFUSE `scope: narrow` when the CONTRACT's own `class` is 3, even if its
+intent is class 2: the rules key the reduction on the intent's class, so a
+contract that revised itself upward would otherwise still be reduced. This
+check is the only thing that catches that combination.
 Act as contract-reviewer: summarise the candidates and spell out the
 selection's consequences. Then invoke graph-maintainer to record the
 decision node (notes and rationale in its body), its `selects` edge,

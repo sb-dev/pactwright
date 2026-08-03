@@ -101,6 +101,43 @@ a green graph / cannot merge.** `/propose-contracts` and `/approve-contract`
 also refuse up front in the normal path; the validation rule is the
 unbypassable backstop, not the only line of defence.
 
+### Narrow-scope reduction
+
+The table above sizes process by **risk alone**. Surface count appears in it only to
+*escalate* — "any multi-surface change" is class 3 — never to reduce, so a one-file
+class-2 change paid the same market as a cross-cutting one. Measured across the first
+ten delivered intents, a class-2 change cost **82% of a class-3 change** by process
+artifact, and the single most expensive delivery in the repository was class 2.
+
+So: **a class-2 contract may declare `scope: narrow`.** When it does, that market runs
+
+- **one candidate**, not two — no comparison node, as at class 0–1;
+- **`spec-critic` plus the one specialist** owning the surface the change touches,
+  rather than the class-2 panel.
+
+The declaration is machine-read: `class-market-quorum` and `comparison-required` both
+skip a selected contract carrying it. Both must, because each enforces the ≥2 bar
+independently — lifting one alone would simply move the red.
+
+**Class 2 only.** Class 3 is high-risk or multi-surface by definition, and narrowness
+never reduces it. Demoting a risky change to class 1 to dodge the market remains what
+it always was: misstating the risk.
+
+**Which class counts, stated because it is not obvious.** Both rules read the class off
+the **intent**, while `scope` is read off the **contract**. Contracts inherit the class
+and may revise it with recorded rationale — but a contract revising itself *upward* to
+class 3 does **not** thereby become irreducible, because the reduction still keys on the
+intent. That combination has no instance in the graph today, and `/approve-contract`'s
+narrow-scope check is where it is caught: refuse `scope: narrow` on a contract whose own
+`class` is 3, whatever its intent says.
+
+**Honest bound.** `scope` is author-declared and unverified, exactly like `class` —
+nothing checks that a contract calling itself narrow is narrow. Two things back it:
+the contract body must carry the rationale, and `/specs/nodes/contract-*` is
+CODEOWNERS-covered, so the declaration cannot merge unreviewed. A reviewer who judges
+the declaration wrong asks for the market; that judgement is not automatable and is
+not claimed to be.
+
 ### Critic routing
 
 `/review-contracts` routes critics by the intent's `class` and the candidates'

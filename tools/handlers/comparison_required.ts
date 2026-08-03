@@ -78,8 +78,21 @@ export default function comparisonRequired(rule: Rule, spec: LoadedSpec): Findin
       if (intent === undefined) continue; // unresolved: skip
       const cls = intent.data["class"];
       if (typeof cls !== "number" || cls < 2) continue; // class < 2 needs no comparison
-
       const live = liveProposingContracts(spec, byId, intentId);
+
+      // Narrow-scope reduction: a SINGLE-candidate market has nothing to compare, so
+      // the comparison requirement lifts with the quorum. Class 2 only, declared on
+      // the selected contract — the same predicate `class_market_quorum` applies, and
+      // both must skip together or a narrow market reds on this rule instead.
+      //
+      // The `live.size < 2` conjunct is load-bearing and is why this guard sits AFTER
+      // the walk rather than beside the class check: without it, a contract declaring
+      // `narrow` would drop the comparison requirement even for a market that actually
+      // ran two or more live candidates — discarding the durable record of why the
+      // losers lost, which is the comparison's whole purpose. The reduction excuses a
+      // market that never happened; it never excuses one that did.
+      if (cls === 2 && live.size < 2 && asString(contract.data["scope"]) === "narrow") continue;
+
       const covered = coveredSet(intentId);
       const uncovered = [...live].filter((id) => !covered.has(id));
 

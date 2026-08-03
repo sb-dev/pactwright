@@ -76,6 +76,10 @@ for (const name of [
   "patch-synthesis-one-parent",
   "patch-status-merged",
   "competes-for-bad-endpoints",
+  // The narrow-scope reduction is class-2 only: a class-3 intent whose sole
+  // selected contract declares `scope: narrow` still reds on BOTH the quorum and
+  // the comparison requirement, end to end through the CLI.
+  "narrow-scope-not-applied",
 ]) {
   test(`bad/${name}: validate fails with the pinned errors`, (t) => {
     const dir = copyFixture(t, `bad/${name}`);
