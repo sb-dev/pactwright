@@ -70,6 +70,18 @@ next:
 
 - `/propose-contracts intent-wave-persistence-5c93` — _paste_ — intent is open with no live `proposes` candidate
 
+## intent-write-tests-status-flip-2b64 — Close the paste-only chain for a test-verification lane without weakening separation of duties
+
+stage: `intent-selected`
+
+next:
+
+- `/prepare-evidence brief-write-tests-flip-4e19` — _paste_ — brief is `implemented`; evidence is the next lifecycle record
+
+| brief | lane | owner | wave | issue | status | next |
+|---|---|---|---|---|---|---|
+| `brief-write-tests-flip-4e19` | — | — | — | not synced | implemented | `/prepare-evidence brief-write-tests-flip-4e19` |
+
 ## intent-write-tests-unlaned-brief-b3d8 — Define `/write-tests` for an unlaned single brief without weakening separation of duties
 
 stage: `intent-open`

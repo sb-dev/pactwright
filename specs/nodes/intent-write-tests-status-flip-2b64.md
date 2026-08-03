@@ -2,7 +2,7 @@
 id: intent-write-tests-status-flip-2b64
 type: intent
 title: Close the paste-only chain for a test-verification lane without weakening separation of duties
-status: addressed
+status: open
 created: 2026-07-30
 class: 2
 produced_by: "/integrate"

@@ -2,7 +2,7 @@
 id: evidence-write-tests-flip-6a24
 type: evidence
 title: Write-tests status flip implemented — the clause block placed before the print, the CLAUDE.md record, six pins with a negative leg proved to bite, and transcript trail I
-status: final
+status: draft
 created: 2026-07-30
 produced_by: "/prepare-evidence"
 ---
@@ -142,8 +142,9 @@ mechanism.** The mechanism is delivered and verified: the command flips, the res
 forward, and six legs pin it with a negative leg proving they bite. What is outstanding is a live
 operator run on a real verification lane, which by construction cannot happen until a future change
 has one. If a reviewer judges that the intent should not read `addressed` until that run lands, the
-correction is to supersede this evidence at `draft` and return the intent to `open` — cheap, and
-preferable to leaving the discrepancy unexplained.
+correction is to re-grade this evidence to `draft` and return the intent to `open` — NOT to supersede
+it, which has no instantiation for this type and would leave this node still counting as final. See
+the closing section; that judgement was made on 2026-07-31.
 
 ## What this evidence does NOT claim
 
@@ -155,3 +156,21 @@ claim the ordering legs cover this change — they do not, and the test-file hea
 not address `integration-conveyor-derived-4d19`, which stays `draft`, or
 `intent-self-guiding-delivery-loop-6d79`, which stays `open`; sequencing those is the routed-out
 item 3 of `decision-write-tests-flip-7f14`.
+
+## Re-graded to `draft` on 2026-07-31
+
+This evidence was written `final` because `/prepare-evidence`'s unlaned path requires a lone final
+evidence to complete the contract. Its own Acceptance section recorded that item 1 (the live
+paste-only run) was DEFERRED and item 6 deferred with it, so `final` overstated what had been shown.
+
+Re-graded rather than superseded, deliberately: `evidence` carries `status_values: [draft, final]`
+and no `superseded` terminal value, so rule 3's supersede protocol has no instantiation here — a
+superseding node would leave this one reading `final` and still counting toward coverage
+(`finalEvidenceForBrief` applies no superseded filter). The re-grade is the only mechanism that
+makes the graph stop asserting what was not demonstrated.
+
+Consequence, intended: `contract-write-tests-flip-3a71` is no longer covered and
+`intent-write-tests-status-flip-2b64` returns to `open`. The mechanism it delivered is unchanged and
+still tested — what is outstanding is the live `test-verification` lane run that
+`drift-finding-write-tests-no-flip-7e52` tracks. This evidence returns to `final` when that run is
+recorded.
