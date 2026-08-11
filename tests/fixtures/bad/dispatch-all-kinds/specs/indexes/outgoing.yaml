@@ -1,9 +1,0 @@
-outgoing:
-  contract-ok-ffff:
-    - id: edge-dangle-dddd
-      target: intent-missing-eeee
-      type: proposes
-  intent-dup-cccc:
-    - id: edge-wrongtype-gggg
-      target: intent-nocreated-aaaa
-      type: proposes

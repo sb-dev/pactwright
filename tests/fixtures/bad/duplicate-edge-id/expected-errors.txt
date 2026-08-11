@@ -1,1 +1,0 @@
-[rule: edges-id-unique] duplicate edge id edge-dup-1111 in specs/graph/edges.yaml (declared 2 times)

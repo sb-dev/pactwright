@@ -1,6 +1,0 @@
-edges:
-  - id: edge-good-cccc
-    source: contract-good-bbbb
-    type: proposes
-    target: intent-good-aaaa
-    created: 2026-06-11
