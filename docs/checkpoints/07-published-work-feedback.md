@@ -10,21 +10,21 @@ Complete the cross-extension Publication → Observation loop and prove it on re
 
 ## 2. Specification baseline
 
-- `Pactwright — Delivery Graph and Lifecycle Engineering Spec v5`
-- `Pactwright — Distribution, Agents and Evaluation v5`
-- `Pactwright — GitHub Actions and Views v5`
-- `Pactwright — Project Intelligence Graph Engineering Spec v3`
-- `Pactwright — Graph Review & Creative Delivery Engineering Spec v3`
-- `Pactwright — Operations Graph Engineering Spec v1`
-- `Pactwright — System Architecture v2`
-- `Pactwright — Implementation Principles v1`
-- `Pactwright Open-Source Project Organisation`
-- `Pactwright website engineering/design specification`
-- `Kakeido — Financial Model Spec v1`
-- `Kakeido — Product & UX Spec v2`
-- `Kakeido — Mobile Design Spec v1`
-- `Kei — Assistant Spec v2`
-- `Kakeido — Tech Stack Engineering Spec v1`
+- [Pactwright — Delivery Graph and Lifecycle Engineering Spec](../research-logs/2026-08-11-pactwright-delivery-graph-and-lifecycle-engineering-spec.md)
+- [Pactwright — Distribution, Agents and Evaluation](../research-logs/2026-08-11-pactwright-distribution-agents-and-evaluation.md)
+- [Pactwright — GitHub Actions and Views](../research-logs/2026-08-11-pactwright-github-actions-and-views.md)
+- [Pactwright — Project Intelligence Graph Engineering Spec](../research-logs/2026-08-11-pactwright-project-intelligence-graph-engineering-spec.md)
+- [Pactwright — Graph Review & Creative Delivery Engineering Spec](../research-logs/2026-08-11-pactwright-graph-review-and-creative-delivery-engineering-spec.md)
+- [Pactwright — Operations Graph Engineering Spec](../research-logs/2026-08-11-pactwright-operations-graph-engineering-spec.md)
+- [Pactwright — System Architecture](../research-logs/2026-08-11-pactwright-system-architecture.md)
+- [Pactwright — Implementation Principles](./00-implementation-principles.md)
+- [Pactwright Open-Source Project Organisation](../research-logs/2026-08-11-pactwright-open-source-project-organisation.md)
+- [Design Specification: Astro + Cloudflare Workers + Meta CAPI](../research-logs/2026-08-11-astro-design-spec.md)
+- [Kakeido — Financial Model Spec](../research-logs/2026-08-11-kakeido-financial-model-spec.md)
+- [Kakeido — Product & UX Spec](../research-logs/2026-08-11-kakeido-product-and-ux-spec.md)
+- [Kakeido — Mobile Design Spec](../research-logs/2026-08-11-kakeido-mobile-design-spec.md)
+- [Kei — Assistant Spec](../research-logs/2026-08-11-kakeido-assistant-spec.md)
+- [Kakeido — Tech Stack Engineering Spec](../research-logs/2026-08-11-kakeido-tech-stack-engineering-spec.md)
 
 Only the owning specifications listed in each step define semantics. This runbook defines execution order, not new product meaning.
 
