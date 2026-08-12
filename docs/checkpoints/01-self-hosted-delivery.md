@@ -47,9 +47,10 @@ Lifecycle adapter commands become available only after Checkpoint 1 generates th
 
 ## 4. Checkpoint specification map
 
-- **Core graph and lifecycle** — Delivery Graph v5 §§2–22, §24
-- **Installation, locking, agents, extensions** — Distribution v5 §§2–8, §§16–19
-- **First Kakeido semantic acceptance** — Financial Model v1 §§2–17
+- **Delivery Graph** — Pactwright — Delivery Graph and Lifecycle Engineering Spec §§2–22, §24
+- **Distribution** — Pactwright — Distribution, Agents and Evaluation §§2–8, §§16–19
+- **Open-Source Project Organisation** — Pactwright Open-Source Project Organisation §§2–3
+- **First Kakeido semantic acceptance** — Kakeido — Financial Model Spec §§2–17
 
 ## Stage 1 — Build the repository-native Project Graph substrate
 
@@ -57,12 +58,12 @@ Implement canonical graph storage and deterministic core mechanics before any ag
 
 ### Step 1 — Create the runtime/package foundation
 
-**References:** Delivery §§4–5; Distribution §§2–3
+**References:** Delivery Graph §§4–5; Distribution §§2–3
 
 **Run**
 
 ```text
-Read Delivery Graph v5 §§4–5 and Distribution v5 §§2–3.
+Read Delivery Graph §§4–5 and Distribution §§2–3.
 
 Implement the Pactwright runtime/package foundation and parsers for:
 - .pactwright/config.yml
@@ -84,12 +85,12 @@ Run the repository-defined typecheck/test commands. Report the exact commands an
 
 ### Step 2 — Implement the five core Delivery node schemas
 
-**References:** Delivery §§5–12
+**References:** Delivery Graph §§5–12
 
 **Run**
 
 ```text
-Implement exactly the five durable core Delivery node types from Delivery Graph v5: intent, decision, contract, brief, evidence.
+Implement exactly the five durable core Delivery node types from Delivery Graph: intent, decision, contract, brief, evidence.
 
 Enforce common frontmatter, stable IDs, type-specific required fields and Decision outcomes proceed/reject/defer.
 
@@ -106,7 +107,7 @@ Run schema tests. Inspect the schema registry and confirm it contains only the f
 
 ### Step 3 — Implement the shared typed-edge registry/store
 
-**References:** Delivery §§13, 21
+**References:** Delivery Graph §§13, 21
 
 **Run**
 
@@ -126,7 +127,7 @@ Run fixtures for invalid endpoint, invalid endpoint type, duplicate tuple, self-
 
 ### Step 4 — Implement current-lineage derivation
 
-**References:** Delivery §§14–15, 21
+**References:** Delivery Graph §§14–15, 21
 
 **Run**
 
@@ -146,7 +147,7 @@ Run lineage fixtures including an ambiguous lineage and confirm validation fails
 
 ### Step 5 — Implement the deterministic Project Graph revision
 
-**References:** Delivery §5
+**References:** Delivery Graph §5
 
 **Run**
 
@@ -168,7 +169,7 @@ Make lifecycle progression deterministic and graph-backed before adding AI execu
 
 ### Step 6 — Implement lifecycle configuration
 
-**References:** Delivery §17
+**References:** Delivery Graph §17
 
 **Run**
 
@@ -186,7 +187,7 @@ Run tests for both lifecycle examples in Delivery §17 plus invalid actor/stage 
 
 ### Step 7 — Implement lifecycle graph mutations
 
-**References:** Delivery §§6–15, 19
+**References:** Delivery Graph §§6–15, 19
 
 **Run**
 
@@ -204,7 +205,7 @@ Run proceed, reject and defer fixtures and inspect resulting graph state.
 
 ### Step 8 — Implement lifecycle status/next/run
 
-**References:** Delivery §§18, 20
+**References:** Delivery Graph §§18, 20
 
 **Run**
 
@@ -222,7 +223,7 @@ Use fixture repositories to prove run stops at a manual gate and no next core st
 
 ### Step 9 — Implement validate and context
 
-**References:** Delivery §§21–22
+**References:** Delivery Graph §§21–22
 
 **Run**
 
@@ -244,7 +245,7 @@ Connect core responsibilities to an agent pack and generated Claude Code adapter
 
 ### Step 10 — Implement the core capability model and default agent pack
 
-**References:** Distribution §7; Delivery §16
+**References:** Distribution §7; Delivery Graph §16
 
 **Run**
 
@@ -262,7 +263,7 @@ Run a complete-pack fixture and an incomplete-pack fixture; the latter must fail
 
 ### Step 11 — Implement Claude Code adapter rendering
 
-**References:** Distribution §8; Delivery §19
+**References:** Distribution §8; Delivery Graph §19
 
 **Run**
 
@@ -378,7 +379,7 @@ Run the real commands in a clean consumer before self-hosting.
 
 ### Step 17 — Install and initialise a clean fixture
 
-**References:** Distribution §§2, 8; Delivery §§20–22
+**References:** Distribution §§2, 8; Delivery Graph §§20–22
 
 **Run**
 
@@ -400,7 +401,7 @@ No manual edit to graph/config/generated files is required beyond intentional pr
 
 ### Step 18 — Complete one full Delivery with the generated adapter
 
-**References:** Delivery §19
+**References:** Delivery Graph §19
 
 **Run**
 
@@ -449,7 +450,7 @@ Run `pnpm pactwright lifecycle status` and confirm the repository is valid.
 
 ### Step 20 — Deliver the first self-hosted Quick Start improvement
 
-**References:** Open-Source Project Organisation §§2–3, 8, 15–16; Delivery §19
+**References:** Open-Source Project Organisation §§2–3, 8, 15–16; Delivery Graph §19
 
 **Run**
 
@@ -498,7 +499,7 @@ Run `pnpm pactwright lifecycle status`.
 
 ### Step 22 — Deliver Kakeido financial-domain invariants
 
-**References:** Kakeido Financial Model §§2–17; Delivery §19
+**References:** Kakeido Financial Model §§2–17; Delivery Graph §19
 
 **Run**
 
