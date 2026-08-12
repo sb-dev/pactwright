@@ -25,6 +25,118 @@ The overall journey is:
 
 Each surface should have a clear responsibility to minimise duplication and documentation drift.
 
+
+## 1.1 Graph-Driven Publishing
+
+The public project must evolve with the product.
+
+Public content is not a separate marketing backlog that is completed after the software. When a capability becomes usable, Pactwright should also publish the smallest useful set of material needed for users to discover, understand, try or learn it.
+
+The operating rule is:
+
+```text
+project knowledge
+↓
+Intent
+↓
+Delivery
+↓
+public artefact
+↓
+Publication where applicable
+↓
+production feedback when available
+↓
+Project Intelligence
+↓
+future corrective Intent
+```
+
+Use the strongest Pactwright capability already available:
+
+```text
+before Project Intelligence
+→ normal Delivery
+
+after Project Intelligence
+→ Project Intelligence-grounded Delivery
+
+after Graph Review
+→ review relevant public work before acceptance
+
+after Creative Delivery
+→ public narrative / visual / educational creative work uses Creative Delivery
+
+after Operations can observe Publications
+→ selected real Publications feed production evidence back into Project Intelligence
+```
+
+Do not manually create or revise material outside Pactwright when the current system can represent the work. The Project Graph should retain the Intent, grounding, Delivery Evidence and, where applicable, Asset and Publication.
+
+Reference documentation and executable examples may remain normal Delivery work. Public-facing narrative, visual, educational and marketing artefacts should use Creative Delivery once available.
+
+## 1.2 Creative Readiness
+
+Creative work must not compensate for missing project knowledge.
+
+Before public creative work begins, Project Intelligence must show sufficient accepted Knowledge for the intended surface.
+
+Minimum readiness:
+
+| Domain | Requirement |
+|---|---|
+| identity | **Covered** for all public/outbound creative work |
+| content | **Covered** for editorial, educational or marketing work |
+| product | **Covered** when making Pactwright capability, value or limitation claims |
+| go-to-market | **Covered** for acquisition, positioning, CTA or campaign work |
+| delivery/ux | **Covered** when describing or generating user-facing workflow/UX material |
+| delivery/eng | **Covered** for technical implementation claims |
+| other subject domain | Covered when factual claims depend on it |
+
+`Covered` means the required current claims and constraints are represented by accepted, in-horizon Knowledge with traceable Sources. It does not mean the domain must be exhaustively complete.
+
+If required coverage is missing:
+
+```text
+intelligence onboard
+↓
+identify missing Source material / strategic decisions
+↓
+normal Delivery creates or collects that material
+↓
+intelligence ingest
+↓
+triage / reviewed promotion
+↓
+coverage becomes sufficient
+↓
+creative Delivery may start
+```
+
+Strategic identity or positioning choices are Decisions. They must not be invented silently by a generation model.
+
+Creative Brief grounding must reference the accepted Knowledge actually used. If the required Knowledge becomes challenged, superseded or retracted before approval, the work must be re-grounded.
+
+## 1.3 Progressive Public Product
+
+The initial public product should grow alongside the implementation programme.
+
+| Capability milestone | Public surfaces that should advance |
+|---|---|
+| Core Delivery | README Quick Start, Getting Started docs, first Delivery example |
+| Remote Delivery | deployable website, GitHub setup guide, remote Delivery example |
+| Project Intelligence | PI concepts/onboarding docs, PI example, Academy Project Understanding lesson, identity/content knowledge foundation |
+| Graph Review | Review docs, review example, Academy review lesson, review of the existing public corpus |
+| Creative Delivery | Creative Delivery docs/example/Academy lesson, README/website capability update, first grounded public Asset/Publication |
+| Operations | Operations docs, production-feedback example, Academy production-learning lesson, website capability update |
+| Publication feedback | Publication-feedback guide and a real evidence-driven revision of an existing Pactwright Publication |
+| Full operating surface | end-to-end operating guide/example, advanced Academy workflow, extension catalogue, complete README capability map |
+| Hardened loop | public-surface audit, Pactwright-building-Pactwright case study, contribution material, release/launch content |
+
+This is a progression target, not a requirement to update every surface on every checkpoint.
+
+The rule is to update the smallest set of surfaces necessary to make the newly delivered capability discoverable, understandable and usable.
+
 ---
 
 ## 2. Repository Structure
@@ -868,3 +980,7 @@ The goal is not to build a documentation platform, learning-management system, o
 The goal is to create a coherent path that helps someone:
 
 **discover Pactwright, understand it, become productive, improve their practice, customise the system, and eventually contribute back to the ecosystem.**
+
+---
+
+**Pactwright Open-Source Project Organisation v2**

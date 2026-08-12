@@ -1,6 +1,6 @@
 # Pactwright — Graduation — TrueLayer
 
-**Version:** 3 
+**Version:** 8 
 **Entry condition:** Checkpoint 9 is accepted and a dedicated Kakeido TrueLayer integration specification exists. 
 **Exit capability:** TrueLayer is added as a second financial-data source without semantic drift and the new integration is observed in production.
 
@@ -45,13 +45,23 @@ Use a prompt for repository/code changes. Once Pactwright owns a deterministic o
 
 Lifecycle adapter commands become available only after Checkpoint 1 generates the active adapter.
 
+**Default execution location:** the Kakeido repository root
+
+For repository/code changes, finish with `pnpm verify`. Before invoking a newly implemented Pactwright runtime command during implementation, run `pnpm build` so the repository-local CLI is not using stale distribution output.
+
+After Checkpoint 2 activates GitHub, land coherent repository changes through pull requests and required checks rather than direct default-branch commits.
+
+Dynamic ids such as `<source-id>`, `<brief-id>` and `<evidence-id>` must come from an earlier command in the runbook. Commands that create or resolve durable records must print the ids required by later steps.
+
+Fixture verification means repository test fixtures unless a step explicitly creates a real repository or GitHub resource.
+
 ## 4. Checkpoint specification map
 
-- **Existing ingestion boundary** — Kakeido Tech Stack §§8–9
-- **Financial semantics** — Financial Model §§2–17
-- **Product/review semantics** — Product & UX §§2–10
-- **Mobile semantics** — Mobile Design §§5–18
-- **Kei authority** — Kei §§6–14
+- **Existing ingestion boundary** — Kakeido — Tech Stack Engineering Spec §§8–9
+- **Financial semantics** — Kakeido — Financial Model Spec §§2–17
+- **Product/review semantics** — Kakeido — Product & UX Spec §§2–10
+- **Mobile semantics** — Kakeido — Mobile Design Spec §§5–18
+- **Kei authority** — Kei — Assistant Spec §§6–14
 - **Full Pactwright loop** — PI/Review/Delivery/Operations owning specs
 
 ## Stage 1 — Ingest/govern the TrueLayer specification
@@ -73,9 +83,21 @@ pnpm pactwright intelligence triage <source-id>
 
 The integration spec enters normal PI governance.
 
+**Run**
+
+```bash
+# only when triage requires reviewed promotion and the proposal is accepted
+pnpm pactwright intelligence promote <source-id>
+
+pnpm pactwright intelligence onboard
+pnpm pactwright intelligence derive-intent-roadmap
+pnpm pactwright intelligence validate
+pnpm pactwright validate
+```
+
 **Verify before continuing**
 
-Promote if required, then run onboarding/intent-roadmap/validation.
+The integration specification is represented as governed project knowledge/candidates and has not created a Delivery Intent automatically.
 
 ### Step 2 — Review integration impact
 
@@ -94,17 +116,37 @@ pnpm pactwright review run graph-auditor
 
 Architecture/product/UX contradictions are surfaced before Delivery.
 
+**Run**
+
+For every internal Source id printed by the reviews:
+
+```bash
+pnpm pactwright intelligence triage <source-id>
+
+# only when triage requires reviewed promotion and the proposal is accepted
+pnpm pactwright intelligence promote <source-id>
+```
+
+Then:
+
+```bash
+pnpm pactwright intelligence derive-intent-roadmap
+```
+
 **Verify before continuing**
 
-Route every finding through PI and regenerate roadmap.
+Every accepted integration concern is traceable to Review evidence and PI governance.
 
 ## Stage 2 — Deliver the second ingestion source
+
+Run the TrueLayer implementation on a Kakeido feature branch. Merge only after the existing Kakeido CI/Pactwright checks pass.
 
 Add provider-specific ingestion behind the canonical Kakeido boundary.
 
 ### Step 3 — Capture/deliver the accepted TrueLayer outcome
 
-**References:** Financial Model §§6–17; Tech Stack §§3,7–10
+**References:** Financial semantics §§6–17; Tech Stack §§3,7–10
+
 
 **Run**
 
@@ -130,18 +172,48 @@ Run Kakeido tests for source equivalence, duplicates, reviewed state and canonic
 
 Use the full production feedback loop on the new integration.
 
-### Step 4 — Record deployment and run Operations
+### Step 4 — Deploy the TrueLayer integration
 
-**References:** Operations §§7–15
+**References:** Operations §7; Kakeido Tech Stack release strategy
+
+**Run**
+
+```text
+Execute Kakeido's existing deployment/release mechanism for the accepted TrueLayer Evidence in the configured operational environment. Report the Evidence id plus deployed artifact revision/locator. Do not introduce a provider-specific release path.
+```
 
 **Run**
 
 ```bash
 pnpm pactwright operations record-deployment <evidence-id>
+pnpm pactwright operations validate
+```
+
+**Expected result**
+
+The TrueLayer Delivery has a canonical Deployment tied to exact Evidence.
+
+**Verify before continuing**
+
+Deployment identity is exact and raw TrueLayer payloads are absent from canonical graph state.
+
+### Step 5 — Observe and govern TrueLayer production evidence
+
+**References:** Operations §§8–15; PI §§8, 11, 14
+
+**Run**
+
+```bash
 pnpm pactwright operations ingest <source-id>
 pnpm pactwright operations observe <source-id>
 pnpm pactwright operations validate
 pnpm pactwright intelligence triage <internal-source-id>
+
+# only when triage requires reviewed promotion and the proposal is accepted
+pnpm pactwright intelligence promote <internal-source-id>
+
+pnpm pactwright intelligence derive-intent-roadmap
+pnpm pactwright operations corrective-roadmap
 ```
 
 **Expected result**
@@ -150,7 +222,7 @@ The new provider integration is production-traceable and governed like prior Kak
 
 **Verify before continuing**
 
-Promote/derive corrective work only when PI governance requires it; inspect that raw provider payloads are not Project Graph state.
+Inspect the Observation evidence and confirm raw provider payloads are not Project Graph state.
 
 ## Exit gate
 
@@ -158,4 +230,4 @@ Equivalent CSV/TrueLayer inputs converge on compatible canonical Kakeido semanti
 
 ---
 
-**Pactwright — Graduation — TrueLayer v3**
+**Pactwright — Graduation — TrueLayer v8**

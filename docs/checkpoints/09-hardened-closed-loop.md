@@ -1,6 +1,6 @@
 # Pactwright — Checkpoint 9 — Hardened Closed Loop
 
-**Version:** 3 
+**Version:** 8 
 **Entry condition:** Checkpoint 8 is accepted. 
 **Exit capability:** The complete first-party system is evaluated, failure-hardened, documented and repeatedly proven in closed loops on Pactwright and Kakeido.
 
@@ -45,11 +45,21 @@ Use a prompt for repository/code changes. Once Pactwright owns a deterministic o
 
 Lifecycle adapter commands become available only after Checkpoint 1 generates the active adapter.
 
+**Default execution location:** the Pactwright repository root unless the step explicitly names Kakeido or a fixture
+
+For repository/code changes, finish with `pnpm verify`. Before invoking a newly implemented Pactwright runtime command during implementation, run `pnpm build` so the repository-local CLI is not using stale distribution output.
+
+After Checkpoint 2 activates GitHub, land coherent repository changes through pull requests and required checks rather than direct default-branch commits.
+
+Dynamic ids such as `<source-id>`, `<brief-id>` and `<evidence-id>` must come from an earlier command in the runbook. Commands that create or resolve durable records must print the ids required by later steps.
+
+Fixture verification means repository test fixtures unless a step explicitly creates a real repository or GitHub resource.
+
 ## 4. Checkpoint specification map
 
-- **Evaluation** — Distribution §16; Review & Creative §17; Operations §21
-- **Definitions of Done/future boundary** — Delivery §§24–26; PI §§17–20; Review & Creative §§21–26; Operations §§22–29; GitHub §§26–28
-- **Public project** — Open-Source Project Organisation §§3–16
+- **Evaluation** — Pactwright — Distribution, Agents and Evaluation §16; Pactwright — Graph Review & Creative Delivery Engineering Spec §17; Pactwright — Operations Graph Engineering Spec §21
+- **Definitions of Done/future boundary** — Pactwright — Delivery Graph and Lifecycle Engineering Spec §§24–26; Pactwright — Project Intelligence Graph Engineering Spec §§17–20; Pactwright — Graph Review & Creative Delivery Engineering Spec §§21–26; Pactwright — Operations Graph Engineering Spec §§22–29; Pactwright — GitHub Actions and Views §§26–28
+- **Public project** — Pactwright Open-Source Project Organisation §§3–16
 
 ## Stage 1 — Convert observed failures into evaluation cases
 
@@ -75,7 +85,7 @@ Manually inspect that every candidate has concrete provenance and an owning capa
 
 ### Step 2 — Implement Delivery evaluation fixtures
 
-**References:** Distribution §16; Delivery §24
+**References:** Evaluation §16; Definitions of Done/future boundary §24
 
 **Run**
 
@@ -93,7 +103,7 @@ Run `pnpm pactwright eval` and inspect Delivery cases individually.
 
 ### Step 3 — Implement PI evaluation fixtures
 
-**References:** Distribution §16; PI §§8–13
+**References:** Evaluation §16; PI §§8–13
 
 **Run**
 
@@ -111,7 +121,7 @@ Run `pnpm pactwright eval` and inspect PI cases individually.
 
 ### Step 4 — Implement Review/Creative evaluation fixtures
 
-**References:** Distribution §16; Review & Creative §§6–17
+**References:** Evaluation §16; Review & Creative §§6–17
 
 **Run**
 
@@ -129,7 +139,7 @@ Run eval and inspect Review/Creative cases individually.
 
 ### Step 5 — Implement Operations evaluation fixtures
 
-**References:** Operations §21
+**References:** Evaluation §21
 
 **Run**
 
@@ -151,11 +161,19 @@ Improve reliability without speculative new semantics.
 
 ### Step 6 — Run the complete evaluation suite
 
-**References:** Distribution §16
+**References:** Evaluation §16
 
 **Run**
 
 ```bash
+pnpm add -D \
+  pactwright@0.0.9 \
+  @pactwright/project-intelligence@0.0.9 \
+  @pactwright/review-creative@0.0.9 \
+  @pactwright/creative@0.0.9 \
+  @pactwright/operations@0.0.9
+pnpm install --frozen-lockfile
+
 pnpm pactwright eval
 ```
 
@@ -167,25 +185,33 @@ A per-capability/per-case result set exists.
 
 No release decision relies on a single aggregate score.
 
-### Step 7 — Compare candidate agent-pack behaviour
+### Step 7 — Compare a real candidate agent pack when one exists
 
-**References:** Distribution §16
+**References:** Evaluation §16
 
 **Run**
 
+```text
+Inspect the accepted hardening work. If no change affects an agent pack or Generation Guidance, record this step as not applicable and do not invent a candidate. If AI behaviour changes, build the candidate pack through the normal package build and report its local package path.
+```
+
+**Run**
+
+Only when a real candidate exists:
+
 ```bash
 pnpm pactwright eval \
- --baseline @pactwright/standard@<released-version> \
- --candidate <candidate-pack>
+  --baseline @pactwright/standard@0.0.8 \
+  --candidate <candidate-pack-path>
 ```
 
 **Expected result**
 
-Regressions/improvements are visible by case/capability.
+Any real AI-behaviour change is compared against the last published checkpoint baseline.
 
 **Verify before continuing**
 
-Review every regression and either fix or explicitly accept it with rationale.
+Review each regression individually; no aggregate score decides release acceptance.
 
 ### Step 8 — Implement only observed hardening fixes
 
@@ -234,7 +260,7 @@ Make shipped content match actual implemented capability.
 
 ### Step 10 — Audit public surfaces against actual product state
 
-**References:** Open-Source Project Organisation §§3–16
+**References:** Public project §§3–16
 
 **Run**
 
@@ -253,6 +279,7 @@ Review the backlog against repository truth and remove aspirational items.
 ### Step 11 — Deliver each blocking public-surface gap through Pactwright
 
 **References:** Open-Source Project Organisation; Delivery/Creative specs
+
 
 **Run**
 
@@ -274,9 +301,29 @@ The initial public journey is coherent and grounded in implemented capability.
 
 Repeat this step only for blocking gaps identified by the audit; run relevant validation after each.
 
-### Step 12 — Create the Pactwright-building-Pactwright case study
+### Step 12 — Re-check public creative readiness
 
-**References:** Open-Source Project Organisation §15; Review & Creative §§9–13
+**References:** Open-Source Project Organisation §1.2; Project Intelligence §§10, 13
+
+**Run**
+
+```bash
+pnpm pactwright intelligence onboard
+```
+
+Before launch/case-study work, require `identity`, `content`, `product` and `go-to-market` to be Covered. Fill any gap through normal Delivery → ingest → triage/promotion before continuing.
+
+**Expected result**
+
+Launch and case-study content is grounded in current accepted strategy/product truth.
+
+**Verify before continuing**
+
+Inspect domain coverage and the Knowledge selected for positioning, audience, voice, product claims and CTA decisions.
+
+### Step 13 — Create and publish the Pactwright-building-Pactwright case study
+
+**References:** Public project §15; Review & Creative §§9–13
 
 **Run**
 
@@ -284,19 +331,48 @@ Repeat this step only for blocking gaps identified by the audit; run relevant va
 Inspect canonical Pactwright graph/Evidence, Review Executions/findings, Publications and Operations Observations from the implementation programme. Prepare a factual grounding set for a Pactwright-building-Pactwright case study covering bootstrap, self-hosted Delivery, PI, Graph Review, Creative Delivery, Operations feedback and corrective Delivery. Do not invent milestones or outcomes.
 ```
 
+**Run**
+
+```text
+/capture-intent "Create the Pactwright-building-Pactwright case study from the verified implementation evidence."
+/propose-contracts <intent-id>
+/approve-contract <contract-id> "<selection notes>"
+/write-brief <contract-id>
+/deliver-brief <brief-id>
+/review <brief-id>
+/prepare-evidence <brief-id>
+```
+
+**Run**
+
+After manually approving the exact case-study output:
+
+```bash
+pnpm pactwright creative approve-asset <evidence-id>
+```
+
+Publish the approved Asset through the existing Pactwright content mechanism, then:
+
+```bash
+pnpm pactwright creative record-publication <asset-id> <channel>
+pnpm pactwright creative validate
+```
+
 **Expected result**
 
-The case study can be produced from repository evidence.
+The case study is a real grounded Publication produced through the same lifecycle it describes.
 
 **Verify before continuing**
 
-Deliver it via Creative Delivery, approve the exact Asset and record its Publication.
+Trace its factual claims to the grounding set and its Publication to the approved Asset hash.
 
 ## Stage 4 — Prove a repeated closed loop on Pactwright
 
+Run this stage from the Pactwright repository root.
+
 Show that a correction can itself be observed after exposure.
 
-### Step 13 — Collect a real Pactwright production finding
+### Step 14 — Collect a real Pactwright production finding
 
 **References:** Operations §§11–15
 
@@ -315,9 +391,9 @@ A new or matched operational finding is produced from a real surface.
 
 Inspect Operations execution and any Observation.
 
-### Step 14 — Route the finding and deliver a correction
+### Step 15 — Route the finding and deliver a correction
 
-**References:** Operations §13; PI §11; Delivery §19
+**References:** Operations §13; PI §11; Delivery Graph §19
 
 **Run**
 
@@ -333,6 +409,7 @@ pnpm pactwright intelligence promote <internal-source-id>
 pnpm pactwright intelligence derive-intent-roadmap
 pnpm pactwright operations corrective-roadmap
 ```
+
 
 **Run**
 
@@ -354,14 +431,28 @@ A production finding becomes normal Delivery only through PI governance.
 
 Trace Observation → Source → candidate → Intent → Evidence.
 
-### Step 15 — Expose the correction and observe again
+### Step 16 — Expose the correction and observe again
 
-**References:** Operations §§7–16
+**References:** Operations §§7–16; Review & Creative §§12–13
 
 **Run**
 
+For a software correction:
+
 ```bash
 pnpm pactwright operations record-deployment <evidence-id>
+```
+
+For a creative correction, after human approval and real publication:
+
+```bash
+pnpm pactwright creative approve-asset <evidence-id>
+pnpm pactwright creative record-publication <asset-id> <channel>
+```
+
+Then:
+
+```bash
 pnpm pactwright operations refresh
 ```
 
@@ -373,19 +464,93 @@ Second-round production evidence either validates the correction, creates new le
 
 Confirm prior Evidence/Observation records remain immutable and any changed operational truth uses a new Observation/supersession.
 
-## Stage 5 — Prove the hardened full loop on Kakeido
+## Stage 5 — Release `0.0.9`
+
+### Step 17 — Prepare, publish and tag `0.0.9`
+
+**References:** Distribution §§2, 4, 6–8, 15, 18–19
+
+**Run**
+
+Update `CHANGELOG.md` from accepted Checkpoint 9 Evidence only, then create the release PR:
+
+```bash
+VERSION=0.0.9
+DEFAULT_BRANCH="$(gh repo view --json defaultBranchRef -q .defaultBranchRef.name)"
+
+git switch "$DEFAULT_BRANCH"
+git pull --ff-only
+git switch -c "release/$VERSION"
+
+pnpm version "$VERSION" -r --no-git-tag-version --allow-same-version
+pnpm install
+pnpm verify
+pnpm publish -r --dry-run --tag next --access public
+
+git add -A
+git commit -m "chore: release $VERSION"
+git push -u origin HEAD
+
+gh pr create \
+  --title "Release $VERSION" \
+  --body "Prepare Pactwright $VERSION."
+
+gh pr checks --watch
+gh pr merge --squash --delete-branch
+
+git switch "$DEFAULT_BRANCH"
+git pull --ff-only
+```
+
+Tag the accepted merge commit:
+
+```bash
+git tag -a "v$VERSION" -m "v$VERSION"
+git push origin "v$VERSION"
+```
+
+**Expected result**
+
+The tag-triggered trusted `release.yml` workflow verifies the exact merged source and publishes every still-unpublished package in the `0.0.9` family under `next`. Existing published members are not overwritten.
+
+**Verify before continuing**
+
+Confirm the `release.yml` run for `v0.0.9` succeeded, then:
+
+```bash
+pnpm view pactwright@0.0.9 version
+pnpm view @pactwright/standard@0.0.9 version
+pnpm view @pactwright/project-intelligence@0.0.9 version
+pnpm view @pactwright/review-creative@0.0.9 version
+pnpm view @pactwright/creative@0.0.9 version
+pnpm view @pactwright/operations@0.0.9 version
+```
+
+Every command must return `0.0.9`. Packages already configured for trusted publishing must show npm provenance/trusted-publisher metadata; any package bootstrapped in this step is trusted for its next release.
+
+
+## Stage 6 — Prove the hardened full loop on Kakeido
+
+Run this stage from the Kakeido repository root unless a step explicitly says otherwise.
 
 Repeat the same model on the external product and guard its domain semantics.
 
-### Step 16 — Upgrade/reconcile Kakeido fully
+### Step 18 — Upgrade/reconcile Kakeido fully
 
 **References:** Distribution §15
 
 **Run**
 
 ```bash
-pnpm add -D pactwright@<checkpoint-version>
+pnpm add -D \
+  pactwright@0.0.9 \
+  @pactwright/project-intelligence@0.0.9 \
+  @pactwright/review-creative@0.0.9 \
+  @pactwright/creative@0.0.9 \
+  @pactwright/operations@0.0.9
+
 pnpm pactwright extension upgrade project-intelligence
+pnpm pactwright agent-pack use @pactwright/creative
 pnpm pactwright extension upgrade review-creative
 pnpm pactwright extension upgrade operations
 pnpm pactwright sync
@@ -401,7 +566,7 @@ Kakeido runs the hardened checkpoint release.
 
 Run all four graph validations plus `pnpm pactwright eval`.
 
-### Step 17 — Run a Kakeido regression Review
+### Step 19 — Run a Kakeido regression Review
 
 **References:** Kakeido specs; Review & Creative §7
 
@@ -422,7 +587,7 @@ Core Financial/Product/Mobile/Kei/Tech Stack semantics remain coherent.
 
 Inspect findings specifically for financial double counting, review IA drift, direct mobile→DB access, and Kei authority/uncertainty regressions.
 
-### Step 18 — Complete one real Kakeido closed loop
+### Step 20 — Complete one real Kakeido closed loop
 
 **References:** Operations/PI/Delivery specs
 
@@ -440,11 +605,11 @@ The external product proves the same closed-loop architecture after hardening.
 
 Review the full trace and run Kakeido repository-defined tests plus Pactwright validations.
 
-## Stage 6 — Run failure drills
+## Stage 7 — Run failure drills
 
 Prove failures remain isolated to their owning boundaries.
 
-### Step 19 — Execute the final failure matrix
+### Step 21 — Execute the final failure matrix
 
 **References:** All owning specs
 
@@ -462,10 +627,122 @@ Known failure boundaries fail closed and do not corrupt sibling/core truth.
 
 Review the evidence for all ten drills; rerun the full validation matrix.
 
+
+## Stage 8 — Publish the first supported Pactwright release
+
+`0.0.9` has already passed Kakeido. Promote the same accepted code line through the trusted tag workflow.
+
+### Step 22 — Prepare and tag `0.1.0`
+
+**References:** Distribution §§2, 4, 6–8, 15, 18–19
+
+**Run**
+
+Update `CHANGELOG.md` with a `0.1.0` summary from accepted programme Evidence and clearly mark the supported CLI/package surface.
+
+```bash
+VERSION=0.1.0
+DEFAULT_BRANCH="$(gh repo view --json defaultBranchRef -q .defaultBranchRef.name)"
+
+git switch "$DEFAULT_BRANCH"
+git pull --ff-only
+git switch -c "release/$VERSION"
+
+pnpm version "$VERSION" -r --no-git-tag-version --allow-same-version
+pnpm install
+pnpm verify
+pnpm publish -r --dry-run --tag latest --access public
+
+git add -A
+git commit -m "chore: release $VERSION"
+git push -u origin HEAD
+
+gh pr create   --title "Release $VERSION"   --body "Prepare the first supported Pactwright release."
+
+gh pr checks --watch
+gh pr merge --squash --delete-branch
+
+git switch "$DEFAULT_BRANCH"
+git pull --ff-only
+
+git tag -a "v$VERSION" -m "v$VERSION"
+git push origin "v$VERSION"
+```
+
+**Expected result**
+
+The trusted `release.yml` workflow runs the complete verification/compatibility gate and publishes the accepted package family as `0.1.0` under `latest` with provenance.
+
+**Verify before continuing**
+
+Confirm the `release.yml` run for `v0.1.0` succeeded, then:
+
+```bash
+pnpm view pactwright@latest version
+pnpm view @pactwright/standard@latest version
+pnpm view @pactwright/project-intelligence@latest version
+pnpm view @pactwright/review-creative@latest version
+pnpm view @pactwright/creative@latest version
+pnpm view @pactwright/operations@latest version
+
+pnpm view pactwright@next version
+```
+
+The first six commands must return `0.1.0`; `next` must remain `0.0.9`.
+
+### Step 23 — Upgrade Kakeido to the stable release
+
+**References:** Distribution §§2, 4, 7–8
+
+**Run**
+
+From a Kakeido acceptance branch:
+
+```bash
+pnpm add -D   pactwright@0.1.0   @pactwright/project-intelligence@0.1.0   @pactwright/review-creative@0.1.0   @pactwright/creative@0.1.0   @pactwright/operations@0.1.0
+
+
+pnpm pactwright extension upgrade project-intelligence
+pnpm pactwright agent-pack use @pactwright/creative
+pnpm pactwright extension upgrade review-creative
+pnpm pactwright extension upgrade operations
+pnpm pactwright sync
+
+pnpm pactwright validate
+pnpm pactwright intelligence validate
+pnpm pactwright creative validate
+pnpm pactwright operations validate
+```
+
+Commit the package/lock/config changes, push the branch, open a PR, wait for required checks and merge it.
+
+**Expected result**
+
+Kakeido consumes the exact supported `0.1.0` registry family and passes the same repository checks used for normal development.
+
+**Verify before continuing**
+
+```bash
+pnpm list pactwright @pactwright/project-intelligence @pactwright/review-creative @pactwright/creative @pactwright/operations
+```
+
+Every direct Pactwright package resolves to `0.1.0`, and the Kakeido PR is merged with all required checks green.
+
+
 ## Exit gate
 
-The complete first-party system repeatedly closes the loop in Pactwright and Kakeido; real failures are represented in evaluation; public surfaces match actual capability; GitHub/projections converge; failure drills preserve ownership; no speculative future semantics were introduced merely for completeness.
+Checkpoint 9 passes only when:
+
+- `0.0.9` published under `next` has passed the full Kakeido closed-loop acceptance;
+- the accepted package family is published to npm as `0.1.0` under `latest`;
+- Kakeido has upgraded to the exact `0.1.0` registry packages and all validations pass;
+- the complete first-party system repeatedly closes the loop in Pactwright and Kakeido;
+- real failures are represented in evaluation;
+- public surfaces match actual capability;
+- GitHub/projections converge;
+- failure drills preserve ownership;
+- no speculative future semantics were introduced merely for completeness.
 
 ---
 
-**Pactwright — Checkpoint 9 — Hardened Closed Loop v3**
+**Pactwright — Checkpoint 9 — Hardened Closed Loop v8**

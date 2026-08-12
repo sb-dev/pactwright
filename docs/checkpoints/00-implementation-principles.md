@@ -129,6 +129,67 @@ is a better early milestone than independently completing graph schemas, prompts
 
 ---
 
+## 5A. Use the Strongest Available Pactwright Capability
+
+Pactwright must increasingly build the whole project through itself, not only its code.
+
+The capability available at the current checkpoint defines the execution path:
+
+```text
+Delivery exists
+→ all material project changes use Delivery
+
+Project Intelligence exists
+→ knowledge-dependent work uses accepted PI context
+→ new project meaning returns through Sources / triage / Knowledge
+
+Graph Review exists
+→ relevant project-wide/public work is reviewed through Graph Review
+
+Creative Delivery exists
+→ public narrative, visual and educational creative work uses Creative Delivery
+
+Operations exists
+→ deployed software is observed through Operations
+
+Publication exposure exists
+→ selected real Publications are observed through Operations
+```
+
+Do not bypass an available Pactwright capability merely because a direct file edit is faster.
+
+The purpose is not ceremony. It is to keep the Project Graph current while Pactwright is being built.
+
+### Creative readiness gate
+
+Once Project Intelligence exists, public creative work may begin only when its grounding domains are sufficiently covered.
+
+Always require:
+
+- `identity` = **Covered**;
+- `content` = **Covered** for editorial/educational/marketing work;
+- `product` = **Covered** for product/capability/value claims;
+- `go-to-market` = **Covered** for acquisition/positioning/campaign work;
+- any subject domain required by factual claims = **Covered**.
+
+Coverage is scoped to the work. It means the necessary current claims and constraints are represented by accepted Knowledge, not that the entire domain is complete.
+
+If coverage is insufficient:
+
+```text
+intelligence onboard
+→ identify missing Sources / Decisions
+→ normal Delivery creates or collects the missing material
+→ intelligence ingest
+→ triage / promotion where required
+→ re-check coverage
+```
+
+Creative generation must not silently invent identity, positioning or other missing project truth.
+
+
+---
+
 ## 6. Two Longitudinal Acceptance Projects
 
 Pactwright uses two persistent real projects.
@@ -154,6 +215,8 @@ Blog
 ```
 
 The public project is implementation work, not post-launch decoration.
+
+Every checkpoint must advance code **and** the smallest useful part of the public product enabled by that capability. Public content should not accumulate as a final-documentation phase.
 
 Pactwright must prove it can deliver:
 
@@ -409,9 +472,15 @@ At every checkpoint, evaluate whether a new user could discover and operate the 
 - Quick Start;
 - Docs;
 - examples;
+- Academy;
+- website;
 - error messages;
 - generated command help;
 - onboarding.
+
+Deliver the smallest concrete content set needed to close those gaps during the same checkpoint.
+
+Once Project Intelligence exists, derive and ground this work from accepted Knowledge. Once Creative Delivery exists, use it for public narrative, visual and educational creative artefacts.
 
 Content failures are product failures.
 
@@ -424,6 +493,37 @@ Discover
 → Learn
 → Extend
 → Contribute
+```
+
+The planned progression is:
+
+```text
+Core Delivery
+→ README Quick Start + Getting Started + first example
+
+Remote Delivery
+→ website foundation + GitHub guide + remote example
+
+Project Intelligence
+→ PI docs + onboarding example + Academy lesson + identity/content readiness
+
+Graph Review
+→ Review docs/example/Academy + review the existing public corpus
+
+Creative Delivery
+→ creative docs/example/Academy + first grounded public Publication
+
+Operations
+→ Operations docs/example/Academy + production-learning content
+
+Publication feedback
+→ revise a real Publication from production evidence
+
+Full operating surface
+→ end-to-end guide/example + advanced Academy + extension catalogue
+
+Hardened loop
+→ case study + contribution/launch material + final public-surface audit
 ```
 
 ---
@@ -464,7 +564,9 @@ A checkpoint may pass its internal tests and still fail System-Level Acceptance.
 
 Real use should create evidence about Pactwright itself.
 
-Before Project Intelligence exists, capture important findings through normal Delivery work.
+Before Project Intelligence exists, capture important findings and public-content changes through normal Delivery work.
+
+When Project Intelligence first becomes available, ingest the existing Pactwright public corpus so identity/content/product knowledge and public claims can be inspected against the same project understanding.
 
 After Project Intelligence exists:
 
@@ -652,4 +754,8 @@ build everything
 
 ---
 
-**Pactwright — Implementation Principles v1**
+
+
+---
+
+**Pactwright — Implementation Principles v2**

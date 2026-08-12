@@ -1,6 +1,6 @@
 # Pactwright — Checkpoint 3 — Project Intelligence
 
-**Version:** 3 
+**Version:** 8 
 **Entry condition:** Checkpoint 2 is accepted. 
 **Exit capability:** Project Intelligence can cold-start both projects, govern knowledge, supply bounded Delivery context and derive one intent roadmap.
 
@@ -45,12 +45,22 @@ Use a prompt for repository/code changes. Once Pactwright owns a deterministic o
 
 Lifecycle adapter commands become available only after Checkpoint 1 generates the active adapter.
 
+**Default execution location:** the Pactwright repository root unless the step explicitly names Kakeido or a fixture
+
+For repository/code changes, finish with `pnpm verify`. Before invoking a newly implemented Pactwright runtime command during implementation, run `pnpm build` so the repository-local CLI is not using stale distribution output.
+
+After Checkpoint 2 activates GitHub, land coherent repository changes through pull requests and required checks rather than direct default-branch commits.
+
+Dynamic ids such as `<source-id>`, `<brief-id>` and `<evidence-id>` must come from an earlier command in the runbook. Commands that create or resolve durable records must print the ids required by later steps.
+
+Fixture verification means repository test fixtures unless a step explicitly creates a real repository or GitHub resource.
+
 ## 4. Checkpoint specification map
 
-- **PI boundary/layout/data** — Project Intelligence v3 §§1–7
-- **Triage/freshness/onboarding/roadmap** — PI §§8–12
-- **Delivery/extension integration/commands** — PI §§13–17
-- **Distribution/GitHub** — Distribution §§4–8; GitHub §§6, 13, 20–21, 25–27
+- **PI boundary/layout/data** — Pactwright — Project Intelligence Graph Engineering Spec §§1–7
+- **Triage/freshness/onboarding/roadmap** — Pactwright — Project Intelligence Graph Engineering Spec §§8–12
+- **Delivery/extension integration/commands** — Pactwright — Project Intelligence Graph Engineering Spec §§13–17
+- **Distribution/GitHub** — Pactwright — Distribution, Agents and Evaluation §§4–8; Pactwright — GitHub Actions and Views §§6, 13, 20–21, 25–27
 
 ## Stage 1 — Package and register Project Intelligence
 
@@ -58,12 +68,12 @@ Create the extension boundary before semantic operations.
 
 ### Step 1 — Implement package manifest and dependency/capability registration
 
-**References:** PI §§1–4; Distribution §§4–5
+**References:** PI boundary/layout/data §§1–4; Distribution/GitHub §§4–5
 
 **Run**
 
 ```text
-Using Pactwright Delivery, implement @pactwright/project-intelligence manifest/registration: Source/Domain/Knowledge node types, Intelligence namespace, required intelligence-triage/intelligence-promotion/intelligence-context capabilities and Project Intelligence GitHub profile. Do not mutate Delivery semantics.
+Using Pactwright Delivery, create `@pactwright/project-intelligence` as a publishable workspace package and implement its manifest/registration: Source/Domain/Knowledge node types, Intelligence namespace, required intelligence-triage/intelligence-promotion/intelligence-context capabilities and Project Intelligence GitHub profile. Do not mutate Delivery semantics.
 ```
 
 **Expected result**
@@ -72,11 +82,11 @@ The extension is independently loadable and owns only its declared graph semanti
 
 **Verify before continuing**
 
-Install the package in a fixture with `pactwright extension add project-intelligence`; run `pactwright validate` and inspect the resolved manifest.
+Run manifest/dependency-resolution fixtures, including the case where a compatible `@pactwright/project-intelligence` package is already installed as a project dependency; then run `pnpm build`. Pactwright installation is exercised in Stage 6.
 
 ### Step 2 — Implement PI repository layout and nine core Domain definitions
 
-**References:** PI §§4, 5.2, 7
+**References:** PI boundary/layout/data §§4, 5.2, 7
 
 **Run**
 
@@ -98,7 +108,7 @@ Create the single ingestion path used by founding material and future extension 
 
 ### Step 3 — Implement Source identity/versioning/storage boundary
 
-**References:** PI §5.1
+**References:** PI boundary/layout/data §5.1
 
 **Run**
 
@@ -116,7 +126,7 @@ Add fixtures for duplicate, changed version, reference-only and secret-rejected 
 
 ### Step 4 — Implement triage and class 0–3 automatic boundary
 
-**References:** PI §8
+**References:** Triage/freshness/onboarding/roadmap §8
 
 **Run**
 
@@ -134,7 +144,7 @@ Run fixtures proving a class-1 Source cannot edit a requirement, constraint, dec
 
 ### Step 5 — Expose `ingest`, `triage`, `promote`
 
-**References:** PI §§8, 15–17
+**References:** Triage/freshness/onboarding/roadmap §8; Delivery/extension integration/commands §§15–17
 
 **Run**
 
@@ -156,7 +166,7 @@ Make accepted project meaning durable and traceable.
 
 ### Step 6 — Implement Knowledge Cards and kind governance
 
-**References:** PI §5.3
+**References:** PI boundary/layout/data §5.3
 
 **Run**
 
@@ -174,7 +184,7 @@ Run validation fixtures for missing Source, invalid kind/status, supersession an
 
 ### Step 7 — Implement Intelligence edges and cross-graph ownership
 
-**References:** PI §6
+**References:** PI boundary/layout/data §6
 
 **Run**
 
@@ -196,7 +206,7 @@ Turn durable Knowledge into project guidance and candidate work without a second
 
 ### Step 8 — Implement onboarding/coverage reports
 
-**References:** PI §10
+**References:** Triage/freshness/onboarding/roadmap §10
 
 **Run**
 
@@ -214,7 +224,7 @@ Run `pnpm pactwright intelligence onboard` on an empty PI fixture and inspect st
 
 ### Step 9 — Implement the single intent-roadmap derivation model
 
-**References:** PI §11
+**References:** Triage/freshness/onboarding/roadmap §11
 
 **Run**
 
@@ -232,7 +242,7 @@ Run the command and prove no new Intent node appears unless separately captured.
 
 ### Step 10 — Implement propagation and freshness
 
-**References:** PI §§9, 12, 15
+**References:** Triage/freshness/onboarding/roadmap §§9, 12; Delivery/extension integration/commands §15
 
 **Run**
 
@@ -254,7 +264,7 @@ Make accepted Knowledge useful during work and visible remotely.
 
 ### Step 11 — Implement bounded Delivery context contribution
 
-**References:** PI §13; Delivery §22
+**References:** Delivery/extension integration/commands §13; Delivery Graph §22
 
 **Run**
 
@@ -272,12 +282,12 @@ Run `pactwright context <brief-id>` against fixtures requiring different domains
 
 ### Step 12 — Implement PI GitHub workflow/checks/views
 
-**References:** GitHub §§6, 13, 20–21
+**References:** Distribution/GitHub §§6, 13, 20–21
 
 **Run**
 
 ```text
-Implement the Project Intelligence GitHub profile and generated pactwright-intelligence.yml. Add Source/promotion validation, onboarding/coverage, roadmap, freshness/propagation regeneration and PI checks/views exactly as defined by GitHub v5. Reports remain revision-stamped derived views.
+Implement the Project Intelligence GitHub profile and generated pactwright-intelligence.yml. Follow the core GitHub workflow hardening invariant from Checkpoint 2: frozen installs, least privilege, SHA-pinned third-party actions, bounded timeouts/concurrency, and no `pull_request_target`. Add Source/promotion validation, onboarding/coverage, roadmap, freshness/propagation regeneration and PI checks/views exactly as defined by GitHub. Reports remain revision-stamped derived views.
 ```
 
 **Expected result**
@@ -294,11 +304,18 @@ Use PI on the project that defines it.
 
 ### Step 13 — Install/reconcile PI in Pactwright
 
-**References:** Distribution §4; GitHub §6
+Run from the Pactwright repository root.
+
+**References:** Distribution/GitHub §§4, 6
 
 **Run**
 
 ```bash
+pnpm add -D \
+  pactwright@0.0.3 \
+  @pactwright/project-intelligence@0.0.3
+pnpm install --frozen-lockfile
+
 pnpm pactwright extension add project-intelligence
 pnpm pactwright sync
 pnpm pactwright intelligence validate
@@ -316,7 +333,9 @@ Run `pnpm pactwright validate`.
 
 ### Step 14 — Ingest the Pactwright authoritative corpus
 
-**References:** PI §§8, 10–11, 15
+Run from the Pactwright repository root.
+
+**References:** Triage/freshness/onboarding/roadmap §§8, 10–11; Delivery/extension integration/commands §15
 
 **Run**
 
@@ -328,27 +347,60 @@ pnpm pactwright intelligence ingest "<github-spec-path>"
 pnpm pactwright intelligence ingest "<project-intelligence-spec-path>"
 pnpm pactwright intelligence ingest "<review-creative-spec-path>"
 pnpm pactwright intelligence ingest "<operations-spec-path>"
-pnpm pactwright intelligence ingest "<open-source-organisation-path>"
+pnpm pactwright intelligence ingest "<open-source-organisation-v2-path>"
 pnpm pactwright intelligence ingest "<website-spec-path>"
+pnpm pactwright intelligence ingest "README.md"
+```
+
+Then enumerate the current public project material under `docs/`, `academy/`, `examples/` and `website/`. Ingest each Markdown/MDX source that materially contains current product claims, identity/voice, guidance, examples or published public content:
+
+```bash
+pnpm pactwright intelligence ingest <public-content-file>
+```
+
+Repeat for each selected file and retain the Source ids printed by the commands.
 ```
 
 **Expected result**
 
-The founding corpus enters the normal Source path as separate traceable Sources.
+The founding authoritative corpus and the current README/Docs/Academy/Examples/Website material enter the normal Source path as separate traceable Sources. Public content is visible to Project Intelligence without automatically becoming authoritative Knowledge.
+
+**Run**
+
+For each Source id printed by the ingest commands:
+
+```bash
+pnpm pactwright intelligence triage <source-id>
+
+# only when triage reports reviewed promotion is required and the proposal is accepted
+pnpm pactwright intelligence promote <source-id>
+```
+
+Then:
+
+```bash
+pnpm pactwright intelligence onboard
+pnpm pactwright intelligence derive-intent-roadmap
+pnpm pactwright intelligence validate
+pnpm pactwright validate
+```
 
 **Verify before continuing**
 
-Triage each returned Source ID; promote only class 2/3 as required; then run `intelligence onboard`, `derive-intent-roadmap`, and `validate`.
+Every accepted Knowledge item remains traceable to its Source and the roadmap contains no automatically created Intent.
 
 ### Step 15 — Use one ready roadmap candidate to drive real Pactwright Delivery
 
-**References:** PI §11; Delivery §19
+Run from the Pactwright repository root.
+
+**References:** Triage/freshness/onboarding/roadmap §11; Delivery Graph §19
 
 **Run**
 
 ```bash
 pnpm pactwright intelligence derive-intent-roadmap
 ```
+
 
 **Run**
 
@@ -381,18 +433,220 @@ The roadmap candidate becomes Delivery work only through explicit Intent capture
 
 Trace candidate → Knowledge/Sources and Intent → Evidence; confirm no candidate-to-Intent automatic mutation.
 
-## Stage 7 — Cold-start Kakeido
+## Stage 7 — Establish Pactwright public-content knowledge readiness
+
+Project Intelligence must know enough about Pactwright before later Creative Delivery is allowed to generate public work.
+
+### Step 16 — Cover identity, content and product knowledge
+
+**References:** PI boundary/layout/data §7; Triage/freshness/onboarding/roadmap §§8–10; Delivery/extension integration/commands §13; Open-Source Project Organisation §1.2; Implementation Principles §5A
+
+**Run**
+
+From the Pactwright repository root:
+
+```bash
+pnpm pactwright intelligence onboard
+```
+
+Inspect the generated domain map.
+
+For each required domain that is not `Covered`, run a normal Delivery to create or collect the missing source material. Start with:
+
+```text
+/capture-intent "Establish the accepted Project Intelligence source material needed to make Pactwright's <identity|content|product> domain Covered for public content. Derive from existing authoritative specifications and current product behaviour. Any new strategic choice must become an explicit Decision rather than being invented silently."
+/propose-contracts <intent-id>
+/approve-contract <contract-id> "<selection notes>"
+/write-brief <contract-id>
+/deliver-brief <brief-id>
+/review <brief-id>
+/prepare-evidence <brief-id>
+```
+
+For each delivered source document:
+
+```bash
+pnpm pactwright intelligence ingest <delivered-source-path>
+pnpm pactwright intelligence triage <source-id>
+
+# only when reviewed promotion is required and accepted
+pnpm pactwright intelligence promote <source-id>
+```
+
+Re-run:
+
+```bash
+pnpm pactwright intelligence onboard
+pnpm pactwright intelligence validate
+```
+
+**Expected result**
+
+Before Checkpoint 3 closes:
+
+- `identity` is `Covered`;
+- `content` is `Covered`;
+- `product` is `Covered`;
+- accepted Knowledge traces to authoritative Sources and explicit Decisions where strategy was created.
+
+**Verify before continuing**
+
+Inspect `domain-map.md`/onboarding output and sample the accepted identity/content/product Knowledge. No identity, positioning, voice or product claim may exist only in a generated public artefact.
+
+### Step 17 — Publish the Project Intelligence learning path
+
+**References:** Open-Source Project Organisation §1.3; Triage/freshness/onboarding/roadmap §§10–12; Delivery/extension integration/commands §13
+
+**Run**
+
+Use the accepted Project Intelligence context through normal Delivery:
+
+```text
+/capture-intent "Publish Pactwright's Project Intelligence learning path: PI concept documentation, onboarding guide, one project-intelligence-onboarding example, and an Academy Project Understanding lesson. Ground claims in current accepted Project Intelligence."
+/propose-contracts <intent-id>
+/approve-contract <contract-id> "<selection notes>"
+/write-brief <contract-id>
+```
+
+Inspect:
+
+```bash
+pnpm pactwright context <brief-id>
+```
+
+Then:
+
+```text
+/deliver-brief <brief-id>
+/review <brief-id>
+/prepare-evidence <brief-id>
+```
+
+Ingest the accepted public material as internal Sources where it materially represents current public claims:
+
+```bash
+pnpm pactwright intelligence ingest <public-content-path>
+pnpm pactwright intelligence triage <source-id>
+```
+
+Do not promote derived public copy back into authoritative Knowledge unless triage identifies genuinely new accepted meaning.
+
+**Expected result**
+
+Project Intelligence is both a product capability and the source of grounded public explanation for that capability.
+
+**Verify before continuing**
+
+Docs, example and Academy lesson agree with accepted PI Knowledge, and the graph records both the Delivery lineage and the public-content Sources.
+
+## Stage 8 — Release `0.0.3`
+
+### Step 18 — Prepare, publish and tag `0.0.3`
+
+**References:** Distribution §§2, 4, 6–8, 15, 18–19
+
+**Run**
+
+Update `CHANGELOG.md` from accepted Checkpoint 3 Evidence only, then create the release PR:
+
+```bash
+VERSION=0.0.3
+DEFAULT_BRANCH="$(gh repo view --json defaultBranchRef -q .defaultBranchRef.name)"
+
+git switch "$DEFAULT_BRANCH"
+git pull --ff-only
+git switch -c "release/$VERSION"
+
+pnpm version "$VERSION" -r --no-git-tag-version --allow-same-version
+pnpm install
+pnpm verify
+pnpm publish -r --dry-run --tag next --access public
+
+git add -A
+git commit -m "chore: release $VERSION"
+git push -u origin HEAD
+
+gh pr create \
+  --title "Release $VERSION" \
+  --body "Prepare Pactwright $VERSION."
+
+gh pr checks --watch
+gh pr merge --squash --delete-branch
+
+git switch "$DEFAULT_BRANCH"
+git pull --ff-only
+```
+
+The following package names are new in this release and cannot use trusted publishing until their first registry version exists:
+
+- `@pactwright/project-intelligence`
+
+After the release PR is merged, bootstrap only those new packages interactively:
+
+```bash
+pnpm --filter @pactwright/project-intelligence publish --dry-run --tag next --access public
+pnpm --filter @pactwright/project-intelligence publish --tag next --access public
+
+REPO="$(gh repo view --json nameWithOwner -q .nameWithOwner)"
+
+npx -y npm@^11.15 trust github @pactwright/project-intelligence \
+  --repo "$REPO" \
+  --file release.yml \
+  --environment npm-release \
+  --allow-publish
+```
+
+Do not manually publish packages that already have trusted publishing configured.
+
+Tag the accepted merge commit:
+
+```bash
+git tag -a "v$VERSION" -m "v$VERSION"
+git push origin "v$VERSION"
+```
+
+**Expected result**
+
+The tag-triggered trusted `release.yml` workflow verifies the exact merged source and publishes every still-unpublished package in the `0.0.3` family under `next`. Existing published members are not overwritten.
+
+**Verify before continuing**
+
+Confirm the `release.yml` run for `v0.0.3` succeeded, then:
+
+```bash
+pnpm view pactwright@0.0.3 version
+pnpm view @pactwright/standard@0.0.3 version
+pnpm view @pactwright/project-intelligence@0.0.3 version
+```
+
+Every command must return `0.0.3`.
+
+For the newly introduced package(s), also run:
+
+```bash
+npx -y npm@^11.15 trust list @pactwright/project-intelligence
+```
+
+Existing package-family members must show npm provenance/trusted-publisher metadata; the newly bootstrapped package(s) must now trust `release.yml` for the next release.
+
+
+## Stage 9 — Cold-start Kakeido
+
+Run this stage from the Kakeido repository root unless a step explicitly says otherwise.
 
 Prove PI can understand a different multi-domain project from its real specs.
 
-### Step 16 — Install PI in Kakeido
+### Step 19 — Install PI in Kakeido
 
-**References:** Distribution §4
+**References:** Distribution/GitHub §4
 
 **Run**
 
 ```bash
-pnpm add -D pactwright@<checkpoint-version>
+pnpm add -D \
+  pactwright@0.0.3 \
+  @pactwright/project-intelligence@0.0.3
+
 pnpm pactwright extension add project-intelligence
 pnpm pactwright sync
 pnpm pactwright intelligence validate
@@ -402,15 +656,15 @@ pnpm pactwright github sync
 
 **Expected result**
 
-Kakeido has the same PI extension/runtime version family.
+Kakeido has the same published `0.0.3` PI/runtime family.
 
 **Verify before continuing**
 
 Run `pnpm pactwright validate`.
 
-### Step 17 — Ingest all five Kakeido specifications
+### Step 20 — Ingest all five Kakeido specifications
 
-**References:** PI §§8, 10–11; Kakeido specs
+**References:** Triage/freshness/onboarding/roadmap §§8, 10–11; Kakeido specs
 
 **Run**
 
@@ -426,13 +680,34 @@ pnpm pactwright intelligence ingest "<Tech-Stack-path>"
 
 Kakeido knowledge is distributed into appropriate PI domains rather than flattened into one generic summary.
 
+**Run**
+
+For each Source id printed above:
+
+```bash
+pnpm pactwright intelligence triage <source-id>
+
+# only when triage reports reviewed promotion is required and the proposal is accepted
+pnpm pactwright intelligence promote <source-id>
+```
+
+Then:
+
+```bash
+pnpm pactwright intelligence onboard
+pnpm pactwright intelligence derive-intent-roadmap
+pnpm pactwright intelligence validate
+pnpm pactwright validate
+```
+
 **Verify before continuing**
 
-Triage/promote as required; run `intelligence onboard`, `derive-intent-roadmap`, `validate`.
+Onboarding and roadmap output reflect Kakeido's distinct domains and no roadmap candidate has become a canonical Intent automatically.
 
-### Step 18 — Deliver a cross-domain Kakeido candidate
+### Step 21 — Deliver a cross-domain Kakeido candidate
 
 **References:** Financial Model §§2–17; Product & UX §§2–10; Tech Stack §§3–10
+
 
 **Run**
 
@@ -471,4 +746,4 @@ PI is installable and self-hosted; both projects are onboarded through the norma
 
 ---
 
-**Pactwright — Checkpoint 3 — Project Intelligence v3**
+**Pactwright — Checkpoint 3 — Project Understanding v8**

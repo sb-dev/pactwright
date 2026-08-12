@@ -1,6 +1,4 @@
-# Pactwright Implementation Runbooks v3
-
-Every executable step uses **Run → Expected result → Verify**, with the Run block containing the prompt or command directly.
+# Pactwright Implementation Runbooks v4
 
 - `00-implementation-guide.md`
 - `00-implementation-principles.md`
@@ -14,3 +12,16 @@ Every executable step uses **Run → Expected result → Verify**, with the Run 
 - `08-github-project-surface.md`
 - `09-hardened-closed-loop.md`
 - `10-graduation-truelayer.md`
+
+Project progression:
+
+```text
+capability
+→ use it on Pactwright
+→ update the Project Graph
+→ advance the public product
+→ publish a real release
+→ prove it on Kakeido
+```
+
+From Project Intelligence onward, public content is grounded in accepted Knowledge. Public creative work cannot start until its required domains—especially identity—are sufficiently covered.

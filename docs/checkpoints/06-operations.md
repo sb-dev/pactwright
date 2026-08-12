@@ -1,6 +1,6 @@
 # Pactwright — Checkpoint 6 — Operations
 
-**Version:** 3 
+**Version:** 8 
 **Entry condition:** Checkpoint 5 is accepted. 
 **Exit capability:** Software production exposure and durable operational findings feed governed future work through Operations → PI → Delivery.
 
@@ -45,13 +45,23 @@ Use a prompt for repository/code changes. Once Pactwright owns a deterministic o
 
 Lifecycle adapter commands become available only after Checkpoint 1 generates the active adapter.
 
+**Default execution location:** the Pactwright repository root unless the step explicitly names Kakeido or a fixture
+
+For repository/code changes, finish with `pnpm verify`. Before invoking a newly implemented Pactwright runtime command during implementation, run `pnpm build` so the repository-local CLI is not using stale distribution output.
+
+After Checkpoint 2 activates GitHub, land coherent repository changes through pull requests and required checks rather than direct default-branch commits.
+
+Dynamic ids such as `<source-id>`, `<brief-id>` and `<evidence-id>` must come from an earlier command in the runbook. Commands that create or resolve durable records must print the ids required by later steps.
+
+Fixture verification means repository test fixtures unless a step explicitly creates a real repository or GitHub resource.
+
 ## 4. Checkpoint specification map
 
-- **Operations boundary/exposure/deployment** — Operations v1 §§1–7
-- **Sources/execution/Observation** — Operations §§8–12
-- **PI hand-off/corrective roadmap/context/commands** — Operations §§13–20
-- **Evaluation/validation/failure/GitHub/build order** — Operations §§21–27
-- **Kakeido evidence sources/privacy** — Tech Stack §11, §§17–18
+- **Operations boundary/exposure/deployment** — Pactwright — Operations Graph Engineering Spec §§1–7
+- **Sources/execution/Observation** — Pactwright — Operations Graph Engineering Spec §§8–12
+- **PI hand-off/corrective roadmap/context/commands** — Pactwright — Operations Graph Engineering Spec §§13–20
+- **Evaluation/validation/failure/GitHub/build order** — Pactwright — Operations Graph Engineering Spec §§21–27
+- **Kakeido evidence sources/privacy** — Kakeido — Tech Stack Engineering Spec §11, §§17–18
 
 ## Stage 1 — Package Operations and implement Deployment
 
@@ -59,12 +69,12 @@ Record which delivered software actually reached an environment.
 
 ### Step 1 — Implement Operations manifest/layout/dependency
 
-**References:** Operations §§4–5; Distribution §§4–5
+**References:** Operations boundary/exposure/deployment §§4–5; Distribution §§4–5
 
 **Run**
 
 ```text
-Implement @pactwright/operations manifest and repository layout: require Project Intelligence, register Deployment/Observation, deployed-as/observes, operations namespace, operations-analysis capability and Operations GitHub profile. Do not depend on Review & Creative.
+Create `@pactwright/operations` as a publishable workspace package and implement its manifest and repository layout: require Project Intelligence, register Deployment/Observation, deployed-as/observes, operations namespace, operations-analysis capability and Operations GitHub profile. Do not depend on Review & Creative.
 ```
 
 **Expected result**
@@ -77,12 +87,12 @@ Use fixture extension add/remove tests; confirm PI auto-resolves and Review & Cr
 
 ### Step 2 — Implement immutable Deployment and `record-deployment`
 
-**References:** Operations §7, §19
+**References:** Operations boundary/exposure/deployment §7; PI hand-off/corrective roadmap/context/commands §19
 
 **Run**
 
 ```text
-Implement Deployment schema/validation and pactwright operations record-deployment <evidence-id>. Require valid Delivery Evidence, configured environment, identifiable artifact revision/locator/hash, deployed_at and deployed_by. Create evidence --deployed-as--> deployment. Repeated deployments are distinct immutable records.
+Implement Deployment schema/validation and pactwright operations record-deployment <evidence-id>. Require valid Delivery Evidence, configured environment, identifiable artifact revision/locator/hash, deployed_at and deployed_by. Create evidence --deployed-as--> deployment, print the Deployment id, and keep repeated deployments as distinct immutable records.
 ```
 
 **Expected result**
@@ -99,7 +109,7 @@ Connect external systems without turning Pactwright into a telemetry store.
 
 ### Step 3 — Implement operational source adapter contract/config
 
-**References:** Operations §8
+**References:** Sources/execution/Observation §8
 
 **Run**
 
@@ -117,7 +127,7 @@ Run source-schema/conformance fixtures for one initial adapter.
 
 ### Step 4 — Implement bounded evidence collection + execution provenance
 
-**References:** Operations §§9–10
+**References:** Sources/execution/Observation §§9–10
 
 **Run**
 
@@ -135,12 +145,12 @@ Run a fixture returning many raw events and inspect that canonical graph contain
 
 ### Step 5 — Expose `operations ingest`
 
-**References:** Operations §19
+**References:** PI hand-off/corrective roadmap/context/commands §19
 
 **Run**
 
 ```text
-Implement pactwright operations ingest [<source-id>] over the collection layer. Ingest may complete successfully with no Observation/canonical graph mutation. Authentication/source failure records execution failure and leaves canonical graph untouched.
+Implement pactwright operations ingest [<source-id>] over the collection layer. Print the Operations execution id. Ingest may complete successfully with no Observation/canonical graph mutation. Authentication/source failure records execution failure and leaves canonical graph untouched.
 ```
 
 **Expected result**
@@ -157,7 +167,7 @@ Compress operational signals into concise facts worth retaining.
 
 ### Step 6 — Implement Observation schema/grounding
 
-**References:** Operations §11
+**References:** Sources/execution/Observation §11
 
 **Run**
 
@@ -175,7 +185,7 @@ Run negative, positive, baseline-dependent and unsupported-causality fixtures.
 
 ### Step 7 — Implement Observation deduplication/supersession
 
-**References:** Operations §12
+**References:** Sources/execution/Observation §12
 
 **Run**
 
@@ -193,12 +203,12 @@ Run repeated-identical and materially-changed finding fixtures.
 
 ### Step 8 — Expose `operations observe`
 
-**References:** Operations §§19–20
+**References:** PI hand-off/corrective roadmap/context/commands §§19–20
 
 **Run**
 
 ```text
-Implement pactwright operations observe [<source-id>] using operations-analysis for bounded evidence interpretation. It may create/supersede concise Observations or legitimately create none. Deterministic source collection, validation, edge creation and graph mutation remain runtime-owned.
+Implement pactwright operations observe [<source-id>] using operations-analysis for bounded evidence interpretation. Print created/matched Observation ids and any internal PI Source ids produced by the hand-off. It may create/supersede concise Observations or legitimately create none. Deterministic source collection, validation, edge creation and graph mutation remain runtime-owned.
 ```
 
 **Expected result**
@@ -215,7 +225,7 @@ Close the governance boundary without letting Operations become a knowledge/road
 
 ### Step 9 — Implement Observation → PI internal Source hand-off
 
-**References:** Operations §13; PI §14
+**References:** PI hand-off/corrective roadmap/context/commands §13; PI §14
 
 **Run**
 
@@ -233,7 +243,7 @@ Run a failed-hand-off fixture and confirm Observation remains valid and retryabl
 
 ### Step 10 — Implement corrective roadmap filter
 
-**References:** Operations §§14–15; PI §11
+**References:** PI hand-off/corrective roadmap/context/commands §§14–15; PI §11
 
 **Run**
 
@@ -251,7 +261,7 @@ Run the command against PI candidates from operational/non-operational origins a
 
 ### Step 11 — Implement `operations refresh` and `validate`
 
-**References:** Operations §§19, 22–23
+**References:** PI hand-off/corrective roadmap/context/commands §19; Evaluation/validation/failure/GitHub/build order §§22–23
 
 **Run**
 
@@ -291,6 +301,8 @@ Run sync/dry-run and inspect that only durable records/derived summaries are pro
 
 ## Stage 6 — Adopt Operations on the Pactwright website
 
+Run this stage from the Pactwright repository root.
+
 Use the first real production surface to create immediate tool feedback.
 
 ### Step 13 — Install/reconcile Operations
@@ -300,6 +312,14 @@ Use the first real production surface to create immediate tool feedback.
 **Run**
 
 ```bash
+pnpm add -D \
+  pactwright@0.0.6 \
+  @pactwright/project-intelligence@0.0.6 \
+  @pactwright/review-creative@0.0.6 \
+  @pactwright/creative@0.0.6 \
+  @pactwright/operations@0.0.6
+pnpm install --frozen-lockfile
+
 pnpm pactwright extension add operations
 pnpm pactwright sync
 pnpm pactwright operations validate
@@ -317,7 +337,7 @@ Run `pnpm pactwright validate`.
 
 ### Step 14 — Configure one real website environment/source
 
-**References:** Operations §§5, 8, 18; website spec
+**References:** Operations boundary/exposure/deployment §5; Sources/execution/Observation §8; PI hand-off/corrective roadmap/context/commands §18; website spec
 
 **Run**
 
@@ -335,7 +355,13 @@ Run `pnpm pactwright operations validate` and inspect committed config for secre
 
 ### Step 15 — Record a real website deployment
 
-**References:** Operations §7
+**References:** Operations boundary/exposure/deployment §7; website engineering spec
+
+**Run**
+
+```text
+Identify the accepted Pactwright website Evidence to expose. Execute the website's existing deployment mechanism for that Evidence and report the deployed artifact revision/locator and Evidence id. Do not invent a new deployment path.
+```
 
 **Run**
 
@@ -354,7 +380,7 @@ Inspect Deployment and deployed-as edge; Evidence bytes remain unchanged.
 
 ### Step 16 — Collect and analyse website evidence
 
-**References:** Operations §§8–12, 19
+**References:** Sources/execution/Observation §§8–12; PI hand-off/corrective roadmap/context/commands §19
 
 **Run**
 
@@ -374,7 +400,7 @@ Inspect execution record and confirm raw source payloads are not graph nodes.
 
 ### Step 17 — Route one accepted Observation into future Delivery
 
-**References:** Operations §§13–15; PI §11
+**References:** PI hand-off/corrective roadmap/context/commands §§13–15; PI §11
 
 **Run**
 
@@ -390,6 +416,7 @@ pnpm pactwright intelligence promote <internal-source-id>
 pnpm pactwright intelligence derive-intent-roadmap
 pnpm pactwright operations corrective-roadmap
 ```
+
 
 **Run**
 
@@ -411,18 +438,161 @@ At least one real production finding reaches normal Delivery only after PI gover
 
 Trace Deployment → Observation → Source → Knowledge/candidate → Intent → Evidence.
 
-## Stage 7 — Prove Operations on Kakeido
+## Stage 7 — Publish the Operations learning path
+
+### Step 18 — Deliver grounded Operations content
+
+**References:** Open-Source Project Organisation §§1.2–1.3; Operations boundary/exposure/deployment §7; Sources/execution/Observation §§8–12; PI hand-off/corrective roadmap/context/commands §§13–16
+
+**Run**
+
+From the Pactwright repository root:
+
+```bash
+pnpm pactwright intelligence onboard
+```
+
+Require `identity`, `content`, `product` and `delivery/eng` to be Covered for this work. Fill any missing coverage through the established PI gap loop before continuing.
+
+Then:
+
+```text
+/capture-intent "Publish Pactwright's Operations learning path: concise Operations documentation, one production-feedback/incident example, an Academy Production Learning lesson, and the website capability update needed to explain the production feedback loop. Ground the content in accepted Project Intelligence and the real Operations behaviour delivered in this checkpoint."
+/propose-contracts <intent-id>
+/approve-contract <contract-id> "<selection notes>"
+/write-brief <contract-id>
+/deliver-brief <brief-id>
+/review <brief-id>
+/prepare-evidence <brief-id>
+```
+
+For the public-facing creative portion, approve and publish through Creative Delivery.
+
+**Expected result**
+
+Operations is understandable from Docs/Examples/Academy/Website and the public-facing material is grounded in accepted project truth.
+
+**Verify before continuing**
+
+Technical claims match the implemented Operations boundary; public narrative has valid identity/product grounding and, where published as an Asset, canonical Publication lineage.
+
+## Stage 8 — Release `0.0.6`
+
+### Step 19 — Prepare, publish and tag `0.0.6`
+
+**References:** Distribution §§2, 4, 6–8, 15, 18–19
+
+**Run**
+
+Update `CHANGELOG.md` from accepted Checkpoint 6 Evidence only, then create the release PR:
+
+```bash
+VERSION=0.0.6
+DEFAULT_BRANCH="$(gh repo view --json defaultBranchRef -q .defaultBranchRef.name)"
+
+git switch "$DEFAULT_BRANCH"
+git pull --ff-only
+git switch -c "release/$VERSION"
+
+pnpm version "$VERSION" -r --no-git-tag-version --allow-same-version
+pnpm install
+pnpm verify
+pnpm publish -r --dry-run --tag next --access public
+
+git add -A
+git commit -m "chore: release $VERSION"
+git push -u origin HEAD
+
+gh pr create \
+  --title "Release $VERSION" \
+  --body "Prepare Pactwright $VERSION."
+
+gh pr checks --watch
+gh pr merge --squash --delete-branch
+
+git switch "$DEFAULT_BRANCH"
+git pull --ff-only
+```
+
+The following package names are new in this release and cannot use trusted publishing until their first registry version exists:
+
+- `@pactwright/operations`
+
+After the release PR is merged, bootstrap only those new packages interactively:
+
+```bash
+pnpm --filter @pactwright/operations publish --dry-run --tag next --access public
+pnpm --filter @pactwright/operations publish --tag next --access public
+
+REPO="$(gh repo view --json nameWithOwner -q .nameWithOwner)"
+
+npx -y npm@^11.15 trust github @pactwright/operations \
+  --repo "$REPO" \
+  --file release.yml \
+  --environment npm-release \
+  --allow-publish
+```
+
+Do not manually publish packages that already have trusted publishing configured.
+
+Tag the accepted merge commit:
+
+```bash
+git tag -a "v$VERSION" -m "v$VERSION"
+git push origin "v$VERSION"
+```
+
+**Expected result**
+
+The tag-triggered trusted `release.yml` workflow verifies the exact merged source and publishes every still-unpublished package in the `0.0.6` family under `next`. Existing published members are not overwritten.
+
+**Verify before continuing**
+
+Confirm the `release.yml` run for `v0.0.6` succeeded, then:
+
+```bash
+pnpm view pactwright@0.0.6 version
+pnpm view @pactwright/standard@0.0.6 version
+pnpm view @pactwright/project-intelligence@0.0.6 version
+pnpm view @pactwright/review-creative@0.0.6 version
+pnpm view @pactwright/creative@0.0.6 version
+pnpm view @pactwright/operations@0.0.6 version
+```
+
+Every command must return `0.0.6`.
+
+For the newly introduced package(s), also run:
+
+```bash
+npx -y npm@^11.15 trust list @pactwright/operations
+```
+
+Existing package-family members must show npm provenance/trusted-publisher metadata; the newly bootstrapped package(s) must now trust `release.yml` for the next release.
+
+
+## Stage 9 — Prove Operations on Kakeido
+
+Run this stage from the Kakeido repository root unless a step explicitly says otherwise.
 
 Exercise the same feedback loop against sensitive financial-product infrastructure.
 
-### Step 18 — Install/reconcile Operations in Kakeido
+### Step 20 — Install/reconcile Operations in Kakeido
 
 **References:** Distribution §4
 
 **Run**
 
 ```bash
-pnpm add -D pactwright@<checkpoint-version>
+pnpm add -D \
+  pactwright@0.0.6 \
+  @pactwright/project-intelligence@0.0.6 \
+  @pactwright/review-creative@0.0.6 \
+  @pactwright/creative@0.0.6 \
+  @pactwright/operations@0.0.6
+
+pnpm pactwright extension upgrade project-intelligence
+pnpm pactwright agent-pack use @pactwright/creative
+pnpm pactwright extension upgrade review-creative
 pnpm pactwright extension add operations
 pnpm pactwright sync
 pnpm pactwright operations validate
@@ -438,9 +608,9 @@ Kakeido has Operations with PI dependency resolved.
 
 Run `pnpm pactwright validate`.
 
-### Step 19 — Configure one safe Kakeido operational source
+### Step 21 — Configure one safe Kakeido operational source
 
-**References:** Kakeido Tech Stack §11; Operations §§8–10
+**References:** Kakeido evidence sources/privacy §11; Sources/execution/Observation §§8–10
 
 **Run**
 
@@ -456,9 +626,9 @@ Kakeido Operations observes product reliability without copying sensitive financ
 
 Inspect source config/logging path and run `pactwright operations validate`.
 
-### Step 20 — Run the Kakeido software feedback loop
+### Step 22 — Run the Kakeido software feedback loop
 
-**References:** Operations §§7–15
+**References:** Operations boundary/exposure/deployment §7; Sources/execution/Observation §§8–12; PI hand-off/corrective roadmap/context/commands §§13–15
 
 **Run**
 
@@ -484,4 +654,4 @@ Deployment remains distinct from Evidence; raw telemetry remains external; Obser
 
 ---
 
-**Pactwright — Checkpoint 6 — Operations v3**
+**Pactwright — Checkpoint 6 — Production Learning v8**
