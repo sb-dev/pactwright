@@ -1,8 +1,9 @@
 # Pactwright — Checkpoint 7 — Published-Work Feedback
 
-**Version:** 8 
-**Entry condition:** Checkpoint 6 is accepted. 
-**Exit capability:** Operations can observe Review & Creative Publications through manifest-driven exposure compatibility without ownership transfer or sibling dependency.
+**Version:** 9
+**Release:** `0.0.7`
+**Entry condition:** Checkpoint 6 is accepted.
+**Exit capability:** Operations can observe Review & Creative Publications through manifest-driven exposure compatibility without ownership transfer or sibling dependency, and the public product closes its first evidence-driven Publication revision.
 
 ## 1. Goal
 
@@ -18,6 +19,7 @@ Complete the cross-extension Publication → Observation loop and prove it on re
 - [Pactwright — Operations Graph Engineering Spec](../research-logs/2026-08-11-pactwright-operations-graph-engineering-spec.md)
 - [Pactwright — System Architecture](../research-logs/2026-08-11-pactwright-system-architecture.md)
 - [Pactwright — Implementation Principles](./00-implementation-principles.md)
+- [Pactwright — Implementation Guide](./00-implementation-guide.md)
 - [Pactwright Open-Source Project Organisation](../research-logs/2026-08-11-pactwright-open-source-project-organisation.md)
 - [Design Specification: Astro + Cloudflare Workers + Meta CAPI](../research-logs/2026-08-11-astro-design-spec.md)
 - [Kakeido — Financial Model Spec](../research-logs/2026-08-11-kakeido-financial-model-spec.md)
@@ -57,10 +59,23 @@ Fixture verification means repository test fixtures unless a step explicitly cre
 
 ## 4. Checkpoint specification map
 
-- **Publication ownership/exposure declaration** — Pactwright — Graph Review & Creative Delivery Engineering Spec §§1–4, 13
-- **Generic production exposure/Observation** — Pactwright — Operations Graph Engineering Spec §§6, 11–15, 25
-- **Sibling dependency model** — Pactwright — Distribution, Agents and Evaluation §§4–5
-- **Cross-extension GitHub integration** — Pactwright — GitHub Actions and Views §§7–8, 23–24, 26–27
+- **Publication ownership/exposure declaration** — Pactwright — Graph Review & Creative Delivery Engineering Spec §§1–4, 9–13, 21
+- **Generic production exposure/Observation** — Pactwright — Operations Graph Engineering Spec §§2, 6, 8–15, 21–22, 25–26
+- **Sibling dependency model** — Pactwright — Distribution, Agents and Evaluation §§4–6, 14–15
+- **Cross-extension GitHub integration** — Pactwright — GitHub Actions and Views §§3–4, 7–8, 23–24, 26–27
+- **Release engineering** — Pactwright — Implementation Guide (npm release model)
+- **Public-product progression and creative readiness** — Pactwright Open-Source Project Organisation §§1.2–1.3
+- **Milestone acceptance and feedback capture** — Pactwright — Implementation Principles §§7, 14–15
+- **Project Intelligence routing** — Pactwright — Project Intelligence Graph Engineering Spec §§8, 11–14
+
+## 5. Out of scope for Checkpoint 7
+
+Deliberately deferred; do not implement in this checkpoint:
+
+- publication-performance-aware creative workflows and publication-specific operational context (Review & Creative §25 future improvements);
+- performance semantics inside Asset or Publication records;
+- governed Kakeido corrective delivery beyond Observation → Project Intelligence triage — Checkpoint 8 operates the full project surface;
+- new observability vendors or Pactwright-owned telemetry infrastructure.
 
 ## Stage 1 — Implement manifest-driven exposure compatibility
 
@@ -68,7 +83,7 @@ Let sibling extensions integrate by contract, not hard-coded dependency.
 
 ### Step 1 — Declare Publication as an Operations-compatible exposure
 
-**References:** Publication ownership/exposure declaration §4
+**References:** Publication ownership/exposure declaration §§4, 21 (rules 16–17)
 
 **Run**
 
@@ -82,7 +97,7 @@ Review & Creative advertises compatible exposure semantics without depending on 
 
 **Verify before continuing**
 
-Run manifest/dependency tests with Review & Creative enabled alone.
+Run manifest/dependency tests with Review & Creative enabled alone. Extension validation must confirm the declared exposure type is owned by Review & Creative and resolves to a valid canonical node type, and that no Operations-owned state enters Review & Creative storage.
 
 ### Step 2 — Implement generic exposure-type discovery in Operations
 
@@ -104,7 +119,7 @@ Add a fixture extension contributing a second exposure type and prove no Operati
 
 ### Step 3 — Validate Observation targets against the registered exposure registry
 
-**References:** Operations §§6, 11, 22
+**References:** Generic production exposure/Observation §§6, 11, 22
 
 **Run**
 
@@ -120,13 +135,31 @@ Cross-extension edges preserve canonical ownership.
 
 Run valid Publication target, disabled-extension target and unregistered-type fixtures.
 
+### Step 4 — Add publication-analysis evaluation cases
+
+**References:** Generic production exposure/Observation §§21, 26; Implementation Principles §15
+
+**Run**
+
+```text
+Extend the operations-analysis evaluation suite with publication-observation cases: channel-performance interpretation against a baseline, unsupported causal claims about creative performance, positive publication finding recognition, and duplicate publication finding handling. Keep deterministic assertions (evidence references exist, no raw analytics persisted, valid Observation schema, valid exposure relationship) separate from semantic judgement; do not collapse results into one aggregate score.
+```
+
+**Expected result**
+
+The new cross-extension analysis capability is covered by evaluation before it is used on real work.
+
+**Verify before continuing**
+
+Run `pnpm pactwright eval` and confirm the new cases execute with their deterministic assertions enforced.
+
 ## Stage 2 — Add cross-extension automation composition
 
 Trigger Operations from Publication changes while keeping workflow ownership clear.
 
-### Step 4 — Compose Publication paths/events into the Operations workflow
+### Step 5 — Compose Publication paths/events into the Operations workflow
 
-**References:** GitHub §§4, 7–8
+**References:** Cross-extension GitHub integration §§3–4, 7–8
 
 **Run**
 
@@ -142,60 +175,84 @@ Cross-extension automation composes from profiles without a new sibling dependen
 
 Run `pactwright sync` and `github sync --dry-run` with Review-only, Operations-only and both-enabled fixtures.
 
+### Step 6 — Regenerate and apply Pactwright repository integration
+
+**References:** Sibling dependency model — Distribution §8; Cross-extension GitHub integration §§3–4
+
+**Run**
+
+```bash
+pnpm build
+pnpm pactwright sync
+pnpm pactwright github sync --dry-run
+pnpm pactwright github sync
+```
+
+**Expected result**
+
+The Pactwright repository's managed workflows reflect the composed profiles: `pactwright-operations.yml` now includes the Publication-contributed trigger paths.
+
+**Verify before continuing**
+
+Inspect git diff; only Pactwright-managed files/regions may change, and the Operations workflow contains the composed publication paths.
+
 ## Stage 3 — Prove Publication feedback on Pactwright
 
-Run this stage from the Pactwright repository root.
+Run this stage from the Pactwright repository root using the repository-local CLI built in Stage 2. Do not install the unreleased `0.0.7` packages; the `0.0.7` family is published in Stage 6.
 
 Observe a real public Pactwright output.
 
-### Step 5 — Select or record a real Pactwright Publication
+### Step 7 — Select or record a real Pactwright Publication
 
 **References:** Publication ownership/exposure declaration §13
 
 **Run**
 
-```bash
-pnpm add -D \
-  pactwright@0.0.7 \
-  @pactwright/project-intelligence@0.0.7 \
-  @pactwright/review-creative@0.0.7 \
-  @pactwright/creative@0.0.7 \
-  @pactwright/operations@0.0.7
-pnpm install --frozen-lockfile
+Resolve the target Publication from existing canonical Review & Creative records:
 
+```bash
+pnpm pactwright creative validate
+```
+
+Inspect `docs/review-creative/publications/` and `docs/review-creative/assets/`, select an existing approved public Publication (for example the grounded public Asset published in Checkpoint 5), and print its `<publication-id>` and `<asset-id>` for later steps.
+
+Only if no suitable Publication exists, record one from an existing approved Asset:
+
+```bash
+# only when no suitable Publication exists
 pnpm pactwright creative record-publication <asset-id> <channel>
 pnpm pactwright creative validate
 ```
 
 **Expected result**
 
-A canonical Publication exists for a real Pactwright public surface.
+A canonical Publication exists for a real Pactwright public surface, and its ids are printed.
 
 **Verify before continuing**
 
-Inspect the Publication’s Asset/hash/channel/locator.
+Inspect the Publication's Asset/hash/channel/locator.
 
-### Step 6 — Configure a publication evidence source
+### Step 8 — Configure a publication evidence source
 
-**References:** Operations §§8–11
+**References:** Generic production exposure/Observation §§8–11
 
 **Run**
 
 ```text
-Create the minimum Operations source configuration needed to observe the selected Pactwright Publication through an existing analytics/evidence system. Store only configuration/provenance. Do not commit credentials or raw analytics events. Run operations validate.
+Create the minimum Operations source configuration needed to observe the selected Pactwright Publication through an existing analytics/evidence system. Store only configuration/provenance. Do not commit credentials or raw analytics events. Print the resulting <publication-source-id> for later steps. Run operations validate.
 ```
 
 **Expected result**
 
-Operations can collect bounded evidence about the Publication.
+Operations can collect bounded evidence about the Publication, and `<publication-source-id>` is printed.
 
 **Verify before continuing**
 
 Run `pnpm pactwright operations validate` and inspect committed config.
 
-### Step 7 — Create/route a Pactwright Publication Observation
+### Step 9 — Create/route a Pactwright Publication Observation
 
-**References:** Generic production exposure/Observation §§11–15; PI §14
+**References:** Generic production exposure/Observation §§11–13; Project Intelligence routing §§8, 14
 
 **Run**
 
@@ -206,29 +263,39 @@ pnpm pactwright operations validate
 pnpm pactwright intelligence triage <internal-source-id>
 ```
 
+`observe` performs the Project Intelligence hand-off through normal Source ingestion and must print the resulting `<internal-source-id>`.
+
 **Expected result**
 
-Real publication performance/failure becomes an Operations Observation then PI Source.
-
-**Run**
-
-```bash
-# only when triage requires reviewed promotion and the proposal is accepted
-pnpm pactwright intelligence promote <internal-source-id>
-
-pnpm pactwright intelligence derive-intent-roadmap
-pnpm pactwright operations corrective-roadmap
-```
+Real publication performance/failure becomes an Operations Observation then PI Source, and the Source is triaged.
 
 **Verify before continuing**
 
-Trace the Observation to the exact Publication id/hash and confirm no Asset/Publication mutation occurred.
+Trace the Observation to the exact Publication id/hash and confirm no Asset/Publication mutation occurred. Promotion and roadmap derivation are deferred to Stage 5.
+
+### Step 10 — Verify cross-extension GitHub checks and views
+
+**References:** Cross-extension GitHub integration §§23–24
+
+**Run**
+
+```text
+With the Stage 3 Observation recorded, inspect the projected GitHub surfaces: the Pactwright / Publication check on the relevant publication change, the shared Project's Publications view showing the linked operational Observation, and the Operations checks/views including corrective-intent-roadmap freshness classification.
+```
+
+**Expected result**
+
+GitHub projects the cross-extension state without owning it.
+
+**Verify before continuing**
+
+The Publications view shows the Observation link for the observed Publication; Operations views distinguish execution failure from invalid canonical state; no GitHub metadata is treated as canonical Publication or Observation truth.
 
 ## Stage 4 — Prove ownership and disablement
 
 Demonstrate the sibling extensions remain independent.
 
-### Step 8 — Prove Review & Creative works without Operations
+### Step 11 — Prove Review & Creative works without Operations
 
 **References:** Publication ownership/exposure declaration §§1–4, 13
 
@@ -246,7 +313,7 @@ Publication semantics do not depend on Operations.
 
 Run Review & Creative validation with Operations disabled.
 
-### Step 9 — Prove Operations cannot mutate Publication
+### Step 12 — Prove Operations cannot mutate Publication
 
 **References:** Generic production exposure/Observation §25
 
@@ -264,9 +331,9 @@ Observation references but never owns Publication.
 
 Record before/after Publication hash and `operations validate` result.
 
-### Step 10 — Prove disabling Operations leaves Publications valid
+### Step 13 — Prove disabling Operations leaves Publications valid
 
-**References:** Operations §2; Distribution §14
+**References:** Generic production exposure/Observation §2; Sibling dependency model — Distribution §14
 
 **Run**
 
@@ -280,26 +347,22 @@ Removing Operations does not reinterpret Review & Creative truth.
 
 **Verify before continuing**
 
-Run `creative validate` after Operations disable/removal.
+Run `creative validate` after Operations disable/removal. Confirm reconciliation removed only Operations-owned workflows/views/fields/checks/labels and retained Project Intelligence integration required by Review & Creative.
 
 ## Stage 5 — Improve a real Pactwright Publication from evidence
 
 This is the first checkpoint where the public product itself must close the production-feedback loop.
 
-### Step 11 — Derive a public-content correction from Publication evidence
+### Step 14 — Derive a public-content correction from Publication evidence
 
-**References:** Generic production exposure/Observation §§11–15; Project Intelligence §§8, 11–14; Open-Source Project Organisation §1.3
+**References:** Generic production exposure/Observation §§13–15; Project Intelligence routing §§8, 11–14; Open-Source Project Organisation §1.3
 
 **Run**
 
-Use the real Pactwright Publication observed earlier in this checkpoint:
+Continue from the triaged Source produced in Step 9:
 
 ```bash
-pnpm pactwright operations ingest <publication-source-id>
-pnpm pactwright operations observe <publication-source-id>
-pnpm pactwright intelligence triage <internal-source-id>
-
-# only when required and accepted
+# only when triage requires reviewed promotion and the proposal is accepted
 pnpm pactwright intelligence promote <internal-source-id>
 
 pnpm pactwright intelligence derive-intent-roadmap
@@ -316,13 +379,13 @@ A public-content improvement is proposed by the same governed Observation → PI
 
 The candidate traces to the exact Publication and supporting operational evidence; unsupported causal claims are absent.
 
-### Step 12 — Publish the evidence-driven revision
+### Step 15 — Publish the evidence-driven revision
 
-**References:** Review & Creative §§9–13; Open-Source Project Organisation §1.3
+**References:** Publication ownership/exposure declaration §§9–13; Open-Source Project Organisation §§1.2–1.3
 
 **Run**
 
-Re-check creative readiness first:
+Re-check creative readiness first and require the `identity`, `content` and `product` domains to be Covered for this work; fill any missing coverage through the established PI gap loop before continuing:
 
 ```bash
 pnpm pactwright intelligence onboard
@@ -340,15 +403,13 @@ Then deliver the accepted correction:
 /prepare-evidence <brief-id>
 ```
 
-After manual approval, publish the superseding Asset:
+Approve the revised output and publish the superseding Asset, recording the `supersedes` relation from the new Asset to the original Asset through Pactwright's graph-mutation responsibility:
 
 ```bash
 pnpm pactwright creative approve-asset <evidence-id>
 pnpm pactwright creative record-publication <asset-id> <channel>
 pnpm pactwright creative validate
 ```
-
-Also publish a concise Publication-feedback guide/example grounded in this real loop.
 
 **Expected result**
 
@@ -365,15 +426,45 @@ original Publication
 → candidate
 → Intent
 → Evidence
-→ superseding Asset
+→ superseding Asset (supersedes → original Asset)
 → new Publication
 ```
 
+`creative validate` must confirm the `supersedes` edge and that the superseded Asset remains immutable.
+
+### Step 16 — Deliver the Publication-feedback guide
+
+**References:** Publication ownership/exposure declaration §§9–13; Open-Source Project Organisation §§1.2–1.3
+
+**Run**
+
+Deliver the §1.3 milestone content through the normal lifecycle, grounded in the real loop just completed:
+
+```text
+/capture-intent "Publish Pactwright's Publication-feedback guide: a concise guide and example showing how a real Publication was observed by Operations and revised from production evidence, grounded in accepted Project Intelligence and the actual Checkpoint 7 lineage."
+/propose-contracts <intent-id>
+/approve-contract <contract-id> "<selection notes>"
+/write-brief <contract-id>
+/deliver-brief <brief-id>
+/review <brief-id>
+/prepare-evidence <brief-id>
+```
+
+For the public-facing portion, approve and publish through Creative Delivery.
+
+**Expected result**
+
+Publication feedback is understandable from the public surfaces and the material is grounded in accepted project truth.
+
+**Verify before continuing**
+
+Technical claims match the implemented cross-extension boundary; public narrative has valid identity/product grounding and, where published as an Asset, canonical Publication lineage.
+
 ## Stage 6 — Release `0.0.7`
 
-### Step 13 — Prepare, publish and tag `0.0.7`
+### Step 17 — Prepare, publish and tag `0.0.7`
 
-**References:** Distribution §§2, 4, 6–8, 15, 18–19
+**References:** Implementation Guide — npm release model; Sibling dependency model — Distribution §6
 
 **Run**
 
@@ -431,8 +522,7 @@ pnpm view @pactwright/creative@0.0.7 version
 pnpm view @pactwright/operations@0.0.7 version
 ```
 
-Every command must return `0.0.7`. Packages already configured for trusted publishing must show npm provenance/trusted-publisher metadata; any package bootstrapped in this step is trusted for its next release.
-
+Every command must return `0.0.7`, and every package must show npm provenance/trusted-publisher metadata. No new packages are introduced at `0.0.7`; this is the first trusted OIDC release for `@pactwright/operations`, bootstrapped in Checkpoint 6.
 
 ## Stage 7 — Prove Publication feedback on Kakeido
 
@@ -440,9 +530,9 @@ Run this stage from the Kakeido repository root unless a step explicitly says ot
 
 Use a real Kakeido marketing/publication surface.
 
-### Step 14 — Upgrade Review & Creative and Operations
+### Step 18 — Upgrade Review & Creative, Operations and the agent pack
 
-**References:** Distribution §15
+**References:** Sibling dependency model — Distribution §15
 
 **Run**
 
@@ -453,11 +543,12 @@ pnpm add -D \
   @pactwright/review-creative@0.0.7 \
   @pactwright/creative@0.0.7 \
   @pactwright/operations@0.0.7
+pnpm install --frozen-lockfile
 
 pnpm pactwright extension upgrade project-intelligence
-pnpm pactwright agent-pack use @pactwright/creative
 pnpm pactwright extension upgrade review-creative
 pnpm pactwright extension upgrade operations
+pnpm pactwright upgrade
 pnpm pactwright sync
 pnpm pactwright creative validate
 pnpm pactwright operations validate
@@ -465,15 +556,65 @@ pnpm pactwright github sync --dry-run
 pnpm pactwright github sync
 ```
 
+`pactwright upgrade` upgrades the already configured `@pactwright/creative` agent pack; pack selection does not change in this checkpoint.
+
 **Expected result**
 
-Kakeido has compatible sibling extension versions.
+Kakeido has compatible sibling extension versions and an upgraded configured agent pack.
 
 **Verify before continuing**
 
 Run core/PI/creative/operations validation.
 
-### Step 15 — Observe a real Kakeido Publication
+### Step 19 — Select or record a real Kakeido Publication
+
+**References:** Publication ownership/exposure declaration §13
+
+**Run**
+
+Resolve the target Publication from Kakeido's canonical Review & Creative records:
+
+```bash
+pnpm pactwright creative validate
+```
+
+Inspect `docs/review-creative/publications/` and `docs/review-creative/assets/`, select an existing approved Kakeido marketing Publication (for example the real Kakeido public asset published in Checkpoint 5), and print its `<publication-id>` and `<asset-id>`.
+
+Only if no suitable Publication exists, record one from an existing approved Asset:
+
+```bash
+# only when no suitable Publication exists
+pnpm pactwright creative record-publication <asset-id> <channel>
+pnpm pactwright creative validate
+```
+
+**Expected result**
+
+A canonical Publication exists for a real Kakeido marketing surface, and its ids are printed.
+
+**Verify before continuing**
+
+Inspect the Publication's Asset/hash/channel/locator.
+
+### Step 20 — Configure a Kakeido publication evidence source
+
+**References:** Generic production exposure/Observation §§8–11
+
+**Run**
+
+```text
+Create the minimum Kakeido Operations source configuration needed to observe the selected Publication through an analytics/evidence system already adopted by the Kakeido marketing surface. Do not add a new observability vendor, commit credentials or persist raw analytics events. Print the resulting <publication-source-id>. Run operations validate.
+```
+
+**Expected result**
+
+Kakeido Operations can collect bounded evidence about the Publication, and `<publication-source-id>` is printed.
+
+**Verify before continuing**
+
+Run `pnpm pactwright operations validate` and inspect committed config.
+
+### Step 21 — Observe the Kakeido Publication
 
 **References:** Publication ownership/exposure declaration §13; Generic production exposure/Observation §§11–15
 
@@ -486,18 +627,47 @@ pnpm pactwright operations validate
 pnpm pactwright intelligence triage <internal-source-id>
 ```
 
+`observe` performs the Project Intelligence hand-off and must print the resulting `<internal-source-id>`.
+
 **Expected result**
 
 Kakeido Publication outcome enters PI through Operations without altering the published Asset.
 
 **Verify before continuing**
 
-Inspect Asset/Publication hashes before/after and route any required promotion through normal PI commands.
+Inspect Asset/Publication hashes before/after and route any required promotion through normal PI commands. Governed corrective delivery on Kakeido is out of scope for this checkpoint (§5).
+
+## Stage 8 — Capture implementation feedback
+
+Real use of the checkpoint must create evidence about Pactwright itself.
+
+### Step 22 — Capture Checkpoint 7 findings as Project Intelligence Sources
+
+**References:** Implementation Principles §§7, 14; Project Intelligence routing §8
+
+**Run**
+
+Capture the durable findings from implementing and installing this checkpoint — cross-extension defects, spec gaps, evaluation misses and installation friction from both repositories — and route each through normal ingestion. From the Pactwright repository root:
+
+```bash
+pnpm pactwright intelligence ingest <finding-path>
+pnpm pactwright intelligence triage <source-id>
+```
+
+Repeat per finding. For each, ask per Implementation Principles §14 whether it is a Kakeido-specific choice or evidence that a Pactwright responsibility failed; only repeatable responsibility failures become evaluation or product candidates.
+
+**Expected result**
+
+Problems found during installation and use become governed future project work rather than untracked memory.
+
+**Verify before continuing**
+
+Each captured finding exists as a Source with a triage outcome, and justified candidates appear through normal intent-candidate derivation.
 
 ## Exit gate
 
-At least one real Pactwright Publication and one real Kakeido Publication are observed by Operations; Review & Creative remains valid without Operations; Operations references but never mutates Publications; dependency graph still has only PI as the shared dependency.
+Manifest-driven exposure compatibility is generic — a fixture second exposure type requires no Operations engine change — and publication-analysis evaluation cases run with deterministic assertions. Cross-extension automation composes from profiles and is applied on the Pactwright repository, with GitHub checks/views projecting Publications and their linked Observations without owning them. At least one real Pactwright Publication and one real Kakeido Publication are observed by Operations; Review & Creative remains valid without Operations; Operations references but never mutates Publications; disabling/removing Operations preserves Publication validity and reconciles only Operations-owned GitHub objects. A real Pactwright Publication is revised from production evidence with complete lineage including Asset supersession, and the Publication-feedback guide is published through the normal lifecycle. The `0.0.7` family is published under `next` with provenance for all six packages. Implementation and installation findings are captured as Project Intelligence Sources. The dependency graph still has only PI as the shared dependency.
 
 ---
 
-**Pactwright — Checkpoint 7 — Published-Work Feedback v8**
+**Pactwright — Checkpoint 7 — Published-Work Feedback v9**

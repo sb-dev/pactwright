@@ -1,6 +1,6 @@
 # Pactwright — Checkpoint 4 — Graph Review
 
-**Version:** 8 
+**Version:** 9 
 **Entry condition:** Checkpoint 3 is accepted. 
 **Exit capability:** Pactwright can run reproducible specialist Graph Reviews over the registered Project Graph and route findings through PI.
 
@@ -58,14 +58,36 @@ Fixture verification means repository test fixtures unless a step explicitly cre
 ## 4. Checkpoint specification map
 
 - **Review boundary/engine/roster** — Pactwright — Graph Review & Creative Delivery Engineering Spec §§1–8
-- **Provider/Generation provenance** — Pactwright — Graph Review & Creative Delivery Engineering Spec §§14–16
+- **Provider/Generation provenance** — Pactwright — Graph Review & Creative Delivery Engineering Spec §§14–16; §18 for credential handling only
 - **Commands/validation/build order** — Pactwright — Graph Review & Creative Delivery Engineering Spec §§19, 21–24
-- **Finding governance** — Pactwright — Project Intelligence Graph Engineering Spec §§8, 14–17
-- **GitHub review surface** — Pactwright — GitHub Actions and Views §§7, 22
+- **Finding governance** — Pactwright — Project Intelligence Graph Engineering Spec §§8, 11, 14–17
+- **Delivery correction path** — Pactwright — Delivery Graph and Lifecycle Engineering Spec §19
+- **Packaging/agent pack/upgrades** — Pactwright — Distribution, Agents and Evaluation §§4–7, 15, 18
+- **GitHub review surface** — Pactwright — GitHub Actions and Views §§4, 7, 22
+- **Release model** — Pactwright — Implementation Guide, "npm release model"
+- **Public product** — Pactwright Open-Source Project Organisation §§1.1–1.3
+- **Kakeido review targets** — Kakeido — Financial Model Spec; Kakeido — Product & UX Spec; Kakeido — Mobile Design Spec; Kei — Assistant Spec; Kakeido — Tech Stack Engineering Spec
+
+## 5. Out of scope — deferred to Checkpoint 5
+
+Checkpoint 4 delivers the Graph Review half of Review & Creative. The following are explicitly deferred to Checkpoint 5 and are not exercised here:
+
+- Creative Delivery semantics — creative Brief contribution, grounding manifests, creative execution, independent creative verification, Asset approval/immutability/supersession and Publication (Graph Review & Creative Delivery spec §§9–13).
+- `pactwright creative approve-asset` and `pactwright creative record-publication` (spec §19).
+- Generation Guidance resolution, guidance provenance evaluation and the generation-reviewer learning loop (spec §17). Generation Records created in this checkpoint may carry empty guidance arrays; the record schema still carries the guidance fields.
+- Execution-local command budgets (spec §18). Credential handling via environment variables and GitHub Actions secrets **is** in scope, because real reviews run in this checkpoint.
+- Creative checks, Delivery PR creative integration and Creative views (GitHub Actions and Views §§14, 23).
+- Asset/Publication validation rules (spec §21 items 9–14, 16–17). This checkpoint implements the review/generation validation subset only.
+- The first meaningful `voice-auditor` run, whose spec perspective is published-Asset compliance; its definition ships with the roster now and is first exercised once Assets exist in Checkpoint 5.
+- Exercising cross-model secondary review (spec §7). The `secondary_model` field is loaded and stored, but no standard definition enables it in this checkpoint.
+
+`generation-reviewer` and `cost-reviewer` definitions ship with the roster in this checkpoint; their evaluation and budget loops mature in Checkpoint 5.
 
 ## Stage 1 — Build provider execution provenance required by Review
 
 Establish extension-owned provider execution before Review depends on it.
+
+Per spec §14, the `graph-review` capability itself executes through the selected agent pack and active adapter like other agent responsibilities; the ProviderRuntime governs extension-owned direct provider calls only. Provider credentials come from environment variables locally and GitHub Actions secrets in workflows (spec §18).
 
 ### Step 1 — Implement Provider Runtime interface/error model
 
@@ -74,7 +96,7 @@ Establish extension-owned provider execution before Review depends on it.
 **Run**
 
 ```text
-Using self-hosted Delivery, implement the Review & Creative ProviderRuntime interface and normalised auth/rate-limit/content-policy/transient/permanent errors. Keep provider-specific SDK translation inside adapters and do not implement Asset/Publication semantics yet.
+Using self-hosted Delivery, implement the Review & Creative ProviderRuntime interface and normalised auth/rate-limit/content-policy/transient/permanent errors. Bound provider-call retries per spec §22, and stub the §14 command-budget check as an inert hook; budgets are implemented in Checkpoint 5. Resolve provider credentials from environment variables only. Keep provider-specific SDK translation inside adapters and do not implement Asset/Publication semantics yet. Implement at least one real provider adapter with conformance tests.
 ```
 
 **Expected result**
@@ -110,7 +132,7 @@ Run a mock second-adapter conformance fixture.
 **Run**
 
 ```text
-Implement one immutable Generation Record for every extension-owned provider call, recording caller, provider/model/capability/task, graph revision, prompt hash, guidance/grounding, usage/cost/latency, status and output hash/error. Failed/refused calls are recorded; records are execution provenance, not graph nodes.
+Implement one immutable Generation Record for every extension-owned provider call, recording caller, provider/model/capability/task, graph revision, prompt hash, guidance/grounding, usage/cost/latency, status and output hash/error. Failed/refused calls are recorded; records are execution provenance, not graph nodes. Guidance arrays may be empty until Checkpoint 5 implements guidance resolution; the schema must still carry the guidance fields.
 ```
 
 **Expected result**
@@ -168,7 +190,7 @@ Add a fixture future extension node type and prove a project-wide scope sees it.
 **Run**
 
 ```text
-Implement immutable Review Execution and pactwright review run <review-id>. Resolve the current core Project Graph revision, resolved scope/configuration, invoke graph-review, record execution status/findings/generation records, and print the Review Execution id plus any internal Source ids created for findings. Failed runs record provenance but emit no accepted truth.
+Implement immutable Review Execution and pactwright review run <review-id>. Resolve the current core Project Graph revision, resolved scope/configuration, invoke graph-review, record execution status/findings/generation records, and print the Review Execution id. Failed runs record provenance but emit no accepted truth.
 ```
 
 **Expected result**
@@ -177,7 +199,7 @@ Every review is pinned to deterministic graph/configuration inputs.
 
 **Verify before continuing**
 
-After installation, run architecture-reviewer and inspect the Review Execution record.
+Run a fixture Review Definition end to end through the implementation environment, inspect the Review Execution record, and confirm executions are excluded from normal Project Graph traversal/context.
 
 ### Step 7 — Implement findings → PI internal Sources
 
@@ -186,7 +208,7 @@ After installation, run architecture-reviewer and inspect the Review Execution r
 **Run**
 
 ```text
-Implement review Finding records inside Review Execution and hand every successful finding into Project Intelligence as an internal Source. Review ends at the finding and cannot edit Knowledge, Intents, Decisions, Contracts, Briefs, Assets, Publications, Deployments or Observations.
+Implement review Finding records inside Review Execution and hand every successful finding into Project Intelligence as an internal Source, printing the internal Source id created for each finding. Review ends at the finding and cannot edit Knowledge, Intents, Decisions, Contracts, Briefs, Assets, Publications, Deployments or Observations.
 ```
 
 **Expected result**
@@ -231,7 +253,7 @@ The full initial roster exists without one bespoke engine per reviewer.
 
 **Verify before continuing**
 
-Run `pnpm pactwright review roster` after installation and confirm all nine definitions.
+Run `pnpm build`, then `pactwright review roster` in a fixture project and confirm all nine definitions load.
 
 ### Step 10 — Implement progression next-actions
 
@@ -262,7 +284,7 @@ Wire capabilities into Distribution and GitHub.
 **Run**
 
 ```text
-Create/complete `@pactwright/review-creative` as a publishable workspace package and implement its manifest/dependency registration for Graph Review: require Project Intelligence, register review namespace/capabilities/configuration/GitHub profile, but do not depend on Operations.
+Create/complete `@pactwright/review-creative` as a publishable workspace package and implement its manifest/dependency registration for Graph Review: require Project Intelligence, register review namespace/capabilities/configuration/GitHub profile, and register the complete §4 manifest including the `asset`/`publication` node types and `produces`/`grounded-in`/`publishes` edge types — their record semantics and validation arrive in Checkpoint 5 (see the out-of-scope block). Do not depend on Operations.
 ```
 
 **Expected result**
@@ -291,14 +313,32 @@ Implement `@pactwright/creative` as a publishable first-party agent-pack workspa
 
 Run the agent-pack compatibility fixtures against `@pactwright/creative` and confirm its package build/prepack succeeds.
 
-### Step 13 — Implement Review GitHub workflow/summaries/views
+### Step 13 — Implement review-scope extension validation
+
+**References:** Commands/validation/build order §21 (items 1–8, 15)
+
+**Run**
+
+```text
+Implement `pactwright creative validate` and extension validation for the review/generation scope shipped in this checkpoint: Review Definition validity; Review Execution definition-hash and graph-revision references; finding → execution/supporting-record references; findings from successful reviews entering Project Intelligence through Source ingestion rather than direct canonical mutation; Generation Record provider/model/task eligibility; output hashes for successful Generation Records; guidance version/hash checks that tolerate empty guidance until Checkpoint 5; and deterministic Project Graph revision identification for generated reports. Do not implement Asset/Publication validation (§21 items 9–14, 16–17); fail closed if such records appear before Checkpoint 5. Allow core `pactwright validate` to invoke this extension validation when enabled.
+```
+
+**Expected result**
+
+`creative validate` enforces the review/generation subset of §21 before any later step invokes it.
+
+**Verify before continuing**
+
+Run valid and invalid review/generation fixtures; invalid fixtures must fail without graph mutation.
+
+### Step 14 — Implement Review GitHub workflow/summaries/views
 
 **References:** GitHub review surface §§7, 22
 
 **Run**
 
 ```text
-Implement generated pactwright-review-creative.yml Review automation, extension validation, Review summaries, Reviews view and Next Actions view. GitHub links to execution/findings/Sources but cannot promote them.
+Implement generated pactwright-review-creative.yml Review automation, extension validation, Review summaries, Reviews view and Next Actions view. A headless review may create or update a Pactwright-managed branch or pull request containing the resulting internal Sources and must not create Intents, reorder the roadmap or change Knowledge Cards. Reference required provider credentials as GitHub Actions secrets in the generated workflow. GitHub links to execution/findings/Sources but cannot promote them.
 ```
 
 **Expected result**
@@ -307,7 +347,7 @@ Review can run remotely without GitHub becoming the Review store/knowledge autho
 
 **Verify before continuing**
 
-Run `pactwright sync` and `github sync --dry-run`; inspect Review-owned contributions.
+Run `pactwright sync` and `github sync --dry-run` in a fixture project; inspect Review-owned contributions.
 
 ## Stage 4 — Adopt Graph Review in Pactwright
 
@@ -315,19 +355,21 @@ Run this stage from the Pactwright repository root.
 
 Use real reviews on Pactwright immediately.
 
-### Step 14 — Select the creative-capable pack and install Review & Creative
+### Step 15 — Select the creative-capable pack and install Review & Creative
 
 **References:** Distribution §§4, 7
 
 **Run**
 
+The `0.0.4` registry versions do not exist yet, so install workspace-linked packages; Stage 6 repins these devDependencies to the published `0.0.4` after release:
+
 ```bash
-pnpm add -D \
-  pactwright@0.0.4 \
-  @pactwright/project-intelligence@0.0.4 \
-  @pactwright/review-creative@0.0.4 \
-  @pactwright/creative@0.0.4
-pnpm install --frozen-lockfile
+pnpm add -D --workspace \
+  pactwright \
+  @pactwright/project-intelligence \
+  @pactwright/review-creative \
+  @pactwright/creative
+pnpm install
 
 pnpm pactwright agent-pack use @pactwright/creative
 pnpm pactwright extension add review-creative
@@ -345,11 +387,13 @@ Pactwright has Review capability and all required PI dependencies.
 
 Run `pnpm pactwright review roster` and `pnpm pactwright validate`.
 
-### Step 15 — Run the first Pactwright specialist reviews
+### Step 16 — Run the first Pactwright specialist reviews
 
 **References:** Review boundary/engine/roster §§6–8
 
 **Run**
+
+Export the provider credentials required by the enabled review task configuration as environment variables (spec §18), then:
 
 ```bash
 pnpm pactwright review run architecture-reviewer
@@ -383,7 +427,7 @@ pnpm pactwright intelligence derive-intent-roadmap
 
 Each finding remains Review-owned provenance until its Source is governed by PI; no Review command directly mutates Knowledge or Delivery.
 
-### Step 16 — Deliver one review-driven Pactwright correction
+### Step 17 — Deliver one review-driven Pactwright correction
 
 **References:** PI §§8, 11; Delivery Graph §19
 
@@ -408,7 +452,7 @@ A review finding affects the project only after PI governance and normal Deliver
 
 Trace Review Execution → Finding → Source → accepted meaning/candidate → Intent → Evidence.
 
-### Step 17 — Prove historical replay semantics
+### Step 18 — Prove historical replay semantics
 
 **References:** Review boundary/engine/roster §6.3; Commands/validation/build order §§19, 22
 
@@ -429,7 +473,7 @@ Inspect the two Review Executions and confirm input revision/configuration diffe
 
 ## Stage 5 — Review and advance the public product
 
-### Step 18 — Review the existing Pactwright public corpus
+### Step 19 — Review the existing Pactwright public corpus
 
 **References:** Review boundary/engine/roster §§6–8; Open-Source Project Organisation §§1.1–1.3
 
@@ -439,7 +483,7 @@ From the Pactwright repository root:
 
 ```bash
 pnpm pactwright review run product-strategist
-pnpm pactwright review run voice-auditor
+pnpm pactwright review run gtm-strategist
 pnpm pactwright review run graph-auditor
 pnpm pactwright review next-actions
 ```
@@ -455,13 +499,13 @@ pnpm pactwright intelligence promote <source-id>
 
 **Expected result**
 
-The existing README/Docs/Academy/Examples/Website corpus is reviewed against current graph truth, product strategy and identity/voice Knowledge.
+The existing README/Docs/Academy/Examples/Website corpus is reviewed against current graph truth, product strategy, positioning and content-alignment Knowledge. `voice-auditor` is deferred until Assets exist (see the out-of-scope block).
 
 **Verify before continuing**
 
 Every accepted correction routes through PI; reviewers do not directly rewrite public content.
 
-### Step 19 — Publish the Graph Review learning path
+### Step 20 — Publish the Graph Review learning path
 
 **References:** Open-Source Project Organisation §1.3; Review boundary/engine/roster §§6–8
 
@@ -489,9 +533,9 @@ Blocking review findings are resolved or explicitly deferred through normal grap
 
 ## Stage 6 — Release `0.0.4`
 
-### Step 20 — Prepare, publish and tag `0.0.4`
+### Step 21 — Prepare, publish and tag `0.0.4`
 
-**References:** Distribution §§2, 4, 6–8, 15, 18–19
+**References:** Pactwright — Implementation Guide, "npm release model"; Distribution §§6, 18
 
 **Run**
 
@@ -505,7 +549,7 @@ git switch "$DEFAULT_BRANCH"
 git pull --ff-only
 git switch -c "release/$VERSION"
 
-pnpm version "$VERSION" -r --no-git-tag-version --allow-same-version
+pnpm -r exec npm version "$VERSION" --no-git-tag-version --allow-same-version
 pnpm install
 pnpm verify
 pnpm publish -r --dry-run --tag next --access public
@@ -589,6 +633,18 @@ npx -y npm@^11.15 trust list @pactwright/creative
 
 Existing package-family members must show npm provenance/trusted-publisher metadata; the newly bootstrapped package(s) must now trust `release.yml` for the next release.
 
+Then replace the Stage 4 workspace links with the published versions and confirm the project remains valid:
+
+```bash
+pnpm add -D \
+  pactwright@0.0.4 \
+  @pactwright/project-intelligence@0.0.4 \
+  @pactwright/review-creative@0.0.4 \
+  @pactwright/creative@0.0.4
+pnpm install --frozen-lockfile
+pnpm pactwright validate
+```
+
 
 ## Stage 7 — Prove Graph Review on Kakeido
 
@@ -596,9 +652,9 @@ Run this stage from the Kakeido repository root unless a step explicitly says ot
 
 Use specialist review to find cross-spec inconsistencies in a real unrelated project.
 
-### Step 21 — Install Review & Creative in Kakeido
+### Step 22 — Install Review & Creative in Kakeido
 
-**References:** Distribution §§4, 7
+**References:** Distribution §§4, 6–7, 15
 
 **Run**
 
@@ -608,6 +664,7 @@ pnpm add -D \
   @pactwright/project-intelligence@0.0.4 \
   @pactwright/review-creative@0.0.4 \
   @pactwright/creative@0.0.4
+pnpm install --frozen-lockfile
 
 pnpm pactwright extension upgrade project-intelligence
 pnpm pactwright agent-pack use @pactwright/creative
@@ -624,11 +681,11 @@ Kakeido has the same Review engine and standard roster.
 
 **Verify before continuing**
 
-Run `pnpm pactwright review roster`.
+Run `pnpm pactwright review roster` and `pnpm pactwright validate`.
 
-### Step 22 — Run cross-spec Kakeido reviews
+### Step 23 — Run cross-spec Kakeido reviews
 
-**References:** Kakeido specs; Review boundary/engine/roster §7
+**References:** Kakeido — Financial Model Spec; Kakeido — Product & UX Spec; Kakeido — Mobile Design Spec; Kei — Assistant Spec; Kakeido — Tech Stack Engineering Spec; Review boundary/engine/roster §7
 
 **Run**
 
@@ -664,16 +721,9 @@ pnpm pactwright intelligence derive-intent-roadmap
 
 Every accepted correction candidate traces to a supported Review finding and PI Source.
 
-### Step 23 — Deliver one accepted Kakeido correction
+### Step 24 — Deliver one accepted Kakeido correction
 
 **References:** PI §§8, 11; Delivery Graph §19
-
-**Run**
-
-```bash
-pnpm pactwright intelligence derive-intent-roadmap
-```
-
 
 **Run**
 
@@ -695,10 +745,49 @@ One real cross-spec finding completes the full governed correction path.
 
 Trace finding provenance end-to-end and run all relevant Kakeido tests.
 
+## Stage 8 — Capture checkpoint feedback as product evidence
+
+Run this stage from the Pactwright repository root.
+
+Per Implementation Principles §§7 ("Learn") and 14, problems found during adoption and installation become future project work.
+
+### Step 25 — Ingest Checkpoint 4 installation/usage findings
+
+**References:** Implementation Principles §§7, 14; Finding governance §§8, 11
+
+**Run**
+
+Capture every material problem found while adopting Graph Review in Pactwright (Stages 4–5) and installing it in Kakeido (Stage 7): defects, unclear commands, missing capabilities and documentation gaps. Distinguish Kakeido-specific choices from evidence that a Pactwright responsibility failed; only the latter become Pactwright product candidates.
+
+```bash
+pnpm pactwright intelligence ingest <finding-or-feedback-source>
+pnpm pactwright intelligence triage <source-id>
+
+# only when triage requires reviewed promotion and the proposal is accepted
+pnpm pactwright intelligence promote <source-id>
+
+pnpm pactwright intelligence derive-intent-roadmap
+```
+
+**Expected result**
+
+Checkpoint 4 friction is durable Project Intelligence evidence and, where justified, roadmap candidates.
+
+**Verify before continuing**
+
+Each ingested finding traces to a Source; accepted candidates appear in the derived intent roadmap.
+
 ## Exit gate
 
-Review Definitions are configuration, project-wide scope is extension-aware, Review Executions are pinned/replayable, failed reviews emit no truth, every successful finding enters PI, and at least one Pactwright and one Kakeido finding become corrected Delivery through normal governance.
+- **Stage 1** — Provider Runtime, provider/task configuration and immutable Generation Records exist, with bounded retries, at least one conformance-tested adapter and environment-variable credential handling.
+- **Stage 2** — Review Definitions are configuration, project-wide scope is extension-aware, Review Executions are pinned/replayable and excluded from normal traversal, failed reviews emit no truth, every successful finding enters PI as an internal Source, and the full nine-reviewer roster plus `next-actions` run through one generic engine.
+- **Stage 3** — `@pactwright/review-creative` and `@pactwright/creative` are installable packages, `creative validate` enforces the review/generation subset of §21, and the generated GitHub workflow, checks and views run reviews headlessly with secret-based credentials and without promoting findings.
+- **Stage 4** — Pactwright adopted Graph Review and delivered at least one review-driven correction through normal governance; historical and `--current` reruns behave as specified.
+- **Stage 5** — The public corpus was reviewed and the Graph Review learning path published through governed Delivery.
+- **Stage 6** — `0.0.4` is published and registry-verified, trusted publishing is configured for the newly bootstrapped packages, and Pactwright is repinned to the published versions.
+- **Stage 7** — Kakeido installed the same release and at least one cross-spec Kakeido finding became corrected Delivery.
+- **Stage 8** — Checkpoint friction was ingested as Project Intelligence evidence.
 
 ---
 
-**Pactwright — Checkpoint 4 — Self-Review v8**
+**Pactwright — Checkpoint 4 — Self-Review v9**

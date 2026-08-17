@@ -1,6 +1,6 @@
 # Pactwright — Checkpoint 5 — Creative Production
 
-**Version:** 8 
+**Version:** 9 
 **Entry condition:** Checkpoint 4 is accepted. 
 **Exit capability:** Grounded creative Delivery can produce a human-approved immutable Asset and Publication in Pactwright and Kakeido.
 
@@ -18,6 +18,7 @@ Complete the Creative Delivery half of Review & Creative, including grounding, v
 - [Pactwright — Operations Graph Engineering Spec](../research-logs/2026-08-11-pactwright-operations-graph-engineering-spec.md)
 - [Pactwright — System Architecture](../research-logs/2026-08-11-pactwright-system-architecture.md)
 - [Pactwright — Implementation Principles](./00-implementation-principles.md)
+- [Pactwright — Implementation Guide](./00-implementation-guide.md)
 - [Pactwright Open-Source Project Organisation](../research-logs/2026-08-11-pactwright-open-source-project-organisation.md)
 - [Design Specification: Astro + Cloudflare Workers + Meta CAPI](../research-logs/2026-08-11-astro-design-spec.md)
 - [Kakeido — Financial Model Spec](../research-logs/2026-08-11-kakeido-financial-model-spec.md)
@@ -62,6 +63,14 @@ Fixture verification means repository test fixtures unless a step explicitly cre
 - **Generation runtime/guidance/cost** — Pactwright — Graph Review & Creative Delivery Engineering Spec §§14–18
 - **Commands/validation/automation** — Pactwright — Graph Review & Creative Delivery Engineering Spec §§19–24; Pactwright — GitHub Actions and Views §§7, 14, 22–23
 - **Kakeido creative constraints** — Kei — Assistant Spec §§4–19; Kakeido — Product & UX Spec §§3,10; Kakeido — Mobile Design Spec §§1–18
+- **Distribution/upgrades/evaluation** — Pactwright — Distribution, Agents and Evaluation §§2, 4, 6–8, 15–16, 18–19
+- **Creative readiness/public product** — Pactwright Open-Source Project Organisation §§1.2–1.3; Pactwright — Project Intelligence Graph Engineering Spec (PI) §§10, 13
+- **Release procedure** — Pactwright — Implementation Guide ("npm release model", "Preparing a development release", "Project Intelligence before creative work")
+
+**Explicitly out of scope for this checkpoint (deferred):**
+
+- `operations.exposure_types: [publication]` manifest registration is deferred to Checkpoint 7, where Operations-compatible exposure declaration is implemented and proven inert without Operations.
+- Scheduled publication automation for already approved Assets (GitHub Actions and Views §7) is deferred until a configured channel integration exists; when introduced, scheduling must never bypass Asset approval.
 
 ## Stage 1 — Add creative Brief grounding to normal Delivery
 
@@ -69,19 +78,21 @@ Extend Delivery context without creating a second lifecycle.
 
 ### Step 1 — Implement creative Brief contribution
 
-**References:** Creative lifecycle/grounding/verification §9
+**References:** Creative lifecycle/grounding/verification §9; Open-Source Project Organisation §1.2
 
 **Run**
 
 ```text
-Implement Review & Creative's contribution to normal Delivery Briefs: modality, target channel/surface, format constraints, task class, grounding manifest, identity/voice context and verification requirements.
+Implement Review & Creative's contribution to normal Delivery Briefs: modality, target channel/surface, format constraints, task class, grounding manifest, identity/voice context and acceptance/verification requirements.
 
 For public creative work, perform a Project Intelligence readiness preflight before generation:
 - `identity` must be Covered;
 - `content` must be Covered for editorial/educational/marketing work;
 - `product` must be Covered for product/capability/value claims;
 - `go-to-market` must be Covered for acquisition/positioning/campaign work;
-- any domain needed for factual claims must be Covered.
+- `delivery/ux` must be Covered for user-facing workflow/UX material;
+- `delivery/eng` must be Covered for technical implementation claims;
+- any other domain needed for factual claims must be Covered.
 
 If readiness is insufficient, stop before generation and report the missing domains/Knowledge. Do not let the generation model fill the gap. Keep Brief ownership in Delivery and do not introduce an Asset Brief node.
 ```
@@ -101,7 +112,7 @@ Create fixture creative/non-creative Briefs and confirm only creative work gets 
 **Run**
 
 ```text
-Implement creative grounding as Project Graph id + content hash pairs. Factual project claims must be supportable by grounding; applicable outbound language requires current accepted identity/voice knowledge. Challenged/superseded/retracted grounding must be surfaced for unapproved work.
+Implement creative grounding as Project Graph id + content hash pairs. Factual project claims must be supportable by grounding; applicable outbound language requires current accepted identity/voice knowledge. External claims not already represented as accepted project knowledge must enter Project Intelligence ingestion before being treated as project truth. Challenged/superseded/retracted grounding must be surfaced for unapproved work.
 ```
 
 **Expected result**
@@ -110,7 +121,7 @@ Creative outputs are traceably grounded in accepted project truth.
 
 **Verify before continuing**
 
-Run fixtures for valid, missing, hash-mismatched and challenged grounding.
+Run fixtures for valid, missing, hash-mismatched and challenged grounding, plus one external-claim fixture proving ingestion is required before the claim can be used as project truth.
 
 ## Stage 2 — Implement creative execution and verification
 
@@ -123,7 +134,7 @@ Reuse core deliver-brief/review responsibilities.
 **Run**
 
 ```text
-Implement the creative-delivery extension capability invoked by the existing deliver-brief responsibility. Candidate outputs and generation attempts stay execution/transient state; generation must not create Asset nodes. Support one first tested modality end-to-end.
+Implement the creative-delivery extension capability invoked by the existing deliver-brief responsibility. Candidate outputs and generation attempts stay execution/transient state; generation must not create Asset nodes. Support one first tested modality (text or image) end-to-end.
 ```
 
 **Expected result**
@@ -164,15 +175,17 @@ Create canonical durable creative outputs only after explicit human approval.
 
 ```text
 Implement immutable Asset semantics: media type, exact content_hash, storage_pointer, Delivery Evidence, Generation Records, grounding, human approved_by/approved_at, evidence --produces--> asset, grounded-in and same-type supersedes. Candidate outputs remain non-canonical.
+
+Complete the review-creative extension manifest for the creative half: register the asset and publication node types, the produces/grounded-in/publishes edge types and the creative runtime namespace, validated through normal Distribution manifest/dependency checks. Do not add operations.exposure_types in this checkpoint.
 ```
 
 **Expected result**
 
-An Asset is the exact approved durable output.
+An Asset is the exact approved durable output, and the manifest registers all creative node/edge types.
 
 **Verify before continuing**
 
-Run fixtures for valid Asset, missing Evidence, missing human approval, hash mismatch and supersession.
+Run fixtures for valid Asset, missing Evidence, missing human approval, hash mismatch, supersession and a manually produced Asset with empty generation_records. Confirm Distribution validation accepts the completed manifest.
 
 ### Step 6 — Implement `creative approve-asset`
 
@@ -232,18 +245,36 @@ Only approved Assets become canonical Publications.
 
 Record a fixture Publication and run `pactwright creative validate`.
 
+### Step 9 — Extend `creative validate` with the creative-half rules
+
+**References:** Commands/validation/automation §§21–22
+
+**Run**
+
+```text
+Extend pactwright creative validate with the Asset/Publication rules: every grounded output references valid graph id/hash pairs; every Asset references valid Delivery Evidence and records a human approver; every Asset content hash matches its stored or referenced output; every produces/grounded-in/publishes/supersedes edge has valid endpoints; every Publication references an approved Asset with a matching hash; superseded Assets remain immutable; generated reports identify their Project Graph revision. Enforce failure semantics: generation retries are bounded and a failed Publication never mutates the approved Asset.
+```
+
+**Expected result**
+
+`creative validate` enforces the full Asset/Publication invariant set, not only the review-half rules.
+
+**Verify before continuing**
+
+Run one failing fixture per rule, plus a bounded-retry generation fixture and a failed-publication fixture proving the approved Asset is byte-identical afterwards.
+
 ## Stage 5 — Implement Generation Guidance and evaluation
 
 Allow fast-moving provider/model guidance to evolve outside graph semantics.
 
-### Step 9 — Implement guidance resolution/provenance
+### Step 10 — Implement guidance resolution/provenance
 
 **References:** Generation runtime/guidance/cost §17
 
 **Run**
 
 ```text
-Implement standard guidance → project override resolution under .pactwright/review-creative/generation-guidance. Guidance versions are immutable when selected and each Generation Record stores exact ids/versions/hashes.
+Implement standard guidance → project override resolution. Standard guidance ships with the selected agent pack/extension package; project overrides live under .pactwright/review-creative/generation-guidance. Guidance versions are immutable when selected and each Generation Record stores exact ids/versions/hashes.
 ```
 
 **Expected result**
@@ -254,7 +285,7 @@ Generation behaviour is versioned and reproducible.
 
 Run a fixture with standard + project override and inspect resolved provenance.
 
-### Step 10 — Implement generation-reviewer evaluation loop
+### Step 11 — Implement generation-reviewer evaluation loop
 
 **References:** Generation runtime/guidance/cost §17; Distribution §16
 
@@ -272,7 +303,7 @@ Guidance can improve through normal eval + human merge.
 
 Run `pnpm pactwright eval` with one baseline/candidate guidance fixture.
 
-### Step 11 — Implement execution-local generation budgets
+### Step 12 — Implement execution-local generation budgets
 
 **References:** Generation runtime/guidance/cost §18
 
@@ -294,14 +325,14 @@ Run one within-budget and one over-budget fixture.
 
 Project grounding/Asset/Publication state without moving approval into GitHub.
 
-### Step 12 — Implement creative checks/PR summary/views
+### Step 13 — Implement creative checks/PR summary/views
 
-**References:** Commands/validation/automation §§7, 14, 22–23
+**References:** Commands/validation/automation §§7, 14, 23
 
 **Run**
 
 ```text
-Complete Review & Creative GitHub integration Follow the core GitHub workflow hardening invariant from Checkpoint 2: frozen installs, least privilege, SHA-pinned third-party actions, bounded timeouts/concurrency, and no `pull_request_target`.: Creative Grounding check, Publication check, creative PR summary, Assets view and Publications view. Repository-backed Asset byte changes must trigger hash validation. GitHub approval metadata alone must never create an Asset.
+Complete Review & Creative GitHub integration: Creative Grounding check, Publication check, creative PR summary, Assets view, Publications view, and generation-configuration validation with evaluation triggers when .pactwright/review-creative/providers, tasks or generation-guidance change. Repository-backed Asset byte changes must trigger hash validation. GitHub approval metadata alone must never create an Asset. Follow the core GitHub workflow hardening invariant from Checkpoint 2: frozen installs, least privilege, SHA-pinned third-party actions, bounded timeouts/concurrency, and no `pull_request_target`.
 ```
 
 **Expected result**
@@ -316,7 +347,29 @@ Run sync/dry-run; use a fixture GitHub approval without Asset record and prove n
 
 Run all public creative work from current accepted Project Intelligence, not from ad-hoc prompt context.
 
-### Step 13 — Verify creative readiness
+### Step 14 — Adopt the Checkpoint 5 creative runtime in Pactwright
+
+**References:** Distribution §§8, 15; Implementation Principles §7
+
+**Run**
+
+```bash
+pnpm build
+pnpm pactwright sync
+pnpm pactwright creative validate
+pnpm pactwright github sync --dry-run
+pnpm pactwright github sync
+```
+
+**Expected result**
+
+Pactwright's own adapter, checks and views reflect the Checkpoint 5 creative runtime before any real creative work runs.
+
+**Verify before continuing**
+
+Run `pnpm pactwright validate`; the creative checks/views from Step 13 appear in the GitHub dry-run diff before sync applies them.
+
+### Step 15 — Verify creative readiness
 
 **References:** Open-Source Project Organisation §1.2; Project Intelligence §§10, 13; Creative lifecycle/grounding/verification §§9–11
 
@@ -333,7 +386,11 @@ For the initial Pactwright creative package require:
 identity = Covered
 content = Covered
 product = Covered
+delivery/eng = Covered
+delivery/ux = Covered
 ```
+
+`delivery/eng` and `delivery/ux` are required because the package includes technical documentation, an example and an Academy lesson describing user-facing workflow.
 
 If the website/README work includes acquisition positioning or CTAs, also require:
 
@@ -351,7 +408,7 @@ Creative Delivery starts from accepted project truth rather than trying to manuf
 
 Inspect the exact Knowledge selected for identity, product and content; all required claims/constraints are current and traceable.
 
-### Step 14 — Publish the Creative Delivery learning path and capability presentation
+### Step 16 — Publish the Creative Delivery learning path and capability presentation
 
 **References:** Open-Source Project Organisation §1.3; Creative lifecycle/grounding/verification §§9–11; Asset/Publication §§12–13
 
@@ -384,9 +441,9 @@ The first Creative Delivery capability is explained and taught using the same gr
 
 **Verify before continuing**
 
-Graph Review/creative verification finds no blocking grounding, identity/voice or product-claim defect.
+Graph Review/creative verification finds no blocking grounding, identity/voice or product-claim defect; rejected competing Contract alternatives remain transient and create no graph nodes.
 
-### Step 15 — Approve and publish the public creative output
+### Step 17 — Approve and publish the public creative output
 
 **References:** Asset/Publication §§12–13
 
@@ -416,9 +473,9 @@ Publication references the approved Asset hash and grounding; no public creative
 
 ## Stage 8 — Release `0.0.5`
 
-### Step 16 — Prepare, publish and tag `0.0.5`
+### Step 18 — Prepare, publish and tag `0.0.5`
 
-**References:** Distribution §§2, 4, 6–8, 15, 18–19
+**References:** Implementation Guide — npm release model / Preparing a development release; Distribution §§2, 4, 6–8, 15, 18–19
 
 **Run**
 
@@ -432,7 +489,8 @@ git switch "$DEFAULT_BRANCH"
 git pull --ff-only
 git switch -c "release/$VERSION"
 
-pnpm version "$VERSION" -r --no-git-tag-version --allow-same-version
+pnpm -r exec npm version "$VERSION" --no-git-tag-version --allow-same-version
+npm version "$VERSION" --no-git-tag-version --allow-same-version
 pnpm install
 pnpm verify
 pnpm publish -r --dry-run --tag next --access public
@@ -475,7 +533,7 @@ pnpm view @pactwright/review-creative@0.0.5 version
 pnpm view @pactwright/creative@0.0.5 version
 ```
 
-Every command must return `0.0.5`. Packages already configured for trusted publishing must show npm provenance/trusted-publisher metadata; any package bootstrapped in this step is trusted for its next release.
+Every command must return `0.0.5`. All packages must show npm provenance/trusted-publisher metadata; this release introduces no new packages, so no interactive bootstrap publishing occurs.
 
 
 ## Stage 9 — Publish real Kakeido work
@@ -484,7 +542,7 @@ Run this stage from the Kakeido repository root unless a step explicitly says ot
 
 Prove creative grounding/voice on a different product.
 
-### Step 17 — Upgrade Review & Creative in Kakeido
+### Step 19 — Upgrade Review & Creative in Kakeido
 
 **References:** Distribution §15
 
@@ -498,7 +556,7 @@ pnpm add -D \
   @pactwright/creative@0.0.5
 
 pnpm pactwright extension upgrade project-intelligence
-pnpm pactwright agent-pack use @pactwright/creative
+pnpm pactwright upgrade
 pnpm pactwright extension upgrade review-creative
 pnpm pactwright sync
 pnpm pactwright creative validate
@@ -508,15 +566,15 @@ pnpm pactwright github sync
 
 **Expected result**
 
-Kakeido uses the checkpoint creative runtime.
+Kakeido uses the checkpoint creative runtime. `pnpm pactwright upgrade` upgrades the already-selected `@pactwright/creative` pack; `agent-pack use` is only for first selection.
 
 **Verify before continuing**
 
 Run `pnpm pactwright validate`.
 
-### Step 18 — Deliver grounded Kakeido public content
+### Step 20 — Deliver grounded Kakeido public content
 
-**References:** Kakeido creative constraints §§4–19, 3, 10, 1–18
+**References:** Kei — Assistant Spec §§4–19; Kakeido — Product & UX Spec §§3, 10; Kakeido — Mobile Design Spec §§1–18
 
 
 **Run**
@@ -539,7 +597,7 @@ The output is calm, non-judgemental, evidence-bounded and visually/product-consi
 
 Review specifically for no adviser claims, no confidence-score language, preserved uncertainty and no mascot-dominant behaviour.
 
-### Step 19 — Approve/publish Kakeido Asset
+### Step 21 — Approve/publish Kakeido Asset
 
 **References:** Asset/Publication §§12–13
 
@@ -574,10 +632,47 @@ Kakeido has a real approved Asset and Publication.
 
 Inspect exact hashes/grounding/approval and published surface.
 
+## Stage 10 — Capture checkpoint feedback as product evidence
+
+Turn real Checkpoint 5 implementation and use into governed future Pactwright work.
+
+### Step 22 — Ingest implementation and usage findings
+
+**References:** Implementation Principles §§7, 14; PI §8
+
+**Run**
+
+```text
+Capture the notable findings from implementing Checkpoint 5 and installing/using it in Kakeido — defects, unclear behaviour, missing guidance, creative-verification misses and installation friction — as Project Intelligence internal Sources. Distinguish Kakeido-specific choices from evidence that a Pactwright responsibility failed; only repeatable responsibility failures are candidates for generic product or evaluation work.
+```
+
+For each internal Source id created:
+
+```bash
+pnpm pactwright intelligence triage <source-id>
+
+# only when triage requires reviewed promotion and the proposal is accepted
+pnpm pactwright intelligence promote <source-id>
+```
+
+Then:
+
+```bash
+pnpm pactwright intelligence derive-intent-roadmap
+```
+
+**Expected result**
+
+Real Checkpoint 5 use produces governed future Pactwright work rather than untracked observations.
+
+**Verify before continuing**
+
+Each retained finding traces to a Source and an explicit triage outcome; no finding directly mutated Knowledge or Delivery state.
+
 ## Exit gate
 
-Both projects have delivered, human-approved and published real grounded creative work through the normal Delivery lifecycle; candidate generations remain non-canonical; Asset/Publication invariants and GitHub projection boundaries pass.
+Creative Briefs carry grounding, readiness and acceptance/verification requirements; grounding manifests, creative execution and independent creative verification pass their fixtures; Assets and Publications enforce human approval, immutability, hash and supersession invariants through the extended `creative validate`; generation guidance is versioned with recorded provenance, improvable through `pactwright eval`, and command-budget bounded; GitHub projects creative state and validates generation configuration without approving or publishing anything itself; both projects have delivered, human-approved and published real grounded creative work through the normal Delivery lifecycle with candidate generations remaining non-canonical; `0.0.5` is registry-verified with trusted-publisher provenance; and checkpoint feedback is ingested through Project Intelligence into governed future work.
 
 ---
 
-**Pactwright — Checkpoint 5 — Creative Production v8**
+**Pactwright — Checkpoint 5 — Creative Production v9**
