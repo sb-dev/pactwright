@@ -103,6 +103,27 @@ export function parseNodeFile(text: string, path: string): ParseResult<GraphNode
   return { value: { id, type, title, created, frontmatter: front, body, path }, problems: [] };
 }
 
+/**
+ * IDs never change (Delivery Graph §5) and records are superseded, not
+ * deleted. Compares a previous graph snapshot with a proposed one and reports
+ * `id-removed` for every id that no longer exists — which is exactly how a
+ * renamed-and-re-identified node file shows up. An in-place id edit is
+ * already rejected by `parseNodeFile` (`filename-mismatch`). New ids are fine.
+ */
+export function checkNodeIdImmutability(
+  previous: readonly Pick<GraphNode, "id" | "path">[],
+  proposed: readonly Pick<GraphNode, "id" | "path">[],
+): readonly Problem[] {
+  const current = new Set(proposed.map((node) => node.id));
+  return previous
+    .filter((node) => !current.has(node.id))
+    .map((node) => ({
+      code: "id-removed",
+      message: `node id "${node.id}" is missing from the proposed graph; IDs never change and nodes are superseded, not deleted`,
+      path: node.path,
+    }));
+}
+
 export interface NodesLoadResult {
   /** Successfully parsed nodes, sorted by id. */
   readonly nodes: readonly GraphNode[];

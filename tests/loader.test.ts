@@ -43,6 +43,7 @@ const failures: Array<[string, string, RegExp]> = [
   ["invalid-node-bad-id", "invalid-id", /intent-hello-world-a1b2\.md/],
   ["invalid-node-type-mismatch", "invalid-id", /intent-hello-world-a1b2\.md/],
   ["invalid-node-missing-field", "missing-field", /intent-hello-world-a1b2\.md/],
+  ["invalid-node-unknown-type", "unknown-node-type", /alternative-hello-world-e5f6\.md/],
   ["invalid-edges-duplicate", "duplicate-edge", /edges\.yml/],
 ];
 

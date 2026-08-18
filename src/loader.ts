@@ -4,6 +4,7 @@ import { loadLifecycle, type LifecycleConfig } from "./config/lifecycle.js";
 import { loadLock, type LockFile } from "./config/lock.js";
 import { loadEdges, type Edge } from "./graph/edges.js";
 import { loadNodes, type GraphNode } from "./graph/nodes.js";
+import { CORE_NODE_SCHEMAS, validateNodes } from "./graph/schema.js";
 import { findProjectRoot, projectPaths, type ProjectPaths } from "./project.js";
 
 /** Fully loaded canonical project state. */
@@ -28,7 +29,7 @@ export interface LoadProjectOptions {
 /**
  * The single canonical loading path for a Pactwright project.
  *
- * Reads, in order: config → lifecycle → lock → nodes → edges. Every file is
+ * Reads, in order: config → lifecycle → lock → nodes (then node schemas) → edges. Every file is
  * parsed even after an earlier one fails so the caller sees all problems at
  * once; if any problem was found a `PactwrightError` with code
  * `project-load-failed` is thrown carrying the full list.
@@ -46,6 +47,7 @@ export function loadProject(options: LoadProjectOptions = {}): Project {
   problems.push(...lock.problems);
   const nodes = loadNodes(paths.nodesDir);
   problems.push(...nodes.problems);
+  problems.push(...validateNodes(nodes.nodes, CORE_NODE_SCHEMAS));
   const edges = loadEdges(paths.edges);
   problems.push(...edges.problems);
 
