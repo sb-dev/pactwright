@@ -39,6 +39,7 @@ specs/reports/
 
 # Test scratch dirs
 .tmp-spec-test-*/
+.tmp-pactwright-test-*/
 
 # Environment
 .env

@@ -1,0 +1,4 @@
+edges:
+  - source: decision-hello-world-c3d4
+    type: resolves
+    target: intent-hello-world-a1b2

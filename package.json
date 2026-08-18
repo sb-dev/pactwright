@@ -1,0 +1,66 @@
+{
+  "name": "pactwright",
+  "version": "0.0.0",
+  "description": "Graph-native AI software delivery: intent, decision, contract, brief and evidence recorded in the repository.",
+  "keywords": [
+    "pactwright",
+    "delivery",
+    "spec-graph",
+    "claude-code"
+  ],
+  "license": "Apache-2.0",
+  "private": false,
+  "type": "module",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/sb-dev/pactwright.git"
+  },
+  "homepage": "https://github.com/sb-dev/pactwright#readme",
+  "bugs": {
+    "url": "https://github.com/sb-dev/pactwright/issues"
+  },
+  "engines": {
+    "node": ">=22"
+  },
+  "packageManager": "pnpm@11.7.0",
+  "bin": {
+    "pactwright": "dist/cli.js"
+  },
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    }
+  },
+  "files": [
+    "dist",
+    "LICENSE",
+    "README.md"
+  ],
+  "scripts": {
+    "build": "tsc -p tsconfig.build.json",
+    "prepack": "pnpm build",
+    "pactwright": "node dist/cli.js",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
+    "lint": "eslint .",
+    "typecheck": "tsc --noEmit",
+    "test": "node --test --import tsx tests/*.test.ts",
+    "verify": "pnpm format:check && pnpm lint && pnpm typecheck && pnpm test && pnpm build"
+  },
+  "dependencies": {
+    "js-yaml": "^4.1.0"
+  },
+  "devDependencies": {
+    "@eslint/js": "^9.0.0",
+    "@types/js-yaml": "^4.0.9",
+    "@types/node": "^22.15.0",
+    "eslint": "^9.0.0",
+    "prettier": "^3.6.0",
+    "tsx": "^4.19.0",
+    "typescript": "^5.8.0",
+    "typescript-eslint": "^8.0.0"
+  }
+}

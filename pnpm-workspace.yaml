@@ -1,0 +1,4 @@
+# pnpm settings (pnpm >= 10 reads them from this file).
+# esbuild ships a postinstall that verifies its native binary; tsx needs it.
+allowBuilds:
+  esbuild: true
