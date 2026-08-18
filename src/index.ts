@@ -65,6 +65,16 @@ export {
   type EdgeSchemaRegistry,
 } from "./graph/edge-schema.js";
 export {
+  DELIVERY_STATES,
+  deriveLineage,
+  deriveLineages,
+  isCurrent,
+  validateLineages,
+  type DeliveryState,
+  type Lineage,
+  type LineageResult,
+} from "./graph/lineage.js";
+export {
   EDGE_TYPE_PATTERN,
   edgeKey,
   loadEdges,

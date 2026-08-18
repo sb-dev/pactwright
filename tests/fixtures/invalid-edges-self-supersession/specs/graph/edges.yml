@@ -5,3 +5,6 @@ edges:
   - source: intent-hello-world-a1b2
     type: supersedes
     target: intent-hello-world-a1b2
+  - source: decision-hello-world-c3d4
+    type: selects
+    target: contract-hello-world-d4e5

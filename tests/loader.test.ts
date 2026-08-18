@@ -14,10 +14,11 @@ test("loader: loads a valid project through the canonical path", () => {
   assert.equal(project.lock.runtime.version, "0.0.0");
   assert.deepEqual(
     project.graph.nodes.map((n) => n.id),
-    ["decision-hello-world-c3d4", "intent-hello-world-a1b2"],
+    ["contract-hello-world-d4e5", "decision-hello-world-c3d4", "intent-hello-world-a1b2"],
   );
   assert.deepEqual(project.graph.edges, [
     { source: "decision-hello-world-c3d4", type: "resolves", target: "intent-hello-world-a1b2" },
+    { source: "decision-hello-world-c3d4", type: "selects", target: "contract-hello-world-d4e5" },
   ]);
 });
 
@@ -49,6 +50,7 @@ const failures: Array<[string, string, RegExp]> = [
   ["invalid-edges-wrong-endpoint-type", "invalid-source-type", /edges\.yml/],
   ["invalid-edges-self-supersession", "self-loop", /edges\.yml/],
   ["invalid-edges-supersession-cycle", "edge-cycle", /edges\.yml/],
+  ["invalid-lineage-ambiguous", "ambiguous-decision", /intent-quick-start-a1b2\.md/],
 ];
 
 for (const [name, code, pathPattern] of failures) {

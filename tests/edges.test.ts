@@ -47,5 +47,5 @@ test("edges: missing fields, unknown fields and bad types are reported", () => {
 test("edges: loadEdges reads the fixture", () => {
   const result = loadEdges(path.join(fixture("valid-project"), "specs", "graph", "edges.yml"));
   assert.deepEqual(result.problems, []);
-  assert.equal(result.edges.length, 1);
+  assert.equal(result.edges.length, 2);
 });

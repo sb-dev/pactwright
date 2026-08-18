@@ -26,3 +26,6 @@ edges:
   - source: evidence-quick-start-b8c9
     type: supersedes
     target: evidence-quick-start-a7b8
+  - source: decision-quick-start-c3d4
+    type: supersedes
+    target: decision-quick-start-b2c3

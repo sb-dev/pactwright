@@ -67,7 +67,7 @@ test("nodes: loadNodes reads a directory sorted by id and reports duplicates", (
   assert.deepEqual(result.problems, []);
   assert.deepEqual(
     result.nodes.map((n) => n.id),
-    ["decision-hello-world-c3d4", "intent-hello-world-a1b2"],
+    ["contract-hello-world-d4e5", "decision-hello-world-c3d4", "intent-hello-world-a1b2"],
   );
   const missing = loadNodes(path.join(fixture("valid-project"), "specs", "nope"));
   assert.equal(missing.problems[0]?.code, "missing-directory");
