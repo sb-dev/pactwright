@@ -54,6 +54,17 @@ export {
   type NodeSchemaRegistry,
 } from "./graph/schema.js";
 export {
+  CORE_EDGE_OWNER,
+  CORE_EDGE_SCHEMAS,
+  CORE_EDGE_TYPES,
+  createEdgeSchemaRegistry,
+  edgeTypes,
+  validateEdges,
+  type CoreEdgeType,
+  type EdgeSchema,
+  type EdgeSchemaRegistry,
+} from "./graph/edge-schema.js";
+export {
   EDGE_TYPE_PATTERN,
   edgeKey,
   loadEdges,

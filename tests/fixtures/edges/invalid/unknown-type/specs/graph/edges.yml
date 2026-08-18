@@ -1,0 +1,4 @@
+edges:
+  - source: decision-x-2222
+    type: deployed-as
+    target: intent-x-1111

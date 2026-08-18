@@ -1,0 +1,7 @@
+edges:
+  - source: brief-x-4444
+    type: supersedes
+    target: brief-x-5555
+  - source: brief-x-5555
+    type: supersedes
+    target: brief-x-4444

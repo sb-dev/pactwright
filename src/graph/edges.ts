@@ -30,7 +30,8 @@ export function edgeKey(edge: Edge): string {
 /**
  * Parses `specs/graph/edges.yml`: `{ edges: [{source, type, target}, ...] }`.
  * An empty document or `edges: []` is a valid empty store. Duplicate
- * `(source, type, target)` tuples are reported and dropped.
+ * `(source, type, target)` tuples are reported and dropped. Semantic checks
+ * (registered type, endpoints, supersession) live in `validateEdges`.
  */
 export function parseEdges(raw: unknown, path: string): EdgesParseResult {
   const c = new Checker(path);

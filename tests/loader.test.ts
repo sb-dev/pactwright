@@ -45,6 +45,10 @@ const failures: Array<[string, string, RegExp]> = [
   ["invalid-node-missing-field", "missing-field", /intent-hello-world-a1b2\.md/],
   ["invalid-node-unknown-type", "unknown-node-type", /alternative-hello-world-e5f6\.md/],
   ["invalid-edges-duplicate", "duplicate-edge", /edges\.yml/],
+  ["invalid-edges-missing-target", "missing-target", /edges\.yml/],
+  ["invalid-edges-wrong-endpoint-type", "invalid-source-type", /edges\.yml/],
+  ["invalid-edges-self-supersession", "self-loop", /edges\.yml/],
+  ["invalid-edges-supersession-cycle", "edge-cycle", /edges\.yml/],
 ];
 
 for (const [name, code, pathPattern] of failures) {

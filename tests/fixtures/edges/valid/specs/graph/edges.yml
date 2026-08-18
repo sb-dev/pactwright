@@ -1,0 +1,28 @@
+edges:
+  - source: decision-quick-start-b2c3
+    type: resolves
+    target: intent-quick-start-a1b2
+  - source: decision-quick-start-c3d4
+    type: resolves
+    target: intent-quick-start-a1b2
+  - source: decision-quick-start-c3d4
+    type: selects
+    target: contract-quick-start-d4e5
+  - source: brief-quick-start-e5f6
+    type: decomposes
+    target: contract-quick-start-d4e5
+  - source: brief-quick-start-f6a7
+    type: decomposes
+    target: contract-quick-start-d4e5
+  - source: brief-quick-start-f6a7
+    type: supersedes
+    target: brief-quick-start-e5f6
+  - source: evidence-quick-start-a7b8
+    type: evidences
+    target: brief-quick-start-f6a7
+  - source: evidence-quick-start-b8c9
+    type: evidences
+    target: brief-quick-start-f6a7
+  - source: evidence-quick-start-b8c9
+    type: supersedes
+    target: evidence-quick-start-a7b8
