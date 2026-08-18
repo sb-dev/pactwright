@@ -83,6 +83,15 @@ export {
   type EdgesParseResult,
 } from "./graph/edges.js";
 export {
+  REVISION_PATTERN,
+  REVISION_VERSION,
+  canonicalGraphPayload,
+  canonicalJson,
+  graphRevision,
+  type CanonicalRecord,
+  type RevisionInput,
+} from "./graph/revision.js";
+export {
   CONFIG_FILE,
   EDGES_FILE,
   LIFECYCLE_FILE,

@@ -1,0 +1,7 @@
+edges:
+  - source: decision-hello-world-c3d4
+    type: selects
+    target: contract-hello-world-d4e5
+  - source: decision-hello-world-c3d4
+    type: resolves
+    target: intent-hello-world-a1b2
