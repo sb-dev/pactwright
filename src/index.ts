@@ -122,3 +122,28 @@ export {
 } from "./project.js";
 export { loadProject, type LoadProjectOptions, type Project } from "./loader.js";
 export { runtimeVersion } from "./version.js";
+export {
+  GRAPH_MARKING_STAGES,
+  TRANSIENT_STAGES,
+  completedStages,
+  isActive,
+  isTransientStage,
+  lifecycleNext,
+  lifecycleStatus,
+  nextActionFor,
+  pendingStages,
+  selectLineages,
+  type LifecycleStatus,
+  type LineageStatus,
+  type NextAction,
+} from "./lifecycle/engine.js";
+export {
+  noExecutor,
+  runLifecycle,
+  type RunOptions,
+  type RunResult,
+  type RunStop,
+  type StageExecutor,
+  type StageOutcome,
+  type StageRequest,
+} from "./lifecycle/run.js";
