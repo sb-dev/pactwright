@@ -86,6 +86,21 @@ export {
   type Edge,
   type EdgesParseResult,
 } from "./graph/edges.js";
+export { mintNodeId, slugify } from "./graph/ids.js";
+export {
+  commitGraphChange,
+  createBrief,
+  createEvidence,
+  createIntent,
+  recordDecision,
+  serialiseEdges,
+  serialiseNode,
+  type CreateChildInput,
+  type CreateIntentInput,
+  type GraphChange,
+  type RecordDecisionInput,
+  type RecordedDecision,
+} from "./graph/mutations.js";
 export {
   REVISION_PATTERN,
   REVISION_VERSION,
