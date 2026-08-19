@@ -10,8 +10,12 @@ export {
 export {
   ACTORS,
   CORE_STAGES,
+  DECISION_STAGE,
   EXECUTION_MODES,
   LIFECYCLE_VERSION,
+  decisionActor,
+  humanGates,
+  isHumanGate,
   loadLifecycle,
   parseLifecycle,
   type Actor,

@@ -40,6 +40,9 @@ export interface LifecycleConfig {
 
 export const LIFECYCLE_VERSION = 1;
 
+/** The stage whose configured actor authorises Decisions (Delivery Graph §8). */
+export const DECISION_STAGE = "approve-contract" as const;
+
 export function parseLifecycle(raw: unknown, path: string): ParseResult<LifecycleConfig> {
   const c = new Checker(path);
   const root = expectRecord(c, raw, "lifecycle");
@@ -72,6 +75,12 @@ export function parseLifecycle(raw: unknown, path: string): ParseResult<Lifecycl
         stage["actor"] === undefined
           ? undefined
           : expectEnum(c, stage["actor"], `${label}.actor`, ACTORS);
+      if (name === DECISION_STAGE && stage["actor"] === undefined) {
+        c.fail(
+          "missing-actor",
+          `${label} must declare "actor"; Decisions must be authorised by lifecycle.yml (Delivery Graph §8)`,
+        );
+      }
       if (execution !== undefined) {
         stages[name] = actor === undefined ? { execution } : { execution, actor };
       }
@@ -86,4 +95,25 @@ export function loadLifecycle(path: string): ParseResult<LifecycleConfig> {
   const read = readYamlFile(path);
   if (read.problems.length > 0) return { value: undefined, problems: read.problems };
   return parseLifecycle(read.value, path);
+}
+
+/** The actor authorised to make Decisions: `approve-contract`'s configured actor. */
+export function decisionActor(lifecycle: LifecycleConfig): Actor {
+  return lifecycle.stages[DECISION_STAGE].actor!;
+}
+
+/**
+ * A human gate is a stage that cannot proceed without a human: manual
+ * execution or a human actor. `lifecycle run` stops here and never skips one
+ * (Delivery Graph §20). In the §17 default example the gates are
+ * capture-intent and approve-contract; in the automated example only
+ * capture-intent remains.
+ */
+export function isHumanGate(stage: StageConfig): boolean {
+  return stage.execution === "manual" || stage.actor === "human";
+}
+
+/** The human gates of a lifecycle, in stage order. */
+export function humanGates(lifecycle: LifecycleConfig): readonly StageName[] {
+  return CORE_STAGES.filter((name) => isHumanGate(lifecycle.stages[name]));
 }

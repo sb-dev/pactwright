@@ -39,6 +39,7 @@ const failures: Array<[string, string, RegExp]> = [
   ["invalid-config-missing-field", "missing-field", /config\.yml/],
   ["invalid-config-extensions", "extensions-not-supported", /config\.yml/],
   ["invalid-lifecycle-unknown-stage", "unknown-stage", /lifecycle\.yml/],
+  ["invalid-lifecycle-bad-actor", "invalid-value", /lifecycle\.yml/],
   ["invalid-lock-bad-hash", "invalid-hash", /lock\.yml/],
   ["invalid-missing-lock", "missing-file", /lock\.yml/],
   ["invalid-node-bad-id", "invalid-id", /intent-hello-world-a1b2\.md/],
