@@ -165,3 +165,81 @@ test("cli: outside a project the lifecycle commands fail cleanly", () => {
   assert.equal(result.status, 1);
   assert.match(result.stdout, /project-not-found/);
 });
+
+// ---- validate / context -----------------------------------------------------
+
+test("cli: help lists validate and context", () => {
+  const result = run("--help");
+  assert.match(result.stdout, /validate \[--json\]/);
+  assert.match(result.stdout, /context <node-id> \[--history\]/);
+});
+
+test("cli: validate reports a valid project (exit 0)", () => {
+  const result = runIn(fixture("valid-project"), "validate");
+  assert.equal(result.status, 0, result.stderr);
+  assert.match(
+    result.stdout,
+    /^Valid: 3 nodes, 2 edges, 1 lineages \(revision sha256:[0-9a-f]{64}\)\n$/,
+  );
+  const json = runIn(fixture("valid-project"), "validate", "--json");
+  assert.equal(json.status, 0);
+  assert.equal((JSON.parse(json.stdout) as { ok: boolean }).ok, true);
+});
+
+test("cli: validate reports problems (exit 1)", () => {
+  const result = runIn(fixture("invalid-lineage-ambiguous"), "validate");
+  assert.equal(result.status, 1);
+  assert.match(result.stdout, /Validation problems:/);
+  assert.match(result.stdout, /ambiguous-decision/);
+  assert.equal(runIn(fixture("valid-project"), "validate", "extra").status, 1);
+});
+
+test("cli: context prints the current core lineage only", () => {
+  const result = runIn(fixture("valid-project"), "context", "intent-hello-world-a1b2");
+  assert.equal(result.status, 0, result.stderr);
+  assert.match(result.stdout, /^# Delivery context for intent-hello-world-a1b2/);
+  assert.match(result.stdout, /state: contracted/);
+  assert.match(result.stdout, /## intent intent-hello-world-a1b2/);
+  assert.match(result.stdout, /## decision decision-hello-world-c3d4/);
+  assert.match(result.stdout, /decided_by: /);
+  assert.match(result.stdout, /## contract contract-hello-world-d4e5/);
+  assert.doesNotMatch(result.stdout, /## brief/);
+  assert.doesNotMatch(result.stdout, /History/);
+});
+
+test("cli: context excludes superseded records unless --history is given", () => {
+  const root = project({ lineage: "superseded-chain" });
+  const plain = runIn(root, "context", "contract-quick-start-2222");
+  assert.equal(plain.status, 0, plain.stderr);
+  assert.match(plain.stdout, /note: contract-quick-start-2222 is superseded/);
+  assert.match(plain.stdout, /## contract contract-quick-start-9999/);
+  assert.doesNotMatch(plain.stdout, /## contract contract-quick-start-2222/);
+  assert.doesNotMatch(plain.stdout, /decision-quick-start-0000/);
+
+  const history = runIn(root, "context", "contract-quick-start-2222", "--history");
+  assert.equal(history.status, 0, history.stderr);
+  assert.match(history.stdout, /# History \(superseded records\)/);
+  assert.match(
+    history.stdout,
+    /## contract contract-quick-start-2222\n[\s\S]*superseded by: contract-quick-start-3333/,
+  );
+  const json = runIn(root, "context", "evidence-quick-start-6666", "--history", "--json");
+  const parsed = JSON.parse(json.stdout) as { requestedIsCurrent: boolean; history: unknown[] };
+  assert.equal(parsed.requestedIsCurrent, false);
+  assert.equal(parsed.history.length, 6);
+});
+
+test("cli: context argument and option errors", () => {
+  assert.equal(runIn(fixture("valid-project"), "context").status, 1);
+  assert.equal(runIn(fixture("valid-project"), "context", "a", "b").status, 1);
+  assert.equal(
+    runIn(fixture("valid-project"), "context", "intent-hello-world-a1b2", "--intent", "x").status,
+    1,
+  );
+  const unknown = runIn(fixture("valid-project"), "context", "intent-nope-0000");
+  assert.equal(unknown.status, 1);
+  assert.match(unknown.stdout, /unknown-node/);
+  const broken = runIn(fixture("invalid-lineage-ambiguous"), "context", "intent-quick-start-a1b2");
+  assert.equal(broken.status, 1);
+  assert.match(broken.stdout, /Validation problems:/);
+});

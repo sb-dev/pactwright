@@ -147,3 +147,13 @@ export {
   type StageOutcome,
   type StageRequest,
 } from "./lifecycle/run.js";
+export { validateProject, type ValidationReport } from "./validate.js";
+export {
+  findIntentOf,
+  loadContext,
+  type ContextContributor,
+  type ContextOptions,
+  type DeliveryContext,
+  type ExtensionContext,
+  type HistoryRecord,
+} from "./context.js";

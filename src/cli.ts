@@ -7,13 +7,18 @@ import {
   type NextAction,
 } from "./lifecycle/engine.js";
 import { noExecutor, runLifecycle, type RunResult } from "./lifecycle/run.js";
+import { loadContext, type DeliveryContext, type HistoryRecord } from "./context.js";
+import type { GraphNode } from "./graph/nodes.js";
 import { loadProject } from "./loader.js";
+import { validateProject } from "./validate.js";
 import { findProjectRoot } from "./project.js";
 import { runtimeVersion } from "./version.js";
 
 const HELP = `Usage: pactwright <command> [options]
 
 Commands:
+  validate [--json]                          Validate the Delivery Graph and typed-edge store
+  context <node-id> [--history] [--json]     Print the current core Delivery lineage of a node
   lifecycle status [--intent <id>] [--json]  Report stage, completed stages, gates and lineage
   lifecycle next   [--intent <id>] [--json]  Report the next permitted core Delivery action
   lifecycle run    [--intent <id>] [--json]  Run automatic stages until a gate, completion,
@@ -27,21 +32,32 @@ Options:
 interface CommonOptions {
   readonly intent?: string;
   readonly json: boolean;
+  readonly history: boolean;
+  /** Positional arguments, in order. */
+  readonly positional: readonly string[];
 }
 
-function parseOptions(args: readonly string[]): CommonOptions | string {
+function parseOptions(
+  args: readonly string[],
+  allow: { intent?: boolean; history?: boolean } = {},
+): CommonOptions | string {
   let intent: string | undefined;
   let json = false;
+  let history = false;
+  const positional: string[] = [];
   for (let i = 0; i < args.length; i += 1) {
     const arg = args[i]!;
     if (arg === "--json") json = true;
-    else if (arg === "--intent") {
+    else if (arg === "--history" && allow.history === true) history = true;
+    else if (arg === "--intent" && allow.intent === true) {
       intent = args[i + 1];
       if (intent === undefined || intent.startsWith("--")) return "--intent needs an intent id";
       i += 1;
-    } else return `unknown option "${arg}"`;
+    } else if (arg.startsWith("--")) return `unknown option "${arg}"`;
+    else positional.push(arg);
   }
-  return intent === undefined ? { json } : { intent, json };
+  const base = { json, history, positional };
+  return intent === undefined ? base : { ...base, intent };
 }
 
 const out = (text: string): void => void process.stdout.write(text);
@@ -112,9 +128,11 @@ function formatRun(result: RunResult): string {
 }
 
 async function lifecycle(sub: string | undefined, args: readonly string[]): Promise<number> {
-  const options = parseOptions(args);
-  if (typeof options === "string") {
-    err(`pactwright: ${options}\n\n${HELP}`);
+  const options = parseOptions(args, { intent: true });
+  if (typeof options === "string" || options.positional.length > 0) {
+    const why =
+      typeof options === "string" ? options : `unexpected argument "${options.positional[0]}"`;
+    err(`pactwright: ${why}\n\n${HELP}`);
     return 1;
   }
   if (sub === "run") {
@@ -163,6 +181,85 @@ async function lifecycle(sub: string | undefined, args: readonly string[]): Prom
   }
 }
 
+function validate(args: readonly string[]): number {
+  const options = parseOptions(args);
+  if (typeof options === "string" || options.positional.length > 0) {
+    const why =
+      typeof options === "string" ? options : `unexpected argument "${options.positional[0]}"`;
+    err(`pactwright: ${why}\n\n${HELP}`);
+    return 1;
+  }
+  const report = validateProject();
+  if (options.json) {
+    out(`${JSON.stringify(report, null, 2)}\n`);
+  } else if (report.ok) {
+    const s = report.summary!;
+    out(
+      `Valid: ${s.nodes} nodes, ${s.edges} edges, ${s.lineages} lineages (revision ${s.revision})\n`,
+    );
+  } else {
+    out("Validation problems:\n");
+    for (const problem of report.problems) out(`  - ${formatProblem(problem)}\n`);
+  }
+  return report.ok ? 0 : 1;
+}
+
+function formatRecord(node: GraphNode, extra: string[] = []): string {
+  const lines = [`## ${node.type} ${node.id}`, `title: ${node.title}`, `created: ${node.created}`];
+  if (node.type === "decision") {
+    lines.push(`decided_by: ${String(node.frontmatter["decided_by"])}`);
+    lines.push(`outcome: ${String(node.frontmatter["outcome"])}`);
+  }
+  lines.push(...extra, "", node.body, "");
+  return `${lines.join("\n")}\n`;
+}
+
+function formatHistory(record: HistoryRecord): string {
+  const by = record.supersededBy.length === 0 ? "none" : record.supersededBy.join(", ");
+  return formatRecord(record.node, [`superseded by: ${by}`]);
+}
+
+function formatContext(context: DeliveryContext): string {
+  const parts: string[] = [`# Delivery context for ${context.requested}`, ""];
+  parts.push(`intent: ${context.intent}`, `state: ${context.state}`);
+  if (!context.requestedIsCurrent) {
+    parts.push(`note: ${context.requested} is superseded; the current lineage is shown`);
+  }
+  parts.push("", ...context.lineage.map((node) => formatRecord(node)));
+  if (context.history !== undefined) {
+    parts.push("# History (superseded records)", "");
+    parts.push(
+      context.history.length === 0 ? "none\n" : context.history.map(formatHistory).join(""),
+    );
+  }
+  return `${parts.join("\n")}`;
+}
+
+function contextCommand(args: readonly string[]): number {
+  const options = parseOptions(args, { history: true });
+  if (typeof options === "string" || options.positional.length !== 1) {
+    const why =
+      typeof options === "string"
+        ? options
+        : options.positional.length === 0
+          ? "context needs a <node-id>"
+          : `unexpected argument "${options.positional[1]}"`;
+    err(`pactwright: ${why}\n\n${HELP}`);
+    return 1;
+  }
+  try {
+    const context = loadContext(loadProject(), options.positional[0]!, {
+      history: options.history,
+    });
+    out(options.json ? `${JSON.stringify(context, null, 2)}\n` : formatContext(context));
+    return 0;
+  } catch (error) {
+    if (!(error instanceof PactwrightError)) throw error;
+    printProblems(error, options.json);
+    return 1;
+  }
+}
+
 export async function main(argv: readonly string[]): Promise<number> {
   const [first, ...rest] = argv;
   if (first === undefined || first === "--help" || first === "-h" || first === "help") {
@@ -174,6 +271,8 @@ export async function main(argv: readonly string[]): Promise<number> {
     return 0;
   }
   if (first === "lifecycle") return lifecycle(rest[0], rest.slice(1));
+  if (first === "validate") return validate(rest);
+  if (first === "context") return contextCommand(rest);
   err(`pactwright: unknown command "${first}"\n\n${HELP}`);
   return 1;
 }
