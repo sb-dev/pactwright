@@ -183,3 +183,17 @@ export {
   type ResolvePackOptions,
   type ResolvedPack,
 } from "./pack/resolve.js";
+export {
+  isRecordingStage,
+  recordStage,
+  type RecordResult,
+  type RecordingStage,
+} from "./lifecycle/record.js";
+export {
+  MANAGED_DIRS,
+  renderClaudeCodeAdapter,
+  writeAdapter,
+  type RenderedFiles,
+  type WriteAdapterResult,
+} from "./adapter/claude-code.js";
+export { COMMAND_TEMPLATES, templateFor, type CommandTemplate } from "./adapter/commands.js";

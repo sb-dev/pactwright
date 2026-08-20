@@ -7,6 +7,8 @@ import {
   type NextAction,
 } from "./lifecycle/engine.js";
 import { noExecutor, runLifecycle, type RunResult } from "./lifecycle/run.js";
+import { recordStage } from "./lifecycle/record.js";
+import type { StageName } from "./config/lifecycle.js";
 import { loadContext, type DeliveryContext, type HistoryRecord } from "./context.js";
 import type { GraphNode } from "./graph/nodes.js";
 import { loadProject } from "./loader.js";
@@ -23,6 +25,10 @@ Commands:
   lifecycle next   [--intent <id>] [--json]  Report the next permitted core Delivery action
   lifecycle run    [--intent <id>] [--json]  Run automatic stages until a gate, completion,
                                              a stage failure or a validation error
+  lifecycle record <stage> --file <yaml>     Record the content of a graph-marking stage
+                                             (capture-intent, approve-contract, write-brief,
+                                             prepare-evidence) after the runtime checks the
+                                             transition
 
 Options:
   -h, --help     Show this help
@@ -33,15 +39,17 @@ interface CommonOptions {
   readonly intent?: string;
   readonly json: boolean;
   readonly history: boolean;
+  readonly file?: string;
   /** Positional arguments, in order. */
   readonly positional: readonly string[];
 }
 
 function parseOptions(
   args: readonly string[],
-  allow: { intent?: boolean; history?: boolean } = {},
+  allow: { intent?: boolean; history?: boolean; file?: boolean } = {},
 ): CommonOptions | string {
   let intent: string | undefined;
+  let file: string | undefined;
   let json = false;
   let history = false;
   const positional: string[] = [];
@@ -53,11 +61,20 @@ function parseOptions(
       intent = args[i + 1];
       if (intent === undefined || intent.startsWith("--")) return "--intent needs an intent id";
       i += 1;
+    } else if (arg === "--file" && allow.file === true) {
+      file = args[i + 1];
+      if (file === undefined || file.startsWith("--")) return "--file needs a path";
+      i += 1;
     } else if (arg.startsWith("--")) return `unknown option "${arg}"`;
     else positional.push(arg);
   }
-  const base = { json, history, positional };
-  return intent === undefined ? base : { ...base, intent };
+  return {
+    json,
+    history,
+    positional,
+    ...(intent === undefined ? {} : { intent }),
+    ...(file === undefined ? {} : { file }),
+  };
 }
 
 const out = (text: string): void => void process.stdout.write(text);
@@ -127,7 +144,43 @@ function formatRun(result: RunResult): string {
   return `${lines.join("\n")}\n`;
 }
 
+function record(args: readonly string[]): number {
+  const options = parseOptions(args, { file: true });
+  if (
+    typeof options === "string" ||
+    options.positional.length !== 1 ||
+    options.file === undefined
+  ) {
+    const why =
+      typeof options === "string"
+        ? options
+        : options.positional.length === 0
+          ? "record needs a <stage>"
+          : options.positional.length > 1
+            ? `unexpected argument "${options.positional[1]}"`
+            : "record needs --file <yaml>";
+    err(`pactwright: ${why}\n\n${HELP}`);
+    return 1;
+  }
+  try {
+    const root = findProjectRoot();
+    const result = recordStage(root, options.positional[0] as StageName, options.file);
+    if (options.json) {
+      const created = result.created.map((node) => ({ id: node.id, type: node.type }));
+      out(`${JSON.stringify({ stage: result.stage, created }, null, 2)}\n`);
+    } else {
+      out(result.created.map((node) => `created ${node.type} ${node.id}\n`).join(""));
+    }
+    return 0;
+  } catch (error) {
+    if (!(error instanceof PactwrightError)) throw error;
+    printProblems(error, options.json);
+    return 1;
+  }
+}
+
 async function lifecycle(sub: string | undefined, args: readonly string[]): Promise<number> {
+  if (sub === "record") return record(args);
   const options = parseOptions(args, { intent: true });
   if (typeof options === "string" || options.positional.length > 0) {
     const why =
