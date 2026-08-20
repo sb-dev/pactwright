@@ -54,18 +54,22 @@ function snapshot(root: string): string {
 
 /**
  * An executor that really performs every stage: transient stages do
- * nothing, graph-marking stages call the Step 7 mutations. Records the
- * order it was asked in.
+ * nothing, graph-marking stages call the Step 7 mutations with the project
+ * root (mutations load current graph state themselves at commit time).
+ * Records the order it was asked in.
  */
-function fullExecutor(asked: StageName[]): StageExecutor {
+function fullExecutor(asked: StageName[], intents = 1): StageExecutor {
   return ({ stage, project, lineage }: StageRequest) => {
     asked.push(stage);
+    const root = project.paths.root;
     switch (stage) {
       case "capture-intent":
-        createIntent(project, { title: "Captured", body: "Do the thing." });
+        for (let i = 1; i <= intents; i += 1) {
+          createIntent(root, { title: `Captured number ${i}`, body: "Do the thing." });
+        }
         break;
       case "approve-contract":
-        recordDecision(project, {
+        recordDecision(root, {
           intentId: lineage!.intent.id,
           outcome: "proceed",
           decidedBy: AGENT,
@@ -74,10 +78,18 @@ function fullExecutor(asked: StageName[]): StageExecutor {
         });
         break;
       case "write-brief":
-        createBrief(project, lineage!.contract!.id, { title: "Brief", body: "Add banner." });
+        createBrief(root, {
+          contractId: lineage!.contract!.id,
+          title: "Brief",
+          body: "Add banner.",
+        });
         break;
       case "prepare-evidence":
-        createEvidence(project, lineage!.brief!.id, { title: "Evidence", body: "Banner added." });
+        createEvidence(root, {
+          briefId: lineage!.brief!.id,
+          title: "Evidence",
+          body: "Banner added.",
+        });
         break;
       default:
         break;
@@ -175,6 +187,57 @@ test("run: automatic capture-intent creates the lineage and continues with it", 
   assert.equal(results[1]?.executed.length, 6);
   const p = loadProject({ root });
   assert.equal(p.graph.nodes.filter((n) => n.type === "evidence").length, 1);
+});
+
+test("run: capturing three intents in one run keeps every lineage's edges; rerun is idempotent", async () => {
+  const root = temp({
+    lifecycle: "automated.yml",
+    stages: defaultStages({
+      "capture-intent": { execution: "automatic" },
+      "approve-contract": { execution: "automatic", actor: "agent" },
+    }),
+  });
+  const asked: StageName[] = [];
+  const inner = fullExecutor(asked, 3);
+  // Node count each lineage's first graph-marking stage was handed: every
+  // lineage must start from the graph the previous lineage wrote.
+  const seen: number[] = [];
+  const execute: StageExecutor = (request) => {
+    if (request.stage === "approve-contract") seen.push(request.project.graph.nodes.length);
+    return inner(request);
+  };
+  const results = await runLifecycle({ root, execute });
+  // 3 intents, then +4 records (decision, contract, brief, evidence) per lineage.
+  assert.deepEqual(seen, [3, 7, 11]);
+  assert.equal(results.length, 4);
+  assert.deepEqual(results[0], { stop: "completed", executed: ["capture-intent"] });
+  for (const result of results.slice(1)) {
+    assert.equal(result.stop, "completed");
+    assert.equal(result.executed.length, 6);
+  }
+  const p = loadProject({ root });
+  const intents = p.graph.nodes.filter((n) => n.type === "intent");
+  assert.equal(intents.length, 3);
+  assert.equal(p.graph.nodes.filter((n) => n.type === "evidence").length, 3);
+  for (const intent of intents) {
+    assert.ok(
+      p.graph.edges.some((e) => e.type === "resolves" && e.target === intent.id),
+      `edges.yml keeps the resolves edge of ${intent.id}`,
+    );
+    assert.equal(
+      deriveLineage(intent.id, p.graph.nodes, p.graph.edges)?.state,
+      "done",
+      `${intent.id} ran to done`,
+    );
+  }
+
+  // Rerun of every lineage executes nothing and changes nothing (PI §16).
+  const before = snapshot(root);
+  for (const intent of intents) {
+    const again = await runLifecycle({ root, execute: fullExecutor([], 3), intentId: intent.id });
+    assert.deepEqual(again, [{ intent: intent.id, stop: "completed", executed: [] }]);
+  }
+  assert.equal(snapshot(root), before);
 });
 
 test("run: a stage failure stops the run; later stages do not run; graph unchanged", async () => {

@@ -1,14 +1,14 @@
-import { renameSync, unlinkSync, writeFileSync } from "node:fs";
+import { readFileSync, renameSync, unlinkSync, writeFileSync } from "node:fs";
 import { basename, dirname, join } from "node:path";
 import { dump } from "js-yaml";
 import { PactwrightError, type Problem } from "../errors.js";
 import { decisionActor, type Actor } from "../config/lifecycle.js";
-import type { Project } from "../loader.js";
+import { loadProject, type Project } from "../loader.js";
 import { CORE_EDGE_SCHEMAS, validateEdges } from "./edge-schema.js";
 import { edgeKey, type Edge } from "./edges.js";
 import { mintNodeId, slugify } from "./ids.js";
 import { validateLineages } from "./lineage.js";
-import { checkNodeIdImmutability, type GraphNode } from "./nodes.js";
+import { checkNodeIdImmutability, parseNodeFile, type GraphNode } from "./nodes.js";
 import {
   CORE_NODE_SCHEMAS,
   parseDecidedBy,
@@ -17,10 +17,24 @@ import {
   type DecisionOutcome,
 } from "./schema.js";
 
-/** New canonical records to commit in one atomic mutation. */
+/**
+ * New canonical records to commit in one atomic mutation.
+ *
+ * Internal: this raw shape is produced only by the typed mutation functions
+ * below (`createIntent`, `recordDecision`, `createBrief`, `createEvidence`).
+ * It is deliberately not part of the public package surface — callers own
+ * semantic content; the runtime owns node construction, serialisation and
+ * destination paths.
+ */
 export interface GraphChange {
   readonly addNodes: readonly GraphNode[];
   readonly addEdges: readonly Edge[];
+}
+
+/** Internal: test-only hooks for the shared commit path. */
+export interface CommitOptions {
+  /** Runs after the atomic renames, before resulting-state validation. */
+  readonly postWrite?: () => void;
 }
 
 function fail(code: string, message: string): never {
@@ -44,14 +58,59 @@ export function serialiseEdges(edges: readonly Edge[]): string {
   return `edges:\n${items}`;
 }
 
+const COMMON_FIELDS = ["id", "type", "title", "created"] as const;
+
 /**
- * Validates the complete proposed graph state, then commits it with atomic
- * file replacement: every file is written to a temporary sibling and renamed
- * into place, node files first, `edges.yml` last. On validation or write
- * failure no partial graph state remains — temporaries and any already
- * renamed new node files are removed before the error propagates.
+ * Complete common validation of one proposed node, exactly as loading it
+ * back will judge it: the destination path is derived from the id (never
+ * caller-supplied), and the serialised file must round-trip through
+ * `parseNodeFile` to the same common fields.
  */
-export function commitGraphChange(project: Project, change: GraphChange): void {
+function checkProposedNode(project: Project, node: GraphNode): readonly Problem[] {
+  const canonical = join(project.paths.nodesDir, `${node.id}.md`);
+  if (node.path !== canonical) {
+    return [
+      {
+        code: "invalid-path",
+        message: `node "${node.id}" must be committed to ${canonical}; committed paths are derived from the id, never supplied`,
+        path: node.path,
+      },
+    ];
+  }
+  const parsed = parseNodeFile(serialiseNode(node), canonical);
+  if (parsed.value === undefined) return parsed.problems;
+  const problems: Problem[] = [];
+  for (const field of COMMON_FIELDS) {
+    if (parsed.value[field] !== node[field]) {
+      problems.push({
+        code: "field-mismatch",
+        message: `node "${node.id}" ${field} does not round-trip: frontmatter carries "${String(parsed.value[field])}" but the node declares "${String(node[field])}"`,
+        path: canonical,
+      });
+    }
+  }
+  return problems;
+}
+
+/**
+ * Internal shared mutation path (Implementation Guide, "Filesystem
+ * mutation"): plan → validate the complete proposed state against the
+ * current graph state → write atomically → validate the resulting state.
+ *
+ * Validation covers the full common node rules (derived path, id shape,
+ * frontmatter round-trip, body) plus type schemas, the typed-edge registry,
+ * global lineage constraints and id immutability. Every file is written to a
+ * temporary sibling and renamed into place, node files first, `edges.yml`
+ * last. After the writes the resulting repository state is reloaded through
+ * the canonical loader; if it fails, the new node files are removed and
+ * `edges.yml` is restored, so no partial graph state remains.
+ */
+export function commitGraphChange(
+  project: Project,
+  change: GraphChange,
+  options: CommitOptions = {},
+): void {
+  const problems: Problem[] = [];
   const nodes = [...project.graph.nodes];
   const seenIds = new Set(nodes.map((node) => node.id));
   for (const node of change.addNodes) {
@@ -60,6 +119,7 @@ export function commitGraphChange(project: Project, change: GraphChange): void {
     }
     seenIds.add(node.id);
     nodes.push(node);
+    problems.push(...checkProposedNode(project, node));
   }
   const edges = [...project.graph.edges];
   const seenEdges = new Set(edges.map(edgeKey));
@@ -70,21 +130,36 @@ export function commitGraphChange(project: Project, change: GraphChange): void {
     edges.push(edge);
   }
 
-  const problems: Problem[] = [
+  problems.push(
     ...validateNodes(nodes, CORE_NODE_SCHEMAS),
     ...validateEdges(edges, nodes, CORE_EDGE_SCHEMAS, project.paths.edges),
     ...validateLineages(nodes, edges),
     ...checkNodeIdImmutability(project.graph.nodes, nodes),
-  ];
+  );
   if (problems.length > 0) throw PactwrightError.fromProblems("mutation-invalid", problems);
 
   // path → content, edges.yml last so the links land only after the records.
+  const previousEdges = readFileSync(project.paths.edges, "utf8");
   const writes: Array<{ path: string; content: string }> = [
     ...change.addNodes.map((node) => ({ path: node.path, content: serialiseNode(node) })),
     { path: project.paths.edges, content: serialiseEdges(edges) },
   ];
   const temps: string[] = [];
-  const renamed: string[] = [];
+  const restore = (): void => {
+    for (const node of change.addNodes) {
+      try {
+        unlinkSync(node.path);
+      } catch {
+        /* rollback is best effort */
+      }
+    }
+    const temp = join(
+      dirname(project.paths.edges),
+      `.${basename(project.paths.edges)}.tmp-${process.pid}`,
+    );
+    writeFileSync(temp, previousEdges, "utf8");
+    renameSync(temp, project.paths.edges);
+  };
   try {
     for (const write of writes) {
       const temp = join(dirname(write.path), `.${basename(write.path)}.tmp-${process.pid}`);
@@ -94,15 +169,27 @@ export function commitGraphChange(project: Project, change: GraphChange): void {
     writes.forEach((write, index) => {
       renameSync(temps[index]!, write.path);
       temps[index] = "";
-      if (write.path !== project.paths.edges) renamed.push(write.path);
     });
   } catch (error) {
-    for (const path of [...temps.filter((t) => t !== ""), ...renamed]) {
+    for (const temp of temps.filter((t) => t !== "")) {
       try {
-        unlinkSync(path);
+        unlinkSync(temp);
       } catch {
         /* rollback is best effort */
       }
+    }
+    restore();
+    throw error;
+  }
+
+  // Validate the resulting repository state; roll back if it does not load.
+  try {
+    options.postWrite?.();
+    loadProject({ root: project.paths.root });
+  } catch (error) {
+    restore();
+    if (error instanceof PactwrightError) {
+      throw PactwrightError.fromProblems("resulting-state-invalid", error.problems);
     }
     throw error;
   }
@@ -171,8 +258,14 @@ export interface CreateIntentInput {
   readonly created?: string;
 }
 
-/** Creates an Intent (Delivery Graph §6). */
-export function createIntent(project: Project, input: CreateIntentInput): GraphNode {
+/**
+ * Creates an Intent (Delivery Graph §6). Like every typed mutation, it loads
+ * the current graph state itself at commit time, builds the node from that
+ * state in one synchronous sequence and validates the complete proposed and
+ * resulting states — a caller-held snapshot never reaches the filesystem.
+ */
+export function createIntent(root: string, input: CreateIntentInput): GraphNode {
+  const project = loadProject({ root });
   const intent = buildNode(project, { type: "intent", ...input });
   commitGraphChange(project, { addNodes: [intent], addEdges: [] });
   return intent;
@@ -213,8 +306,10 @@ const DECISION_TITLES: Readonly<Record<DecisionOutcome, string>> = {
  * The acting actor must be authorised for approve-contract by lifecycle.yml;
  * authorisation is checked before anything is built or written. Re-deciding
  * supersedes the previous current decision and its selected contract (§15).
+ * Current graph state is loaded at commit time; see `createIntent`.
  */
-export function recordDecision(project: Project, input: RecordDecisionInput): RecordedDecision {
+export function recordDecision(root: string, input: RecordDecisionInput): RecordedDecision {
+  const project = loadProject({ root });
   const actor = parseDecidedBy(input.decidedBy);
   if (actor === undefined) {
     fail("invalid-actor", `decided_by "${input.decidedBy}" must be "<kind>:<name>"`);
@@ -282,7 +377,8 @@ export function recordDecision(project: Project, input: RecordDecisionInput): Re
   return contract === undefined ? { decision } : { decision, contract };
 }
 
-export interface CreateChildInput {
+export interface CreateBriefInput {
+  readonly contractId: string;
   readonly title: string;
   readonly body: string;
   readonly created?: string;
@@ -290,15 +386,18 @@ export interface CreateChildInput {
 
 /**
  * Creates the delivery Brief decomposing a Contract (§10). An existing
- * current brief is superseded explicitly (§15, brief change).
+ * current brief is superseded explicitly (§15, brief change). Current graph
+ * state is loaded at commit time; see `createIntent`.
  */
-export function createBrief(
-  project: Project,
-  contractId: string,
-  input: CreateChildInput,
-): GraphNode {
-  const contract = requireNode(project, contractId, "contract");
-  const brief = buildNode(project, { type: "brief", ...input });
+export function createBrief(root: string, input: CreateBriefInput): GraphNode {
+  const project = loadProject({ root });
+  const contract = requireNode(project, input.contractId, "contract");
+  const brief = buildNode(project, {
+    type: "brief",
+    title: input.title,
+    body: input.body,
+    created: input.created,
+  });
   const addEdges: Edge[] = [{ source: brief.id, type: "decomposes", target: contract.id }];
   for (const previous of currentSources(project, contract.id, "decomposes")) {
     addEdges.push({ source: brief.id, type: "supersedes", target: previous });
@@ -307,18 +406,28 @@ export function createBrief(
   return brief;
 }
 
+export interface CreateEvidenceInput {
+  readonly briefId: string;
+  readonly title: string;
+  readonly body: string;
+  readonly created?: string;
+}
+
 /**
  * Creates the Evidence record for a Brief (§12), completing the core
  * Delivery lifecycle. Existing current evidence is superseded explicitly
- * (§15, evidence correction).
+ * (§15, evidence correction). Current graph state is loaded at commit time;
+ * see `createIntent`.
  */
-export function createEvidence(
-  project: Project,
-  briefId: string,
-  input: CreateChildInput,
-): GraphNode {
-  const brief = requireNode(project, briefId, "brief");
-  const evidence = buildNode(project, { type: "evidence", ...input });
+export function createEvidence(root: string, input: CreateEvidenceInput): GraphNode {
+  const project = loadProject({ root });
+  const brief = requireNode(project, input.briefId, "brief");
+  const evidence = buildNode(project, {
+    type: "evidence",
+    title: input.title,
+    body: input.body,
+    created: input.created,
+  });
   const addEdges: Edge[] = [{ source: evidence.id, type: "evidences", target: brief.id }];
   for (const previous of currentSources(project, brief.id, "evidences")) {
     addEdges.push({ source: evidence.id, type: "supersedes", target: previous });

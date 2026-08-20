@@ -1,19 +1,29 @@
 import { after, test } from "node:test";
 import assert from "node:assert/strict";
-import { cpSync, mkdtempSync, readdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import {
+  cpSync,
+  existsSync,
+  mkdtempSync,
+  readdirSync,
+  readFileSync,
+  rmSync,
+  writeFileSync,
+} from "node:fs";
 import { createHash } from "node:crypto";
 import * as path from "node:path";
+import * as api from "../src/index.js";
 import { PactwrightError } from "../src/errors.js";
 import { mintNodeId, slugify } from "../src/graph/ids.js";
 import { deriveLineage } from "../src/graph/lineage.js";
 import {
+  commitGraphChange,
   createBrief,
   createEvidence,
   createIntent,
   recordDecision,
   serialiseNode,
 } from "../src/graph/mutations.js";
-import { parseNodeFile } from "../src/graph/nodes.js";
+import { parseNodeFile, type GraphNode } from "../src/graph/nodes.js";
 import { loadProject, type Project } from "../src/loader.js";
 import { fixture, repoRoot } from "./helpers.js";
 
@@ -62,11 +72,30 @@ function snapshot(root: string): string {
   return out.sort().join("\n");
 }
 
+/** No leftover atomic-write temporaries in specs/nodes. */
+function assertNoTemps(root: string): void {
+  assert.deepEqual(
+    readdirSync(path.join(root, "specs", "nodes")).filter((f) => f.includes(".tmp-")),
+    [],
+  );
+}
+
+/** A hand-built raw node for white-box tests of the internal commit path. */
+function rawNode(root: string, id: string): GraphNode {
+  const front = { id, type: "intent", title: id, created: "2026-08-18" };
+  return {
+    ...front,
+    frontmatter: front,
+    body: `Body of ${id}.`,
+    path: path.join(root, "specs", "nodes", `${id}.md`),
+  };
+}
+
 const CONTRACT = { title: "Quick start contract", body: "Print a banner." };
 
 test("mutations: proceed records decision + canonical contract + resolves/selects", () => {
   const root = tempProject();
-  const { decision, contract } = recordDecision(load(root), {
+  const { decision, contract } = recordDecision(root, {
     intentId: INTENT,
     outcome: "proceed",
     decidedBy: "human:samir",
@@ -88,7 +117,7 @@ test("mutations: proceed records decision + canonical contract + resolves/select
 for (const outcome of ["reject", "defer"] as const) {
   test(`mutations: ${outcome} records only the decision and resolves edge`, () => {
     const root = tempProject();
-    const { decision, contract } = recordDecision(load(root), {
+    const { decision, contract } = recordDecision(root, {
       intentId: INTENT,
       outcome,
       decidedBy: "human:samir",
@@ -110,7 +139,7 @@ test("mutations: an unauthorised actor is rejected with no graph mutation", () =
   const before = snapshot(root);
   assert.throws(
     () =>
-      recordDecision(load(root), {
+      recordDecision(root, {
         intentId: INTENT,
         outcome: "proceed",
         decidedBy: "agent:spec",
@@ -120,15 +149,12 @@ test("mutations: an unauthorised actor is rejected with no graph mutation", () =
     (error: unknown) => error instanceof PactwrightError && error.code === "unauthorised-actor",
   );
   assert.equal(snapshot(root), before);
-  assert.deepEqual(
-    readdirSync(path.join(root, "specs", "nodes")).filter((f) => f.includes(".tmp-")),
-    [],
-  );
+  assertNoTemps(root);
 });
 
 test("mutations: agent lifecycle authorises agent and automation actors", () => {
   const root = tempProject({ agentDecides: true });
-  const { decision } = recordDecision(load(root), {
+  const { decision } = recordDecision(root, {
     intentId: INTENT,
     outcome: "defer",
     decidedBy: "automation:pactwright",
@@ -137,7 +163,7 @@ test("mutations: agent lifecycle authorises agent and automation actors", () => 
   assert.equal(decision.frontmatter["decided_by"], "automation:pactwright");
   assert.throws(
     () =>
-      recordDecision(load(root), {
+      recordDecision(root, {
         intentId: INTENT,
         outcome: "defer",
         decidedBy: "human:samir",
@@ -149,35 +175,54 @@ test("mutations: agent lifecycle authorises agent and automation actors", () => 
 
 test("mutations: proceed requires a contract; reject/defer forbid one", () => {
   const root = tempProject();
+  const before = snapshot(root);
   const base = { intentId: INTENT, decidedBy: "human:samir", body: "x" } as const;
   assert.throws(
-    () => recordDecision(load(root), { ...base, outcome: "proceed" }),
+    () => recordDecision(root, { ...base, outcome: "proceed" }),
     (error: unknown) => error instanceof PactwrightError && error.code === "invalid-outcome-input",
   );
   assert.throws(
-    () => recordDecision(load(root), { ...base, outcome: "reject", contract: CONTRACT }),
+    () => recordDecision(root, { ...base, outcome: "reject", contract: CONTRACT }),
     (error: unknown) => error instanceof PactwrightError && error.code === "invalid-outcome-input",
   );
+  assert.equal(snapshot(root), before);
+});
+
+test("mutations: empty semantic content is rejected before any write", () => {
+  const root = tempProject();
+  const before = snapshot(root);
+  assert.throws(
+    () => createIntent(root, { title: "   ", body: "Body." }),
+    (error: unknown) => error instanceof PactwrightError && error.code === "invalid-title",
+  );
+  assert.throws(
+    () => createIntent(root, { title: "Fine title", body: "  " }),
+    (error: unknown) => error instanceof PactwrightError && error.code === "missing-body",
+  );
+  assert.equal(snapshot(root), before);
+  assertNoTemps(root);
 });
 
 test("mutations: intent → proceed → brief → evidence completes the lifecycle", () => {
   const root = tempProject();
-  const intent = createIntent(load(root), {
+  const intent = createIntent(root, {
     title: "Ship the banner",
     body: "Users need a banner.",
   });
-  const { contract } = recordDecision(load(root), {
+  const { contract } = recordDecision(root, {
     intentId: intent.id,
     outcome: "proceed",
     decidedBy: "human:samir",
     body: "Go.",
     contract: CONTRACT,
   });
-  const brief = createBrief(load(root), contract!.id, {
+  const brief = createBrief(root, {
+    contractId: contract!.id,
     title: "Banner brief",
     body: "Add the banner to main.",
   });
-  const evidence = createEvidence(load(root), brief.id, {
+  const evidence = createEvidence(root, {
+    briefId: brief.id,
     title: "Banner evidence",
     body: "Banner added; verified by run.",
   });
@@ -189,14 +234,14 @@ test("mutations: intent → proceed → brief → evidence completes the lifecyc
 
 test("mutations: re-deciding supersedes the previous decision and contract", () => {
   const root = tempProject();
-  const first = recordDecision(load(root), {
+  const first = recordDecision(root, {
     intentId: INTENT,
     outcome: "proceed",
     decidedBy: "human:samir",
     body: "Go.",
     contract: CONTRACT,
   });
-  const second = recordDecision(load(root), {
+  const second = recordDecision(root, {
     intentId: INTENT,
     outcome: "proceed",
     decidedBy: "human:samir",
@@ -228,17 +273,17 @@ test("mutations: re-deciding supersedes the previous decision and contract", () 
 
 test("mutations: new brief and new evidence supersede the previous current ones", () => {
   const root = tempProject();
-  const { contract } = recordDecision(load(root), {
+  const { contract } = recordDecision(root, {
     intentId: INTENT,
     outcome: "proceed",
     decidedBy: "human:samir",
     body: "Go.",
     contract: CONTRACT,
   });
-  const brief1 = createBrief(load(root), contract!.id, { title: "Brief one", body: "v1" });
-  const brief2 = createBrief(load(root), contract!.id, { title: "Brief two", body: "v2" });
-  const evidence1 = createEvidence(load(root), brief2.id, { title: "Evidence one", body: "e1" });
-  const evidence2 = createEvidence(load(root), brief2.id, { title: "Evidence two", body: "e2" });
+  const brief1 = createBrief(root, { contractId: contract!.id, title: "Brief one", body: "v1" });
+  const brief2 = createBrief(root, { contractId: contract!.id, title: "Brief two", body: "v2" });
+  const evidence1 = createEvidence(root, { briefId: brief2.id, title: "Evidence one", body: "e1" });
+  const evidence2 = createEvidence(root, { briefId: brief2.id, title: "Evidence two", body: "e2" });
   const project = load(root);
   const lineage = deriveLineage(INTENT, project.graph.nodes, project.graph.edges);
   assert.equal(lineage?.brief?.id, brief2.id);
@@ -255,22 +300,23 @@ test("mutations: new brief and new evidence supersede the previous current ones"
   );
 });
 
-test("mutations: briefs need an existing current contract; superseded records refuse work", () => {
+test("mutations: briefs need an existing current contract; a conflicting intervening change is rejected", () => {
   const root = tempProject();
   const before = snapshot(root);
   assert.throws(
-    () => createBrief(load(root), "contract-nope-0000", { title: "x", body: "y" }),
+    () => createBrief(root, { contractId: "contract-nope-0000", title: "x", body: "y" }),
     (error: unknown) => error instanceof PactwrightError && error.code === "unknown-node",
   );
   assert.equal(snapshot(root), before);
-  const first = recordDecision(load(root), {
+  const first = recordDecision(root, {
     intentId: INTENT,
     outcome: "proceed",
     decidedBy: "human:samir",
     body: "Go.",
     contract: CONTRACT,
   });
-  recordDecision(load(root), {
+  // Intervening change: a second decision supersedes the first contract.
+  recordDecision(root, {
     intentId: INTENT,
     outcome: "proceed",
     decidedBy: "human:samir",
@@ -278,15 +324,83 @@ test("mutations: briefs need an existing current contract; superseded records re
     contract: { title: "Other contract", body: "Other." },
     created: "2026-08-19",
   });
+  // A brief for the superseded contract commits against CURRENT state and fails.
+  const beforeConflict = snapshot(root);
   assert.throws(
-    () => createBrief(load(root), first.contract!.id, { title: "x", body: "y" }),
+    () => createBrief(root, { contractId: first.contract!.id, title: "x", body: "y" }),
     (error: unknown) => error instanceof PactwrightError && error.code === "superseded-node",
   );
+  assert.equal(snapshot(root), beforeConflict);
+  assertNoTemps(root);
+});
+
+test("mutations: the raw commit primitive is not part of the public API", () => {
+  for (const name of ["commitGraphChange", "serialiseNode", "serialiseEdges"]) {
+    assert.equal(name in api, false, `${name} must not be exported from the package index`);
+  }
+  for (const name of ["createIntent", "recordDecision", "createBrief", "createEvidence"]) {
+    assert.equal(name in api, true, `${name} is the public mutation surface`);
+  }
+});
+
+test("mutations: the commit path rejects a caller-supplied path outside specs/nodes", () => {
+  const root = tempProject();
+  const before = snapshot(root);
+  const project = load(root);
+  const outside = { ...rawNode(root, "intent-sneaky-beef"), path: path.join(root, "evil.md") };
+  assert.throws(
+    () => commitGraphChange(project, { addNodes: [outside], addEdges: [] }),
+    (error: unknown) =>
+      error instanceof PactwrightError &&
+      error.code === "mutation-invalid" &&
+      error.problems.some((p) => p.code === "invalid-path"),
+  );
+  assert.equal(snapshot(root), before);
+  assert.equal(existsSync(path.join(root, "evil.md")), false);
+});
+
+test("mutations: the commit path runs full common validation before any write", () => {
+  const root = tempProject();
+  const before = snapshot(root);
+  const project = load(root);
+  const bad = rawNode(root, "intent-BAD"); // invalid id shape
+  assert.throws(
+    () => commitGraphChange(project, { addNodes: [bad], addEdges: [] }),
+    (error: unknown) =>
+      error instanceof PactwrightError &&
+      error.code === "mutation-invalid" &&
+      error.problems.some((p) => p.code === "invalid-id"),
+  );
+  assert.equal(snapshot(root), before);
+  assertNoTemps(root);
+});
+
+test("mutations: a post-write invalid resulting state is rolled back completely", () => {
+  const root = tempProject();
+  const before = snapshot(root);
+  const project = load(root);
+  const node = rawNode(root, "intent-extra-beef");
+  assert.throws(
+    () =>
+      commitGraphChange(
+        project,
+        { addNodes: [node], addEdges: [] },
+        {
+          postWrite: () =>
+            writeFileSync(path.join(root, "specs", "graph", "edges.yml"), "edges: [broken\n"),
+        },
+      ),
+    (error: unknown) =>
+      error instanceof PactwrightError && error.code === "resulting-state-invalid",
+  );
+  assert.equal(snapshot(root), before);
+  assertNoTemps(root);
+  assert.equal(existsSync(node.path), false);
 });
 
 test("mutations: created nodes round-trip through the node parser", () => {
   const root = tempProject();
-  const intent = createIntent(load(root), {
+  const intent = createIntent(root, {
     title: 'Weird: title -- with "quotes" & symbols!',
     body: "Body.",
   });

@@ -88,16 +88,13 @@ export {
 } from "./graph/edges.js";
 export { mintNodeId, slugify } from "./graph/ids.js";
 export {
-  commitGraphChange,
   createBrief,
   createEvidence,
   createIntent,
   recordDecision,
-  serialiseEdges,
-  serialiseNode,
-  type CreateChildInput,
+  type CreateBriefInput,
+  type CreateEvidenceInput,
   type CreateIntentInput,
-  type GraphChange,
   type RecordDecisionInput,
   type RecordedDecision,
 } from "./graph/mutations.js";

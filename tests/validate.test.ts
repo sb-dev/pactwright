@@ -1,10 +1,16 @@
-import { test } from "node:test";
+import { after, test } from "node:test";
 import assert from "node:assert/strict";
+import { rmSync } from "node:fs";
 import { graphRevision } from "../src/graph/revision.js";
 import { loadProject } from "../src/loader.js";
 import { validateProject } from "../src/validate.js";
-import { fixture, loadGraphFixture } from "./helpers.js";
+import { fixture, loadGraphFixture, makeTempProject } from "./helpers.js";
 import * as path from "node:path";
+
+const tempDirs: string[] = [];
+after(() => {
+  for (const dir of tempDirs) rmSync(dir, { recursive: true, force: true });
+});
 
 test("validate: a valid project reports ok with counts and the graph revision", () => {
   const root = fixture("valid-project");
@@ -33,6 +39,26 @@ for (const [name, code] of invalid) {
     const report = validateProject({ root: fixture(name) });
     assert.equal(report.ok, false);
     assert.equal(report.summary, undefined);
+    assert.ok(
+      report.problems.some((p) => p.code === code),
+      `expected ${code} in ${JSON.stringify(report.problems.map((p) => p.code))}`,
+    );
+  });
+}
+
+// Delivery Graph §21: brief/evidence cardinality is a global constraint,
+// not a per-selected-path check — off-path ambiguities must fail too.
+const offpath: Array<[string, string]> = [
+  ["two-current-briefs-offpath", "ambiguous-brief"],
+  ["two-current-evidence-offpath", "ambiguous-evidence"],
+];
+
+for (const [name, code] of offpath) {
+  test(`validate: ${name} fails globally with ${code}`, () => {
+    const root = makeTempProject({ lineage: name });
+    tempDirs.push(root);
+    const report = validateProject({ root });
+    assert.equal(report.ok, false);
     assert.ok(
       report.problems.some((p) => p.code === code),
       `expected ${code} in ${JSON.stringify(report.problems.map((p) => p.code))}`,

@@ -129,6 +129,41 @@ for (const [name, code, pathPattern] of invalid) {
   });
 }
 
+// Delivery Graph §21 makes brief/evidence cardinality global: an ambiguity
+// off the selected intent path is still a validation failure, even when the
+// intent's own current lineage derives cleanly.
+const offpath: Array<[string, string, RegExp, string]> = [
+  [
+    "two-current-briefs-offpath",
+    "ambiguous-brief",
+    /contract-quick-start-c3d4\.md$/,
+    "rejected", // the current decision rejects; the ambiguity is on the superseded path
+  ],
+  [
+    "two-current-evidence-offpath",
+    "ambiguous-evidence",
+    /brief-quick-start-d4e5\.md$/,
+    "delivering", // the current brief has no evidence; the ambiguity is on the superseded brief
+  ],
+];
+
+for (const [name, code, pathPattern, state] of offpath) {
+  test(`lineage: fixture ${name} fails globally with ${code}`, () => {
+    const graph = lineageFixture(name);
+    assert.deepEqual(graph.problems, []);
+    const result = deriveLineages(graph.nodes, graph.edges);
+    assert.deepEqual(
+      result.problems.map((p) => p.code),
+      [code],
+    );
+    assert.match(result.problems[0]!.path ?? "", pathPattern);
+    // The intent's own current lineage is unambiguous and still derived.
+    assert.equal(result.lineages.length, 1);
+    assert.equal(result.lineages[0]?.state, state);
+    assert.deepEqual(validateLineages(graph.nodes, graph.edges), result.problems);
+  });
+}
+
 test("lineage: isCurrent follows supersedes edges only", () => {
   const edges = [
     { source: "brief-x-2222", type: "supersedes", target: "brief-x-1111" },

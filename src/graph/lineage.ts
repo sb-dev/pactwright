@@ -113,6 +113,51 @@ function ids(nodes: readonly GraphNode[]): string {
   return nodes.map((node) => node.id).join(", ");
 }
 
+interface GlobalCardinality {
+  readonly problems: readonly Problem[];
+  /** Contract/brief ids whose current children are ambiguous. */
+  readonly ambiguous: ReadonlySet<string>;
+}
+
+/**
+ * Global cardinality constraints (Delivery Graph §21): at most one current
+ * Brief decomposes each Contract, and at most one current Evidence record
+ * evidences each Brief — checked for every contract and brief in the graph,
+ * independently of any intent path and of the record's own currency.
+ */
+function checkGlobalCardinality(nodes: readonly GraphNode[], graph: GraphIndex): GlobalCardinality {
+  const problems: Problem[] = [];
+  const ambiguous = new Set<string>();
+  const of = (type: string): GraphNode[] => nodes.filter((n) => n.type === type).sort(byId);
+  for (const contract of of("contract")) {
+    const briefs = graph
+      .sourcesOf(contract.id, "decomposes", "brief")
+      .filter((brief) => graph.isCurrent(brief.id));
+    if (briefs.length > 1) {
+      ambiguous.add(contract.id);
+      problems.push({
+        code: "ambiguous-brief",
+        message: `contract "${contract.id}" is decomposed by ${briefs.length} current briefs (${ids(briefs)}); supersede all but one`,
+        path: contract.path,
+      });
+    }
+  }
+  for (const brief of of("brief")) {
+    const evidences = graph
+      .sourcesOf(brief.id, "evidences", "evidence")
+      .filter((evidence) => graph.isCurrent(evidence.id));
+    if (evidences.length > 1) {
+      ambiguous.add(brief.id);
+      problems.push({
+        code: "ambiguous-evidence",
+        message: `brief "${brief.id}" is evidenced by ${evidences.length} current evidence records (${ids(evidences)}); supersede all but one`,
+        path: brief.path,
+      });
+    }
+  }
+  return { problems, ambiguous };
+}
+
 /**
  * Derives the current lineage of one intent, reporting every ambiguity in it
  * (Delivery Graph §21, Current-lineage ambiguity). Returns no lineage when the
@@ -121,6 +166,7 @@ function ids(nodes: readonly GraphNode[]): string {
 function derive(
   intent: GraphNode,
   graph: GraphIndex,
+  ambiguous: ReadonlySet<string>,
 ): { lineage?: Lineage; problems: readonly Problem[] } {
   const problems: Problem[] = [];
   const fail = (node: GraphNode, code: string, message: string): void => {
@@ -182,33 +228,21 @@ function derive(
   }
   const contract = contracts[0]!;
 
+  // >1 current brief was already reported by the global cardinality pass.
+  if (ambiguous.has(contract.id)) return { problems };
   const briefs = graph
     .sourcesOf(contract.id, "decomposes", "brief")
     .filter((brief) => graph.isCurrent(brief.id));
-  if (briefs.length > 1) {
-    fail(
-      contract,
-      "ambiguous-brief",
-      `contract "${contract.id}" is decomposed by ${briefs.length} current briefs (${ids(briefs)}); supersede all but one`,
-    );
-    return { problems };
-  }
   const brief = briefs[0];
   if (brief === undefined) {
     return { lineage: { intent, decision, contract, state: "contracted" }, problems };
   }
 
+  // >1 current evidence was already reported by the global cardinality pass.
+  if (ambiguous.has(brief.id)) return { problems };
   const evidences = graph
     .sourcesOf(brief.id, "evidences", "evidence")
     .filter((evidence) => graph.isCurrent(evidence.id));
-  if (evidences.length > 1) {
-    fail(
-      brief,
-      "ambiguous-evidence",
-      `brief "${brief.id}" is evidenced by ${evidences.length} current evidence records (${ids(evidences)}); supersede all but one`,
-    );
-    return { problems };
-  }
   const evidence = evidences[0];
   if (evidence === undefined) {
     return { lineage: { intent, decision, contract, brief, state: "delivering" }, problems };
@@ -225,10 +259,11 @@ function derive(
  */
 export function deriveLineages(nodes: readonly GraphNode[], edges: readonly Edge[]): LineageResult {
   const graph = new GraphIndex(nodes, edges);
+  const global = checkGlobalCardinality(nodes, graph);
   const lineages: Lineage[] = [];
-  const problems: Problem[] = [];
+  const problems: Problem[] = [...global.problems];
   for (const intent of [...nodes].filter((node) => node.type === "intent").sort(byId)) {
-    const result = derive(intent, graph);
+    const result = derive(intent, graph, global.ambiguous);
     problems.push(...result.problems);
     if (result.lineage !== undefined) lineages.push(result.lineage);
   }
@@ -243,7 +278,8 @@ export function deriveLineage(
 ): Lineage | undefined {
   const intent = nodes.find((node) => node.id === intentId && node.type === "intent");
   if (intent === undefined) return undefined;
-  return derive(intent, new GraphIndex(nodes, edges)).lineage;
+  const graph = new GraphIndex(nodes, edges);
+  return derive(intent, graph, checkGlobalCardinality(nodes, graph).ambiguous).lineage;
 }
 
 /** Current-lineage ambiguity validation (Delivery Graph §21). */

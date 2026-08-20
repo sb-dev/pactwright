@@ -10,6 +10,12 @@ export type StageOutcome =
 
 export interface StageRequest {
   readonly stage: StageName;
+  /**
+   * Read-only derivation input (which lineage, which config) — never a
+   * mutation base. Executors that mutate the graph pass
+   * `project.paths.root` to the typed mutations, which load and validate
+   * the current graph state themselves at commit time.
+   */
   readonly project: Project;
   /** Absent for capture-intent on a graph with no active lineage. */
   readonly lineage?: Lineage;
@@ -191,17 +197,23 @@ export async function runLifecycle(options: RunOptions): Promise<readonly RunRes
     const result = await runLineage(options, target?.intent.id, current);
     results.push(result);
     if (target === undefined && result.stop === "completed" && result.executed.length > 0) {
-      // capture-intent ran: continue with the lineages it created.
+      // capture-intent ran: continue with the lineages it created, reloading
+      // before each one so lineage N+1 starts from the graph lineage N wrote.
       const reloaded = load(options.root);
       if (reloaded instanceof PactwrightError) {
         results.push(validationStop(undefined, reloaded, []));
         break;
       }
-      current = reloaded;
-      for (const created of selectLineages(current)) {
-        if (created !== undefined && isActive(created)) {
-          results.push(await runLineage(options, created.intent.id, current));
+      const createdIds = selectLineages(reloaded)
+        .filter((created): created is Lineage => created !== undefined && isActive(created))
+        .map((created) => created.intent.id);
+      for (const created of createdIds) {
+        const fresh = load(options.root);
+        if (fresh instanceof PactwrightError) {
+          results.push(validationStop(created, fresh, []));
+          break;
         }
+        results.push(await runLineage(options, created, fresh));
       }
       break;
     }
