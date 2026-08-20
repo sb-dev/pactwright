@@ -58,5 +58,6 @@ test("package: published files are only the consumer runtime", () => {
   for (const entry of ["LICENSE", "README.md"]) {
     assert.ok(fs.existsSync(path.join(repoRoot, entry)), `${entry} exists`);
   }
-  assert.deepEqual(Object.keys(manifest.dependencies), ["js-yaml"]);
+  assert.deepEqual(Object.keys(manifest.dependencies).sort(), ["@pactwright/standard", "js-yaml"]);
+  assert.equal(manifest.dependencies["@pactwright/standard"], "workspace:*");
 });

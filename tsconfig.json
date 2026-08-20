@@ -17,5 +17,5 @@
     "resolveJsonModule": true,
     "noEmit": true
   },
-  "include": ["src/**/*.ts", "tests/**/*.ts", "eslint.config.js"]
+  "include": ["src/**/*.ts", "tests/**/*.ts", "packages/*/src/**/*.ts", "eslint.config.js"]
 }

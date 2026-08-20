@@ -27,6 +27,12 @@ Open a PR directly. Reference the file you're fixing in the description. No inte
   - §16 — human gates and CODEOWNERS.
 - [`SECURITY.md`](./SECURITY.md) — report security issues privately, not via public issues.
 
+## Working in the workspace
+
+- `pnpm verify` is the one gate: format check, lint, typecheck, tests, build. It covers every workspace package.
+- `packages/standard/` is the default agent pack. Its `pack.yml` carries its own `version` and the exact compatible `pactwright` version; when a release bumps package versions (`pnpm version <v> -r`), update both fields in `pack.yml` too. `tests/pack-package.test.ts` fails if they drift.
+- Agent prompts and skills describe *how* to do a responsibility. Lifecycle stages, gates and graph mutations belong to the runtime; do not write transition rules into prompts.
+
 ## Code of conduct
 
 This project follows the [Contributor Covenant](https://www.contributor-covenant.org/version/2/1/code_of_conduct/). See [`CODE_OF_CONDUCT.md`](./CODE_OF_CONDUCT.md).

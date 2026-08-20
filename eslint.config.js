@@ -9,6 +9,7 @@ export default tseslint.config(
     ignores: [
       "node_modules/",
       "dist/",
+      "packages/*/dist/",
       "build/",
       "coverage/",
       "specs/",
@@ -20,7 +21,7 @@ export default tseslint.config(
   js.configs.recommended,
   ...tseslint.configs.recommended,
   {
-    files: ["src/**/*.ts", "tests/**/*.ts"],
+    files: ["src/**/*.ts", "tests/**/*.ts", "packages/*/src/**/*.ts"],
     languageOptions: { ecmaVersion: 2022, sourceType: "module" },
   },
 );

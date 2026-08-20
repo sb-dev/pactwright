@@ -40,7 +40,7 @@
     "README.md"
   ],
   "scripts": {
-    "build": "tsc -p tsconfig.build.json",
+    "build": "pnpm --filter @pactwright/standard build && tsc -p tsconfig.build.json",
     "prepack": "pnpm build",
     "pactwright": "node dist/cli.js",
     "format": "prettier --write .",
@@ -51,6 +51,7 @@
     "verify": "pnpm format:check && pnpm lint && pnpm typecheck && pnpm test && pnpm build"
   },
   "dependencies": {
+    "@pactwright/standard": "workspace:*",
     "js-yaml": "^4.1.0"
   },
   "devDependencies": {

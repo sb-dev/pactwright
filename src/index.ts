@@ -154,3 +154,32 @@ export {
   type ExtensionContext,
   type HistoryRecord,
 } from "./context.js";
+export {
+  CAPABILITY_PATTERN,
+  CORE_CAPABILITIES,
+  missingCapabilities,
+  requiredCapabilities,
+  type CoreCapability,
+} from "./pack/capabilities.js";
+export {
+  PACK_MANIFEST_FILE,
+  SKILLS_DIR,
+  loadPackManifest,
+  parsePackManifest,
+  skillPath,
+  type PackAgent,
+  type PackManifest,
+} from "./pack/manifest.js";
+export {
+  agentFor,
+  assertPackComplete,
+  locatePack,
+  lockEntriesFor,
+  resolveAndLock,
+  resolvePack,
+  satisfiesRange,
+  serialiseLock,
+  writeLock,
+  type ResolvePackOptions,
+  type ResolvedPack,
+} from "./pack/resolve.js";

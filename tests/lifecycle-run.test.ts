@@ -341,3 +341,21 @@ test("run: an unknown --intent is a validation error", async () => {
   assert.equal(result?.stop, "validation-error");
   assert.match(result!.message!, /not an intent/);
 });
+
+test("run: an incomplete agent pack fails the first graph-marking stage; graph unchanged", async () => {
+  const root = temp({
+    lineage: "open",
+    pack: "incomplete",
+    stages: defaultStages({
+      "approve-contract": { execution: "automatic", actor: "agent" },
+    }),
+  });
+  const before = snapshot(root);
+  const asked: StageName[] = [];
+  const [result] = await runLifecycle({ root, execute: fullExecutor(asked) });
+  assert.equal(result!.stop, "stage-failed");
+  assert.equal(result!.stage, "approve-contract");
+  assert.match(result!.message ?? "", /missing-capability|delivery-review/);
+  assert.equal(snapshot(root), before);
+  assert.equal(state(root), "open");
+});

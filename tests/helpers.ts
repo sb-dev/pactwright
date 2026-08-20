@@ -1,4 +1,4 @@
-import { copyFileSync, cpSync, mkdirSync, mkdtempSync, writeFileSync } from "node:fs";
+import { copyFileSync, cpSync, mkdirSync, mkdtempSync, readFileSync, writeFileSync } from "node:fs";
 import * as path from "node:path";
 import { fileURLToPath } from "node:url";
 import type { Problem } from "../src/errors.js";
@@ -48,6 +48,8 @@ export function makeTempProject(
     readonly lineage?: string;
     readonly lifecycle?: string;
     readonly stages?: Readonly<Record<string, { execution: string; actor?: string }>>;
+    /** A `tests/fixtures/packs/<name>` pack copied to `<dir>/pack` and selected by config. */
+    readonly pack?: string;
   } = {},
 ): string {
   const dir = mkdtempSync(path.join(repoRoot, ".tmp-pactwright-test-"));
@@ -62,6 +64,16 @@ export function makeTempProject(
     mkdirSync(path.join(dir, "specs", "nodes"), { recursive: true });
     mkdirSync(path.join(dir, "specs", "graph"), { recursive: true });
     writeFileSync(path.join(dir, "specs", "graph", "edges.yml"), "edges: []\n");
+  }
+  if (options.pack !== undefined) {
+    cpSync(path.join(fixture("packs"), options.pack), path.join(dir, "pack"), { recursive: true });
+    const configPath = path.join(dir, ".pactwright", "config.yml");
+    writeFileSync(
+      configPath,
+      readFileSync(configPath, "utf8")
+        .replace('source: "@pactwright/standard"', 'source: "./pack"')
+        .replace(/\n {2}version: .*\n/, "\n"),
+    );
   }
   const lifecyclePath = path.join(dir, ".pactwright", "lifecycle.yml");
   if (options.lifecycle !== undefined) {

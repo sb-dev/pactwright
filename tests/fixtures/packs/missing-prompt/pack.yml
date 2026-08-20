@@ -1,0 +1,23 @@
+name: "@pactwright/standard"
+version: 0.0.0
+pactwright: 0.0.0
+
+capabilities:
+  delivery-specification: spec
+  delivery-execution: implementer
+  delivery-review: reviewer
+
+agents:
+  spec:
+    prompt: agents/spec.md
+    skills:
+      - repository-analysis
+      - contract-writing
+  implementer:
+    prompt: agents/implementer.md
+    skills:
+      - repository-analysis
+  reviewer:
+    prompt: agents/reviewer.md
+    skills:
+      - implementation-review

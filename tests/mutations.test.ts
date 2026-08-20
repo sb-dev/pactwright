@@ -25,7 +25,7 @@ import {
 } from "../src/graph/mutations.js";
 import { parseNodeFile, type GraphNode } from "../src/graph/nodes.js";
 import { loadProject, type Project } from "../src/loader.js";
-import { fixture, repoRoot } from "./helpers.js";
+import { fixture, makeTempProject, repoRoot } from "./helpers.js";
 
 const tempDirs: string[] = [];
 after(() => {
@@ -420,4 +420,42 @@ test("mutations: ids are deterministic, unique and well-formed", () => {
   assert.notEqual(a, b);
   assert.ok(b.startsWith(a));
   assert.notEqual(mintNodeId("intent", "x", "other-seed", new Set()), a);
+});
+
+test("mutations: an incomplete agent pack is rejected before any graph or lock mutation", () => {
+  const root = makeTempProject({ lineage: "open", pack: "incomplete" });
+  tempDirs.push(root);
+  const before = snapshot(root);
+  const lockBefore = readFileSync(path.join(root, ".pactwright", "lock.yml"), "utf8");
+  assert.throws(
+    () => createIntent(root, { title: "Blocked", body: "Never written." }),
+    (error: unknown) =>
+      error instanceof PactwrightError &&
+      error.code === "missing-capability" &&
+      /delivery-review/.test(error.message),
+  );
+  assert.throws(
+    () =>
+      recordDecision(root, {
+        intentId: INTENT,
+        outcome: "reject",
+        decidedBy: "human:samir",
+        body: "No.",
+      }),
+    (error: unknown) => error instanceof PactwrightError && error.code === "missing-capability",
+  );
+  assert.equal(snapshot(root), before);
+  assert.equal(readFileSync(path.join(root, ".pactwright", "lock.yml"), "utf8"), lockBefore);
+  assertNoTemps(root);
+});
+
+test("mutations: an unresolvable agent pack is rejected before any graph mutation", () => {
+  const root = makeTempProject({ lineage: "open", pack: "missing-prompt" });
+  tempDirs.push(root);
+  const before = snapshot(root);
+  assert.throws(
+    () => createIntent(root, { title: "Blocked", body: "Never written." }),
+    (error: unknown) => error instanceof PactwrightError && error.code === "pack-unresolved",
+  );
+  assert.equal(snapshot(root), before);
 });

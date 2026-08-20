@@ -4,6 +4,7 @@ import { dump } from "js-yaml";
 import { PactwrightError, type Problem } from "../errors.js";
 import { decisionActor, type Actor } from "../config/lifecycle.js";
 import { loadProject, type Project } from "../loader.js";
+import { assertPackComplete } from "../pack/resolve.js";
 import { CORE_EDGE_SCHEMAS, validateEdges } from "./edge-schema.js";
 import { edgeKey, type Edge } from "./edges.js";
 import { mintNodeId, slugify } from "./ids.js";
@@ -97,6 +98,10 @@ function checkProposedNode(project: Project, node: GraphNode): readonly Problem[
  * mutation"): plan → validate the complete proposed state against the
  * current graph state → write atomically → validate the resulting state.
  *
+ * Before anything else the selected agent pack is resolved and checked
+ * against the required capabilities (Distribution §7): an incomplete or
+ * unresolvable pack throws here, before any validation or write.
+ *
  * Validation covers the full common node rules (derived path, id shape,
  * frontmatter round-trip, body) plus type schemas, the typed-edge registry,
  * global lineage constraints and id immutability. Every file is written to a
@@ -110,6 +115,7 @@ export function commitGraphChange(
   change: GraphChange,
   options: CommitOptions = {},
 ): void {
+  assertPackComplete(project);
   const problems: Problem[] = [];
   const nodes = [...project.graph.nodes];
   const seenIds = new Set(nodes.map((node) => node.id));
