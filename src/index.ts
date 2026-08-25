@@ -197,3 +197,27 @@ export {
   type WriteAdapterResult,
 } from "./adapter/claude-code.js";
 export { COMMAND_TEMPLATES, templateFor, type CommandTemplate } from "./adapter/commands.js";
+export {
+  type AssertionResult,
+  type CandidateRunner,
+  type CandidateTask,
+  type DeterministicAssertion,
+  type EvalCase,
+  type EvalSuite,
+  type Observation,
+  type ScriptedCandidate,
+  type SemanticDimension,
+  type SemanticJudge,
+  type SemanticJudgement,
+  type ViolationCandidate,
+} from "./eval/case.js";
+export {
+  evalPassed,
+  runEval,
+  type DeterministicResult,
+  type EvalCaseResult,
+  type EvalOptions,
+  type EvalReport,
+  type SemanticResult,
+} from "./eval/runner.js";
+export { CORE_DELIVERY_SUITE } from "./eval/core-suite.js";

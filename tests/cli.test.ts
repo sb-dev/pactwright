@@ -330,3 +330,81 @@ test("cli: lifecycle record rejects transient stages, bad input and missing opti
   );
   assert.equal(fs.readdirSync(path.join(root, "specs", "nodes")).length, 1);
 });
+
+// ---- eval -------------------------------------------------------------------
+
+test("cli: help lists eval", () => {
+  assert.match(run("--help").stdout, /eval \[--json\]/);
+});
+
+test("cli: eval outside a project runs the core suite against the default pack", () => {
+  const result = run("eval");
+  assert.equal(result.status, 0, result.stdout + result.stderr);
+  assert.match(result.stdout, /Evaluating @pactwright\/standard@/);
+  assert.match(result.stdout, /suite core-delivery\)/);
+  for (const id of [
+    "contract-fidelity",
+    "scope-discipline",
+    "graph-output-structure",
+    "forbidden-mutation",
+    "review-defect-detection",
+  ]) {
+    assert.match(result.stdout, new RegExp(id));
+  }
+  assert.match(result.stdout, /deterministic:/);
+  assert.match(result.stdout, /pass {2}contract-acceptance-holds/);
+  assert.match(
+    result.stdout,
+    /semantic \(requires judgement; reported separately, never auto-scored\):/,
+  );
+  assert.match(result.stdout, /unjudged {2}fidelity: no semantic judge configured/);
+  assert.match(result.stdout, /No aggregate quality score is calculated\./);
+  assert.doesNotMatch(result.stdout, /FAIL/);
+});
+
+test("cli: eval --json emits the per-case report", () => {
+  const result = run("eval", "--json");
+  assert.equal(result.status, 0, result.stderr);
+  const report = JSON.parse(result.stdout) as {
+    suite: string;
+    pack: { name: string };
+    cases: Array<{
+      id: string;
+      agent: string;
+      deterministic: Array<{ passed: boolean }>;
+      semantic: Array<{ judged: boolean }>;
+    }>;
+  };
+  assert.equal(report.suite, "core-delivery");
+  assert.equal(report.pack.name, "@pactwright/standard");
+  assert.equal(report.cases.length, 5);
+  for (const entry of report.cases) {
+    assert.ok(
+      entry.deterministic.every((a) => a.passed),
+      entry.id,
+    );
+    assert.ok(
+      entry.semantic.every((d) => !d.judged),
+      entry.id,
+    );
+  }
+});
+
+test("cli: eval inside a project evaluates the configured pack", () => {
+  const root = project({ pack: "complete" });
+  const result = runIn(root, "eval");
+  assert.equal(result.status, 0, result.stdout + result.stderr);
+  assert.match(result.stdout, /suite core-delivery\)/);
+});
+
+test("cli: eval fails a pack missing a required capability (exit 1)", () => {
+  const root = project({ pack: "incomplete" });
+  const result = runIn(root, "eval");
+  assert.equal(result.status, 1);
+  assert.match(result.stdout, /does not provide capability "delivery-review"/);
+});
+
+test("cli: eval rejects unexpected arguments", () => {
+  assert.equal(run("eval", "extra").status, 1);
+  assert.equal(run("eval", "--nope").status, 1);
+});

@@ -10,10 +10,14 @@ import { noExecutor, runLifecycle, type RunResult } from "./lifecycle/run.js";
 import { recordStage } from "./lifecycle/record.js";
 import type { StageName } from "./config/lifecycle.js";
 import { loadContext, type DeliveryContext, type HistoryRecord } from "./context.js";
+import { loadConfig, type PactwrightConfig } from "./config/config.js";
+import { CORE_DELIVERY_SUITE } from "./eval/core-suite.js";
+import { evalPassed, runEval, type EvalCaseResult, type EvalReport } from "./eval/runner.js";
 import type { GraphNode } from "./graph/nodes.js";
 import { loadProject } from "./loader.js";
+import { resolvePack } from "./pack/resolve.js";
 import { validateProject } from "./validate.js";
-import { findProjectRoot } from "./project.js";
+import { findProjectRoot, projectPaths } from "./project.js";
 import { runtimeVersion } from "./version.js";
 
 const HELP = `Usage: pactwright <command> [options]
@@ -29,6 +33,9 @@ Commands:
                                              (capture-intent, approve-contract, write-brief,
                                              prepare-evidence) after the runtime checks the
                                              transition
+  eval [--json]                              Run the core Delivery evaluation suite against
+                                             the selected agent pack (deterministic assertions
+                                             and semantic dimensions reported separately)
 
 Options:
   -h, --help     Show this help
@@ -288,6 +295,92 @@ function formatContext(context: DeliveryContext): string {
   return `${parts.join("\n")}`;
 }
 
+function formatEvalCase(entry: EvalCaseResult): string {
+  const lines: string[] = [];
+  const agent = entry.agent === undefined ? "" : ` (agent: ${entry.agent})`;
+  lines.push(`${entry.id} — ${entry.title}`);
+  lines.push(`  capability: ${entry.capability}${agent}`);
+  if (entry.error !== undefined) lines.push(`  error: ${entry.error}`);
+  if (entry.deterministic.length > 0) {
+    lines.push("  deterministic:");
+    for (const assertion of entry.deterministic) {
+      lines.push(`    ${assertion.passed ? "pass" : "FAIL"}  ${assertion.id}: ${assertion.detail}`);
+    }
+  }
+  if (entry.semantic.length > 0) {
+    lines.push("  semantic (requires judgement; reported separately, never auto-scored):");
+    for (const dimension of entry.semantic) {
+      lines.push(
+        dimension.judged
+          ? `    judged    ${dimension.id}: ${dimension.verdict}${dimension.rationale === undefined ? "" : ` — ${dimension.rationale}`}`
+          : `    unjudged  ${dimension.id}: ${dimension.reason}`,
+      );
+    }
+  }
+  return `${lines.join("\n")}\n`;
+}
+
+function formatEvalReport(report: EvalReport): string {
+  const assertions = report.cases.flatMap((entry) => entry.deterministic);
+  const failed = assertions.filter((assertion) => !assertion.passed).length;
+  const dimensions = report.cases.flatMap((entry) => entry.semantic);
+  const judged = dimensions.filter((dimension) => dimension.judged).length;
+  const errors = report.cases.filter((entry) => entry.error !== undefined).length;
+  return [
+    `Evaluating ${report.pack.name}@${report.pack.version} (runtime ${report.runtime}, suite ${report.suite})`,
+    "",
+    ...report.cases.map(formatEvalCase),
+    `Deterministic assertions: ${assertions.length - failed} passed, ${failed} failed${errors === 0 ? "" : `; ${errors} case(s) not evaluated`}.`,
+    `Semantic dimensions: ${judged} judged, ${dimensions.length - judged} unjudged. No aggregate quality score is calculated.`,
+    "",
+  ].join("\n");
+}
+
+/**
+ * `pactwright eval` runs inside or outside a project: inside one it
+ * evaluates the configured pack; outside it evaluates the default
+ * `@pactwright/standard` pack, since evaluation is independent from any
+ * project's Delivery (Distribution §16).
+ */
+async function evalCommand(args: readonly string[]): Promise<number> {
+  const options = parseOptions(args);
+  if (typeof options === "string" || options.positional.length > 0) {
+    const why =
+      typeof options === "string" ? options : `unexpected argument "${options.positional[0]}"`;
+    err(`pactwright: ${why}\n\n${HELP}`);
+    return 1;
+  }
+  let root: string;
+  let config: PactwrightConfig;
+  try {
+    root = findProjectRoot();
+    const loaded = loadConfig(projectPaths(root).config);
+    if (loaded.value === undefined) {
+      printProblems(PactwrightError.fromProblems("invalid-config", loaded.problems), options.json);
+      return 1;
+    }
+    config = loaded.value;
+  } catch (error) {
+    if (!(error instanceof PactwrightError)) throw error;
+    root = process.cwd();
+    config = {
+      version: 1,
+      agentPack: { source: "@pactwright/standard" },
+      adapter: { type: "claude-code" },
+      extensions: {},
+      github: { enabled: false },
+    };
+  }
+  const resolved = resolvePack({ root, config });
+  if (resolved.value === undefined) {
+    printProblems(PactwrightError.fromProblems("pack-unresolved", resolved.problems), options.json);
+    return 1;
+  }
+  const report = await runEval({ pack: resolved.value, suite: CORE_DELIVERY_SUITE });
+  out(options.json ? `${JSON.stringify(report, null, 2)}\n` : formatEvalReport(report));
+  return evalPassed(report) ? 0 : 1;
+}
+
 function contextCommand(args: readonly string[]): number {
   const options = parseOptions(args, { history: true });
   if (typeof options === "string" || options.positional.length !== 1) {
@@ -326,6 +419,7 @@ export async function main(argv: readonly string[]): Promise<number> {
   if (first === "lifecycle") return lifecycle(rest[0], rest.slice(1));
   if (first === "validate") return validate(rest);
   if (first === "context") return contextCommand(rest);
+  if (first === "eval") return evalCommand(rest);
   err(`pactwright: unknown command "${first}"\n\n${HELP}`);
   return 1;
 }
