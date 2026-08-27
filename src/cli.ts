@@ -14,6 +14,7 @@ import { loadConfig, type PactwrightConfig } from "./config/config.js";
 import { CORE_DELIVERY_SUITE } from "./eval/core-suite.js";
 import { evalPassed, runEval, type EvalCaseResult, type EvalReport } from "./eval/runner.js";
 import type { GraphNode } from "./graph/nodes.js";
+import { initProject } from "./init.js";
 import { loadProject } from "./loader.js";
 import { resolvePack } from "./pack/resolve.js";
 import { validateProject } from "./validate.js";
@@ -23,6 +24,10 @@ import { runtimeVersion } from "./version.js";
 const HELP = `Usage: pactwright <command> [options]
 
 Commands:
+  init [--json]                              Create the Pactwright-owned core structure
+                                             (.pactwright, specs, .claude directories) in the
+                                             current directory and resolve the lock; existing
+                                             paths are left untouched
   validate [--json]                          Validate the Delivery Graph and typed-edge store
   context <node-id> [--history] [--json]     Print the current core Delivery lineage of a node
   lifecycle status [--intent <id>] [--json]  Report stage, completed stages, gates and lineage
@@ -241,6 +246,33 @@ async function lifecycle(sub: string | undefined, args: readonly string[]): Prom
   }
 }
 
+function initCommand(args: readonly string[]): number {
+  const options = parseOptions(args);
+  if (typeof options === "string" || options.positional.length > 0) {
+    const why =
+      typeof options === "string" ? options : `unexpected argument "${options.positional[0]}"`;
+    err(`pactwright: ${why}\n\n${HELP}`);
+    return 1;
+  }
+  // Init is the one command that must not search for an enclosing project:
+  // it creates the project in the current directory.
+  const report = initProject();
+  if (options.json) {
+    out(`${JSON.stringify(report, null, 2)}\n`);
+  } else {
+    for (const entry of report.entries) {
+      out(
+        entry.action === "created" ? `created ${entry.path}\n` : `skipped ${entry.path} (exists)\n`,
+      );
+    }
+    if (report.problems.length > 0) {
+      out("Validation problems:\n");
+      for (const problem of report.problems) out(`  - ${formatProblem(problem)}\n`);
+    }
+  }
+  return report.ok ? 0 : 1;
+}
+
 function validate(args: readonly string[]): number {
   const options = parseOptions(args);
   if (typeof options === "string" || options.positional.length > 0) {
@@ -416,6 +448,7 @@ export async function main(argv: readonly string[]): Promise<number> {
     out(`${runtimeVersion()}\n`);
     return 0;
   }
+  if (first === "init") return initCommand(rest);
   if (first === "lifecycle") return lifecycle(rest[0], rest.slice(1));
   if (first === "validate") return validate(rest);
   if (first === "context") return contextCommand(rest);

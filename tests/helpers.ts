@@ -1,4 +1,5 @@
 import { copyFileSync, cpSync, mkdirSync, mkdtempSync, readFileSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
 import * as path from "node:path";
 import { fileURLToPath } from "node:url";
 import type { Problem } from "../src/errors.js";
@@ -88,6 +89,15 @@ export function makeTempProject(
     writeFileSync(lifecyclePath, `${lines.join("\n")}\n`);
   }
   return dir;
+}
+
+/**
+ * An empty temporary directory outside the repository, for `init` tests: no
+ * enclosing `.pactwright/` can be found by walking up from it. Callers
+ * remove the directory afterwards.
+ */
+export function makeEmptyRepo(): string {
+  return mkdtempSync(path.join(tmpdir(), "pactwright-init-"));
 }
 
 /** The §17 default lifecycle stages, with overrides. */

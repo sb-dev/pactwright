@@ -118,6 +118,15 @@ export {
   type ProjectPaths,
 } from "./project.js";
 export { loadProject, type LoadProjectOptions, type Project } from "./loader.js";
+export {
+  CONFIG_TEMPLATE,
+  INIT_DIRS,
+  LIFECYCLE_TEMPLATE,
+  initProject,
+  initTemplates,
+  type InitEntry,
+  type InitReport,
+} from "./init.js";
 export { runtimeVersion } from "./version.js";
 export {
   GRAPH_MARKING_STAGES,

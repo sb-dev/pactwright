@@ -4,7 +4,7 @@ import { spawnSync } from "node:child_process";
 import * as fs from "node:fs";
 import { rmSync } from "node:fs";
 import * as path from "node:path";
-import { defaultStages, fixture, makeTempProject, repoRoot } from "./helpers.js";
+import { defaultStages, fixture, makeEmptyRepo, makeTempProject, repoRoot } from "./helpers.js";
 
 const cli = path.join(repoRoot, "dist", "cli.js");
 const manifest = JSON.parse(fs.readFileSync(path.join(repoRoot, "package.json"), "utf8")) as {
@@ -350,6 +350,56 @@ test("cli: lifecycle record rejects transient stages, bad input and missing opti
     1,
   );
   assert.equal(fs.readdirSync(path.join(root, "specs", "nodes")).length, 1);
+});
+
+// ---- init -------------------------------------------------------------------
+
+test("cli: help lists init", () => {
+  assert.match(run("--help").stdout, /init \[--json\]/);
+});
+
+test("cli: init then validate and lifecycle status pass in a clean repository", () => {
+  const dir = makeEmptyRepo();
+  tempDirs.push(dir);
+  const result = runIn(dir, "init");
+  assert.equal(result.status, 0, result.stdout + result.stderr);
+  assert.match(result.stdout, /created \.pactwright\/config\.yml/);
+  assert.match(result.stdout, /created \.pactwright\/lock\.yml/);
+  assert.doesNotMatch(result.stdout, /skipped/);
+  assert.equal(fs.existsSync(path.join(dir, ".github")), false);
+
+  const valid = runIn(dir, "validate");
+  assert.equal(valid.status, 0, valid.stdout + valid.stderr);
+  assert.match(valid.stdout, /^Valid: 0 nodes, 0 edges, 0 lineages/);
+
+  const status = runIn(dir, "lifecycle", "status");
+  assert.equal(status.status, 0, status.stdout + status.stderr);
+  assert.match(status.stdout, /No active lineage/);
+
+  const again = runIn(dir, "init");
+  assert.equal(again.status, 0, again.stdout + again.stderr);
+  assert.match(again.stdout, /skipped \.pactwright\/config\.yml \(exists\)/);
+  assert.doesNotMatch(again.stdout, /created/);
+});
+
+test("cli: init --json emits the report", () => {
+  const dir = makeEmptyRepo();
+  tempDirs.push(dir);
+  const result = runIn(dir, "init", "--json");
+  assert.equal(result.status, 0, result.stdout + result.stderr);
+  const report = JSON.parse(result.stdout) as {
+    ok: boolean;
+    entries: Array<{ path: string; action: string }>;
+  };
+  assert.equal(report.ok, true);
+  assert.ok(report.entries.every((entry) => entry.action === "created"));
+});
+
+test("cli: init rejects unexpected arguments", () => {
+  const extra = run("init", "extra");
+  assert.equal(extra.status, 1);
+  assert.match(extra.stderr, /unexpected argument "extra"/);
+  assert.equal(run("init", "--nope").status, 1);
 });
 
 // ---- eval -------------------------------------------------------------------

@@ -11,6 +11,7 @@ This repository is a pnpm workspace with two published packages:
 
 ## What the runtime provides
 
+- **Initialiser** — `pactwright init`: creates the Pactwright-owned core structure in a clean repository (`.pactwright/` configuration, an empty Delivery Graph under `specs/`, the empty `.claude/` adapter directories) and resolves the lock; existing files are never overwritten.
 - **Delivery Graph** — canonical records (`specs/nodes/*.md`, `specs/graph/edges.yml`) with schema validation, typed-edge rules, lineage derivation and a deterministic revision hash.
 - **Lifecycle engine** — `pactwright lifecycle status|next|run|record`: derives each intent's state from graph structure alone and refuses out-of-order records at the runtime, regardless of executor behaviour.
 - **Claude Code adapter** — renders one agent file per pack agent and one command per lifecycle stage into `.claude/`, deterministically from the locked pack.
