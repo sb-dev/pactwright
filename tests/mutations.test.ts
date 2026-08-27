@@ -404,6 +404,27 @@ test("mutations: the commit path runs full common validation before any write", 
   assertNoTemps(root);
 });
 
+test("mutations: duplicate ids and edges aggregate into one mutation-invalid report", () => {
+  const root = tempProject();
+  const before = snapshot(root);
+  const project = load(root);
+  const existingEdge = { source: INTENT, type: "resolves", target: INTENT };
+  assert.throws(
+    () =>
+      commitGraphChange(project, {
+        addNodes: [rawNode(root, INTENT)],
+        addEdges: [existingEdge, existingEdge],
+      }),
+    (error: unknown) =>
+      error instanceof PactwrightError &&
+      error.code === "mutation-invalid" &&
+      error.problems.some((p) => p.code === "duplicate-id") &&
+      error.problems.some((p) => p.code === "duplicate-edge"),
+  );
+  assert.equal(snapshot(root), before);
+  assertNoTemps(root);
+});
+
 test("mutations: a stale snapshot is refused instead of overwriting concurrent edges", () => {
   const root = tempProject();
   const stale = load(root);

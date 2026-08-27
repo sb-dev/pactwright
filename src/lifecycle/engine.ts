@@ -117,7 +117,7 @@ function findLineage(project: Project, intentId: string, lineages: readonly Line
       (node) => node.id === intentId && node.type === "intent",
     );
     throw new PactwrightError(
-      "unknown-intent",
+      exists ? "ambiguous-lineage" : "unknown-intent",
       exists
         ? `intent "${intentId}" has an ambiguous lineage; fix validation problems first`
         : `"${intentId}" is not an intent in this project`,

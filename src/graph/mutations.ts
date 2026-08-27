@@ -123,7 +123,12 @@ export function commitGraphChange(
   const seenIds = new Set(nodes.map((node) => node.id));
   for (const node of change.addNodes) {
     if (seenIds.has(node.id)) {
-      fail("duplicate-id", `node id "${node.id}" already exists in the graph`);
+      problems.push({
+        code: "duplicate-id",
+        message: `node id "${node.id}" already exists in the graph`,
+        path: node.path,
+      });
+      continue;
     }
     seenIds.add(node.id);
     nodes.push(node);
@@ -133,7 +138,10 @@ export function commitGraphChange(
   const seenEdges = new Set(edges.map(edgeKey));
   for (const edge of change.addEdges) {
     const key = edgeKey(edge);
-    if (seenEdges.has(key)) fail("duplicate-edge", `edge ${key} already exists`);
+    if (seenEdges.has(key)) {
+      problems.push({ code: "duplicate-edge", message: `edge ${key} already exists` });
+      continue;
+    }
     seenEdges.add(key);
     edges.push(edge);
   }
