@@ -115,6 +115,17 @@ function assertPermitted(project: Project, stage: RecordingStage, anchor: string
     throw new PactwrightError("unknown-node", `"${anchor}" is not part of any Delivery lineage`);
   }
   const [lineage] = selectLineages(project, intent.id);
+  // §15: deferred and rejected lineages resume by recording a new Decision,
+  // which is exactly what approve-contract does. Frozen (superseded)
+  // lineages stay refused.
+  if (
+    stage === "approve-contract" &&
+    lineage !== undefined &&
+    !lineage.superseded &&
+    (lineage.state === "deferred" || lineage.state === "rejected")
+  ) {
+    return;
+  }
   const pending = pendingStages(lineage);
   const index = pending.indexOf(stage);
   if (index < 0 || !pending.slice(0, index).every(isTransientStage)) {

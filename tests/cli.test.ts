@@ -312,6 +312,27 @@ test("cli: lifecycle record approve-contract checks the actor through the Step 7
   assert.match(ok.stdout, /created contract contract-/);
 });
 
+test("cli: lifecycle record approve-contract resumes a deferred lineage", () => {
+  const root = project({ lineage: "deferred", stages: defaultStages() });
+  const decision = path.join(root, "decision.yml");
+  fs.writeFileSync(
+    decision,
+    [
+      "intent: intent-quick-start-a1b2",
+      "outcome: proceed",
+      "decided_by: human:samir",
+      "body: Resuming after deferral.",
+      "contract:",
+      "  title: Resumed contract",
+      "  body: It shall work.",
+      "",
+    ].join("\n"),
+  );
+  const ok = runIn(root, "lifecycle", "record", "approve-contract", "--file", decision);
+  assert.equal(ok.status, 0, ok.stdout + ok.stderr);
+  assert.match(runIn(root, "lifecycle", "status").stdout, /state: contracted/);
+});
+
 test("cli: lifecycle record rejects transient stages, bad input and missing options", () => {
   const root = project({ lineage: "open", stages: defaultStages() });
   const input = path.join(root, "x.yml");

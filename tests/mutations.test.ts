@@ -194,6 +194,29 @@ test("mutations: proceed requires a contract; reject/defer forbid one", () => {
   assert.equal(snapshot(root), before);
 });
 
+test("mutations: reject/defer with a current contract is refused (pinned §15 behavior)", () => {
+  const root = tempProject();
+  recordDecision(root, {
+    intentId: INTENT,
+    outcome: "proceed",
+    decidedBy: "human:samir",
+    body: "Go ahead.",
+    contract: CONTRACT,
+  });
+  // §15: while a current contract exists, a contract change needs a new
+  // proceed decision with a new canonical contract — reject/defer is refused.
+  for (const outcome of ["reject", "defer"] as const) {
+    assert.throws(
+      () =>
+        recordDecision(root, { intentId: INTENT, outcome, decidedBy: "human:samir", body: "x" }),
+      (error: unknown) =>
+        error instanceof PactwrightError &&
+        error.code === "invalid-outcome-input" &&
+        /new proceed decision/.test(error.message),
+    );
+  }
+});
+
 test("mutations: empty semantic content is rejected before any write", () => {
   const root = tempProject();
   const before = snapshot(root);
