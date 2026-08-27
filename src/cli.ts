@@ -21,6 +21,7 @@ import {
   type ExtensionChangeReport,
 } from "./extension/manage.js";
 import { initProject } from "./init.js";
+import { syncProject } from "./sync.js";
 import { loadProject } from "./loader.js";
 import { resolvePack } from "./pack/resolve.js";
 import { validateProject } from "./validate.js";
@@ -34,6 +35,9 @@ Commands:
                                              (.pactwright, specs, .claude directories) in the
                                              current directory and resolve the lock; existing
                                              paths are left untouched
+  sync [--json]                              Render the Pactwright-managed .claude/ adapter
+                                             surface from config + lock (deterministic;
+                                             never touches user-authored files)
   validate [--json]                          Validate the Delivery Graph and typed-edge store
   context <node-id> [--history] [--json]     Print the current core Delivery lineage of a node
   lifecycle status [--intent <id>] [--json]  Report stage, completed stages, gates and lineage
@@ -346,6 +350,37 @@ function extensionCommand(sub: string | undefined, args: readonly string[]): num
   return report.ok ? 0 : 1;
 }
 
+function syncCommand(args: readonly string[]): number {
+  const options = parseOptions(args);
+  if (typeof options === "string" || options.positional.length > 0) {
+    const why =
+      typeof options === "string" ? options : `unexpected argument "${options.positional[0]}"`;
+    err(`pactwright: ${why}\n\n${HELP}`);
+    return 1;
+  }
+  let root: string;
+  try {
+    root = findProjectRoot();
+  } catch (error) {
+    if (!(error instanceof PactwrightError)) throw error;
+    printProblems(error, options.json);
+    return 1;
+  }
+  const report = syncProject(root);
+  if (options.json) {
+    out(`${JSON.stringify(report, null, 2)}\n`);
+  } else {
+    for (const path of report.changed) out(`wrote ${path}\n`);
+    for (const path of report.unchanged) out(`unchanged ${path}\n`);
+    for (const path of report.removed) out(`removed ${path}\n`);
+    if (report.problems.length > 0) {
+      out("Validation problems:\n");
+      for (const problem of report.problems) out(`  - ${formatProblem(problem)}\n`);
+    }
+  }
+  return report.ok ? 0 : 1;
+}
+
 function validate(args: readonly string[]): number {
   const options = parseOptions(args);
   if (typeof options === "string" || options.positional.length > 0) {
@@ -522,6 +557,7 @@ export async function main(argv: readonly string[]): Promise<number> {
     return 0;
   }
   if (first === "init") return initCommand(rest);
+  if (first === "sync") return syncCommand(rest);
   if (first === "extension") return extensionCommand(rest[0], rest.slice(1));
   if (first === "lifecycle") return lifecycle(rest[0], rest.slice(1));
   if (first === "validate") return validate(rest);

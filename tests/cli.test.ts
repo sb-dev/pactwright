@@ -402,6 +402,62 @@ test("cli: init rejects unexpected arguments", () => {
   assert.equal(run("init", "--nope").status, 1);
 });
 
+// ---- sync -------------------------------------------------------------------
+
+test("cli: help lists sync", () => {
+  assert.match(run("--help").stdout, /sync \[--json\]/);
+});
+
+test("cli: init, sync, validate and lifecycle status compose in a clean repository", () => {
+  const dir = makeEmptyRepo();
+  tempDirs.push(dir);
+  assert.equal(runIn(dir, "init").status, 0);
+
+  const first = runIn(dir, "sync");
+  assert.equal(first.status, 0, first.stdout + first.stderr);
+  assert.match(first.stdout, /wrote \.claude\/agents\/spec\.md/);
+  assert.match(first.stdout, /wrote \.claude\/commands\/capture-intent\.md/);
+  assert.doesNotMatch(first.stdout, /unchanged/);
+  const bytes = (): Map<string, string> => {
+    const map = new Map<string, string>();
+    for (const sub of ["agents", "commands"]) {
+      const dirPath = path.join(dir, ".claude", sub);
+      for (const entry of fs.readdirSync(dirPath).sort()) {
+        map.set(`${sub}/${entry}`, fs.readFileSync(path.join(dirPath, entry), "utf8"));
+      }
+    }
+    return map;
+  };
+  const afterFirst = bytes();
+  assert.equal(afterFirst.size, 10);
+
+  const second = runIn(dir, "sync");
+  assert.equal(second.status, 0, second.stdout + second.stderr);
+  assert.doesNotMatch(second.stdout, /wrote /);
+  assert.match(second.stdout, /unchanged \.claude\/agents\/spec\.md/);
+  assert.deepEqual(bytes(), afterFirst);
+
+  assert.equal(runIn(dir, "validate").status, 0);
+  const status = runIn(dir, "lifecycle", "status");
+  assert.equal(status.status, 0, status.stdout + status.stderr);
+  assert.match(status.stdout, /No active lineage/);
+  assert.equal(fs.existsSync(path.join(dir, ".github")), false);
+});
+
+test("cli: sync --json emits the report and argument errors are reported", () => {
+  const root = project();
+  const result = runIn(root, "sync", "--json");
+  assert.equal(result.status, 0, result.stdout + result.stderr);
+  const report = JSON.parse(result.stdout) as { ok: boolean; changed: string[] };
+  assert.equal(report.ok, true);
+  assert.equal(report.changed.length, 10);
+
+  assert.equal(runIn(root, "sync", "extra").status, 1);
+  const outside = runIn(fixture("not-a-project/sub"), "sync");
+  assert.equal(outside.status, 1);
+  assert.match(outside.stdout, /project-not-found/);
+});
+
 // ---- extension --------------------------------------------------------------
 
 test("cli: help lists the extension commands", () => {

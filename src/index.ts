@@ -163,6 +163,7 @@ export {
   type StageRequest,
 } from "./lifecycle/run.js";
 export { validateProject, type ValidationReport } from "./validate.js";
+export { renderGitHubWorkflows, syncProject, type SyncReport } from "./sync.js";
 export {
   findIntentOf,
   loadContext,
