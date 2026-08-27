@@ -66,13 +66,14 @@ export function completedStages(lineage: Lineage | undefined): readonly StageNam
  */
 export function pendingStages(lineage: Lineage | undefined): readonly StageName[] {
   if (lineage === undefined) return ["capture-intent"];
+  if (lineage.superseded) return [];
   if (TERMINAL_STATES.includes(lineage.state)) return [];
   return CORE_STAGES.slice(COMPLETED_COUNT[lineage.state]);
 }
 
 /** A lineage still progressing through the core lifecycle. */
 export function isActive(lineage: Lineage): boolean {
-  return !TERMINAL_STATES.includes(lineage.state);
+  return !lineage.superseded && !TERMINAL_STATES.includes(lineage.state);
 }
 
 /** `lifecycle status` for one lineage (Delivery Graph §20). */
@@ -80,6 +81,8 @@ export interface LineageStatus {
   /** Absent for the "no lineage yet" entry. */
   readonly intent?: string;
   readonly state: DeliveryState | "none";
+  /** Set when the intent itself is superseded: the lineage is frozen (§15). */
+  readonly superseded?: true;
   readonly completed: readonly StageName[];
   /** First pending stage; absent when the core lifecycle has no next stage. */
   readonly currentStage?: StageName;
@@ -144,6 +147,7 @@ function statusOf(project: Project, lineage: Lineage | undefined): LineageStatus
   const base: LineageStatus = {
     ...(lineage === undefined ? {} : { intent: lineage.intent.id, lineage }),
     state: lineage === undefined ? "none" : lineage.state,
+    ...(lineage?.superseded === true ? { superseded: true } : {}),
     completed: completedStages(lineage),
     ...(currentStage === undefined ? {} : { currentStage }),
   };
@@ -176,9 +180,11 @@ export function nextActionFor(
   const stage = pendingStages(lineage).find((candidate) => !done.has(candidate));
   if (stage === undefined) {
     const reason =
-      lineage?.state === "done"
-        ? "current Evidence exists; the core Delivery lifecycle is complete and has no next stage"
-        : `lineage is ${lineage?.state}; resuming needs a new Decision (Delivery Graph §15)`;
+      lineage?.superseded === true
+        ? `intent "${lineage.intent.id}" is superseded; work continues on the superseding intent's lineage (Delivery Graph §15)`
+        : lineage?.state === "done"
+          ? "current Evidence exists; the core Delivery lifecycle is complete and has no next stage"
+          : `lineage is ${lineage?.state}; record a new Decision with approve-contract to resume (Delivery Graph §15)`;
     return { ...intent, gate: false, reason };
   }
   const config = project.lifecycle.stages[stage];

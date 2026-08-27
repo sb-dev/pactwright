@@ -1,0 +1,4 @@
+edges:
+  - source: intent-quick-start-v2-f6a7
+    type: supersedes
+    target: intent-quick-start-a1b2

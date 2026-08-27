@@ -102,6 +102,20 @@ for (const [name, state, expected] of valid) {
   });
 }
 
+test("lineage: a superseded intent's lineage is derived, frozen and flagged", () => {
+  const graph = lineageFixture("superseded-intent");
+  assert.deepEqual(graph.problems, []);
+  const result = deriveLineages(graph.nodes, graph.edges);
+  assert.deepEqual(result.problems, []);
+  assert.deepEqual(
+    result.lineages.map((lineage) => [lineage.intent.id, lineage.state, lineage.superseded]),
+    [
+      ["intent-quick-start-a1b2", "open", true],
+      ["intent-quick-start-v2-f6a7", "open", false],
+    ],
+  );
+});
+
 const invalid: Array<[string, string, RegExp]> = [
   ["two-current-decisions", "ambiguous-decision", /intent-quick-start-a1b2\.md$/],
   ["proceed-no-contract", "missing-contract", /decision-quick-start-b2c3\.md$/],

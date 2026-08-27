@@ -129,6 +129,23 @@ test("engine: status carries the current lineage chain", () => {
   assert.equal(entry?.lineage?.evidence, undefined);
 });
 
+test("engine: a superseded lineage has no pending stages and no next action", () => {
+  const p = project({ lineage: "superseded-intent" });
+  const status = lifecycleStatus(p, INTENT);
+  const [entry] = status.lineages;
+  assert.equal(entry?.state, "open");
+  assert.equal(entry?.superseded, true);
+  assert.equal(entry?.currentStage, undefined);
+  assert.equal(entry?.blockedStage, undefined);
+  const [next] = lifecycleNext(p, INTENT);
+  assert.equal(next?.stage, undefined);
+  assert.equal(next?.gate, false);
+  assert.match(next!.reason, /superseded/);
+  // The superseding intent's own lineage is live and unaffected.
+  const [successor] = lifecycleNext(p, "intent-quick-start-v2-f6a7");
+  assert.equal(successor?.stage, "propose-contracts");
+});
+
 test("engine: an unknown intent id is rejected", () => {
   const p = project({ lineage: "open" });
   assert.throws(

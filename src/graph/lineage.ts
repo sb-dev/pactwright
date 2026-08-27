@@ -29,6 +29,8 @@ export interface Lineage {
   readonly brief?: GraphNode;
   readonly evidence?: GraphNode;
   readonly state: DeliveryState;
+  /** The intent itself is superseded: the lineage is frozen (§15). */
+  readonly superseded: boolean;
 }
 
 export interface LineageResult {
@@ -172,6 +174,7 @@ function derive(
   const fail = (node: GraphNode, code: string, message: string): void => {
     problems.push({ code, message, path: node.path });
   };
+  const superseded = !graph.isCurrent(intent.id);
 
   const decisions = graph
     .sourcesOf(intent.id, "resolves", "decision")
@@ -185,7 +188,7 @@ function derive(
     return { problems };
   }
   const decision = decisions[0];
-  if (decision === undefined) return { lineage: { intent, state: "open" }, problems };
+  if (decision === undefined) return { lineage: { intent, state: "open", superseded }, problems };
 
   // An invalid decision was already reported by validateNode; do not judge its lineage.
   const fields = decisionFields(decision);
@@ -203,7 +206,12 @@ function derive(
       return { problems };
     }
     return {
-      lineage: { intent, decision, state: outcome === "defer" ? "deferred" : "rejected" },
+      lineage: {
+        intent,
+        decision,
+        state: outcome === "defer" ? "deferred" : "rejected",
+        superseded,
+      },
       problems,
     };
   }
@@ -235,7 +243,7 @@ function derive(
     .filter((brief) => graph.isCurrent(brief.id));
   const brief = briefs[0];
   if (brief === undefined) {
-    return { lineage: { intent, decision, contract, state: "contracted" }, problems };
+    return { lineage: { intent, decision, contract, state: "contracted", superseded }, problems };
   }
 
   // >1 current evidence was already reported by the global cardinality pass.
@@ -245,9 +253,15 @@ function derive(
     .filter((evidence) => graph.isCurrent(evidence.id));
   const evidence = evidences[0];
   if (evidence === undefined) {
-    return { lineage: { intent, decision, contract, brief, state: "delivering" }, problems };
+    return {
+      lineage: { intent, decision, contract, brief, state: "delivering", superseded },
+      problems,
+    };
   }
-  return { lineage: { intent, decision, contract, brief, evidence, state: "done" }, problems };
+  return {
+    lineage: { intent, decision, contract, brief, evidence, state: "done", superseded },
+    problems,
+  };
 }
 
 /**
