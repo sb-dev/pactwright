@@ -1,5 +1,12 @@
 import { createHash } from "node:crypto";
-import { mkdirSync, mkdtempSync, readdirSync, readFileSync, writeFileSync } from "node:fs";
+import {
+  mkdirSync,
+  mkdtempSync,
+  readdirSync,
+  readFileSync,
+  readlinkSync,
+  writeFileSync,
+} from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join, relative, sep } from "node:path";
 import type { Edge } from "../graph/edges.js";
@@ -112,10 +119,24 @@ function walk(dir: string, base: string, into: Map<string, string>): void {
     a.name < b.name ? -1 : a.name > b.name ? 1 : 0,
   )) {
     const absolute = join(dir, entry.name);
-    if (entry.isDirectory()) walk(absolute, base, into);
-    else if (entry.isFile()) {
-      const key = relative(base, absolute).split(sep).join("/");
+    const key = relative(base, absolute).split(sep).join("/");
+    // Symlinks first, and never followed: a link is recorded by its target
+    // path, so creating, deleting or retargeting one is a visible change,
+    // while the tree behind a directory link stays outside the snapshot.
+    if (entry.isSymbolicLink()) {
+      into.set(
+        key,
+        createHash("sha256")
+          .update(`symlink:${readlinkSync(absolute)}`)
+          .digest("hex"),
+      );
+    } else if (entry.isDirectory()) {
+      walk(absolute, base, into);
+    } else if (entry.isFile()) {
       into.set(key, createHash("sha256").update(readFileSync(absolute)).digest("hex"));
+    } else {
+      // FIFOs, sockets, devices: content is meaningless, presence is not.
+      into.set(key, createHash("sha256").update("special").digest("hex"));
     }
   }
 }

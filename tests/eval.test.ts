@@ -1,12 +1,14 @@
 import { after, test } from "node:test";
 import assert from "node:assert/strict";
-import { existsSync, rmSync } from "node:fs";
+import { existsSync, mkdtempSync, rmSync, symlinkSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
 import * as path from "node:path";
 import { parseConfig, type PactwrightConfig } from "../src/config/config.js";
 import { CORE_CAPABILITIES } from "../src/pack/capabilities.js";
 import { resolvePack, type ResolvedPack } from "../src/pack/resolve.js";
 import { CORE_DELIVERY_SUITE } from "../src/eval/core-suite.js";
 import { evalPassed, runEval, type EvalReport } from "../src/eval/runner.js";
+import { diffSnapshots, snapshotFiles } from "../src/eval/sandbox.js";
 import type { EvalCase } from "../src/eval/case.js";
 import { runtimeVersion } from "../src/version.js";
 import { loadProject } from "../src/loader.js";
@@ -209,6 +211,27 @@ test("runEval: a failing candidate is reported as a case error, not a crash", as
   assert.equal(evalPassed(report), false);
   assert.match(report.cases[0]!.error!, /candidate failed: candidate exploded/);
   assert.deepEqual(report.cases[0]!.deterministic, []);
+});
+
+test("sandbox: snapshots record symlinks without following them", () => {
+  const outside = mkdtempSync(path.join(tmpdir(), "pactwright-eval-outside-"));
+  const root = mkdtempSync(path.join(tmpdir(), "pactwright-eval-root-"));
+  dirs.push(outside, root);
+  writeFileSync(path.join(outside, "secret.txt"), "outside\n");
+  writeFileSync(path.join(root, "plain.txt"), "inside\n");
+  symlinkSync(outside, path.join(root, "dir-link"));
+  symlinkSync(path.join(outside, "secret.txt"), path.join(root, "file-link"));
+
+  const before = snapshotFiles(root);
+  assert.deepEqual([...before.keys()].sort(), ["dir-link", "file-link", "plain.txt"]);
+  // Nothing behind the directory link is walked, and a link's hash differs
+  // from a plain file with the target's content.
+  assert.ok(!before.has("dir-link/secret.txt"));
+
+  // Retargeting a link is a visible change.
+  rmSync(path.join(root, "file-link"));
+  symlinkSync(path.join(outside, "other.txt"), path.join(root, "file-link"));
+  assert.deepEqual(diffSnapshots(before, snapshotFiles(root)), ["file-link"]);
 });
 
 test("runEval: a setup failure yields a case error, not a thrown run", async () => {
