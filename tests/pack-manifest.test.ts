@@ -67,6 +67,21 @@ const valid = {
   agents: { spec: { prompt: "agents/spec.md", skills: ["a"] } },
 };
 
+test("pack manifest: pack.name accepts scoped npm names and rejects invalid ones", () => {
+  for (const name of ["@pactwright/standard", "plain-name", "a.b_c-d"]) {
+    const result = parsePackManifest({ ...valid, name }, "pack.yml");
+    assert.deepEqual(result.problems, [], `expected "${name}" to be a valid pack name`);
+  }
+  for (const name of ["../evil", "UPPER", "@bad/", "@/x", 'has"quote', "a".repeat(215)]) {
+    const result = parsePackManifest({ ...valid, name }, "pack.yml");
+    assert.deepEqual(
+      result.problems.map((p) => p.code),
+      ["invalid-value"],
+      `expected "${name}" to be rejected`,
+    );
+  }
+});
+
 test("pack manifest: structural problems are all reported in one pass", () => {
   const result = parsePackManifest(
     {

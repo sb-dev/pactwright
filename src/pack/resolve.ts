@@ -1,5 +1,6 @@
 import { createHash } from "node:crypto";
 import { renameSync, writeFileSync } from "node:fs";
+import { dump } from "js-yaml";
 import { createRequire } from "node:module";
 import { dirname, isAbsolute, join, resolve } from "node:path";
 import { tempSibling } from "../atomic.js";
@@ -223,21 +224,30 @@ export function lockEntriesFor(pack: ResolvedPack, runtime: string = runtimeVers
   };
 }
 
-function yamlMap(entries: Readonly<Record<string, string>>, indent: string): string {
-  const keys = Object.keys(entries).sort();
-  if (keys.length === 0) return "{}\n";
-  return `\n${keys.map((key) => `${indent}${key}: ${entries[key]}\n`).join("")}`;
+function sortedMap(entries: Readonly<Record<string, string>>): Record<string, string> {
+  return Object.fromEntries(
+    Object.keys(entries)
+      .sort()
+      .map((key) => [key, entries[key]!]),
+  );
 }
 
 /** Serialises a lock file deterministically in the `.pactwright/lock.yml` shape. */
 export function serialiseLock(lock: LockFile): string {
-  return [
-    `runtime:\n  version: ${lock.runtime.version}\n`,
-    `agent_pack:\n  name: "${lock.agentPack.name}"\n  version: ${lock.agentPack.version}\n  hash: ${lock.agentPack.hash}\n`,
-    `agents:${yamlMap(lock.agents, "  ")}`,
-    `skills:${yamlMap(lock.skills, "  ")}`,
-    "extensions: {}\n",
-  ].join("\n");
+  return dump(
+    {
+      runtime: { version: lock.runtime.version },
+      agent_pack: {
+        name: lock.agentPack.name,
+        version: lock.agentPack.version,
+        hash: lock.agentPack.hash,
+      },
+      agents: sortedMap(lock.agents),
+      skills: sortedMap(lock.skills),
+      extensions: {},
+    },
+    { lineWidth: -1, noRefs: true },
+  );
 }
 
 /** Writes the lock file atomically (temporary sibling + rename). */

@@ -169,6 +169,7 @@ test("lock: a complete pack resolves and writes a lock that round-trips, byte-id
   assert.notEqual(written, before);
   assert.equal(written, serialiseLock(lock));
   assert.deepEqual(parseLock(loadYaml(written), "lock.yml").problems, []);
+  assert.deepEqual(parseLock(loadYaml(written), "lock.yml").value, lock);
   const reloaded = loadProject({ root }).lock;
   assert.deepEqual(reloaded, lockEntriesFor(pack));
   assert.equal(reloaded.runtime.version, runtimeVersion());
@@ -178,6 +179,20 @@ test("lock: a complete pack resolves and writes a lock that round-trips, byte-id
   resolveAndLock(root);
   assert.equal(lockBytes(root), written);
   noTemps(root);
+});
+
+test("lock: empty agent and skill maps serialise to YAML the loader can parse back", () => {
+  const hash = `sha256:${"0".repeat(64)}`;
+  const lock = {
+    runtime: { version: "0.0.0" },
+    agentPack: { name: "@pactwright/standard", version: "0.0.0", hash },
+    agents: {},
+    skills: {},
+    extensions: {},
+  };
+  const parsed = parseLock(loadYaml(serialiseLock(lock)), "lock.yml");
+  assert.deepEqual(parsed.problems, []);
+  assert.deepEqual(parsed.value, lock);
 });
 
 test("lock: the real @pactwright/standard pack locks from a plain project", () => {

@@ -37,6 +37,8 @@ export interface PackManifest {
 const VERSION_PATTERN = /^\d+\.\d+\.\d+$/;
 const COMPAT_PATTERN = /^\^?\d+\.\d+\.\d+$/;
 const NAME_PATTERN = /^[a-z0-9][a-z0-9._-]*$/;
+// npm package name, optionally scoped; capped at npm's 214-character limit.
+const PACK_NAME_PATTERN = /^(@[a-z0-9][a-z0-9._-]*\/)?[a-z0-9][a-z0-9._-]*$/;
 
 function expectRelativeFile(c: Checker, value: unknown, label: string): string | undefined {
   const text = expectString(c, value, label);
@@ -85,6 +87,12 @@ export function parsePackManifest(raw: unknown, path: string): ParseResult<PackM
   rejectUnknownKeys(c, root, "pack", ["name", "version", "pactwright", "capabilities", "agents"]);
 
   const name = expectString(c, root["name"], "pack.name");
+  if (name !== undefined && (name.length > 214 || !PACK_NAME_PATTERN.test(name))) {
+    c.fail(
+      "invalid-value",
+      `pack.name must be a lowercase npm package name (optionally scoped), found "${name}"`,
+    );
+  }
   const version = expectString(c, root["version"], "pack.version");
   if (version !== undefined && !VERSION_PATTERN.test(version)) {
     c.fail("invalid-value", `pack.version must be x.y.z, found "${version}"`);
