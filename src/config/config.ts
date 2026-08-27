@@ -10,6 +10,15 @@ import {
   requireKeys,
 } from "../validation.js";
 import { readYamlFile } from "../yaml.js";
+import { EXTENSION_ID_PATTERN } from "./lock.js";
+
+/** One configured extension: desired state only (Distribution §4). */
+export interface ConfigExtension {
+  /** A disabled extension keeps its graph types registered but contributes no behaviour. */
+  readonly enabled: boolean;
+  /** Package name or project-relative path the extension resolves from. */
+  readonly source: string;
+}
 
 /** `.pactwright/config.yml` — desired installation state (Distribution §3). */
 export interface PactwrightConfig {
@@ -21,8 +30,8 @@ export interface PactwrightConfig {
   readonly adapter: {
     readonly type: "claude-code";
   };
-  /** Always empty in this checkpoint: optional extensions are not implemented. */
-  readonly extensions: Readonly<Record<string, never>>;
+  /** Extension id → desired extension state (Distribution §4). */
+  readonly extensions: Readonly<Record<string, ConfigExtension>>;
   readonly github: {
     readonly enabled: boolean;
   };
@@ -69,13 +78,32 @@ export function parseConfig(raw: unknown, path: string): ParseResult<PactwrightC
     adapterType = expectEnum(c, adapter["type"], "config.adapter.type", ADAPTER_TYPES);
   }
 
+  const extensions: Record<string, ConfigExtension> = Object.create(null) as Record<
+    string,
+    ConfigExtension
+  >;
   if (root["extensions"] !== undefined) {
-    const extensions = expectRecord(c, root["extensions"], "config.extensions");
-    if (extensions !== undefined && Object.keys(extensions).length > 0) {
-      c.fail(
-        "extensions-not-supported",
-        `config.extensions must be empty: optional extensions are not supported by this runtime (found: ${Object.keys(extensions).join(", ")})`,
-      );
+    const raw = expectRecord(c, root["extensions"], "config.extensions");
+    if (raw !== undefined) {
+      for (const id of Object.keys(raw).sort()) {
+        if (!EXTENSION_ID_PATTERN.test(id)) {
+          c.fail(
+            "invalid-extension-id",
+            `config.extensions key "${id}" is not a valid extension id`,
+          );
+          continue;
+        }
+        const label = `config.extensions.${id}`;
+        const entry = expectRecord(c, raw[id], label);
+        if (entry === undefined) continue;
+        requireKeys(c, entry, label, ["enabled", "source"]);
+        rejectUnknownKeys(c, entry, label, ["enabled", "source"]);
+        const extensionEnabled = expectBoolean(c, entry["enabled"], `${label}.enabled`);
+        const extensionSource = expectString(c, entry["source"], `${label}.source`);
+        if (extensionEnabled !== undefined && extensionSource !== undefined) {
+          extensions[id] = { enabled: extensionEnabled, source: extensionSource };
+        }
+      }
     }
   }
 
@@ -95,7 +123,10 @@ export function parseConfig(raw: unknown, path: string): ParseResult<PactwrightC
       version: 1,
       agentPack: packVersion === undefined ? { source } : { source, version: packVersion },
       adapter: { type: adapterType },
-      extensions: {},
+      // Copied to a plain object; callers guard dynamic id lookups with
+      // `Object.hasOwn` so an id like "constructor" cannot resolve to an
+      // Object.prototype member.
+      extensions: { ...extensions },
       github: { enabled },
     },
     problems: [],
@@ -106,4 +137,40 @@ export function loadConfig(path: string): ParseResult<PactwrightConfig> {
   const read = readYamlFile(path);
   if (read.problems.length > 0) return { value: undefined, problems: read.problems };
   return parseConfig(read.value, path);
+}
+
+/**
+ * Serialises a configuration in the canonical `.pactwright/config.yml`
+ * shape — the exact bytes `pactwright init` writes for the default state.
+ * Commands that rewrite the configuration (extension add/remove) use this,
+ * so a rewritten file is always canonically formatted.
+ */
+export function serialiseConfig(config: PactwrightConfig): string {
+  const lines: string[] = [
+    "version: 1",
+    "",
+    "agent_pack:",
+    `  source: "${config.agentPack.source}"`,
+  ];
+  if (config.agentPack.version !== undefined) {
+    lines.push(`  version: "${config.agentPack.version}"`);
+  }
+  lines.push("", "adapter:", `  type: ${config.adapter.type}`, "");
+  const ids = Object.keys(config.extensions).sort();
+  if (ids.length === 0) {
+    lines.push("extensions: {}");
+  } else {
+    lines.push("extensions:");
+    ids.forEach((id, index) => {
+      const extension = config.extensions[id]!;
+      if (index > 0) lines.push("");
+      lines.push(
+        `  ${id}:`,
+        `    enabled: ${extension.enabled}`,
+        `    source: "${extension.source}"`,
+      );
+    });
+  }
+  lines.push("", "github:", `  enabled: ${config.github.enabled}`, "");
+  return lines.join("\n");
 }

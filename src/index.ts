@@ -4,6 +4,8 @@ export {
   CONFIG_VERSION,
   loadConfig,
   parseConfig,
+  serialiseConfig,
+  type ConfigExtension,
   type PactwrightConfig,
   type ParseResult,
 } from "./config/config.js";
@@ -207,6 +209,29 @@ export {
   type RecordResult,
   type RecordingStage,
 } from "./lifecycle/record.js";
+export {
+  EXTENSION_MANIFEST_FILE,
+  loadExtensionManifest,
+  parseExtensionManifest,
+  type ExtensionManifest,
+} from "./extension/manifest.js";
+export {
+  RESERVED_NAMESPACES,
+  composedRegistries,
+  enabledManifests,
+  extensionLockEntries,
+  extensionSchemas,
+  resolveExtensions,
+  type ResolveExtensionsOptions,
+  type ResolvedExtension,
+} from "./extension/resolve.js";
+export {
+  addExtension,
+  removeExtension,
+  upgradeExtension,
+  type ExtensionChange,
+  type ExtensionChangeReport,
+} from "./extension/manage.js";
 export {
   MANAGED_DIRS,
   renderClaudeCodeAdapter,

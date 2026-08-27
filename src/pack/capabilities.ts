@@ -21,12 +21,19 @@ export const CAPABILITY_PATTERN = /^[a-z][a-z0-9]*(-[a-z0-9]+)*$/;
 /**
  * The capability set the selected pack must satisfy: the core set plus the
  * `agent_capabilities` of every enabled extension (Distribution §5, §7).
- * Extensions are not implemented in this checkpoint, so the union is the
- * core set; the parameter is the seam later extension loading plugs into.
+ * Callers pass the manifests of the enabled extensions; only capabilities
+ * required by enabled extensions are mandatory.
  */
-export function requiredCapabilities(config: PactwrightConfig): readonly string[] {
-  void config.extensions; // always empty in this checkpoint; extension manifests arrive in Step 15
-  return [...CORE_CAPABILITIES].sort();
+export function requiredCapabilities(
+  config: PactwrightConfig,
+  extensions: ReadonlyArray<{ readonly agentCapabilities: readonly string[] }> = [],
+): readonly string[] {
+  void config;
+  const union = new Set<string>(CORE_CAPABILITIES);
+  for (const manifest of extensions) {
+    for (const capability of manifest.agentCapabilities) union.add(capability);
+  }
+  return [...union].sort();
 }
 
 /** Required capabilities the manifest does not map to an agent, sorted. */

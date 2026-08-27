@@ -17,6 +17,7 @@ This repository is a pnpm workspace with two published packages:
 - **Claude Code adapter** — renders one agent file per pack agent and one command per lifecycle stage into `.claude/`, deterministically from the locked pack.
 - **Evaluation runner** — `pactwright eval`: runs an agent pack against scripted delivery cases in throw-away sandboxes; failures are data in the report, and the exit code gates on deterministic assertions only.
 - **Pack resolution and locking** — resolves the configured agent pack, checks capabilities and version compatibility, and pins exact content hashes in `.pactwright/lock.yml`.
+- **Extension model** — `pactwright extension add|remove|upgrade`: package-backed extensions with versioned manifests, dependency resolution, capability-union validation, command namespaces and extension-owned graph types. Removal is blocked while enabled dependants exist and always preserves canonical extension data.
 
 ## How to contribute
 

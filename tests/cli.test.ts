@@ -402,6 +402,54 @@ test("cli: init rejects unexpected arguments", () => {
   assert.equal(run("init", "--nope").status, 1);
 });
 
+// ---- extension --------------------------------------------------------------
+
+test("cli: help lists the extension commands", () => {
+  const result = run("--help");
+  assert.match(result.stdout, /extension add <id\|package>/);
+  assert.match(result.stdout, /extension remove <id>/);
+  assert.match(result.stdout, /extension upgrade <id>/);
+});
+
+test("cli: extension add enables dependencies, remove is blocked then succeeds", () => {
+  const root = project({
+    extensions: [
+      { id: "fixture-base", configure: false },
+      { id: "fixture-reporting", configure: false },
+    ],
+  });
+  const added = runIn(root, "extension", "add", "fixture-reporting");
+  assert.equal(added.status, 0, added.stdout + added.stderr);
+  assert.match(added.stdout, /added fixture-base 0\.1\.0/);
+  assert.match(added.stdout, /added fixture-reporting 0\.2\.0/);
+  assert.match(added.stdout, /github profile "fixture-base" requires provisioning/);
+
+  const valid = runIn(root, "validate");
+  assert.equal(valid.status, 0, valid.stdout);
+
+  const blocked = runIn(root, "extension", "remove", "fixture-base");
+  assert.equal(blocked.status, 1);
+  assert.match(blocked.stdout, /extension-required-by/);
+
+  const first = runIn(root, "extension", "remove", "fixture-reporting");
+  assert.equal(first.status, 0, first.stdout);
+  const second = runIn(root, "extension", "remove", "fixture-base", "--json");
+  assert.equal(second.status, 0, second.stdout);
+  const report = JSON.parse(second.stdout) as { ok: boolean; changes: Array<{ action: string }> };
+  assert.equal(report.ok, true);
+  assert.equal(report.changes[0]?.action, "removed");
+});
+
+test("cli: extension argument errors", () => {
+  const root = project();
+  assert.equal(runIn(root, "extension", "dance", "x").status, 1);
+  assert.equal(runIn(root, "extension", "add").status, 1);
+  assert.equal(runIn(root, "extension", "add", "a", "b").status, 1);
+  const outside = runIn(fixture("not-a-project/sub"), "extension", "add", "fixture-base");
+  assert.equal(outside.status, 1);
+  assert.match(outside.stdout, /project-not-found/);
+});
+
 // ---- eval -------------------------------------------------------------------
 
 test("cli: help lists eval", () => {

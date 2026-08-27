@@ -1,0 +1,19 @@
+id: fixture-reporting
+package: "@pactwright/fixture-reporting"
+version: 0.2.0
+pactwright: 0.0.0
+
+dependencies:
+  extensions:
+    - fixture-base
+
+graph:
+  node_types:
+    - report
+
+runtime:
+  namespaces:
+    - reporting
+
+github:
+  profile: fixture-reporting

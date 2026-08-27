@@ -1,0 +1,10 @@
+id: fixture-analysis
+package: "@pactwright/fixture-analysis"
+version: 0.1.0
+pactwright: 0.0.0
+
+runtime:
+  namespace: analysis
+
+agent_capabilities:
+  - operations-analysis

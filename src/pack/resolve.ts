@@ -1,8 +1,6 @@
-import { createHash } from "node:crypto";
 import { renameSync, writeFileSync } from "node:fs";
 import { dump } from "js-yaml";
-import { createRequire } from "node:module";
-import { dirname, isAbsolute, join, resolve } from "node:path";
+import { join } from "node:path";
 import { tempSibling } from "../atomic.js";
 import type { PactwrightConfig } from "../config/config.js";
 import type { LockFile } from "../config/lock.js";
@@ -10,7 +8,15 @@ import { PactwrightError, type Problem } from "../errors.js";
 import { canonicalJson } from "../graph/revision.js";
 import { loadProject, type Project } from "../loader.js";
 import { runtimeVersion } from "../version.js";
+import {
+  enabledManifests,
+  extensionLockEntries,
+  resolveExtensions,
+  type ResolvedExtension,
+} from "../extension/resolve.js";
+import type { ExtensionManifest } from "../extension/manifest.js";
 import { missingCapabilities, requiredCapabilities } from "./capabilities.js";
+import { isPathSource, isValidRange, locatePackage, satisfiesRange, sha256 } from "./locate.js";
 import { loadPackManifest, readPackFile, skillPath, type PackManifest } from "./manifest.js";
 
 /** A pack resolved from a project's configuration, with every hash the lock records. */
@@ -36,76 +42,11 @@ export interface ResolvePackOptions {
   readonly runtimeVersion?: string;
 }
 
-export function sha256(text: string): string {
-  return `sha256:${createHash("sha256").update(text, "utf8").digest("hex")}`;
-}
+export { isValidRange, satisfiesRange, sha256 };
 
-function parseVersion(text: string): readonly [number, number, number] | undefined {
-  const match = /^(\d+)\.(\d+)\.(\d+)$/.exec(text);
-  if (match === null) return undefined;
-  return [Number(match[1]), Number(match[2]), Number(match[3])];
-}
-
-/**
- * Whether `version` satisfies `range`: an exact version, or a `^x.y.z`
- * caret range with npm semantics (`^0.0.z` is exact, `^0.y.z` fixes the
- * minor, `^x.y.z` fixes the major). During the `0.0.x` series packs declare
- * the exact runtime version, so caret only matters from `0.1.0` onward.
- */
-/** Whether `range` is a shape `satisfiesRange` understands: `x.y.z` or `^x.y.z`. */
-export function isValidRange(range: string): boolean {
-  return parseVersion(range.startsWith("^") ? range.slice(1) : range) !== undefined;
-}
-
-export function satisfiesRange(version: string, range: string): boolean {
-  const caret = range.startsWith("^");
-  const want = parseVersion(caret ? range.slice(1) : range);
-  const have = parseVersion(version);
-  if (want === undefined || have === undefined) return false;
-  if (!caret) return have.every((part, i) => part === want[i]);
-  const cmp = (i: number): number => have[i]! - want[i]!;
-  const notBelow = cmp(0) !== 0 ? cmp(0) > 0 : cmp(1) !== 0 ? cmp(1) > 0 : cmp(2) >= 0;
-  if (!notBelow) return false;
-  if (want[0] !== 0) return have[0] === want[0];
-  if (want[1] !== 0) return have[0] === 0 && have[1] === want[1];
-  return have[0] === 0 && have[1] === 0 && have[2] === want[2];
-}
-
-function isPathSource(source: string): boolean {
-  return source.startsWith("./") || source.startsWith("../") || isAbsolute(source);
-}
-
-/**
- * Where the configured pack lives. A path source resolves from the project
- * root. A package source resolves like a dependency of the project first
- * (`<root>/node_modules`), then like a dependency of the runtime — which is
- * how `@pactwright/standard`, a dependency of `pactwright`, is always found
- * after one `pnpm add -D pactwright`.
- */
+/** Where the configured pack lives; see `locatePackage`. */
 export function locatePack(root: string, source: string): string | Problem {
-  if (isPathSource(source)) return resolve(root, source);
-  const candidates = [join(root, "package.json"), import.meta.url];
-  let unexported = false;
-  for (const from of candidates) {
-    try {
-      return dirname(createRequire(from).resolve(`${source}/package.json`));
-    } catch (error) {
-      // An installed package whose `exports` map hides package.json is a
-      // different failure from an absent one; try the next location.
-      const code = (error as NodeJS.ErrnoException).code;
-      if (code === "ERR_PACKAGE_PATH_NOT_EXPORTED") unexported = true;
-    }
-  }
-  if (unexported) {
-    return {
-      code: "pack-not-exported",
-      message: `agent pack "${source}" is installed but its package "exports" does not expose ./package.json, so it cannot be used as a pack`,
-    };
-  }
-  return {
-    code: "pack-not-found",
-    message: `agent pack "${source}" is not installed: it resolves neither from ${root} nor from the runtime`,
-  };
+  return locatePackage(root, source, "agent pack");
 }
 
 /**
@@ -209,13 +150,17 @@ type CompleteResolution =
 
 /**
  * The one resolution pipeline behind every desired-state surface: resolve
- * the configured pack, then check it provides every required capability.
+ * the configured pack, then check it provides every required capability —
+ * the core set plus the capabilities of the given enabled extensions.
  */
-function resolveComplete(options: ResolvePackOptions): CompleteResolution {
+function resolveComplete(
+  options: ResolvePackOptions,
+  extensions: readonly ExtensionManifest[] = [],
+): CompleteResolution {
   const resolved = resolvePack(options);
   if (resolved.value === undefined) return { kind: "unresolved", problems: resolved.problems };
   const pack = resolved.value;
-  const required = requiredCapabilities(options.config);
+  const required = requiredCapabilities(options.config, extensions);
   const missing = missingCapabilities(pack.manifest, required);
   if (missing.length === 0) return { kind: "ok", pack };
   return {
@@ -238,7 +183,10 @@ function resolveComplete(options: ResolvePackOptions): CompleteResolution {
  * by this function; callers run it before their first write.
  */
 export function assertPackComplete(project: Project): ResolvedPack {
-  const resolution = resolveComplete({ root: project.paths.root, config: project.config });
+  const resolution = resolveComplete(
+    { root: project.paths.root, config: project.config },
+    enabledManifests(project.extensions),
+  );
   if (resolution.kind === "unresolved") {
     throw PactwrightError.fromProblems("pack-unresolved", resolution.problems);
   }
@@ -253,16 +201,18 @@ export function assertPackComplete(project: Project): ResolvedPack {
   return resolution.pack;
 }
 
-/** Desired installation state resolved to exact state: the pack and the lock recording it. */
+/** Desired installation state resolved to exact state: pack, extensions and the lock recording them. */
 export interface DesiredState {
   readonly pack: ResolvedPack;
+  readonly extensions: readonly ResolvedExtension[];
   readonly lock: LockFile;
 }
 
 /**
  * Resolves desired state (configuration) to exact state (a lock value):
- * resolve the configured pack, check required capabilities, record runtime
- * version and pack/agent/skill hashes (Distribution §§3, 6). Pure — nothing
+ * resolve every configured extension, resolve the configured pack, check
+ * the required capability union, record runtime version and
+ * pack/agent/skill/extension hashes (Distribution §§3–6). Pure — nothing
  * is written — and deterministic: the same desired state always resolves to
  * the same lock. Never throws; mirrors `resolvePack`'s result idiom.
  */
@@ -270,10 +220,16 @@ export function resolveDesiredState(options: ResolvePackOptions): {
   value: DesiredState | undefined;
   problems: readonly Problem[];
 } {
-  const resolution = resolveComplete(options);
+  const extensions = resolveExtensions(options);
+  if (extensions.value === undefined) return { value: undefined, problems: extensions.problems };
+  const resolution = resolveComplete(options, enabledManifests(extensions.value));
   if (resolution.kind !== "ok") return { value: undefined, problems: resolution.problems };
-  const lock = lockEntriesFor(resolution.pack, options.runtimeVersion ?? runtimeVersion());
-  return { value: { pack: resolution.pack, lock }, problems: [] };
+  const lock = lockEntriesFor(
+    resolution.pack,
+    options.runtimeVersion ?? runtimeVersion(),
+    extensionLockEntries(extensions.value),
+  );
+  return { value: { pack: resolution.pack, extensions: extensions.value, lock }, problems: [] };
 }
 
 /** The agent key and definition implementing `capability`, if the pack maps it. */
@@ -373,7 +329,7 @@ export function writeLock(lockPath: string, lock: LockFile): void {
 export function resolveAndLock(root: string): { pack: ResolvedPack; lock: LockFile } {
   const project = loadProject({ root });
   const pack = assertPackComplete(project);
-  const lock = lockEntriesFor(pack);
+  const lock = lockEntriesFor(pack, runtimeVersion(), extensionLockEntries(project.extensions));
   writeLock(project.paths.lock, lock);
   return { pack, lock };
 }

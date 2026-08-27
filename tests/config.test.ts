@@ -1,6 +1,7 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { parseConfig, loadConfig } from "../src/config/config.js";
+import { load as loadYaml } from "js-yaml";
+import { parseConfig, loadConfig, serialiseConfig } from "../src/config/config.js";
 import { fixture } from "./helpers.js";
 import * as path from "node:path";
 
@@ -61,15 +62,62 @@ test("config: reports every problem in one pass", () => {
   for (const problem of result.problems) assert.equal(problem.path, "config.yml");
 });
 
-test("config: non-empty extensions are rejected in this runtime", () => {
+test("config: parses the Distribution §4 extensions block", () => {
   const result = parseConfig(
-    { ...valid, extensions: { "project-intelligence": {} } },
+    {
+      ...valid,
+      extensions: {
+        "project-intelligence": { enabled: true, source: "@pactwright/project-intelligence" },
+        operations: { enabled: false, source: "@pactwright/operations" },
+      },
+    },
     "config.yml",
   );
-  assert.deepEqual(
-    result.problems.map((p) => p.code),
-    ["extensions-not-supported"],
+  assert.deepEqual(result.problems, []);
+  assert.deepEqual(result.value?.extensions, {
+    operations: { enabled: false, source: "@pactwright/operations" },
+    "project-intelligence": { enabled: true, source: "@pactwright/project-intelligence" },
+  });
+});
+
+test("config: extension entries are validated", () => {
+  const result = parseConfig(
+    {
+      ...valid,
+      extensions: {
+        "project-intelligence": {},
+        Bad_Id: { enabled: true, source: "x" },
+        operations: { enabled: "yes", source: "@pactwright/operations", extra: 1 },
+      },
+    },
+    "config.yml",
   );
+  assert.deepEqual(result.problems.map((p) => p.code).sort(), [
+    "invalid-extension-id",
+    "invalid-type",
+    "missing-field",
+    "missing-field",
+    "unknown-field",
+  ]);
+});
+
+test("config: serialiseConfig round-trips and orders extensions deterministically", () => {
+  const parsed = parseConfig(
+    {
+      ...valid,
+      extensions: {
+        "review-creative": { enabled: true, source: "@pactwright/review-creative" },
+        "project-intelligence": { enabled: true, source: "@pactwright/project-intelligence" },
+      },
+    },
+    "config.yml",
+  ).value!;
+  const text = serialiseConfig(parsed);
+  const reparsed = parseConfig(loadYaml(text), "config.yml");
+  assert.deepEqual(reparsed.problems, []);
+  assert.deepEqual(reparsed.value, parsed);
+  assert.ok(text.indexOf("project-intelligence:") < text.indexOf("review-creative:"));
+  assert.equal(serialiseConfig(reparsed.value!), text);
 });
 
 test("config: non-mapping document is rejected", () => {
