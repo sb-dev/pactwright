@@ -234,6 +234,8 @@ export async function runEval(options: EvalOptions): Promise<EvalReport> {
  * dimensions never enter it, and no aggregate is calculated anywhere.
  */
 export function evalPassed(report: EvalReport): boolean {
+  // An empty run proves nothing; the gate must not pass vacuously.
+  if (report.cases.length === 0) return false;
   return report.cases.every(
     (entry) => entry.error === undefined && entry.deterministic.every((a) => a.passed),
   );

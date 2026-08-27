@@ -213,6 +213,12 @@ test("runEval: a failing candidate is reported as a case error, not a crash", as
   assert.deepEqual(report.cases[0]!.deterministic, []);
 });
 
+test("runEval: an empty suite never passes the gate", async () => {
+  const report = await runEval({ pack: standardPack, suite: { name: "empty", cases: [] } });
+  assert.deepEqual(report.cases, []);
+  assert.equal(evalPassed(report), false);
+});
+
 test("sandbox: snapshots record symlinks without following them", () => {
   const outside = mkdtempSync(path.join(tmpdir(), "pactwright-eval-outside-"));
   const root = mkdtempSync(path.join(tmpdir(), "pactwright-eval-root-"));

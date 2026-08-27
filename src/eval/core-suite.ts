@@ -422,7 +422,12 @@ const reviewDefectDetection: EvalCase = {
       check: (observation) => {
         const output = observation.output;
         const findings = Array.isArray(output) ? output.filter(isFinding) : [];
-        return findings.some((finding) => finding.location.includes(GREETING_FILE))
+        // Exact path or path:line — a location merely containing the path
+        // as a substring must not pass.
+        return findings.some(
+          (finding) =>
+            finding.location === GREETING_FILE || finding.location.startsWith(`${GREETING_FILE}:`),
+        )
           ? verdict(true, `the planted defect in ${GREETING_FILE} was flagged`)
           : verdict(false, `no finding locates the planted defect in ${GREETING_FILE}`);
       },
