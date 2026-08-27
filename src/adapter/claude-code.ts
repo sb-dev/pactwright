@@ -1,7 +1,8 @@
 import { existsSync, mkdirSync, readdirSync, renameSync, unlinkSync, writeFileSync } from "node:fs";
-import { dirname, join } from "node:path";
+import { dirname, join, relative, resolve, sep } from "node:path";
 import { dump } from "js-yaml";
 import { tempSibling } from "../atomic.js";
+import { PactwrightError } from "../errors.js";
 import { CORE_STAGES } from "../config/lifecycle.js";
 import { SKILLS_DIR, readPackFile } from "../pack/manifest.js";
 import { agentFor, type ResolvedPack } from "../pack/resolve.js";
@@ -108,37 +109,57 @@ export interface WriteAdapterResult {
  * written to a temporary sibling first and renamed into place.
  */
 export function writeAdapter(root: string, files: RenderedFiles): WriteAdapterResult {
-  for (const relative of files.keys()) {
-    if (!MANAGED_DIRS.some((dir) => relative.startsWith(`${dir}/`))) {
-      throw new Error(`refusing to write outside the managed adapter directories: ${relative}`);
+  // Normalise then check: every key must resolve strictly inside a managed
+  // directory, and its canonical form is the single key used to write,
+  // report and prune — a traversal segment or duplicate spelling cannot
+  // escape the guard or desynchronise the prune bookkeeping.
+  const canonical = new Map<string, { target: string; content: string }>();
+  for (const [key, content] of files) {
+    const target = resolve(root, key);
+    const contained = MANAGED_DIRS.some((dir) => target.startsWith(resolve(root, dir) + sep));
+    if (!contained) {
+      throw new PactwrightError(
+        "unmanaged-path",
+        `refusing to write outside the managed adapter directories: ${key}`,
+      );
     }
+    const clean = relative(root, target).split(sep).join("/");
+    if (canonical.has(clean)) {
+      throw new PactwrightError("duplicate-render-path", `render produces "${clean}" twice`);
+    }
+    canonical.set(clean, { target, content });
   }
+
   const temps: [string, string][] = [];
   try {
-    for (const [relative, content] of files) {
-      const target = join(root, relative);
+    for (const { target, content } of canonical.values()) {
       mkdirSync(dirname(target), { recursive: true });
       const temp = tempSibling(target);
       writeFileSync(temp, content, "utf8");
       temps.push([temp, target]);
     }
+    for (const entry of temps) {
+      renameSync(entry[0], entry[1]);
+      entry[0] = "";
+    }
   } catch (error) {
-    for (const [temp] of temps) if (existsSync(temp)) unlinkSync(temp);
+    for (const [temp] of temps) {
+      if (temp !== "" && existsSync(temp)) unlinkSync(temp);
+    }
     throw error;
   }
-  for (const [temp, target] of temps) renameSync(temp, target);
 
   const removed: string[] = [];
   for (const dir of MANAGED_DIRS) {
     const absolute = join(root, dir);
     if (!existsSync(absolute)) continue;
     for (const entry of readdirSync(absolute).sort()) {
-      const relative = `${dir}/${entry}`;
-      if (entry.endsWith(".md") && !files.has(relative)) {
+      const rel = `${dir}/${entry}`;
+      if (entry.endsWith(".md") && !canonical.has(rel)) {
         unlinkSync(join(absolute, entry));
-        removed.push(relative);
+        removed.push(rel);
       }
     }
   }
-  return { written: [...files.keys()], removed };
+  return { written: [...canonical.keys()].sort(), removed };
 }

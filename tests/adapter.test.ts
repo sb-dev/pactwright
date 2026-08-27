@@ -7,6 +7,7 @@ import { MANAGED_DIRS, renderClaudeCodeAdapter, writeAdapter } from "../src/adap
 import { COMMAND_TEMPLATES } from "../src/adapter/commands.js";
 import { CORE_STAGES } from "../src/config/lifecycle.js";
 import { GRAPH_MARKING_STAGES, TRANSIENT_STAGES } from "../src/lifecycle/engine.js";
+import { PactwrightError } from "../src/errors.js";
 import { resolvePack, type ResolvedPack } from "../src/pack/resolve.js";
 import { loadConfig } from "../src/config/config.js";
 import { fixture, makeTempProject, repoRoot } from "./helpers.js";
@@ -179,4 +180,67 @@ test("adapter: refuses to write outside the managed directories", () => {
     /outside the managed adapter directories/,
   );
   assert.ok(!fs.existsSync(path.join(dir, ".claude", "settings.json")));
+});
+
+test("adapter: refuses path traversal out of the managed directories", () => {
+  const dir = makeTempProject();
+  tempDirs.push(dir);
+  for (const key of [
+    ".claude/agents/../../x.md",
+    ".claude/commands/../settings.json",
+    ".claude/agents",
+    "/etc/passwd.md",
+  ]) {
+    assert.throws(
+      () => writeAdapter(dir, new Map([[key, "boom"]])),
+      (error: unknown) => error instanceof PactwrightError && error.code === "unmanaged-path",
+      `expected "${key}" to be refused`,
+    );
+  }
+  assert.ok(!fs.existsSync(path.join(dir, "x.md")));
+  assert.ok(!fs.existsSync(path.join(dir, ".claude", "settings.json")));
+});
+
+test("adapter: non-canonical keys write and prune under one canonical spelling", () => {
+  const dir = makeTempProject();
+  tempDirs.push(dir);
+  const first = writeAdapter(dir, new Map([[".claude/agents//a.md", "content\n"]]));
+  assert.deepEqual(first.written, [".claude/agents/a.md"]);
+  assert.equal(fs.readFileSync(path.join(dir, ".claude", "agents", "a.md"), "utf8"), "content\n");
+  const second = writeAdapter(dir, new Map([[".claude/agents/a.md", "content\n"]]));
+  assert.deepEqual(second.removed, []);
+  assert.throws(
+    () =>
+      writeAdapter(
+        dir,
+        new Map([
+          [".claude/agents/a.md", "one\n"],
+          [".claude/agents//a.md", "two\n"],
+        ]),
+      ),
+    (error: unknown) => error instanceof PactwrightError && error.code === "duplicate-render-path",
+  );
+});
+
+test("adapter: a failed rename cleans up remaining temps", () => {
+  const dir = makeTempProject();
+  tempDirs.push(dir);
+  // A directory occupying a target path makes renameSync throw mid-loop.
+  fs.mkdirSync(path.join(dir, ".claude", "agents", "blocked.md"), { recursive: true });
+  assert.throws(() =>
+    writeAdapter(
+      dir,
+      new Map([
+        [".claude/agents/blocked.md", "one\n"],
+        [".claude/agents/other.md", "two\n"],
+      ]),
+    ),
+  );
+  for (const managed of MANAGED_DIRS) {
+    const absolute = path.join(dir, managed);
+    if (!fs.existsSync(absolute)) continue;
+    for (const entry of fs.readdirSync(absolute)) {
+      assert.doesNotMatch(entry, /\.tmp-/);
+    }
+  }
 });
