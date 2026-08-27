@@ -13,7 +13,7 @@ import {
 import { tmpdir } from "node:os";
 import * as path from "node:path";
 import { parseConfig, type PactwrightConfig } from "../src/config/config.js";
-import { parseLock } from "../src/config/lock.js";
+import { parseLock, type LockFile } from "../src/config/lock.js";
 import { load as loadYaml } from "js-yaml";
 import { PactwrightError } from "../src/errors.js";
 import { loadProject } from "../src/loader.js";
@@ -23,6 +23,7 @@ import {
   locatePack,
   lockEntriesFor,
   resolveAndLock,
+  resolveDesiredState,
   resolvePack,
   satisfiesRange,
   serialiseLock,
@@ -272,6 +273,98 @@ for (const [name, code] of [
     noTemps(root);
   });
 }
+
+test("resolveDesiredState: resolves desired state to the exact lock without writing", () => {
+  const root = temp({ pack: "complete" });
+  const before = lockBytes(root);
+  const resolved = resolveDesiredState({ root, config: config("./pack") });
+  assert.deepEqual(resolved.problems, []);
+  assert.deepEqual(resolved.value!.lock, lockEntriesFor(resolved.value!.pack));
+  assert.equal(resolved.value!.lock.runtime.version, runtimeVersion());
+  assert.deepEqual(resolved.value!.lock.extensions, {});
+  assert.equal(lockBytes(root), before);
+});
+
+test("resolveDesiredState: an incomplete pack reports missing-capability without throwing", () => {
+  const root = temp({ pack: "incomplete" });
+  const resolved = resolveDesiredState({ root, config: config("./pack") });
+  assert.equal(resolved.value, undefined);
+  assert.ok(resolved.problems.length > 0);
+  assert.ok(resolved.problems.every((p) => p.code === "missing-capability"));
+  assert.ok(resolved.problems.some((p) => p.message.includes("delivery-review")));
+});
+
+test("resolveDesiredState: resolution problems pass through", () => {
+  const resolved = resolveDesiredState({ root: temp(), config: config("@pactwright/nope") });
+  assert.equal(resolved.value, undefined);
+  assert.deepEqual(
+    resolved.problems.map((p) => p.code),
+    ["pack-not-found"],
+  );
+});
+
+test("lock: the same desired state resolves byte-identically across independent roots", () => {
+  // The checkpoint's Step 14 verify: resolve the same fixture twice and
+  // compare lock output byte-for-byte. Two separate roots hold identical
+  // copies of the same pack, so the desired state is the same.
+  const a = resolveDesiredState({ root: temp({ pack: "complete" }), config: config("./pack") });
+  const b = resolveDesiredState({ root: temp({ pack: "complete" }), config: config("./pack") });
+  assert.deepEqual(a.problems, []);
+  assert.deepEqual(b.problems, []);
+  assert.equal(serialiseLock(a.value!.lock), serialiseLock(b.value!.lock));
+});
+
+const extensionHash = `sha256:${"5f".repeat(32)}`;
+const lockWithExtensions: LockFile = {
+  runtime: { version: "0.0.0" },
+  agentPack: { name: "@pactwright/standard", version: "0.0.0", hash: `sha256:${"0".repeat(64)}` },
+  agents: { reviewer: extensionHash, spec: extensionHash },
+  skills: { "contract-writing": extensionHash },
+  extensions: {
+    operations: {
+      package: "@pactwright/operations",
+      version: "1.0.0",
+      hash: extensionHash,
+      dependencies: { "project-intelligence": "1.1.0" },
+    },
+    "project-intelligence": {
+      package: "@pactwright/project-intelligence",
+      version: "1.1.0",
+      hash: extensionHash,
+    },
+  },
+};
+
+test("lock: a lock with extensions round-trips and re-serialises byte-identically", () => {
+  const written = serialiseLock(lockWithExtensions);
+  const parsed = parseLock(loadYaml(written), "lock.yml");
+  assert.deepEqual(parsed.problems, []);
+  assert.deepEqual(parsed.value, lockWithExtensions);
+  assert.equal(serialiseLock(parsed.value!), written);
+});
+
+test("lock: serialisation is independent of key insertion order", () => {
+  const reversed: LockFile = {
+    runtime: lockWithExtensions.runtime,
+    agentPack: lockWithExtensions.agentPack,
+    agents: { spec: extensionHash, reviewer: extensionHash },
+    skills: lockWithExtensions.skills,
+    extensions: {
+      "project-intelligence": {
+        package: "@pactwright/project-intelligence",
+        version: "1.1.0",
+        hash: extensionHash,
+      },
+      operations: {
+        hash: extensionHash,
+        dependencies: { "project-intelligence": "1.1.0" },
+        version: "1.0.0",
+        package: "@pactwright/operations",
+      },
+    },
+  };
+  assert.equal(serialiseLock(reversed), serialiseLock(lockWithExtensions));
+});
 
 test("assertPackComplete: lists every missing capability", () => {
   const root = temp({ pack: "incomplete" });

@@ -5,8 +5,7 @@ import { tempSibling } from "./atomic.js";
 import { loadConfig } from "./config/config.js";
 import type { Problem } from "./errors.js";
 import { serialiseEdges } from "./graph/mutations.js";
-import { missingCapabilities, requiredCapabilities } from "./pack/capabilities.js";
-import { lockEntriesFor, resolvePack, writeLock } from "./pack/resolve.js";
+import { resolveDesiredState, writeLock } from "./pack/resolve.js";
 import {
   CONFIG_FILE,
   EDGES_FILE,
@@ -141,8 +140,9 @@ export function initProject(root: string = process.cwd()): InitReport {
   // The lock records exact resolved state (Distribution §3), so a fresh one
   // is derived from whatever configuration is on disk — which after the step
   // above is either the template or pre-existing user content. An existing
-  // lock is trusted as-is; `resolveAndLock` cannot be reused here because it
-  // loads the full project, which requires the lock to already exist.
+  // lock is trusted as-is; `resolveDesiredState` is used rather than
+  // `resolveAndLock` because the latter loads the full project, which
+  // requires the lock to already exist.
   if (existsSync(paths.lock)) {
     entries.push({ path: LOCK_FILE, kind: "file", action: "skipped" });
   } else {
@@ -151,24 +151,12 @@ export function initProject(root: string = process.cwd()): InitReport {
       problems.push(...config.problems);
       return failed();
     }
-    const resolved = resolvePack({ root: paths.root, config: config.value });
+    const resolved = resolveDesiredState({ root: paths.root, config: config.value });
     if (resolved.value === undefined) {
       problems.push(...resolved.problems);
       return failed();
     }
-    const pack = resolved.value;
-    const missing = missingCapabilities(pack.manifest, requiredCapabilities(config.value));
-    if (missing.length > 0) {
-      problems.push(
-        ...missing.map((capability) => ({
-          code: "missing-capability",
-          message: `required capability "${capability}" is not provided by the selected agent pack`,
-          path: join(pack.dir, "pack.yml"),
-        })),
-      );
-      return failed();
-    }
-    writeLock(paths.lock, lockEntriesFor(pack));
+    writeLock(paths.lock, resolved.value.lock);
     entries.push({ path: LOCK_FILE, kind: "file", action: "created" });
   }
 

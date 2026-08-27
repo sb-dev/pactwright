@@ -24,7 +24,14 @@ export {
   type StageConfig,
   type StageName,
 } from "./config/lifecycle.js";
-export { HASH_PATTERN, loadLock, parseLock, type LockFile } from "./config/lock.js";
+export {
+  EXTENSION_ID_PATTERN,
+  HASH_PATTERN,
+  loadLock,
+  parseLock,
+  type LockExtension,
+  type LockFile,
+} from "./config/lock.js";
 export {
   CREATED_PATTERN,
   NODE_ID_PATTERN,
@@ -185,10 +192,12 @@ export {
   locatePack,
   lockEntriesFor,
   resolveAndLock,
+  resolveDesiredState,
   resolvePack,
   satisfiesRange,
   serialiseLock,
   writeLock,
+  type DesiredState,
   type ResolvePackOptions,
   type ResolvedPack,
 } from "./pack/resolve.js";

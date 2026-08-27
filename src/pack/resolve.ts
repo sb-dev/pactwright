@@ -195,6 +195,42 @@ export function resolvePack(options: ResolvePackOptions): {
   };
 }
 
+/** Resolution of a pack checked against the configuration's required capabilities. */
+type CompleteResolution =
+  | { readonly kind: "ok"; readonly pack: ResolvedPack }
+  | { readonly kind: "unresolved"; readonly problems: readonly Problem[] }
+  | {
+      readonly kind: "incomplete";
+      readonly pack: ResolvedPack;
+      readonly missing: readonly string[];
+      readonly required: readonly string[];
+      readonly problems: readonly Problem[];
+    };
+
+/**
+ * The one resolution pipeline behind every desired-state surface: resolve
+ * the configured pack, then check it provides every required capability.
+ */
+function resolveComplete(options: ResolvePackOptions): CompleteResolution {
+  const resolved = resolvePack(options);
+  if (resolved.value === undefined) return { kind: "unresolved", problems: resolved.problems };
+  const pack = resolved.value;
+  const required = requiredCapabilities(options.config);
+  const missing = missingCapabilities(pack.manifest, required);
+  if (missing.length === 0) return { kind: "ok", pack };
+  return {
+    kind: "incomplete",
+    pack,
+    missing,
+    required,
+    problems: missing.map((capability) => ({
+      code: "missing-capability",
+      message: `required capability "${capability}" is not provided by the selected agent pack`,
+      path: join(pack.dir, "pack.yml"),
+    })),
+  };
+}
+
 /**
  * The capability check that guards canonical graph mutation (Distribution
  * §7): resolves the project's pack and throws `missing-capability` — listing
@@ -202,24 +238,42 @@ export function resolvePack(options: ResolvePackOptions): {
  * by this function; callers run it before their first write.
  */
 export function assertPackComplete(project: Project): ResolvedPack {
-  const resolved = resolvePack({ root: project.paths.root, config: project.config });
-  if (resolved.value === undefined) {
-    throw PactwrightError.fromProblems("pack-unresolved", resolved.problems);
+  const resolution = resolveComplete({ root: project.paths.root, config: project.config });
+  if (resolution.kind === "unresolved") {
+    throw PactwrightError.fromProblems("pack-unresolved", resolution.problems);
   }
-  const required = requiredCapabilities(project.config);
-  const missing = missingCapabilities(resolved.value.manifest, required);
-  if (missing.length > 0) {
+  if (resolution.kind === "incomplete") {
+    const { pack, missing, required } = resolution;
     throw new PactwrightError(
       "missing-capability",
-      `agent pack "${resolved.value.manifest.name}@${resolved.value.manifest.version}" does not provide required capabilit${missing.length === 1 ? "y" : "ies"}: ${missing.join(", ")} (required: ${required.join(", ")})`,
-      missing.map((capability) => ({
-        code: "missing-capability",
-        message: `required capability "${capability}" is not provided by the selected agent pack`,
-        path: join(resolved.value!.dir, "pack.yml"),
-      })),
+      `agent pack "${pack.manifest.name}@${pack.manifest.version}" does not provide required capabilit${missing.length === 1 ? "y" : "ies"}: ${missing.join(", ")} (required: ${required.join(", ")})`,
+      resolution.problems,
     );
   }
-  return resolved.value;
+  return resolution.pack;
+}
+
+/** Desired installation state resolved to exact state: the pack and the lock recording it. */
+export interface DesiredState {
+  readonly pack: ResolvedPack;
+  readonly lock: LockFile;
+}
+
+/**
+ * Resolves desired state (configuration) to exact state (a lock value):
+ * resolve the configured pack, check required capabilities, record runtime
+ * version and pack/agent/skill hashes (Distribution §§3, 6). Pure — nothing
+ * is written — and deterministic: the same desired state always resolves to
+ * the same lock. Never throws; mirrors `resolvePack`'s result idiom.
+ */
+export function resolveDesiredState(options: ResolvePackOptions): {
+  value: DesiredState | undefined;
+  problems: readonly Problem[];
+} {
+  const resolution = resolveComplete(options);
+  if (resolution.kind !== "ok") return { value: undefined, problems: resolution.problems };
+  const lock = lockEntriesFor(resolution.pack, options.runtimeVersion ?? runtimeVersion());
+  return { value: { pack: resolution.pack, lock }, problems: [] };
 }
 
 /** The agent key and definition implementing `capability`, if the pack maps it. */
@@ -236,14 +290,22 @@ export function agentFor(
   return { key, prompt: join(pack.dir, agent.prompt), skills: agent.skills };
 }
 
-/** The lock-file value recording exactly this resolved pack and runtime. */
-export function lockEntriesFor(pack: ResolvedPack, runtime: string = runtimeVersion()): LockFile {
+/**
+ * The lock-file value recording exactly this resolved pack and runtime.
+ * `extensions` is the seam for extension resolution: nothing resolves
+ * extensions in this checkpoint, so it defaults to empty.
+ */
+export function lockEntriesFor(
+  pack: ResolvedPack,
+  runtime: string = runtimeVersion(),
+  extensions: LockFile["extensions"] = {},
+): LockFile {
   return {
     runtime: { version: runtime },
     agentPack: { name: pack.manifest.name, version: pack.manifest.version, hash: pack.hashes.pack },
     agents: pack.hashes.agents,
     skills: pack.hashes.skills,
-    extensions: {},
+    extensions,
   };
 }
 
@@ -252,6 +314,29 @@ function sortedMap(entries: Readonly<Record<string, string>>): Record<string, st
     Object.keys(entries)
       .sort()
       .map((key) => [key, entries[key]!]),
+  );
+}
+
+/** Extensions in serialisation order: sorted ids, fixed key order, sorted dependencies. */
+function serialisedExtensions(extensions: LockFile["extensions"]): Record<string, unknown> {
+  return Object.fromEntries(
+    Object.keys(extensions)
+      .sort()
+      .map((id) => {
+        const extension = extensions[id]!;
+        return [
+          id,
+          {
+            package: extension.package,
+            version: extension.version,
+            hash: extension.hash,
+            ...(extension.dependencies === undefined ||
+            Object.keys(extension.dependencies).length === 0
+              ? {}
+              : { dependencies: sortedMap(extension.dependencies) }),
+          },
+        ];
+      }),
   );
 }
 
@@ -267,7 +352,7 @@ export function serialiseLock(lock: LockFile): string {
       },
       agents: sortedMap(lock.agents),
       skills: sortedMap(lock.skills),
-      extensions: {},
+      extensions: serialisedExtensions(lock.extensions),
     },
     { lineWidth: -1, noRefs: true },
   );
