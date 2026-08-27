@@ -220,6 +220,7 @@ export function commitGraphChange(
   }
 }
 
+/** Today's date in UTC — deliberately timezone-independent, since `created` feeds the id hash. */
 function today(): string {
   return new Date().toISOString().slice(0, 10);
 }

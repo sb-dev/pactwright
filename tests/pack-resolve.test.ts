@@ -1,7 +1,16 @@
 import { after, test } from "node:test";
 import assert from "node:assert/strict";
 import { createHash } from "node:crypto";
-import { cpSync, existsSync, readdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import {
+  cpSync,
+  existsSync,
+  mkdtempSync,
+  readdirSync,
+  readFileSync,
+  rmSync,
+  writeFileSync,
+} from "node:fs";
+import { tmpdir } from "node:os";
 import * as path from "node:path";
 import { parseConfig, type PactwrightConfig } from "../src/config/config.js";
 import { parseLock } from "../src/config/lock.js";
@@ -60,7 +69,12 @@ test("resolve: satisfiesRange handles exact and caret ranges", () => {
 });
 
 test("resolve: @pactwright/standard resolves from a project with no node_modules (runtime fallback)", () => {
-  const root = temp();
+  // The root lives outside the repository, so the project-side node_modules
+  // walk-up cannot succeed and only the runtime (import.meta.url) candidate
+  // can resolve the pack — the path real consumers depend on after
+  // `pnpm add -D pactwright`.
+  const root = mkdtempSync(path.join(tmpdir(), "pactwright-fallback-"));
+  dirs.push(root);
   assert.ok(!existsSync(path.join(root, "node_modules")));
   const located = locatePack(root, "@pactwright/standard");
   assert.equal(typeof located, "string");
