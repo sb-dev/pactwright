@@ -143,7 +143,13 @@ export function diffSnapshots(before: FileSnapshot, after: FileSnapshot): readon
  * canonical state it left behind still equals the seeded state.
  */
 export function sandboxRevision(root: string): string {
-  const nodes = loadNodes(join(root, NODES_DIR));
-  const edges = loadEdges(join(root, EDGES_FILE));
-  return graphRevision({ nodes: nodes.nodes, edges: edges.edges });
+  try {
+    const nodes = loadNodes(join(root, NODES_DIR));
+    const edges = loadEdges(join(root, EDGES_FILE));
+    return graphRevision({ nodes: nodes.nodes, edges: edges.edges });
+  } catch {
+    // Never equals a real sha256: revision, so revision-comparing
+    // assertions fail instead of the case erroring out.
+    return "revision-unavailable";
+  }
 }

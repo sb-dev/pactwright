@@ -211,6 +211,64 @@ test("runEval: a failing candidate is reported as a case error, not a crash", as
   assert.deepEqual(report.cases[0]!.deterministic, []);
 });
 
+test("runEval: a setup failure yields a case error, not a thrown run", async () => {
+  const evalCase = CORE_DELIVERY_SUITE.cases[0]!;
+  const report = await runEval({
+    pack: standardPack,
+    suite: one({
+      ...evalCase,
+      setup: () => {
+        throw new Error("setup exploded");
+      },
+    }),
+  });
+  assert.equal(evalPassed(report), false);
+  assert.match(report.cases[0]!.error!, /case failed: setup exploded/);
+  assert.deepEqual(report.cases[0]!.deterministic, []);
+});
+
+test("runEval: a candidate that destroys the sandbox is a case error, not a thrown run", async () => {
+  const evalCase = CORE_DELIVERY_SUITE.cases[0]!;
+  const report = await runEval({
+    pack: standardPack,
+    suite: one(evalCase),
+    candidate: (task) => {
+      rmSync(task.root, { recursive: true, force: true });
+      return undefined;
+    },
+  });
+  assert.equal(evalPassed(report), false);
+  assert.match(report.cases[0]!.error!, /case failed:/);
+});
+
+test("runEval: a slow candidate times out and is reported as a case error", async () => {
+  const evalCase = CORE_DELIVERY_SUITE.cases[0]!;
+  const report = await runEval({
+    pack: standardPack,
+    suite: one(evalCase),
+    candidate: () => new Promise(() => {}),
+    candidateTimeoutMs: 50,
+  });
+  assert.equal(evalPassed(report), false);
+  assert.match(report.cases[0]!.error!, /candidate failed: candidate timed out after 50ms/);
+});
+
+test("runEval: a slow judge times out per dimension; deterministic results are unaffected", async () => {
+  const evalCase = CORE_DELIVERY_SUITE.cases.find((c) => c.semantic.length > 0)!;
+  const report = await runEval({
+    pack: standardPack,
+    suite: one(evalCase),
+    judge: () => new Promise(() => {}),
+    judgeTimeoutMs: 50,
+  });
+  assert.equal(report.cases[0]!.error, undefined);
+  assert.ok(report.cases[0]!.deterministic.every((a) => a.passed));
+  for (const dimension of report.cases[0]!.semantic) {
+    assert.equal(dimension.judged, false);
+    assert.match(dimension.reason!, /judge failed: judge timed out after 50ms/);
+  }
+});
+
 test("runEval: a pack missing a capability fails that case and still evaluates the others", async () => {
   const root = temp({ pack: "incomplete" });
   const incomplete = resolvePack({ root, config: loadProject({ root }).config }).value!;

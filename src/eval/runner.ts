@@ -60,10 +60,38 @@ export interface EvalOptions {
   readonly judge?: SemanticJudge;
   /** Directory sandboxes are created under; defaults to the OS temp directory. */
   readonly workDir?: string;
+  /**
+   * Per-case candidate deadline in ms; `undefined` disables. Scripted
+   * reference candidates are synchronous, so only model-backed runners need
+   * this. On timeout the case is reported as an error and its sandbox is
+   * removed immediately; a still-running candidate writes into the void.
+   */
+  readonly candidateTimeoutMs?: number;
+  /** Per-dimension judge deadline in ms; `undefined` disables. */
+  readonly judgeTimeoutMs?: number;
 }
 
 const message = (error: unknown): string =>
   error instanceof Error ? error.message : String(error);
+
+async function withTimeout<T>(work: Promise<T>, ms: number | undefined, label: string): Promise<T> {
+  if (ms === undefined) return work;
+  let timer: NodeJS.Timeout | undefined;
+  try {
+    return await Promise.race([
+      work,
+      new Promise<never>((_, reject) => {
+        // The timer stays referenced so the deadline fires even when the
+        // hung work holds nothing else on the event loop; it is cleared as
+        // soon as the race settles.
+        timer = setTimeout(() => reject(new Error(`${label} timed out after ${ms}ms`)), ms);
+      }),
+    ]);
+  } finally {
+    clearTimeout(timer);
+    void work.catch(() => {}); // the losing promise must not become an unhandled rejection
+  }
+}
 
 async function runCase(options: EvalOptions, evalCase: EvalCase): Promise<EvalCaseResult> {
   const base = { id: evalCase.id, title: evalCase.title, capability: evalCase.capability };
@@ -76,8 +104,10 @@ async function runCase(options: EvalOptions, evalCase: EvalCase): Promise<EvalCa
       semantic: [],
     };
   }
-  const root = createSandbox(options.pack, options.workDir);
+  const withAgent = { ...base, agent: agent.key };
+  let root: string | undefined;
   try {
+    root = createSandbox(options.pack, options.workDir);
     evalCase.setup(root);
     const filesBefore = snapshotFiles(root);
     const revisionBefore = sandboxRevision(root);
@@ -86,17 +116,22 @@ async function runCase(options: EvalOptions, evalCase: EvalCase): Promise<EvalCa
     try {
       const run: CandidateRunner =
         options.candidate ?? ((task) => evalCase.reference.run(task.root));
-      output = await run({
-        caseId: evalCase.id,
-        capability: evalCase.capability,
-        instruction: evalCase.instruction,
-        root,
-        agent,
-      });
+      output = await withTimeout(
+        Promise.resolve(
+          run({
+            caseId: evalCase.id,
+            capability: evalCase.capability,
+            instruction: evalCase.instruction,
+            root,
+            agent,
+          }),
+        ),
+        options.candidateTimeoutMs,
+        "candidate",
+      );
     } catch (error) {
       return {
-        ...base,
-        agent: agent.key,
+        ...withAgent,
         error: `candidate failed: ${message(error)}`,
         deterministic: [],
         semantic: [],
@@ -143,7 +178,11 @@ async function runCase(options: EvalOptions, evalCase: EvalCase): Promise<EvalCa
         continue;
       }
       try {
-        const judgement = await options.judge({ caseId: evalCase.id, dimension, observation });
+        const judgement = await withTimeout(
+          Promise.resolve(options.judge({ caseId: evalCase.id, dimension, observation })),
+          options.judgeTimeoutMs,
+          "judge",
+        );
         semantic.push({
           ...entry,
           judged: true,
@@ -155,9 +194,18 @@ async function runCase(options: EvalOptions, evalCase: EvalCase): Promise<EvalCa
       }
     }
 
-    return { ...base, agent: agent.key, deterministic, semantic };
+    return { ...withAgent, deterministic, semantic };
+  } catch (error) {
+    // Sandbox creation, case setup or observation building failed: the
+    // failure is data in the report, never a thrown run (Distribution §16).
+    return {
+      ...withAgent,
+      error: `case failed: ${message(error)}`,
+      deterministic: [],
+      semantic: [],
+    };
   } finally {
-    rmSync(root, { recursive: true, force: true });
+    if (root !== undefined) rmSync(root, { recursive: true, force: true });
   }
 }
 
