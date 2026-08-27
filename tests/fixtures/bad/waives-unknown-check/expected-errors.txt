@@ -1,1 +1,0 @@
-[rule: edges-references-resolve] edge edge-waives-bad-2222 target no-such-check does not resolve

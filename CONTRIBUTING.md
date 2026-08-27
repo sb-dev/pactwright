@@ -1,17 +1,15 @@
 # Contributing
 
-Pactwright runs as a structured delivery workflow, not a free-for-all PR queue. Substantive contributions move through the lifecycle defined in [`SPEC.md`](./SPEC.md): **intent → candidate contracts → human decision → brief → implementation → evidence**. Direct PRs without an upstream intent node will be redirected.
+Pactwright runs as a structured delivery workflow, not a free-for-all PR queue. Substantive contributions move through the Delivery lifecycle the runtime enforces: **intent → decision → contract → brief → implementation → evidence**. Direct PRs without an upstream intent will be redirected.
 
 ## How to contribute
 
 ### For substantive work (features, behaviour changes, schema migrations)
 
-1. **Open an issue** describing the *intent* — what problem you want solved and why, who it affects, expected outcome, urgency, and any trade-offs you already see. Free-form prose is fine; this becomes (or seeds) an `intent` node in the spec graph.
-2. A Spec Writer proposes multiple candidate contracts from the intent; a human selects one.
-3. The approved contract is decomposed into briefs; implementation follows.
-4. Your PR carries an `evidence` node referencing its brief — see [`SPEC.md` §13](./SPEC.md) for what the PR description should cover.
-
-Once the bootstrap PR ([#1](https://github.com/sb-dev/pactwright/pull/1)) is merged, schema changes will require code-owner approval; see [`SPEC.md`](./SPEC.md) §16.
+1. **Open an issue** describing the *intent* — what problem you want solved and why, who it affects, expected outcome, urgency, and any trade-offs you already see. Free-form prose is fine; this becomes (or seeds) an `intent` node in the Delivery Graph.
+2. A spec agent proposes candidate contracts from the intent; a human decision selects the canonical one.
+3. The approved contract is decomposed into a brief; implementation follows.
+4. Your PR carries an `evidence` node referencing its brief.
 
 ### For trivial work (typos, doc clarifications, broken links)
 
@@ -19,13 +17,14 @@ Open a PR directly. Reference the file you're fixing in the description. No inte
 
 ## What to read first
 
-- [`SPEC.md`](./SPEC.md) — full system specification. Most relevant sections for contributors:
-  - §4 — graph layout (`nodes/` + `graph/edges.yaml` + `schema/`).
-  - §5 — graph rules. Relationships live in the edge table only; never delete records, supersede them.
-  - §11 — Claude Code operating instructions.
-  - §13 — what a meaningful PR description should contain.
-  - §16 — human gates and CODEOWNERS.
+- [`docs/`](./docs/) — the research logs and checkpoints that specify the system. Start with the Delivery Graph and lifecycle engineering spec in `docs/research-logs/`; code comments cite its sections (e.g. "Delivery Graph §15").
 - [`SECURITY.md`](./SECURITY.md) — report security issues privately, not via public issues.
+
+## Working in the workspace
+
+- `pnpm verify` is the one gate: format check, lint, typecheck, tests, build. It covers every workspace package.
+- `packages/standard/` is the default agent pack. Its `pack.yml` carries its own `version` and the exact compatible `pactwright` version; when a release bumps package versions (`pnpm version <v> -r`), update both fields in `pack.yml` too. `tests/pack-package.test.ts` fails if they drift.
+- Agent prompts and skills describe *how* to do a responsibility. Lifecycle stages, gates and graph mutations belong to the runtime; do not write transition rules into prompts.
 
 ## Code of conduct
 

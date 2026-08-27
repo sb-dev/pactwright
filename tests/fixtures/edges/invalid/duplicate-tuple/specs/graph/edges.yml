@@ -1,0 +1,7 @@
+edges:
+  - source: decision-x-2222
+    type: resolves
+    target: intent-x-1111
+  - source: decision-x-2222
+    type: resolves
+    target: intent-x-1111

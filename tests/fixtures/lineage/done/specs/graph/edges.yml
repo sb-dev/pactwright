@@ -1,0 +1,13 @@
+edges:
+  - source: decision-quick-start-b2c3
+    type: resolves
+    target: intent-quick-start-a1b2
+  - source: decision-quick-start-b2c3
+    type: selects
+    target: contract-quick-start-c3d4
+  - source: brief-quick-start-d4e5
+    type: decomposes
+    target: contract-quick-start-c3d4
+  - source: evidence-quick-start-e5f6
+    type: evidences
+    target: brief-quick-start-d4e5

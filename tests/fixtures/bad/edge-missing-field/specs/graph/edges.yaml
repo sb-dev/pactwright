@@ -1,5 +1,0 @@
-edges:
-  - id: edge-nocreated-3333
-    source: contract-x-aaaa
-    type: proposes
-    target: intent-y-bbbb

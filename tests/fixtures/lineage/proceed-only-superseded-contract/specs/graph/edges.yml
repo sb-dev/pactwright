@@ -1,0 +1,10 @@
+edges:
+  - source: decision-quick-start-b2c3
+    type: resolves
+    target: intent-quick-start-a1b2
+  - source: decision-quick-start-b2c3
+    type: selects
+    target: contract-quick-start-c3d4
+  - source: contract-quick-start-3333
+    type: supersedes
+    target: contract-quick-start-c3d4

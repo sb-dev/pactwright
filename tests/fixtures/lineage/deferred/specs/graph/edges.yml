@@ -1,0 +1,4 @@
+edges:
+  - source: decision-quick-start-b2c3
+    type: resolves
+    target: intent-quick-start-a1b2

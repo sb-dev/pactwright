@@ -15,7 +15,7 @@ Please include:
 
 ## Supported versions
 
-During the Phase 1–7 bootstrap, only `main` is supported. Tagged releases will define their own supported windows once the release loop (SPEC.md §21) is in place.
+During the 0.0.x series, only `main` is supported. Tagged releases will define their own supported windows once a release loop is in place.
 
 ## Response
 
@@ -23,5 +23,5 @@ Best-effort acknowledgement within 7 days. This is a personal-time project — t
 
 ## Scope
 
-In scope: code, workflows, and spec-graph tooling in this repository.
+In scope: the runtime, CLI, agent packs and workflows in this repository.
 Out of scope: GitHub itself, Anthropic's services, and any third-party dependency vulnerabilities that should be reported upstream.

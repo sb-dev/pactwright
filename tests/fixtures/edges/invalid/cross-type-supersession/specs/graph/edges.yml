@@ -1,0 +1,4 @@
+edges:
+  - source: brief-x-4444
+    type: supersedes
+    target: contract-x-3333

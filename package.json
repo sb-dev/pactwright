@@ -1,19 +1,57 @@
 {
   "name": "pactwright",
-  "private": true,
+  "version": "0.0.0",
+  "description": "Graph-native AI software delivery: intent, decision, contract, brief and evidence recorded in the repository.",
+  "keywords": [
+    "pactwright",
+    "delivery",
+    "spec-graph",
+    "claude-code"
+  ],
+  "license": "Apache-2.0",
+  "private": false,
   "type": "module",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/sb-dev/pactwright.git"
+  },
+  "homepage": "https://github.com/sb-dev/pactwright#readme",
+  "bugs": {
+    "url": "https://github.com/sb-dev/pactwright/issues"
+  },
+  "engines": {
+    "node": ">=22"
+  },
+  "packageManager": "pnpm@11.7.0",
+  "bin": {
+    "pactwright": "dist/cli.js"
+  },
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    }
+  },
+  "files": [
+    "dist",
+    "LICENSE",
+    "README.md"
+  ],
   "scripts": {
-    "spec:index": "tsx tools/spec.ts index",
-    "spec:validate": "tsx tools/spec.ts validate",
-    "spec:gate": "tsx tools/spec.ts gate",
-    "spec:check-diff": "tsx tools/spec.ts check-diff",
-    "spec:patch-gate": "tsx tools/spec.ts patch-gate",
-    "spec:drift-map": "tsx tools/spec.ts drift-map",
-    "test": "node --test --import tsx tests/*.test.ts",
+    "build": "pnpm --filter @pactwright/standard build && tsc -p tsconfig.build.json",
+    "prepack": "pnpm build",
+    "pactwright": "node dist/cli.js",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
+    "lint": "eslint .",
     "typecheck": "tsc --noEmit",
-    "lint": "eslint ."
+    "test": "node --test --import tsx tests/*.test.ts",
+    "verify": "pnpm format:check && pnpm lint && pnpm typecheck && pnpm test && pnpm build"
   },
   "dependencies": {
+    "@pactwright/standard": "workspace:*",
     "js-yaml": "^4.1.0"
   },
   "devDependencies": {
@@ -21,6 +59,7 @@
     "@types/js-yaml": "^4.0.9",
     "@types/node": "^22.15.0",
     "eslint": "^9.0.0",
+    "prettier": "^3.6.0",
     "tsx": "^4.19.0",
     "typescript": "^5.8.0",
     "typescript-eslint": "^8.0.0"

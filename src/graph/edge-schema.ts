@@ -1,0 +1,247 @@
+import { PactwrightError, type Problem } from "../errors.js";
+import { Checker } from "../validation.js";
+import { edgeKey, type Edge } from "./edges.js";
+import type { GraphNode } from "./nodes.js";
+
+/** Owner id of the core Delivery edge types; extensions use their extension id. */
+export const CORE_EDGE_OWNER = "core";
+
+/** The core Delivery edge types (Delivery Graph §13). */
+export const CORE_EDGE_TYPES = [
+  "resolves",
+  "selects",
+  "decomposes",
+  "evidences",
+  "supersedes",
+] as const;
+export type CoreEdgeType = (typeof CORE_EDGE_TYPES)[number];
+
+/**
+ * An edge type schema in the shared typed-edge registry (Delivery Graph §13,
+ * §21). `"any"` endpoints accept every registered node type, which is how the
+ * shared `supersedes` relation is reused by extension node types instead of
+ * being redeclared (Distribution §7).
+ */
+export interface EdgeSchema {
+  readonly type: string;
+  /** Who registered and validates this type: `"core"` or an extension id. */
+  readonly owner: string;
+  readonly sourceTypes: readonly string[] | "any";
+  readonly targetTypes: readonly string[] | "any";
+  /** Source and target must be nodes of the same type. */
+  readonly sameType?: boolean;
+  /** No edge may point at its own source, and edges of this type must not form a cycle. */
+  readonly acyclic?: boolean;
+}
+
+/** Edge schemas keyed by edge type. */
+export type EdgeSchemaRegistry = Readonly<Record<string, EdgeSchema>>;
+
+/**
+ * Builds a frozen registry. Throws `duplicate-edge-type` when two schemas
+ * claim the same type; later extensions compose registries with
+ * `createEdgeSchemaRegistry([...Object.values(CORE_EDGE_SCHEMAS), ...own])`.
+ */
+export function createEdgeSchemaRegistry(schemas: readonly EdgeSchema[]): EdgeSchemaRegistry {
+  // Prototype-less, so a type like "constructor" can never resolve to an
+  // Object.prototype member instead of a registered schema.
+  const registry: Record<string, EdgeSchema> = Object.create(null) as Record<string, EdgeSchema>;
+  for (const schema of schemas) {
+    if (Object.hasOwn(registry, schema.type)) {
+      throw new PactwrightError(
+        "duplicate-edge-type",
+        `edge type "${schema.type}" is already registered`,
+      );
+    }
+    registry[schema.type] = schema;
+  }
+  return Object.freeze(registry);
+}
+
+/** Registered edge types, sorted. */
+export function edgeTypes(registry: EdgeSchemaRegistry): readonly string[] {
+  return Object.keys(registry).sort();
+}
+
+/**
+ * The core Delivery relations (Delivery Graph §13):
+ *
+ * ```text
+ * decision --resolves----> intent
+ * decision --selects-----> contract
+ * brief    --decomposes--> contract
+ * evidence --evidences---> brief
+ * node     --supersedes--> same node type
+ * ```
+ */
+export const CORE_EDGE_SCHEMAS: EdgeSchemaRegistry = createEdgeSchemaRegistry([
+  { type: "resolves", owner: CORE_EDGE_OWNER, sourceTypes: ["decision"], targetTypes: ["intent"] },
+  { type: "selects", owner: CORE_EDGE_OWNER, sourceTypes: ["decision"], targetTypes: ["contract"] },
+  { type: "decomposes", owner: CORE_EDGE_OWNER, sourceTypes: ["brief"], targetTypes: ["contract"] },
+  { type: "evidences", owner: CORE_EDGE_OWNER, sourceTypes: ["evidence"], targetTypes: ["brief"] },
+  {
+    type: "supersedes",
+    owner: CORE_EDGE_OWNER,
+    sourceTypes: "any",
+    targetTypes: "any",
+    sameType: true,
+    acyclic: true,
+  },
+]);
+
+function typeAllowed(allowed: readonly string[] | "any", type: string): boolean {
+  return allowed === "any" || allowed.includes(type);
+}
+
+function describe(allowed: readonly string[] | "any"): string {
+  return allowed === "any" ? "any registered node type" : allowed.join(", ");
+}
+
+/**
+ * Validates the shared typed-edge store against the node set and the edge
+ * registry (Delivery Graph §21, Edges): declared type, source exists, target
+ * exists, valid endpoint types, same-type supersession, no self-supersession,
+ * no supersession cycles. Field shape and unique tuples are already enforced
+ * by `parseEdges`. `path` is the edges file every problem is reported against.
+ */
+export function validateEdges(
+  edges: readonly Edge[],
+  nodes: readonly GraphNode[],
+  registry: EdgeSchemaRegistry,
+  path: string,
+): readonly Problem[] {
+  const c = new Checker(path);
+  const byId = new Map(nodes.map((node) => [node.id, node]));
+  /** Edges that passed every per-edge check, grouped by type, for the cycle pass. */
+  const sound = new Map<string, Edge[]>();
+
+  for (const edge of edges) {
+    const key = edgeKey(edge);
+    const schema = registry[edge.type];
+    if (schema === undefined) {
+      c.fail(
+        "unknown-edge-type",
+        `${key}: edge type "${edge.type}" is not a registered edge type (known: ${edgeTypes(registry).join(", ")})`,
+      );
+      continue;
+    }
+    const source = byId.get(edge.source);
+    const target = byId.get(edge.target);
+    if (source === undefined) {
+      c.fail("missing-source", `${key}: source node "${edge.source}" does not exist`);
+    }
+    if (target === undefined) {
+      c.fail("missing-target", `${key}: target node "${edge.target}" does not exist`);
+    }
+    if (source === undefined || target === undefined) continue;
+
+    let ok = true;
+    if (!typeAllowed(schema.sourceTypes, source.type)) {
+      ok = false;
+      c.fail(
+        "invalid-source-type",
+        `${key}: source must be a ${describe(schema.sourceTypes)} node, found ${source.type}`,
+      );
+    }
+    if (!typeAllowed(schema.targetTypes, target.type)) {
+      ok = false;
+      c.fail(
+        "invalid-target-type",
+        `${key}: target must be a ${describe(schema.targetTypes)} node, found ${target.type}`,
+      );
+    }
+    if (schema.sameType === true && source.type !== target.type) {
+      ok = false;
+      c.fail(
+        "endpoint-type-mismatch",
+        `${key}: ${edge.type} requires source and target of the same node type, found ${source.type} and ${target.type}`,
+      );
+    }
+    if (schema.acyclic === true && edge.source === edge.target) {
+      ok = false;
+      c.fail("self-loop", `${key}: a node cannot ${edge.type} itself`);
+    }
+    if (ok && schema.acyclic === true) {
+      const list = sound.get(edge.type) ?? [];
+      list.push(edge);
+      sound.set(edge.type, list);
+    }
+  }
+
+  for (const [type, list] of sound) {
+    for (const cycle of findCycles(list)) {
+      c.fail("edge-cycle", `${type} edges form a cycle: ${[...cycle, cycle[0]].join(" -> ")}`);
+    }
+  }
+  return c.problems;
+}
+
+/**
+ * Finds cycles by depth-first search over the given edges: every back edge
+ * yields one cycle, so each cyclic component is reported at least once. A
+ * cycle is reported once, rotated to start at its smallest id, and the cycles
+ * are returned sorted so output is deterministic.
+ */
+function findCycles(edges: readonly Edge[]): readonly (readonly string[])[] {
+  const next = new Map<string, string[]>();
+  for (const edge of edges) {
+    const list = next.get(edge.source) ?? [];
+    list.push(edge.target);
+    next.set(edge.source, list);
+  }
+  for (const list of next.values()) list.sort();
+
+  const state = new Map<string, "active" | "done">();
+  const stack: string[] = [];
+  const cycles = new Map<string, readonly string[]>();
+
+  // Iterative DFS with explicit frames: a long supersession chain must not
+  // grow the call stack once per link.
+  const visit = (start: string): void => {
+    const frames: { id: string; targets: readonly string[]; index: number }[] = [];
+    const enter = (id: string): void => {
+      state.set(id, "active");
+      stack.push(id);
+      frames.push({ id, targets: next.get(id) ?? [], index: 0 });
+    };
+    enter(start);
+    while (frames.length > 0) {
+      const frame = frames[frames.length - 1]!;
+      if (frame.index >= frame.targets.length) {
+        frames.pop();
+        stack.pop();
+        state.set(frame.id, "done");
+        continue;
+      }
+      const target = frame.targets[frame.index]!;
+      frame.index += 1;
+      const seen = state.get(target);
+      if (seen === "done") continue;
+      if (seen === "active") {
+        const cycleStart = stack.indexOf(target);
+        const cycle = canonical(stack.slice(cycleStart));
+        cycles.set(cycle.join(" "), cycle);
+        continue;
+      }
+      enter(target);
+    }
+  };
+
+  for (const id of [...next.keys()].sort()) {
+    if (!state.has(id)) visit(id);
+  }
+  return [...cycles.values()].sort((a, b) => {
+    const left = a.join(" ");
+    const right = b.join(" ");
+    return left < right ? -1 : left > right ? 1 : 0;
+  });
+}
+
+/** Rotates a cycle so it starts at its lexicographically smallest id. */
+function canonical(cycle: readonly string[]): readonly string[] {
+  let start = 0;
+  for (let i = 1; i < cycle.length; i += 1) {
+    if (cycle[i]! < cycle[start]!) start = i;
+  }
+  return [...cycle.slice(start), ...cycle.slice(0, start)];
+}

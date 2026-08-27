@@ -1,0 +1,12 @@
+node_modules/
+dist/
+build/
+coverage/
+.pnpm-store/
+.tmp-pactwright-test-*/
+pnpm-lock.yaml
+docs/
+drafts/
+.claude/
+tests/fixtures/
+*.md

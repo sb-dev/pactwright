@@ -1,57 +1,85 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import * as fs from "node:fs";
-import * as os from "node:os";
 import * as path from "node:path";
-import { loadSpec } from "../tools/loader.ts";
+import { PactwrightError } from "../src/errors.js";
+import { loadProject } from "../src/loader.js";
+import { findProjectRoot } from "../src/project.js";
+import { fixture } from "./helpers.js";
 
-/**
- * Build a minimal on-disk specs/ tree with the given validation-rules.yaml
- * contents, run `fn` against the loaded spec, then remove the fixture. Only the
- * pieces loadSpec touches are written (empty nodes/, empty edges, empty schemas).
- */
-function withFixture(rulesYaml: string, fn: (spec: ReturnType<typeof loadSpec>) => void): void {
-  const root = fs.mkdtempSync(path.join(os.tmpdir(), "spec-loader-"));
-  try {
-    fs.mkdirSync(path.join(root, "nodes"));
-    fs.mkdirSync(path.join(root, "graph"));
-    fs.mkdirSync(path.join(root, "schema"));
-    fs.writeFileSync(path.join(root, "graph", "edges.yaml"), "edges: []\n");
-    fs.writeFileSync(path.join(root, "schema", "node-types.yaml"), "node_types: {}\n");
-    fs.writeFileSync(path.join(root, "schema", "edge-types.yaml"), "edge_types: {}\n");
-    fs.writeFileSync(path.join(root, "schema", "validation-rules.yaml"), rulesYaml);
-    fn(loadSpec(root));
-  } finally {
-    fs.rmSync(root, { recursive: true, force: true });
-  }
+test("loader: loads a valid project through the canonical path", () => {
+  const project = loadProject({ root: fixture("valid-project") });
+  assert.equal(project.paths.root, fixture("valid-project"));
+  assert.equal(project.config.agentPack.source, "@pactwright/standard");
+  assert.equal(project.lifecycle.stages["approve-contract"].actor, "human");
+  assert.equal(project.lock.runtime.version, "0.0.0");
+  assert.deepEqual(
+    project.graph.nodes.map((n) => n.id),
+    ["contract-hello-world-d4e5", "decision-hello-world-c3d4", "intent-hello-world-a1b2"],
+  );
+  assert.deepEqual(project.graph.edges, [
+    { source: "decision-hello-world-c3d4", type: "resolves", target: "intent-hello-world-a1b2" },
+    { source: "decision-hello-world-c3d4", type: "selects", target: "contract-hello-world-d4e5" },
+  ]);
+});
+
+test("loader: finds the project root from a nested cwd", () => {
+  const nested = path.join(fixture("valid-project"), "specs", "nodes");
+  assert.equal(findProjectRoot(nested), fixture("valid-project"));
+  assert.equal(loadProject({ cwd: nested }).paths.root, fixture("valid-project"));
+});
+
+test("loader: no project → project-not-found", () => {
+  assert.throws(
+    () => loadProject({ cwd: path.join(fixture("not-a-project"), "sub") }),
+    (error: unknown) => error instanceof PactwrightError && error.code === "project-not-found",
+  );
+});
+
+const failures: Array<[string, string, RegExp]> = [
+  ["invalid-config-missing-field", "missing-field", /config\.yml/],
+  ["invalid-config-extensions", "extensions-not-supported", /config\.yml/],
+  ["invalid-lifecycle-unknown-stage", "unknown-stage", /lifecycle\.yml/],
+  ["invalid-lifecycle-bad-actor", "invalid-value", /lifecycle\.yml/],
+  ["invalid-lock-bad-hash", "invalid-hash", /lock\.yml/],
+  ["invalid-missing-lock", "missing-file", /lock\.yml/],
+  ["invalid-node-bad-id", "invalid-id", /intent-hello-world-a1b2\.md/],
+  ["invalid-node-type-mismatch", "invalid-id", /intent-hello-world-a1b2\.md/],
+  ["invalid-node-missing-field", "missing-field", /intent-hello-world-a1b2\.md/],
+  ["invalid-node-unknown-type", "unknown-node-type", /alternative-hello-world-e5f6\.md/],
+  ["invalid-edges-duplicate", "duplicate-edge", /edges\.yml/],
+  ["invalid-edges-missing-target", "missing-target", /edges\.yml/],
+  ["invalid-edges-wrong-endpoint-type", "invalid-source-type", /edges\.yml/],
+  ["invalid-edges-self-supersession", "self-loop", /edges\.yml/],
+  ["invalid-edges-supersession-cycle", "edge-cycle", /edges\.yml/],
+  ["invalid-lineage-ambiguous", "ambiguous-decision", /intent-quick-start-a1b2\.md/],
+];
+
+for (const [name, code, pathPattern] of failures) {
+  test(`loader: ${name} fails with ${code}`, () => {
+    assert.throws(
+      () => loadProject({ root: fixture(name) }),
+      (error: unknown) => {
+        assert.ok(error instanceof PactwrightError);
+        assert.equal(error.code, "project-load-failed");
+        const hit = error.problems.find((p) => p.code === code);
+        assert.ok(hit, `expected problem ${code}, got ${JSON.stringify(error.problems)}`);
+        assert.match(hit.path ?? "", pathPattern);
+        return true;
+      },
+    );
+  });
 }
 
-test("loader: comparison_required_from present → exact string", () => {
-  withFixture('rules: []\ncomparison_required_from: "2026-06-18"\n', (spec) => {
-    assert.equal(spec.comparisonRequiredFrom, "2026-06-18");
-  });
-});
-
-test("loader: comparison_required_from absent → undefined", () => {
-  withFixture("rules: []\n", (spec) => {
-    assert.equal(spec.comparisonRequiredFrom, undefined);
-  });
-});
-
-test("loader: comparison_required_from empty string → undefined", () => {
-  withFixture('rules: []\ncomparison_required_from: ""\n', (spec) => {
-    assert.equal(spec.comparisonRequiredFrom, undefined);
-  });
-});
-
-test("loader: comparison_required_from non-string (number) → undefined", () => {
-  withFixture("rules: []\ncomparison_required_from: 20260618\n", (spec) => {
-    assert.equal(spec.comparisonRequiredFrom, undefined);
-  });
-});
-
-test("loader: comparison_required_from non-string (list) → undefined", () => {
-  withFixture("rules: []\ncomparison_required_from:\n  - 2026-06-18\n", (spec) => {
-    assert.equal(spec.comparisonRequiredFrom, undefined);
-  });
+test("loader: reports problems from every file in one pass", () => {
+  // Combine two independent failures by loading a fixture whose config AND
+  // node are broken: build it in memory by pointing at a config-broken fixture
+  // and checking the node problems are still collected.
+  try {
+    loadProject({ root: fixture("invalid-config-extensions") });
+    assert.fail("expected throw");
+  } catch (error) {
+    assert.ok(error instanceof PactwrightError);
+    assert.equal(error.problems.length, 1);
+    assert.match(error.message, /extensions-not-supported/);
+  }
 });

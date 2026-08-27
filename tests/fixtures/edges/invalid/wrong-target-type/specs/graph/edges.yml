@@ -1,0 +1,4 @@
+edges:
+  - source: decision-x-2222
+    type: resolves
+    target: contract-x-3333

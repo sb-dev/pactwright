@@ -1,15 +1,27 @@
 import js from "@eslint/js";
 import tseslint from "typescript-eslint";
 
-// Minimal flat config: lint the TypeScript toolchain and its tests with the
+// Minimal flat config: lint the runtime source and its tests with the
 // recommended (non-type-checked) rule sets. Data/spec files are not JS/TS and
-// are excluded; generated reports and test scratch dirs are ignored.
+// are excluded; build output and test scratch dirs are ignored.
 export default tseslint.config(
-  { ignores: ["node_modules/", "specs/", ".tmp-spec-test-*/", "dist/", "build/", "coverage/"] },
+  {
+    ignores: [
+      "node_modules/",
+      "dist/",
+      "packages/*/dist/",
+      "build/",
+      "coverage/",
+      ".claude/",
+      ".pnpm-store/",
+      ".tmp-pactwright-test-*/",
+      "tests/fixtures/",
+    ],
+  },
   js.configs.recommended,
   ...tseslint.configs.recommended,
   {
-    files: ["tools/**/*.ts", "tests/**/*.ts"],
+    files: ["src/**/*.ts", "tests/**/*.ts", "packages/*/src/**/*.ts"],
     languageOptions: { ecmaVersion: 2022, sourceType: "module" },
   },
 );

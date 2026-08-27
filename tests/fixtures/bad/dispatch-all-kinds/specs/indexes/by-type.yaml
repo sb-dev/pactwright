@@ -1,8 +1,0 @@
-by-type:
-  contract:
-    - contract-ok-ffff
-  gadget:
-  intent:
-    - intent-dup-cccc
-    - intent-dup-cccc
-    - intent-nocreated-aaaa

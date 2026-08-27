@@ -1,0 +1,47 @@
+{
+  "name": "@pactwright/standard",
+  "version": "0.0.0",
+  "description": "Default Pactwright agent pack: delivery-specification, delivery-execution and delivery-review.",
+  "keywords": [
+    "pactwright",
+    "agent-pack",
+    "claude-code"
+  ],
+  "license": "Apache-2.0",
+  "private": false,
+  "type": "module",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/sb-dev/pactwright.git",
+    "directory": "packages/standard"
+  },
+  "homepage": "https://github.com/sb-dev/pactwright#readme",
+  "bugs": {
+    "url": "https://github.com/sb-dev/pactwright/issues"
+  },
+  "engines": {
+    "node": ">=22"
+  },
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    },
+    "./package.json": "./package.json",
+    "./pack.yml": "./pack.yml"
+  },
+  "files": [
+    "dist",
+    "pack.yml",
+    "agents",
+    "skills",
+    "LICENSE",
+    "README.md"
+  ],
+  "scripts": {
+    "build": "tsc -p tsconfig.build.json",
+    "prepack": "pnpm build"
+  }
+}
