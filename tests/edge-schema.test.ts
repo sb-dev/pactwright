@@ -142,6 +142,17 @@ test("edge-schema: an extension edge type validates against extension node types
   );
 });
 
+test("edge-schema: a long supersession chain validates without exhausting the stack", () => {
+  const count = 20_000;
+  const nodes = Array.from({ length: count }, (_, i) => node(`intent-chain-${i}`, "intent"));
+  const edges = Array.from({ length: count - 1 }, (_, i) => ({
+    source: `intent-chain-${i}`,
+    type: "supersedes",
+    target: `intent-chain-${i + 1}`,
+  }));
+  assert.deepEqual(validateEdges(edges, nodes, CORE_EDGE_SCHEMAS, "edges.yml"), []);
+});
+
 test("edge-schema: prototype member names are unknown types, not Object.prototype hits", () => {
   const nodes = loadAndValidate(path.join(fixture("edges"), "valid")).nodes;
   const source = nodes[0]!.id;

@@ -2,6 +2,7 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 import * as path from "node:path";
 import { HASH_PATTERN } from "../src/config/lock.js";
+import { PactwrightError } from "../src/errors.js";
 import type { GraphNode } from "../src/graph/nodes.js";
 import {
   REVISION_PATTERN,
@@ -74,6 +75,18 @@ test("revision: canonicalJson sorts keys recursively and drops undefined", () =>
     canonicalJson({ b: [3, { z: 1, a: undefined, y: null }], a: "x" }),
     '{"a":"x","b":[3,{"y":null,"z":1}]}',
   );
+});
+
+test("revision: canonicalJson rejects a cyclic value instead of overflowing the stack", () => {
+  const cyclic: { self?: unknown } = {};
+  cyclic.self = cyclic;
+  assert.throws(
+    () => canonicalJson(cyclic),
+    (error: unknown) => error instanceof PactwrightError && error.code === "cyclic-value",
+  );
+  // A value merely referenced twice is not a cycle.
+  const shared = { x: 1 };
+  assert.equal(canonicalJson({ a: shared, b: shared }), '{"a":{"x":1},"b":{"x":1}}');
 });
 
 test("revision: the payload ignores paths and input order", () => {

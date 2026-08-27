@@ -1,5 +1,6 @@
 import { createHash } from "node:crypto";
 import { HASH_PATTERN } from "../config/lock.js";
+import { PactwrightError } from "../errors.js";
 import type { Edge } from "./edges.js";
 import type { GraphNode } from "./nodes.js";
 
@@ -41,14 +42,28 @@ function compare(a: string, b: string): number {
  * no whitespace, so equal values always serialise to equal bytes.
  */
 export function canonicalJson(value: unknown): string {
+  return canonicalise(value, new Set());
+}
+
+function canonicalise(value: unknown, path: Set<object>): string {
   if (value === null || typeof value !== "object") return JSON.stringify(value) ?? "null";
-  if (Array.isArray(value)) return `[${value.map((item) => canonicalJson(item)).join(",")}]`;
-  const record = value as Record<string, unknown>;
-  const members = Object.keys(record)
-    .filter((key) => record[key] !== undefined)
-    .sort(compare)
-    .map((key) => `${JSON.stringify(key)}:${canonicalJson(record[key])}`);
-  return `{${members.join(",")}}`;
+  if (path.has(value)) {
+    throw new PactwrightError("cyclic-value", "cannot canonicalise a value that contains itself");
+  }
+  path.add(value);
+  try {
+    if (Array.isArray(value)) {
+      return `[${value.map((item) => canonicalise(item, path)).join(",")}]`;
+    }
+    const record = value as Record<string, unknown>;
+    const members = Object.keys(record)
+      .filter((key) => record[key] !== undefined)
+      .sort(compare)
+      .map((key) => `${JSON.stringify(key)}:${canonicalise(record[key], path)}`);
+    return `{${members.join(",")}}`;
+  } finally {
+    path.delete(value);
+  }
 }
 
 /**
