@@ -1,10 +1,6 @@
 # Pactwright
 
-A GitHub-native AI software delivery workflow built on Claude Code, GitHub, and a file-based spec graph. Human intent is transformed into verified, traceable, production-aware change through a market of candidate contracts, candidate patches, and explicit human trade-off decisions — all recorded as nodes and edges in the repository itself.
-
-## Status
-
-**Bootstrap in progress.** `main` currently holds the licence and governance scaffold only. The spec graph, schema, and Claude Code operating instructions land via the open bootstrap PR: [#1 Bootstrap GH AI-native delivery system](https://github.com/sb-dev/pactwright/pull/1). See [`SPEC.md`](./SPEC.md) §22 for the build order.
+An AI software delivery runtime built for Claude Code. Human intent moves through an explicit lifecycle — **intent → decision → contract → brief → evidence** — recorded as nodes and edges of a file-based Delivery Graph inside the repository itself. The runtime owns the lifecycle: it validates the graph, decides what is permitted next, and writes every record atomically; agent packs supply the prompts and skills that do the work.
 
 ## Packages
 
@@ -13,14 +9,18 @@ This repository is a pnpm workspace with two published packages:
 - `pactwright` (repository root) — the runtime and CLI.
 - `@pactwright/standard` (`packages/standard/`) — the default agent pack. It provides the three core Delivery capabilities (`delivery-specification`, `delivery-execution`, `delivery-review`). `pactwright` depends on it, so one `pnpm add -D pactwright` installs both; `.pactwright/config.yml` selects it by default.
 
-## Design
+## What the runtime provides
 
-[`SPEC.md`](./SPEC.md) — full system specification.
+- **Delivery Graph** — canonical records (`specs/nodes/*.md`, `specs/graph/edges.yml`) with schema validation, typed-edge rules, lineage derivation and a deterministic revision hash.
+- **Lifecycle engine** — `pactwright lifecycle status|next|run|record`: derives each intent's state from graph structure alone and refuses out-of-order records at the runtime, regardless of executor behaviour.
+- **Claude Code adapter** — renders one agent file per pack agent and one command per lifecycle stage into `.claude/`, deterministically from the locked pack.
+- **Evaluation runner** — `pactwright eval`: runs an agent pack against scripted delivery cases in throw-away sandboxes; failures are data in the report, and the exit code gates on deterministic assertions only.
+- **Pack resolution and locking** — resolves the configured agent pack, checks capabilities and version compatibility, and pins exact content hashes in `.pactwright/lock.yml`.
 
 ## How to contribute
 
-Intent first, then implementation. See [`CONTRIBUTING.md`](./CONTRIBUTING.md).
+Intent first, then implementation. See `CONTRIBUTING.md` in the repository.
 
 ## License
 
-Apache-2.0. See [`LICENSE`](./LICENSE).
+Apache-2.0. See `LICENSE`.
