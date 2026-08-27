@@ -131,6 +131,17 @@ test("schema: unknown-node-type names the registered types", () => {
   assert.match(problems[0]?.message ?? "", /brief, contract, decision, evidence, intent/);
 });
 
+test("schema: prototype member names are unknown types, not Object.prototype hits", () => {
+  for (const type of ["constructor", "valueof", "hasownproperty"]) {
+    const node = parseNodeFile(
+      `---\nid: ${type}-x-1111\ntype: ${type}\ntitle: T\ncreated: 2026-08-17\n---\n\nBody\n`,
+      `specs/nodes/${type}-x-1111.md`,
+    ).value!;
+    const problems = validateNode(node, CORE_NODE_SCHEMAS);
+    assert.equal(problems[0]?.code, "unknown-node-type", type);
+  }
+});
+
 test("schema: decided_by is <kind>:<name> with kind human|agent|automation", () => {
   assert.deepEqual(parseDecidedBy("human:samir"), { kind: "human", name: "samir" });
   assert.deepEqual(parseDecidedBy("agent:@pactwright/standard/spec"), {

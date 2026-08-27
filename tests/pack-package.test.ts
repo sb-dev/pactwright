@@ -82,11 +82,14 @@ test("standard pack: pack.yml is valid, complete for the core capabilities, and 
   for (const capability of CORE_CAPABILITIES) {
     assert.ok(manifest.capabilities[capability], `provides ${capability}`);
   }
-  assert.deepEqual(manifest.capabilities, {
-    "delivery-execution": "implementer",
-    "delivery-review": "reviewer",
-    "delivery-specification": "spec",
-  });
+  assert.deepEqual(
+    { ...manifest.capabilities },
+    {
+      "delivery-execution": "implementer",
+      "delivery-review": "reviewer",
+      "delivery-specification": "spec",
+    },
+  );
 });
 
 test("standard pack: prompts delegate lifecycle state to the runtime and own no transition rules", () => {

@@ -102,7 +102,9 @@ export function parsePackManifest(raw: unknown, path: string): ParseResult<PackM
     c.fail("invalid-value", `pack.pactwright must be x.y.z or ^x.y.z, found "${pactwright}"`);
   }
 
-  const agents: Record<string, PackAgent> = {};
+  // Prototype-less maps: keys are author-controlled, and a name like
+  // "constructor" must never resolve to an Object.prototype member.
+  const agents: Record<string, PackAgent> = Object.create(null) as Record<string, PackAgent>;
   const agentsRaw = expectRecord(c, root["agents"], "pack.agents");
   if (agentsRaw !== undefined) {
     for (const key of Object.keys(agentsRaw).sort()) {
@@ -118,7 +120,7 @@ export function parsePackManifest(raw: unknown, path: string): ParseResult<PackM
     }
   }
 
-  const capabilities: Record<string, string> = {};
+  const capabilities: Record<string, string> = Object.create(null) as Record<string, string>;
   const capsRaw = expectRecord(c, root["capabilities"], "pack.capabilities");
   if (capsRaw !== undefined) {
     for (const capability of Object.keys(capsRaw).sort()) {
@@ -128,7 +130,7 @@ export function parsePackManifest(raw: unknown, path: string): ParseResult<PackM
       }
       const agent = expectString(c, capsRaw[capability], `pack.capabilities.${capability}`);
       if (agent === undefined) continue;
-      if (agentsRaw !== undefined && !(agent in agentsRaw)) {
+      if (agentsRaw !== undefined && !Object.hasOwn(agentsRaw, agent)) {
         c.fail(
           "unknown-agent",
           `pack.capabilities.${capability} names agent "${agent}", which pack.agents does not declare`,

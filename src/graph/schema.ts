@@ -47,9 +47,11 @@ export type NodeSchemaRegistry = Readonly<Record<string, NodeSchema>>;
  * `createNodeSchemaRegistry([...Object.values(CORE_NODE_SCHEMAS), ...own])`.
  */
 export function createNodeSchemaRegistry(schemas: readonly NodeSchema[]): NodeSchemaRegistry {
-  const registry: Record<string, NodeSchema> = {};
+  // Prototype-less, so a type like "constructor" can never resolve to an
+  // Object.prototype member instead of a registered schema.
+  const registry: Record<string, NodeSchema> = Object.create(null) as Record<string, NodeSchema>;
   for (const schema of schemas) {
-    if (schema.type in registry) {
+    if (Object.hasOwn(registry, schema.type)) {
       throw new PactwrightError(
         "duplicate-node-type",
         `node type "${schema.type}" is already registered`,

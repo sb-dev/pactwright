@@ -11,11 +11,14 @@ test("pack manifest: the complete fixture parses to the §7 shape", () => {
   assert.deepEqual(result.problems, []);
   assert.equal(result.value?.name, "@pactwright/standard");
   assert.equal(result.value?.pactwright, "0.0.0");
-  assert.deepEqual(result.value?.capabilities, {
-    "delivery-execution": "implementer",
-    "delivery-review": "reviewer",
-    "delivery-specification": "spec",
-  });
+  assert.deepEqual(
+    { ...result.value?.capabilities },
+    {
+      "delivery-execution": "implementer",
+      "delivery-review": "reviewer",
+      "delivery-specification": "spec",
+    },
+  );
   assert.deepEqual(result.value?.agents["spec"], {
     prompt: "agents/spec.md",
     skills: ["repository-analysis", "contract-writing"],

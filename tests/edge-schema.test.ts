@@ -142,6 +142,20 @@ test("edge-schema: an extension edge type validates against extension node types
   );
 });
 
+test("edge-schema: prototype member names are unknown types, not Object.prototype hits", () => {
+  const nodes = loadAndValidate(path.join(fixture("edges"), "valid")).nodes;
+  const source = nodes[0]!.id;
+  for (const type of ["constructor", "valueof"]) {
+    const problems = validateEdges(
+      [{ source, type, target: source }],
+      nodes,
+      CORE_EDGE_SCHEMAS,
+      "edges.yml",
+    );
+    assert.equal(problems[0]?.code, "unknown-edge-type", type);
+  }
+});
+
 test("edge-schema: the positive fixture validates cleanly across all five relations", () => {
   const result = loadAndValidate(path.join(fixture("edges"), "valid"));
   assert.deepEqual(result.problems, []);

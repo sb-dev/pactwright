@@ -181,6 +181,14 @@ test("lock: a complete pack resolves and writes a lock that round-trips, byte-id
   noTemps(root);
 });
 
+test("resolve: agentFor with a prototype member name returns undefined, not a crash", () => {
+  const root = temp();
+  const pack = resolvePack({ root, config: config("@pactwright/standard") }).value!;
+  for (const capability of ["constructor", "valueOf", "hasOwnProperty", "__proto__"]) {
+    assert.equal(agentFor(pack, capability), undefined, capability);
+  }
+});
+
 test("lock: empty agent and skill maps serialise to YAML the loader can parse back", () => {
   const hash = `sha256:${"0".repeat(64)}`;
   const lock = {

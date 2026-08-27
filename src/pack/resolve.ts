@@ -209,7 +209,8 @@ export function agentFor(
   | undefined {
   const key = pack.manifest.capabilities[capability];
   if (key === undefined) return undefined;
-  const agent = pack.manifest.agents[key]!;
+  const agent = pack.manifest.agents[key];
+  if (agent === undefined) return undefined;
   return { key, prompt: join(pack.dir, agent.prompt), skills: agent.skills };
 }
 
