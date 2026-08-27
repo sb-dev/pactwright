@@ -7,6 +7,6 @@ coverage/
 pnpm-lock.yaml
 docs/
 drafts/
-specs/
+.claude/
 tests/fixtures/
 *.md
