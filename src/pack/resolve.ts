@@ -52,6 +52,11 @@ function parseVersion(text: string): readonly [number, number, number] | undefin
  * minor, `^x.y.z` fixes the major). During the `0.0.x` series packs declare
  * the exact runtime version, so caret only matters from `0.1.0` onward.
  */
+/** Whether `range` is a shape `satisfiesRange` understands: `x.y.z` or `^x.y.z`. */
+export function isValidRange(range: string): boolean {
+  return parseVersion(range.startsWith("^") ? range.slice(1) : range) !== undefined;
+}
+
 export function satisfiesRange(version: string, range: string): boolean {
   const caret = range.startsWith("^");
   const want = parseVersion(caret ? range.slice(1) : range);
@@ -80,12 +85,22 @@ function isPathSource(source: string): boolean {
 export function locatePack(root: string, source: string): string | Problem {
   if (isPathSource(source)) return resolve(root, source);
   const candidates = [join(root, "package.json"), import.meta.url];
+  let unexported = false;
   for (const from of candidates) {
     try {
       return dirname(createRequire(from).resolve(`${source}/package.json`));
-    } catch {
-      /* try the next location */
+    } catch (error) {
+      // An installed package whose `exports` map hides package.json is a
+      // different failure from an absent one; try the next location.
+      const code = (error as NodeJS.ErrnoException).code;
+      if (code === "ERR_PACKAGE_PATH_NOT_EXPORTED") unexported = true;
     }
+  }
+  if (unexported) {
+    return {
+      code: "pack-not-exported",
+      message: `agent pack "${source}" is installed but its package "exports" does not expose ./package.json, so it cannot be used as a pack`,
+    };
   }
   return {
     code: "pack-not-found",
@@ -130,7 +145,14 @@ export function resolvePack(options: ResolvePackOptions): {
     });
   }
   const wanted = options.config.agentPack.version;
-  if (wanted !== undefined && !satisfiesRange(manifest.version, wanted)) {
+  if (wanted !== undefined && !isValidRange(wanted)) {
+    // A range the runtime cannot parse is its own problem, not a mismatch.
+    problems.push({
+      code: "invalid-version-range",
+      message: `config.agent_pack.version "${wanted}" is not a supported range; use x.y.z or ^x.y.z`,
+      path,
+    });
+  } else if (wanted !== undefined && !satisfiesRange(manifest.version, wanted)) {
     problems.push({
       code: "incompatible-pack-version",
       message: `config.agent_pack.version wants ${wanted} but the installed pack "${manifest.name}" is ${manifest.version}`,

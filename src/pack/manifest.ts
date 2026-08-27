@@ -1,5 +1,5 @@
 import { existsSync, readFileSync, statSync } from "node:fs";
-import { isAbsolute, join, normalize } from "node:path";
+import { isAbsolute, join, normalize, sep } from "node:path";
 import type { ParseResult } from "../config/config.js";
 import {
   Checker,
@@ -44,7 +44,9 @@ function expectRelativeFile(c: Checker, value: unknown, label: string): string |
   const text = expectString(c, value, label);
   if (text === undefined) return undefined;
   const clean = normalize(text);
-  if (isAbsolute(clean) || clean.startsWith("..")) {
+  // Reject a leading `..` path *segment*, not any name starting with two
+  // dots: `agents/..foo.md` is a legitimate (if odd) file name.
+  if (isAbsolute(clean) || clean === ".." || clean.startsWith(`..${sep}`)) {
     return c.fail("invalid-path", `${label} must be a relative path inside the pack`);
   }
   return text;

@@ -139,6 +139,32 @@ test("resolve: runtime and requested-version compatibility are checked", () => {
   );
 });
 
+test("resolve: an unparseable requested range is its own problem, not a mismatch", () => {
+  const root = temp({ pack: "complete" });
+  for (const range of ["~1.2.3", ">=1.0.0", "1.x", "abc"]) {
+    const problems = resolvePack({ root, config: config("./pack", range) }).problems;
+    assert.deepEqual(
+      problems.map((p) => p.code),
+      ["invalid-version-range"],
+      range,
+    );
+    assert.match(problems[0]!.message, new RegExp(range.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")));
+  }
+});
+
+test("resolve: an installed pack that hides package.json reports pack-not-exported", () => {
+  const root = temp();
+  const local = path.join(root, "node_modules", "@x", "hidden");
+  cpSync(fixture("packs/complete"), local, { recursive: true });
+  writeFileSync(
+    path.join(local, "package.json"),
+    '{"name":"@x/hidden","version":"0.0.0","exports":{".":"./pack.yml"}}\n',
+  );
+  const located = locatePack(root, "@x/hidden");
+  assert.notEqual(typeof located, "string");
+  assert.equal((located as { code: string }).code, "pack-not-exported");
+});
+
 test("resolve: a project-local package wins over the runtime fallback; its name must match", () => {
   const root = temp();
   const local = path.join(root, "node_modules", "@x", "other");

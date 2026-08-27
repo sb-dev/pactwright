@@ -1,15 +1,25 @@
 import { createHash } from "node:crypto";
 
 /**
+ * The longest slug a node id may carry. The id adds the type, a dash and up
+ * to 64 hash digits, and the filename adds `.md`; 180 keeps the whole name
+ * comfortably under the common 255-byte filesystem limit.
+ */
+const MAX_SLUG_LENGTH = 180;
+
+/**
  * Turns a title into the `<slug>` part of a node id: lowercase, runs of
- * non-alphanumerics become single dashes. `undefined` when nothing usable
- * remains.
+ * non-alphanumerics become single dashes, truncated to `MAX_SLUG_LENGTH`.
+ * `undefined` when nothing usable remains. Truncation never harms
+ * uniqueness: `mintNodeId` hashes the full creation input, not the slug.
  */
 export function slugify(title: string): string | undefined {
   const slug = title
     .toLowerCase()
     .replace(/[^a-z0-9]+/g, "-")
-    .replace(/^-+|-+$/g, "");
+    .replace(/^-+|-+$/g, "")
+    .slice(0, MAX_SLUG_LENGTH)
+    .replace(/-+$/, "");
   return slug.length === 0 ? undefined : slug;
 }
 

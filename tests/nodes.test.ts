@@ -1,5 +1,7 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
+import { cpSync, mkdirSync, mkdtempSync, rmSync } from "node:fs";
+import { tmpdir } from "node:os";
 import * as path from "node:path";
 import { checkNodeId, loadNodes, parseNodeFile } from "../src/graph/nodes.js";
 import { fixture } from "./helpers.js";
@@ -71,4 +73,18 @@ test("nodes: loadNodes reads a directory sorted by id and reports duplicates", (
   );
   const missing = loadNodes(path.join(fixture("valid-project"), "specs", "nope"));
   assert.equal(missing.problems[0]?.code, "missing-directory");
+});
+
+test("nodes: a directory named *.md is an unreadable-file problem, not a crash", () => {
+  const dir = mkdtempSync(path.join(tmpdir(), "pactwright-nodes-"));
+  try {
+    cpSync(path.join(fixture("valid-project"), "specs", "nodes"), dir, { recursive: true });
+    mkdirSync(path.join(dir, "intent-trap-0000.md"));
+    const result = loadNodes(dir);
+    assert.equal(result.problems.length, 1);
+    assert.equal(result.problems[0]?.code, "unreadable-file");
+    assert.equal(result.nodes.length, 3);
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
 });

@@ -149,7 +149,17 @@ export function loadNodes(dir: string): NodesLoadResult {
     .sort();
   for (const name of files) {
     const path = join(dir, name);
-    const parsed = parseNodeFile(readFileSync(path, "utf8"), path);
+    let content: string;
+    try {
+      content = readFileSync(path, "utf8");
+    } catch (error) {
+      // A directory named *.md, unreadable permissions, a broken symlink:
+      // a Problem, never a raw filesystem throw out of the loader.
+      const detail = error instanceof Error ? error.message : String(error);
+      problems.push({ code: "unreadable-file", message: `cannot read file: ${detail}`, path });
+      continue;
+    }
+    const parsed = parseNodeFile(content, path);
     problems.push(...parsed.problems);
     if (parsed.value === undefined) continue;
     const previous = seen.get(parsed.value.id);

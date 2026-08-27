@@ -453,6 +453,17 @@ test("mutations: created nodes round-trip through the node parser", () => {
   assert.equal(parsed.value?.title, intent.title);
 });
 
+test("mutations: an over-long title mints a capped slug and a writable filename", () => {
+  const longSlug = slugify("word ".repeat(80));
+  assert.ok(longSlug!.length <= 180);
+  assert.ok(!longSlug!.endsWith("-"));
+  const root = tempProject();
+  const intent = createIntent(root, { title: "Long ".repeat(80), body: "Body." });
+  assert.ok(existsSync(intent.path));
+  assert.ok(path.basename(intent.path).length <= 255);
+  load(root); // the written state reloads cleanly
+});
+
 test("mutations: ids are deterministic, unique and well-formed", () => {
   assert.equal(slugify("Ship the Banner!"), "ship-the-banner");
   assert.equal(slugify("--- !!"), undefined);

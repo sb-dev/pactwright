@@ -85,6 +85,20 @@ test("pack manifest: pack.name accepts scoped npm names and rejects invalid ones
   }
 });
 
+test("pack manifest: a leading .. segment is rejected but ..-prefixed names are not", () => {
+  const withPrompt = (prompt: string) =>
+    parsePackManifest({ ...valid, agents: { spec: { prompt } } }, "pack.yml");
+  assert.deepEqual(withPrompt("agents/..foo.md").problems, []);
+  assert.deepEqual(withPrompt("..foo.md").problems, []);
+  for (const prompt of ["../outside.md", "..", "agents/../../outside.md"]) {
+    assert.deepEqual(
+      withPrompt(prompt).problems.map((p) => p.code),
+      ["invalid-path"],
+      prompt,
+    );
+  }
+});
+
 test("pack manifest: structural problems are all reported in one pass", () => {
   const result = parsePackManifest(
     {
