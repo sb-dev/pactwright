@@ -1,7 +1,8 @@
 import { createHash } from "node:crypto";
 import { renameSync, writeFileSync } from "node:fs";
 import { createRequire } from "node:module";
-import { basename, dirname, isAbsolute, join, resolve } from "node:path";
+import { dirname, isAbsolute, join, resolve } from "node:path";
+import { tempSibling } from "../atomic.js";
 import type { PactwrightConfig } from "../config/config.js";
 import type { LockFile } from "../config/lock.js";
 import { PactwrightError, type Problem } from "../errors.js";
@@ -241,7 +242,7 @@ export function serialiseLock(lock: LockFile): string {
 
 /** Writes the lock file atomically (temporary sibling + rename). */
 export function writeLock(lockPath: string, lock: LockFile): void {
-  const temp = join(dirname(lockPath), `.${basename(lockPath)}.tmp-${process.pid}`);
+  const temp = tempSibling(lockPath);
   writeFileSync(temp, serialiseLock(lock), "utf8");
   renameSync(temp, lockPath);
 }

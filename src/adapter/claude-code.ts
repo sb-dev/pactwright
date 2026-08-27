@@ -1,6 +1,7 @@
 import { existsSync, mkdirSync, readdirSync, renameSync, unlinkSync, writeFileSync } from "node:fs";
-import { basename, dirname, join } from "node:path";
+import { dirname, join } from "node:path";
 import { dump } from "js-yaml";
+import { tempSibling } from "../atomic.js";
 import { CORE_STAGES } from "../config/lifecycle.js";
 import { SKILLS_DIR, readPackFile } from "../pack/manifest.js";
 import { agentFor, type ResolvedPack } from "../pack/resolve.js";
@@ -117,7 +118,7 @@ export function writeAdapter(root: string, files: RenderedFiles): WriteAdapterRe
     for (const [relative, content] of files) {
       const target = join(root, relative);
       mkdirSync(dirname(target), { recursive: true });
-      const temp = join(dirname(target), `.${basename(target)}.tmp-${process.pid}`);
+      const temp = tempSibling(target);
       writeFileSync(temp, content, "utf8");
       temps.push([temp, target]);
     }

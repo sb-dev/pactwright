@@ -12,6 +12,7 @@ import {
 import { createHash } from "node:crypto";
 import * as path from "node:path";
 import * as api from "../src/index.js";
+import { tempSibling } from "../src/atomic.js";
 import { PactwrightError } from "../src/errors.js";
 import { mintNodeId, slugify } from "../src/graph/ids.js";
 import { deriveLineage } from "../src/graph/lineage.js";
@@ -92,6 +93,11 @@ function rawNode(root: string, id: string): GraphNode {
 }
 
 const CONTRACT = { title: "Quick start contract", body: "Print a banner." };
+
+test("atomic: temp sibling names are unique per write within one process", () => {
+  const target = path.join("some", "dir", "edges.yml");
+  assert.notEqual(tempSibling(target), tempSibling(target));
+});
 
 test("mutations: proceed records decision + canonical contract + resolves/selects", () => {
   const root = tempProject();

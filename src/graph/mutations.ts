@@ -1,6 +1,7 @@
 import { readFileSync, renameSync, unlinkSync, writeFileSync } from "node:fs";
-import { basename, dirname, join } from "node:path";
+import { join } from "node:path";
 import { dump } from "js-yaml";
+import { tempSibling } from "../atomic.js";
 import { PactwrightError, type Problem } from "../errors.js";
 import { decisionActor, type Actor } from "../config/lifecycle.js";
 import { loadProject, type Project } from "../loader.js";
@@ -159,16 +160,13 @@ export function commitGraphChange(
         /* rollback is best effort */
       }
     }
-    const temp = join(
-      dirname(project.paths.edges),
-      `.${basename(project.paths.edges)}.tmp-${process.pid}`,
-    );
+    const temp = tempSibling(project.paths.edges);
     writeFileSync(temp, previousEdges, "utf8");
     renameSync(temp, project.paths.edges);
   };
   try {
     for (const write of writes) {
-      const temp = join(dirname(write.path), `.${basename(write.path)}.tmp-${process.pid}`);
+      const temp = tempSibling(write.path);
       writeFileSync(temp, write.content, "utf8");
       temps.push(temp);
     }
