@@ -10,6 +10,7 @@ import { CORE_EDGE_SCHEMAS, validateEdges } from "./edge-schema.js";
 import { edgeKey, type Edge } from "./edges.js";
 import { mintNodeId, slugify } from "./ids.js";
 import { validateLineages } from "./lineage.js";
+import { graphRevision } from "./revision.js";
 import { checkNodeIdImmutability, parseNodeFile, type GraphNode } from "./nodes.js";
 import {
   CORE_NODE_SCHEMAS,
@@ -144,6 +145,18 @@ export function commitGraphChange(
     ...checkNodeIdImmutability(project.graph.nodes, nodes),
   );
   if (problems.length > 0) throw PactwrightError.fromProblems("mutation-invalid", problems);
+
+  // Compare-and-swap: the snapshot this change was planned against must
+  // still be the on-disk graph state, or a concurrent writer's records
+  // would be silently overwritten by the wholesale edges.yml rewrite.
+  const expected = graphRevision({ nodes: project.graph.nodes, edges: project.graph.edges });
+  const fresh = loadProject({ root: project.paths.root });
+  if (graphRevision({ nodes: fresh.graph.nodes, edges: fresh.graph.edges }) !== expected) {
+    throw new PactwrightError(
+      "concurrent-modification",
+      "the graph changed since this mutation was planned; reload and retry",
+    );
+  }
 
   // path → content, edges.yml last so the links land only after the records.
   const previousEdges = readFileSync(project.paths.edges, "utf8");

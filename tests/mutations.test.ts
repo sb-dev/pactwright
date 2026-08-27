@@ -381,6 +381,21 @@ test("mutations: the commit path runs full common validation before any write", 
   assertNoTemps(root);
 });
 
+test("mutations: a stale snapshot is refused instead of overwriting concurrent edges", () => {
+  const root = tempProject();
+  const stale = load(root);
+  // A concurrent writer commits between the caller's load and its commit.
+  createIntent(root, { title: "Concurrent intent", body: "Landed first." });
+  const after = snapshot(root);
+  assert.throws(
+    () => commitGraphChange(stale, { addNodes: [rawNode(root, "intent-late-beef")], addEdges: [] }),
+    (error: unknown) =>
+      error instanceof PactwrightError && error.code === "concurrent-modification",
+  );
+  assert.equal(snapshot(root), after);
+  assertNoTemps(root);
+});
+
 test("mutations: a post-write invalid resulting state is rolled back completely", () => {
   const root = tempProject();
   const before = snapshot(root);
