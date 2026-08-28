@@ -344,7 +344,9 @@ function extensionCommand(sub: string | undefined, args: readonly string[]): num
   } else {
     out(formatExtensionReport(report));
     if (report.problems.length > 0) {
-      out("Validation problems:\n");
+      // A successful command can still carry an advisory, so the heading
+      // follows the outcome rather than the presence of problems.
+      out(report.ok ? "Notes:\n" : "Validation problems:\n");
       for (const problem of report.problems) out(`  - ${formatProblem(problem)}\n`);
     }
   }

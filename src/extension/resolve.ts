@@ -116,6 +116,28 @@ export function resolveExtensions(options: ResolveExtensionsOptions): {
   value: readonly ResolvedExtension[] | undefined;
   problems: readonly Problem[];
 } {
+  const { extensions, problems } = resolveExtensionsBestEffort(options);
+  if (problems.length > 0) return { value: undefined, problems };
+  return { value: extensions, problems: [] };
+}
+
+/**
+ * Resolution without the all-or-nothing gate: every extension that could be
+ * resolved, alongside every problem found. An entry here may itself be the
+ * subject of a reported problem (`incompatible-runtime`, a package mismatch,
+ * a duplicate type or a cycle), and an extension that could not be located,
+ * whose manifest failed to load, or whose declared id disagrees with its
+ * configuration key is absent entirely.
+ *
+ * Use it only for reporting and for decisions that fail closed elsewhere —
+ * never to decide behaviour. `removeExtension` needs it because the command
+ * that repairs a broken extension set must not be blocked by that set being
+ * broken.
+ */
+export function resolveExtensionsBestEffort(options: ResolveExtensionsOptions): {
+  readonly extensions: readonly ResolvedExtension[];
+  readonly problems: readonly Problem[];
+} {
   const { root, config } = options;
   const runtime = options.runtimeVersion ?? runtimeVersion();
   const problems: Problem[] = [];
@@ -236,8 +258,7 @@ export function resolveExtensions(options: ResolveExtensionsOptions): {
     }
   }
 
-  if (problems.length > 0) return { value: undefined, problems };
-  return { value: resolved, problems: [] };
+  return { extensions: resolved, problems };
 }
 
 /** Manifests of the enabled extensions, the set that contributes behaviour. */

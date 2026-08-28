@@ -227,6 +227,74 @@ test("extension remove: blocked while an enabled extension depends on it", () =>
   assert.deepEqual(loadLock(path.join(root, ".pactwright", "lock.yml")).value!.extensions, {});
 });
 
+test("extension remove: runs when the extension being removed is what is broken", () => {
+  const root = temp({ extensions: ["fixture-base"] });
+  writeNode(root, "note-kept-1a2b", "note", "Kept note");
+  // A runtime bump the old extension does not declare: every command that
+  // loads the project now fails, so remove must still be able to undo it.
+  const manifest = installedManifest(root, "fixture-base");
+  fs.writeFileSync(
+    manifest,
+    fs.readFileSync(manifest, "utf8").replace("pactwright: 0.0.0", "pactwright: ^9.9.0"),
+  );
+  assert.equal(validateProject({ root }).ok, false);
+
+  const report = removeExtension(root, "fixture-base");
+  assert.equal(report.ok, true, JSON.stringify(report.problems));
+  assert.deepEqual(report.changes, [
+    { id: "fixture-base", action: "removed", previousVersion: "0.1.0" },
+  ]);
+  assert.deepEqual({ ...config(root).extensions }, {});
+  assert.deepEqual(loadLock(path.join(root, ".pactwright", "lock.yml")).value!.extensions, {});
+  // Canonical data is still preserved, and still attributed.
+  assert.equal(report.preserved.length, 1);
+});
+
+test("extension remove: runs when the extension's package is gone, and says what it cannot list", () => {
+  const root = temp({ extensions: ["fixture-base"] });
+  writeNode(root, "note-kept-1a2b", "note", "Kept note");
+  // The configured lock predates the extension; record it before the package
+  // disappears, so the fallback has something exact to report.
+  assert.equal(upgradeExtension(root, "fixture-base").ok, true);
+  fs.rmSync(path.join(root, "node_modules", "@pactwright", "fixture-base"), {
+    recursive: true,
+    force: true,
+  });
+
+  const report = removeExtension(root, "fixture-base");
+  assert.equal(report.ok, true, JSON.stringify(report.problems));
+  // The lock still records the exact version that was resolved.
+  assert.deepEqual(report.changes, [
+    { id: "fixture-base", action: "removed", previousVersion: "0.1.0" },
+  ]);
+  // With no manifest there is no ownership fact, so the list is empty and
+  // the report says so rather than implying nothing was left behind.
+  assert.deepEqual(report.preserved, []);
+  assert.deepEqual(
+    report.problems.map((p) => p.code),
+    ["extension-manifest-unavailable"],
+  );
+  assert.equal(fs.existsSync(path.join(root, "specs", "nodes", "note-kept-1a2b.md")), true);
+});
+
+test("extension remove: a broken dependency is still blocked by its enabled dependant", () => {
+  const root = temp({ extensions: ["fixture-base", "fixture-reporting"] });
+  const manifest = installedManifest(root, "fixture-base");
+  fs.writeFileSync(
+    manifest,
+    fs.readFileSync(manifest, "utf8").replace("pactwright: 0.0.0", "pactwright: ^9.9.0"),
+  );
+
+  const blocked = removeExtension(root, "fixture-base");
+  assert.equal(blocked.ok, false);
+  assert.deepEqual(
+    blocked.problems.map((p) => p.code),
+    ["extension-required-by"],
+  );
+  assert.match(blocked.problems[0]!.message, /fixture-reporting/);
+  assert.equal(config(root).extensions["fixture-base"]?.enabled, true);
+});
+
 test("extensions: disabling a dependant is safe; disabling its dependency is reported", () => {
   const safe = temp({
     extensions: ["fixture-base", { id: "fixture-reporting", enabled: false }],

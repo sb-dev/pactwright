@@ -13,7 +13,7 @@ import { resolveDesiredState, serialiseLock } from "../pack/resolve.js";
 import { projectPaths } from "../project.js";
 import { validateProject } from "../validate.js";
 import { loadExtensionManifest } from "./manifest.js";
-import { resolveExtensions } from "./resolve.js";
+import { resolveExtensionsBestEffort } from "./resolve.js";
 
 /** One extension the operation touched. */
 export interface ExtensionChange {
@@ -240,10 +240,16 @@ export function removeExtension(root: string, id: string): ExtensionChangeReport
     ]);
   }
 
-  const resolved = resolveExtensions({ root: paths.root, config: config.value });
-  if (resolved.value === undefined) return failure(paths.root, resolved.problems);
-  const removed = resolved.value.find((e) => e.id === id);
-  const dependants = resolved.value
+  // Deliberately best effort: `remove` is the remedy for a broken extension
+  // set, so it must not be blocked by that set being broken. An extension
+  // left incompatible by a runtime bump, or whose package was uninstalled,
+  // fails every other command — including the remove that would fix it.
+  // Nothing here decides the write: the proposed `resolveDesiredState` below
+  // still refuses any state that does not resolve, so every blind spot in
+  // this scan fails closed.
+  const scan = resolveExtensionsBestEffort({ root: paths.root, config: config.value });
+  const removed = scan.extensions.find((e) => e.id === id);
+  const dependants = scan.extensions
     .filter((e) => e.id !== id && e.config.enabled && e.manifest.dependencies.includes(id))
     .map((e) => e.id)
     .sort();
@@ -255,6 +261,12 @@ export function removeExtension(root: string, id: string): ExtensionChangeReport
       },
     ]);
   }
+
+  // Read before the write: `writeDesiredState` replaces the lock. When the
+  // manifest could not be loaded the lock still records the exact version
+  // that was resolved, so the report stays truthful.
+  const previousVersion =
+    removed?.manifest.version ?? loadLock(paths.lock).value?.extensions[id]?.version;
 
   const proposed = { ...config.value.extensions };
   delete proposed[id];
@@ -287,6 +299,10 @@ export function removeExtension(root: string, id: string): ExtensionChangeReport
           .filter((p) => [...ownedTypes].some((type) => p.includes(`/${type}-`)))
           .sort();
 
+  // `preserved` is defined by attribution, so with no manifest there is no
+  // ownership fact and the only honest list is empty. A bare `[]` would read
+  // as "nothing was left behind", which cannot be supported, so the removal
+  // succeeds and says why the inventory is missing.
   return {
     ok: true,
     root: paths.root,
@@ -294,12 +310,20 @@ export function removeExtension(root: string, id: string): ExtensionChangeReport
       {
         id,
         action: "removed",
-        ...(removed === undefined ? {} : { previousVersion: removed.manifest.version }),
+        ...(previousVersion === undefined ? {} : { previousVersion }),
       },
     ],
     githubProfiles: [],
     preserved,
-    problems: [],
+    problems:
+      removed === undefined
+        ? [
+            {
+              code: "extension-manifest-unavailable",
+              message: `extension "${id}" was removed, but its manifest could not be read, so the records it owned could not be listed; run \`pactwright validate\` to see records left without a registered type`,
+            },
+          ]
+        : [],
   };
 }
 
