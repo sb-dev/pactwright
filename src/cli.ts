@@ -36,8 +36,9 @@ Commands:
                                              current directory and resolve the lock; existing
                                              paths are left untouched
   sync [--json]                              Render the Pactwright-managed .claude/ adapter
-                                             surface from config + lock (deterministic;
-                                             never touches user-authored files)
+                                             surface from config + lock (deterministic; only
+                                             files carrying the Pactwright banner are written
+                                             or removed, so user-authored files are kept)
   validate [--json]                          Validate the Delivery Graph and typed-edge store
   context <node-id> [--history] [--json]     Print the current core Delivery lineage of a node
   lifecycle status [--intent <id>] [--json]  Report stage, completed stages, gates and lineage
@@ -373,6 +374,8 @@ function syncCommand(args: readonly string[]): number {
     for (const path of report.changed) out(`wrote ${path}\n`);
     for (const path of report.unchanged) out(`unchanged ${path}\n`);
     for (const path of report.removed) out(`removed ${path}\n`);
+    for (const path of report.kept) out(`kept ${path} (not pactwright-generated)\n`);
+    for (const path of report.conflicts) out(`conflict ${path} (not pactwright-generated)\n`);
     if (report.problems.length > 0) {
       out("Validation problems:\n");
       for (const problem of report.problems) out(`  - ${formatProblem(problem)}\n`);

@@ -1,6 +1,7 @@
 import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import {
+  GENERATED_MARKER,
   renderClaudeCodeAdapter,
   writeAdapter,
   type RenderedFiles,
@@ -18,8 +19,19 @@ export interface SyncReport {
   readonly changed: readonly string[];
   /** Rendered files that were already byte-identical on disk. */
   readonly unchanged: readonly string[];
-  /** Stale managed files the render no longer produces, deleted. */
+  /** Stale generated files the render no longer produces, deleted. */
   readonly removed: readonly string[];
+  /**
+   * Files inside the managed directories that carry no Pactwright marker, so
+   * are not Pactwright's to remove. Reported, never deleted.
+   */
+  readonly kept: readonly string[];
+  /**
+   * Rendered paths already occupied by an unmarked file. The file is left
+   * untouched and the sync fails, so the collision is resolved deliberately
+   * rather than by overwriting user state.
+   */
+  readonly conflicts: readonly string[];
   /** Empty when `ok`. */
   readonly problems: readonly Problem[];
 }
@@ -48,6 +60,10 @@ export function renderGitHubWorkflows(project: Project, pack: ResolvedPack): Ren
  * declare no renderable adapter content yet. Repeated sync with unchanged
  * inputs is byte-identical. Never throws for expected failures, and writes
  * nothing when resolution fails.
+ *
+ * Only files carrying the Pactwright marker are overwritten or removed, so a
+ * hand-written file inside `.claude/agents` or `.claude/commands` survives
+ * every sync.
  */
 export function syncProject(root: string = process.cwd()): SyncReport {
   const paths = projectPaths(root);
@@ -57,6 +73,8 @@ export function syncProject(root: string = process.cwd()): SyncReport {
     changed: [],
     unchanged: [],
     removed: [],
+    kept: [],
+    conflicts: [],
     problems,
   });
 
@@ -75,6 +93,9 @@ export function syncProject(root: string = process.cwd()): SyncReport {
     ...renderGitHubWorkflows(project, pack),
   ]);
 
+  // Compared before the write, or every rendered file would read back as
+  // unchanged. Paths that turn out to collide with user state are dropped
+  // afterwards: nothing was written there.
   const changed: string[] = [];
   const unchanged: string[] = [];
   for (const [relPath, content] of files) {
@@ -87,12 +108,25 @@ export function syncProject(root: string = process.cwd()): SyncReport {
   }
 
   const written = writeAdapter(paths.root, files);
+  const conflicted = new Set(written.conflicts);
+
+  // A collision with an unmarked file is reported, never resolved by
+  // overwriting: `sync` fails so the state is visible to the user and to CI
+  // (Distribution §14 — leave ambiguous state intact and report it).
+  const problems: Problem[] = written.conflicts.map((path) => ({
+    code: "unmanaged-conflict",
+    message: `"${path}" is not a Pactwright-generated file, so it was not overwritten: delete it, or restore its "${GENERATED_MARKER}" banner, then run \`pactwright sync\` again`,
+    path,
+  }));
+
   return {
-    ok: true,
+    ok: problems.length === 0,
     root: paths.root,
-    changed: changed.sort(),
-    unchanged: unchanged.sort(),
+    changed: changed.filter((path) => !conflicted.has(path)).sort(),
+    unchanged: unchanged.filter((path) => !conflicted.has(path)).sort(),
     removed: written.removed,
-    problems: [],
+    kept: written.kept,
+    conflicts: written.conflicts,
+    problems,
   };
 }

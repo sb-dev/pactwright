@@ -6,6 +6,7 @@ import { initProject, initTemplates } from "../src/init.js";
 import { loadConfig } from "../src/config/config.js";
 import { loadLock } from "../src/config/lock.js";
 import { lockEntriesFor, resolvePack } from "../src/pack/resolve.js";
+import { syncProject } from "../src/sync.js";
 import { runtimeVersion } from "../src/version.js";
 import { validateProject } from "../src/validate.js";
 import { fixture, makeEmptyRepo } from "./helpers.js";
@@ -153,6 +154,14 @@ test("init: leaves user-authored files untouched in a populated repository", () 
   const byPath = new Map(report.entries.map((entry) => [entry.path, entry.action]));
   assert.equal(byPath.get(".claude/agents"), "skipped");
   assert.equal(byPath.get(".claude/commands"), "skipped");
+  for (const [relPath, content] of userFiles) assert.equal(read(dir, relPath), content);
+
+  // The documented flow is `init` then `sync`. What init promises to leave
+  // alone, sync must also leave alone — otherwise the two disagree.
+  const synced = syncProject(dir);
+  assert.equal(synced.ok, true, synced.problems.map((p) => p.message).join("\n"));
+  assert.deepEqual(synced.removed, []);
+  assert.deepEqual(synced.kept, [".claude/agents/custom.md", ".claude/commands/deploy.md"]);
   for (const [relPath, content] of userFiles) assert.equal(read(dir, relPath), content);
 });
 

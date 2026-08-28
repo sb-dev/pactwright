@@ -234,7 +234,9 @@ export {
   type ExtensionChangeReport,
 } from "./extension/manage.js";
 export {
+  GENERATED_MARKER,
   MANAGED_DIRS,
+  isGenerated,
   renderClaudeCodeAdapter,
   writeAdapter,
   type RenderedFiles,

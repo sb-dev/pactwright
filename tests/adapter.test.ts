@@ -3,7 +3,12 @@ import assert from "node:assert/strict";
 import { createHash } from "node:crypto";
 import * as fs from "node:fs";
 import * as path from "node:path";
-import { MANAGED_DIRS, renderClaudeCodeAdapter, writeAdapter } from "../src/adapter/claude-code.js";
+import {
+  GENERATED_MARKER,
+  MANAGED_DIRS,
+  renderClaudeCodeAdapter,
+  writeAdapter,
+} from "../src/adapter/claude-code.js";
 import { COMMAND_TEMPLATES } from "../src/adapter/commands.js";
 import { CORE_STAGES } from "../src/config/lifecycle.js";
 import { GRAPH_MARKING_STAGES, TRANSIENT_STAGES } from "../src/lifecycle/engine.js";
@@ -18,7 +23,10 @@ import { fixture, makeTempProject, repoRoot } from "./helpers.js";
  * value: bump it on purpose, in the same commit, after reading the diff.
  */
 const COMPLETE_RENDER_HASH =
-  "sha256:637f1b928cd3e5431850c2449dbe7bf344c713253cc588722bc4a78e6f416508";
+  "sha256:112587ff33338fee1f70b3f794c128189c815093f5198313626052a24e547e6e";
+
+/** A minimal banner: enough to prove ownership, as a stale render would. */
+const BANNER = `${GENERATED_MARKER} from @pactwright/standard@0.0.0 (gone). -->\n\n`;
 
 const FORBIDDEN =
   /\b(supersede the|must supersede|human gate|next stage|advance the lifecycle|mark (the )?(brief|contract|intent) as)\b/i;
@@ -149,27 +157,53 @@ test("adapter: commands invoke the runtime and own no transition rules", () => {
   }
 });
 
-test("adapter: writing twice is byte-identical, prunes stale managed files and leaves the rest", () => {
+test("adapter: writing twice is byte-identical, prunes stale generated files and leaves the rest", () => {
   const dir = makeTempProject({ pack: "complete" });
   tempDirs.push(dir);
   fs.mkdirSync(path.join(dir, ".claude", "commands"), { recursive: true });
-  fs.writeFileSync(path.join(dir, ".claude", "commands", "old.md"), "stale\n");
+  fs.writeFileSync(path.join(dir, ".claude", "commands", "old.md"), `${BANNER}stale\n`);
+  fs.writeFileSync(path.join(dir, ".claude", "commands", "mine.md"), "hand-written\n");
   fs.writeFileSync(path.join(dir, ".claude", "settings.local.json"), "{}\n");
 
   const pack = packAt(dir);
   const first = writeAdapter(dir, renderClaudeCodeAdapter(pack));
   assert.deepEqual(first.removed, [".claude/commands/old.md"]);
+  assert.deepEqual(first.kept, [".claude/commands/mine.md"]);
+  assert.deepEqual(first.conflicts, []);
   assert.equal(first.written.length, 10);
   const afterFirst = treeHashes(dir);
   const second = writeAdapter(dir, renderClaudeCodeAdapter(pack));
   assert.deepEqual(second.removed, []);
+  assert.deepEqual(second.kept, [".claude/commands/mine.md"]);
   assert.deepEqual(treeHashes(dir), afterFirst);
-  assert.equal(Object.keys(afterFirst).length, 10);
+  // The 10 rendered files plus the hand-written one the adapter left alone.
+  assert.equal(Object.keys(afterFirst).length, 11);
   assert.equal(fs.readFileSync(path.join(dir, ".claude", "settings.local.json"), "utf8"), "{}\n");
+  assert.equal(
+    fs.readFileSync(path.join(dir, ".claude", "commands", "mine.md"), "utf8"),
+    "hand-written\n",
+  );
   assert.ok(!fs.existsSync(path.join(dir, ".claude", "commands", "old.md")));
   for (const entry of fs.readdirSync(path.join(dir, ".claude", "agents"))) {
     assert.doesNotMatch(entry, /\.tmp-/);
   }
+});
+
+test("adapter: an unmarked file at a rendered path is reported, not overwritten", () => {
+  const dir = makeTempProject({ pack: "complete" });
+  tempDirs.push(dir);
+  const mine = path.join(dir, ".claude", "agents", "spec.md");
+  fs.mkdirSync(path.dirname(mine), { recursive: true });
+  fs.writeFileSync(mine, "my own spec agent\n");
+
+  const result = writeAdapter(dir, renderClaudeCodeAdapter(packAt(dir)));
+  assert.deepEqual(result.conflicts, [".claude/agents/spec.md"]);
+  assert.equal(result.written.includes(".claude/agents/spec.md"), false);
+  assert.equal(result.written.length, 9);
+  // A conflicting path is reported once, as a conflict — never also as kept.
+  assert.deepEqual(result.kept, []);
+  assert.deepEqual(result.removed, []);
+  assert.equal(fs.readFileSync(mine, "utf8"), "my own spec agent\n");
 });
 
 test("adapter: refuses to write outside the managed directories", () => {
