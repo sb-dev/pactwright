@@ -129,6 +129,12 @@ function writeDesiredState(
  * capability union, then record the exact state in config and lock. Fails
  * before any write when compatibility is incomplete; rolls both files back
  * if the resulting project state does not validate.
+ *
+ * "Missing" means not enabled, not merely absent: a dependency the
+ * configuration already names but has disabled is enabled too. So adding an
+ * extension that is itself already enabled still repairs a disabled
+ * dependency underneath it, and reports what it enabled rather than
+ * `unchanged`.
  */
 export function addExtension(root: string, spec: string): ExtensionChangeReport {
   const paths = projectPaths(root);
@@ -142,21 +148,25 @@ export function addExtension(root: string, spec: string): ExtensionChangeReport 
   const added: string[] = [];
   const problems: Problem[] = [];
 
-  // Enable the requested extension, then walk manifest dependencies and
-  // enable any that are not yet configured, resolving each by its
-  // conventional `@pactwright/<id>` package (Distribution §4).
+  // Enable the requested extension, then walk its manifest dependencies and
+  // enable every one that is not already enabled — whether it is absent from
+  // the configuration or configured and disabled (Distribution §4). A
+  // dependency the configuration already names is located by its recorded
+  // source, never by the conventional package name: sources may be paths,
+  // and resolution treats a divergence as `extension-package-mismatch`. An
+  // unconfigured dependency falls back to `@pactwright/<id>`.
+  //
+  // `visited` makes termination independent of the enabled flags, so a
+  // dependency cycle among configured extensions stops here; reporting the
+  // cycle stays with `resolveDesiredState` below.
   const queue: Array<{ id: string; source: string }> = [parsed];
+  const visited = new Set<string>();
   while (queue.length > 0) {
     const { id, source } = queue.shift()!;
+    if (visited.has(id)) continue;
+    visited.add(id);
     const existing = Object.hasOwn(proposed, id) ? proposed[id] : undefined;
-    if (existing !== undefined) {
-      if (!existing.enabled) {
-        proposed[id] = { ...existing, enabled: true };
-        added.push(id);
-      }
-      continue;
-    }
-    const located = locatePackage(paths.root, source, "extension");
+    const located = locatePackage(paths.root, existing?.source ?? source, "extension");
     if (typeof located !== "string") {
       problems.push({
         ...located,
@@ -170,10 +180,17 @@ export function addExtension(root: string, spec: string): ExtensionChangeReport 
       problems.push(...manifest.problems);
       continue;
     }
-    proposed[id] = { enabled: true, source };
-    added.push(id);
+    if (existing === undefined) {
+      proposed[id] = { enabled: true, source };
+      added.push(id);
+    } else if (!existing.enabled) {
+      proposed[id] = { ...existing, enabled: true };
+      added.push(id);
+    }
     for (const dep of manifest.value.dependencies) {
-      if (!Object.hasOwn(proposed, dep)) queue.push({ id: dep, source: `@pactwright/${dep}` });
+      const configured = Object.hasOwn(proposed, dep) ? proposed[dep] : undefined;
+      if (configured?.enabled === true) continue;
+      queue.push({ id: dep, source: configured?.source ?? `@pactwright/${dep}` });
     }
   }
   if (problems.length > 0) return failure(paths.root, problems);

@@ -184,6 +184,51 @@ test("extension add: resolves and enables missing dependencies first", () => {
   assert.deepEqual(lock.extensions["fixture-reporting"]?.dependencies, { "fixture-base": "0.1.0" });
 });
 
+test("extension add: re-enabling a disabled extension walks its dependencies", () => {
+  const root = temp({
+    extensions: [
+      { id: "fixture-base", enabled: false },
+      { id: "fixture-reporting", enabled: false },
+    ],
+  });
+  const report = addExtension(root, "fixture-reporting");
+  assert.equal(report.ok, true, JSON.stringify(report.problems));
+  assert.deepEqual(
+    report.changes.map((c) => c.id),
+    ["fixture-base", "fixture-reporting"],
+  );
+  assert.equal(config(root).extensions["fixture-base"]?.enabled, true);
+  assert.equal(config(root).extensions["fixture-reporting"]?.enabled, true);
+  assert.equal(validateProject({ root }).ok, true);
+});
+
+test("extension add: a disabled dependency is enabled for a newly added dependant", () => {
+  const root = temp({
+    extensions: [
+      { id: "fixture-base", enabled: false },
+      { id: "fixture-reporting", configure: false },
+    ],
+  });
+  const report = addExtension(root, "fixture-reporting");
+  assert.equal(report.ok, true, JSON.stringify(report.problems));
+  assert.deepEqual(
+    report.changes.map((c) => c.id),
+    ["fixture-base", "fixture-reporting"],
+  );
+  assert.equal(config(root).extensions["fixture-base"]?.enabled, true);
+});
+
+test("extension add: an already-enabled extension still repairs a disabled dependency", () => {
+  const root = temp({
+    extensions: [{ id: "fixture-base", enabled: false }, "fixture-reporting"],
+  });
+  assert.equal(validateProject({ root }).ok, false);
+  const report = addExtension(root, "fixture-reporting");
+  assert.equal(report.ok, true, JSON.stringify(report.problems));
+  assert.deepEqual(report.changes, [{ id: "fixture-base", action: "added", version: "0.1.0" }]);
+  assert.equal(validateProject({ root }).ok, true);
+});
+
 test("extension add: the explicit package form and re-add work", () => {
   const root = temp({ extensions: [{ id: "fixture-base", configure: false }] });
   assert.equal(addExtension(root, "@pactwright/fixture-base").ok, true);
