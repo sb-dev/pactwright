@@ -81,35 +81,46 @@ function withExtensions(
   return { ...config, extensions };
 }
 
-/** Writes config and lock atomically (temp sibling + rename, config first). */
+/**
+ * Writes config and lock atomically (temp sibling + rename, config first).
+ * `config` is `undefined` when only the lock changes, so desired state is
+ * left exactly as the user wrote it. Returns a Problem rather than throwing
+ * when either file is absent, keeping the result idiom the callers rely on.
+ */
 function writeDesiredState(
   root: string,
-  config: PactwrightConfig,
+  config: PactwrightConfig | undefined,
   lockText: string,
-): { restore: () => void } {
+): { restore: () => void } | Problem {
   const paths = projectPaths(root);
-  const previousConfig = readFileSync(paths.config, "utf8");
-  const previousLock = readFileSync(paths.lock, "utf8");
-  for (const [target, content] of [
-    [paths.config, serialiseConfig(config)],
-    [paths.lock, lockText],
-  ] as const) {
-    const temp = tempSibling(target);
-    writeFileSync(temp, content, "utf8");
-    renameSync(temp, target);
+  let previousConfig: string;
+  let previousLock: string;
+  try {
+    previousConfig = readFileSync(paths.config, "utf8");
+    previousLock = readFileSync(paths.lock, "utf8");
+  } catch (error) {
+    const path = (error as NodeJS.ErrnoException).path ?? paths.lock;
+    return { code: "missing-file", message: "file not found", path };
   }
-  return {
-    restore: () => {
-      for (const [target, content] of [
-        [paths.config, previousConfig],
-        [paths.lock, previousLock],
-      ] as const) {
-        const temp = tempSibling(target);
-        writeFileSync(temp, content, "utf8");
-        renameSync(temp, target);
-      }
-    },
+  const writeAll = (entries: readonly (readonly [string, string])[]): void => {
+    for (const [target, content] of entries) {
+      const temp = tempSibling(target);
+      writeFileSync(temp, content, "utf8");
+      renameSync(temp, target);
+    }
   };
+
+  const written: (readonly [string, string])[] = [];
+  const previous: (readonly [string, string])[] = [];
+  if (config !== undefined) {
+    written.push([paths.config, serialiseConfig(config)]);
+    previous.push([paths.config, previousConfig]);
+  }
+  written.push([paths.lock, lockText]);
+  previous.push([paths.lock, previousLock]);
+
+  writeAll(written);
+  return { restore: () => writeAll(previous) };
 }
 
 /**
@@ -188,6 +199,7 @@ export function addExtension(root: string, spec: string): ExtensionChangeReport 
     withExtensions(config.value, proposed),
     serialiseLock(desired.value.lock),
   );
+  if ("code" in written) return failure(paths.root, [written]);
   const report = validateProject({ root: paths.root });
   if (!report.ok) {
     written.restore();
@@ -252,15 +264,18 @@ export function removeExtension(root: string, id: string): ExtensionChangeReport
   });
   if (desired.value === undefined) return failure(paths.root, desired.problems);
 
-  writeDesiredState(
+  const written = writeDesiredState(
     paths.root,
     withExtensions(config.value, proposed),
     serialiseLock(desired.value.lock),
   );
+  if ("code" in written) return failure(paths.root, [written]);
 
   // Preserved user-authored canonical data: records whose types the removed
   // extension registered. `pactwright validate` reports them as unknown
-  // types until the user deletes them or re-enables the extension.
+  // types until the user deletes them or re-enables the extension. The
+  // restore handle is deliberately unused: a removal is *expected* to leave
+  // records validate rejects, so `report.ok` is never consulted here.
   const ownedTypes = new Set(removed === undefined ? [] : removed.manifest.nodeTypes);
   const report = validateProject({ root: paths.root });
   const preserved =
@@ -310,9 +325,17 @@ export function upgradeExtension(root: string, id: string): ExtensionChangeRepor
   if (desired.value === undefined) return failure(paths.root, desired.problems);
   const next = desired.value.extensions.find((e) => e.id === id);
 
-  writeDesiredState(paths.root, config.value, serialiseLock(desired.value.lock));
+  // The configuration is desired state and cannot change on an upgrade, so
+  // only the lock is written. A lock that does not validate is rolled back:
+  // §15 requires an upgrade to satisfy every enabled dependant *before* the
+  // lock file changes, so a failed upgrade must leave no trace.
+  const written = writeDesiredState(paths.root, undefined, serialiseLock(desired.value.lock));
+  if ("code" in written) return failure(paths.root, [written]);
   const report = validateProject({ root: paths.root });
-  if (!report.ok) return failure(paths.root, report.problems);
+  if (!report.ok) {
+    written.restore();
+    return failure(paths.root, report.problems);
+  }
 
   return {
     ok: true,

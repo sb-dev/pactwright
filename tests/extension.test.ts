@@ -298,3 +298,46 @@ test("extension upgrade: re-resolves and updates the lock", () => {
   ]);
   assert.equal(loadLock(lockPath).value!.extensions["fixture-base"]?.version, "0.1.1");
 });
+
+test("extension upgrade: a failed upgrade leaves config and lock byte-identical", () => {
+  const root = temp({ extensions: ["fixture-base"] });
+  assert.equal(upgradeExtension(root, "fixture-base").ok, true);
+  const configPath = path.join(root, ".pactwright", "config.yml");
+  const lockPath = path.join(root, ".pactwright", "lock.yml");
+  const beforeConfig = fs.readFileSync(configPath, "utf8");
+  const beforeLock = fs.readFileSync(lockPath, "utf8");
+
+  // A record whose type the graph no longer recognises makes the post-write
+  // validation fail, standing in for any unrelated project problem.
+  writeNode(root, "ghost-stray-1a2b", "ghost", "Stray record");
+  const manifest = installedManifest(root, "fixture-base");
+  fs.writeFileSync(
+    manifest,
+    fs.readFileSync(manifest, "utf8").replace("version: 0.1.0", "version: 0.1.1"),
+  );
+
+  const report = upgradeExtension(root, "fixture-base");
+  assert.equal(report.ok, false);
+  assert.deepEqual(report.changes, []);
+  assert.equal(fs.readFileSync(configPath, "utf8"), beforeConfig);
+  assert.equal(fs.readFileSync(lockPath, "utf8"), beforeLock);
+  assert.equal(loadLock(lockPath).value!.extensions["fixture-base"]?.version, "0.1.0");
+});
+
+test("extension upgrade: a successful upgrade leaves config.yml untouched", () => {
+  const root = temp({ extensions: ["fixture-base"] });
+  const configPath = path.join(root, ".pactwright", "config.yml");
+  assert.equal(upgradeExtension(root, "fixture-base").ok, true);
+  // Desired state cannot change on an upgrade, so a hand-formatted config —
+  // comments and all — must survive it.
+  const annotated = `# pinned on purpose\n${fs.readFileSync(configPath, "utf8")}`;
+  fs.writeFileSync(configPath, annotated);
+
+  const manifest = installedManifest(root, "fixture-base");
+  fs.writeFileSync(
+    manifest,
+    fs.readFileSync(manifest, "utf8").replace("version: 0.1.0", "version: 0.1.1"),
+  );
+  assert.equal(upgradeExtension(root, "fixture-base").ok, true);
+  assert.equal(fs.readFileSync(configPath, "utf8"), annotated);
+});
