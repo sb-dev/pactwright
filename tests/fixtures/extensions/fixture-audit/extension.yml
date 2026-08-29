@@ -1,0 +1,15 @@
+id: fixture-audit
+package: "@pactwright/fixture-audit"
+version: 0.3.0
+pactwright: 0.0.0
+
+dependencies:
+  extensions:
+    - fixture-reporting
+
+graph:
+  node_types:
+    - finding
+
+runtime:
+  namespace: audit

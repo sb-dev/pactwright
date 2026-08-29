@@ -228,6 +228,41 @@ test("extension add: an already-enabled extension still repairs a disabled depen
   assert.equal(validateProject({ root }).ok, true);
 });
 
+test("extension add: the walk crosses an enabled dependency to repair one below it", () => {
+  // fixture-audit -> fixture-reporting -> fixture-base. The middle link is
+  // already enabled, so a walk that stops at an enabled dependency never
+  // reaches the disabled one two hops down.
+  const root = temp({
+    extensions: [
+      { id: "fixture-base", enabled: false },
+      "fixture-reporting",
+      { id: "fixture-audit", configure: false },
+    ],
+  });
+  const report = addExtension(root, "fixture-audit");
+  assert.equal(report.ok, true, JSON.stringify(report.problems));
+  assert.deepEqual(
+    report.changes.map((c) => c.id),
+    ["fixture-audit", "fixture-base"],
+  );
+  assert.equal(config(root).extensions["fixture-base"]?.enabled, true);
+  assert.equal(validateProject({ root }).ok, true);
+});
+
+test("extension add: a dependency cycle terminates and is reported, not looped on", () => {
+  const root = temp({ extensions: ["fixture-base", { id: "fixture-reporting", enabled: false }] });
+  const manifest = installedManifest(root, "fixture-base");
+  fs.writeFileSync(
+    manifest,
+    fs
+      .readFileSync(manifest, "utf8")
+      .replace("graph:", "dependencies:\n  extensions:\n    - fixture-reporting\n\ngraph:"),
+  );
+  const report = addExtension(root, "fixture-reporting");
+  assert.equal(report.ok, false);
+  assert.ok(report.problems.some((p) => p.code === "extension-dependency-cycle"));
+});
+
 test("extension add: the explicit package form and re-add work", () => {
   const root = temp({ extensions: [{ id: "fixture-base", configure: false }] });
   assert.equal(addExtension(root, "@pactwright/fixture-base").ok, true);

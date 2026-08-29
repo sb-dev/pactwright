@@ -133,8 +133,13 @@ function writeDesiredState(
  * "Missing" means not enabled, not merely absent: a dependency the
  * configuration already names but has disabled is enabled too. So adding an
  * extension that is itself already enabled still repairs a disabled
- * dependency underneath it, and reports what it enabled rather than
- * `unchanged`.
+ * dependency underneath it, at any depth, and reports what it enabled rather
+ * than `unchanged`.
+ *
+ * Because the walk crosses already-enabled dependencies to reach what is
+ * below them, an add whose enabled dependency is itself broken reports that
+ * problem rather than `unchanged`. The write would have failed on it anyway;
+ * saying so up front is the more truthful answer.
  */
 export function addExtension(root: string, spec: string): ExtensionChangeReport {
   const paths = projectPaths(root);
@@ -187,9 +192,11 @@ export function addExtension(root: string, spec: string): ExtensionChangeReport 
       proposed[id] = { ...existing, enabled: true };
       added.push(id);
     }
+    // Every dependency is enqueued, enabled or not: stopping at an enabled one
+    // would hide whatever sits beneath it, and a disabled dependency two hops
+    // down is exactly what needs repairing. `visited` is what bounds the walk.
     for (const dep of manifest.value.dependencies) {
       const configured = Object.hasOwn(proposed, dep) ? proposed[dep] : undefined;
-      if (configured?.enabled === true) continue;
       queue.push({ id: dep, source: configured?.source ?? `@pactwright/${dep}` });
     }
   }
