@@ -312,22 +312,40 @@ function formatExtensionReport(report: ExtensionChangeReport): string {
   return lines.map((line) => `${line}\n`).join("");
 }
 
+const EXTENSION_OPERATIONS = {
+  add: addExtension,
+  remove: removeExtension,
+  upgrade: upgradeExtension,
+} as const;
+
+function extensionOperation(
+  sub: string | undefined,
+): (typeof EXTENSION_OPERATIONS)[keyof typeof EXTENSION_OPERATIONS] | undefined {
+  // `Object.hasOwn`, not a bare lookup: `sub` is user input, and an inherited
+  // member like "constructor" would otherwise pass an `=== undefined` guard
+  // and be called as if it were an extension operation.
+  return sub !== undefined && Object.hasOwn(EXTENSION_OPERATIONS, sub)
+    ? EXTENSION_OPERATIONS[sub as keyof typeof EXTENSION_OPERATIONS]
+    : undefined;
+}
+
 function extensionCommand(sub: string | undefined, args: readonly string[]): number {
+  // The verb is checked before the arguments, so an unknown verb is named as
+  // such rather than being reported as a missing extension id.
+  const operation = extensionOperation(sub);
+  if (operation === undefined) {
+    err(`pactwright: unknown extension command "${sub ?? ""}"\n\n${HELP}`);
+    return 1;
+  }
   const options = parseOptions(args);
   if (typeof options === "string" || options.positional.length !== 1) {
     const why =
       typeof options === "string"
         ? options
         : options.positional.length === 0
-          ? `extension ${sub ?? "<verb>"} needs an extension id`
+          ? `extension ${sub} needs an extension id`
           : `unexpected argument "${options.positional[1]}"`;
     err(`pactwright: ${why}\n\n${HELP}`);
-    return 1;
-  }
-  const operations = { add: addExtension, remove: removeExtension, upgrade: upgradeExtension };
-  const operation = operations[sub as keyof typeof operations];
-  if (operation === undefined) {
-    err(`pactwright: unknown extension command "${sub ?? ""}"\n\n${HELP}`);
     return 1;
   }
   let root: string;

@@ -506,6 +506,24 @@ test("cli: extension argument errors", () => {
   assert.match(outside.stdout, /project-not-found/);
 });
 
+test("cli: an inherited Object member is not an extension verb", () => {
+  // A bare `operations[sub]` lookup resolves these off Object.prototype, and
+  // they pass an `=== undefined` guard — so the verb has to be checked by
+  // ownership, not by truthiness.
+  const root = project();
+  for (const verb of ["constructor", "toString", "valueOf", "hasOwnProperty", "__proto__"]) {
+    const result = runIn(root, "extension", verb, "fixture-base");
+    assert.equal(result.status, 1, `${verb}: ${result.stdout}${result.stderr}`);
+    assert.match(result.stderr, /unknown extension command/, verb);
+    assert.doesNotMatch(result.stderr, /TypeError/, verb);
+  }
+  // Including in --json mode, where the crash used to print the project path
+  // as the machine-readable payload.
+  const json = runIn(root, "extension", "constructor", "fixture-base", "--json");
+  assert.equal(json.status, 1);
+  assert.equal(json.stdout, "");
+});
+
 // ---- eval -------------------------------------------------------------------
 
 test("cli: help lists eval", () => {
