@@ -7,8 +7,8 @@ import { GENERATED_MARKER, MANAGED_DIRS } from "../src/adapter/claude-code.js";
 import { syncProject } from "../src/sync.js";
 import { makeTempProject } from "./helpers.js";
 
-/** A minimal banner: enough to prove ownership, as a stale render would. */
-const BANNER = `${GENERATED_MARKER} from @pactwright/standard@0.0.0 (gone). -->\n\n`;
+/** A file shaped as a stale render: frontmatter, then the banner. */
+const BANNER = `---\ndescription: gone\n---\n\n${GENERATED_MARKER} from @pactwright/standard@0.0.0 (gone). -->\n\n`;
 
 const dirs: string[] = [];
 after(() => {
@@ -97,6 +97,34 @@ test("sync: prunes stale generated files and never touches user-authored files",
   for (const [relPath, content] of userFiles) {
     assert.equal(fs.readFileSync(path.join(root, relPath), "utf8"), content);
   }
+});
+
+test("sync: a copy of a generated file is still Pactwright's until the banner goes", () => {
+  // The banner says "Delete this line to take ownership", so copying a
+  // command to customise it and leaving the banner in place keeps it
+  // Pactwright's — it is removed once the render stops producing that name.
+  // Pinned deliberately: it is the documented contract, not an oversight.
+  const root = temp({ pack: "complete" });
+  assert.equal(syncProject(root).ok, true);
+  const commands = path.join(root, ".claude", "commands");
+  fs.copyFileSync(path.join(commands, "review.md"), path.join(commands, "my-review.md"));
+  assert.deepEqual(syncProject(root).removed, [".claude/commands/my-review.md"]);
+
+  // Dropping the banner line is what takes ownership, and then it survives.
+  fs.copyFileSync(path.join(commands, "review.md"), path.join(commands, "mine.md"));
+  const mine = path.join(commands, "mine.md");
+  fs.writeFileSync(
+    mine,
+    fs
+      .readFileSync(mine, "utf8")
+      .split("\n")
+      .filter((line) => !line.startsWith(GENERATED_MARKER))
+      .join("\n"),
+  );
+  const report = syncProject(root);
+  assert.deepEqual(report.removed, []);
+  assert.deepEqual(report.kept, [".claude/commands/mine.md"]);
+  assert.equal(fs.existsSync(mine), true);
 });
 
 test("sync: refuses to overwrite an unmarked file sitting at a rendered path", () => {

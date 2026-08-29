@@ -6,6 +6,7 @@ import * as path from "node:path";
 import {
   GENERATED_MARKER,
   MANAGED_DIRS,
+  isGenerated,
   renderClaudeCodeAdapter,
   writeAdapter,
 } from "../src/adapter/claude-code.js";
@@ -25,8 +26,12 @@ import { fixture, makeTempProject, repoRoot } from "./helpers.js";
 const COMPLETE_RENDER_HASH =
   "sha256:112587ff33338fee1f70b3f794c128189c815093f5198313626052a24e547e6e";
 
-/** A minimal banner: enough to prove ownership, as a stale render would. */
-const BANNER = `${GENERATED_MARKER} from @pactwright/standard@0.0.0 (gone). -->\n\n`;
+/**
+ * A file shaped as a stale render: frontmatter, then the banner in the
+ * position ownership is proved from. A bare marker at byte 0 would not be a
+ * render the adapter ever produced, and is deliberately not claimed.
+ */
+const BANNER = `---\ndescription: gone\n---\n\n${GENERATED_MARKER} from @pactwright/standard@0.0.0 (gone). -->\n\n`;
 
 const FORBIDDEN =
   /\b(supersede the|must supersede|human gate|next stage|advance the lifecycle|mark (the )?(brief|contract|intent) as)\b/i;
@@ -155,6 +160,56 @@ test("adapter: commands invoke the runtime and own no transition rules", () => {
       if (agent.startsWith(".claude/agents/")) assert.doesNotMatch(files.get(agent)!, FORBIDDEN);
     }
   }
+});
+
+test("adapter: ownership is proved by the banner's position, not by mentioning it", () => {
+  const dir = makeTempProject();
+  tempDirs.push(dir);
+  const write = (name: string, content: string): string => {
+    const file = path.join(dir, name);
+    fs.writeFileSync(file, content);
+    return file;
+  };
+  const rendered = renderClaudeCodeAdapter(standardPack()).get(".claude/agents/spec.md")!;
+
+  assert.equal(isGenerated(write("real.md", rendered)), true, "a rendered file");
+  assert.equal(isGenerated(write("stale.md", `${BANNER}stale\n`)), true, "a stale render");
+
+  // The defect this anchoring exists to close: prose that quotes the banner.
+  assert.equal(
+    isGenerated(
+      write("prose.md", `# Notes\n\nGenerated files open with \`${GENERATED_MARKER} ... -->\`.\n`),
+    ),
+    false,
+    "prose quoting the marker",
+  );
+  assert.equal(
+    isGenerated(write("byte-zero.md", `${GENERATED_MARKER} from nowhere. -->\n\nbody\n`)),
+    false,
+    "a marker with no frontmatter above it is not a render we produce",
+  );
+  assert.equal(
+    isGenerated(write("after-body.md", `---\na: b\n---\n\n# Title\n\n${GENERATED_MARKER} -->\n`)),
+    false,
+    "a marker below the first line after the frontmatter",
+  );
+  assert.equal(isGenerated(write("plain.md", "hand-written\n")), false, "no marker at all");
+  assert.equal(isGenerated(path.join(dir, "absent.md")), false, "an unreadable file is kept");
+  assert.equal(isGenerated(dir), false, "a directory is kept");
+});
+
+test("adapter: a file quoting the banner in prose survives the prune", () => {
+  const dir = makeTempProject({ pack: "complete" });
+  tempDirs.push(dir);
+  fs.mkdirSync(path.join(dir, ".claude", "commands"), { recursive: true });
+  const notes = path.join(dir, ".claude", "commands", "notes.md");
+  const content = `# Team notes\n\nOur generated commands open with \`${GENERATED_MARKER} ... -->\`.\n`;
+  fs.writeFileSync(notes, content);
+
+  const result = writeAdapter(dir, renderClaudeCodeAdapter(packAt(dir)));
+  assert.deepEqual(result.removed, []);
+  assert.deepEqual(result.kept, [".claude/commands/notes.md"]);
+  assert.equal(fs.readFileSync(notes, "utf8"), content);
 });
 
 test("adapter: writing twice is byte-identical, prunes stale generated files and leaves the rest", () => {

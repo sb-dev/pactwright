@@ -19,10 +19,10 @@ export interface SyncReport {
   readonly changed: readonly string[];
   /** Rendered files that were already byte-identical on disk. */
   readonly unchanged: readonly string[];
-  /** Stale generated files the render no longer produces, deleted. */
+  /** Files Pactwright had generated that the render no longer produces, deleted. */
   readonly removed: readonly string[];
   /**
-   * Files inside the managed directories that carry no Pactwright marker, so
+   * Files inside the managed directories that Pactwright did not generate, so
    * are not Pactwright's to remove. Reported, never deleted.
    */
   readonly kept: readonly string[];
@@ -61,9 +61,10 @@ export function renderGitHubWorkflows(project: Project, pack: ResolvedPack): Ren
  * inputs is byte-identical. Never throws for expected failures, and writes
  * nothing when resolution fails.
  *
- * Only files carrying the Pactwright marker are overwritten or removed, so a
- * hand-written file inside `.claude/agents` or `.claude/commands` survives
- * every sync.
+ * Only files whose banner stands in its rendered position are overwritten or
+ * removed, so a hand-written file inside `.claude/agents` or
+ * `.claude/commands` survives every sync — including one that quotes the
+ * banner in its prose.
  */
 export function syncProject(root: string = process.cwd()): SyncReport {
   const paths = projectPaths(root);
