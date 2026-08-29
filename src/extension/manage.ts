@@ -2,7 +2,7 @@ import { readFileSync, renameSync, writeFileSync } from "node:fs";
 import { tempSibling } from "../atomic.js";
 import {
   loadConfig,
-  serialiseConfig,
+  rewriteConfig,
   type ConfigExtension,
   type PactwrightConfig,
 } from "../config/config.js";
@@ -113,7 +113,9 @@ function writeDesiredState(
   const written: (readonly [string, string])[] = [];
   const previous: (readonly [string, string])[] = [];
   if (config !== undefined) {
-    written.push([paths.config, serialiseConfig(config)]);
+    // Only the `extensions:` block ever changes, so the rest of the file —
+    // including whatever the team wrote in comments — is carried across.
+    written.push([paths.config, rewriteConfig(previousConfig, config)]);
     previous.push([paths.config, previousConfig]);
   }
   written.push([paths.lock, lockText]);

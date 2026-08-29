@@ -4,6 +4,7 @@ export {
   CONFIG_VERSION,
   loadConfig,
   parseConfig,
+  rewriteConfig,
   serialiseConfig,
   type ConfigExtension,
   type PactwrightConfig,

@@ -1,7 +1,7 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { load as loadYaml } from "js-yaml";
-import { parseConfig, loadConfig, serialiseConfig } from "../src/config/config.js";
+import { parseConfig, loadConfig, rewriteConfig, serialiseConfig } from "../src/config/config.js";
 import { CONFIG_TEMPLATE } from "../src/init.js";
 import { fixture } from "./helpers.js";
 import * as path from "node:path";
@@ -141,6 +141,87 @@ test("config: serialiseConfig escapes sources that would otherwise break the doc
     const reparsed = parseConfig(loadYaml(text), "config.yml");
     assert.deepEqual(reparsed.problems, [], `re-parsing failed for ${JSON.stringify(source)}`);
     assert.deepEqual(reparsed.value, parsed, `round-trip lost data for ${JSON.stringify(source)}`);
+  }
+});
+
+const ANNOTATED = `# pinned deliberately — see docs/adr/0007
+version: 1
+
+agent_pack:
+  source: "@pactwright/standard"
+  version: "^0.0.0"
+
+# the adapter is not configurable yet
+adapter:
+  type: claude-code
+
+extensions: {}
+
+# owner: platform-team
+github:
+  enabled: false
+`;
+
+function withExtension(text: string, id: string): string {
+  const parsed = parseConfig(loadYaml(text), "config.yml").value!;
+  return rewriteConfig(text, {
+    ...parsed,
+    extensions: { ...parsed.extensions, [id]: { enabled: true, source: `@pactwright/${id}` } },
+  });
+}
+
+test("config: rewriteConfig keeps every comment outside the extensions block", () => {
+  const added = withExtension(ANNOTATED, "fixture-base");
+  for (const comment of [
+    "# pinned deliberately — see docs/adr/0007",
+    "# the adapter is not configurable yet",
+    "# owner: platform-team",
+  ]) {
+    assert.ok(added.includes(comment), `lost ${comment}`);
+  }
+  assert.ok(added.includes("  fixture-base:"));
+  assert.deepEqual(parseConfig(loadYaml(added), "config.yml").value?.extensions, {
+    "fixture-base": { enabled: true, source: "@pactwright/fixture-base" },
+  });
+
+  // And back again: removing the last extension collapses to the flow form
+  // without disturbing anything around it.
+  const parsed = parseConfig(loadYaml(added), "config.yml").value!;
+  const removed = rewriteConfig(added, { ...parsed, extensions: {} });
+  assert.ok(removed.includes("extensions: {}"));
+  assert.ok(removed.includes("# owner: platform-team"));
+  assert.equal(removed, ANNOTATED);
+});
+
+test("config: rewriteConfig inserts the block when the key is absent", () => {
+  const withoutKey = ANNOTATED.replace("extensions: {}\n\n", "");
+  const added = withExtension(withoutKey, "fixture-base");
+  assert.ok(added.includes("# owner: platform-team"));
+  assert.deepEqual(Object.keys(parseConfig(loadYaml(added), "config.yml").value!.extensions), [
+    "fixture-base",
+  ]);
+  // The insertion goes above `github:`, not into it.
+  assert.ok(added.indexOf("extensions:") < added.indexOf("github:"));
+});
+
+test("config: rewriteConfig falls back to a full rewrite rather than corrupt a file", () => {
+  const parsed = parseConfig(loadYaml(ANNOTATED), "config.yml").value!;
+  const next = {
+    ...parsed,
+    extensions: { operations: { enabled: true, source: "@pactwright/operations" } },
+  };
+  for (const hostile of [
+    // A flow mapping spanning lines: not a shape the editor claims to read.
+    ANNOTATED.replace("extensions: {}", "extensions: {\n}"),
+    // Tabs anywhere make indentation unreliable to reason about.
+    ANNOTATED.replace("adapter:\n  type:", "adapter:\n\ttype:"),
+  ]) {
+    const result = rewriteConfig(hostile, next);
+    // Either shape may fail to parse at all; what matters is that whatever is
+    // returned is a valid config carrying the intended extensions.
+    const reparsed = parseConfig(loadYaml(result), "config.yml");
+    assert.deepEqual(reparsed.problems, []);
+    assert.deepEqual(Object.keys(reparsed.value!.extensions), ["operations"]);
   }
 });
 

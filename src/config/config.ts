@@ -9,7 +9,7 @@ import {
   rejectUnknownKeys,
   requireKeys,
 } from "../validation.js";
-import { readYamlFile } from "../yaml.js";
+import { parseYaml, readYamlFile } from "../yaml.js";
 import { EXTENSION_ID_PATTERN } from "./lock.js";
 
 /** One configured extension: desired state only (Distribution §4). */
@@ -151,13 +151,29 @@ function scalar(text: string): string {
   return JSON.stringify(text);
 }
 
+/** The canonical `extensions:` block, the only region the commands rewrite. */
+function extensionsBlock(config: PactwrightConfig): readonly string[] {
+  const ids = Object.keys(config.extensions).sort();
+  if (ids.length === 0) return ["extensions: {}"];
+  const lines = ["extensions:"];
+  ids.forEach((id, index) => {
+    const extension = config.extensions[id]!;
+    if (index > 0) lines.push("");
+    lines.push(
+      `  ${id}:`,
+      `    enabled: ${extension.enabled}`,
+      `    source: ${scalar(extension.source)}`,
+    );
+  });
+  return lines;
+}
+
 /**
  * Serialises a configuration in the canonical `.pactwright/config.yml`
  * shape — the exact bytes `pactwright init` writes for the default state.
- * Commands that rewrite the configuration (extension add/remove) use this,
- * so a rewritten file is always canonically formatted. Canonical means
- * exactly that: the file is re-emitted from parsed values, so comments and
- * incidental layout in the previous file are not carried over.
+ * This is the fallback whenever the previous file cannot be edited in place;
+ * it re-emits from parsed values, so comments and incidental layout are not
+ * carried over. `rewriteConfig` is what the commands normally use.
  */
 export function serialiseConfig(config: PactwrightConfig): string {
   const lines: string[] = [
@@ -173,21 +189,66 @@ export function serialiseConfig(config: PactwrightConfig): string {
   // kebab-case, so both are safe bare; quoting them would also change the
   // bytes `init` writes.
   lines.push("", "adapter:", `  type: ${config.adapter.type}`, "");
-  const ids = Object.keys(config.extensions).sort();
-  if (ids.length === 0) {
-    lines.push("extensions: {}");
-  } else {
-    lines.push("extensions:");
-    ids.forEach((id, index) => {
-      const extension = config.extensions[id]!;
-      if (index > 0) lines.push("");
-      lines.push(
-        `  ${id}:`,
-        `    enabled: ${extension.enabled}`,
-        `    source: ${scalar(extension.source)}`,
-      );
-    });
-  }
+  lines.push(...extensionsBlock(config));
   lines.push("", "github:", `  enabled: ${config.github.enabled}`, "");
   return lines.join("\n");
+}
+
+/** The line range of the top-level `extensions:` key, or `undefined`. */
+function extensionsRegion(lines: readonly string[]): { start: number; end: number } | undefined {
+  const start = lines.findIndex((line) => /^extensions:/.test(line));
+  if (start === -1) return undefined;
+  if (lines.some((line) => line.includes("\t"))) return undefined;
+  // A flow mapping (`extensions: {}`) is the whole region. Anything else on
+  // the key line is a shape this editor does not claim to understand.
+  const inline = lines[start]!.slice("extensions:".length).trim();
+  if (inline !== "") return inline === "{}" ? { start, end: start } : undefined;
+  let end = start;
+  for (let i = start + 1; i < lines.length; i += 1) {
+    const line = lines[i]!;
+    if (line.trim() === "") continue;
+    if (!/^\s/.test(line)) break;
+    end = i;
+  }
+  return { start, end };
+}
+
+/**
+ * The previous configuration text with only its `extensions:` block replaced
+ * (Distribution §3). `extension add` and `remove` change nothing else, so
+ * every other byte — comments, key order, spacing a team chose — survives.
+ *
+ * Falls back to a full `serialiseConfig` rewrite whenever the edit cannot be
+ * made confidently, including when the spliced result does not parse back to
+ * the intended configuration. The fallback is today's behaviour, so the worst
+ * case is losing comments rather than corrupting the file — which matters
+ * because `removeExtension` never rolls its write back.
+ *
+ * Comments *inside* the extensions block are part of the replaced region and
+ * are not preserved.
+ */
+export function rewriteConfig(previous: string, config: PactwrightConfig): string {
+  const canonical = serialiseConfig(config);
+  const newline = previous.includes("\r\n") ? "\r\n" : "\n";
+  const lines = previous.split(/\r?\n/);
+  const block = [...extensionsBlock(config)];
+  const region = extensionsRegion(lines);
+
+  let spliced: string;
+  if (region !== undefined) {
+    spliced = [...lines.slice(0, region.start), ...block, ...lines.slice(region.end + 1)].join(
+      newline,
+    );
+  } else {
+    // No `extensions:` key at all: place it before `github:`, else append.
+    const github = lines.findIndex((line) => /^github:/.test(line));
+    const at = github === -1 ? lines.length : github;
+    spliced = [...lines.slice(0, at), ...block, "", ...lines.slice(at)].join(newline);
+  }
+
+  const read = parseYaml(spliced, "config.yml");
+  if (read.problems.length > 0) return canonical;
+  const reparsed = parseConfig(read.value, "config.yml");
+  if (reparsed.value === undefined) return canonical;
+  return serialiseConfig(reparsed.value) === canonical ? spliced : canonical;
 }
