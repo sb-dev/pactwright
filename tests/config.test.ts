@@ -2,6 +2,7 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 import { load as loadYaml } from "js-yaml";
 import { parseConfig, loadConfig, serialiseConfig } from "../src/config/config.js";
+import { CONFIG_TEMPLATE } from "../src/init.js";
 import { fixture } from "./helpers.js";
 import * as path from "node:path";
 
@@ -118,6 +119,37 @@ test("config: serialiseConfig round-trips and orders extensions deterministicall
   assert.deepEqual(reparsed.value, parsed);
   assert.ok(text.indexOf("project-intelligence:") < text.indexOf("review-creative:"));
   assert.equal(serialiseConfig(reparsed.value!), text);
+});
+
+test("config: serialiseConfig escapes sources that would otherwise break the document", () => {
+  for (const source of [
+    './packs/my "pack"',
+    "./packs\\v1",
+    "C:\\packs\\standard",
+    "./packs/one\ntwo",
+    "@scope/name",
+  ]) {
+    const parsed = parseConfig(
+      {
+        ...valid,
+        agent_pack: { source },
+        extensions: { operations: { enabled: true, source } },
+      },
+      "config.yml",
+    ).value!;
+    const text = serialiseConfig(parsed);
+    const reparsed = parseConfig(loadYaml(text), "config.yml");
+    assert.deepEqual(reparsed.problems, [], `re-parsing failed for ${JSON.stringify(source)}`);
+    assert.deepEqual(reparsed.value, parsed, `round-trip lost data for ${JSON.stringify(source)}`);
+  }
+});
+
+test("config: serialiseConfig reproduces the exact bytes init writes", () => {
+  // The doc comment promises these are the same document; if the template
+  // and the serialiser drift, `extension add` silently reformats config.yml.
+  const parsed = parseConfig(loadYaml(CONFIG_TEMPLATE), "config.yml");
+  assert.deepEqual(parsed.problems, []);
+  assert.equal(serialiseConfig(parsed.value!), CONFIG_TEMPLATE);
 });
 
 test("config: non-mapping document is rejected", () => {

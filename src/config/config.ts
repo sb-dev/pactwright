@@ -140,21 +140,38 @@ export function loadConfig(path: string): ParseResult<PactwrightConfig> {
 }
 
 /**
+ * A YAML double-quoted scalar holding `text`. JSON is a subset of YAML 1.2
+ * and the two share their double-quoted escape set, so `JSON.stringify` is a
+ * correct encoder here — and for an ordinary package name or relative path it
+ * emits exactly the bytes a hand-written config already has. Interpolating
+ * such values raw would let a `"`, `\` or newline in a source break out of
+ * the field and leave an unparseable config behind.
+ */
+function scalar(text: string): string {
+  return JSON.stringify(text);
+}
+
+/**
  * Serialises a configuration in the canonical `.pactwright/config.yml`
  * shape — the exact bytes `pactwright init` writes for the default state.
  * Commands that rewrite the configuration (extension add/remove) use this,
- * so a rewritten file is always canonically formatted.
+ * so a rewritten file is always canonically formatted. Canonical means
+ * exactly that: the file is re-emitted from parsed values, so comments and
+ * incidental layout in the previous file are not carried over.
  */
 export function serialiseConfig(config: PactwrightConfig): string {
   const lines: string[] = [
     "version: 1",
     "",
     "agent_pack:",
-    `  source: "${config.agentPack.source}"`,
+    `  source: ${scalar(config.agentPack.source)}`,
   ];
   if (config.agentPack.version !== undefined) {
-    lines.push(`  version: "${config.agentPack.version}"`);
+    lines.push(`  version: ${scalar(config.agentPack.version)}`);
   }
+  // `adapter.type` is a validated enum and extension ids are validated
+  // kebab-case, so both are safe bare; quoting them would also change the
+  // bytes `init` writes.
   lines.push("", "adapter:", `  type: ${config.adapter.type}`, "");
   const ids = Object.keys(config.extensions).sort();
   if (ids.length === 0) {
@@ -167,7 +184,7 @@ export function serialiseConfig(config: PactwrightConfig): string {
       lines.push(
         `  ${id}:`,
         `    enabled: ${extension.enabled}`,
-        `    source: "${extension.source}"`,
+        `    source: ${scalar(extension.source)}`,
       );
     });
   }
