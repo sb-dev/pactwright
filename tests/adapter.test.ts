@@ -212,6 +212,33 @@ test("adapter: a file quoting the banner in prose survives the prune", () => {
   assert.equal(fs.readFileSync(notes, "utf8"), content);
 });
 
+test("adapter: a case-colliding user file is reported once, under its real name", () => {
+  const dir = makeTempProject({ pack: "complete" });
+  tempDirs.push(dir);
+  const agents = path.join(dir, ".claude", "agents");
+  fs.mkdirSync(agents, { recursive: true });
+  const mine = path.join(agents, "Spec.md");
+  fs.writeFileSync(mine, "my own spec agent\n");
+  // Only meaningful where the filesystem folds case: elsewhere `Spec.md` and
+  // the rendered `spec.md` are simply two files, and both land normally.
+  const caseInsensitive = fs.existsSync(path.join(agents, "spec.md"));
+
+  const result = writeAdapter(dir, renderClaudeCodeAdapter(packAt(dir)));
+  if (caseInsensitive) {
+    assert.deepEqual(result.conflicts, [".claude/agents/Spec.md"]);
+    assert.deepEqual(result.kept, [], "a conflict is never also reported as kept");
+    assert.equal(fs.readFileSync(mine, "utf8"), "my own spec agent\n");
+    // Every reported path names a file a directory listing actually shows.
+    for (const rel of [...result.conflicts, ...result.kept, ...result.written]) {
+      assert.ok(fs.existsSync(path.join(dir, rel)), `${rel} should exist on disk`);
+    }
+  } else {
+    assert.deepEqual(result.conflicts, []);
+    assert.deepEqual(result.kept, [".claude/agents/Spec.md"]);
+  }
+  assert.deepEqual(result.removed, []);
+});
+
 test("adapter: writing twice is byte-identical, prunes stale generated files and leaves the rest", () => {
   const dir = makeTempProject({ pack: "complete" });
   tempDirs.push(dir);

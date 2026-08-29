@@ -10,7 +10,7 @@ import {
   unlinkSync,
   writeFileSync,
 } from "node:fs";
-import { dirname, join, relative, resolve, sep } from "node:path";
+import { basename, dirname, join, relative, resolve, sep } from "node:path";
 import { dump } from "js-yaml";
 import { tempSibling } from "../atomic.js";
 import { PactwrightError } from "../errors.js";
@@ -22,8 +22,8 @@ import { COMMAND_TEMPLATES } from "./commands.js";
 /**
  * The directories the Claude Code adapter may write in (Distribution §8).
  * They are the *scope* of ownership, not the proof of it: a file inside them
- * belongs to Pactwright only when it carries `GENERATED_MARKER`. Nothing
- * else under `.claude/` is touched.
+ * belongs to Pactwright only when its banner stands in the rendered position
+ * (see `isGenerated`). Nothing else under `.claude/` is touched.
  */
 export const MANAGED_DIRS = [".claude/agents", ".claude/commands"] as const;
 
@@ -70,6 +70,24 @@ export function isGenerated(file: string): boolean {
     return false;
   } finally {
     if (fd !== undefined) closeSync(fd);
+  }
+}
+
+/**
+ * The name `target` actually has in its directory. A case-insensitive
+ * filesystem resolves a rendered `spec.md` onto an existing `Spec.md`, and
+ * reporting the rendered spelling would name a path no listing shows and
+ * leave a remediation message the user cannot act on.
+ */
+function onDiskName(target: string): string {
+  const wanted = basename(target);
+  try {
+    const entries = readdirSync(dirname(target));
+    if (entries.includes(wanted)) return wanted;
+    const lowered = wanted.toLowerCase();
+    return entries.find((entry) => entry.toLowerCase() === lowered) ?? wanted;
+  } catch {
+    return wanted;
   }
 }
 
@@ -170,11 +188,12 @@ export interface WriteAdapterResult {
  * no longer produces, inside the managed directories only. Every file is
  * written to a temporary sibling first and renamed into place.
  *
- * Ownership is proved per file, never by position: a file without
- * `GENERATED_MARKER` is neither overwritten nor removed. Such files are
- * reported — as `conflicts` when they occupy a rendered path, as `kept`
- * otherwise — rather than thrown on, because they are user state and not a
- * render bug (Distribution §14).
+ * Ownership is proved per file, never by location: a file Pactwright did not
+ * generate is neither overwritten nor removed. Such files are reported —
+ * as `conflicts` when they occupy a rendered path, under the name the
+ * directory actually holds, and as `kept` otherwise, never both — rather than
+ * thrown on, because they are user state and not a render bug
+ * (Distribution §14).
  */
 export function writeAdapter(root: string, files: RenderedFiles): WriteAdapterResult {
   // Normalise then check: every key must resolve strictly inside a managed
@@ -199,19 +218,23 @@ export function writeAdapter(root: string, files: RenderedFiles): WriteAdapterRe
   }
 
   // A rendered path already occupied by an unmarked file is user state: skip
-  // it, report it, and leave the bytes exactly as they are. `rendered` keeps
-  // every path the render claims, including the skipped ones, so the prune
-  // below reports such a file once — as a conflict, not also as kept.
+  // it, report it, and leave the bytes exactly as they are. The conflict is
+  // reported under the name the directory actually holds, and that name goes
+  // into `rendered` so the prune — which compares directory entries — skips
+  // the same file. Both halves therefore name one file once: a conflict, not
+  // also a kept.
   const rendered = new Set(canonical.keys());
   const conflicts: string[] = [];
   for (const [clean, { target }] of canonical) {
     // Only a regular file can be user content. Anything else occupying a
     // rendered path is a broken working tree, and the write below reports it
     // by failing rather than quietly stepping around it.
-    if (statSync(target, { throwIfNoEntry: false })?.isFile() === true && !isGenerated(target)) {
-      conflicts.push(clean);
-      canonical.delete(clean);
-    }
+    if (statSync(target, { throwIfNoEntry: false })?.isFile() !== true) continue;
+    if (isGenerated(target)) continue;
+    const actual = `${dirname(clean)}/${onDiskName(target)}`;
+    conflicts.push(actual);
+    rendered.add(actual);
+    canonical.delete(clean);
   }
 
   const temps: [string, string][] = [];
