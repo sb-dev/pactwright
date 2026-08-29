@@ -413,6 +413,36 @@ test("extension remove: preserves user-authored canonical extension data", () =>
   assert.equal(validateProject({ root }).ok, true);
 });
 
+test("extension remove: runs when other extensions are broken too", () => {
+  // A runtime bump breaks every installed extension at once, so removing one
+  // of them can never leave a set that resolves. Refusing on that basis would
+  // make the repair impossible through the CLI.
+  const root = temp({ extensions: ["fixture-base", "fixture-analysis"], pack: "extra-capability" });
+  assert.equal(upgradeExtension(root, "fixture-base").ok, true);
+  for (const id of ["fixture-base", "fixture-analysis"]) {
+    const manifest = installedManifest(root, id);
+    fs.writeFileSync(
+      manifest,
+      fs.readFileSync(manifest, "utf8").replace("pactwright: 0.0.0", "pactwright: ^9.9.0"),
+    );
+  }
+  assert.equal(validateProject({ root }).ok, false);
+
+  const report = removeExtension(root, "fixture-base");
+  assert.equal(report.ok, true, JSON.stringify(report.problems));
+  assert.equal(config(root).extensions["fixture-base"], undefined);
+  assert.equal(config(root).extensions["fixture-analysis"]?.enabled, true);
+  // The degradation is reported, not silent.
+  assert.ok(report.problems.some((p) => p.code === "lock-not-re-resolved"));
+  // The lock kept its other entry and lost only the removed one.
+  const lock = loadLock(path.join(root, ".pactwright", "lock.yml")).value!;
+  assert.equal(lock.extensions["fixture-base"], undefined);
+
+  // And the second one can now be removed too, which is the point.
+  assert.equal(removeExtension(root, "fixture-analysis").ok, true);
+  assert.deepEqual({ ...config(root).extensions }, {});
+});
+
 test("extension remove: an unconfigured extension is reported", () => {
   const root = temp();
   const report = removeExtension(root, "fixture-base");

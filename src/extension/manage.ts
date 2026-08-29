@@ -253,6 +253,11 @@ export function addExtension(root: string, spec: string): ExtensionChangeReport 
  * extension still depends on it. Canonical graph data owned by the
  * extension is never deleted — it is reported as preserved, and the user
  * chooses separately whether to delete it.
+ *
+ * Removal is the remedy for a broken extension set, so nothing about that set
+ * being broken may block it: the dependant scan runs best effort, and when the
+ * remaining configuration still does not resolve the lock is derived from its
+ * previous contents rather than re-resolved. Both degradations are reported.
  */
 export function removeExtension(root: string, id: string): ExtensionChangeReport {
   const paths = projectPaths(root);
@@ -289,8 +294,8 @@ export function removeExtension(root: string, id: string): ExtensionChangeReport
   // Read before the write: `writeDesiredState` replaces the lock. When the
   // manifest could not be loaded the lock still records the exact version
   // that was resolved, so the report stays truthful.
-  const previousVersion =
-    removed?.manifest.version ?? loadLock(paths.lock).value?.extensions[id]?.version;
+  const previousLock = loadLock(paths.lock);
+  const previousVersion = removed?.manifest.version ?? previousLock.value?.extensions[id]?.version;
 
   const proposed = { ...config.value.extensions };
   delete proposed[id];
@@ -298,13 +303,30 @@ export function removeExtension(root: string, id: string): ExtensionChangeReport
     root: paths.root,
     config: withExtensions(config.value, proposed),
   });
-  if (desired.value === undefined) return failure(paths.root, desired.problems);
 
-  const written = writeDesiredState(
-    paths.root,
-    withExtensions(config.value, proposed),
-    serialiseLock(desired.value.lock),
-  );
+  // Resolving afresh is the happy path. When the state left behind still does
+  // not resolve — a runtime bump breaks every extension at once, so removing
+  // one of them cannot fix the others — fall back to the lock already on
+  // disk, minus this entry. That lock is by definition the last state that
+  // did resolve, so nothing is recorded that was never resolvable, and the
+  // command that repairs a broken set stays available while the set is broken.
+  const degraded: Problem[] = [];
+  let lockText: string;
+  if (desired.value !== undefined) {
+    lockText = serialiseLock(desired.value.lock);
+  } else if (previousLock.value !== undefined) {
+    const rest = { ...previousLock.value.extensions };
+    delete rest[id];
+    lockText = serialiseLock({ ...previousLock.value, extensions: rest });
+    degraded.push({
+      code: "lock-not-re-resolved",
+      message: `extension "${id}" was removed, but the remaining configuration does not resolve, so the lock was derived from its previous contents rather than re-resolved; fix the reported problems and run \`pactwright extension upgrade\` to re-lock`,
+    });
+  } else {
+    return failure(paths.root, desired.problems);
+  }
+
+  const written = writeDesiredState(paths.root, withExtensions(config.value, proposed), lockText);
   if ("code" in written) return failure(paths.root, [written]);
 
   // Preserved user-authored canonical data: records whose types the removed
@@ -339,15 +361,17 @@ export function removeExtension(root: string, id: string): ExtensionChangeReport
     ],
     githubProfiles: [],
     preserved,
-    problems:
-      removed === undefined
+    problems: [
+      ...(removed === undefined
         ? [
             {
               code: "extension-manifest-unavailable",
               message: `extension "${id}" was removed, but its manifest could not be read, so the records it owned could not be listed; run \`pactwright validate\` to see records left without a registered type`,
             },
           ]
-        : [],
+        : []),
+      ...degraded,
+    ],
   };
 }
 
