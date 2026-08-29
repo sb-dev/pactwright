@@ -4,6 +4,9 @@ export {
   CONFIG_VERSION,
   loadConfig,
   parseConfig,
+  rewriteConfig,
+  serialiseConfig,
+  type ConfigExtension,
   type PactwrightConfig,
   type ParseResult,
 } from "./config/config.js";
@@ -24,7 +27,14 @@ export {
   type StageConfig,
   type StageName,
 } from "./config/lifecycle.js";
-export { HASH_PATTERN, loadLock, parseLock, type LockFile } from "./config/lock.js";
+export {
+  EXTENSION_ID_PATTERN,
+  HASH_PATTERN,
+  loadLock,
+  parseLock,
+  type LockExtension,
+  type LockFile,
+} from "./config/lock.js";
 export {
   CREATED_PATTERN,
   NODE_ID_PATTERN,
@@ -118,6 +128,15 @@ export {
   type ProjectPaths,
 } from "./project.js";
 export { loadProject, type LoadProjectOptions, type Project } from "./loader.js";
+export {
+  CONFIG_TEMPLATE,
+  INIT_DIRS,
+  LIFECYCLE_TEMPLATE,
+  initProject,
+  initTemplates,
+  type InitEntry,
+  type InitReport,
+} from "./init.js";
 export { runtimeVersion } from "./version.js";
 export {
   GRAPH_MARKING_STAGES,
@@ -145,6 +164,7 @@ export {
   type StageRequest,
 } from "./lifecycle/run.js";
 export { validateProject, type ValidationReport } from "./validate.js";
+export { renderGitHubWorkflows, syncProject, type SyncReport } from "./sync.js";
 export {
   findIntentOf,
   loadContext,
@@ -176,10 +196,12 @@ export {
   locatePack,
   lockEntriesFor,
   resolveAndLock,
+  resolveDesiredState,
   resolvePack,
   satisfiesRange,
   serialiseLock,
   writeLock,
+  type DesiredState,
   type ResolvePackOptions,
   type ResolvedPack,
 } from "./pack/resolve.js";
@@ -190,7 +212,32 @@ export {
   type RecordingStage,
 } from "./lifecycle/record.js";
 export {
+  EXTENSION_MANIFEST_FILE,
+  loadExtensionManifest,
+  parseExtensionManifest,
+  type ExtensionManifest,
+} from "./extension/manifest.js";
+export {
+  RESERVED_NAMESPACES,
+  composedRegistries,
+  enabledManifests,
+  extensionLockEntries,
+  extensionSchemas,
+  resolveExtensions,
+  type ResolveExtensionsOptions,
+  type ResolvedExtension,
+} from "./extension/resolve.js";
+export {
+  addExtension,
+  removeExtension,
+  upgradeExtension,
+  type ExtensionChange,
+  type ExtensionChangeReport,
+} from "./extension/manage.js";
+export {
+  GENERATED_MARKER,
   MANAGED_DIRS,
+  isGenerated,
   renderClaudeCodeAdapter,
   writeAdapter,
   type RenderedFiles,

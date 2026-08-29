@@ -14,6 +14,14 @@ import { loadConfig, type PactwrightConfig } from "./config/config.js";
 import { CORE_DELIVERY_SUITE } from "./eval/core-suite.js";
 import { evalPassed, runEval, type EvalCaseResult, type EvalReport } from "./eval/runner.js";
 import type { GraphNode } from "./graph/nodes.js";
+import {
+  addExtension,
+  removeExtension,
+  upgradeExtension,
+  type ExtensionChangeReport,
+} from "./extension/manage.js";
+import { initProject } from "./init.js";
+import { syncProject } from "./sync.js";
 import { loadProject } from "./loader.js";
 import { resolvePack } from "./pack/resolve.js";
 import { validateProject } from "./validate.js";
@@ -23,6 +31,14 @@ import { runtimeVersion } from "./version.js";
 const HELP = `Usage: pactwright <command> [options]
 
 Commands:
+  init [--json]                              Create the Pactwright-owned core structure
+                                             (.pactwright, specs, .claude directories) in the
+                                             current directory and resolve the lock; existing
+                                             paths are left untouched
+  sync [--json]                              Render the Pactwright-managed .claude/ adapter
+                                             surface from config + lock (deterministic; only
+                                             files carrying the Pactwright banner are written
+                                             or removed, so user-authored files are kept)
   validate [--json]                          Validate the Delivery Graph and typed-edge store
   context <node-id> [--history] [--json]     Print the current core Delivery lineage of a node
   lifecycle status [--intent <id>] [--json]  Report stage, completed stages, gates and lineage
@@ -33,6 +49,13 @@ Commands:
                                              (capture-intent, approve-contract, write-brief,
                                              prepare-evidence) after the runtime checks the
                                              transition
+  extension add <id|package> [--json]        Enable an extension (and its dependencies),
+                                             validate the capability union and update
+                                             config and lock
+  extension remove <id> [--json]             Disable and remove an extension; blocked while
+                                             enabled extensions depend on it, and canonical
+                                             extension data is preserved
+  extension upgrade <id> [--json]            Re-resolve an extension and update the lock
   eval [--json]                              Run the core Delivery evaluation suite against
                                              the selected agent pack (deterministic assertions
                                              and semantic dimensions reported separately)
@@ -241,6 +264,146 @@ async function lifecycle(sub: string | undefined, args: readonly string[]): Prom
   }
 }
 
+function initCommand(args: readonly string[]): number {
+  const options = parseOptions(args);
+  if (typeof options === "string" || options.positional.length > 0) {
+    const why =
+      typeof options === "string" ? options : `unexpected argument "${options.positional[0]}"`;
+    err(`pactwright: ${why}\n\n${HELP}`);
+    return 1;
+  }
+  // Init is the one command that must not search for an enclosing project:
+  // it creates the project in the current directory.
+  const report = initProject();
+  if (options.json) {
+    out(`${JSON.stringify(report, null, 2)}\n`);
+  } else {
+    for (const entry of report.entries) {
+      out(
+        entry.action === "created" ? `created ${entry.path}\n` : `skipped ${entry.path} (exists)\n`,
+      );
+    }
+    if (report.problems.length > 0) {
+      out("Validation problems:\n");
+      for (const problem of report.problems) out(`  - ${formatProblem(problem)}\n`);
+    }
+  }
+  return report.ok ? 0 : 1;
+}
+
+function formatExtensionReport(report: ExtensionChangeReport): string {
+  const lines: string[] = [];
+  for (const change of report.changes) {
+    const version =
+      change.action === "upgraded" && change.previousVersion !== undefined
+        ? ` ${change.previousVersion} → ${change.version ?? "?"}`
+        : change.version !== undefined
+          ? ` ${change.version}`
+          : "";
+    lines.push(`${change.action} ${change.id}${version}`);
+  }
+  for (const profile of report.githubProfiles) {
+    lines.push(`github profile "${profile}" requires provisioning (not performed: deferred)`);
+  }
+  if (report.preserved.length > 0) {
+    lines.push("preserved canonical extension data (delete separately if unwanted):");
+    for (const path of report.preserved) lines.push(`  - ${path}`);
+  }
+  return lines.map((line) => `${line}\n`).join("");
+}
+
+const EXTENSION_OPERATIONS = {
+  add: addExtension,
+  remove: removeExtension,
+  upgrade: upgradeExtension,
+} as const;
+
+function extensionOperation(
+  sub: string | undefined,
+): (typeof EXTENSION_OPERATIONS)[keyof typeof EXTENSION_OPERATIONS] | undefined {
+  // `Object.hasOwn`, not a bare lookup: `sub` is user input, and an inherited
+  // member like "constructor" would otherwise pass an `=== undefined` guard
+  // and be called as if it were an extension operation.
+  return sub !== undefined && Object.hasOwn(EXTENSION_OPERATIONS, sub)
+    ? EXTENSION_OPERATIONS[sub as keyof typeof EXTENSION_OPERATIONS]
+    : undefined;
+}
+
+function extensionCommand(sub: string | undefined, args: readonly string[]): number {
+  // The verb is checked before the arguments, so an unknown verb is named as
+  // such rather than being reported as a missing extension id.
+  const operation = extensionOperation(sub);
+  if (operation === undefined) {
+    err(`pactwright: unknown extension command "${sub ?? ""}"\n\n${HELP}`);
+    return 1;
+  }
+  const options = parseOptions(args);
+  if (typeof options === "string" || options.positional.length !== 1) {
+    const why =
+      typeof options === "string"
+        ? options
+        : options.positional.length === 0
+          ? `extension ${sub} needs an extension id`
+          : `unexpected argument "${options.positional[1]}"`;
+    err(`pactwright: ${why}\n\n${HELP}`);
+    return 1;
+  }
+  let root: string;
+  try {
+    root = findProjectRoot();
+  } catch (error) {
+    if (!(error instanceof PactwrightError)) throw error;
+    printProblems(error, options.json);
+    return 1;
+  }
+  const report = operation(root, options.positional[0]!);
+  if (options.json) {
+    out(`${JSON.stringify(report, null, 2)}\n`);
+  } else {
+    out(formatExtensionReport(report));
+    if (report.problems.length > 0) {
+      // A successful command can still carry an advisory, so the heading
+      // follows the outcome rather than the presence of problems.
+      out(report.ok ? "Notes:\n" : "Validation problems:\n");
+      for (const problem of report.problems) out(`  - ${formatProblem(problem)}\n`);
+    }
+  }
+  return report.ok ? 0 : 1;
+}
+
+function syncCommand(args: readonly string[]): number {
+  const options = parseOptions(args);
+  if (typeof options === "string" || options.positional.length > 0) {
+    const why =
+      typeof options === "string" ? options : `unexpected argument "${options.positional[0]}"`;
+    err(`pactwright: ${why}\n\n${HELP}`);
+    return 1;
+  }
+  let root: string;
+  try {
+    root = findProjectRoot();
+  } catch (error) {
+    if (!(error instanceof PactwrightError)) throw error;
+    printProblems(error, options.json);
+    return 1;
+  }
+  const report = syncProject(root);
+  if (options.json) {
+    out(`${JSON.stringify(report, null, 2)}\n`);
+  } else {
+    for (const path of report.changed) out(`wrote ${path}\n`);
+    for (const path of report.unchanged) out(`unchanged ${path}\n`);
+    for (const path of report.removed) out(`removed ${path}\n`);
+    for (const path of report.kept) out(`kept ${path} (not pactwright-generated)\n`);
+    for (const path of report.conflicts) out(`conflict ${path} (not pactwright-generated)\n`);
+    if (report.problems.length > 0) {
+      out("Validation problems:\n");
+      for (const problem of report.problems) out(`  - ${formatProblem(problem)}\n`);
+    }
+  }
+  return report.ok ? 0 : 1;
+}
+
 function validate(args: readonly string[]): number {
   const options = parseOptions(args);
   if (typeof options === "string" || options.positional.length > 0) {
@@ -416,6 +579,9 @@ export async function main(argv: readonly string[]): Promise<number> {
     out(`${runtimeVersion()}\n`);
     return 0;
   }
+  if (first === "init") return initCommand(rest);
+  if (first === "sync") return syncCommand(rest);
+  if (first === "extension") return extensionCommand(rest[0], rest.slice(1));
   if (first === "lifecycle") return lifecycle(rest[0], rest.slice(1));
   if (first === "validate") return validate(rest);
   if (first === "context") return contextCommand(rest);

@@ -4,7 +4,7 @@ import { spawnSync } from "node:child_process";
 import * as fs from "node:fs";
 import { rmSync } from "node:fs";
 import * as path from "node:path";
-import { defaultStages, fixture, makeTempProject, repoRoot } from "./helpers.js";
+import { defaultStages, fixture, makeEmptyRepo, makeTempProject, repoRoot } from "./helpers.js";
 
 const cli = path.join(repoRoot, "dist", "cli.js");
 const manifest = JSON.parse(fs.readFileSync(path.join(repoRoot, "package.json"), "utf8")) as {
@@ -350,6 +350,178 @@ test("cli: lifecycle record rejects transient stages, bad input and missing opti
     1,
   );
   assert.equal(fs.readdirSync(path.join(root, "specs", "nodes")).length, 1);
+});
+
+// ---- init -------------------------------------------------------------------
+
+test("cli: help lists init", () => {
+  assert.match(run("--help").stdout, /init \[--json\]/);
+});
+
+test("cli: init then validate and lifecycle status pass in a clean repository", () => {
+  const dir = makeEmptyRepo();
+  tempDirs.push(dir);
+  const result = runIn(dir, "init");
+  assert.equal(result.status, 0, result.stdout + result.stderr);
+  assert.match(result.stdout, /created \.pactwright\/config\.yml/);
+  assert.match(result.stdout, /created \.pactwright\/lock\.yml/);
+  assert.doesNotMatch(result.stdout, /skipped/);
+  assert.equal(fs.existsSync(path.join(dir, ".github")), false);
+
+  const valid = runIn(dir, "validate");
+  assert.equal(valid.status, 0, valid.stdout + valid.stderr);
+  assert.match(valid.stdout, /^Valid: 0 nodes, 0 edges, 0 lineages/);
+
+  const status = runIn(dir, "lifecycle", "status");
+  assert.equal(status.status, 0, status.stdout + status.stderr);
+  assert.match(status.stdout, /No active lineage/);
+
+  const again = runIn(dir, "init");
+  assert.equal(again.status, 0, again.stdout + again.stderr);
+  assert.match(again.stdout, /skipped \.pactwright\/config\.yml \(exists\)/);
+  assert.doesNotMatch(again.stdout, /created/);
+});
+
+test("cli: init --json emits the report", () => {
+  const dir = makeEmptyRepo();
+  tempDirs.push(dir);
+  const result = runIn(dir, "init", "--json");
+  assert.equal(result.status, 0, result.stdout + result.stderr);
+  const report = JSON.parse(result.stdout) as {
+    ok: boolean;
+    entries: Array<{ path: string; action: string }>;
+  };
+  assert.equal(report.ok, true);
+  assert.ok(report.entries.every((entry) => entry.action === "created"));
+});
+
+test("cli: init rejects unexpected arguments", () => {
+  const extra = run("init", "extra");
+  assert.equal(extra.status, 1);
+  assert.match(extra.stderr, /unexpected argument "extra"/);
+  assert.equal(run("init", "--nope").status, 1);
+});
+
+// ---- sync -------------------------------------------------------------------
+
+test("cli: help lists sync", () => {
+  assert.match(run("--help").stdout, /sync \[--json\]/);
+});
+
+test("cli: init, sync, validate and lifecycle status compose in a clean repository", () => {
+  const dir = makeEmptyRepo();
+  tempDirs.push(dir);
+  assert.equal(runIn(dir, "init").status, 0);
+
+  const first = runIn(dir, "sync");
+  assert.equal(first.status, 0, first.stdout + first.stderr);
+  assert.match(first.stdout, /wrote \.claude\/agents\/spec\.md/);
+  assert.match(first.stdout, /wrote \.claude\/commands\/capture-intent\.md/);
+  assert.doesNotMatch(first.stdout, /unchanged/);
+  const bytes = (): Map<string, string> => {
+    const map = new Map<string, string>();
+    for (const sub of ["agents", "commands"]) {
+      const dirPath = path.join(dir, ".claude", sub);
+      for (const entry of fs.readdirSync(dirPath).sort()) {
+        map.set(`${sub}/${entry}`, fs.readFileSync(path.join(dirPath, entry), "utf8"));
+      }
+    }
+    return map;
+  };
+  const afterFirst = bytes();
+  assert.equal(afterFirst.size, 10);
+
+  const second = runIn(dir, "sync");
+  assert.equal(second.status, 0, second.stdout + second.stderr);
+  assert.doesNotMatch(second.stdout, /wrote /);
+  assert.match(second.stdout, /unchanged \.claude\/agents\/spec\.md/);
+  assert.deepEqual(bytes(), afterFirst);
+
+  assert.equal(runIn(dir, "validate").status, 0);
+  const status = runIn(dir, "lifecycle", "status");
+  assert.equal(status.status, 0, status.stdout + status.stderr);
+  assert.match(status.stdout, /No active lineage/);
+  assert.equal(fs.existsSync(path.join(dir, ".github")), false);
+});
+
+test("cli: sync --json emits the report and argument errors are reported", () => {
+  const root = project();
+  const result = runIn(root, "sync", "--json");
+  assert.equal(result.status, 0, result.stdout + result.stderr);
+  const report = JSON.parse(result.stdout) as { ok: boolean; changed: string[] };
+  assert.equal(report.ok, true);
+  assert.equal(report.changed.length, 10);
+
+  assert.equal(runIn(root, "sync", "extra").status, 1);
+  const outside = runIn(fixture("not-a-project/sub"), "sync");
+  assert.equal(outside.status, 1);
+  assert.match(outside.stdout, /project-not-found/);
+});
+
+// ---- extension --------------------------------------------------------------
+
+test("cli: help lists the extension commands", () => {
+  const result = run("--help");
+  assert.match(result.stdout, /extension add <id\|package>/);
+  assert.match(result.stdout, /extension remove <id>/);
+  assert.match(result.stdout, /extension upgrade <id>/);
+});
+
+test("cli: extension add enables dependencies, remove is blocked then succeeds", () => {
+  const root = project({
+    extensions: [
+      { id: "fixture-base", configure: false },
+      { id: "fixture-reporting", configure: false },
+    ],
+  });
+  const added = runIn(root, "extension", "add", "fixture-reporting");
+  assert.equal(added.status, 0, added.stdout + added.stderr);
+  assert.match(added.stdout, /added fixture-base 0\.1\.0/);
+  assert.match(added.stdout, /added fixture-reporting 0\.2\.0/);
+  assert.match(added.stdout, /github profile "fixture-base" requires provisioning/);
+
+  const valid = runIn(root, "validate");
+  assert.equal(valid.status, 0, valid.stdout);
+
+  const blocked = runIn(root, "extension", "remove", "fixture-base");
+  assert.equal(blocked.status, 1);
+  assert.match(blocked.stdout, /extension-required-by/);
+
+  const first = runIn(root, "extension", "remove", "fixture-reporting");
+  assert.equal(first.status, 0, first.stdout);
+  const second = runIn(root, "extension", "remove", "fixture-base", "--json");
+  assert.equal(second.status, 0, second.stdout);
+  const report = JSON.parse(second.stdout) as { ok: boolean; changes: Array<{ action: string }> };
+  assert.equal(report.ok, true);
+  assert.equal(report.changes[0]?.action, "removed");
+});
+
+test("cli: extension argument errors", () => {
+  const root = project();
+  assert.equal(runIn(root, "extension", "dance", "x").status, 1);
+  assert.equal(runIn(root, "extension", "add").status, 1);
+  assert.equal(runIn(root, "extension", "add", "a", "b").status, 1);
+  const outside = runIn(fixture("not-a-project/sub"), "extension", "add", "fixture-base");
+  assert.equal(outside.status, 1);
+  assert.match(outside.stdout, /project-not-found/);
+});
+
+test("cli: an inherited Object member is not an extension verb", () => {
+  // A bare `operations[sub]` lookup resolves these off Object.prototype, and
+  // they pass an `=== undefined` guard — so the verb has to be checked by
+  // ownership, not by truthiness.
+  const root = project();
+  for (const verb of ["constructor", "toString", "valueOf", "hasOwnProperty", "__proto__"]) {
+    const result = runIn(root, "extension", verb, "fixture-base");
+    assert.equal(result.status, 1, `${verb}: ${result.stdout}${result.stderr}`);
+    assert.match(result.stderr, /unknown extension command/, verb);
+    assert.doesNotMatch(result.stderr, /TypeError/, verb);
+  }
+  // Including in --json mode, where the crash used to print the project path
+  // as the machine-readable payload.
+  const json = runIn(root, "extension", "constructor", "fixture-base", "--json");
+  assert.equal(json.status, 1);
+  assert.equal(json.stdout, "");
 });
 
 // ---- eval -------------------------------------------------------------------

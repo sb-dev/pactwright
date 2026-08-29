@@ -9,6 +9,24 @@ import {
 } from "../validation.js";
 import { readYamlFile } from "../yaml.js";
 
+/**
+ * One locked extension: the exact package and version it resolved to, and a
+ * hash of its manifest (Distribution §6).
+ */
+export interface LockExtension {
+  readonly package: string;
+  readonly version: string;
+  /**
+   * Hash of the extension's declared manifest — its id, package, version,
+   * runtime range, dependencies, graph types, namespaces, capabilities and
+   * GitHub profile. It pins what the extension declares, not the bytes of
+   * the code it ships.
+   */
+  readonly hash: string;
+  /** Extension id → exact version of a required peer extension. Omitted when empty. */
+  readonly dependencies?: Readonly<Record<string, string>>;
+}
+
 /** `.pactwright/lock.yml` — the exact resolved setup (Distribution §6). */
 export interface LockFile {
   readonly runtime: { readonly version: string };
@@ -19,13 +37,22 @@ export interface LockFile {
   };
   /** Agent name → content hash. */
   readonly agents: Readonly<Record<string, string>>;
-  /** Skill name → content hash. */
+  /** Skill name → content hash. A runtime addition relative to the §6 shape. */
   readonly skills: Readonly<Record<string, string>>;
-  /** Always empty in this checkpoint: optional extensions are not implemented. */
-  readonly extensions: Readonly<Record<string, never>>;
+  /**
+   * Extension id → locked extension (Distribution §6). Empty only when no
+   * extension is configured.
+   */
+  readonly extensions: Readonly<Record<string, LockExtension>>;
 }
 
 export const HASH_PATTERN = /^sha256:[0-9a-f]{64}$/;
+
+/** Extension ids are kebab-case identifiers, like `project-intelligence`. */
+export const EXTENSION_ID_PATTERN = /^[a-z][a-z0-9]*(-[a-z0-9]+)*$/;
+
+/** The lock records exact resolved state, so versions are never ranges. */
+const EXACT_VERSION_PATTERN = /^\d+\.\d+\.\d+$/;
 
 function expectHash(c: Checker, value: unknown, label: string): string | undefined {
   const text = expectString(c, value, label);
@@ -33,6 +60,70 @@ function expectHash(c: Checker, value: unknown, label: string): string | undefin
   if (!HASH_PATTERN.test(text))
     return c.fail("invalid-hash", `${label} must match sha256:<64 hex>`);
   return text;
+}
+
+function expectExactVersion(c: Checker, value: unknown, label: string): string | undefined {
+  const text = expectString(c, value, label);
+  if (text === undefined) return undefined;
+  if (!EXACT_VERSION_PATTERN.test(text)) {
+    return c.fail("invalid-version", `${label} must be an exact x.y.z version, found "${text}"`);
+  }
+  return text;
+}
+
+function parseExtension(c: Checker, raw: unknown, label: string): LockExtension | undefined {
+  const record = expectRecord(c, raw, label);
+  if (record === undefined) return undefined;
+  requireKeys(c, record, label, ["package", "version", "hash"]);
+  rejectUnknownKeys(c, record, label, ["package", "version", "hash", "dependencies"]);
+  const pkg = expectString(c, record["package"], `${label}.package`);
+  const version = expectExactVersion(c, record["version"], `${label}.version`);
+  const hash = expectHash(c, record["hash"], `${label}.hash`);
+
+  let dependencies: Record<string, string> | undefined;
+  if (record["dependencies"] !== undefined) {
+    const deps = expectRecord(c, record["dependencies"], `${label}.dependencies`);
+    if (deps !== undefined) {
+      dependencies = {};
+      for (const id of Object.keys(deps).sort()) {
+        if (!EXTENSION_ID_PATTERN.test(id)) {
+          c.fail(
+            "invalid-extension-id",
+            `${label}.dependencies key "${id}" is not a valid extension id`,
+          );
+          continue;
+        }
+        const wanted = expectExactVersion(c, deps[id], `${label}.dependencies.${id}`);
+        if (wanted !== undefined) dependencies[id] = wanted;
+      }
+    }
+  }
+
+  if (pkg === undefined || version === undefined || hash === undefined) return undefined;
+  return {
+    package: pkg,
+    version,
+    hash,
+    ...(dependencies === undefined || Object.keys(dependencies).length === 0
+      ? {}
+      : { dependencies }),
+  };
+}
+
+function parseExtensions(c: Checker, raw: unknown): Record<string, LockExtension> {
+  const out: Record<string, LockExtension> = {};
+  if (raw === undefined) return out;
+  const record = expectRecord(c, raw, "lock.extensions");
+  if (record === undefined) return out;
+  for (const id of Object.keys(record).sort()) {
+    if (!EXTENSION_ID_PATTERN.test(id)) {
+      c.fail("invalid-extension-id", `lock.extensions key "${id}" is not a valid extension id`);
+      continue;
+    }
+    const extension = parseExtension(c, record[id], `lock.extensions.${id}`);
+    if (extension !== undefined) out[id] = extension;
+  }
+  return out;
 }
 
 function parseHashMap(c: Checker, raw: unknown, label: string): Record<string, string> {
@@ -82,16 +173,7 @@ export function parseLock(raw: unknown, path: string): ParseResult<LockFile> {
 
   const agents = parseHashMap(c, root["agents"], "lock.agents");
   const skills = parseHashMap(c, root["skills"], "lock.skills");
-
-  if (root["extensions"] !== undefined) {
-    const extensions = expectRecord(c, root["extensions"], "lock.extensions");
-    if (extensions !== undefined && Object.keys(extensions).length > 0) {
-      c.fail(
-        "extensions-not-supported",
-        `lock.extensions must be empty: optional extensions are not supported by this runtime (found: ${Object.keys(extensions).join(", ")})`,
-      );
-    }
-  }
+  const extensions = parseExtensions(c, root["extensions"]);
 
   if (!c.ok || runtimeVersion === undefined || pack === undefined) {
     return { value: undefined, problems: c.problems };
@@ -102,7 +184,7 @@ export function parseLock(raw: unknown, path: string): ParseResult<LockFile> {
       agentPack: pack,
       agents,
       skills,
-      extensions: {},
+      extensions,
     },
     problems: [],
   };

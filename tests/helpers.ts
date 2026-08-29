@@ -1,4 +1,5 @@
 import { copyFileSync, cpSync, mkdirSync, mkdtempSync, readFileSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
 import * as path from "node:path";
 import { fileURLToPath } from "node:url";
 import type { Problem } from "../src/errors.js";
@@ -50,6 +51,15 @@ export function makeTempProject(
     readonly stages?: Readonly<Record<string, { execution: string; actor?: string }>>;
     /** A `tests/fixtures/packs/<name>` pack copied to `<dir>/pack` and selected by config. */
     readonly pack?: string;
+    /**
+     * Fixture extensions installed into `<dir>/node_modules/@pactwright/<name>`.
+     * A plain name is installed and configured enabled; pass `enabled: false`
+     * to configure it disabled, or `configure: false` to install the package
+     * without a config entry (for `extension add` tests).
+     */
+    readonly extensions?: ReadonlyArray<
+      string | { readonly id: string; readonly enabled?: boolean; readonly configure?: boolean }
+    >;
   } = {},
 ): string {
   const dir = mkdtempSync(path.join(repoRoot, ".tmp-pactwright-test-"));
@@ -75,6 +85,34 @@ export function makeTempProject(
         .replace(/\n {2}version: .*\n/, "\n"),
     );
   }
+  if (options.extensions !== undefined) {
+    const entries: string[] = [];
+    for (const item of options.extensions) {
+      const { id, enabled, configure } =
+        typeof item === "string" ? { id: item, enabled: true, configure: true } : item;
+      cpSync(
+        path.join(fixture("extensions"), id),
+        path.join(dir, "node_modules", "@pactwright", id),
+        { recursive: true },
+      );
+      if (configure === false) continue;
+      entries.push(
+        `  ${id}:`,
+        `    enabled: ${enabled !== false}`,
+        `    source: "@pactwright/${id}"`,
+      );
+    }
+    if (entries.length > 0) {
+      const configPath = path.join(dir, ".pactwright", "config.yml");
+      writeFileSync(
+        configPath,
+        readFileSync(configPath, "utf8").replace(
+          "extensions: {}",
+          ["extensions:", ...entries].join("\n"),
+        ),
+      );
+    }
+  }
   const lifecyclePath = path.join(dir, ".pactwright", "lifecycle.yml");
   if (options.lifecycle !== undefined) {
     copyFileSync(path.join(fixture("lifecycle"), options.lifecycle), lifecyclePath);
@@ -88,6 +126,15 @@ export function makeTempProject(
     writeFileSync(lifecyclePath, `${lines.join("\n")}\n`);
   }
   return dir;
+}
+
+/**
+ * An empty temporary directory outside the repository, for `init` tests: no
+ * enclosing `.pactwright/` can be found by walking up from it. Callers
+ * remove the directory afterwards.
+ */
+export function makeEmptyRepo(): string {
+  return mkdtempSync(path.join(tmpdir(), "pactwright-init-"));
 }
 
 /** The §17 default lifecycle stages, with overrides. */

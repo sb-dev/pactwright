@@ -34,11 +34,12 @@ export interface PackManifest {
   readonly agents: Readonly<Record<string, PackAgent>>;
 }
 
-const VERSION_PATTERN = /^\d+\.\d+\.\d+$/;
-const COMPAT_PATTERN = /^\^?\d+\.\d+\.\d+$/;
+export const VERSION_PATTERN = /^\d+\.\d+\.\d+$/;
+export const COMPAT_PATTERN = /^\^?\d+\.\d+\.\d+$/;
 const NAME_PATTERN = /^[a-z0-9][a-z0-9._-]*$/;
 // npm package name, optionally scoped; capped at npm's 214-character limit.
-const PACK_NAME_PATTERN = /^(@[a-z0-9][a-z0-9._-]*\/)?[a-z0-9][a-z0-9._-]*$/;
+export const PACKAGE_NAME_PATTERN = /^(@[a-z0-9][a-z0-9._-]*\/)?[a-z0-9][a-z0-9._-]*$/;
+const PACK_NAME_PATTERN = PACKAGE_NAME_PATTERN;
 
 function expectRelativeFile(c: Checker, value: unknown, label: string): string | undefined {
   const text = expectString(c, value, label);

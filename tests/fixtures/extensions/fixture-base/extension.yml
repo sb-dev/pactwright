@@ -1,0 +1,17 @@
+id: fixture-base
+package: "@pactwright/fixture-base"
+version: 0.1.0
+pactwright: 0.0.0
+
+graph:
+  node_types:
+    - note
+
+  edge_types:
+    - annotates
+
+runtime:
+  namespace: notes
+
+github:
+  profile: fixture-base

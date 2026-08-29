@@ -37,7 +37,7 @@ test("loader: no project → project-not-found", () => {
 
 const failures: Array<[string, string, RegExp]> = [
   ["invalid-config-missing-field", "missing-field", /config\.yml/],
-  ["invalid-config-extensions", "extensions-not-supported", /config\.yml/],
+  ["invalid-config-extensions", "missing-field", /config\.yml/],
   ["invalid-lifecycle-unknown-stage", "unknown-stage", /lifecycle\.yml/],
   ["invalid-lifecycle-bad-actor", "invalid-value", /lifecycle\.yml/],
   ["invalid-lock-bad-hash", "invalid-hash", /lock\.yml/],
@@ -79,7 +79,7 @@ test("loader: reports problems from every file in one pass", () => {
     assert.fail("expected throw");
   } catch (error) {
     assert.ok(error instanceof PactwrightError);
-    assert.equal(error.problems.length, 1);
-    assert.match(error.message, /extensions-not-supported/);
+    assert.equal(error.problems.length, 2);
+    assert.ok(error.problems.every((p) => p.code === "missing-field"));
   }
 });

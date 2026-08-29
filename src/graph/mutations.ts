@@ -6,14 +6,14 @@ import { PactwrightError, type Problem } from "../errors.js";
 import { decisionActor, type Actor } from "../config/lifecycle.js";
 import { loadProject, type Project } from "../loader.js";
 import { assertPackComplete } from "../pack/resolve.js";
-import { CORE_EDGE_SCHEMAS, validateEdges } from "./edge-schema.js";
+import { composedRegistries } from "../extension/resolve.js";
+import { validateEdges } from "./edge-schema.js";
 import { edgeKey, type Edge } from "./edges.js";
 import { mintNodeId, slugify } from "./ids.js";
 import { validateLineages } from "./lineage.js";
 import { graphRevision } from "./revision.js";
 import { checkNodeIdImmutability, parseNodeFile, type GraphNode } from "./nodes.js";
 import {
-  CORE_NODE_SCHEMAS,
   parseDecidedBy,
   validateNodes,
   type DecidedByKind,
@@ -146,9 +146,10 @@ export function commitGraphChange(
     edges.push(edge);
   }
 
+  const registries = composedRegistries(project.extensions);
   problems.push(
-    ...validateNodes(nodes, CORE_NODE_SCHEMAS),
-    ...validateEdges(edges, nodes, CORE_EDGE_SCHEMAS, project.paths.edges),
+    ...validateNodes(nodes, registries.nodes),
+    ...validateEdges(edges, nodes, registries.edges, project.paths.edges),
     ...validateLineages(nodes, edges),
     ...checkNodeIdImmutability(project.graph.nodes, nodes),
   );

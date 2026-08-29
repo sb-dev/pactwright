@@ -3,7 +3,13 @@ import assert from "node:assert/strict";
 import { createHash } from "node:crypto";
 import * as fs from "node:fs";
 import * as path from "node:path";
-import { MANAGED_DIRS, renderClaudeCodeAdapter, writeAdapter } from "../src/adapter/claude-code.js";
+import {
+  GENERATED_MARKER,
+  MANAGED_DIRS,
+  isGenerated,
+  renderClaudeCodeAdapter,
+  writeAdapter,
+} from "../src/adapter/claude-code.js";
 import { COMMAND_TEMPLATES } from "../src/adapter/commands.js";
 import { CORE_STAGES } from "../src/config/lifecycle.js";
 import { GRAPH_MARKING_STAGES, TRANSIENT_STAGES } from "../src/lifecycle/engine.js";
@@ -18,7 +24,14 @@ import { fixture, makeTempProject, repoRoot } from "./helpers.js";
  * value: bump it on purpose, in the same commit, after reading the diff.
  */
 const COMPLETE_RENDER_HASH =
-  "sha256:637f1b928cd3e5431850c2449dbe7bf344c713253cc588722bc4a78e6f416508";
+  "sha256:112587ff33338fee1f70b3f794c128189c815093f5198313626052a24e547e6e";
+
+/**
+ * A file shaped as a stale render: frontmatter, then the banner in the
+ * position ownership is proved from. A bare marker at byte 0 would not be a
+ * render the adapter ever produced, and is deliberately not claimed.
+ */
+const BANNER = `---\ndescription: gone\n---\n\n${GENERATED_MARKER} from @pactwright/standard@0.0.0 (gone). -->\n\n`;
 
 const FORBIDDEN =
   /\b(supersede the|must supersede|human gate|next stage|advance the lifecycle|mark (the )?(brief|contract|intent) as)\b/i;
@@ -149,27 +162,130 @@ test("adapter: commands invoke the runtime and own no transition rules", () => {
   }
 });
 
-test("adapter: writing twice is byte-identical, prunes stale managed files and leaves the rest", () => {
+test("adapter: ownership is proved by the banner's position, not by mentioning it", () => {
+  const dir = makeTempProject();
+  tempDirs.push(dir);
+  const write = (name: string, content: string): string => {
+    const file = path.join(dir, name);
+    fs.writeFileSync(file, content);
+    return file;
+  };
+  const rendered = renderClaudeCodeAdapter(standardPack()).get(".claude/agents/spec.md")!;
+
+  assert.equal(isGenerated(write("real.md", rendered)), true, "a rendered file");
+  assert.equal(isGenerated(write("stale.md", `${BANNER}stale\n`)), true, "a stale render");
+
+  // The defect this anchoring exists to close: prose that quotes the banner.
+  assert.equal(
+    isGenerated(
+      write("prose.md", `# Notes\n\nGenerated files open with \`${GENERATED_MARKER} ... -->\`.\n`),
+    ),
+    false,
+    "prose quoting the marker",
+  );
+  assert.equal(
+    isGenerated(write("byte-zero.md", `${GENERATED_MARKER} from nowhere. -->\n\nbody\n`)),
+    false,
+    "a marker with no frontmatter above it is not a render we produce",
+  );
+  assert.equal(
+    isGenerated(write("after-body.md", `---\na: b\n---\n\n# Title\n\n${GENERATED_MARKER} -->\n`)),
+    false,
+    "a marker below the first line after the frontmatter",
+  );
+  assert.equal(isGenerated(write("plain.md", "hand-written\n")), false, "no marker at all");
+  assert.equal(isGenerated(path.join(dir, "absent.md")), false, "an unreadable file is kept");
+  assert.equal(isGenerated(dir), false, "a directory is kept");
+});
+
+test("adapter: a file quoting the banner in prose survives the prune", () => {
   const dir = makeTempProject({ pack: "complete" });
   tempDirs.push(dir);
   fs.mkdirSync(path.join(dir, ".claude", "commands"), { recursive: true });
-  fs.writeFileSync(path.join(dir, ".claude", "commands", "old.md"), "stale\n");
+  const notes = path.join(dir, ".claude", "commands", "notes.md");
+  const content = `# Team notes\n\nOur generated commands open with \`${GENERATED_MARKER} ... -->\`.\n`;
+  fs.writeFileSync(notes, content);
+
+  const result = writeAdapter(dir, renderClaudeCodeAdapter(packAt(dir)));
+  assert.deepEqual(result.removed, []);
+  assert.deepEqual(result.kept, [".claude/commands/notes.md"]);
+  assert.equal(fs.readFileSync(notes, "utf8"), content);
+});
+
+test("adapter: a case-colliding user file is reported once, under its real name", () => {
+  const dir = makeTempProject({ pack: "complete" });
+  tempDirs.push(dir);
+  const agents = path.join(dir, ".claude", "agents");
+  fs.mkdirSync(agents, { recursive: true });
+  const mine = path.join(agents, "Spec.md");
+  fs.writeFileSync(mine, "my own spec agent\n");
+  // Only meaningful where the filesystem folds case: elsewhere `Spec.md` and
+  // the rendered `spec.md` are simply two files, and both land normally.
+  const caseInsensitive = fs.existsSync(path.join(agents, "spec.md"));
+
+  const result = writeAdapter(dir, renderClaudeCodeAdapter(packAt(dir)));
+  if (caseInsensitive) {
+    assert.deepEqual(result.conflicts, [".claude/agents/Spec.md"]);
+    assert.deepEqual(result.kept, [], "a conflict is never also reported as kept");
+    assert.equal(fs.readFileSync(mine, "utf8"), "my own spec agent\n");
+    // Every reported path names a file a directory listing actually shows.
+    for (const rel of [...result.conflicts, ...result.kept, ...result.written]) {
+      assert.ok(fs.existsSync(path.join(dir, rel)), `${rel} should exist on disk`);
+    }
+  } else {
+    assert.deepEqual(result.conflicts, []);
+    assert.deepEqual(result.kept, [".claude/agents/Spec.md"]);
+  }
+  assert.deepEqual(result.removed, []);
+});
+
+test("adapter: writing twice is byte-identical, prunes stale generated files and leaves the rest", () => {
+  const dir = makeTempProject({ pack: "complete" });
+  tempDirs.push(dir);
+  fs.mkdirSync(path.join(dir, ".claude", "commands"), { recursive: true });
+  fs.writeFileSync(path.join(dir, ".claude", "commands", "old.md"), `${BANNER}stale\n`);
+  fs.writeFileSync(path.join(dir, ".claude", "commands", "mine.md"), "hand-written\n");
   fs.writeFileSync(path.join(dir, ".claude", "settings.local.json"), "{}\n");
 
   const pack = packAt(dir);
   const first = writeAdapter(dir, renderClaudeCodeAdapter(pack));
   assert.deepEqual(first.removed, [".claude/commands/old.md"]);
+  assert.deepEqual(first.kept, [".claude/commands/mine.md"]);
+  assert.deepEqual(first.conflicts, []);
   assert.equal(first.written.length, 10);
   const afterFirst = treeHashes(dir);
   const second = writeAdapter(dir, renderClaudeCodeAdapter(pack));
   assert.deepEqual(second.removed, []);
+  assert.deepEqual(second.kept, [".claude/commands/mine.md"]);
   assert.deepEqual(treeHashes(dir), afterFirst);
-  assert.equal(Object.keys(afterFirst).length, 10);
+  // The 10 rendered files plus the hand-written one the adapter left alone.
+  assert.equal(Object.keys(afterFirst).length, 11);
   assert.equal(fs.readFileSync(path.join(dir, ".claude", "settings.local.json"), "utf8"), "{}\n");
+  assert.equal(
+    fs.readFileSync(path.join(dir, ".claude", "commands", "mine.md"), "utf8"),
+    "hand-written\n",
+  );
   assert.ok(!fs.existsSync(path.join(dir, ".claude", "commands", "old.md")));
   for (const entry of fs.readdirSync(path.join(dir, ".claude", "agents"))) {
     assert.doesNotMatch(entry, /\.tmp-/);
   }
+});
+
+test("adapter: an unmarked file at a rendered path is reported, not overwritten", () => {
+  const dir = makeTempProject({ pack: "complete" });
+  tempDirs.push(dir);
+  const mine = path.join(dir, ".claude", "agents", "spec.md");
+  fs.mkdirSync(path.dirname(mine), { recursive: true });
+  fs.writeFileSync(mine, "my own spec agent\n");
+
+  const result = writeAdapter(dir, renderClaudeCodeAdapter(packAt(dir)));
+  assert.deepEqual(result.conflicts, [".claude/agents/spec.md"]);
+  assert.equal(result.written.includes(".claude/agents/spec.md"), false);
+  assert.equal(result.written.length, 9);
+  // A conflicting path is reported once, as a conflict — never also as kept.
+  assert.deepEqual(result.kept, []);
+  assert.deepEqual(result.removed, []);
+  assert.equal(fs.readFileSync(mine, "utf8"), "my own spec agent\n");
 });
 
 test("adapter: refuses to write outside the managed directories", () => {
