@@ -120,13 +120,12 @@ test("extensions: the capability union gates the selected pack", () => {
   assert.deepEqual(ok.problems, []);
 
   const resolved = resolveExtensions({ root: passing, config: config(passing) });
-  assert.deepEqual(
-    requiredCapabilities(
-      config(passing),
-      resolved.value!.map((e) => e.manifest),
-    ),
-    ["delivery-execution", "delivery-review", "delivery-specification", "operations-analysis"],
-  );
+  assert.deepEqual(requiredCapabilities(resolved.value!.map((e) => e.manifest)), [
+    "delivery-execution",
+    "delivery-review",
+    "delivery-specification",
+    "operations-analysis",
+  ]);
 });
 
 // ---- graph contribution -----------------------------------------------------

@@ -160,7 +160,7 @@ function resolveComplete(
   const resolved = resolvePack(options);
   if (resolved.value === undefined) return { kind: "unresolved", problems: resolved.problems };
   const pack = resolved.value;
-  const required = requiredCapabilities(options.config, extensions);
+  const required = requiredCapabilities(extensions);
   const missing = missingCapabilities(pack.manifest, required);
   if (missing.length === 0) return { kind: "ok", pack };
   return {

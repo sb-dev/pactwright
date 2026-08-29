@@ -35,9 +35,9 @@ export interface ExtensionChangeReport {
    */
   readonly githubProfiles: readonly string[];
   /**
-   * Node ids of canonical records that stayed on disk after a removal.
-   * Removal never deletes user-authored extension graph data; the user
-   * chooses separately whether to delete it.
+   * Paths of canonical records that stayed on disk after a removal. Removal
+   * never deletes user-authored extension graph data; the user chooses
+   * separately whether to delete it.
    */
   readonly preserved: readonly string[];
   readonly problems: readonly Problem[];

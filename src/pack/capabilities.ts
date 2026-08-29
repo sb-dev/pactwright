@@ -1,4 +1,3 @@
-import type { PactwrightConfig } from "../config/config.js";
 import type { PackManifest } from "./manifest.js";
 
 /**
@@ -21,14 +20,12 @@ export const CAPABILITY_PATTERN = /^[a-z][a-z0-9]*(-[a-z0-9]+)*$/;
 /**
  * The capability set the selected pack must satisfy: the core set plus the
  * `agent_capabilities` of every enabled extension (Distribution §5, §7).
- * Callers pass the manifests of the enabled extensions; only capabilities
- * required by enabled extensions are mandatory.
+ * Callers pass the manifests of the enabled extensions, so only capabilities
+ * an enabled extension asks for are mandatory.
  */
 export function requiredCapabilities(
-  config: PactwrightConfig,
   extensions: ReadonlyArray<{ readonly agentCapabilities: readonly string[] }> = [],
 ): readonly string[] {
-  void config;
   const union = new Set<string>(CORE_CAPABILITIES);
   for (const manifest of extensions) {
     for (const capability of manifest.agentCapabilities) union.add(capability);
