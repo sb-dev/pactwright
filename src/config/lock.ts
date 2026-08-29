@@ -10,12 +10,18 @@ import {
 import { readYamlFile } from "../yaml.js";
 
 /**
- * One locked extension: the exact package, version and content hash it
- * resolved to (Distribution §6).
+ * One locked extension: the exact package and version it resolved to, and a
+ * hash of its manifest (Distribution §6).
  */
 export interface LockExtension {
   readonly package: string;
   readonly version: string;
+  /**
+   * Hash of the extension's declared manifest — its id, package, version,
+   * runtime range, dependencies, graph types, namespaces, capabilities and
+   * GitHub profile. It pins what the extension declares, not the bytes of
+   * the code it ships.
+   */
   readonly hash: string;
   /** Extension id → exact version of a required peer extension. Omitted when empty. */
   readonly dependencies?: Readonly<Record<string, string>>;
@@ -34,9 +40,8 @@ export interface LockFile {
   /** Skill name → content hash. A runtime addition relative to the §6 shape. */
   readonly skills: Readonly<Record<string, string>>;
   /**
-   * Extension id → locked extension. Produced empty in this checkpoint —
-   * resolution knows no extensions yet — but the structure is Distribution
-   * §6, prepared for extension support.
+   * Extension id → locked extension (Distribution §6). Empty only when no
+   * extension is configured.
    */
   readonly extensions: Readonly<Record<string, LockExtension>>;
 }
