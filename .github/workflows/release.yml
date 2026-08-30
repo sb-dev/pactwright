@@ -1,0 +1,92 @@
+name: Release
+
+on:
+  push:
+    tags: ["v*"]
+
+permissions:
+  contents: read
+  id-token: write
+
+# Releases queue rather than cancel: an interrupted registry write cannot be
+# retried against immutable versions, so a superseding run must wait.
+concurrency:
+  group: ${{ github.workflow }}
+  cancel-in-progress: false
+
+jobs:
+  publish:
+    name: Publish
+    runs-on: ubuntu-latest
+    environment: npm-release
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+          # Full history: the default-branch ancestry assertion below needs it.
+          fetch-depth: 0
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          # Node 24 bundles npm >= 11.5.1, the minimum for npm trusted
+          # publishing, and sits inside the package's declared support range.
+          node-version: "24"
+      - name: Enable Corepack
+        run: corepack enable
+        env:
+          COREPACK_ENABLE_DOWNLOAD_PROMPT: "0"
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm verify
+      - name: Assert the tag version matches every publishable package
+        env:
+          TAG: ${{ github.ref_name }}
+        run: |
+          node --input-type=module -e '
+            import { globSync, readFileSync } from "node:fs";
+            const expected = process.env.TAG.replace(/^v/, "");
+            const manifests = ["package.json", ...globSync("packages/*/package.json")];
+            const mismatched = manifests
+              .map((file) => ({ file, ...JSON.parse(readFileSync(file, "utf8")) }))
+              .filter((pkg) => pkg.private !== true && pkg.version !== expected);
+            for (const pkg of mismatched) {
+              console.error(`${pkg.file}: ${pkg.name}@${pkg.version} does not match ${expected}`);
+            }
+            if (mismatched.length > 0) process.exit(1);
+          '
+      - name: Assert the tagged commit is on the default branch
+        run: git merge-base --is-ancestor "$GITHUB_SHA" origin/main
+      - name: Select the npm dist-tag
+        id: dist-tag
+        env:
+          TAG: ${{ github.ref_name }}
+        run: |
+          case "${TAG#v}" in
+            0.0.*) echo "tag=next" >> "$GITHUB_OUTPUT" ;;
+            *) echo "tag=latest" >> "$GITHUB_OUTPUT" ;;
+          esac
+      # Tag checkouts are detached, so pnpm's branch/clean checks would fail
+      # every release; they are disabled only now, after the assertions above.
+      # Recursive publishing skips versions already in the registry, which is
+      # what makes a rerun or a bootstrap-published tag complete safely.
+      - name: Publish dry-run
+        env:
+          DIST_TAG: ${{ steps.dist-tag.outputs.tag }}
+          NPM_CONFIG_PROVENANCE: "true"
+        run: pnpm publish -r --dry-run --tag "$DIST_TAG" --access public --no-git-checks
+      - name: Publish
+        env:
+          DIST_TAG: ${{ steps.dist-tag.outputs.tag }}
+          NPM_CONFIG_PROVENANCE: "true"
+        run: pnpm publish -r --tag "$DIST_TAG" --access public --no-git-checks
+      - name: Verify the release resolves from the registry
+        env:
+          TAG: ${{ github.ref_name }}
+        run: |
+          VERSION="${TAG#v}"
+          for manifest in package.json packages/*/package.json; do
+            name="$(node -p "const m = require('./$manifest'); m.private === true ? '' : m.name")"
+            [ -z "$name" ] && continue
+            resolved="$(npm view "${name}@${VERSION}" version)"
+            echo "${name}@${VERSION} resolves to ${resolved}"
+            test "$resolved" = "$VERSION"
+          done
