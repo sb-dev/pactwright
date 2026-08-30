@@ -20,7 +20,7 @@
     "url": "https://github.com/sb-dev/pactwright/issues"
   },
   "engines": {
-    "node": ">=22 <25"
+    "node": ">=22 <23 || >=24 <25"
   },
   "main": "dist/index.js",
   "types": "dist/index.d.ts",

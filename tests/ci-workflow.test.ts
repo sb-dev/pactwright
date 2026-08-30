@@ -89,24 +89,24 @@ test("ci workflow: checks out without persisting credentials", () => {
   assert.equal(checkouts[0]?.with?.["persist-credentials"], false);
 });
 
-test("ci workflow: verifies every Node version the package supports", () => {
+test("ci workflow: verifies exactly the Node versions the package supports", () => {
   const versions = jobs.flatMap((job) => job.strategy?.matrix?.["node-version"] ?? []);
   assert.ok(versions.length > 0, "a Node version matrix exists");
 
-  const minimum = Number(/>=(\d+)/.exec(engines)?.[1]);
-  const belowMaximum = Number(/<(\d+)/.exec(engines)?.[1]) - 1;
-  assert.ok(Number.isInteger(minimum) && Number.isInteger(belowMaximum), `engines.node ${engines}`);
+  // Expand engines.node into every admitted major. Only single-major
+  // `>=A <A+1` clauses are recognised, so a wider range shape fails here and
+  // forces this coupling to be revisited instead of passing silently.
+  const admitted = engines.split("||").map((clause) => {
+    const bounds = /^>=(\d+) <(\d+)$/.exec(clause.trim());
+    assert.ok(bounds, `engines.node clause "${clause.trim()}" is a single-major >=A <A+1 range`);
+    const major = Number(bounds[1]);
+    assert.equal(Number(bounds[2]), major + 1, `clause "${clause.trim()}" admits one major`);
+    return String(major);
+  });
 
-  for (const version of versions) {
-    const major = Number(version);
-    assert.ok(
-      major >= minimum && major <= belowMaximum,
-      `Node ${version} is inside the declared range ${engines}`,
-    );
-  }
-  for (const boundary of [minimum, belowMaximum]) {
-    assert.ok(versions.includes(String(boundary)), `Node ${boundary} is exercised`);
-  }
+  // Exact equality both ways: every claimed major is exercised (no untested
+  // compatibility claim) and every matrix version is claimed.
+  assert.deepEqual([...versions].sort(), [...admitted].sort());
 });
 
 test("ci workflow: installs from the lockfile and runs the one verification gate", () => {
