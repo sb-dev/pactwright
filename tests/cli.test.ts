@@ -4,7 +4,14 @@ import { spawnSync } from "node:child_process";
 import * as fs from "node:fs";
 import { rmSync } from "node:fs";
 import * as path from "node:path";
-import { defaultStages, fixture, makeEmptyRepo, makeTempProject, repoRoot } from "./helpers.js";
+import {
+  defaultStages,
+  fixture,
+  makeEmptyRepo,
+  makeTempProject,
+  notAProject,
+  repoRoot,
+} from "./helpers.js";
 
 const cli = path.join(repoRoot, "dist", "cli.js");
 const manifest = JSON.parse(fs.readFileSync(path.join(repoRoot, "package.json"), "utf8")) as {
@@ -161,7 +168,7 @@ test("cli: lifecycle rejects unknown subcommands and options", () => {
 });
 
 test("cli: outside a project the lifecycle commands fail cleanly", () => {
-  const result = runIn(fixture("not-a-project/sub"), "lifecycle", "status");
+  const result = runIn(notAProject(), "lifecycle", "status");
   assert.equal(result.status, 1);
   assert.match(result.stdout, /project-not-found/);
 });
@@ -453,7 +460,7 @@ test("cli: sync --json emits the report and argument errors are reported", () =>
   assert.equal(report.changed.length, 10);
 
   assert.equal(runIn(root, "sync", "extra").status, 1);
-  const outside = runIn(fixture("not-a-project/sub"), "sync");
+  const outside = runIn(notAProject(), "sync");
   assert.equal(outside.status, 1);
   assert.match(outside.stdout, /project-not-found/);
 });
@@ -501,7 +508,7 @@ test("cli: extension argument errors", () => {
   assert.equal(runIn(root, "extension", "dance", "x").status, 1);
   assert.equal(runIn(root, "extension", "add").status, 1);
   assert.equal(runIn(root, "extension", "add", "a", "b").status, 1);
-  const outside = runIn(fixture("not-a-project/sub"), "extension", "add", "fixture-base");
+  const outside = runIn(notAProject(), "extension", "add", "fixture-base");
   assert.equal(outside.status, 1);
   assert.match(outside.stdout, /project-not-found/);
 });

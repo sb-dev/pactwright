@@ -16,6 +16,18 @@ export function fixture(name: string): string {
 }
 
 /**
+ * A directory guaranteed to be outside any Pactwright project. A static
+ * fixture inside this repository cannot serve: the repository is itself a
+ * Pactwright project, so the loader walking up from any in-repo directory
+ * finds the repository's own `.pactwright/`.
+ */
+export function notAProject(): string {
+  const dir = mkdtempSync(path.join(tmpdir(), "pactwright-not-a-project-"));
+  mkdirSync(path.join(dir, "sub"));
+  return path.join(dir, "sub");
+}
+
+/**
  * Nodes + edges of one `<dir>/specs` fixture, validated exactly as the
  * loader does it (node schemas, then the typed-edge registry).
  */

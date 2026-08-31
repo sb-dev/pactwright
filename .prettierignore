@@ -5,6 +5,7 @@ coverage/
 .pnpm-store/
 .tmp-pactwright-test-*/
 pnpm-lock.yaml
+.pactwright/lock.yml
 docs/
 drafts/
 .claude/

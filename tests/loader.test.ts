@@ -4,7 +4,7 @@ import * as path from "node:path";
 import { PactwrightError } from "../src/errors.js";
 import { loadProject } from "../src/loader.js";
 import { findProjectRoot } from "../src/project.js";
-import { fixture } from "./helpers.js";
+import { fixture, notAProject } from "./helpers.js";
 
 test("loader: loads a valid project through the canonical path", () => {
   const project = loadProject({ root: fixture("valid-project") });
@@ -30,7 +30,7 @@ test("loader: finds the project root from a nested cwd", () => {
 
 test("loader: no project → project-not-found", () => {
   assert.throws(
-    () => loadProject({ cwd: path.join(fixture("not-a-project"), "sub") }),
+    () => loadProject({ cwd: notAProject() }),
     (error: unknown) => error instanceof PactwrightError && error.code === "project-not-found",
   );
 });

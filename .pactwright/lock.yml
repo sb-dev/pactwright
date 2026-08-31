@@ -1,0 +1,15 @@
+runtime:
+  version: 0.0.0
+agent_pack:
+  name: '@pactwright/standard'
+  version: 0.0.0
+  hash: sha256:d14e35231f604199e35d386c52fd988a334e834241614eea453ca4c263818e2e
+agents:
+  implementer: sha256:290d170cbf9525aa6b7614c295fc817bb37116fcf26084d38798c9d65653c398
+  reviewer: sha256:d8ab50ec55432f9d83b6252442ed8414df1ed64264c45d1caa2a654157bfa379
+  spec: sha256:5d6a2301d776fdda7aa32d81372075b66d6c6551e9e3c6b76cbc57750bcd676a
+skills:
+  contract-writing: sha256:c971dc4b623df00fa40b0516c3d7fd38cdd02322500afe7f12c651fbdd8c37d6
+  implementation-review: sha256:aa8f7c5311bef26594bb24e9241cd26b953d1a58e65027a34bc0bd0b5de1fa15
+  repository-analysis: sha256:4c1a22cb052eae69c82c07d22342d38bce85f710d3e3b2dd9643f0c2466df7ae
+extensions: {}

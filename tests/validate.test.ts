@@ -4,8 +4,7 @@ import { rmSync } from "node:fs";
 import { graphRevision } from "../src/graph/revision.js";
 import { loadProject } from "../src/loader.js";
 import { validateProject } from "../src/validate.js";
-import { fixture, loadGraphFixture, makeTempProject } from "./helpers.js";
-import * as path from "node:path";
+import { fixture, loadGraphFixture, makeTempProject, notAProject } from "./helpers.js";
 
 const tempDirs: string[] = [];
 after(() => {
@@ -73,7 +72,7 @@ test("validate: every problem is reported in one pass", () => {
 });
 
 test("validate: no project is a reported problem, not a crash", () => {
-  const report = validateProject({ cwd: path.join(fixture("not-a-project"), "sub") });
+  const report = validateProject({ cwd: notAProject() });
   assert.equal(report.ok, false);
   assert.equal(report.problems[0]?.code, "project-not-found");
 });
