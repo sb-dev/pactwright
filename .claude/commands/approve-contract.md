@@ -27,7 +27,7 @@ Write a YAML file in a temporary location outside the repository with:
 ```yaml
 intent: <intent-id>
 outcome: proceed | reject | defer
-decided_by: human:<name>   # name from `git config user.name`
+decided_by: human:<handle>  # short handle for the deciding human, no spaces (e.g. human:samir)
 body: |
   <why this alternative; include the notes>
 contract:                   # proceed only

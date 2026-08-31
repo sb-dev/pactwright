@@ -24,7 +24,7 @@ import { fixture, makeTempProject, repoRoot } from "./helpers.js";
  * value: bump it on purpose, in the same commit, after reading the diff.
  */
 const COMPLETE_RENDER_HASH =
-  "sha256:112587ff33338fee1f70b3f794c128189c815093f5198313626052a24e547e6e";
+  "sha256:653f9df1028183b889315ca16efd427d4919a2b387a5bafc8f687a0d7b5e85d7";
 
 /**
  * A file shaped as a stale render: frontmatter, then the banner in the

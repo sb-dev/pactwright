@@ -525,7 +525,7 @@ mkdir -p /tmp/pactwright-checkpoint-1-fixture
 cd /tmp/pactwright-checkpoint-1-fixture
 
 pnpm init
-npm pkg set 'pnpm.overrides.@pactwright/standard=file:/tmp/pactwright-standard-checkpoint-1-bootstrap.tgz'
+printf 'overrides:\n  "@pactwright/standard": file:/tmp/pactwright-standard-checkpoint-1-bootstrap.tgz\n' > pnpm-workspace.yaml
 pnpm add -D /tmp/pactwright-checkpoint-1-bootstrap.tgz
 pnpm pactwright init
 pnpm pactwright sync
