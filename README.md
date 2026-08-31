@@ -2,6 +2,43 @@
 
 An AI software delivery runtime built for Claude Code. Human intent moves through an explicit lifecycle — **intent → decision → contract → brief → evidence** — recorded as nodes and edges of a file-based Delivery Graph inside the repository itself. The runtime owns the lifecycle: it validates the graph, decides what is permitted next, and writes every record atomically; agent packs supply the prompts and skills that do the work.
 
+## Quick Start
+
+> The first npm release (`0.0.1`) ships at the end of the current checkpoint.
+
+Install the runtime and generate the project integration:
+
+```bash
+pnpm add -D pactwright
+pnpm pactwright init
+pnpm pactwright sync
+```
+
+- `pnpm pactwright init` creates the Pactwright-owned core structure: `.pactwright/` configuration, an empty Delivery Graph under `specs/` and the empty `.claude/` adapter directories.
+- `pnpm pactwright sync` renders the Claude Code adapter into `.claude/`: one agent file per pack agent and one command per lifecycle stage.
+
+Run one Delivery with the generated Claude Code commands, in order:
+
+1. `/capture-intent <text>` — records the intent as the first node of a new lineage.
+2. `/propose-contracts <intent-id>` — drafts transient contract alternatives for the decision; nothing is recorded.
+3. `/approve-contract <intent-id> <alternative> [notes]` — records your decision and, on proceed, the one canonical contract it selects.
+4. `/write-brief <contract-id>` — records the focused brief that implements the contract.
+5. `/deliver-brief <brief-id>` — executes the brief against the repository; changes stay in the working tree for review.
+6. `/review <brief-id>` — reviews the delivered changes against the contract and brief; findings are reported, not recorded.
+7. `/prepare-evidence <brief-id>` — records what was delivered and the verification that proves it, completing the lineage.
+
+Inspect the graph at any time:
+
+```bash
+pnpm pactwright validate
+pnpm pactwright lifecycle status
+pnpm pactwright context <intent-id>
+```
+
+- `validate` checks every node, edge and lineage and prints the graph revision.
+- `lifecycle status` derives each intent's state and the next permitted stage.
+- `context <intent-id>` prints the current lineage only — the high-signal context for a human or agent picking up the work.
+
 ## Packages
 
 This repository is a pnpm workspace with two published packages:

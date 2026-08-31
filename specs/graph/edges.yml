@@ -1,1 +1,13 @@
-edges: []
+edges:
+  - source: decision-proceed-with-document-the-working-quick-start-2ee5fb66
+    type: resolves
+    target: intent-document-the-working-quick-start-5d6f2f19
+  - source: decision-proceed-with-document-the-working-quick-start-2ee5fb66
+    type: selects
+    target: contract-readme-quick-start-for-the-proven-delivery-surface-c9a8f1db
+  - source: brief-insert-the-quick-start-section-into-readme-md-ad337723
+    type: decomposes
+    target: contract-readme-quick-start-for-the-proven-delivery-surface-c9a8f1db
+  - source: evidence-readme-quick-start-delivered-and-verified-553fab7f
+    type: evidences
+    target: brief-insert-the-quick-start-section-into-readme-md-ad337723
