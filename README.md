@@ -39,6 +39,8 @@ pnpm pactwright context <intent-id>
 - `lifecycle status` derives each intent's state and the next permitted stage.
 - `context <intent-id>` prints the current lineage only — the high-signal context for a human or agent picking up the work.
 
+Learn more: the [Getting Started guide](docs/getting-started.md) and the [runnable core Delivery example](examples/core-delivery/README.md).
+
 ## Packages
 
 This repository is a pnpm workspace with two published packages:

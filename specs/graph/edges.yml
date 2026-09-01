@@ -11,3 +11,15 @@ edges:
   - source: evidence-readme-quick-start-delivered-and-verified-553fab7f
     type: evidences
     target: brief-insert-the-quick-start-section-into-readme-md-ad337723
+  - source: decision-proceed-with-publish-the-core-delivery-learning-path-66f070aa
+    type: resolves
+    target: intent-publish-the-core-delivery-learning-path-ae900627
+  - source: decision-proceed-with-publish-the-core-delivery-learning-path-66f070aa
+    type: selects
+    target: contract-core-delivery-learning-path-in-guide-and-example-6f423688
+  - source: brief-write-the-guide-the-example-and-the-readme-links-fb50e5dd
+    type: decomposes
+    target: contract-core-delivery-learning-path-in-guide-and-example-6f423688
+  - source: evidence-learning-path-delivered-and-fixture-verified-63e97869
+    type: evidences
+    target: brief-write-the-guide-the-example-and-the-readme-links-fb50e5dd
