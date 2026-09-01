@@ -149,7 +149,7 @@ test("resolve: runtime and requested-version compatibility are checked", () => {
     ["incompatible-pack-version"],
   );
   assert.deepEqual(
-    resolvePack({ root: ok, config: config("./pack", "0.0.0"), runtimeVersion: "0.0.0" }).problems,
+    resolvePack({ root: ok, config: config("./pack", "0.0.0"), runtimeVersion: "0.0.1" }).problems,
     [],
   );
 });

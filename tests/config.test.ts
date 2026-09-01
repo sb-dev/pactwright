@@ -149,7 +149,7 @@ version: 1
 
 agent_pack:
   source: "@pactwright/standard"
-  version: "^0.0.0"
+  version: "^0.0.1"
 
 # the adapter is not configurable yet
 adapter:

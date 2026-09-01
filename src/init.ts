@@ -6,6 +6,7 @@ import { loadConfig } from "./config/config.js";
 import type { Problem } from "./errors.js";
 import { serialiseEdges } from "./graph/mutations.js";
 import { resolveDesiredState, writeLock } from "./pack/resolve.js";
+import { runtimeVersion } from "./version.js";
 import {
   CONFIG_FILE,
   EDGES_FILE,
@@ -26,7 +27,7 @@ export const CONFIG_TEMPLATE = `version: 1
 
 agent_pack:
   source: "@pactwright/standard"
-  version: "^0.0.0"
+  version: "^${runtimeVersion()}"
 
 adapter:
   type: claude-code

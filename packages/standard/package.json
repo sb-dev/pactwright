@@ -1,6 +1,6 @@
 {
   "name": "@pactwright/standard",
-  "version": "0.0.0",
+  "version": "0.0.1",
   "description": "Default Pactwright agent pack: delivery-specification, delivery-execution and delivery-review.",
   "keywords": [
     "pactwright",

@@ -10,7 +10,7 @@ test("pack manifest: the complete fixture parses to the §7 shape", () => {
   const result = loadPackManifest(pack("complete"));
   assert.deepEqual(result.problems, []);
   assert.equal(result.value?.name, "@pactwright/standard");
-  assert.equal(result.value?.pactwright, "0.0.0");
+  assert.equal(result.value?.pactwright, "0.0.1");
   assert.deepEqual(
     { ...result.value?.capabilities },
     {

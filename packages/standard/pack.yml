@@ -1,6 +1,6 @@
 name: "@pactwright/standard"
-version: 0.0.0
-pactwright: 0.0.0
+version: 0.0.1
+pactwright: 0.0.1
 
 capabilities:
   delivery-specification: spec
