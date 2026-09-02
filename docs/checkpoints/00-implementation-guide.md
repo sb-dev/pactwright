@@ -1,6 +1,6 @@
 # Pactwright — Implementation Guide
 
-**Version:** 13  
+**Version:** 14  
 **Status:** Checkpoint index, engineering standard and release model
 
 ## Purpose
@@ -16,6 +16,37 @@ Step
 ```
 
 `Run` contains the actual prompt, slash command or shell command. The runbook does not encode which AI coding provider is active.
+
+## Kakeibo System-Level Acceptance authority
+
+Kakeibo is Pactwright's persistent external proving project.
+
+`00-kakeibo-acceptance-profile.md` is the current authority for Kakeibo-specific acceptance semantics across Checkpoints 1–9 and Graduation.
+
+Individual checkpoint files continue to own the Pactwright capability/release sequence. Older embedded `Kakeido` or August-spec acceptance wording is historical context only when it conflicts with the acceptance profile.
+
+At execution time, Kakeibo work uses the current canonical Kakeibo repository spec set:
+
+```text
+docs/specs/README.md
+01-product-and-ux-spec.md
+02-financial-domain-model-spec.md
+03-kei-assistant-spec.md
+04-mobile-design-system-spec.md
+05-system-architecture-and-data-spec.md
+06-engineering-delivery-and-operations-spec.md
+07-open-source-project-organisation-spec.md
+```
+
+The retained August Kakeido Tech Stack snapshot is not implementation authority. Current architecture/data is owned by `05`; testing, delivery and operations by `06`.
+
+Checkpoint 6 additionally uses:
+
+```text
+../research-logs/2026-09-02-pactwright-operations-experiment-semantics.md
+```
+
+That amendment activates generic Operations-owned `Experiment` state. Project-specific release artefacts such as Kakeibo `KeiRelease`, policy/persona/task contracts, model routes and benchmark datasets remain project-owned and are not Pactwright Project Graph node types.
 
 ## Engineering baseline
 
@@ -56,7 +87,7 @@ packed or published consumer behaviour
 → clean-repository smoke test
 
 cross-system behaviour
-→ Pactwright or Kakeido System-Level Acceptance
+→ Pactwright or Kakeibo System-Level Acceptance
 ```
 
 Do not replace deterministic tests with LLM judgement. Do not add arbitrary coverage targets.
@@ -65,7 +96,7 @@ Do not replace deterministic tests with LLM judgement. Do not add arbitrary cove
 
 After Checkpoint 2 activates GitHub:
 
-- coherent Pactwright and Kakeido changes land through pull requests;
+- coherent Pactwright and Kakeibo changes land through pull requests;
 - required checks must pass before merge;
 - the default branch is not force-pushed or deleted;
 - no approval-count requirement is added merely for ceremony in a one-maintainer project.
@@ -149,7 +180,6 @@ pactwright intelligence onboard
 If required coverage is missing, stop creative execution and create/ingest the missing project knowledge through normal Delivery first.
 
 After content is accepted, feed material changes back through the normal Pactwright path so the graph remains current. Public content is never an untracked side channel.
-
 
 ## npm release model
 
@@ -292,22 +322,23 @@ Published npm versions are immutable.
 Unless a step says otherwise:
 
 - Pactwright implementation/release commands run from the Pactwright repository root;
-- Kakeido acceptance commands run from the Kakeido repository root;
+- Kakeibo acceptance commands run from the Kakeibo repository root;
 - fixture verification uses test fixtures unless the step explicitly creates a real repository/resource;
 - ids consumed later must be printed or resolved by an earlier step.
 
 ## Execution order
 
-1. `01 — Checkpoint 1 — Self-Hosted Delivery.md`
-2. `02 — Checkpoint 2 — Remote Delivery.md`
-3. `03 — Checkpoint 3 — Project Understanding.md`
-4. `04 — Checkpoint 4 — Self-Review.md`
-5. `05 — Checkpoint 5 — Creative Production.md`
-6. `06 — Checkpoint 6 — Production Learning.md`
-7. `07 — Checkpoint 7 — Published-Work Feedback.md`
-8. `08 — Checkpoint 8 — Full Project Operating Surface.md`
-9. `09 — Checkpoint 9 — Hardened Closed Loop.md`
-10. `10 — Graduation — TrueLayer.md`
+0. `00-kakeibo-acceptance-profile.md` — read as the Kakeibo acceptance authority before executing any Kakeibo stage.
+1. `01-self-hosted-delivery.md`
+2. `02-remote-delivery.md`
+3. `03-project-intelligence.md`
+4. `04-graph-review.md`
+5. `05-creative-production.md`
+6. `06-operations.md` + `2026-09-02-pactwright-operations-experiment-semantics.md`
+7. `07-published-work-feedback.md`
+8. `08-github-project-surface.md`
+9. `09-hardened-closed-loop.md`
+10. `10-graduation-connected-banking.md`
 
 ## Transition rule
 
@@ -319,8 +350,8 @@ implementation verified
 → real Pactwright work accepted
 → release prepared from accepted source
 → exact npm version published
-→ exact version installed in Kakeido
-→ Kakeido System-Level Acceptance passed
+→ exact version installed in Kakeibo
+→ Kakeibo System-Level Acceptance passed
 → blocking feedback captured
 ```
 
@@ -328,4 +359,4 @@ Do not carry a known blocking failure into the next checkpoint.
 
 ---
 
-**Pactwright — Implementation Guide v13**
+**Pactwright — Implementation Guide v14**
