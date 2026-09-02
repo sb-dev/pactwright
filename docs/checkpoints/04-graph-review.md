@@ -1,14 +1,18 @@
 # Pactwright — Checkpoint 4 — Graph Review
 
-**Version:** 9 
-**Entry condition:** Checkpoint 3 is accepted. 
+**Version:** 10  
+**Entry condition:** Checkpoint 3 is accepted.  
 **Exit capability:** Pactwright can run reproducible specialist Graph Reviews over the registered Project Graph and route findings through PI.
 
 ## 1. Goal
 
-Implement Review execution infrastructure, the generic Review engine and full standard roster; then review Pactwright and Kakeido and turn at least one finding in each into governed corrected Delivery.
+Implement Review execution infrastructure, the generic Review engine and full standard roster; then review Pactwright and Kakeibo and turn at least one finding in each into governed corrected Delivery.
+
+The Kakeibo proof must review the complete seven-owner system plus its authority index. It must detect contradictions across owner boundaries without allowing Review itself to become a competing source of project truth.
 
 ## 2. Specification baseline
+
+### Pactwright
 
 - [Pactwright — Delivery Graph and Lifecycle Engineering Spec](../research-logs/2026-08-11-pactwright-delivery-graph-and-lifecycle-engineering-spec.md)
 - [Pactwright — Distribution, Agents and Evaluation](../research-logs/2026-08-11-pactwright-distribution-agents-and-evaluation.md)
@@ -18,13 +22,32 @@ Implement Review execution infrastructure, the generic Review engine and full st
 - [Pactwright — Operations Graph Engineering Spec](../research-logs/2026-08-11-pactwright-operations-graph-engineering-spec.md)
 - [Pactwright — System Architecture](../research-logs/2026-08-11-pactwright-system-architecture.md)
 - [Pactwright — Implementation Principles](./00-implementation-principles.md)
+- [Pactwright — Implementation Guide](./00-implementation-guide.md)
 - [Pactwright Open-Source Project Organisation](../research-logs/2026-08-11-pactwright-open-source-project-organisation.md)
 - [Design Specification: Astro + Cloudflare Workers + Meta CAPI](../research-logs/2026-08-11-astro-design-spec.md)
-- [Kakeido — Financial Model Spec](../research-logs/2026-08-11-kakeido-financial-model-spec.md)
-- [Kakeido — Product & UX Spec](../research-logs/2026-08-11-kakeido-product-and-ux-spec.md)
-- [Kakeido — Mobile Design Spec](../research-logs/2026-08-11-kakeido-mobile-design-spec.md)
-- [Kei — Assistant Spec](../research-logs/2026-08-11-kakeido-assistant-spec.md)
-- [Kakeido — Tech Stack Engineering Spec](../research-logs/2026-08-11-kakeido-tech-stack-engineering-spec.md)
+- [Kakeibo System-Level Acceptance Profile](./00-kakeibo-acceptance-profile.md)
+
+### Kakeibo
+
+At execution time use the complete current Kakeibo authority set:
+
+```text
+docs/specs/README.md
+
+docs/specs/01-product-and-ux-spec.md
+docs/specs/02-financial-domain-model-spec.md
+docs/specs/03-kei-assistant-spec.md
+docs/specs/04-mobile-design-system-spec.md
+docs/specs/05-system-architecture-and-data-spec.md
+docs/specs/06-engineering-delivery-and-operations-spec.md
+docs/specs/07-open-source-project-organisation-spec.md
+```
+
+`docs/specs/README.md` owns authority/conflict resolution. Review must preserve the ownership of all seven numbered specs rather than flattening them into one system narrative.
+
+`00-kakeibo-acceptance-profile.md` §8 is the shared System-Level Acceptance cross-check for this checkpoint.
+
+The retained August Kakeido Financial/Product/Mobile/Assistant/Tech Stack snapshots are not implementation authority.
 
 Only the owning specifications listed in each step define semantics. This runbook defines execution order, not new product meaning.
 
@@ -45,7 +68,7 @@ Use a prompt for repository/code changes. Once Pactwright owns a deterministic o
 
 Lifecycle adapter commands become available only after Checkpoint 1 generates the active adapter.
 
-**Default execution location:** the Pactwright repository root unless the step explicitly names Kakeido or a fixture
+**Default execution location:** the Pactwright repository root unless the step explicitly names Kakeibo or a fixture.
 
 For repository/code changes, finish with `pnpm verify`. Before invoking a newly implemented Pactwright runtime command during implementation, run `pnpm build` so the repository-local CLI is not using stale distribution output.
 
@@ -66,7 +89,9 @@ Fixture verification means repository test fixtures unless a step explicitly cre
 - **GitHub review surface** — Pactwright — GitHub Actions and Views §§4, 7, 22
 - **Release model** — Pactwright — Implementation Guide, "npm release model"
 - **Public product** — Pactwright Open-Source Project Organisation §§1.1–1.3
-- **Kakeido review targets** — Kakeido — Financial Model Spec; Kakeido — Product & UX Spec; Kakeido — Mobile Design Spec; Kei — Assistant Spec; Kakeido — Tech Stack Engineering Spec
+- **Kakeibo authority/conflict map** — current `docs/specs/README.md`
+- **Kakeibo review targets** — current specs `01`–`07`
+- **Kakeibo System-Level Acceptance** — Kakeibo Acceptance Profile §§2–8
 
 ## 5. Out of scope — deferred to Checkpoint 5
 
@@ -431,7 +456,6 @@ Each finding remains Review-owned provenance until its Source is governed by PI;
 
 **References:** PI §§8, 11; Delivery Graph §19
 
-
 **Run**
 
 ```text
@@ -645,16 +669,15 @@ pnpm install --frozen-lockfile
 pnpm pactwright validate
 ```
 
+## Stage 7 — Prove Graph Review on Kakeibo
 
-## Stage 7 — Prove Graph Review on Kakeido
+Run this stage from the Kakeibo repository root unless a step explicitly says otherwise.
 
-Run this stage from the Kakeido repository root unless a step explicitly says otherwise.
+Use specialist review to find cross-spec inconsistencies in the complete current Kakeibo system.
 
-Use specialist review to find cross-spec inconsistencies in a real unrelated project.
+### Step 22 — Install Review & Creative in Kakeibo
 
-### Step 22 — Install Review & Creative in Kakeido
-
-**References:** Distribution §§4, 6–7, 15
+**References:** Distribution §§4, 6–7, 15; Kakeibo Acceptance Profile §8
 
 **Run**
 
@@ -677,15 +700,15 @@ pnpm pactwright github sync
 
 **Expected result**
 
-Kakeido has the same Review engine and standard roster.
+Kakeibo has the same Review engine and standard roster, operating over the PI state established from the complete authority set in Checkpoint 3.
 
 **Verify before continuing**
 
-Run `pnpm pactwright review roster` and `pnpm pactwright validate`.
+Run `pnpm pactwright review roster`, `pnpm pactwright intelligence validate` and `pnpm pactwright validate`.
 
-### Step 23 — Run cross-spec Kakeido reviews
+### Step 23 — Run the complete cross-owner Kakeibo review
 
-**References:** Kakeido — Financial Model Spec; Kakeido — Product & UX Spec; Kakeido — Mobile Design Spec; Kei — Assistant Spec; Kakeido — Tech Stack Engineering Spec; Review boundary/engine/roster §7
+**References:** current Kakeibo `docs/specs/README.md` and specs `01`–`07`; Kakeibo Acceptance Profile §§3–8; Review boundary/engine/roster §7
 
 **Run**
 
@@ -696,9 +719,59 @@ pnpm pactwright review run architecture-reviewer
 pnpm pactwright review run graph-auditor
 ```
 
+The combined review must cover at least this cross-owner matrix:
+
+```text
+02 Financial Domain ↔ 01 Product & UX
+01 Product & UX ↔ 04 Mobile Design
+03 Kei behaviour ↔ 02 Financial truth
+03 Kei behaviour ↔ 05 Kei runtime architecture
+03 Kei behaviour ↔ 06 Kei release/evaluation/operations
+05 System Architecture ↔ 06 Engineering/Operations
+05 System Architecture ↔ 07 Open-source/public-private boundary
+06 Kei release/evaluation ↔ 07 public evaluation/transparency
+01 Product/commercial semantics ↔ 07 public surfaces
+```
+
+The index must also be checked against all seven owners for stale ownership/conflict-resolution claims.
+
+Reviewer attention must explicitly include these failure classes:
+
+```text
+financial / review truth:
+  spending-only assumptions leaking back into FinancialEntry
+  preparation states treated as reviewed truth
+  rules/history/Kei suggestions creating reviewed truth
+  transfer/card/business/goal semantics double-counting
+  provider/source lifecycle treated as review state
+
+Kei authority / runtime:
+  Kei recalculating or redefining canonical financial values
+  model-selected tasks bypassing app-selected task contracts
+  optional skills/tools/subagents expanding authority
+  ad-hoc prompts bypassing versioned policy/persona/task/output contracts
+  model-route changes treated as behavioural-release changes or vice versa
+  dashboard configuration becoming hidden production behaviour
+
+security / prompt injection:
+  merchant descriptions, CSV fields, provider labels or bank references treated as trusted instructions
+  untrusted source text reaching system/tool authority without containment
+
+architecture / privacy:
+  mobile/private clients accessing Neon directly
+  financial domain state, audit history, product/marketing analytics and operational telemetry being conflated
+  raw financial prompts/responses/traces becoming public or retained merely for observability
+  Meta receiving mobile/product financial behaviour rather than allowlisted consented marketing conversions
+
+maturity / over-engineering:
+  planned Salt Edge represented as current implementation
+  persistent memory, autonomous tools, dynamic skills, subagents or general-purpose Ask Kei pulled into the initial runtime without evidence
+  product-specific Kei artefacts promoted into Pactwright graph semantics
+```
+
 **Expected result**
 
-Reviews inspect Financial Model ↔ Product/UX, Product/UX ↔ Mobile, Kei ↔ Financial Model, Tech Stack ↔ product requirements.
+Graph Review tests the seven-owner system as a coherent design while preserving each owner's authority and produces supported findings for real contradictions, omissions or unsafe boundary crossings.
 
 **Run**
 
@@ -719,16 +792,23 @@ pnpm pactwright intelligence derive-intent-roadmap
 
 **Verify before continuing**
 
-Every accepted correction candidate traces to a supported Review finding and PI Source.
+- every accepted correction candidate traces to a supported Review finding and PI Source;
+- Review did not directly rewrite any Kakeibo spec, Knowledge Card, Delivery node or application state;
+- owner attribution for every finding points to the relevant current specs rather than obsolete August documents;
+- disagreements caused only by one spec owning a different concern are not misclassified as contradictions;
+- findings distinguish actual current defects from planned/future/open design choices;
+- no reviewer recommendation weakens explicit financial truth, privacy, advice or user-confirmation boundaries.
 
-### Step 24 — Deliver one accepted Kakeido correction
+### Step 24 — Deliver one accepted Kakeibo correction through the owning specs
 
-**References:** PI §§8, 11; Delivery Graph §19
+**References:** PI §§8, 11; Delivery Graph §19; current Kakeibo authority map and affected owning specs
 
 **Run**
 
+Choose one supported, accepted cross-owner finding from Step 23. The Delivery must update the owning specification(s) and, when required, dependent integration wording without creating a second source of truth.
+
 ```text
-/capture-intent "<accepted Kakeido correction motivated by Review>"
+/capture-intent "<accepted Kakeibo correction motivated by Graph Review, naming the affected owner boundary and desired coherent outcome>"
 /propose-contracts <intent-id>
 /approve-contract <contract-id> "<selection notes>"
 /write-brief <contract-id>
@@ -737,13 +817,38 @@ Every accepted correction candidate traces to a supported Review finding and PI 
 /prepare-evidence <brief-id>
 ```
 
+After Delivery, rerun the reviewer(s) that produced or validate the finding:
+
+```bash
+pnpm pactwright review rerun <execution-id> --current
+pnpm pactwright intelligence validate
+pnpm pactwright validate
+```
+
 **Expected result**
 
-One real cross-spec finding completes the full governed correction path.
+One real seven-owner coherence finding completes the full governed correction path:
+
+```text
+Review Execution
+→ Finding
+→ PI internal Source
+→ triage / accepted meaning
+→ roadmap candidate
+→ explicit Intent
+→ normal Delivery
+→ corrected owner/dependent specs
+→ current-state Review
+```
 
 **Verify before continuing**
 
-Trace finding provenance end-to-end and run all relevant Kakeido tests.
+Trace the finding provenance end to end, run all Kakeibo tests relevant to any implementation change, and verify:
+
+- the correction was made in the semantic owner rather than duplicated elsewhere;
+- dependent specs integrate the corrected meaning without taking ownership;
+- `docs/specs/README.md` remains consistent with the resulting authority map;
+- the rerun no longer reports the corrected contradiction, or reports it as explicitly unresolved with evidence rather than silently treating it as fixed.
 
 ## Stage 8 — Capture checkpoint feedback as product evidence
 
@@ -757,7 +862,7 @@ Per Implementation Principles §§7 ("Learn") and 14, problems found during adop
 
 **Run**
 
-Capture every material problem found while adopting Graph Review in Pactwright (Stages 4–5) and installing it in Kakeido (Stage 7): defects, unclear commands, missing capabilities and documentation gaps. Distinguish Kakeido-specific choices from evidence that a Pactwright responsibility failed; only the latter become Pactwright product candidates.
+Capture every material problem found while adopting Graph Review in Pactwright (Stages 4–5) and installing it in Kakeibo (Stage 7): defects, unclear commands, missing capabilities, context/owner-selection errors, false-positive contradictions and documentation gaps. Distinguish Kakeibo-specific choices from evidence that a Pactwright responsibility failed; only the latter become Pactwright product candidates.
 
 ```bash
 pnpm pactwright intelligence ingest <finding-or-feedback-source>
@@ -775,7 +880,7 @@ Checkpoint 4 friction is durable Project Intelligence evidence and, where justif
 
 **Verify before continuing**
 
-Each ingested finding traces to a Source; accepted candidates appear in the derived intent roadmap.
+Each ingested finding traces to a Source; accepted candidates appear in the derived intent roadmap. Kakeibo-specific preferences or product implementation details are not generalised into Pactwright Review semantics without repeatable evidence.
 
 ## Exit gate
 
@@ -785,9 +890,9 @@ Each ingested finding traces to a Source; accepted candidates appear in the deri
 - **Stage 4** — Pactwright adopted Graph Review and delivered at least one review-driven correction through normal governance; historical and `--current` reruns behave as specified.
 - **Stage 5** — The public corpus was reviewed and the Graph Review learning path published through governed Delivery.
 - **Stage 6** — `0.0.4` is published and registry-verified, trusted publishing is configured for the newly bootstrapped packages, and Pactwright is repinned to the published versions.
-- **Stage 7** — Kakeido installed the same release and at least one cross-spec Kakeido finding became corrected Delivery.
-- **Stage 8** — Checkpoint friction was ingested as Project Intelligence evidence.
+- **Stage 7** — Kakeibo installed the same release; Graph Review covered `README + 01–07` through the required cross-owner matrix; financial/review truth, Kei authority/runtime, prompt-injection, architecture/privacy and maturity/over-engineering failure classes were explicitly checked; and at least one accepted finding completed Review → PI → Delivery → current-state rerun without Review directly changing project truth.
+- **Stage 8** — Checkpoint friction was ingested as Project Intelligence evidence, with Kakeibo-specific preferences kept separate from generic Pactwright responsibility failures.
 
 ---
 
-**Pactwright — Checkpoint 4 — Self-Review v9**
+**Pactwright — Checkpoint 4 — Graph Review v10**
