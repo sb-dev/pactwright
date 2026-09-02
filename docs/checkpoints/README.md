@@ -1,4 +1,8 @@
-# Pactwright Implementation Runbooks v5
+# Pactwright Implementation Runbooks v6
+
+The checkpoint runbooks are the executable implementation sequence for building Pactwright through progressive self-hosting, proving each released capability on Pactwright itself and on Kakeibo as the persistent external acceptance project.
+
+## Runbook sequence
 
 - `00-implementation-guide.md`
 - `00-implementation-principles.md`
@@ -14,46 +18,123 @@
 - `09-hardened-closed-loop.md`
 - `10-graduation-connected-banking.md`
 
-## Kakeibo acceptance authority
+Run Checkpoints 1–9 in order. Graduation follows only after the hardened closed loop is accepted.
 
-The checkpoint sequence remains Pactwright-owned, but Kakeibo is the persistent external proving project.
+## Authority model
 
-`00-kakeibo-acceptance-profile.md` is the current authority for Kakeibo-specific System-Level Acceptance across Checkpoints 1–9 and Graduation. It incorporates the current seven-spec Kakeibo architecture, including the 2026-09-02 v2 Kei/runtime/engineering/open-source changes.
+The runbooks define execution order and acceptance work. They do not replace the owning Pactwright or Kakeibo specifications.
 
-When an older checkpoint contains embedded `Kakeido`/August-spec wording that conflicts with the acceptance profile, the profile wins. The older wording is retained only as historical runbook context until that checkpoint is naturally rewritten; it must not override current Kakeibo semantics.
+For Pactwright semantics, use the owning specification referenced by each checkpoint. For Kakeibo semantics, use the current canonical Kakeibo `docs/specs/` set and its authority map:
 
-The retained August Kakeido Tech Stack snapshot is not implementation authority. Current Kakeibo architecture/data is owned by `05-system-architecture-and-data-spec.md`, and delivery/testing/operations by `06-engineering-delivery-and-operations-spec.md`.
+```text
+docs/specs/README.md
+docs/specs/01-product-and-ux-spec.md
+docs/specs/02-financial-domain-model-spec.md
+docs/specs/03-kei-assistant-spec.md
+docs/specs/04-mobile-design-system-spec.md
+docs/specs/05-system-architecture-and-data-spec.md
+docs/specs/06-engineering-delivery-and-operations-spec.md
+docs/specs/07-open-source-project-organisation-spec.md
+```
 
-Checkpoint 6 additionally uses the adopted Operations amendment:
+`00-kakeibo-acceptance-profile.md` defines the cross-checks that must hold when those owner specifications are exercised through Checkpoints 1–9 and Graduation. It is an acceptance profile, not a replacement product specification.
+
+The numbered checkpoint runbooks are aligned to this current authority set. Retained August Kakeido research snapshots are historical research inputs only and are not implementation authority.
+
+## Operations Experiment authority
+
+Checkpoints 6–9 additionally use the adopted Operations amendment:
 
 - `../research-logs/2026-09-02-pactwright-operations-experiment-semantics.md`
 
-This activates generic Operations-owned `Experiment` state for controlled production comparisons. Product-specific release artefacts such as Kakeibo `KeiRelease`, policy/persona/task contracts, model routes and benchmark datasets remain project-owned rather than becoming Pactwright node types.
+It activates the generic Operations-owned `Experiment` concept for controlled production comparisons:
+
+```text
+Delivery Evidence
+→ exact operational exposures
+→ Experiment
+→ bounded external evidence
+→ Observation
+→ Project Intelligence
+→ normal Delivery governance
+```
+
+`Experiment` is optional controlled-evaluation state, not a mandatory Deployment or rollout stage.
+
+Operations owns the generic Experiment contract and its graph/provenance semantics. Product-specific release artefacts remain project-owned. For Kakeibo this includes:
+
+```text
+KeiRelease
+Kei policy
+Kei persona
+Kei task contracts
+model routes
+benchmark suites / datasets
+```
+
+These do not become Pactwright graph node types merely because an Experiment compares exposures containing them.
 
 ## Project progression
 
+Each checkpoint follows the same progressive self-hosting pattern:
+
 ```text
-capability
+build capability
 → use it on Pactwright
-→ update the Project Graph
-→ advance the public product
-→ publish a real release
-→ prove it on Kakeibo
+→ update governed project state
+→ advance the public product where appropriate
+→ publish the checkpoint release
+→ install and prove it on Kakeibo
+→ capture implementation/acceptance findings through Project Intelligence
 ```
 
-From Project Intelligence onward, public content is grounded in accepted Knowledge. Public creative work cannot start until its required domains—especially identity—are sufficiently covered.
+From Project Intelligence onward, public work is grounded in accepted Knowledge. Public creative work requires the relevant knowledge domains to be sufficiently covered before generation/approval.
 
-Kakeibo progression now uses:
+## Kakeibo proving progression
 
 ```text
-Core financial semantics
-→ CSV ingestion through the general financial core
+Checkpoint 1
+→ deterministic financial-domain foundation
+
+Checkpoint 2
+→ source-neutral ingestion architecture with CSV as the first adapter
+
+Checkpoint 3
 → complete seven-spec Project Intelligence onboarding
-→ cross-spec Graph Review
-→ bounded/versioned Kei foundation + public trust artefact
-→ controlled Kei production Experiment through Operations
-→ publication feedback
-→ full projected operating surface
-→ hardened closed loop + production-derived regression cases
-→ connected-banking graduation using Salt Edge as the current planned provider
+
+Checkpoint 4
+→ cross-owner Graph Review
+
+Checkpoint 5
+→ bounded/versioned Kei foundation + grounded public trust artefact
+
+Checkpoint 6
+→ production learning + controlled Kei Experiment
+
+Checkpoint 7
+→ Publication → Operations → PI feedback with analytics/privacy boundaries
+
+Checkpoint 8
+→ complete GitHub operating surface including Experiments projection
+
+Checkpoint 9
+→ permanent regression coverage + production Kei defect learning loop
+
+Graduation
+→ connected banking through the existing ingestion abstraction, with Salt Edge Account Information as the current planned first provider
 ```
+
+Connected banking is deliberately Graduation work. The earlier checkpoints prove the financial core, review model, Kei lifecycle, Operations feedback and Pactwright architecture without depending on a bank-data provider.
+
+## Non-negotiable boundaries
+
+Across the runbooks:
+
+- repository graph/spec state remains canonical; GitHub Projects, checks and views are derived projections;
+- Review findings, model outputs, operational evidence and analytics do not silently become project truth;
+- Operations may observe sibling exposures such as Publication but does not take ownership of them;
+- favourable Experiment evidence never auto-promotes a candidate;
+- approved Assets, Publications, Deployments, Experiments and Observations remain immutable according to their owning semantics;
+- raw production analytics, experiment samples, financial grounding, prompts and responses remain outside Pactwright graph state;
+- Kakeibo financial truth, review truth, audit history, analytics and operational telemetry retain their distinct ownership boundaries;
+- project-specific concepts are generalised into Pactwright only after repeatable cross-domain evidence justifies the abstraction.
