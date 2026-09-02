@@ -1,14 +1,18 @@
 # Pactwright — Checkpoint 5 — Creative Production
 
-**Version:** 9 
-**Entry condition:** Checkpoint 4 is accepted. 
-**Exit capability:** Grounded creative Delivery can produce a human-approved immutable Asset and Publication in Pactwright and Kakeido.
+**Version:** 10  
+**Entry condition:** Checkpoint 4 is accepted.  
+**Exit capability:** Grounded creative Delivery can produce a human-approved immutable Asset and Publication in Pactwright and Kakeibo, with Kakeibo public Kei claims grounded in a real versioned offline Kei foundation.
 
 ## 1. Goal
 
 Complete the Creative Delivery half of Review & Creative, including grounding, verification, Asset approval, Publication and Generation Guidance, then publish real work in both projects.
 
+For Kakeibo, Creative Production must not publish Kei capability claims ahead of implementation. This checkpoint first establishes the repository-owned, bounded and versioned Kei subsystem plus its offline evaluation gates, then uses Creative Delivery to publish a grounded public Asset explaining that real capability.
+
 ## 2. Specification baseline
+
+### Pactwright
 
 - [Pactwright — Delivery Graph and Lifecycle Engineering Spec](../research-logs/2026-08-11-pactwright-delivery-graph-and-lifecycle-engineering-spec.md)
 - [Pactwright — Distribution, Agents and Evaluation](../research-logs/2026-08-11-pactwright-distribution-agents-and-evaluation.md)
@@ -21,11 +25,40 @@ Complete the Creative Delivery half of Review & Creative, including grounding, v
 - [Pactwright — Implementation Guide](./00-implementation-guide.md)
 - [Pactwright Open-Source Project Organisation](../research-logs/2026-08-11-pactwright-open-source-project-organisation.md)
 - [Design Specification: Astro + Cloudflare Workers + Meta CAPI](../research-logs/2026-08-11-astro-design-spec.md)
-- [Kakeido — Financial Model Spec](../research-logs/2026-08-11-kakeido-financial-model-spec.md)
-- [Kakeido — Product & UX Spec](../research-logs/2026-08-11-kakeido-product-and-ux-spec.md)
-- [Kakeido — Mobile Design Spec](../research-logs/2026-08-11-kakeido-mobile-design-spec.md)
-- [Kei — Assistant Spec](../research-logs/2026-08-11-kakeido-assistant-spec.md)
-- [Kakeido — Tech Stack Engineering Spec](../research-logs/2026-08-11-kakeido-tech-stack-engineering-spec.md)
+- [Kakeibo System-Level Acceptance Profile](./00-kakeibo-acceptance-profile.md)
+
+### Kakeibo
+
+At execution time use the current canonical Kakeibo authorities relevant to this checkpoint:
+
+```text
+docs/specs/README.md
+
+docs/specs/03-kei-assistant-spec.md
+docs/specs/05-system-architecture-and-data-spec.md
+docs/specs/06-engineering-delivery-and-operations-spec.md
+docs/specs/07-open-source-project-organisation-spec.md
+```
+
+Supporting public-product/visual context may additionally come from:
+
+```text
+docs/specs/01-product-and-ux-spec.md
+docs/specs/04-mobile-design-system-spec.md
+```
+
+For Kei behaviour and public claims, preserve this ownership split:
+
+```text
+03 → Kei behaviour, authority, task contracts
+05 → runtime, grounding, release/model-route architecture
+06 → testing, benchmark, release and operational engineering
+07 → public/private boundary and open-source transparency
+```
+
+`00-kakeibo-acceptance-profile.md` §9 is the shared System-Level Acceptance cross-check for the Kakeibo proof.
+
+The retained August Kakeido Financial/Product/Mobile/Assistant/Tech Stack snapshots are not implementation authority.
 
 Only the owning specifications listed in each step define semantics. This runbook defines execution order, not new product meaning.
 
@@ -46,7 +79,7 @@ Use a prompt for repository/code changes. Once Pactwright owns a deterministic o
 
 Lifecycle adapter commands become available only after Checkpoint 1 generates the active adapter.
 
-**Default execution location:** the Pactwright repository root unless the step explicitly names Kakeido or a fixture
+**Default execution location:** the Pactwright repository root unless the step explicitly names Kakeibo or a fixture.
 
 For repository/code changes, finish with `pnpm verify`. Before invoking a newly implemented Pactwright runtime command during implementation, run `pnpm build` so the repository-local CLI is not using stale distribution output.
 
@@ -62,15 +95,22 @@ Fixture verification means repository test fixtures unless a step explicitly cre
 - **Asset/Publication** — Pactwright — Graph Review & Creative Delivery Engineering Spec §§12–13
 - **Generation runtime/guidance/cost** — Pactwright — Graph Review & Creative Delivery Engineering Spec §§14–18
 - **Commands/validation/automation** — Pactwright — Graph Review & Creative Delivery Engineering Spec §§19–24; Pactwright — GitHub Actions and Views §§7, 14, 22–23
-- **Kakeido creative constraints** — Kei — Assistant Spec §§4–19; Kakeido — Product & UX Spec §§3,10; Kakeido — Mobile Design Spec §§1–18
 - **Distribution/upgrades/evaluation** — Pactwright — Distribution, Agents and Evaluation §§2, 4, 6–8, 15–16, 18–19
-- **Creative readiness/public product** — Pactwright Open-Source Project Organisation §§1.2–1.3; Pactwright — Project Intelligence Graph Engineering Spec (PI) §§10, 13
+- **Creative readiness/public product** — Pactwright Open-Source Project Organisation §§1.2–1.3; Pactwright — Project Intelligence Graph Engineering Spec §§10, 13
 - **Release procedure** — Pactwright — Implementation Guide ("npm release model", "Preparing a development release", "Project Intelligence before creative work")
+- **Kakeibo Kei behaviour** — current `03-kei-assistant-spec.md`
+- **Kakeibo Kei runtime/release architecture** — current `05-system-architecture-and-data-spec.md`
+- **Kakeibo Kei testing/evaluation/release** — current `06-engineering-delivery-and-operations-spec.md`
+- **Kakeibo Kei public/private transparency** — current `07-open-source-project-organisation-spec.md`
+- **Kakeibo System-Level Acceptance** — Kakeibo Acceptance Profile §§2–9
 
-**Explicitly out of scope for this checkpoint (deferred):**
+**Explicitly out of scope for this checkpoint:**
 
 - `operations.exposure_types: [publication]` manifest registration is deferred to Checkpoint 7, where Operations-compatible exposure declaration is implemented and proven inert without Operations.
 - Scheduled publication automation for already approved Assets (GitHub Actions and Views §7) is deferred until a configured channel integration exists; when introduced, scheduling must never bypass Asset approval.
+- Kakeibo production shadowing, canary comparison, A/B testing and controlled rollout are deferred to Checkpoint 6. They are Operations concerns and must not be simulated as Creative Delivery or offline evaluation.
+- Kakeibo-specific concepts such as `KeiRelease`, task, policy, persona, model route or benchmark case do not become Pactwright graph node types in this checkpoint.
+- Persistent memory, autonomous tool use, dynamic skill selection, subagents, agent-selected workflows and general-purpose Ask Kei remain future optional Kakeibo capabilities unless separately accepted later.
 
 ## Stage 1 — Add creative Brief grounding to normal Delivery
 
@@ -470,7 +510,6 @@ The Project Graph records Intent → Delivery Evidence → approved Asset → Pu
 
 Publication references the approved Asset hash and grounding; no public creative work in this stage exists only as an untracked file edit.
 
-
 ## Stage 8 — Release `0.0.5`
 
 ### Step 18 — Prepare, publish and tag `0.0.5`
@@ -535,16 +574,26 @@ pnpm view @pactwright/creative@0.0.5 version
 
 Every command must return `0.0.5`. All packages must show npm provenance/trusted-publisher metadata; this release introduces no new packages, so no interactive bootstrap publishing occurs.
 
+## Stage 9 — Establish the versioned Kakeibo Kei foundation, then publish real work
 
-## Stage 9 — Publish real Kakeido work
+Run this stage from the Kakeibo repository root unless a step explicitly says otherwise.
 
-Run this stage from the Kakeido repository root unless a step explicitly says otherwise.
+The order is mandatory:
 
-Prove creative grounding/voice on a different product.
+```text
+repository-owned Kei implementation
+→ deterministic contract tests
+→ offline benchmark/red-team acceptance
+→ grounded public Asset
+→ human approval
+→ Publication
+```
 
-### Step 19 — Upgrade Review & Creative in Kakeido
+A public claim must not be used as evidence that the underlying Kei capability exists.
 
-**References:** Distribution §15
+### Step 19 — Upgrade Review & Creative in Kakeibo
+
+**References:** Distribution §15; Kakeibo Acceptance Profile §9
 
 **Run**
 
@@ -566,21 +615,22 @@ pnpm pactwright github sync
 
 **Expected result**
 
-Kakeido uses the checkpoint creative runtime. `pnpm pactwright upgrade` upgrades the already-selected `@pactwright/creative` pack; `agent-pack use` is only for first selection.
+Kakeibo uses the checkpoint creative runtime. `pnpm pactwright upgrade` upgrades the already-selected `@pactwright/creative` pack; `agent-pack use` is only for first selection.
 
 **Verify before continuing**
 
-Run `pnpm pactwright validate`.
+Run `pnpm pactwright intelligence validate` and `pnpm pactwright validate`.
 
-### Step 20 — Deliver grounded Kakeido public content
+### Step 20 — Deliver the bounded, repository-owned Kei runtime foundation
 
-**References:** Kei — Assistant Spec §§4–19; Kakeido — Product & UX Spec §§3, 10; Kakeido — Mobile Design Spec §§1–18
-
+**References:** Kakeibo Acceptance Profile §9; current Kakeibo `03-kei-assistant-spec.md`; `05-system-architecture-and-data-spec.md`; `06-engineering-delivery-and-operations-spec.md`; `07-open-source-project-organisation-spec.md`
 
 **Run**
 
+Use normal Pactwright Delivery:
+
 ```text
-/capture-intent "Create one real Kakeido public asset such as trykakeido.com copy, a Kei introduction, onboarding illustration or store asset. Ground factual/product claims in accepted Kakeido knowledge and preserve Kei/Product/Mobile constraints."
+/capture-intent "Implement Kakeibo's first bounded, repository-owned and versioned Kei runtime foundation. Create packages/kei with policy, persona, tasks, schemas, evals and release ownership. The application must select an explicit task, construct authorised bounded grounding from canonical application state, resolve one immutable KeiRelease, route through the configured AI Gateway model route, require structured output, validate it deterministically, then display the validated result or use a deterministic fallback. Implement Review Brief end to end and define contracts for the complete initial task set. Kei may explain canonical values but must never recalculate or redefine financial truth. Treat merchant descriptions, CSV fields, bank references and provider labels as untrusted data rather than instructions. Do not implement persistent memory, autonomous tools, dynamic skill selection, subagents, agent-selected workflows or general-purpose chat."
 /propose-contracts <intent-id>
 /approve-contract <contract-id> "<selection notes>"
 /write-brief <contract-id>
@@ -589,35 +639,217 @@ Run `pnpm pactwright validate`.
 /prepare-evidence <brief-id>
 ```
 
+The repository layout must include at least:
+
+```text
+packages/kei/
+  policy/
+  persona/
+  tasks/
+  schemas/
+  evals/
+  release/
+```
+
+The runtime boundary must be:
+
+```text
+application selects task
+→ application builds authorised bounded grounding
+→ release resolver selects exact KeiRelease
+→ model-route reference resolves through AI Gateway
+→ structured output
+→ deterministic schema/authority validation
+→ display or deterministic fallback
+```
+
+Define contracts for the initial task set:
+
+```text
+Review Brief
+Explain Decision
+Explain Group
+Explain Looks Safe
+Weekly Summary
+Goal Progress Explanation
+Reflection Prompt
+```
+
+Implement at least `Review Brief` end to end against synthetic/safe financial state from the existing domain/application boundary.
+
+The first candidate/release manifest must resolve exact versions/hashes for:
+
+```text
+Kei semantic version
+bundle hash
+policy
+persona
+task contracts
+output schemas
+tool set
+skill set
+model-route reference
+application commit
+benchmark suite
+benchmark dataset
+```
+
+A `KeiRelease` identifies behaviour. A model route identifies provider/model routing. They are related but not interchangeable and must be independently traceable.
+
+Production-defining policy/persona/task/schema/release configuration must be repository source of truth. An external prompt/model dashboard may assist operations but must not become hidden canonical behaviour.
+
 **Expected result**
 
-The output is calm, non-judgemental, evidence-bounded and visually/product-consistent.
+Kakeibo has a real bounded Kei subsystem whose production-defining behaviour can be inspected, versioned and reproduced from the repository, with at least one real task executing through the complete structured-output boundary.
 
 **Verify before continuing**
 
-Review specifically for no adviser claims, no confidence-score language, preserved uncertainty and no mascot-dominant behaviour.
+Run the Kakeibo deterministic test gate and prove:
 
-### Step 21 — Approve/publish Kakeido Asset
+- the application selects the Kei task; the model cannot silently select another task;
+- grounding is bounded to the selected task and current authorised application state;
+- `Review Brief` does not recalculate canonical totals or create reviewed truth;
+- source/provider text containing instruction-like content remains untrusted data;
+- malformed or authority-violating structured output fails validation and reaches deterministic fallback;
+- one response can be traced to the exact release bundle and model-route reference used;
+- changing policy/persona/task/schema behaviour changes the release identity rather than mutating an already released bundle;
+- no optional skill/tool configuration expands financial authority;
+- no raw production financial prompt/response is required for release reproducibility;
+- no Kakeibo-specific Kei artefact was added as a Pactwright graph node type.
+
+### Step 21 — Establish the permanent offline Kei evaluation and red-team gate
+
+**References:** Kakeibo Acceptance Profile §9; current Kakeibo `06-engineering-delivery-and-operations-spec.md`; `03-kei-assistant-spec.md`; `07-open-source-project-organisation-spec.md`
+
+**Run**
+
+Use normal Pactwright Delivery to create the permanent repository evaluation assets and gate for candidate Kei releases. Cover at least:
+
+```text
+financial correctness
+evidence discipline / Known-Likely-Unknown handling
+authority and financial-safety boundaries
+tone and usefulness
+prompt injection / hostile financial source text
+structured-output/schema/fallback behaviour
+operational latency/cost signals where meaningfully testable offline
+```
+
+The gate order must preserve deterministic authority:
+
+```text
+deterministic contract tests
+→ offline benchmark
+→ red-team cases
+→ repeated probabilistic evaluation where variance matters
+→ human sample review where required
+→ candidate accepted for later production evaluation
+```
+
+Hard deterministic assertions outrank model-judge preference scores. Do not collapse all evaluation into one aggregate score or one LLM judge.
+
+Create safe synthetic/sanitised datasets and version/hash the benchmark suite and dataset so they can be referenced by `KeiRelease`.
+
+Minimum permanent adversarial cases must include:
+
+```text
+merchant/CSV/provider text containing instructions
+request to turn Looks Safe into reviewed truth
+request to invent or alter canonical financial values
+request for personalised investment/product/debt-strategy advice
+unsupported certainty where evidence is incomplete
+invalid output schema
+model output attempting an unavailable tool/skill action
+```
+
+Critical probabilistic cases must be run repeatedly where a single pass could hide instability.
+
+A prompt-only or policy/persona/task-contract behaviour change is a production behaviour change and therefore requires a new Kei release version/bundle hash before evaluation.
+
+**Expected result**
+
+Kakeibo has a permanent offline release gate capable of rejecting unsafe or semantically incorrect Kei candidates before any production exposure.
+
+**Verify before continuing**
+
+- deterministic assertions fail independently of model-judge output;
+- benchmark/red-team assets have stable versions/hashes and use no real user financial data;
+- prompt-injection cases cannot convert untrusted financial text into instructions;
+- safety/advice cases cannot be passed merely because tone/usefulness scores are high;
+- repeated critical cases expose variance rather than reporting one lucky run;
+- the accepted candidate manifest references the exact benchmark suite/dataset used;
+- repository-public evaluation definitions/safe synthetic data contain no private production trace;
+- there is no shadow/canary/A-B/rollout implementation in this step.
+
+### Step 22 — Deliver a grounded Kakeibo Kei public Asset
+
+**References:** Kakeibo Acceptance Profile §9; current Kakeibo specs `03`, `05`, `06`, `07`; Creative lifecycle/grounding/verification §§9–11; Asset/Publication §§12–13
+
+Only continue after Steps 20–21 are accepted.
+
+**Run**
+
+```text
+/capture-intent "Create one real public Kakeibo Asset explaining or demonstrating the implemented bounded Kei capability. Ground behavioural claims in the current Kei behaviour contract, runtime/release implementation, offline evaluation gate and public/private transparency rules. Explain that Kakeibo selects explicit Kei tasks, supplies bounded grounding and validates structured output; Kei explains canonical state rather than redefining financial truth. Describe versioned Git-traceable behaviour only to the extent implemented. Do not claim production shadowing, A/B testing, autonomous tools, persistent memory or other future capabilities."
+/propose-contracts <intent-id>
+/approve-contract <contract-id> "<selection notes>"
+/write-brief <contract-id>
+```
+
+Inspect the grounded context:
+
+```bash
+pnpm pactwright context <brief-id>
+```
+
+The relevant grounding must principally trace to:
+
+```text
+03 → behaviour/task/authority contract
+05 → runtime/release/model-route architecture and implementation
+06 → offline testing/evaluation/release gate
+07 → open-source/public/private transparency
+```
+
+Then:
+
+```text
+/deliver-brief <brief-id>
+/review <brief-id>
+/prepare-evidence <brief-id>
+```
+
+**Expected result**
+
+The public output describes a capability that now exists in the repository and does not use future production-learning features as marketing claims.
+
+**Verify before continuing**
+
+Review specifically for:
+
+- no adviser or personalised financial-product claims;
+- no confidence-score language presented as financial truth;
+- explicit bounded-task and user-authority model;
+- Kei never presented as recalculating canonical finance;
+- Git-traceable/versioned production-defining behaviour described accurately;
+- safe benchmark/red-team definitions and synthetic data public where implemented;
+- no raw production financial grounding, prompt, response or AI trace published;
+- no claim that shadowing/canary/A-B/controlled rollout already exists;
+- no optional future agentic feature presented as current.
+
+### Step 23 — Approve and publish the Kakeibo Asset
 
 **References:** Asset/Publication §§12–13
 
 **Run**
 
-After manually inspecting the exact output:
+After manually inspecting the exact reviewed output:
 
 ```bash
 pnpm pactwright creative approve-asset <evidence-id>
 ```
 
-Use the Asset id printed by the command.
-
-**Run**
-
-```text
-Publish the approved Asset through Kakeido's existing channel mechanism. Confirm the released bytes match the approved Asset hash and report the public locator.
-```
-
-**Run**
+Use the Asset id printed by the command. Publish the approved Asset through Kakeibo's existing channel mechanism, confirm that the released bytes match the approved Asset hash, then:
 
 ```bash
 pnpm pactwright creative record-publication <asset-id> <channel>
@@ -626,24 +858,24 @@ pnpm pactwright creative validate
 
 **Expected result**
 
-Kakeido has a real approved Asset and Publication.
+Kakeibo has a real approved Asset and Publication grounded in the real bounded/versioned Kei implementation and accepted offline evaluation evidence.
 
 **Verify before continuing**
 
-Inspect exact hashes/grounding/approval and published surface.
+Inspect exact hashes, grounding, human approval and published surface. Trace the public claim back through Delivery Evidence to the implemented Kei foundation and its accepted offline gate.
 
 ## Stage 10 — Capture checkpoint feedback as product evidence
 
 Turn real Checkpoint 5 implementation and use into governed future Pactwright work.
 
-### Step 22 — Ingest implementation and usage findings
+### Step 24 — Ingest implementation and usage findings
 
-**References:** Implementation Principles §§7, 14; PI §8
+**References:** Implementation Principles §§7, 14; PI §8; Kakeibo Acceptance Profile §9
 
 **Run**
 
 ```text
-Capture the notable findings from implementing Checkpoint 5 and installing/using it in Kakeido — defects, unclear behaviour, missing guidance, creative-verification misses and installation friction — as Project Intelligence internal Sources. Distinguish Kakeido-specific choices from evidence that a Pactwright responsibility failed; only repeatable responsibility failures are candidates for generic product or evaluation work.
+Capture the notable findings from implementing Checkpoint 5 and installing/using it in Kakeibo — defects, unclear behaviour, missing guidance, creative-verification misses, Kei contract/evaluation friction and installation problems — as Project Intelligence internal Sources. Distinguish Kakeibo-specific choices from evidence that a Pactwright responsibility failed; only repeatable responsibility failures are candidates for generic product or evaluation work. Do not generalise KeiRelease, Kei task, policy, persona, model-route or benchmark-case concepts into Pactwright graph semantics from this single product use case.
 ```
 
 For each internal Source id created:
@@ -663,16 +895,29 @@ pnpm pactwright intelligence derive-intent-roadmap
 
 **Expected result**
 
-Real Checkpoint 5 use produces governed future Pactwright work rather than untracked observations.
+Real Checkpoint 5 use produces governed future Pactwright work rather than untracked observations or premature generic abstractions.
 
 **Verify before continuing**
 
-Each retained finding traces to a Source and an explicit triage outcome; no finding directly mutated Knowledge or Delivery state.
+Each retained finding traces to a Source and an explicit triage outcome; no finding directly mutates Knowledge or Delivery state; Kakeibo-specific runtime concepts remain Kakeibo-owned unless independent cross-domain evidence later justifies a generic abstraction.
 
 ## Exit gate
 
-Creative Briefs carry grounding, readiness and acceptance/verification requirements; grounding manifests, creative execution and independent creative verification pass their fixtures; Assets and Publications enforce human approval, immutability, hash and supersession invariants through the extended `creative validate`; generation guidance is versioned with recorded provenance, improvable through `pactwright eval`, and command-budget bounded; GitHub projects creative state and validates generation configuration without approving or publishing anything itself; both projects have delivered, human-approved and published real grounded creative work through the normal Delivery lifecycle with candidate generations remaining non-canonical; `0.0.5` is registry-verified with trusted-publisher provenance; and checkpoint feedback is ingested through Project Intelligence into governed future work.
+Checkpoint 5 is complete only when all of the following hold:
+
+1. Creative Briefs carry grounding, readiness and acceptance/verification requirements; grounding manifests, creative execution and independent creative verification pass their fixtures.
+2. Assets and Publications enforce human approval, immutability, exact-hash and supersession invariants through the extended `creative validate`.
+3. Generation Guidance is versioned with recorded provenance, improvable through `pactwright eval`, and command-budget bounded.
+4. GitHub projects creative state and validates generation configuration without approving or publishing anything itself.
+5. Pactwright delivered, human-approved and published real grounded creative work through the normal Delivery lifecycle, with candidate generations remaining non-canonical.
+6. `0.0.5` is registry-verified with trusted-publisher provenance.
+7. Kakeibo contains the repository-owned `packages/kei/{policy,persona,tasks,schemas,evals,release}` foundation, with the application-selected task → bounded grounding → exact KeiRelease → model route → structured output → deterministic validation → display/fallback boundary implemented and `Review Brief` proven end to end.
+8. Kakeibo's immutable release manifest identifies exact policy/persona/task/schema/tool/skill/model-route/application/benchmark versions and hashes; behavioural release identity remains distinct from model routing.
+9. Kakeibo has permanent deterministic contract tests, offline benchmark and red-team assets covering financial correctness, evidence discipline, authority/safety, tone/usefulness, prompt injection and structured-output/fallback behaviour, with repeated evaluation where probabilistic variance matters and no single aggregate judge controlling acceptance.
+10. Kakeibo's public Kei Asset is grounded in current `03/05/06/07` truth, accurately describes only implemented bounded/versioned behaviour, exposes safe evaluation material where applicable, publishes no private production trace, and completes human-approved Asset → Publication semantics.
+11. Production shadowing, canary/A-B testing and controlled rollout remain deferred to Checkpoint 6 rather than being implemented or claimed in Checkpoint 5.
+12. Checkpoint feedback is ingested through Project Intelligence into governed future work without promoting Kakeibo-specific Kei artefacts into Pactwright graph types.
 
 ---
 
-**Pactwright — Checkpoint 5 — Creative Production v9**
+**Pactwright — Checkpoint 5 — Creative Production v10**

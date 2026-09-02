@@ -1,15 +1,19 @@
 # Pactwright — Checkpoint 6 — Production Learning
 
-**Version:** 11 
-**Entry condition:** Checkpoint 5 is accepted. 
-**Release:** `0.0.6` 
-**Exit capability:** Software production exposure and durable operational findings feed governed future work through Operations → PI → Delivery.
+**Version:** 12  
+**Entry condition:** Checkpoint 5 is accepted.  
+**Release:** `0.0.6`  
+**Exit capability:** Deployment, controlled Experiment and durable Observation state feed governed future work through Operations → PI → Delivery without moving product-specific release semantics or raw production evidence into Pactwright.
 
 ## 1. Goal
 
-Implement Operations for software exposure first, use the Pactwright website as the first self-hosted production surface, then prove the same feedback path on Kakeido.
+Implement Operations for software exposure and production learning, use the Pactwright website to prove the Deployment → Observation path, then activate the generic Operations `Experiment` seam and prove it with Kakeibo's versioned Kei subsystem.
+
+The Kakeibo proof must compare exact active/candidate operational exposures through a predeclared immutable Experiment, observe the result through bounded external evidence, and route any decision through normal PI/Delivery governance. Pactwright must not gain Kei-specific graph types or automatic promotion semantics.
 
 ## 2. Specification baseline
+
+### Pactwright
 
 - [Pactwright — Delivery Graph and Lifecycle Engineering Spec](../research-logs/2026-08-11-pactwright-delivery-graph-and-lifecycle-engineering-spec.md)
 - [Pactwright — Distribution, Agents and Evaluation](../research-logs/2026-08-11-pactwright-distribution-agents-and-evaluation.md)
@@ -17,16 +21,39 @@ Implement Operations for software exposure first, use the Pactwright website as 
 - [Pactwright — Project Intelligence Graph Engineering Spec](../research-logs/2026-08-11-pactwright-project-intelligence-graph-engineering-spec.md)
 - [Pactwright — Graph Review & Creative Delivery Engineering Spec](../research-logs/2026-08-11-pactwright-graph-review-and-creative-delivery-engineering-spec.md)
 - [Pactwright — Operations Graph Engineering Spec](../research-logs/2026-08-11-pactwright-operations-graph-engineering-spec.md)
+- [Pactwright — Operations Experiment Semantics](../research-logs/2026-09-02-pactwright-operations-experiment-semantics.md)
 - [Pactwright — System Architecture](../research-logs/2026-08-11-pactwright-system-architecture.md)
 - [Pactwright — Implementation Principles](./00-implementation-principles.md)
 - [Pactwright — Implementation Guide](./00-implementation-guide.md)
 - [Pactwright Open-Source Project Organisation](../research-logs/2026-08-11-pactwright-open-source-project-organisation.md)
 - [Design Specification: Astro + Cloudflare Workers + Meta CAPI](../research-logs/2026-08-11-astro-design-spec.md)
-- [Kakeido — Financial Model Spec](../research-logs/2026-08-11-kakeido-financial-model-spec.md)
-- [Kakeido — Product & UX Spec](../research-logs/2026-08-11-kakeido-product-and-ux-spec.md)
-- [Kakeido — Mobile Design Spec](../research-logs/2026-08-11-kakeido-mobile-design-spec.md)
-- [Kei — Assistant Spec](../research-logs/2026-08-11-kakeido-assistant-spec.md)
-- [Kakeido — Tech Stack Engineering Spec](../research-logs/2026-08-11-kakeido-tech-stack-engineering-spec.md)
+- [Kakeibo System-Level Acceptance Profile](./00-kakeibo-acceptance-profile.md)
+
+### Kakeibo
+
+At execution time use the current canonical Kakeibo authorities relevant to production Kei evaluation:
+
+```text
+docs/specs/README.md
+
+docs/specs/02-financial-domain-model-spec.md
+docs/specs/03-kei-assistant-spec.md
+docs/specs/05-system-architecture-and-data-spec.md
+docs/specs/06-engineering-delivery-and-operations-spec.md
+docs/specs/07-open-source-project-organisation-spec.md
+```
+
+Preserve the Kakeibo ownership split:
+
+```text
+02 → financial truth and non-experimentable financial invariants
+03 → Kei behaviour / authority / task contract
+05 → Kei runtime / release / model-route architecture
+06 → evaluation / experiment / rollout / rollback engineering
+07 → public/private and production-evidence transparency boundary
+```
+
+`00-kakeibo-acceptance-profile.md` §10 is the shared System-Level Acceptance cross-check for the Kakeibo proof.
 
 Only the owning specifications listed in each step define semantics. This runbook defines execution order, not new product meaning.
 
@@ -47,13 +74,13 @@ Use a prompt for repository/code changes. Once Pactwright owns a deterministic o
 
 Lifecycle adapter commands become available only after Checkpoint 1 generates the active adapter.
 
-**Default execution location:** the Pactwright repository root unless the step explicitly names Kakeido or a fixture
+**Default execution location:** the Pactwright repository root unless the step explicitly names Kakeibo or a fixture.
 
 For repository/code changes, finish with `pnpm verify`. Before invoking a newly implemented Pactwright runtime command during implementation, run `pnpm build` so the repository-local CLI is not using stale distribution output.
 
 After Checkpoint 2 activates GitHub, land coherent repository changes through pull requests and required checks rather than direct default-branch commits.
 
-Dynamic ids such as `<source-id>`, `<brief-id>` and `<evidence-id>` must come from an earlier command in the runbook, or from configuration this runbook explicitly creates (a `<source-id>` is the `id` field of a source configured by an earlier step). Commands that create or resolve durable records must print the ids required by later steps.
+Dynamic ids such as `<source-id>`, `<brief-id>`, `<evidence-id>`, `<deployment-id>` and `<experiment-id>` must come from an earlier command in the runbook, or from configuration this runbook explicitly creates. Commands that create or resolve durable records must print the ids required by later steps.
 
 Fixture verification means repository test fixtures unless a step explicitly creates a real repository or GitHub resource.
 
@@ -63,6 +90,10 @@ Fixture verification means repository test fixtures unless a step explicitly cre
 - **Sources/execution/Observation** — Pactwright — Operations Graph Engineering Spec §§8–12
 - **PI hand-off/corrective roadmap/context/commands** — Pactwright — Operations Graph Engineering Spec §§13–20
 - **Evaluation/validation/failure/GitHub/build order** — Pactwright — Operations Graph Engineering Spec §§21–27
+- **Experiment ownership/invariants/graph/layout** — Operations Experiment Semantics §§1–5
+- **Experiment contract/modes/constraints/execution/outcomes** — Operations Experiment Semantics §§6–9
+- **Experiment commands/validation/failure/GitHub/PI hand-off** — Operations Experiment Semantics §§10–14
+- **Experiment acceptance/genericity** — Operations Experiment Semantics §§15–17
 - **Project Intelligence** — Pactwright — Project Intelligence Graph Engineering Spec §§8, 11, 14
 - **Distribution** — Pactwright — Distribution, Agents and Evaluation §§4–8, 15–16, 18
 - **GitHub** — Pactwright — GitHub Actions and Views §§4, 8, 15, 24
@@ -70,39 +101,54 @@ Fixture verification means repository test fixtures unless a step explicitly cre
 - **Release model** — Pactwright — Implementation Guide (npm release model, trusted release workflow, release failure rules)
 - **Implementation Principles** — Pactwright — Implementation Principles §§7, 14
 - **Website spec** — Design Specification: Astro + Cloudflare Workers + Meta CAPI
-- **Kakeido evidence sources/privacy/delivery** — Kakeido — Tech Stack Engineering Spec §11, §13, §§17–18
+- **Kakeibo controlled Kei experiment** — current Kakeibo `02`, `03`, `05`, `06`, `07`; Kakeibo Acceptance Profile §10
 
 ### Out of scope in this checkpoint
 
-The following Operations capabilities are intentionally deferred to Checkpoint 7 — Published-Work Feedback and must not be implemented here:
+The following remain deferred to Checkpoint 7 — Published-Work Feedback:
 
-- generic exposure-type registration and manifest-driven exposure discovery (Operations Graph Engineering Spec §6);
-- Publication as a registered operational exposure and Publication Observations (Operations Graph Engineering Spec §25; build order item 6);
-- cross-extension composition of Publication paths and events into `pactwright-operations.yml` (GitHub Actions and Views §4).
+- generic manifest-driven exposure registration/discovery across sibling extensions;
+- Publication as a registered operational exposure and Publication Observations;
+- cross-extension composition of Publication paths and events into `pactwright-operations.yml`.
 
-In this checkpoint the only registered operational exposure type is `deployment`. Validation of `observes` targets (Operations Graph Engineering Spec §22 rule 8) is scoped to that registry, and the deferred registration mechanism must not be pre-built.
+This checkpoint has two native Operations exposure types:
 
-## Stage 1 — Package Operations and implement Deployment
+```text
+deployment
+experiment
+```
 
-Record which delivered software actually reached an environment.
+`Experiment` is activated directly by the adopted Operations amendment. This does not pre-build the generic cross-extension exposure registry deferred to Checkpoint 7.
+
+Also out of scope:
+
+- Kakeibo `KeiRelease`, Kei task, policy, persona, model route or benchmark case as Pactwright graph node types;
+- raw experiment assignments, analytics rows, financial grounding, prompts, responses, traces or metric samples as Project Graph nodes;
+- a `promote-experiment` command or any automatic candidate promotion;
+- Pactwright ownership of Kakeibo rollout percentages or product-specific release configuration;
+- a dedicated shared GitHub Project `Experiments` view, which is completed with the full operating surface in Checkpoint 8. Checkpoint 6 must still validate and project Experiment state in Operations summaries/workflows.
+
+## Stage 1 — Package Operations and implement exact exposures
+
+Record exact delivered software exposure and predeclared controlled comparisons.
 
 ### Step 1 — Implement Operations manifest/layout/dependency
 
-**References:** Operations boundary/exposure/deployment §§4–5; Distribution §§4–5
+**References:** Operations boundary/exposure/deployment §§4–5; Distribution §§4–5; Experiment §§4–5
 
 **Run**
 
 ```text
-Create `@pactwright/operations` as a publishable workspace package and implement its manifest and repository layout: require Project Intelligence, register Deployment/Observation, deployed-as/observes, operations namespace, operations-analysis capability and Operations GitHub profile. Do not depend on Review & Creative.
+Create `@pactwright/operations` as a publishable workspace package and implement its manifest and repository layout: require Project Intelligence; register Deployment, Experiment and Observation node types; register deployed-as and observes edge types; register the operations namespace, operations-analysis capability and Operations GitHub profile; create docs/operations/deployments, docs/operations/experiments, docs/operations/observations and reports plus Operations execution provenance. Do not depend on Review & Creative and do not add product-specific experiment fields.
 ```
 
 **Expected result**
 
-Operations is an independently installable sibling extension requiring PI only.
+Operations is an independently installable sibling extension requiring PI only, with native Deployment/Experiment/Observation semantics.
 
 **Verify before continuing**
 
-Use fixture extension add/remove tests; confirm PI auto-resolves and Review & Creative is not required.
+Use fixture extension add/remove tests; confirm PI auto-resolves, Review & Creative is not required, `experiment` is registered by Operations, and no Kei/product-specific type appears in the manifest.
 
 ### Step 2 — Implement immutable Deployment and `record-deployment`
 
@@ -111,65 +157,99 @@ Use fixture extension add/remove tests; confirm PI auto-resolves and Review & Cr
 **Run**
 
 ```text
-Implement Deployment schema/validation and pactwright operations record-deployment <evidence-id>. Require valid Delivery Evidence, configured environment, identifiable artifact revision/locator/hash, deployed_at and deployed_by. Create evidence --deployed-as--> deployment, print the Deployment id, and keep repeated deployments as distinct immutable records. Corrections to a Deployment use explicit supersession, never mutation.
+Implement Deployment schema/validation and pactwright operations record-deployment <evidence-id>. Require valid Delivery Evidence, configured environment, identifiable artifact revision/locator/hash, deployed_at and deployed_by. Create evidence --deployed-as--> deployment, print the Deployment id, and keep repeated deployments as distinct immutable records. Deployment records exact exposure of the delivered artifact but does not imply user visibility. Corrections use explicit supersession, never mutation.
 ```
 
 **Expected result**
 
-Delivery Evidence and production exposure are explicitly distinct.
+Delivery Evidence and operational exposure are explicitly distinct, including isolated/shadow deployments that are not user-facing.
 
 **Verify before continuing**
 
-Run fixtures for invalid Evidence, missing environment/artifact, repeated deployment, supersession and no Evidence mutation.
+Run fixtures for invalid Evidence, missing environment/artifact, repeated deployment, isolated non-user-facing deployment, supersession and no Evidence mutation.
+
+### Step 3 — Implement immutable Experiment and `record-experiment`
+
+**References:** Experiment §§6–7, 10–12
+
+**Run**
+
+```text
+Implement the Operations Experiment schema and pactwright operations record-experiment <contract-path>. Validate the complete proposed contract before mutation, resolve exact control/candidate exposure ids and hashes, then write one immutable Experiment and print its id. Re-recording the same exact contract is idempotent or resolves to the existing Experiment; any semantic change creates a new Experiment that explicitly supersedes the previous one.
+
+The canonical contract must represent:
+- mode: shadow | canary | ab | controlled_rollout;
+- hypothesis;
+- exact control exposure id/hash;
+- exact candidate exposure id/hash;
+- eligibility description;
+- assignment strategy/subject key where applicable;
+- one primary metric where comparative success requires it;
+- guardrail metrics;
+- minimum evidence;
+- decision rule;
+- start/end window or review condition;
+- referenced project constraints.
+
+Do not add product-specific fields or a promotion action.
+```
+
+**Expected result**
+
+Operations can record what was deliberately compared and how success was to be judged before outcome evidence is inspected.
+
+**Verify before continuing**
+
+Run fixtures for all four modes plus invalid/missing exposure, same control/candidate, hash mismatch, missing hypothesis, missing primary metric where required, missing decision rule, invalid assignment, invalid shadow user-facing assignment, unresolved required constraint, duplicate exact contract and valid supersession. Confirm failure leaves no partial canonical Experiment.
 
 ## Stage 2 — Implement bounded operational collection
 
-Connect external systems without turning Pactwright into a telemetry store.
+Connect external systems without turning Pactwright into a telemetry or experiment-sample store.
 
-### Step 3 — Implement operational source adapter contract/config
+### Step 4 — Implement operational source adapter contract/config
 
-**References:** Sources/execution/Observation §8
+**References:** Sources/execution/Observation §8; Experiment §8
 
 **Run**
 
 ```text
-Implement .pactwright/operations/sources and environments configuration plus a source adapter contract. Provider-specific settings live in adapters; credentials never live in canonical records. Adding a source adapter must not change graph semantics.
+Implement .pactwright/operations/sources and environments configuration plus a source adapter contract. Provider-specific settings live in adapters; credentials never live in canonical records. Sources may provide bounded evidence about Deployments or Experiments. Adding a source adapter must not change graph semantics.
 ```
 
 **Expected result**
 
-Operational sources are pluggable and configuration-driven.
+Operational/evaluation sources are pluggable and configuration-driven.
 
 **Verify before continuing**
 
-Run source-schema/conformance fixtures for one initial adapter.
+Run source-schema/conformance fixtures for one initial adapter and one bounded experiment-evidence fixture.
 
-### Step 4 — Implement bounded evidence collection + execution provenance
+### Step 5 — Implement bounded evidence collection + execution provenance
 
-**References:** Sources/execution/Observation §§9–10
+**References:** Sources/execution/Observation §§9–10; Experiment §8
 
 **Run**
 
 ```text
-Implement bounded collection windows and immutable Operations execution records containing source, graph revision, window, exposures, evidence locators, observations created/matched and status. Raw log/trace/metric/analytics/support payloads remain external and are never Project Graph nodes.
+Implement bounded collection windows and immutable Operations execution records containing source, graph revision, window, exact exposures, evidence locators/fingerprints, observations created/matched and status. When execution concerns an Experiment, also retain the Experiment id, mode and exact control/candidate exposure references needed for reproducibility. Raw logs, traces, analytics rows, assignments, prompts, responses, metric samples, support payloads and financial grounding remain external and are never Project Graph nodes.
 ```
 
 **Expected result**
 
-Collection provenance is retained without graph pollution.
+Collection/evaluation provenance is retained without graph pollution or unnecessary personal-data retention.
 
 **Verify before continuing**
 
-Run a fixture returning many raw events and inspect that canonical graph contains none of them.
+Run fixtures returning many raw telemetry/experiment samples and inspect that canonical graph contains none of them while the execution record retains only bounded locators/fingerprints and reproducibility metadata.
 
-### Step 5 — Expose `operations ingest`
+### Step 6 — Expose `operations ingest`
 
-**References:** PI hand-off/corrective roadmap/context/commands §19
+**References:** PI hand-off/corrective roadmap/context/commands §19; Experiment §§8–10
 
 **Run**
 
 ```text
-Implement pactwright operations ingest [<source-id>] over the collection layer. Print the Operations execution id. Ingest may complete successfully with no Observation/canonical graph mutation. Authentication/source failure records execution failure and leaves canonical graph untouched.
+Implement pactwright operations ingest [<source-id>] over the collection layer. Print the Operations execution id. Ingest may complete successfully with no Observation/canonical graph mutation. Authentication/source/assignment/evaluation failure records execution failure and leaves existing Deployments, Experiments and canonical graph state untouched.
 ```
 
 **Expected result**
@@ -178,207 +258,237 @@ Evidence collection is independently executable/retryable.
 
 **Verify before continuing**
 
-Run successful/no-finding and failed-auth fixtures.
+Run successful/no-finding, failed-auth and failed-experiment-evidence fixtures.
 
 ## Stage 3 — Implement durable Observation semantics
 
-Compress operational signals into concise facts worth retaining.
+Compress operational signals and Experiment outcomes into concise facts worth retaining.
 
-### Step 6 — Implement Observation schema/grounding
+### Step 7 — Implement Observation schema/grounding
 
-**References:** Sources/execution/Observation §11
-
-**Run**
-
-```text
-Implement Observation schema/validation: exposure id/hash, evidence window, factual finding, direction, significance, confidence, evidence source/locator/summary and optional baseline plus observation --observes--> exposure. Preserve uncertainty and prohibit unsupported causal claims. Significance represents operational importance only and must not determine Project Intelligence promotion class or roadmap priority.
-```
-
-**Expected result**
-
-An Observation is a concise durable operational fact tied to evidence and exact exposure.
-
-**Verify before continuing**
-
-Run negative, positive, baseline-dependent and unsupported-causality fixtures.
-
-### Step 7 — Implement Observation deduplication/supersession
-
-**References:** Sources/execution/Observation §12
+**References:** Sources/execution/Observation §11; Experiment §9
 
 **Run**
 
 ```text
-Before creating an Observation, compare with relevant existing Observations. Same finding with new evidence creates no new canonical Observation unless meaning changed. Materially changed meaning creates a new Observation explicitly superseding the previous one. External evidence remains addressable through execution provenance when no new Observation is created. Operations deduplication does not replace Project Intelligence Source-level triage.
+Implement Observation schema/validation: exposure id/hash, evidence window, factual finding, direction, significance, confidence, evidence source/locator/summary and optional baseline plus observation --observes--> exposure. Exposure may be a Deployment or Experiment registered by Operations. Preserve uncertainty and prohibit unsupported causal claims. For Experiment outcomes, preserve the predeclared contract, report material guardrail breaches and allow positive, negative, mixed, neutral or insufficient-evidence findings. Significance must not determine PI consequence class or roadmap priority.
 ```
 
 **Expected result**
 
-Repeated monitoring does not create uncontrolled graph growth.
+An Observation is a concise durable operational fact tied to evidence and an exact Deployment or Experiment.
 
 **Verify before continuing**
 
-Run repeated-identical and materially-changed finding fixtures; confirm the repeated-identical case retains its evidence through execution provenance.
+Run negative, positive, mixed, neutral, insufficient-evidence, baseline-dependent and unsupported-causality fixtures, including `Observation --observes--> Experiment`.
 
-### Step 8 — Expose `operations observe`
+### Step 8 — Implement Observation deduplication/supersession
 
-**References:** PI hand-off/corrective roadmap/context/commands §§19–20
+**References:** Sources/execution/Observation §12; Experiment §12
 
 **Run**
 
 ```text
-Implement pactwright operations observe [<source-id>] using operations-analysis for bounded evidence interpretation. Print created/matched Observation ids and any internal PI Source ids produced by the hand-off. It may create/supersede concise Observations or legitimately create none. Deterministic source collection, validation, edge creation and graph mutation remain runtime-owned.
+Before creating an Observation, compare with relevant existing Observations. Same finding with new evidence creates no new canonical Observation unless meaning changed. Materially changed meaning creates a new Observation explicitly superseding the previous one. External evidence remains addressable through execution provenance when no new Observation is created. Re-running analysis over the same Experiment/evidence must not create uncontrolled duplicate Observations.
 ```
 
 **Expected result**
 
-Semantic analysis is bounded; deterministic mechanics stay in Pactwright.
+Repeated monitoring/evaluation does not create uncontrolled graph growth.
 
 **Verify before continuing**
 
-Run one no-observation, one negative and one positive fixture.
+Run repeated-identical and materially-changed Deployment and Experiment finding fixtures.
 
-### Step 9 — Deliver `operations-analysis` in the first-party complete pack
+### Step 9 — Expose `operations observe`
 
-**References:** PI hand-off/corrective roadmap/context/commands §20; Distribution §§7, 18
+**References:** PI hand-off/corrective roadmap/context/commands §§19–20; Experiment §§9–10
 
 **Run**
 
 ```text
-Implement the operations-analysis capability in the @pactwright/creative complete pack so the Operations manifest requirement is satisfied by a first-party pack: bounded evidence interpretation, baseline comparison, durable-finding identification, exposure correlation, evidence/speculation separation and concise candidate Observation production. Regenerate adapter files through the normal agent-pack path. Deterministic responsibilities (collection, hashing, exposure resolution, schema validation, deduplication mechanics, edge creation, graph mutation, PI hand-off, report generation) remain runtime-owned.
+Implement pactwright operations observe [<source-id>] using operations-analysis for bounded evidence interpretation. Print created/matched Observation ids and any internal PI Source ids produced by the hand-off. It may create/supersede concise Observations about Deployments or Experiments or legitimately create none. It must not rewrite an Experiment hypothesis, metrics, guardrails, decision rule or compared exposures after seeing results. Deterministic collection, validation, edge creation and graph mutation remain runtime-owned.
 ```
 
 **Expected result**
 
-`extension add operations` capability validation passes wherever the complete pack is selected.
+Semantic analysis is bounded and predeclared Experiment truth cannot drift after outcome inspection.
 
 **Verify before continuing**
 
-Run fixture extension-add tests: enabling Operations with the updated pack passes capability validation; enabling it with a pack lacking `operations-analysis` fails with a clear capability error.
+Run one no-observation, one Deployment outcome and one Experiment outcome fixture; attempt post-result Experiment mutation and require rejection.
 
-## Stage 4 — Route operational meaning through PI
+### Step 10 — Deliver `operations-analysis` in the first-party complete pack
 
-Close the governance boundary without letting Operations become a knowledge/roadmap engine.
-
-### Step 10 — Implement Observation → PI internal Source hand-off
-
-**References:** PI hand-off/corrective roadmap/context/commands §13; Project Intelligence §14
+**References:** PI hand-off/corrective roadmap/context/commands §20; Distribution §§7, 18; Experiment §9
 
 **Run**
 
 ```text
-Implement internal Source creation from meaningful Observations, preserving Observation id/hash, evidence locators, exposure and execution provenance. Operations must not directly create/edit Knowledge, Domains, Intents, Contracts or Briefs. Failed hand-off leaves Observation valid/retryable.
+Implement the operations-analysis capability in the @pactwright/creative complete pack: bounded evidence interpretation, baseline/control-candidate comparison, durable-finding identification, exposure correlation, evidence/speculation separation, guardrail reporting and concise candidate Observation production. An Experiment result may be favourable, unfavourable, mixed, neutral or insufficient under the predeclared decision rule. Deterministic responsibilities — collection, hashing, exposure resolution, schema validation, deduplication, edge creation, graph mutation, PI hand-off and report generation — remain runtime-owned.
 ```
 
 **Expected result**
 
-Operational truth enters the same PI ingestion/governance path as other Sources.
+`extension add operations` capability validation passes wherever the complete pack is selected and Experiment analysis does not become promotion logic.
 
 **Verify before continuing**
 
-Run a failed-hand-off fixture and confirm Observation remains valid and retryable.
+Run fixture extension-add tests plus a favourable Experiment fixture proving `operations-analysis` emits only a candidate Observation and cannot mutate/promote the candidate exposure.
 
-### Step 11 — Implement corrective roadmap filter
+## Stage 4 — Route operational meaning through PI and validate the complete boundary
 
-**References:** PI hand-off/corrective roadmap/context/commands §§14–15; Project Intelligence §11
+Close governance without letting Operations become a knowledge, roadmap or release-promotion engine.
+
+### Step 11 — Implement Observation → PI internal Source hand-off
+
+**References:** PI hand-off/corrective roadmap/context/commands §13; Project Intelligence §14; Experiment §14
 
 **Run**
 
 ```text
-Implement pactwright operations corrective-roadmap as a derived filter over Project Intelligence intent candidates whose accepted motivation traces to Operations, regenerating docs/operations/reports/corrective-intent-roadmap.md and recording the Project Graph revision it was generated from. Reuse PI candidate ordering; do not create a second candidate set/priority model or canonical Intents. Editing the report must not create an Intent or change any priority.
+Implement internal Source creation from meaningful Observations, preserving Observation id/hash, evidence locators, exact exposure and execution provenance. For Experiment outcomes preserve the Experiment id/hash and bounded result evidence. Operations must not directly create/edit Knowledge, Domains, Intents, Contracts, Briefs or project-specific release state. Failed hand-off leaves Observation valid/retryable.
 ```
 
 **Expected result**
 
-Operations can answer what corrective work production suggests without owning project prioritisation.
+Deployment and Experiment outcomes enter the same PI governance path as other Sources.
 
 **Verify before continuing**
 
-Run the command against PI candidates from operational/non-operational origins and inspect filtering, the recorded Project Graph revision and provenance; confirm editing the generated report changes no canonical state.
+Run a failed-hand-off fixture and confirm Observation/Experiment remain valid and retryable/immutable.
 
-### Step 12 — Implement `operations refresh` and `validate`
+### Step 12 — Implement corrective roadmap filter
 
-**References:** PI hand-off/corrective roadmap/context/commands §19; Evaluation/validation/failure/GitHub/build order §§22–23
+**References:** PI hand-off/corrective roadmap/context/commands §§14–15; Project Intelligence §11; Experiment §14
 
 **Run**
 
 ```text
-Implement pactwright operations refresh to compose configured ingest + observe and pactwright operations validate to enforce Deployment, Observation, source configuration, execution provenance and cross-graph rules. A successful refresh with no Observation is valid.
+Implement pactwright operations corrective-roadmap as a derived filter over PI intent candidates whose accepted motivation traces to Operations, regenerating docs/operations/reports/corrective-intent-roadmap.md with its Project Graph revision. Reuse PI candidate ordering; do not create a second candidate set/priority model or canonical Intents. A favourable Experiment result does not independently set consequence class, priority or promotion.
 ```
 
 **Expected result**
 
-Operations has a complete deterministic runtime surface.
+Operations can answer what production/evaluation evidence suggests without owning project prioritisation.
 
 **Verify before continuing**
 
-Run refresh/validate on success, no-finding, source-failure and invalid-graph fixtures.
+Run the command against operational/non-operational candidates, including a favourable Experiment result, and prove editing the derived report changes no canonical state or candidate priority.
 
-### Step 13 — Implement bounded Operations context contribution
+### Step 13 — Implement `operations refresh` and complete `operations validate`
 
-**References:** PI hand-off/corrective roadmap/context/commands §18; GitHub §15
+**References:** PI hand-off/corrective roadmap/context/commands §19; Evaluation/validation/failure/GitHub/build order §§22–23; Experiment §§11–12
 
 **Run**
 
 ```text
-Implement namespaced bounded Operations context for active Delivery lineages: Observations affecting prior versions of the same surface, unresolved production findings, relevant successful operational patterns, Deployments associated with the lineage and corrective intent evidence, surfaced through pactwright context and the Delivery PR Operations section. Never preload complete telemetry history, unrelated incidents, all historical Deployments or every Observation in the repository.
+Implement pactwright operations refresh to compose configured ingest + observe and complete pactwright operations validate for Deployment, Experiment, Observation, source configuration, execution provenance and cross-graph rules. A successful refresh with no Observation is valid.
+
+Experiment validation must enforce at least:
+- valid mode/hypothesis/exact control and candidate refs;
+- control/candidate resolve to registered operational exposure types and hashes match;
+- control and candidate are not the same exact exposure;
+- required primary metric, guardrails, minimum evidence and decision rule are present;
+- assignment is valid for mode and stable_hash has an appropriate subject key/rule;
+- shadow cannot be user-facing;
+- required project constraints resolve;
+- no credentials/raw user payloads are stored;
+- supersession is valid/acyclic;
+- Experiment Observations use `observes`;
+- execution provenance is not Project Graph state.
 ```
 
 **Expected result**
 
-Future Delivery sees relevant production history without raw telemetry or unbounded context.
+Operations has a complete deterministic runtime surface including controlled Experiment invariants.
 
 **Verify before continuing**
 
-Run a context fixture for a lineage with prior Observations and Deployments: relevant records appear, unrelated records and raw payloads do not.
+Run refresh/validate on success, no-finding, source-failure, invalid Deployment, invalid Experiment, invalid Observation and raw-payload-leak fixtures.
+
+### Step 14 — Implement bounded Operations context contribution
+
+**References:** PI hand-off/corrective roadmap/context/commands §18; GitHub §15; Experiment §14
+
+**Run**
+
+```text
+Implement namespaced bounded Operations context for active Delivery lineages: relevant prior Deployments, Experiments, Observations, unresolved findings, successful operational patterns and corrective intent evidence. Experiment context includes only the contract/result facts relevant to the lineage, not raw samples or every historical comparison. Never preload complete telemetry, unrelated incidents, all Deployments/Experiments or private experiment payloads.
+```
+
+**Expected result**
+
+Future Delivery can learn from production experiments without unbounded or sensitive context.
+
+**Verify before continuing**
+
+Run a context fixture with related/unrelated Deployments, Experiments and Observations; only relevant durable records appear.
 
 ## Stage 5 — Add Operations evaluation and GitHub automation
 
-Prove the analysis capability, then run/visualise Operations remotely without mirroring telemetry.
+Prove generic Operations/Experiment quality, then run/project the capability remotely without mirroring telemetry.
 
-### Step 14 — Implement Operations evaluation cases
+### Step 15 — Implement Operations evaluation cases and generic Experiment fixture
 
-**References:** Evaluation/validation/failure/GitHub/build order §21; Distribution §§16, 18
-
-**Run**
-
-```text
-Contribute operations-analysis evaluation cases covering signal-to-Observation compression, correct exposure attribution, factual grounding, baseline interpretation, false-positive avoidance, unsupported-causality avoidance, duplicate finding handling, positive-finding recognition, correct Project Intelligence routing and scope discipline. Prefer deterministic assertions (required evidence references exist, raw telemetry is not persisted as graph nodes, Observation schema is valid, forbidden graph mutations do not occur, exposure relationships are valid); report semantic dimensions individually without a single aggregate score.
-```
-
-**Expected result**
-
-Operations analysis quality is testable through the shared evaluation surface.
-
-**Verify before continuing**
-
-Run `pnpm pactwright eval` with the Operations cases and inspect per-dimension reporting.
-
-### Step 15 — Implement Operations workflow/checks/views
-
-**References:** GitHub §§4, 8, 15, 24
+**References:** Evaluation/validation/failure/GitHub/build order §21; Distribution §§16, 18; Experiment §§11–15
 
 **Run**
 
 ```text
-Implement generated pactwright-operations.yml, Deployment recording hooks, source-config validation, scheduled refresh, Observation hand-off, corrective-roadmap regeneration, the Delivery PR Operations context section, the Operations refresh summary, Pactwright / Operations and Pactwright / Operations Views checks, and Deployments/Production Findings/Operations/Corrective Roadmap projections. Never write raw telemetry into GitHub/Pactwright graph.
+Contribute operations-analysis evaluation cases covering signal-to-Observation compression, correct exposure attribution, factual grounding, baseline interpretation, false-positive/unsupported-causality avoidance, duplicate handling, positive-finding recognition, PI routing and scope discipline.
+
+Add Experiment-specific cases for:
+- invalid/mismatched exposure hashes;
+- predeclared contract integrity;
+- shadow user-visibility rejection;
+- stable assignment validation;
+- primary/guardrail metric interpretation;
+- insufficient evidence not forced into a conclusion;
+- favourable result not auto-promoting a candidate;
+- raw assignment/sample data not persisted;
+- failed experiment execution preserving existing exposure state.
+
+Also add one non-Kakeibo fixture comparing two generic immutable software/configuration Deployment exposures. Its Experiment schema, commands and assertions must contain no Kei/Kakeibo-specific fields.
+
+Prefer deterministic assertions and report semantic dimensions individually without a single aggregate score.
 ```
 
 **Expected result**
 
-Operations remote automation remains a thin runtime projection/execution surface.
+Operations Experiment semantics are demonstrably generic before Kakeibo uses them.
 
 **Verify before continuing**
 
-Run sync/dry-run and inspect that only durable records/derived summaries are projected and that the PR Operations section contains no raw telemetry.
+Run `pnpm pactwright eval`; inspect the generic Experiment fixture and search its canonical schema/records for Kakeibo/Kei-specific fields — none may exist.
+
+### Step 16 — Implement Operations workflow/checks/projections with Experiment support
+
+**References:** GitHub §§4, 8, 15, 24; Experiment §13
+
+**Run**
+
+```text
+Implement generated pactwright-operations.yml, Deployment recording hooks, source-config validation, scheduled refresh, Observation hand-off, corrective-roadmap regeneration, Delivery PR Operations context, Operations refresh summary and existing Operations projections. Add managed-path/validation/summary support for docs/operations/experiments/** and surface derived Experiment fields needed for review: mode, hypothesis, control/candidate, primary metric, guardrails, window, current derived state and latest Observation/resulting PI references where available.
+
+Do not create candidate promotion actions and do not write raw telemetry/experiment samples into GitHub. The dedicated shared Project Experiments view is completed in Checkpoint 8.
+```
+
+**Expected result**
+
+Operations remote automation understands Experiment state while GitHub remains a projection/execution surface.
+
+**Verify before continuing**
+
+Run sync/dry-run; inspect Experiment path triggers/validation and summaries; confirm GitHub field edits alone cannot create a valid Experiment or promote a candidate.
 
 ## Stage 6 — Adopt Operations on the Pactwright website
 
 Run this stage from the Pactwright repository root.
 
-Use the first real production surface to create immediate tool feedback.
+Use the first real production surface to prove the base Deployment → Observation feedback path independently of the Kakeibo experiment.
 
-### Step 16 — Enable Operations through the repository-local CLI
+### Step 17 — Enable Operations through the repository-local CLI
 
 **References:** Distribution §4; GitHub §8
 
@@ -398,13 +508,13 @@ pnpm pactwright github sync
 
 **Expected result**
 
-Pactwright has Operations enabled with the PI dependency resolved from the workspace.
+Pactwright has Operations enabled with PI dependency resolved from the workspace.
 
 **Verify before continuing**
 
 Run `pnpm pactwright validate`.
 
-### Step 17 — Configure one real website environment/source
+### Step 18 — Configure one real website environment/source
 
 **References:** Operations boundary/exposure/deployment §5; Sources/execution/Observation §8; Website spec
 
@@ -422,7 +532,7 @@ The website has one real Operations source using existing infrastructure.
 
 Run `pnpm pactwright operations validate` and inspect committed config for secrets/raw payloads.
 
-### Step 18 — Record a real website deployment
+### Step 19 — Record a real website deployment
 
 **References:** Operations boundary/exposure/deployment §7; Website spec
 
@@ -432,7 +542,7 @@ Run `pnpm pactwright operations validate` and inspect committed config for secre
 Identify the accepted Pactwright website Evidence to expose. Execute the website's existing deployment mechanism for that Evidence and report the deployed artifact revision/locator and Evidence id. Do not invent a new deployment path.
 ```
 
-**Run**
+Then:
 
 ```bash
 pnpm pactwright operations record-deployment <website-evidence-id>
@@ -447,13 +557,13 @@ A canonical Deployment identifies exact delivered Evidence/artifact/environment.
 
 Inspect Deployment and deployed-as edge; Evidence bytes remain unchanged.
 
-### Step 19 — Collect and analyse website evidence
+### Step 20 — Collect and analyse website evidence
 
 **References:** Sources/execution/Observation §§8–12; PI hand-off/corrective roadmap/context/commands §19
 
 **Run**
 
-`<source-id>` is the `id` of the source configured in Step 17.
+`<source-id>` is the `id` of the source configured in Step 18.
 
 ```bash
 pnpm pactwright operations ingest <source-id>
@@ -469,7 +579,7 @@ The run creates execution provenance and zero or more durable Observations.
 
 Inspect execution record and confirm raw source payloads are not graph nodes.
 
-### Step 20 — Route one accepted Observation into future Delivery
+### Step 21 — Route one accepted website Observation into future Delivery
 
 **References:** PI hand-off/corrective roadmap/context/commands §§13–15; Project Intelligence §11
 
@@ -477,19 +587,15 @@ Inspect execution record and confirm raw source payloads are not graph nodes.
 
 ```bash
 pnpm pactwright intelligence triage <internal-source-id>
-```
 
-**Run**
-
-```bash
 # only if triage requires reviewed promotion
 pnpm pactwright intelligence promote <internal-source-id>
+
 pnpm pactwright intelligence derive-intent-roadmap
 pnpm pactwright operations corrective-roadmap
 ```
 
-
-**Run**
+Then:
 
 ```text
 /capture-intent "<accepted corrective outcome>"
@@ -511,9 +617,9 @@ Trace Deployment → Observation → Source → Knowledge/candidate → Intent �
 
 ## Stage 7 — Publish the Operations learning path
 
-### Step 21 — Deliver grounded Operations content
+### Step 22 — Deliver grounded Operations content
 
-**References:** Open-Source Project Organisation §§1.2–1.3; Operations boundary/exposure/deployment §7; Sources/execution/Observation §§8–12; PI hand-off/corrective roadmap/context/commands §§13–16
+**References:** Open-Source Project Organisation §§1.2–1.3; Operations Graph Engineering; Operations Experiment Semantics; Project Intelligence §§10, 13
 
 **Run**
 
@@ -523,12 +629,12 @@ From the Pactwright repository root:
 pnpm pactwright intelligence onboard
 ```
 
-Require `identity`, `content`, `product` and `delivery/eng` to be Covered for this work. Fill any missing coverage through the established PI gap loop before continuing.
+Require `identity`, `content`, `product` and `delivery/eng` to be Covered. Fill any missing coverage through the established PI gap loop before continuing.
 
 Then:
 
 ```text
-/capture-intent "Publish Pactwright's Operations learning path: concise Operations documentation, one production-feedback/incident example, an Academy Production Learning lesson, and the website capability update needed to explain the production feedback loop. Ground the content in accepted Project Intelligence and the real Operations behaviour delivered in this checkpoint."
+/capture-intent "Publish Pactwright's Operations learning path: concise Operations documentation, one production-feedback example, one generic controlled-Experiment example, an Academy Production Learning lesson, and the website capability update needed to explain Deployment → Experiment/Observation → PI → Delivery. Ground the content in accepted Project Intelligence and the real Operations behaviour delivered in this checkpoint. Make clear that Experiment records predeclared comparison truth, not raw samples or automatic promotion."
 /propose-contracts <intent-id>
 /approve-contract <contract-id> "<selection notes>"
 /write-brief <contract-id>
@@ -537,19 +643,19 @@ Then:
 /prepare-evidence <brief-id>
 ```
 
-For the public-facing creative portion, approve and publish through Creative Delivery.
+For the public-facing creative portion, approve/publish through Creative Delivery.
 
 **Expected result**
 
-Operations is understandable from Docs/Examples/Academy/Website and the public-facing material is grounded in accepted project truth.
+Operations and controlled Experiment semantics are understandable without implying product-specific release ownership.
 
 **Verify before continuing**
 
-Technical claims match the implemented Operations boundary; public narrative has valid identity/product grounding and, where published as an Asset, canonical Publication lineage.
+Technical claims match the implemented boundaries and the generic Experiment example contains no Kakeibo/Kei-specific semantics.
 
 ## Stage 8 — Release `0.0.6`
 
-### Step 22 — Prepare, publish and tag `0.0.6`
+### Step 23 — Prepare, publish and tag `0.0.6`
 
 **References:** Release model (Implementation Guide); Distribution §§6, 18
 
@@ -585,11 +691,11 @@ git switch "$DEFAULT_BRANCH"
 git pull --ff-only
 ```
 
-The following package names are new in this release and cannot use trusted publishing until their first registry version exists:
+The following package name is new in this release and cannot use trusted publishing until its first registry version exists:
 
 - `@pactwright/operations`
 
-After the release PR is merged, bootstrap only those new packages interactively:
+After the release PR is merged, bootstrap only that new package interactively:
 
 ```bash
 pnpm --filter @pactwright/operations publish --dry-run --tag next --access public
@@ -604,9 +710,7 @@ npx -y npm@^11.15 trust github @pactwright/operations \
   --allow-publish
 ```
 
-If the npm CLI `trust` command is unavailable in the installed npm version, configure the trusted publisher for `@pactwright/operations` through the npm package settings web UI instead (GitHub Actions publisher: this repository, workflow `release.yml`, environment `npm-release`) before tagging.
-
-Do not manually publish packages that already have trusted publishing configured.
+If the npm CLI `trust` command is unavailable, configure the trusted publisher through npm package settings instead before tagging. Do not manually publish packages that already have trusted publishing configured.
 
 Tag the accepted merge commit:
 
@@ -617,7 +721,7 @@ git push origin "v$VERSION"
 
 **Expected result**
 
-The tag-triggered trusted `release.yml` workflow verifies the exact merged source and publishes every still-unpublished package in the `0.0.6` family under `next`. Existing published members are not overwritten.
+The tag-triggered trusted `release.yml` workflow verifies the exact merged source and publishes every still-unpublished package in the `0.0.6` family under `next`.
 
 **Verify before continuing**
 
@@ -634,24 +738,23 @@ pnpm view @pactwright/operations@0.0.6 version
 
 Every command must return `0.0.6`.
 
-For the newly introduced package(s), also run:
+For the newly introduced package, also run:
 
 ```bash
 npx -y npm@^11.15 trust list @pactwright/operations
 ```
 
-Existing package-family members must show npm provenance/trusted-publisher metadata; the newly bootstrapped package(s) must now trust `release.yml` for the next release.
+Existing package-family members must show npm provenance/trusted-publisher metadata; `@pactwright/operations` must now trust `release.yml` for the next release.
 
+## Stage 9 — Prove a controlled Kei Experiment on Kakeibo
 
-## Stage 9 — Prove Operations on Kakeido
+Run this stage from the Kakeibo repository root unless a step explicitly says otherwise.
 
-Run this stage from the Kakeido repository root unless a step explicitly says otherwise.
+Kakeibo provides the first real production-evaluation need for generic Experiment semantics. Kakeibo owns what each Kei release/model route means; Pactwright Operations owns only the durable comparison contract and resulting Observation.
 
-Exercise the same feedback loop against sensitive financial-product infrastructure.
+### Step 24 — Install/reconcile Operations in Kakeibo
 
-### Step 23 — Install/reconcile Operations in Kakeido
-
-**References:** Distribution §4
+**References:** Distribution §4; Kakeibo Acceptance Profile §10
 
 **Run**
 
@@ -675,139 +778,265 @@ pnpm pactwright github sync
 
 **Expected result**
 
-Kakeido has Operations with PI dependency resolved and the upgraded pack providing `operations-analysis`.
+Kakeibo has the published Operations runtime and the complete pack provides `operations-analysis`.
 
 **Verify before continuing**
 
-Run `pnpm pactwright validate`.
+Run `pnpm pactwright intelligence validate` and `pnpm pactwright validate`.
 
-### Step 24 — Configure one safe Kakeido environment and operational source
+### Step 25 — Configure a privacy-safe Kakeibo evaluation environment/source
 
-**References:** Operations boundary/exposure/deployment §5; Kakeido evidence sources/privacy/delivery §11; Sources/execution/Observation §§8–10
+**References:** Sources/execution/Observation §§8–10; Experiment §8; current Kakeibo `05`, `06`, `07`
 
 **Run**
 
 ```text
-Configure the minimum .pactwright/operations environment for the exposed Kakeido surface plus one Operations source using existing Better Stack or Cloudflare evidence for failed imports, failed Workflows, API errors/latency, LLM failures or deployment markers. For native mobile crash evidence, Apple App Store Connect and Google Play Vitals platform diagnostics are permitted existing sources per Kakeido Tech Stack §11 (v1.1); record that choice as a canonical Decision in the Kakeido graph as part of this step. Do not add a new observability vendor. Do not log/store raw financial CSV contents, secrets, access tokens or unnecessary personal data. Run operations validate.
+Configure the minimum .pactwright/operations environment and bounded source needed to observe Kei active/candidate evaluation using Kakeibo's already adopted operational/evaluation infrastructure. Prefer bounded evaluation metadata and metric aggregates/locators. Do not add a new observability vendor, create a new unrelated diagnostics Decision, or persist raw financial CSV contents, canonical financial payloads, credentials, access tokens, production grounding, prompts, responses or unnecessary personal data in Pactwright.
 ```
 
 **Expected result**
 
-Kakeido has a configured environment and observes product reliability without copying sensitive financial payloads.
+Operations can address the evidence required for controlled Kei evaluation without becoming Kakeibo's telemetry or AI-trace store.
 
 **Verify before continuing**
 
-Inspect environment/source config and logging path and run `pactwright operations validate`.
+Run `pnpm pactwright operations validate`; inspect source/environment config and one collection fixture for secret/private-payload leakage.
 
-### Step 25 — Deploy accepted Kakeido Evidence
+### Step 26 — Record exact active and candidate Kei evaluation exposures
 
-**References:** Operations boundary/exposure/deployment §7; Kakeido evidence sources/privacy/delivery §13; Kakeido Tech Stack §13, and §14 when mobile surfaces changed
+**References:** Operations Deployment §7; Experiment §6; Kakeibo Acceptance Profile §10; current Kakeibo `03`, `05`, `06`
 
 **Run**
+
+Identify:
 
 ```text
-Identify the accepted Kakeido Delivery Evidence to expose and report its Evidence id. Execute Kakeido's existing deployment mechanism for that Evidence: backend through the Tech Stack §13 Wrangler path, and mobile through the Tech Stack §13 mobile delivery path — including the OTA staging-channel verification gate for EAS Updates — and §14 when the accepted scope changed mobile surfaces. Report the deployed artifact revision/locator. Do not invent a new deployment path.
+active baseline KeiRelease + model-route reference + exact bundle hash + accepted Delivery Evidence
+accepted candidate KeiRelease + model-route reference + exact bundle hash + accepted Delivery Evidence from the CP5 release/evaluation path
 ```
 
-**Run**
+All CP5 deterministic/benchmark/red-team hard gates must still pass for the candidate before production evaluation.
+
+Expose the active baseline through Kakeibo's normal production mechanism and expose the candidate only through the isolated evaluation/shadow path required by the current Kakeibo architecture. A Deployment for the shadow candidate records exact operational exposure but does not imply user visibility.
+
+Then record both exact exposures:
 
 ```bash
-pnpm pactwright operations record-deployment <kakeido-evidence-id>
+pnpm pactwright operations record-deployment <active-kei-evidence-id>
+pnpm pactwright operations record-deployment <candidate-kei-evidence-id>
 pnpm pactwright operations validate
 ```
 
+Retain the printed Deployment ids/hashes as the Experiment control/candidate references.
+
 **Expected result**
 
-A canonical Kakeido Deployment identifies exact delivered Evidence/artifact/environment.
+Pactwright knows the exact immutable operational exposures being compared while `KeiRelease`, model-route and task semantics remain Kakeibo repository/application state.
 
 **Verify before continuing**
 
-Inspect Deployment and deployed-as edge; Evidence bytes remain unchanged.
+- both Deployment records resolve to exact accepted Evidence/artifact/bundle hashes;
+- active and candidate are distinct exposures;
+- candidate hard gates pass before experimentation;
+- the candidate shadow Deployment is not represented as user-facing merely because it is deployed;
+- no `KeiRelease`, model-route or benchmark node type was added to Pactwright.
 
-### Step 26 — Run the Kakeido software feedback loop
+### Step 27 — Record and run the initial shadow Experiment
 
-**References:** Sources/execution/Observation §§8–12; PI hand-off/corrective roadmap/context/commands §§13–15
+**References:** Experiment §§6–8, 10–12; Kakeibo Acceptance Profile §10; current Kakeibo `02`, `03`, `05`, `06`, `07`
 
 **Run**
 
-`<source-id>` is the `id` of the source configured in Step 24; `<internal-source-id>` is printed by `operations observe`.
+Create a proposed Experiment contract before inspecting outcome evidence. The initial real proof uses `shadow` mode unless the current Kakeibo engineering spec explicitly supports an equally safe earlier mode.
+
+The contract must predeclare:
+
+```text
+experiment id/title
+mode = shadow
+hypothesis
+exact control Deployment id/hash
+exact candidate Deployment id/hash
+eligible population / grounding eligibility
+assignment = mirror (or equivalent non-user-facing shadow assignment)
+primary metric
+guardrail metrics
+minimum evidence
+decision rule
+start/end or review condition
+hard Kakeibo constraints
+```
+
+Reference, without moving ownership, the Kakeibo constraints that cannot be weakened:
+
+```text
+financial truth
+privacy
+user authority
+explicit confirmation requirements
+Known / Likely / Unknown semantics
+financial-advice boundaries
+canonical-state mutation boundaries
+```
+
+Record the Experiment:
+
+```bash
+pnpm pactwright operations record-experiment <experiment-contract-path>
+pnpm pactwright operations validate
+```
+
+Then execute Kakeibo's isolated shadow mechanism against eligible production evaluation input. Where comparison requires it, active and candidate use the same immutable grounding snapshot.
+
+Shadow acceptance is strict:
+
+```text
+candidate output never reaches the user
+candidate cannot mutate canonical state
+candidate cannot trigger normal product side effects
+candidate failure cannot delay or fail the active response
+raw financial grounding/prompts/responses are not retained by default for experiment analysis
+evaluation cost remains bounded
+```
+
+**Expected result**
+
+A canonical immutable Experiment records the comparison contract before outcome inspection while Kakeibo executes the comparison safely outside Pactwright graph state.
+
+**Verify before continuing**
+
+- Experiment ids/hashes exactly match the two Deployment exposures;
+- hypothesis/primary metric/guardrails/minimum evidence/decision rule were recorded before evidence analysis;
+- shadow has no user-facing assignment;
+- the experiment contract contains no Kakeibo-specific schema fields beyond generic constraint references/exposure metadata;
+- changing the contract after recording is rejected and requires supersession;
+- failed candidate execution cannot alter active production behaviour or Experiment state.
+
+### Step 28 — Observe, govern and prove rollback
+
+**References:** Experiment §§9, 12, 14–15; PI hand-off/corrective roadmap §§13–15; Kakeibo Acceptance Profile §10; current Kakeibo `06`
+
+**Run**
+
+Use the source configured in Step 25:
 
 ```bash
 pnpm pactwright operations ingest <source-id>
 pnpm pactwright operations observe <source-id>
 pnpm pactwright operations validate
-pnpm pactwright intelligence triage <internal-source-id>
 ```
 
-**Run**
+The durable result, when evidence is sufficient, must be an Observation targeting the Experiment rather than a mutation of the Experiment or candidate. It may be positive, negative, mixed or neutral. Insufficient evidence may legitimately create no outcome Observation or an explicitly insufficient-evidence Observation according to the implemented rules.
+
+For every internal PI Source emitted from the outcome:
 
 ```bash
-# only if triage requires reviewed promotion
+pnpm pactwright intelligence triage <internal-source-id>
+
+# only when reviewed promotion is required and accepted
 pnpm pactwright intelligence promote <internal-source-id>
+
 pnpm pactwright intelligence derive-intent-roadmap
 pnpm pactwright operations corrective-roadmap
 ```
 
-**Run**
+There is no automatic candidate promotion. If the evidence justifies accepting, rejecting or modifying the candidate, capture that outcome through normal Kakeibo Delivery/governance.
+
+If a user-facing comparison is justified by the current Kakeibo spec and hard gates pass, create a **new** Experiment contract for a limited canary or A/B stage. For Kakeibo user-facing A/B assignment, preserve the repository-defined stable assignment rule (for example the accepted `hash(experiment_id + stable_subject_id)` rule) and predeclare rollback/guardrails before exposure. Do not create a user-facing experiment merely to satisfy this checkpoint.
+
+Demonstrate one rollback drill selecting the smallest failing layer from the Kakeibo-owned recovery options:
 
 ```text
-/capture-intent "<accepted corrective outcome>"
-/propose-contracts <intent-id>
-/approve-contract <contract-id> "<selection notes>"
-/write-brief <contract-id>
-/deliver-brief <brief-id>
-/review <brief-id>
-/prepare-evidence <brief-id>
+previous KeiRelease
+previous model route
+disable one optional Kei task
+deterministic fallback
 ```
 
-During the checkpoint, also prove one positive Observation path through the same ingest/observe/triage flow.
+Core financial workflows must remain usable without Kei.
 
 **Expected result**
 
-A real Kakeido exposure yields governed production meaning, one corrective Delivery and one accepted positive Observation.
+The complete loop is proven:
+
+```text
+Delivery Evidence
+→ exact active/candidate Deployments
+→ immutable predeclared Experiment
+→ bounded external evidence
+→ Observation
+→ PI Source
+→ governed accept/reject/change decision
+→ normal Delivery when required
+```
 
 **Verify before continuing**
 
-Trace Deployment → Observation → Source → Knowledge/candidate → Intent → Evidence for the corrective path and confirm the positive Observation reached PI through the same governance path.
+- Observation uses `observes` to the exact Experiment id/hash;
+- raw samples/financial prompts/responses are absent from Pactwright graph state;
+- guardrail breaches and uncertainty are preserved;
+- a favourable result did not automatically mutate/promote the candidate;
+- any canary/A-B follow-on is a distinct immutable Experiment with stable assignment where required;
+- the rollback drill restores the smallest appropriate layer and leaves core financial workflows usable;
+- rollback can distinguish behavioural KeiRelease rollback from model-route rollback where practical;
+- the complete lineage reaches PI/Delivery only through normal governance.
 
 ## Stage 10 — Capture checkpoint feedback
 
-### Step 27 — Route Checkpoint 6 findings into project truth
+### Step 29 — Route Checkpoint 6 findings into project truth
 
-**References:** Implementation Principles §§7, 14; Project Intelligence §8
+**References:** Implementation Principles §§7, 14; Project Intelligence §8; Experiment §15
 
 **Run**
 
 From the Pactwright repository root:
 
 ```text
-Record the material findings from building, adopting, releasing and installing Operations in this checkpoint — defects, obstructive ceremony, installation problems, content gaps and evaluation gaps from both the Pactwright website and Kakeido loops — as Project Intelligence Sources. Distinguish Kakeido-specific choices from evidence of Pactwright responsibility failures; only the latter become candidate Pactwright work or generic evaluation cases.
+Record material findings from building, adopting, releasing and using Operations/Experiment in this checkpoint — defects, obstructive ceremony, installation problems, content gaps, evaluation gaps, unsafe defaults, false conclusions or missing generic semantics from both the Pactwright website and Kakeibo experiment — as Project Intelligence Sources. Distinguish Kakeibo-specific Kei choices from evidence of a generic Pactwright Operations responsibility failure. Do not promote KeiRelease/model-route/task/benchmark concepts into Pactwright graph semantics unless independent cross-domain evidence later justifies them.
 ```
 
+For each retained feedback Source:
+
 ```bash
-pnpm pactwright intelligence ingest
+pnpm pactwright intelligence ingest <feedback-source-path>
 pnpm pactwright intelligence triage <feedback-source-id>
+
+# only when reviewed promotion is required and accepted
+pnpm pactwright intelligence promote <feedback-source-id>
+
 pnpm pactwright intelligence derive-intent-roadmap
-```
-
-Regenerate the corrective view where accepted findings are operational in origin:
-
-```bash
 pnpm pactwright operations corrective-roadmap
 ```
 
 **Expected result**
 
-Checkpoint learning is durable, governed project truth rather than untracked memory.
+Checkpoint learning becomes durable governed evidence without product-specific leakage into generic Operations semantics.
 
 **Verify before continuing**
 
-Each blocking finding traces to a Source and a triage outcome; no blocking failure is carried silently into Checkpoint 7.
+Each blocking finding traces to a Source and triage outcome; no blocking failure is carried silently into Checkpoint 7; the Experiment abstraction still contains no Kakeibo/Kei-specific canonical fields.
 
 ## Exit gate
 
-Operations installs as a sibling extension requiring PI only, and Deployment remains distinct from Delivery Evidence, immutable, and corrected only through explicit supersession. Raw telemetry remains external, execution provenance is not Project Graph state, and Observation grounding, deduplication and causality rules hold with both negative and positive Observation acceptance during the checkpoint. Operational meaning enters Project Intelligence only through internal Source ingestion, and the corrective roadmap remains a revision-stamped filtered view that creates no Intents and changes no priority. `operations-analysis` ships in the first-party complete pack with its evaluation cases passing, and bounded Operations context reaches Delivery without raw telemetry. GitHub automation stays a thin projection with the Operations checks and views green. The Pactwright website and Kakeido each prove a governed Deployment → Observation → PI → Delivery path; the `0.0.6` family is published, registry-verified and installed in Kakeido; the Operations learning path is published from accepted project truth; and checkpoint feedback is captured as Sources with no blocking failure carried into Checkpoint 7.
+Checkpoint 6 is complete only when all of the following hold:
+
+1. `@pactwright/operations` installs as a sibling extension requiring PI only and registers native `Deployment`, `Experiment` and `Observation` state without changing Delivery semantics.
+2. Deployment remains distinct from Delivery Evidence, immutable and exact; isolated/shadow Deployment does not imply user visibility.
+3. `record-experiment` creates immutable predeclared Experiment contracts over exact control/candidate exposure ids/hashes, validates mode/hypothesis/metrics/guardrails/assignment/minimum evidence/decision rule/constraints and provides no promotion command.
+4. Raw telemetry, analytics rows, experiment assignments/samples, prompts, responses and private financial grounding remain external; Operations execution provenance is not Project Graph state.
+5. Observation grounding, causality, uncertainty, deduplication and supersession rules hold for both Deployment and Experiment exposures, including `Observation --observes--> Experiment`.
+6. Operational/experiment meaning enters PI only through Observation → internal Source; the corrective roadmap remains a revision-stamped filtered PI view that creates no Intents and changes no priority.
+7. `operations-analysis` ships in the first-party complete pack with Deployment and Experiment evaluation cases passing; a non-Kakeibo fixture proves the Experiment schema/commands contain no Kei-specific fields.
+8. Bounded Operations context reaches Delivery without raw telemetry/experiment samples, and GitHub automation validates/projects Experiment state without owning canonical contracts or promotion; the dedicated Experiments Project view remains deferred to CP8.
+9. The Pactwright website proves a real governed Deployment → Observation → PI → Delivery path independently of Kakeibo.
+10. The Operations learning path documents both production feedback and generic controlled Experiment semantics from accepted project truth.
+11. `0.0.6` is published, registry-verified and installed in Kakeibo.
+12. Kakeibo records exact active/candidate Kei Deployments, then records an immutable predeclared shadow Experiment referencing those exact exposure hashes while KeiRelease/model-route semantics remain Kakeibo-owned.
+13. Kakeibo shadow execution preserves same grounding where required, never exposes candidate output to users, cannot mutate/side-effect, cannot delay the active response and minimises raw financial trace retention.
+14. The Kakeibo Experiment produces bounded Observation/PI evidence without automatic promotion; any justified user-facing canary/A-B is a separate controlled Experiment with stable assignment and unchanged financial/privacy/user-authority/advice invariants.
+15. Kakeibo demonstrates a smallest-layer rollback drill and core financial workflows remain usable without Kei.
+16. Checkpoint feedback is captured as governed Sources with no blocking failure carried into Checkpoint 7 and no Kakeibo-specific release artefacts promoted into Pactwright graph types.
 
 ---
 
-**Pactwright — Checkpoint 6 — Production Learning v11**
+**Pactwright — Checkpoint 6 — Production Learning v12**
