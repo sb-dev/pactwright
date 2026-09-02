@@ -1,16 +1,16 @@
 # Pactwright — Kakeibo System-Level Acceptance Profile
 
-**Version:** 1  
-**Status:** Checkpoint acceptance authority  
+**Version:** 2  
+**Status:** Cross-owner checkpoint acceptance profile  
 **Date:** 2026-09-02
 
 ## 1. Purpose
 
 Kakeibo is Pactwright's persistent external proving project.
 
-This profile centralises **Kakeibo-specific system-level acceptance semantics** so individual Pactwright checkpoint runbooks do not repeatedly copy product, financial, Kei, architecture, operations and open-source rules that evolve independently.
+This profile centralises **Kakeibo-specific system-level acceptance cross-checks** so individual Pactwright checkpoint runbooks do not repeatedly copy product, financial, Kei, architecture, operations and open-source rules that evolve independently.
 
-The Pactwright checkpoints still define:
+The Pactwright checkpoints define:
 
 ```text
 what Pactwright capability is built
@@ -27,9 +27,9 @@ what real Kakeibo work is used to prove that checkpoint
 → which cross-domain invariants must be verified
 ```
 
-When Kakeibo-specific wording in an older checkpoint conflicts with this profile, **this profile wins**. Pactwright core/extension semantics remain owned by their Pactwright specifications.
+Kakeibo semantics always come from the owning canonical Kakeibo specifications. This profile is a cross-owner acceptance layer, not another product specification and not an override mechanism.
 
-The purpose is to remove Kakeibo semantic duplication from the checkpoint programme, not to create another Kakeibo specification.
+Pactwright core/extension semantics remain owned by their Pactwright specifications.
 
 ---
 
@@ -49,19 +49,26 @@ docs/specs/06-engineering-delivery-and-operations-spec.md
 docs/specs/07-open-source-project-organisation-spec.md
 ```
 
-The 2026-09-02 v2 updates to `03`, `05`, `06` and `07` are part of this acceptance baseline even while their corresponding Kakeibo repository commit is being prepared.
+Current baseline on 2026-09-02:
+
+```text
+03 Kei Assistant                         v2
+05 System Architecture and Data         v2
+06 Engineering Delivery and Operations  v2
+07 Open-Source Project Organisation     v3
+```
 
 `docs/specs/README.md` owns the Kakeibo authority/conflict-resolution map.
 
-Do not use the retained August `Kakeido — Tech Stack Engineering Spec` as implementation authority. Its responsibilities are now split across current `05` and `06`.
+Do not use retained August Kakeido research snapshots as implementation authority.
 
-Product spelling in new Pactwright material is **Kakeibo**. Legacy `Kakeido` names inside not-yet-renamed Kakeibo spec files are source titles, not a reason to perpetuate the old project name in Pactwright runbooks.
+Product spelling in new Pactwright material is **Kakeibo**.
 
 ---
 
-## 3. Kakeibo architecture baseline
+## 3. Kakeibo architecture and open-source baseline
 
-The current accepted product/runtime boundaries are:
+The accepted product/runtime flow is:
 
 ```text
 Source financial data
@@ -86,6 +93,25 @@ AI Gateway / LLM         → versioned model-routing boundary
 Better Stack/Cloudflare  → operational telemetry
 ```
 
+Kakeibo maintains **one public product architecture**:
+
+```text
+React Native / Expo
+Cloudflare
+Neon
+R2
+bounded Kei runtime
+AI Gateway
+Better Stack
+supported external providers
+```
+
+The official service is one supported production deployment of that public software. Independent operators use the same supported architecture with their own provider accounts, credentials and operational configuration.
+
+Do not create a separate Community Edition, Self-Hosted Edition, open-source architecture, Docker-only stack, SQLite variant, local object-storage stack, local LLM stack or parallel database/workflow implementation merely to make the repository appear self-hostable.
+
+Private information may differ between deployments. Hidden product architecture may not.
+
 Critical separations:
 
 ```text
@@ -108,6 +134,9 @@ Kei behavioural release
 
 Kei generated interpretation
 ≠ canonical financial state
+
+public source
+≠ production credentials / user data / commercial agreements
 ```
 
 ---
@@ -148,6 +177,8 @@ FinancialSource
 CSV is an initial adapter, not the meaning of a financial source.
 
 Source-specific amount signs, provider categories, lifecycle state and provider metadata remain behind the ingestion boundary.
+
+The ingestion seam is also the strongest initial contribution seam. New adapters must preserve provenance, source identity/idempotency, normalisation, review-state separation, synthetic fixtures and deterministic tests.
 
 ### Review truth
 
@@ -212,13 +243,101 @@ Meta → allowlisted consented marketing conversions only
 
 Mobile/product financial behaviour never routes to Meta.
 
-### Open-source boundary
+### Open-source/public-private boundary
 
-The official Kakeibo service runs the same public product architecture.
+Normally public:
 
-Production-defining Kei policy/persona/task/schema behaviour, release manifests, benchmark/red-team definitions and safe synthetic evaluation data remain Git-traceable/public by default.
+```text
+product source
+financial domain/application behaviour
+database migrations
+public deployment infrastructure/configuration
+canonical specs
+technical documentation
+synthetic fixtures
+Kei policy/persona/task/grounding/output contracts
+Kei release manifests
+Kei benchmark/red-team definitions + safe synthetic datasets
+analytics contracts
+CI/CD workflows
+contribution/security policy
+```
 
-Raw production financial grounding, prompts, responses, AI traces with user data, credentials and production analytics remain private.
+Private by necessity:
+
+```text
+production credentials / provider secrets
+production financial data
+production analytics rows
+raw production Kei grounding/prompts/responses with user data
+production AI traces with personal/financial data
+support/customer data
+commercial agreements
+billing-account information
+emergency/admin credentials
+sensitive incident evidence / anti-abuse intelligence where disclosure adds material risk
+```
+
+Private material must not become a hidden software dependency.
+
+### Open-source proposition
+
+Kakeibo's public claim is:
+
+> **Kakeibo is open-source personal-finance software. The official Kakeibo service is a supported production deployment of the same public codebase.**
+
+The public repository must contain the real financial/review/Kei product rather than a reduced shell with a private premium core.
+
+Open-source availability does not imply a free hosted tier.
+
+### Licence, trademark and security
+
+```text
+software licence → Apache License 2.0
+root LICENSE      → authoritative licence text
+trademark         → separate from software rights
+security reports  → private disclosure route first
+```
+
+Forks may exercise software rights without implying official Kakeibo endorsement.
+
+Security-sensitive reports must not be forced through public Issues.
+
+### Repository growth
+
+Repository structure grows from demonstrated responsibility:
+
+```text
+real capability
+→ real implementation/content
+→ repeated or clearly distinct responsibility
+→ smallest justified structural expansion
+```
+
+not:
+
+```text
+possible future capability
+→ speculative abstraction
+→ permanent maintenance burden
+```
+
+Prefer extending existing apps/packages/docs/specs before creating new top-level areas. Do not create marketplace, plugin-registry, LMS, community-portal or agent-framework structure before real evidence justifies it.
+
+### Public knowledge flow
+
+```text
+canonical spec
+→ implementation
+→ tests / Kei benchmarks where applicable
+→ release manifest
+→ technical docs
+→ concise README/site explanation
+```
+
+README, Blog, Issues, Discussions and marketing pages may explain or explore. They cannot silently redefine canonical behaviour.
+
+Synthetic financial fixtures replace real personal financial data in tests, docs, screenshots, benchmarks and contributor onboarding.
 
 ---
 
@@ -228,7 +347,7 @@ Raw production financial grounding, prompts, responses, AI traces with user data
 
 ### Goal
 
-Use Pactwright Core Delivery to create the first executable deterministic Kakeibo financial-domain foundation.
+Use Pactwright Core Delivery to create the first executable deterministic Kakeibo financial-domain foundation while establishing the minimum open-source repository safeguards that `07` requires from the beginning.
 
 ### Owning Kakeibo specs
 
@@ -236,11 +355,26 @@ Use Pactwright Core Delivery to create the first executable deterministic Kakeib
 02 Financial Domain Model
 05 System Architecture/Data — package/layer boundary only
 06 Engineering Delivery/Operations — deterministic test expectations
+07 Open-Source Project Organisation — repository/licence/security foundation only
 ```
 
 ### Required Kakeibo work
 
 Before installing the first Pactwright package, establish the minimum pnpm workspace root required by the consumer repository if it does not yet exist.
+
+Also establish or verify the smallest initial public-repository foundation where absent:
+
+```text
+README.md
+LICENSE                → Apache-2.0
+SECURITY.md            → private disclosure route
+CONTRIBUTING.md
+canonical docs/specs/ authority set
+working deterministic tests
+safe synthetic financial fixtures sufficient for the delivered domain slice
+```
+
+Do not scaffold Academy, Blog, marketplace, registry, parallel self-hosting architecture or speculative package directories merely because `07` describes where mature content may eventually live.
 
 Then deliver a `packages/domain` slice covering at least:
 
@@ -267,6 +401,9 @@ plan/goal/rule history preservation
 
 - tests are deterministic and use explicit numeric assertions where applicable;
 - domain code has no Hono/Neon/Cloudflare/UI/analytics/provider dependency;
+- public synthetic fixtures contain no real personal financial exports;
+- the repository licence is Apache-2.0 and security reporting has a private route;
+- no hidden private financial/review engine is required for the delivered slice;
 - no research-derived financial target becomes a default/recommendation;
 - Pactwright preserves the Contract's financial invariants through Intent → Evidence.
 
@@ -285,6 +422,7 @@ Use GitHub-operated Pactwright Delivery to establish the first real ingestion sl
 02 Financial Domain — source/entry semantics
 05 System Architecture/Data — ingestion architecture
 06 Engineering Delivery/Operations — adapter/API/persistence tests
+07 Open-Source Project Organisation — public ingestion/contribution seam
 ```
 
 ### Required Kakeibo work
@@ -317,6 +455,15 @@ duplicate-candidate preparation
 deterministic rule/history preparation
 ```
 
+The public seam must already be understandable as:
+
+```text
+source-specific input
+→ IngestionAdapter
+→ NormalisedSourceRecord
+→ FinancialEntry
+```
+
 Do **not** describe the output as "canonical spendings". The canonical persisted concept is `FinancialEntry`; the product may later present ordinary outflows as spendings.
 
 ### Acceptance
@@ -327,7 +474,10 @@ Do **not** describe the output as "canonical spendings". The canonical persisted
 - Workflows own resumable multi-step ingestion, not normal CRUD;
 - exact re-import does not create another canonical entry;
 - financial duplicates still require explicit resolution;
-- source/provider semantics do not leak into the financial domain.
+- source/provider semantics do not leak into the financial domain;
+- CSV implementation/fixtures/tests are public-source assets rather than hosted-service-only behaviour;
+- core tests do not require production Meta, Salt Edge, app-store or production LLM credentials;
+- no official-service secret/configuration becomes a hidden dependency of the ingestion architecture.
 
 ---
 
@@ -335,7 +485,7 @@ Do **not** describe the output as "canonical spendings". The canonical persisted
 
 ### Goal
 
-Prove Project Intelligence can understand the complete multi-owner Kakeibo system, including bounded AI behaviour and unresolved decisions, without flattening it into a generic product summary.
+Prove Project Intelligence can understand the complete multi-owner Kakeibo system, including bounded AI behaviour, open-source governance and unresolved decisions, without flattening it into a generic product summary.
 
 ### Required Source corpus
 
@@ -349,7 +499,7 @@ docs/specs/README.md
 04
 05
 06
-07
+07 v3
 ```
 
 Treat each as a separate Source and preserve its owning authority.
@@ -359,7 +509,7 @@ Treat each as a separate Source and preserve its owning authority.
 PI onboarding/context must distinguish:
 
 ```text
-current product/runtime
+current product/runtime/governance
 planned extension
 future optional capability
 open decision
@@ -374,6 +524,10 @@ current:
   bounded explicit Kei tasks
   Neon analytics
   weekly review
+  one public product architecture
+  Apache-2.0 software licence
+  private security-disclosure route
+  public production-defining Kei behaviour/evaluation definitions
 
 planned extension:
   Salt Edge Account Information
@@ -383,26 +537,40 @@ future optional:
   persistent agent runtime
   dynamic skills
   write-capable agent tools
+  extension/integration index only after demonstrated ecosystem demand
 
-open decisions:
+open decisions before public launch where still unresolved:
   authentication provider
   billing implementation
   primary model/provider choices within the model-routing boundary
-  retention/recovery details where still explicitly open
+  retention/recovery details
+  trademark policy maturity
+  brand/asset licence
+  copyright ownership wording
+  contributor licence policy if any
+  supported-version/security policy details
+  official wording for independent deployments
+
+non-goals:
+  Community/Self-Hosted Edition architecture
+  alternate local production stack
+  marketplace / generic plugin registry
+  LMS / badges / course accounts
+  community portal built ahead of demand
 ```
 
-### Kei knowledge ownership test
+### Knowledge ownership test
 
 PI must preserve:
 
 ```text
 03 → Kei behaviour/authority
-05 → Kei runtime architecture
+05 → Kei runtime + architecture
 06 → Kei evaluation/release/operations
-07 → public/private and open-source transparency
+07 → public/private boundary, repository organisation, licensing, deployment and contribution governance
 ```
 
-A Delivery context needing Kei implementation must receive all relevant owners without treating one as replacement for another.
+A Delivery context needing Kei implementation, deployment documentation, adapter contribution work or public trust material must receive all relevant owners without treating one as replacement for another.
 
 ---
 
@@ -410,7 +578,7 @@ A Delivery context needing Kei implementation must receive all relevant owners w
 
 ### Goal
 
-Prove specialist Graph Review can find contradictions across the seven-owner Kakeibo system.
+Prove specialist Graph Review can find contradictions across the seven-owner Kakeibo system, including contradictions between product architecture and its open-source/public representation.
 
 ### Minimum cross-owner review matrix
 
@@ -420,10 +588,13 @@ Prove specialist Graph Review can find contradictions across the seven-owner Kak
 03 Kei behaviour ↔ 02 Financial truth
 03 Kei behaviour ↔ 05 Kei runtime
 03 Kei behaviour ↔ 06 Kei release/evaluation
+02 Financial truth ↔ 07 public financial transparency
 05 Architecture ↔ 06 Engineering/Operations
-05 Architecture ↔ 07 Open-source claims
+05 Architecture ↔ 07 one public architecture / independent deployment
+06 Delivery/Operations ↔ 07 public release/security/deployment expectations
 06 Kei release/evaluation ↔ 07 public evaluation/transparency
-01 Product/commercial claims ↔ 07 public surfaces
+01 Product/commercial claims ↔ 07 official-service/open-source claims
+04 Brand/assets ↔ 07 trademark/asset-licence boundary where relevant
 ```
 
 ### Required reviewer attention
@@ -436,7 +607,14 @@ Reviewers must explicitly look for:
 - model/provider concerns leaking into financial semantics;
 - private production traces accidentally required to understand public production behaviour;
 - analytics/telemetry/audit conflation;
-- future agentic capability being implemented as if already accepted.
+- future agentic capability being implemented as if already accepted;
+- hidden premium financial/review/Kei behaviour not represented in the public repository;
+- official-service-only architecture or secret configuration becoming a software dependency;
+- deployment docs describing a parallel self-hosting stack rather than the supported architecture;
+- public README/site/blog language silently redefining canonical behaviour;
+- public Issues being used for vulnerability reports that require private disclosure;
+- Apache-2.0 software rights being confused with trademark/brand permission;
+- speculative directories/packages/marketplace/LMS/community infrastructure without demonstrated responsibility.
 
 At least one accepted finding must complete Review → PI → governed Delivery.
 
@@ -448,15 +626,15 @@ At least one accepted finding must complete Review → PI → governed Delivery.
 
 Prove Creative Delivery against a public-facing Kakeibo claim whose grounding depends on a real, inspectable bounded Kei implementation.
 
-Checkpoint 5 therefore establishes the **offline/repository half** of the Kei engineering lifecycle before publishing a Kakeibo Kei-related public Asset.
+Checkpoint 5 establishes the **offline/repository half** of the Kei engineering lifecycle before publishing a Kakeibo Kei-related public Asset.
 
 ### Owning Kakeibo specs
 
 ```text
 03 Kei Assistant v2
-05 System Architecture/Data v2 §23
-06 Engineering Delivery/Operations v2 §15 offline gates
-07 Open-Source Organisation v2 Kei transparency
+05 System Architecture/Data v2
+06 Engineering Delivery/Operations v2 offline gates
+07 Open-Source Project Organisation v3 Kei/public-source transparency
 ```
 
 ### Required Kakeibo Delivery A — bounded Kei runtime foundation
@@ -472,6 +650,8 @@ packages/kei/
   evals/
   release/
 ```
+
+Do not create `skills/`, `tools/`, `memory/`, `agents/` or `subagents/` merely because an agent framework supports them. Add those structures only if `03`, `05` and `06` later accept the corresponding capability.
 
 Implement the initial explicit task boundary:
 
@@ -492,6 +672,7 @@ The first candidate/release manifest must resolve:
 ```text
 Kei semantic version
 bundle hash
+public source commit
 policy version/hash
 persona version/hash
 task contract versions/hashes
@@ -532,7 +713,7 @@ Ground public claims in:
 03 behavioural contract
 05 runtime implementation/architecture
 06 evaluation/release rules
-07 open-source transparency rules
+07 public/private + Git-traceability rules
 ```
 
 Verify:
@@ -540,9 +721,12 @@ Verify:
 - no adviser claims;
 - no confidence-score language;
 - explicit bounded-task/user-authority model;
-- production behaviour is described as Git-traceable/versioned;
-- safe benchmark/evaluation assets are public where the implementation exists;
-- no raw production financial trace is published.
+- official production-defining Kei behaviour resolves to public Git-traceable source;
+- the official service is not described as having a hidden private Kei behaviour layer;
+- safe benchmark/red-team definitions and synthetic evaluation assets are public where implementation exists;
+- evaluation assets remain engineering evidence rather than a new marketplace/examples subsystem;
+- no raw production financial trace is published;
+- external prompt/evaluation dashboards are supplementary, never the sole canonical behaviour source.
 
 Then human-approve and publish the exact Asset through normal Review & Creative semantics.
 
@@ -584,6 +768,7 @@ Kakeibo has:
 - an active baseline KeiRelease/model route or controlled staging equivalent;
 - benchmark/red-team hard gates passing;
 - exact bundle hashes and model-route references;
+- production-defining behaviour traceable to public source;
 - operational/evaluation metadata with raw financial prompts/responses minimised.
 
 ### Required Kakeibo production-evaluation work
@@ -635,7 +820,8 @@ canonical state-mutation rules
 - candidate output never reaches the user;
 - candidate cannot mutate canonical state or trigger normal product side effects;
 - candidate failure cannot delay/fail the active response;
-- retained data is evaluation metadata by default, not raw financial prompts/grounding/responses.
+- retained data is evaluation metadata by default, not raw financial prompts/grounding/responses;
+- private experiment evidence is not copied into the public repository merely to demonstrate open-source transparency.
 
 ### Rollback acceptance
 
@@ -660,7 +846,7 @@ Also run one non-Kakeibo fixture proving Pactwright Experiment schema/commands c
 
 ### Goal
 
-Keep the existing Publication → Operations → PI loop, but apply the v2 trust boundary when the Publication concerns Kei.
+Keep the Publication → Operations → PI loop while enforcing Kakeibo's public/private, canonical-writing and analytics boundaries.
 
 ### Additional Kakeibo acceptance
 
@@ -669,8 +855,11 @@ When observing a Kakeibo publication:
 - publication analytics remain external/bounded evidence;
 - first-party marketing analytics may supply evidence;
 - mobile/product financial behaviour does not flow to Meta;
-- if the publication makes Kei claims, the Asset must remain traceable to the exact public behavioural/evaluation sources current when it was approved;
-- experiment or production evidence may motivate a superseding Asset, but must not mutate the previously approved Asset.
+- no identifiable production financial data appears in public content;
+- if the publication makes Kei claims, the Asset remains traceable to the exact public behavioural/evaluation sources current when it was approved;
+- public writing may propose ideas but cannot silently redefine `01`–`07`;
+- later Experiment/production evidence may motivate a superseding Asset but cannot mutate the original approved Asset;
+- software licensing, trademark/brand permission and third-party asset licensing remain distinct when public creative work uses Kakeibo branding/assets.
 
 ---
 
@@ -678,7 +867,7 @@ When observing a Kakeibo publication:
 
 ### Goal
 
-Project the complete first-party Pactwright system including the new Operations Experiment state.
+Project the complete first-party Pactwright system including Operations Experiment state while preserving Kakeibo's public contribution/security boundaries.
 
 ### Additional required Operations projection
 
@@ -712,15 +901,26 @@ Delivery Evidence
 → later Delivery
 ```
 
-GitHub must remain projection only.
+GitHub remains projection only.
+
+Kakeibo repository collaboration surfaces preserve their own authority:
+
+```text
+Issues       → actionable work, not canonical behaviour
+Discussions  → exploration/questions, not canonical behaviour
+SECURITY.md  → private vulnerability route
+PRs          → implementation proposals; canonical changes identify/update owning spec
+```
+
+No Project view, Issue, Discussion or PR field may turn a noncanonical proposal into Kakeibo product truth.
 
 ---
 
-## 13. Checkpoint 9 — Hardened Closed Loop / Kei Regression Learning
+## 13. Checkpoint 9 — Hardened Closed Loop / Open-Source Readiness / Kei Regression Learning
 
 ### Goal
 
-Turn observed failures from the complete programme into permanent evaluation coverage, including Kakeibo's production Kei lifecycle.
+Turn observed failures into permanent evaluation coverage, prove Kakeibo's production Kei regression lifecycle, and harden the public repository so the real supported product can be inspected, deployed and contributed to without a hidden parallel architecture.
 
 ### Pactwright evaluation additions
 
@@ -758,9 +958,9 @@ incident / observed failure
 → controlled promotion or rejection
 ```
 
-### Kakeibo regression review
+Production failure evidence becomes public regression coverage only after minimum reproduction and sanitisation/synthetic reconstruction.
 
-Review all seven canonical owners, not the old Financial/Product/Mobile/Kei/Tech-Stack subset.
+### Kakeibo seven-owner regression review
 
 Inspect specifically for:
 
@@ -778,11 +978,109 @@ Kei release/model route conflation
 dashboard-only production behaviour
 unsafe experiment variants
 raw private AI traces becoming public artefacts
+hidden premium financial/review/Kei implementation
+official-service-only software dependency
+parallel Community/Self-Hosted architecture
+public docs/README/blog contradicting canonical specs
+Apache-2.0/trademark/asset-rights conflation
+public vulnerability disclosure where private reporting is required
+speculative marketplace/plugin/LMS/community infrastructure
+repository areas with no demonstrated responsibility
 ```
+
+### Public repository readiness
+
+By Checkpoint 9 acceptance, Kakeibo's public repository must contain or deliberately resolve the initial-public-project surfaces required by `07`:
+
+```text
+README.md
+LICENSE                    → Apache-2.0
+SECURITY.md                → private disclosure + supported-version process
+CONTRIBUTING.md
+CODE_OF_CONDUCT.md
+TRADEMARKS.md              → software rights separated from official branding
+CHANGELOG / Releases
+canonical specs
+working source + tests
+synthetic financial fixtures
+public Kei benchmark/red-team assets
+basic product/technical/deployment docs
+```
+
+The README/public trust path must explain, without duplicating all documentation:
+
+```text
+what Kakeibo is
+weekly-review model
+why open source
+financial / AI / privacy boundaries
+Kei behaviour + evaluation
+architecture at a glance
+Quick Start / tests
+deployment
+canonical specs
+contributing / security
+official service
+licence / trademark
+```
+
+### Independent-deployment acceptance
+
+Prove that a technically capable operator can follow the documented supported architecture using operator-owned provider accounts/credentials without access to hidden official code/configuration.
+
+The proof may use test/sandbox provider configuration where production accounts are inappropriate. The core Quick Start must not require production Meta, Salt Edge, mobile-store submission or production LLM credentials merely to run tests and a representative review flow.
+
+Deployment docs separate:
+
+```text
+required
+optional capability
+production-only
+future
+```
+
+and cover the actual managed-provider architecture rather than inventing a second local-production stack.
+
+### Contribution/governance acceptance
+
+Verify lightweight contributor mechanics support:
+
+```text
+Level 1 local improvement
+Level 2 behavioural implementation
+Level 3 canonical change
+```
+
+Meaningful PRs identify affected canonical spec plus privacy/security/analytics/Kei/release impact where relevant.
+
+Structural expansion follows the `07` evidence rule. Do not scaffold a marketplace, plugin framework, LMS or community portal for launch completeness.
+
+### Pre-public-launch decisions
+
+Resolve or explicitly document the accepted mechanism for remaining `07` launch decisions:
+
+```text
+trademark policy
+brand/asset licence
+copyright ownership wording
+contributor licence policy if any
+supported-version/security policy
+official wording for independent deployments
+```
+
+Do not add a Contributor Licence Agreement without a concrete reason.
 
 ### Failure matrix
 
-Include at least one Experiment failure drill in addition to the existing core/extension failure boundaries.
+Include at least one Experiment failure drill plus an open-source boundary drill, for example:
+
+```text
+private production trace accidentally selected for a public artefact
+or
+hidden official-only configuration required by a documented independent deployment
+```
+
+The failure must be caught before publication/release acceptance.
 
 ---
 
@@ -790,7 +1088,7 @@ Include at least one Experiment failure drill in addition to the existing core/e
 
 ### Goal
 
-Prove the complete Pactwright system can add Kakeibo's planned second ingestion mechanism without changing downstream financial, review or Kei semantics.
+Prove the complete Pactwright system can add Kakeibo's planned second ingestion mechanism without changing downstream financial, review or Kei semantics, while exercising the v3 public adapter/contributor/deployment model.
 
 The graduation scenario is provider-neutral in architecture, with **Salt Edge Account Information** as the current planned first connected-banking implementation.
 
@@ -828,6 +1126,39 @@ rate-limit/retry
 provider outage
 ```
 
+### Public adapter contract
+
+Salt Edge graduates as a normal public ingestion implementation, for example:
+
+```text
+packages/financial-ingestion/
+  core/
+  csv/
+  salt-edge/
+```
+
+Public:
+
+```text
+adapter implementation
+mapping / normalisation
+callback logic
+synthetic fixtures
+deterministic tests
+provider setup/sandbox documentation
+known limitations/recovery guidance
+```
+
+Private:
+
+```text
+production credentials / private keys
+commercial/provider agreement
+production connection/user data
+```
+
+Every deployment uses operator-owned Salt Edge credentials where that capability is enabled.
+
 ### Semantic invariants
 
 - provider lifecycle remains distinct from Kakeibo review truth;
@@ -835,7 +1166,25 @@ provider outage
 - provider IDs/cursors do not redefine FinancialEntry identity semantics;
 - no payment initiation is implied;
 - provider outage does not damage trusted history or disable CSV ingestion;
-- Salt Edge-specific fields stay outside the financial domain.
+- Salt Edge-specific fields stay outside the financial domain;
+- the public adapter does not create a second Kakeibo financial model;
+- adding the second real source still does not justify a generic plugin marketplace/registry unless concrete ecosystem demand exists.
+
+### Adapter contribution acceptance
+
+Prove the adapter boundary is understandable enough that another contributor could implement a compatible source using:
+
+```text
+source identity
+raw-source boundary
+normalisation
+idempotency
+fixtures
+failure behaviour
+known limitations
+```
+
+without changing the financial core.
 
 ### Kei-specific connected-banking regression
 
@@ -843,13 +1192,40 @@ Provider labels/references are untrusted data and must remain unable to alter Ke
 
 A future connected-banking Kei task/skill may explain provider state only within the accepted bounded authority model; it must not cause dynamic agent-selected financial workflows.
 
+### Public synchronisation
+
+When Salt Edge becomes usable, update the smallest necessary public surfaces:
+
+```text
+adapter implementation
+ingestion/provider docs
+security/provider notes
+fixtures/tests
+README capability summary
+release notes
+website capability summary where user-relevant
+```
+
+Do not mechanically update every public surface.
+
 ---
 
 ## 15. Public-source acceptance progression
 
-As Kakeibo capabilities become real, update only the smallest public surface set required to make them inspectable.
+As Kakeibo capabilities become real, update only the smallest public surface set required to make them understandable, inspectable and operable.
 
-For Kei this means, when implemented:
+General flow:
+
+```text
+canonical spec
+→ implementation
+→ tests/evaluation
+→ release artefact
+→ technical/reference docs
+→ concise public explanation
+```
+
+Kei flow:
 
 ```text
 03 behavioural contract
@@ -861,6 +1237,17 @@ For Kei this means, when implemented:
 → README/docs trust explanation
 ```
 
+Ingestion flow:
+
+```text
+ingestion contract
+→ CSV adapter
+→ Salt Edge adapter
+→ contributor/deployment guide
+```
+
+Synthetic fixtures should be reused across domain/adapter/API tests, Kei evaluation, documentation, screenshots and contributor onboarding where safe.
+
 Do not publish raw production financial traces to prove transparency.
 
 External model/evaluation dashboards may support analysis but cannot become the only source of production-defining Kei behaviour.
@@ -869,16 +1256,18 @@ External model/evaluation dashboards may support analysis but cannot become the 
 
 ## 16. Graph boundary summary
 
-The v2 Kakeibo changes require **one generic Pactwright graph addition**:
+The earlier Kakeibo v2 runtime changes required **one generic Pactwright graph addition**:
 
 ```text
 Operations Graph
 ├── Deployment
-├── Experiment      ← added
+├── Experiment
 └── Observation
 ```
 
-They do **not** justify adding:
+The v3 open-source organisation changes do **not** justify another Pactwright graph node type. They strengthen repository/public/private/contribution/deployment acceptance around existing project truth.
+
+Do **not** add:
 
 ```text
 KeiRelease
@@ -887,19 +1276,21 @@ KeiPolicy
 KeiPersona
 ModelRoute
 BenchmarkCase
+OpenSourceEdition
+AdapterMarketplace
 ```
 
 as Pactwright core/extension node types.
 
-Those are Kakeibo-owned implementation/release artefacts delivered through normal Delivery and referenced by exact production exposures.
+Those remain Kakeibo-owned implementation/release/governance concepts delivered through normal Delivery where applicable.
 
 The distinction is:
 
 ```text
 what Kakeibo behaviour is
-→ Kakeibo repository + Delivery
+→ Kakeibo canonical specs + repository + Delivery
 
-what controlled comparison was run in production
+what controlled comparison was run
 → Pactwright Operations Experiment
 
 what happened
@@ -916,6 +1307,8 @@ what to change next
 
 ## 17. Governing test
 
-The Kakeibo proving project is doing its job when a materially richer product requirement can force Pactwright to add a **generic missing responsibility** without causing Pactwright to absorb Kakeibo-specific product semantics.
+The Kakeibo proving project is doing its job when materially richer product requirements can force Pactwright to add a **generic missing responsibility** without causing Pactwright to absorb Kakeibo-specific semantics.
 
-For the 2026-09-02 v2 update, controlled Experiment truth meets that threshold. Kei-specific release internals do not.
+The controlled-production need justified generic `Experiment` semantics because it introduced a reusable missing Operations responsibility.
+
+The Open-Source Project Organisation v3 update does not cross that threshold. Its requirements are correctly expressed as Kakeibo repository, governance, deployment, security, contribution and public-product acceptance using Pactwright's existing Delivery, Review, Creative, Operations and Project Intelligence capabilities.
