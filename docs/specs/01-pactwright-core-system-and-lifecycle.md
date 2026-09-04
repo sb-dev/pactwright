@@ -393,8 +393,7 @@ A Brief owns:
 - relevant existing patterns;
 - required changes or outputs;
 - required verification;
-- delivery-specific constraints;
-- the selected lifecycle shape.
+- delivery-specific constraints.
 
 It should not repeat:
 
@@ -406,6 +405,8 @@ It should not repeat:
 The Brief is downstream of the Contract.
 
 It may refine **how** the Contract will be fulfilled but may not weaken or reinterpret **what** the Contract requires.
+
+Lifecycle shape selection occurs around Brief creation, but the exact persistence location of the resolved shape identity is part of the lifecycle-shape storage and locking design rather than a Brief schema requirement.
 
 ---
 
@@ -596,18 +597,7 @@ A lifecycle shape does not define:
 - provider selection;
 - Project Graph semantics.
 
-The same shape may be used for:
-
-```text
-software
-UI/UX
-video
-music
-narrative
-game development
-research
-other production domains
-```
+The same shape may be used across software, UI/UX, video, music, narrative, game development, research and other production domains.
 
 ---
 
@@ -628,7 +618,7 @@ A Delivery step invokes the current Delivery responsibility.
 
 It means:
 
-> Perform the work required by this phase of the Brief.
+> Perform the work required by the currently active Delivery step.
 
 The production meaning is interpreted by the selected Agent Pack and Production Skills.
 
@@ -664,31 +654,7 @@ No additional core lifecycle primitives are required initially.
 
 # 19. Domain-Specific Stages Stay Outside Pactwright
 
-Pactwright must not encode production-domain stages such as:
-
-```text
-storyboard
-shot generation
-edit
-mix
-master
-
-user flow
-wireframe
-prototype
-
-architecture sketch
-implementation
-database migration
-
-paper mechanic
-grey-box
-level production
-
-search map
-evidence table
-claim synthesis
-```
+Pactwright must not encode production-domain stages such as storyboard, shot generation, edit, mix, master, wireframe, prototype, implementation, migration, grey-box, search map or claim synthesis.
 
 Those concepts belong to Production Skills.
 
@@ -706,25 +672,7 @@ Brief
 → Evidence
 ```
 
-may be interpreted by a video skill as:
-
-```text
-storyboard
-→ storyboard review
-→ approval
-→ production/edit
-→ final review
-```
-
-and by a UI/UX skill as:
-
-```text
-flow + wireframe
-→ UX review
-→ approval
-→ high-fidelity prototype
-→ final review
-```
+may be interpreted differently by different Production Skills without changing Pactwright semantics.
 
 The shape is shared.
 
@@ -755,9 +703,7 @@ The core architecture must support richer shapes without requiring domain-specif
 
 # 21. Reference Lifecycle Shapes
 
-The following patterns establish the intended expressive boundary.
-
-They are reference shapes, not mandatory initial built-ins.
+The following patterns illustrate possible domain-neutral topologies. They are reference examples, not mandatory built-ins or a normative catalogue.
 
 ## Iterative
 
@@ -765,11 +711,9 @@ They are reference shapes, not mandatory initial built-ins.
 Brief
 → Delivery
 → Review
-   ├─ pass   → Evidence
-   └─ revise → Delivery
+   ├→ Evidence
+   └→ Delivery
 ```
-
-Suitable when work commonly requires bounded correction before acceptance.
 
 ## Checkpointed
 
@@ -781,8 +725,6 @@ Brief
 → Review
 → Evidence
 ```
-
-Suitable when an intermediate direction or low-cost representation should be approved before more expensive work begins.
 
 ## Progressive
 
@@ -798,53 +740,29 @@ Brief
 → Evidence
 ```
 
-Suitable when work progresses through several materially different fidelity levels.
+These examples show that lifecycle shapes may support repeated Delivery and Review, Gates and corrective transitions without introducing domain-specific stages.
 
-These patterns demonstrate what the lifecycle model must be able to express.
-
-They do not justify a generic workflow language.
+They do not establish required built-ins or justify a generic workflow language.
 
 ---
 
 # 22. Cheap-to-Expensive Production
 
-Many production domains benefit from progressing from cheap representations to expensive execution.
+Production Skills research across Narrative, Music and Video supports a common principle:
 
-Common pattern:
+> Resolve important uncertainty using the cheapest adequate representation before committing to more expensive production where that approach is useful.
 
-```text
-intent
-→ cheap representation
-→ alternatives
-→ selection
-→ approval
-→ higher-fidelity execution
-→ evaluation
-→ diagnosis
-→ smallest sufficient correction
-```
+Examples include concepts and outlines in Narrative, motifs/MIDI/demos in Music, and storyboards/references in Video.
 
-Examples:
+This is a production doctrine that Pactwright lifecycle shapes should be able to accommodate. It is not a mandatory Pactwright lifecycle progression, and Pactwright does not define a universal sequence of exploration, selection, approval, production and correction stages.
 
-| Domain | Cheap representation |
-|---|---|
-| Software | architecture sketch / implementation strategy |
-| UI/UX | task flow / wireframe |
-| Game development | paper mechanic / grey-box |
-| Deep research | search map / evidence table |
-| Narrative | concept / outline |
-| Music | MIDI / demo |
-| Video | storyboard / reference |
-
-Pactwright should enable this pattern through lifecycle topology.
-
-It must not encode these domain artefacts into the core model.
+Domain-specific representations and production decisions remain owned by Production Skills.
 
 ---
 
 # 23. Shape Selection
 
-Lifecycle shape selection occurs downstream of the Contract.
+Lifecycle shape selection occurs downstream of the Contract, around Brief creation.
 
 Conceptually:
 
@@ -855,24 +773,14 @@ Contract
         ↓
 write Brief
         ↓
-Brief + selected lifecycle shape
+resolved lifecycle strategy
 ```
 
-The selected shape is part of the Brief's execution strategy.
+A lifecycle run must be able to identify which resolved shape definition it is executing.
 
-The Brief must identify the exact resolved shape used for its lifecycle.
+The exact persistence and identity mechanism is unresolved. It may ultimately use an id, version, lock identity, hash or another reproducible representation.
 
-Conceptually this identity includes:
-
-```text
-shape id
-shape version
-shape hash
-```
-
-The exact serialisation may evolve without changing the semantic requirement.
-
-Shape identity must be reproducible and reviewable.
+This specification does not require shape hashing or make shape identity part of Brief identity.
 
 ---
 
@@ -947,31 +855,7 @@ Policy may determine:
 - remote automation behaviour;
 - other execution constraints.
 
-For example, the same shape may operate as:
-
-```text
-Delivery
-→ automatic
-
-Review
-→ automatic
-
-Gate
-→ human
-```
-
-or under a more delegated policy:
-
-```text
-Delivery
-→ automatic
-
-Review
-→ automatic
-
-Gate
-→ authorised agent
-```
+For example, the same shape may use automatic Delivery and Review with a human Gate, or delegate that Gate to an authorised agent under repository policy.
 
 Changing authority should not require creating a different lifecycle shape.
 
@@ -1044,27 +928,7 @@ iteration counts
 execution status
 ```
 
-Conceptually:
-
-```yaml
-brief: brief-123
-
-shape:
-  id: progressive
-  version: ...
-  hash: ...
-
-current_step: review
-
-completed:
-  - delivery-explore
-  - review-explore
-  - direction-gate
-  - delivery-realise
-
-iterations:
-  delivery-realise: 1
-```
+The exact representation of `resolved shape identity`, including whether it uses a version or hash, remains part of the lifecycle-shape storage and locking design.
 
 The exact storage path and serialisation are implementation concerns.
 
@@ -1086,36 +950,11 @@ Under lifecycle shapes it means:
 
 > Execute the currently active Delivery step for this Brief.
 
-The command may therefore be invoked several times during one Contract fulfilment.
+The command may therefore be invoked several times during one Contract fulfilment, with Reviews and configured Gates controlling progression between declared steps.
 
-Example:
+No domain phase names or separate `/gate` command are defined by this specification.
 
-```text
-/deliver-brief
-→ explore
-
-/review
-→ evaluate exploration
-
-/gate
-→ approve direction
-
-/deliver-brief
-→ realise
-
-/review
-→ evaluate realisation
-
-/deliver-brief
-→ finish
-
-/review
-→ final verification
-```
-
-The Pactwright command remains domain-neutral.
-
-The Production Skills determine what `explore`, `realise` or another phase actually requires.
+The Pactwright command remains domain-neutral. Production Skills determine what work the active Delivery step requires.
 
 ---
 
@@ -1133,15 +972,7 @@ Closing Review determines whether the latest delivered state satisfies the Contr
 
 All Review steps use the same core semantic responsibility.
 
-Different review needs should normally be satisfied by:
-
-```text
-current context
-+ Agent Pack
-+ appropriate Production Skills
-```
-
-rather than creating new Pactwright Review capabilities.
+Different review needs should normally be satisfied by current context, the Agent Pack and appropriate Production Skills rather than by creating new Pactwright Review capabilities.
 
 ---
 
@@ -1196,31 +1027,11 @@ NO
 
 # 32. Corrective Routing
 
-Review may identify that work needs correction.
+Review may identify that work can continue, requires correction, or cannot currently progress.
 
-The basic outcomes are:
+Pactwright needs enough structured Review output for the runtime to choose among declared transitions, but this specification does not define a formal `pass | revise | blocked` protocol.
 
-```text
-pass
-revise
-blocked
-```
-
-## Pass
-
-Continue along the declared successful transition.
-
-## Revise
-
-Identify the owning Delivery layer and return through an allowed corrective transition.
-
-## Blocked
-
-Stop progression until the blocking condition is resolved.
-
-The reviewer may identify the responsible layer.
-
-The runtime validates whether the requested transition exists.
+When correction is required, Review may identify the relevant Delivery step or responsibility. The runtime validates that the requested corrective route exists in the selected shape.
 
 AI must not invent lifecycle transitions.
 
@@ -1228,43 +1039,13 @@ AI must not invent lifecycle transitions.
 
 # 33. Smallest Sufficient Correction
 
-Pactwright should encourage local repair rather than restarting complete productions unnecessarily.
+Production Skills research across Narrative, Music and Video supports preserving valid work and correcting the smallest useful production scope that owns a defect.
 
-Cross-domain examples include:
+Pactwright's responsibility is limited to allowing a bounded transition back to an appropriate declared Delivery step.
 
-```text
-software
-→ affected change/component
+The Production Skill determines the domain-specific correction unit, what can be preserved and what must be reopened.
 
-UI/UX
-→ affected interaction/flow
-
-game development
-→ mechanic/system
-
-research
-→ claim
-
-narrative
-→ scene
-
-music
-→ section
-
-video
-→ shot
-```
-
-Pactwright does not need to understand these units.
-
-Its responsibility is only to allow a bounded transition back to the appropriate Delivery step.
-
-The Production Skill determines:
-
-- what failed;
-- which production layer owns the failure;
-- what can be preserved;
-- what smallest unit must be reopened.
+Pactwright does not model scenes, shots, musical sections, components or equivalent domain units as lifecycle primitives.
 
 ---
 
@@ -1274,30 +1055,9 @@ Lifecycle loops must not be unbounded.
 
 Iteration limits are execution policy.
 
-For example:
+A Review may route back to Delivery through a declared transition, but policy determines how many automatic iterations are permitted before human intervention, a stop condition or another configured escalation.
 
-```text
-Review
-→ revise
-→ Delivery
-→ Review
-```
-
-may be valid, but policy determines how many automatic iterations are permitted before:
-
-- human intervention;
-- blocked state;
-- another configured escalation.
-
-Pactwright should not create separate:
-
-```text
-retry shape
-revision shape
-repair shape
-```
-
-for this purpose.
+Pactwright should not create separate retry, revision or repair shapes for this purpose.
 
 A backward transition plus bounded policy is sufficient.
 
@@ -1342,7 +1102,7 @@ Responsible for:
 - identifying defects;
 - detecting scope creep;
 - challenging unnecessary complexity;
-- identifying the smallest responsible correction layer.
+- identifying whether corrective Delivery is required and where it should return within the declared lifecycle shape.
 
 The selected Agent Pack determines which agent implements each responsibility.
 
@@ -1396,16 +1156,7 @@ Production Skills
 → narrative + music + video
 ```
 
-Pactwright need not understand:
-
-```text
-screenplay structure
-musical arrangement
-storyboarding
-shot construction
-```
-
-to govern an episode Contract successfully.
+Pactwright need not understand screenplay structure, musical arrangement, storyboarding or shot construction to govern an episode Contract successfully.
 
 ---
 
@@ -1413,28 +1164,7 @@ to govern an episode Contract successfully.
 
 One Pactwright Delivery may require several Production Skills families.
 
-Examples:
-
-```text
-children's television:
-Narrative + Music + Video
-```
-
-```text
-video game:
-Game Development
-+ Game Assets
-+ Narrative
-+ Music
-+ UI/UX
-```
-
-```text
-software product:
-Software Engineering
-+ UI/UX
-+ Deep Research
-```
+Examples include Narrative + Music + Video for children's television, or Software Engineering + UI/UX + Deep Research for a software product.
 
 The core lifecycle must therefore assume:
 
@@ -1456,35 +1186,17 @@ It does not require additional lifecycle stages.
 
 ---
 
-# 38. Technical Contracts
+# 38. Domain Design Artefacts
 
-Production Skills may derive domain-specific contracts under the governing Pactwright Contract.
+Production Skills may create domain-specific design or technical artefacts while fulfilling a Pactwright Contract.
 
-Software examples include:
+Pactwright core does not define a separate class of API, event, interface, component, schema or other technical contracts.
 
-```text
-API contract
-event contract
-interface contract
-component contract
-schema contract
-```
+The only core authority rule is:
 
-These are technical artefacts used to satisfy the Pactwright Contract.
+> Domain-specific artefacts must remain subordinate to the governing Pactwright Contract and must not become competing definitions of the authorised project outcome.
 
-They do not replace it.
-
-Authority remains:
-
-```text
-Pactwright Contract
-        ↓ governs
-domain design
-        ↓ may derive
-technical/domain contracts
-```
-
-There must not be two competing definitions of the authorised project outcome.
+Their semantics remain owned by the relevant Production Skills or project domain.
 
 ---
 
@@ -1665,15 +1377,15 @@ old Brief
 
 ## Contract changes
 
-When authorised meaning changes:
+When authorised meaning changes, return to the Decision stage and create a new authorised Decision and new canonical Contract.
 
 ```text
-new Decision
-→ new Contract
-→ new Brief
+new Decision --supersedes--> previous current Decision
+new Contract --supersedes--> previous current Contract
+new Brief    --decomposes--> new Contract
 ```
 
-The previous current Contract is superseded.
+The previous current Decision and Contract are both superseded so there remains one current authorised direction and one readable canonical Contract.
 
 ## Evidence correction
 
@@ -1689,11 +1401,11 @@ A later production Observation does not supersede Evidence merely because real-w
 
 ---
 
-# 46. Workflow Commands
+# 46. Workflow and Runtime Commands
 
 AI-facing commands expose Contract-driven operations through the active adapter.
 
-The stable command surface includes:
+The stable adapter command surface includes:
 
 ```text
 /capture-intent
@@ -1705,9 +1417,21 @@ The stable command surface includes:
 /prepare-evidence
 ```
 
-These commands express Pactwright lifecycle operations.
+These commands express Pactwright lifecycle operations and are distinct from Production Skill commands.
 
-They are distinct from Production Skill commands.
+Pactwright also preserves the runtime lifecycle interface already present in the working architecture:
+
+```text
+pactwright lifecycle status
+pactwright lifecycle next
+pactwright lifecycle run
+```
+
+`lifecycle status` reports current stage, completed stages, blocking stage, required actor, validation problems and current lineage.
+
+`lifecycle next` determines the next permitted core Delivery lifecycle action without executing it.
+
+`lifecycle run` executes automatic stages until a configured gate is reached, the lifecycle completes, a stage fails or validation fails. It must not skip a configured gate.
 
 ---
 
@@ -1776,7 +1500,7 @@ The operation:
 
 - inspects relevant project state;
 - resolves delivery context;
-- resolves the lifecycle shape;
+- resolves the lifecycle strategy;
 - creates the current Brief.
 
 Canonical mutation:
@@ -1785,6 +1509,8 @@ Canonical mutation:
 Brief
 brief --decomposes--> contract
 ```
+
+The exact storage of resolved lifecycle-shape identity is not defined as part of the Brief schema by this specification.
 
 ---
 
@@ -1817,10 +1543,12 @@ It:
 
 - evaluates the latest relevant delivered state;
 - invokes `delivery-review`;
-- produces `pass`, `revise` or `blocked` outcome;
-- may identify the responsible correction layer;
+- reports whether progression may continue or corrective action is required;
+- may identify the relevant Delivery step for correction;
 - cannot invent transitions;
 - does not create Evidence directly.
+
+The exact Review-result vocabulary is not fixed by this specification.
 
 The runtime validates and applies the next permitted lifecycle transition.
 
@@ -1836,7 +1564,7 @@ Before mutation, Pactwright must verify that:
 
 - the Brief is current;
 - the latest delivered state has been reviewed;
-- the closing Review passed;
+- the closing Review permits successful Evidence closure;
 - no required Gate remains unresolved;
 - the Contract and Brief lineage is valid.
 
@@ -1900,10 +1628,10 @@ and:
 
 ```text
 reviewer
-→ returns revise + owning layer
+→ reports that correction is required and identifies a relevant Delivery step
 
 runtime
-→ validates declared corrective transition
+→ validates the declared corrective transition
 → updates execution state
 ```
 
@@ -1952,7 +1680,7 @@ Pactwright validation must detect at least:
 - invalid core relationships;
 - missing required lineage;
 - contradictory current records;
-- multiple unsuperseded canonical Contracts for one active direction;
+- multiple unsuperseded canonical Decisions or Contracts for one active direction;
 - invalid Brief-to-Contract lineage;
 - invalid Evidence-to-Brief lineage;
 - illegal supersession;
@@ -1974,7 +1702,7 @@ Validation should fail before canonical mutation where possible.
 The following are canonical Pactwright invariants.
 
 1. Pactwright exists to turn Intent into an explicit authorised Contract and govern fulfilment against it.
-2. There is one current canonical Contract for an authorised direction.
+2. There is one current canonical Decision and Contract for an authorised direction.
 3. Contract alternatives are transient.
 4. Every proceeding Contract is selected by an authorised Decision.
 5. A Brief is downstream of and constrained by its Contract.
@@ -2051,7 +1779,7 @@ Broadly implemented:
 - Contract-driven workflow commands;
 - graph-derived Delivery state;
 - deterministic graph mutation;
-- lifecycle status and progression;
+- `pactwright lifecycle status`, `next` and `run`;
 - automatic/manual stage policy;
 - human-gated Contract approval;
 - transient Delivery and Review stages;
@@ -2080,7 +1808,7 @@ Brief
 The canonical target adds:
 
 - explicit lifecycle-shape semantics;
-- shape identity pinned to the Brief;
+- reproducible identification of the selected shape, with exact persistence unresolved;
 - phase-aware repeated Delivery and Review;
 - shape execution state;
 - declared corrective transitions;
