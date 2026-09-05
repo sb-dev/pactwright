@@ -188,6 +188,8 @@ same Pactwright lock
 
 There must not be separate CI agents and interactive agents implementing different semantic behaviour.
 
+GitHub consumes the environment identity supplied by Pactwright Distribution; it does not derive a separate environment hash.
+
 ---
 
 # 7. Core Delivery Automation
@@ -330,7 +332,7 @@ It validates at least:
 - secret scan before snapshots;
 - triage output.
 
-Internal Sources from Graph Review and Operations use the same path.
+Internal Sources from Graph Review and Operations use the same path while preserving the distinction that Graph Review Findings are non-graph execution outputs and Operations Observations are canonical Operations records.
 
 Duplicate or irrelevant material may stop cheaply. Class 0/1 mutations remain bounded by Project Intelligence automatic-mutation rules.
 
@@ -531,13 +533,23 @@ and validation uses:
 pactwright graph-review validate
 ```
 
-Every run records the Project Graph revision supplied by Pactwright runtime.
+Every Review Execution records the replay identities supplied by Pactwright runtime:
+
+```text
+repository_revision
+project_graph_revision
+environment_lock_hash
+```
+
+GitHub does not derive or reinterpret those identities.
 
 Every Finding from a successful review must be handed to Project Intelligence through normal internal Source ingestion.
 
 A failed hand-off leaves the successful Finding valid and retryable. GitHub must not rerun the review merely to retry Source hand-off.
 
 A failed Review Execution records failure provenance and emits no Findings.
+
+For a pinned rerun, GitHub invokes the Graph Review operation and lets Pactwright reconstruct and verify the recorded replay base. GitHub must not substitute the workflow's current checkout or current environment if that reconstruction fails.
 
 ---
 
@@ -573,7 +585,7 @@ Advisory         3
 Source hand-off  5
 ```
 
-Review Executions and Findings remain execution provenance/output until Findings enter Project Intelligence as Sources.
+Review Executions and Findings remain execution provenance/output even after a Finding is handed to Project Intelligence. The resulting Source is Project Intelligence's own canonical record; Source ingestion does not turn the Finding itself into Project Graph state.
 
 ---
 
@@ -599,6 +611,7 @@ Asset validation checks at least:
 - human Asset approval;
 - exact stored/referenced content hash where verifiable;
 - required grounding id/hash pairs;
+- conditional Project Intelligence dependency when the Asset requires governed project grounding;
 - Asset immutability and valid supersession relationships.
 
 Changes under `assets/**` must validate affected Asset records so repository-backed content cannot diverge from approved `content_hash`.
@@ -625,6 +638,8 @@ pactwright assets approve-asset <evidence-id>
 
 but Pactwright must still create the canonical Asset with human approval and exact content identity.
 
+Where the Asset depends on governed project truth, the operation must also enforce Spec 05's Project Intelligence grounding requirement.
+
 Scheduled or event-triggered release of an already approved Asset may invoke:
 
 ```text
@@ -648,7 +663,7 @@ Pactwright / Assets
 Pactwright / Publication
 ```
 
-`Assets` validates Asset structure, Evidence provenance, approval, content identity, grounding and supersession.
+`Assets` validates Asset structure, Evidence provenance, approval, content identity, applicable grounding and supersession.
 
 `Publication` validates the referenced approved Asset, asset-hash equality, publication provenance and `publishes` relationship.
 
@@ -762,7 +777,7 @@ validate:
 - acyclic supersession;
 - separation between correlation and unsupported causality.
 
-A valid Observation enters Project Intelligence through normal Source ingestion.
+A valid Observation enters Project Intelligence through normal Source ingestion while remaining canonical Operations state.
 
 GitHub must not directly create Knowledge, create canonical Intents, assign Project Intelligence consequence class or reorder the global roadmap.
 
@@ -884,7 +899,7 @@ Asset approval, Publication, Deployment and Observation do not create new core D
 
 ---
 
-# 31. Deterministic Project Graph Revision
+# 31. Deterministic Project Graph Revision and Replay Provenance
 
 GitHub consumes one deterministic Project Graph revision supplied by Pactwright runtime.
 
@@ -902,7 +917,7 @@ The revision:
 
 - **includes canonical Extension records**, including Project Intelligence canonical state, Assets, Publications, Deployments and Observations;
 - **excludes generated reports and derived views**;
-- **excludes execution provenance and other non-canonical execution outputs**, including Review/Operations execution records;
+- **excludes execution provenance and other non-canonical execution outputs**, including Review/Operations execution records and Graph Review Findings;
 - is independent of the Git commit containing generated output.
 
 The same canonical Project Graph state must produce the same revision.
@@ -912,6 +927,20 @@ The same canonical Project Graph state must produce the same revision.
 Every applicable view-freshness check compares the report's recorded revision with the current runtime-supplied revision.
 
 A mismatch means derived state is stale. It does not by itself mean canonical Project Graph state is invalid.
+
+For replayable execution provenance, GitHub consumes but does not define the shared Pactwright replay base:
+
+```text
+repository_revision
++ project_graph_revision
++ environment_lock_hash
+```
+
+The identities are supplied by Pactwright Core and Distribution. GitHub must not replace `repository_revision` with the commit containing a generated report, derive a second Project Graph revision, or derive its own environment identity.
+
+When a GitHub-triggered operation claims pinned replay, the workflow must invoke the owning Pactwright command using the recorded replay provenance. If the runtime cannot reconstruct or verify it, the operation fails rather than falling back to the workflow's current checkout or environment.
+
+Generated reports do not require the full replay tuple merely because they are revision-aware; the full tuple is required where the owning execution semantics promise pinned replay.
 
 ---
 
@@ -1005,7 +1034,8 @@ Component-specific guarantees are:
 - Project Intelligence ingestion failures are surfaced; failed promotion does not remove accepted Source capture; report failure does not mutate canonical state;
 - failed Graph Review execution remains failed execution provenance and emits no Findings;
 - failed Graph Review → Project Intelligence hand-off leaves successful Findings valid and retryable without promoting truth;
-- invalid Asset prevents Asset acceptance;
+- failed pinned replay caused by an unreconstructible repository revision, graph mismatch or unresolved environment remains a failed pinned replay and is never silently rerun against current state;
+- invalid Asset prevents Asset acceptance, including missing required Project Intelligence grounding;
 - failed Publication leaves the approved Asset unchanged;
 - Operations authentication/availability failure records failed execution provenance and leaves existing canonical Operations state valid;
 - failed Operations collection or analysis creates no canonical mutation;
@@ -1093,6 +1123,8 @@ GitHub Integration evaluation should verify:
 - Project field/view derivation;
 - Operations PR context;
 - report revision and stale-view detection;
+- replay provenance is passed through without GitHub-derived substitution;
+- pinned replay failure does not fall back to current checkout/environment;
 - Extension enable/disable behaviour;
 - remote reconciliation;
 - preservation of unmanaged GitHub state;
@@ -1115,19 +1147,20 @@ Extension-specific business semantics remain evaluated by their owning Extension
 7. One shared GitHub Project per repository is the default.
 8. Interactive and CI execution use the same locked Pactwright environment.
 9. Shared graph changes are routed by semantic ownership, not path alone.
-10. GitHub consumes but does not define lifecycle topology or Project Graph revision.
+10. GitHub consumes but does not define lifecycle topology, repository replay identity, Project Graph revision or environment-lock identity.
 11. Every generated Pactwright report records its source Project Graph revision.
 12. Applicable view checks compare the recorded report revision with the current runtime revision.
-13. Generated reports and execution provenance are excluded from Project Graph revision; canonical Extension records are included.
-14. `Pactwright / Intelligence Grounding` uses `grounded | attention | blocked | not-applicable`.
-15. Graph Review execution and Finding hand-off preserve Spec 04 failure/provenance boundaries.
-16. Asset and Publication automation preserves Spec 05 hash, approval and failure boundaries.
-17. Operations automation uses `record-deployment`, `refresh`, `corrective-roadmap` and `validate` rather than inventing alternate semantics.
-18. Insufficient operational evidence is not an error and creates no Observation.
-19. GitHub Project edits do not silently mutate canonical Pactwright state.
-20. Reconciliation preserves unmanaged resources.
-21. Permissions follow least privilege.
-22. Disabling an Extension affects only its managed GitHub contribution.
+13. Generated reports, Graph Review Findings and execution provenance are excluded from Project Graph revision; canonical Extension records are included.
+14. Replayable GitHub-triggered executions preserve `repository_revision + project_graph_revision + environment_lock_hash` when their owning semantics require pinned replay.
+15. `Pactwright / Intelligence Grounding` uses `grounded | attention | blocked | not-applicable`.
+16. Graph Review execution and Finding hand-off preserve Spec 04 failure/provenance boundaries.
+17. Asset and Publication automation preserves Spec 05 hash, approval, grounding and failure boundaries.
+18. Operations automation uses `record-deployment`, `refresh`, `corrective-roadmap` and `validate` rather than inventing alternate semantics.
+19. Insufficient operational evidence is not an error and creates no Observation.
+20. GitHub Project edits do not silently mutate canonical Pactwright state.
+21. Reconciliation preserves unmanaged resources.
+22. Permissions follow least privilege.
+23. Disabling an Extension affects only its managed GitHub contribution.
 
 ---
 
@@ -1165,6 +1198,8 @@ Open implementation gaps remain:
 - exact GitHub check conclusion mapping between execution failure, stale derived state and canonical invalidity;
 - the concrete repository configuration that maps a safe GitHub human-authority event to canonical Pactwright operations such as Asset approval.
 
+Historical repository/package retention is not owned by GitHub Integration. GitHub must preserve and pass Pactwright replay identities but must not grow a second snapshot/archive subsystem.
+
 These gaps must not be resolved by making GitHub metadata canonical.
 
 ---
@@ -1182,6 +1217,8 @@ The established GitHub design provides the required architecture:
 - one shared GitHub Project is used by default;
 - PRs, Issues and Projects remain collaboration/projection surfaces.
 
+The cross-spec replay contract adds one integration requirement: GitHub-triggered replayable operations preserve Pactwright's recorded repository, Project Graph and environment identities and never replace them with workflow-local current state.
+
 The redesign separates the old Review & Creative surface into:
 
 ```text
@@ -1197,19 +1234,19 @@ while preserving the sourced GitHub behaviours under their new owners.
 
 ```text
 01 Core System and Lifecycle
-→ owns Delivery/lifecycle semantics consumed by GitHub
+→ owns Delivery/lifecycle semantics and repository/Project Graph replay identity consumed by GitHub
 
 02 Distribution, Agent Packs, Extensions and Evaluation
-→ owns GitHub profile contribution and resolved environment
+→ owns GitHub profile contribution, resolved environment and environment-lock identity
 
 03 Project Intelligence
 → owns Intelligence commands, reports and governance
 
 04 Graph Review
-→ owns Review Executions, Findings and PI hand-off
+→ owns Review Executions, Findings, PI hand-off and pinned replay
 
 05 Assets and Publication
-→ owns Asset approval, hashes and Publication truth
+→ owns Asset approval, grounding, hashes and Publication truth
 
 06 Operations
 → owns Deployment, Observation and corrective-roadmap semantics
@@ -1225,7 +1262,7 @@ while preserving the sourced GitHub behaviours under their new owners.
 
 # 44. Governing Rule
 
-> **GitHub executes and projects Pactwright; it does not become Pactwright. Every workflow invokes the owning Pactwright semantics, every generated report and applicable view is revision-aware, and every GitHub field, check, PR, Issue and Project remains a derived collaboration surface unless repository policy explicitly routes a safe authority event through a canonical Pactwright operation.**
+> **GitHub executes and projects Pactwright; it does not become Pactwright. Every workflow invokes the owning Pactwright semantics, every generated report and applicable view is revision-aware, and replayable operations preserve the repository, Project Graph and environment identities supplied by Pactwright rather than substituting workflow-local state. Every GitHub field, check, PR, Issue and Project remains a derived collaboration surface unless repository policy explicitly routes a safe authority event through a canonical Pactwright operation.**
 
 ---
 
