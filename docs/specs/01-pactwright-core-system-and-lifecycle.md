@@ -72,6 +72,7 @@ This specification is authoritative for:
 - derived Delivery state;
 - supersession;
 - deterministic runtime responsibilities;
+- Project Graph revision and repository replay identity;
 - core validation invariants;
 - the boundary between Pactwright core, Agent Packs, Production Skills and extensions.
 
@@ -1588,6 +1589,7 @@ These include:
 - loading canonical graph state;
 - validating graph schemas;
 - deriving Project Graph revision;
+- resolving repository revision for replayable execution provenance;
 - deriving broad lifecycle state;
 - selecting valid next lifecycle operations;
 - loading lifecycle shape and policy;
@@ -1639,7 +1641,7 @@ This prevents prompts and model behaviour from becoming an implicit state machin
 
 ---
 
-# 56. Project Graph Revision
+# 56. Project Graph Revision and Shared Replay Identity
 
 Pactwright derives one deterministic Project Graph revision from canonical registered Project Graph state.
 
@@ -1670,6 +1672,38 @@ reviews / extensions / reports / projections
 
 The same canonical graph state must produce the same Project Graph revision.
 
+A Project Graph revision identifies semantic graph state. It does **not** identify all repository bytes or the AI execution environment used by an execution.
+
+For execution provenance that promises pinned replay, Pactwright uses the shared replay base:
+
+```text
+repository_revision
++ project_graph_revision
++ environment_lock_hash
+```
+
+`repository_revision` identifies the exact repository state used as the reconstructible execution input base.
+
+`project_graph_revision` identifies the canonical Project Graph state derived from that repository state.
+
+`environment_lock_hash` identifies the exact resolved Pactwright execution environment and is owned by Spec 02.
+
+The identities are deliberately distinct:
+
+```text
+repository_revision
+≠ project_graph_revision
+≠ environment_lock_hash
+```
+
+A replay operation must reconstruct the recorded repository revision and verify that Pactwright derives the recorded Project Graph revision from it before executing. It must also resolve the recorded environment lock through Spec 02.
+
+If any required identity cannot be reconstructed or verified, pinned replay fails explicitly rather than substituting current state.
+
+This shared tuple does not define every execution-specific input. Lifecycle shape identity, Graph Review request/scope and mutable external evidence remain additional provenance where applicable.
+
+The exact lifecycle-shape identity mechanism remains unresolved under sections 23 and 28; this replay contract does not force shape identity into the Brief or require a shape hash.
+
 ---
 
 # 57. Validation
@@ -1691,7 +1725,8 @@ Pactwright validation must detect at least:
 - unauthorised Decision;
 - unauthorised Gate progression;
 - unbounded configured corrective loops;
-- extension state that illegally redefines core Delivery semantics.
+- extension state that illegally redefines core Delivery semantics;
+- replay provenance whose recorded repository state does not derive its recorded Project Graph revision when replay validation is requested.
 
 Validation should fail before canonical mutation where possible.
 
@@ -1721,6 +1756,9 @@ The following are canonical Pactwright invariants.
 18. Corrective execution follows declared bounded transitions.
 19. Durable truth changes through explicit canonical mutation and supersession.
 20. Git remains history; the Project Graph remains current semantic truth.
+21. Repository revision and Project Graph revision are distinct identities.
+22. Replayable execution provenance uses `repository_revision + project_graph_revision + environment_lock_hash` as its shared replay base.
+23. Pinned replay fails rather than silently substituting current repository, graph or environment state.
 
 ---
 
@@ -1762,6 +1800,8 @@ Production Skills
 ```
 
 New lifecycle primitives should be introduced only when multiple materially different domains demonstrate that the existing vocabulary cannot represent the required contract-fulfilment topology cleanly.
+
+The shared replay tuple does not justify a new snapshot database, repository abstraction or environment archive. Existing repository and package mechanisms should be used until real retention failures demonstrate a need for additional infrastructure.
 
 ---
 
@@ -1814,7 +1854,10 @@ The canonical target adds:
 - declared corrective transitions;
 - bounded iteration policy;
 - Delivery Gates distinct from Contract Decisions;
-- support for richer domain-neutral shapes without adding domain-specific stages.
+- support for richer domain-neutral shapes without adding domain-specific stages;
+- shared replay identity across repository state, Project Graph state and the resolved execution environment.
+
+The replay tuple resolves the cross-spec identity contract but deliberately leaves historical repository/package retention and lifecycle-shape representation to their existing owners and implementation evidence.
 
 These are evolutions of the existing lifecycle architecture rather than a replacement for it.
 
@@ -1828,16 +1871,16 @@ The surrounding canonical system is:
 
 ```text
 01 Pactwright Core System and Lifecycle
-→ Contracts, Delivery Graph and lifecycle
+→ Contracts, Delivery Graph, lifecycle and repository/Project Graph replay identity
 
 02 Distribution, Agent Packs, Extensions and Evaluation
-→ execution composition and distribution
+→ execution composition, environment-lock identity and distribution
 
 03 Project Intelligence
 → durable project knowledge and guidance
 
 04 Graph Review
-→ specialist Project Graph analysis
+→ specialist Project Graph analysis and pinned replay
 
 05 Assets and Publication
 → approved durable outputs and publication
@@ -1846,7 +1889,7 @@ The surrounding canonical system is:
 → real-world exposure and feedback
 
 07 GitHub Integration
-→ remote automation and projection
+→ remote automation and replay-aware projection
 
 08 Open-Source Project Organisation
 → repository, ecosystem and public project structure
