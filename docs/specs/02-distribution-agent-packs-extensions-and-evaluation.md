@@ -2,7 +2,7 @@
 
 ## 1. Purpose
 
-This specification defines how Pactwright is packaged, installed, configured, extended, composed with AI capabilities, synchronised, locked, upgraded and evaluated.
+This specification defines how Pactwright is packaged, installed, configured, extended, composed with AI capabilities, synchronised, locked, upgraded, diagnosed and evaluated.
 
 The architecture is:
 
@@ -56,6 +56,7 @@ This specification owns:
 
 - Pactwright distribution and initialisation;
 - project configuration;
+- package-manager integration;
 - locking and reproducibility;
 - Agent Packs;
 - capability resolution;
@@ -64,7 +65,9 @@ This specification owns:
 - Production Extension Pack resolution;
 - adapters;
 - synchronisation;
-- upgrades and migrations;
+- runtime and component upgrades;
+- migrations;
+- environment diagnosis;
 - compatibility validation;
 - Pactwright-level evaluation and baseline comparison.
 
@@ -82,7 +85,9 @@ It does not own:
 
 # 3. Distribution, Initialisation and Project Configuration
 
-Install Pactwright as a Node development dependency:
+Pactwright is installed as a project development dependency using the project's package manager.
+
+Example:
 
 ```text
 pnpm add -D pactwright
@@ -126,9 +131,11 @@ github:
   enabled: true
 ```
 
-Configuration records desired state.
+Configuration records desired Pactwright state.
 
-`.pactwright/lock.yml` records the exact resolved environment.
+The package-manager manifest and lock record installed package state.
+
+`.pactwright/lock.yml` records the exact resolved Pactwright execution environment.
 
 One-shot initialisation options must compose the same underlying operations as the corresponding explicit commands rather than implement a separate setup path. For example:
 
@@ -233,6 +240,14 @@ The operation must:
 If required capabilities are missing, selection fails without replacing the current valid lock or generated environment.
 
 Pactwright may recommend a compatible pack but must not silently select one.
+
+Upgrade the currently configured Agent Pack through:
+
+```text
+pactwright agent-pack upgrade
+```
+
+This upgrades the selected pack within its configured compatibility constraints without changing Agent Pack identity.
 
 ---
 
@@ -622,7 +637,19 @@ Pactwright lock
 → records Pactwright's exact dependency on it
 ```
 
-Configuration expresses intent. The lock records the exact resolved setup.
+The package-manager lock and `.pactwright/lock.yml` have different responsibilities:
+
+```text
+package-manager lock
+→ exact installed packages
+
+.pactwright/lock.yml
+→ exact resolved Pactwright semantic and AI execution environment
+```
+
+They must agree on the installed Pactwright and package-backed component versions they both identify.
+
+Configuration expresses intent. The locks record exact resolved state at their respective layers.
 
 ---
 
@@ -631,6 +658,7 @@ Configuration expresses intent. The lock records the exact resolved setup.
 Before accepting a resolved environment, Pactwright validates:
 
 - runtime compatibility;
+- package-manager and Pactwright lock consistency;
 - Extension dependencies;
 - required Agent Pack capabilities;
 - Production Skills manifest syntax;
@@ -703,30 +731,66 @@ User-authored source, unrelated workflows and external Production Skills reposit
 
 ---
 
-# 15. Upgrades and Migrations
+# 15. Upgrade Model
 
-Environment-changing operations include:
+Pactwright owns upgrade orchestration. The project's package manager owns package installation.
 
-```text
-runtime upgrade
-Extension upgrade
-Agent Pack switch or upgrade
-Production Skills revision change
-Production Extension Pack change
-```
-
-Supported interfaces include:
+The command surface is:
 
 ```text
-pnpm up pactwright
-pactwright extension upgrade <id>
-pactwright agent-pack use <source>
 pactwright upgrade
+pactwright upgrade --to <version>
+pactwright agent-pack upgrade
+pactwright agent-pack use <source>
+pactwright extension upgrade <id>
 ```
 
-`pactwright upgrade` upgrades the configured Agent Pack through the same complete-environment validation path used for pack selection.
+## Pactwright runtime upgrade
 
-An Extension upgrade must:
+`pactwright upgrade` upgrades the Pactwright runtime itself to the latest compatible release.
+
+`pactwright upgrade --to <version>` targets an explicit release and may be used for controlled forward upgrade or rollback.
+
+The runtime upgrade flow is:
+
+```text
+current Pactwright runtime
+→ detect project package manager
+→ resolve target Pactwright release
+→ package manager updates Pactwright package
+→ re-enter through newly installed Pactwright runtime
+→ validate complete environment compatibility
+→ run required migrations
+→ update .pactwright lock
+→ pactwright sync
+→ pactwright validate
+```
+
+Pactwright must not implement a parallel package installer.
+
+It delegates package replacement to the detected project package manager.
+
+Package-manager detection should prefer the repository's explicit `packageManager` declaration and otherwise use unambiguous project package-manager state such as its lockfile. Pactwright must not silently switch package managers.
+
+After package replacement, migration, lock regeneration, synchronisation and validation must be performed by the **newly installed runtime**, not by the old runtime that initiated the upgrade.
+
+A runtime upgrade must not silently major-upgrade Extensions, Agent Packs, Production Skills or Production Extension Packs. Their configured constraints remain authoritative unless the user explicitly upgrades those components.
+
+If the target runtime has no compatible complete environment, the operation must fail clearly rather than silently substitute components or reinterpret canonical state.
+
+Canonical Project Graph state must never be left partially migrated. Upgrade implementation must preserve enough previous package/configuration/lock state to restore or explicitly target the previous runtime when an upgrade cannot complete safely.
+
+## Agent Pack upgrade
+
+`pactwright agent-pack upgrade` upgrades the currently selected Agent Pack within its configured compatibility constraints.
+
+It must validate the complete required capability set before changing the current lock or generated environment.
+
+`pactwright agent-pack use <source>` remains the explicit operation for changing Agent Pack identity.
+
+## Extension upgrade
+
+`pactwright extension upgrade <id>` must:
 
 1. resolve a compatible package;
 2. validate the complete Extension dependency graph;
@@ -740,11 +804,65 @@ An Extension upgrade must not silently reinterpret canonical Project Graph state
 
 A dependency upgrade must satisfy every enabled dependent Extension before the current lock changes.
 
-All environment changes are atomic from Pactwright's perspective: an incompatible target must not leave partial configuration, partial lock state, partial adapter output or partial canonical mutation.
+All upgrade paths must protect canonical Project Graph state from partial mutation and leave the environment either valid at the target version or recoverable to its previous valid state.
 
 ---
 
-# 16. Production Skill Commands
+# 16. `pactwright doctor`
+
+Pactwright exposes a read-only environment health command:
+
+```text
+pactwright doctor
+```
+
+`doctor` diagnoses distribution and execution-environment problems without mutating project state.
+
+It should report at least:
+
+```text
+installed Pactwright runtime version
+detected package manager
+package-manager declaration/lock consistency
+available runtime upgrade where determinable
+Pactwright configuration validity
+package-manager lock ↔ .pactwright/lock.yml drift
+runtime ↔ Extension compatibility
+runtime ↔ Agent Pack compatibility
+missing required capabilities
+missing/unresolvable Production Skills dependencies
+pending or incomplete migrations
+generated adapter/integration drift
+validation failures affecting the resolved environment
+```
+
+The command should distinguish:
+
+```text
+healthy
+warning
+action required
+```
+
+without inventing a separate health-state subsystem.
+
+`doctor` must provide concrete remediation commands where the correction is deterministic, for example:
+
+```text
+pactwright upgrade
+pactwright agent-pack upgrade
+pactwright extension upgrade <id>
+pactwright sync
+pactwright validate
+```
+
+It must not automatically execute those mutations.
+
+GitHub remote-health diagnosis remains owned by the GitHub Integration surface rather than making `doctor` a second GitHub reconciler.
+
+---
+
+# 17. Production Skill Commands
 
 Production Skills may decompose skills into narrower commands for composition, testing and benchmarks.
 
@@ -754,7 +872,7 @@ Pactwright commands remain Contract-driven lifecycle or Extension operations.
 
 ---
 
-# 17. Authority Boundaries
+# 18. Authority Boundaries
 
 Semantic authority flows from stable Pactwright semantics towards increasingly specialised execution:
 
@@ -785,7 +903,7 @@ Examples:
 
 ---
 
-# 18. Project Knowledge Boundary
+# 19. Project Knowledge Boundary
 
 Reusable expertise and project-specific knowledge have different owners.
 
@@ -804,7 +922,7 @@ Production Skills and Agent Packs should not become hidden project memory.
 
 ---
 
-# 19. Provider Boundary
+# 20. Provider Boundary
 
 Pactwright should not recreate:
 
@@ -823,7 +941,7 @@ Pactwright records only the provenance required for Contract fulfilment, Evidenc
 
 ---
 
-# 20. Evaluation Model and Public Interface
+# 21. Evaluation Model and Public Interface
 
 Pactwright Evaluation answers:
 
@@ -859,7 +977,7 @@ Production-domain quality remains owned by Production Skills benchmarks.
 
 ---
 
-# 21. Production Benchmark Ownership
+# 22. Production Benchmark Ownership
 
 Domain-specific benchmarks stay in Production Skills.
 
@@ -869,7 +987,7 @@ Pactwright should not silently execute entire external Production Skills benchma
 
 ---
 
-# 22. Evaluation Cases and Artefact Ownership
+# 23. Evaluation Cases and Artefact Ownership
 
 Evaluation cases belong to the component that owns the behaviour:
 
@@ -906,7 +1024,7 @@ Routine evaluation results and reports are generated artefacts, not Project Grap
 
 ---
 
-# 23. Baselines and Regression Reporting
+# 24. Baselines and Regression Reporting
 
 A released Agent Pack establishes a baseline that can be compared with a candidate environment.
 
@@ -938,7 +1056,7 @@ A regression report must make the affected capability/case visible so a release 
 
 ---
 
-# 24. Anti-Overengineering Constraints
+# 25. Anti-Overengineering Constraints
 
 Do not introduce initially:
 
@@ -954,6 +1072,8 @@ cross-family pack dependency language
 universal domain benchmark framework
 hosted evaluation
 automatic prompt optimisation/promotion
+parallel Pactwright package installer
+doctor auto-fix engine
 ```
 
 The required bridge is deliberately small:
@@ -976,7 +1096,7 @@ Add more machinery only when real integrations demonstrate that this model is in
 
 ---
 
-# 25. Core Invariants
+# 26. Core Invariants
 
 1. Pactwright Core defines stable semantics.
 2. Pactwright Extensions add optional Pactwright semantics.
@@ -991,26 +1111,33 @@ Add more machinery only when real integrations demonstrate that this model is in
 11. Production domains do not create new Pactwright capabilities when existing responsibilities suffice.
 12. Capability identity is independent from agent and skill identity.
 13. Production Skills selection flows through the Agent Pack.
-14. Configuration expresses desired state; the lock records exact resolved state.
-15. Runtime, Extensions and Agent Packs may version independently under compatibility constraints.
-16. Extension dependencies are installed and locked through the same managed path as explicit Extensions.
-17. Enabled Extension dependencies cannot be removed underneath dependants.
-18. The complete target environment is validated before activation or lock replacement.
-19. Explicit migrations are required when an Extension upgrade changes canonical stored semantics.
-20. Repeated synchronisation with identical locked inputs produces identical generated output.
-21. Adapters project the resolved environment but do not define semantics.
-22. Production Skill commands do not automatically become Pactwright commands.
-23. Evaluation cases remain owned and versioned by the component whose behaviour they test.
-24. Evaluation results are generated artefacts, not Project Graph truth.
-25. Baseline comparison reports regressions by meaningful capability/agent/case dimensions.
-26. Pactwright evaluates Pactwright responsibility fulfilment.
-27. Production-domain benchmarks remain owned by Production Skills.
-28. Project-specific learned knowledge belongs in Project Intelligence.
-29. Provider and model routing remain outside Pactwright where Production Skills already own them.
+14. Configuration expresses desired state; locks record exact resolved state at their respective layers.
+15. Package-manager and Pactwright lock state must agree on package-backed Pactwright components.
+16. Runtime, Extensions and Agent Packs may version independently under compatibility constraints.
+17. Extension dependencies are installed and locked through the same managed path as explicit Extensions.
+18. Enabled Extension dependencies cannot be removed underneath dependants.
+19. `pactwright upgrade` upgrades the Pactwright runtime, not the Agent Pack.
+20. Pactwright owns upgrade orchestration; the detected project package manager owns package installation.
+21. Post-install upgrade work is performed by the newly installed runtime.
+22. Runtime upgrade does not silently major-upgrade other Pactwright components.
+23. Explicit runtime targets support controlled upgrade or rollback.
+24. Explicit migrations are required when an upgrade changes canonical stored semantics.
+25. Upgrade paths protect canonical Project Graph state from partial migration.
+26. Repeated synchronisation with identical locked inputs produces identical generated output.
+27. `pactwright doctor` is read-only and diagnoses environment drift and compatibility problems.
+28. Adapters project the resolved environment but do not define semantics.
+29. Production Skill commands do not automatically become Pactwright commands.
+30. Evaluation cases remain owned and versioned by the component whose behaviour they test.
+31. Evaluation results are generated artefacts, not Project Graph truth.
+32. Baseline comparison reports regressions by meaningful capability/agent/case dimensions.
+33. Pactwright evaluates Pactwright responsibility fulfilment.
+34. Production-domain benchmarks remain owned by Production Skills.
+35. Project-specific learned knowledge belongs in Project Intelligence.
+36. Provider and model routing remain outside Pactwright where Production Skills already own them.
 
 ---
 
-# 26. Current Implementation Baseline
+# 27. Current Implementation Baseline
 
 Pactwright `0.0.1` already implements important parts of this model:
 
@@ -1027,22 +1154,28 @@ Pactwright `0.0.1` already implements important parts of this model:
 - synchronisation foundations;
 - evaluation infrastructure.
 
-The preserved public distribution surface includes:
+The canonical public distribution surface is:
 
 ```text
 pnpm add -D pactwright
 pnpm pactwright init
+
+pactwright upgrade
+pactwright doctor
+
 pactwright extension add
 pactwright extension remove
 pactwright extension upgrade
+
 pactwright agent-pack use
+pactwright agent-pack upgrade
+
 pactwright sync
+pactwright validate
 pactwright eval
 ```
 
-with runtime and Agent Pack upgrade paths as defined above.
-
-The redesigned architecture preserves those mechanisms while simplifying the older domain-specific capability model.
+The redesigned architecture preserves the working mechanisms while simplifying the older domain-specific capability model.
 
 The principal new integration is:
 
@@ -1059,14 +1192,14 @@ It extends the Agent Pack model rather than introducing a second AI composition 
 
 ---
 
-# 27. Relationship to Other Canonical Specifications
+# 28. Relationship to Other Canonical Specifications
 
 ```text
 01 Pactwright Core System and Lifecycle
 → Contracts, Delivery and core capabilities
 
 02 Distribution, Agent Packs, Extensions and Evaluation
-→ composition, distribution and AI execution
+→ composition, distribution, upgrades, diagnosis and AI execution
 
 03 Project Intelligence
 → project-specific knowledge
@@ -1093,9 +1226,9 @@ Production-specific semantics remain in independent Production Skills repositori
 
 ---
 
-# 28. Governing Rule
+# 29. Governing Rule
 
-> **Pactwright defines semantic responsibilities. Pactwright Extensions add optional system semantics. The selected Agent Pack maps responsibilities to agents and may compose multiple independently maintained Production Skills through optional Pactwright integration manifests. Production Skills retain ownership of their workflows, commands, Extension Packs, tools and benchmarks. Pactwright installs, resolves, validates, locks, synchronises, upgrades and evaluates the resulting environment without absorbing production-domain semantics.**
+> **Pactwright defines semantic responsibilities. Pactwright Extensions add optional system semantics. The selected Agent Pack maps responsibilities to agents and may compose multiple independently maintained Production Skills through optional Pactwright integration manifests. Pactwright owns upgrade orchestration and environment diagnosis while the project's package manager owns package installation. Production Skills retain ownership of their workflows, commands, Extension Packs, tools and benchmarks. Pactwright resolves, validates, locks, synchronises, upgrades and evaluates the resulting environment without absorbing production-domain semantics.**
 
 ---
 
