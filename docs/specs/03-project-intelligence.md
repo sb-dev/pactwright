@@ -96,12 +96,13 @@ Disabling Project Intelligence must not change the meaning of Delivery or siblin
 9. Onboarding and the Intent roadmap are generated views, not hand-maintained canonical state.
 10. Missing knowledge is an intelligence gap, not automatically a Delivery Intent.
 11. Delivery work enters the normal Delivery Graph lifecycle.
-12. Findings from other Extensions enter through normal Source ingestion.
-13. An Operations Observation is operational truth, not automatically accepted project knowledge.
-14. Extension-originated findings cannot directly create canonical Delivery Intents.
-15. There is one Project Intelligence Intent-roadmap derivation model.
-16. Extension-specific roadmap views may filter Project Intelligence candidates but must not introduce independent candidate or prioritisation models.
-17. Project Intelligence consumes the deterministic Project Graph revision supplied by Pactwright runtime.
+12. Graph Review Findings and other Extension-originated evidence enter through normal Source ingestion.
+13. A Graph Review Finding is an immutable non-graph execution output, not canonical Project Graph state.
+14. An Operations Observation is canonical Operations truth, not automatically accepted project knowledge.
+15. Extension-originated evidence cannot directly create canonical Delivery Intents.
+16. There is one Project Intelligence Intent-roadmap derivation model.
+17. Extension-specific roadmap views may filter Project Intelligence candidates but must not introduce independent candidate or prioritisation models.
+18. Project Intelligence consumes the deterministic Project Graph revision supplied by Pactwright runtime.
 
 ---
 
@@ -194,28 +195,31 @@ Rules:
 
 Other Pactwright Extensions may contribute internal Sources.
 
-Examples:
+The two principal Extension paths deliberately start from different semantic kinds:
 
 ```text
 Graph Review Finding
+→ immutable Review Execution output
+→ not a Project Graph node
 → internal Source
 
 Operations Observation
-→ internal Source
-
-Delivery or Production evaluation
+→ canonical Operations record
 → internal Source
 ```
+
+Delivery or Production evaluation may also become an internal Source when another owning semantic authorises that hand-off.
 
 The Source must preserve enough provenance to recover:
 
 - originating Extension or process;
-- originating canonical record where applicable;
+- originating canonical record where one exists;
+- originating execution/output identity where the source is non-canonical execution output;
 - content hash;
 - supporting evidence where applicable;
 - originating Project Graph revision.
 
-The originating record remains owned by its original subsystem.
+The originating object remains owned by its original subsystem. Source ingestion does not change whether that object is canonical Project Graph state.
 
 Capture as a Source does not mean its interpretation has automatically become accepted project knowledge.
 
@@ -820,24 +824,32 @@ Propagation never directly mutates Delivery, Graph Review, Assets / Publication 
 
 # 25. Graph Review and Operations Integration
 
-Graph Review Findings and Operations Observations use the same governance boundary:
+Graph Review Findings and Operations Observations share the same **Project Intelligence ingestion boundary**, but not the same upstream semantic status.
 
 ```text
-Extension-owned canonical record
+Graph Review Finding
+→ immutable Review Execution output
+→ not a Project Graph node
 → internal Source
 → triage
-→ Knowledge / candidate
+
+Operations Observation
+→ canonical Operations record
+→ internal Source
+→ triage
 ```
 
-Every successful Graph Review Finding is handed to Project Intelligence as a Source by the Graph Review Extension. Project Intelligence triage decides whether that Source is irrelevant, corroborating, novel or contradictory.
+Every successful Graph Review Finding is handed to Project Intelligence as a Source by the Graph Review Extension. Project Intelligence triage decides whether that Source is irrelevant, corroborating, incremental, novel or contradictory.
 
-Operations Observations remain operational truth. Project Intelligence owns only the project meaning accepted from them.
+Every canonical Operations Observation enters Project Intelligence through normal internal Source ingestion. Operations remains authoritative for the Observation itself; Project Intelligence owns only the project meaning accepted from it.
+
+Source ingestion never promotes a Finding into a Project Graph node and never transfers ownership of an Observation to Project Intelligence.
 
 Extension metadata such as severity, significance, direction or confidence may inform analysis but does not directly determine trust, triage class, Knowledge status or roadmap priority.
 
 ---
 
-# 26. Commands and Required Capabilities
+# 26. Commands and Capability Boundary
 
 Initial Project Intelligence commands are:
 
@@ -855,15 +867,11 @@ pactwright intelligence validate
 
 Enabled Extensions invoke the same ingestion path for internal Sources rather than introducing Extension-specific Knowledge mutation commands.
 
-Project Intelligence requires these Pactwright capabilities:
+Project Intelligence may require Agent Pack capabilities for its AI-mediated responsibilities, but the evidence does not yet establish a canonical capability decomposition or stable capability identifiers for triage, promotion and context assembly.
 
-```text
-intelligence-triage
-intelligence-promotion
-intelligence-context
-```
+The exact Project Intelligence capability names therefore remain unresolved until implementation and evaluation demonstrate that distinct Pactwright capabilities are required.
 
-The selected Agent Pack decides which agents and Production Skills implement them.
+Whatever capability set is eventually declared, the selected Agent Pack must satisfy it through the normal Distribution capability-resolution path.
 
 The runtime owns deterministic transition, validation and canonical mutation mechanics.
 
@@ -917,7 +925,7 @@ Idempotency rules:
 
 - Source identity is `canonical_id + content_hash`;
 - rerunning ingestion for the same identity converges on the same Source;
-- Extension-originated Sources use stable originating record identity and content hash;
+- Extension-originated Sources use stable originating record or execution-output identity and content hash;
 - reports are deterministic views over a pinned Project Graph revision;
 - mutations validate against current graph state before application.
 
@@ -929,7 +937,7 @@ Failure rules:
 - deterministic validation failures stop immediately;
 - failed ingestion is recorded in `reports/failed-ingestion.md`;
 - failed promotion never removes an already captured Source;
-- failed Extension hand-off leaves the originating Extension record valid and retryable;
+- failed Extension hand-off leaves the originating Finding, Observation or other source object valid under its owning semantics and retryable;
 - rerunning triage or promotion uses current Project Graph state;
 - report-generation failure never mutates canonical state.
 
@@ -943,27 +951,29 @@ Failure rules:
 2. Source type and storage mode are valid independent fields.
 3. Snapshot Sources passed required secret scanning before canonical capture.
 4. Removing stored Source bytes retains provenance/hash and causes dependent Knowledge revalidation.
-5. Internal Sources reference valid originating provenance when declared.
-6. All nine core Domain Definitions exist while Project Intelligence is enabled.
-7. Domain Definitions contain required scope, stewardship, horizon, artifact and dependency information.
-8. Domain dependencies reference registered domains and are acyclic.
-9. Every accepted Knowledge record references a registered domain and at least one Source.
-10. Knowledge kinds follow their governance rules.
-11. Superseded Knowledge points to valid replacements.
-12. Retracted Knowledge triggers direct-dependant revalidation.
-13. Class 0/1 mutations do not change canonical meaning, Delivery state or Extension-owned canonical state.
-14. Class 2/3 canonical changes have required human approval.
-15. Intelligence-specific edge types use valid endpoints.
-16. Cross-graph edges preserve record ownership.
-17. `requires-delivery` targets a valid Delivery Intent.
-18. `satisfied-by` targets valid Delivery Evidence.
-19. Recurring obligations are not simultaneously treated as permanently unsatisfied one-off obligations without explicit justification.
-20. Roadmap candidates preserve valid motivating Knowledge and Source provenance.
-21. Extension-originated roadmap provenance traces through valid Sources.
-22. An Extension finding alone cannot create a canonical Delivery Intent.
-23. Generated onboarding and roadmap reports identify the Project Graph revision they derive from.
-24. Extension-specific roadmap projections do not introduce candidates absent from Project Intelligence roadmap derivation.
-25. Coverage states obey the exact Missing/Seeded/Covered rules, including that domains without coverage slots stop at Seeded.
+5. Internal Sources reference valid originating canonical-record or execution-output provenance as applicable.
+6. Graph Review-originated Sources do not imply that their Findings are Project Graph nodes.
+7. Operations-originated Sources reference valid canonical Observations without transferring Observation ownership.
+8. All nine core Domain Definitions exist while Project Intelligence is enabled.
+9. Domain Definitions contain required scope, stewardship, horizon, artifact and dependency information.
+10. Domain dependencies reference registered domains and are acyclic.
+11. Every accepted Knowledge record references a registered domain and at least one Source.
+12. Knowledge kinds follow their governance rules.
+13. Superseded Knowledge points to valid replacements.
+14. Retracted Knowledge triggers direct-dependant revalidation.
+15. Class 0/1 mutations do not change canonical meaning, Delivery state or Extension-owned canonical state.
+16. Class 2/3 canonical changes have required human approval.
+17. Intelligence-specific edge types use valid endpoints.
+18. Cross-graph edges preserve record ownership.
+19. `requires-delivery` targets a valid Delivery Intent.
+20. `satisfied-by` targets valid Delivery Evidence.
+21. Recurring obligations are not simultaneously treated as permanently unsatisfied one-off obligations without explicit justification.
+22. Roadmap candidates preserve valid motivating Knowledge and Source provenance.
+23. Extension-originated roadmap provenance traces through valid Sources.
+24. An Extension finding alone cannot create a canonical Delivery Intent.
+25. Generated onboarding and roadmap reports identify the Project Graph revision they derive from.
+26. Extension-specific roadmap projections do not introduce candidates absent from Project Intelligence roadmap derivation.
+27. Coverage states obey the exact Missing/Seeded/Covered rules, including that domains without coverage slots stop at Seeded.
 
 Core `pactwright validate` may invoke Project Intelligence validation when the Extension is enabled.
 
@@ -1007,7 +1017,8 @@ The following remain deliberately unresolved rather than being invented here:
 - the scheduler or trigger mechanism that materialises recurring obligations;
 - richer evidence-independence metadata beyond `origin`;
 - first-class processing/promotion records;
-- richer coverage scoring.
+- richer coverage scoring;
+- the exact Project Intelligence Agent Pack capability decomposition and identifiers.
 
 ---
 
@@ -1036,10 +1047,12 @@ Source
 while updating integration boundaries:
 
 - Graph Review is independent from Assets / Publication;
+- Graph Review Findings remain immutable non-graph execution outputs even after Source hand-off;
+- Operations Observations remain canonical Operations records after Source hand-off;
 - durable production guidance belongs in Project Intelligence;
 - Production Skills outputs may become Sources;
 - reusable Production Skills expertise remains outside Project Intelligence;
-- Operations and Graph Review use the same Source-ingestion boundary.
+- Operations and Graph Review use the same Source-ingestion boundary without sharing upstream canonicality.
 
 ---
 
@@ -1056,13 +1069,13 @@ while updating integration boundaries:
 → owns project-specific durable knowledge
 
 04 Graph Review
-→ produces specialist Findings
+→ produces specialist non-graph Findings
 
 05 Assets and Publication
 → owns approved durable outputs
 
 06 Operations
-→ produces real-world Observations
+→ produces canonical real-world Observations
 
 07 GitHub Integration
 → projects automation and review to GitHub
@@ -1075,7 +1088,7 @@ while updating integration boundaries:
 
 # 34. Governing Rule
 
-> **Project Intelligence turns project material, research, Delivery experience, Review Findings and operational evidence into traceable accepted project knowledge. It contributes that knowledge to future Pactwright work and may propose Delivery obligations, but it never bypasses Contract authority, Delivery ownership or the normal Intent lifecycle. Reusable expertise stays in Production Skills; only project-specific knowledge worth future reliance belongs in Project Intelligence.**
+> **Project Intelligence turns project material, research, Delivery experience, Graph Review Findings and operational evidence into traceable accepted project knowledge. Graph Review Findings remain non-graph execution outputs; Operations Observations remain canonical Operations records; both may enter Project Intelligence through the same Source-ingestion boundary without transferring ownership. Project Intelligence contributes accepted knowledge to future Pactwright work and may propose Delivery obligations, but it never bypasses Contract authority, Delivery ownership or the normal Intent lifecycle. Reusable expertise stays in Production Skills; only project-specific knowledge worth future reliance belongs in Project Intelligence.**
 
 ---
 
