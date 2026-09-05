@@ -2,7 +2,7 @@
 
 ## 1. Purpose
 
-Pactwright should be organised as one coherent open-source product with several publishing and learning surfaces.
+Pactwright is one coherent open-source product with several publishing, learning and contribution surfaces.
 
 The repository remains the source of truth.
 
@@ -19,9 +19,9 @@ Blog
 Ecosystem catalogue
 ```
 
-These surfaces should reuse canonical repository content rather than evolve into independent knowledge bases.
+These surfaces reuse repository-owned knowledge rather than evolving into independent knowledge bases.
 
-The user journey is:
+The public journey is:
 
 ```text
 Discover
@@ -32,28 +32,30 @@ Discover
 → Contribute
 ```
 
-This specification defines:
+This specification owns:
 
-* monorepo organisation;
-* package boundaries;
-* documentation structure;
-* public product surfaces;
-* examples and case studies;
-* Academy organisation;
-* ecosystem discovery;
-* content ownership and reuse;
-* contribution structure;
-* Pactwright dogfooding.
+- monorepo organisation;
+- package boundaries;
+- documentation structure;
+- public product surfaces;
+- examples and case studies;
+- Academy organisation;
+- ecosystem discovery;
+- content ownership and reuse;
+- contribution structure;
+- Pactwright dogfooding;
+- public-content readiness;
+- public-product progression.
 
 ---
 
 ## 2. Product Identity
 
-Public material should consistently describe Pactwright around its core purpose:
+Public material should describe Pactwright around its core purpose:
 
 > Pactwright turns intent into explicit, authorised Contracts and governs their fulfilment by humans and AI agents.
 
-The canonical lifecycle is:
+The canonical Delivery model is:
 
 ```text
 Intent
@@ -66,7 +68,7 @@ Intent
 → Evidence
 ```
 
-Optional Extensions continue the system where needed:
+Optional Extensions add:
 
 ```text
 Project Intelligence
@@ -76,36 +78,55 @@ Graph Review
 → specialist Project Graph analysis
 
 Assets / Publication
-→ approved durable outputs
+→ approved durable outputs and release records
 
 Operations
 → real-world outcomes
 ```
 
-Public material must not revert to older software-only or creative-delivery-specific models.
+Public material must not revert to older software-only or Creative Delivery-specific models.
+
+Creative, software, research, design and other specialised production use normal Delivery plus the relevant Production Skills.
 
 ---
 
-# 3. Project Surfaces
+# 3. Public Surfaces
 
-| Surface      | Purpose                                                           |
-| ------------ | ----------------------------------------------------------------- |
-| README       | Understand Pactwright and achieve first success                   |
-| Docs         | Product concepts, guides and reference                            |
-| Academy      | Learn Pactwright methodology and judgement                        |
-| Examples     | Execute realistic Pactwright workflows                            |
-| Case Studies | Show complete real-world journeys                                 |
-| Blog         | Publish current thinking and project developments                 |
-| Ecosystem    | Discover Agent Packs, Extensions and compatible Production Skills |
-| Website      | Main public product and discovery surface                         |
+Each public surface has one primary responsibility:
 
-Each information type should have one canonical home.
+```text
+README
+→ understand Pactwright and achieve first success
+
+Docs
+→ product concepts, guides and reference
+
+Academy
+→ methodology, judgement and proficiency
+
+Examples
+→ executable realistic workflows
+
+Case Studies
+→ evidence-backed real journeys and outcomes
+
+Blog
+→ current thinking and project developments
+
+Ecosystem
+→ Agent Packs, Extensions and compatible Production Skills
+
+Website
+→ primary public discovery and product surface
+```
+
+One information type should not have several independently maintained sources of truth.
 
 ---
 
 # 4. Target Monorepo
 
-Pactwright should evolve into a pnpm + Turborepo monorepo.
+Pactwright should evolve as a pnpm + Turborepo monorepo.
 
 ```text
 pactwright/
@@ -120,10 +141,7 @@ pactwright/
 │
 ├── apps/
 │   └── website/
-│       ├── src/
-│       └── content/
-│           ├── blog/
-│           └── case-studies/
+│       └── ...
 │
 ├── packages/
 │   ├── pactwright/
@@ -155,6 +173,7 @@ pactwright/
 │   ├── graph-review/
 │   ├── assets-publication/
 │   ├── operations/
+│   ├── multi-production-skills/
 │   └── end-to-end/
 │
 ├── registry/
@@ -163,26 +182,20 @@ pactwright/
 │   └── production-skills/
 │
 ├── tooling/
-│   ├── eslint/
-│   ├── typescript/
-│   └── test/
+│   └── ...
 │
 ├── .pactwright/
-│   ├── config.yml
-│   ├── lifecycle.yml
-│   └── lock.yml
+│   └── ...
 │
 └── .github/
     └── ...
 ```
 
-Exact directory names may evolve.
-
-The ownership boundaries should not.
+Exact directory names may evolve. Ownership boundaries should not.
 
 ---
 
-# 5. Turborepo Boundary
+# 5. Build Graph vs Project Graph
 
 Turborepo manages the repository build graph.
 
@@ -212,59 +225,27 @@ Pactwright
 
 These graphs must not be conflated.
 
-Turborepo determines build dependencies.
-
-Pactwright governs project meaning and Delivery.
-
 ---
 
-# 6. Core Runtime Package
+# 6. Package Boundaries
+
+## Core runtime
 
 ```text
 packages/pactwright/
 ```
 
-contains the Pactwright runtime and CLI.
+owns the Pactwright runtime and CLI, including core Delivery semantics, graph validation, configuration, locking, Extension loading, Agent Pack loading, Production Skills integration resolution, adapters, synchronisation and common evaluation infrastructure.
 
-It owns implementation of:
+It remains production-domain neutral.
 
-* Delivery Graph;
-* Contract lifecycle;
-* lifecycle shapes;
-* graph validation;
-* configuration;
-* locking;
-* Extension loading;
-* Agent Pack loading;
-* Production Skills integration resolution;
-* adapters;
-* synchronisation;
-* common evaluation infrastructure.
-
-The runtime must remain independent of any particular production domain.
-
----
-
-# 7. Standard Agent Pack
+## Standard Agent Pack
 
 ```text
 packages/standard/
 ```
 
-contains the default Pactwright Agent Pack.
-
-Conceptually:
-
-```text
-packages/standard/
-├── agents/
-├── skills/
-├── evals/
-├── pack.yml
-└── package.json
-```
-
-It remains separate from the core runtime because:
+remains separate from the runtime:
 
 ```text
 Pactwright Core
@@ -274,48 +255,37 @@ Standard Agent Pack
 → implements those responsibilities with AI
 ```
 
-Alternative Agent Packs may exist without changing core Pactwright.
-
----
-
-# 8. First-Party Extensions
-
-First-party Pactwright Extensions should be independently packaged:
+## First-party Extensions
 
 ```text
-packages/
-├── project-intelligence/
-├── graph-review/
-├── assets-publication/
-└── operations/
+packages/project-intelligence/
+packages/graph-review/
+packages/assets-publication/
+packages/operations/
 ```
 
-Each package owns only its canonical semantic boundary.
+are independently testable and versionable.
 
-There should be no replacement `review-creative` package.
-
-The redesigned split is:
+There is no replacement `review-creative` package.
 
 ```text
 Graph Review
 → specialist analysis
 
 Assets / Publication
-→ approved outputs
+→ approved durable outputs
 
 normal Delivery + Production Skills
-→ creative or other production
+→ specialised production
 ```
-
-Extensions should be independently testable and versionable while using common Pactwright runtime contracts.
 
 ---
 
-# 9. Production Skills Stay External
+# 7. Production Skills Stay External
 
-Production Skills families should normally remain independent repositories.
+Production Skills families normally remain independent repositories.
 
-Examples:
+Examples include:
 
 ```text
 software-engineering-skills
@@ -327,74 +297,36 @@ music-production-skills
 narrative-production-skills
 ```
 
-They are not moved into `packages/`.
-
 Their relationship is:
 
 ```text
-Pactwright Agent Pack
-→ optional Production Skills integration
-→ external Production Skills repository
+Pactwright
+→ Agent Pack
+→ compatible Production Skills
 ```
 
-This preserves independent usage:
+Production Skills remain independently usable without Pactwright.
 
-```text
-without Pactwright
-→ Production Skills work normally
-
-with Pactwright
-→ Agent Pack consumes integrations/pactwright.yml
-```
+Pactwright integration is supplied through their integration manifest where supported.
 
 ---
 
-# 10. Ecosystem Categories
+# 8. Ecosystem Categories and Registry
 
-Pactwright should expose three clearly different ecosystem categories.
-
-## Agent Packs
+Pactwright exposes three distinct ecosystem categories:
 
 ```text
 Agent Pack
-→ defines how AI performs Pactwright responsibilities
-```
+→ how AI performs Pactwright responsibilities
 
-## Pactwright Extensions
+Pactwright Extension
+→ optional Pactwright semantics
 
-```text
-Extension
-→ adds optional Pactwright semantics
-```
-
-## Compatible Production Skills
-
-```text
 Production Skills
-→ provide specialised production expertise
+→ specialised reusable production expertise
 ```
 
-These replace the older catalogue model that treated:
-
-```text
-agents
-reviewers
-evaluators
-skills
-commands
-workflows
-templates
-```
-
-as peer-level Pactwright extension categories.
-
-Those concepts now belong inside their owning architectural layer.
-
----
-
-# 11. Registry
-
-The repository should initially provide a lightweight registry, not a marketplace.
+The repository initially provides a lightweight registry, not a marketplace:
 
 ```text
 registry/
@@ -403,41 +335,18 @@ registry/
 └── production-skills/
 ```
 
-Registry entries are discovery metadata.
+Registry entries are discovery metadata, not another runtime plugin system.
 
-They do not become another runtime plugin system.
-
-Useful metadata includes:
-
-```text
-name
-description
-author
-version
-repository
-Pactwright compatibility
-category
-installation
-documentation
-```
-
-For Production Skills, registry metadata may also indicate the availability of:
-
-```text
-integrations/pactwright.yml
-```
-
-Third-party components remain in their own repositories.
+Useful metadata includes name, description, author, version, repository, Pactwright compatibility, category, installation and documentation.
 
 ---
 
-# 12. Canonical Specifications
+# 9. Canonical Specifications and Document Authority
 
-The authoritative system definition lives in:
+Canonical system semantics live in:
 
 ```text
 docs/specs/
-├── README.md
 ├── 01-pactwright-core-system-and-lifecycle.md
 ├── 02-distribution-agent-packs-extensions-and-evaluation.md
 ├── 03-project-intelligence.md
@@ -448,21 +357,7 @@ docs/specs/
 └── 08-open-source-project-organisation.md
 ```
 
-`docs/specs/README.md` should provide:
-
-* system overview;
-* specification index;
-* ownership map;
-* dependency map;
-* document authority rules.
-
-Do not create another independent System Architecture specification merely to summarise these files.
-
----
-
-# 13. Document Authority
-
-Documentation layers have distinct authority.
+Authority is:
 
 ```text
 docs/specs/
@@ -475,7 +370,7 @@ docs/checkpoints/
 → implementation progression
 
 docs/research-logs/
-→ design exploration and rationale
+→ exploration and rationale
 
 docs/concepts + guides + reference
 → user-facing product documentation
@@ -487,17 +382,13 @@ examples/
 → executable demonstrations
 ```
 
-If implementation temporarily differs from a canonical specification, that may indicate unfinished implementation rather than a reason to rewrite the specification to match current code.
-
-Checkpoints describe how the implementation reaches the canonical target.
+Implementation lag does not automatically change canonical semantics. Checkpoints describe how implementation reaches the canonical target.
 
 ---
 
-# 14. Documentation
+# 10. Documentation
 
-Documentation should be product-centred.
-
-Suggested structure:
+Documentation remains product-centred.
 
 ```text
 docs/
@@ -510,129 +401,27 @@ docs/
 └── research-logs/
 ```
 
-## Concepts
+Concepts explain stable Pactwright ideas.
 
-Explain stable Pactwright ideas:
+Guides explain task-oriented workflows.
 
-```text
-Contracts
-Delivery Graph
-Lifecycle Shapes
-Agent Packs
-Production Skills integration
-Project Intelligence
-Graph Review
-Assets / Publication
-Operations
-```
+Reference defines exact CLI, configuration, schemas, manifests and contracts.
 
-## Guides
-
-Task-oriented workflows:
-
-```text
-Start a project
-Add Pactwright to an existing repository
-Configure lifecycle policy
-Configure an Agent Pack
-Integrate Production Skills
-Enable an Extension
-Configure GitHub
-```
-
-## Reference
-
-Precise behaviour:
-
-```text
-CLI
-configuration
-schemas
-manifests
-Extension contracts
-Agent Pack contracts
-integration manifests
-```
-
-## Architecture
-
-Explain how the canonical components interact without redefining their semantics.
+Architecture explains component interaction without redefining canonical semantics.
 
 ---
 
-# 15. Website
+# 11. Website and README
 
-The website is the primary public product surface.
-
-It should answer:
+The website answers:
 
 > Why should I use Pactwright?
 
-while the README primarily answers:
+The README answers:
 
 > What is Pactwright and how do I start?
 
-Suggested navigation:
-
-```text
-Product
-Docs
-Academy
-Examples
-Ecosystem
-Case Studies
-Blog
-GitHub
-```
-
 The website should render or reuse repository-owned Markdown and metadata wherever practical.
-
-It must not become a separate product-knowledge database.
-
----
-
-# 16. Homepage
-
-The homepage should demonstrate Pactwright before explaining every subsystem.
-
-A compact progression is:
-
-```text
-Hero
-↓
-Problem
-↓
-Contract-driven model
-↓
-Lifecycle
-↓
-Example
-↓
-Capabilities
-↓
-Production Skills integration
-↓
-Extensions
-↓
-Case study
-↓
-Open-source CTA
-```
-
-The core message should remain centred on:
-
-```text
-Intent
-→ Contract
-→ governed Delivery
-→ verified Evidence
-```
-
-rather than generic agent orchestration.
-
----
-
-# 17. README
 
 The README journey is:
 
@@ -644,28 +433,15 @@ Understand
 → Explore
 ```
 
-It should contain:
+It should include a concise product definition, Contract-driven model, one concrete example, Quick Start, compact capability overview, Examples, Docs/Academy links, ecosystem overview and contribution routes.
 
-* concise product definition;
-* core Contract lifecycle;
-* why Pactwright exists;
-* one concrete example;
-* Quick Start;
-* brief capability overview;
-* links to Examples;
-* links to Docs and Academy;
-* ecosystem overview;
-* contribution routes.
-
-It must not become the complete documentation.
-
-The first useful result should appear early.
+Neither surface should become a second documentation system.
 
 ---
 
-# 18. Progressive Disclosure
+# 12. Progressive Disclosure
 
-Users should encounter complexity gradually:
+Users encounter complexity gradually:
 
 ```text
 Homepage / README
@@ -678,24 +454,13 @@ Homepage / README
 → Canonical Specs
 ```
 
-Do not introduce:
-
-```text
-Project Intelligence internals
-Extension manifests
-Production Skills integration details
-Graph revision mechanics
-```
-
-before users understand Pactwright's basic Contract lifecycle.
+Project Intelligence internals, Extension manifests, Production Skills integration details and Project Graph revision mechanics should not be prerequisites for understanding the basic Contract lifecycle.
 
 ---
 
-# 19. Academy
+# 13. Academy
 
-The Academy teaches methodology and judgement rather than acting as another command reference.
-
-Suggested organisation:
+The Academy teaches methodology and judgement rather than mirroring the CLI.
 
 ```text
 academy/
@@ -705,53 +470,21 @@ academy/
 └── projects/
 ```
 
-## Foundations
+Foundations cover Contract-driven Delivery, human/agent responsibilities, evidence, Project Graph thinking and cheap-to-expensive production.
 
-Teach:
+Workflows cover Contract crafting, Delivery, Review, Project Intelligence, Graph Review and Operations feedback.
 
-* Contract-driven delivery;
-* human and agent responsibilities;
-* evidence;
-* Project Graph thinking;
-* cheap-to-expensive production.
+Advanced material covers Agent Pack design, Production Skills integration, Extension development, evaluation, lifecycle design and complex composition.
 
-## Workflows
+Projects provide realistic end-to-end exercises.
 
-Teach complete Pactwright use:
-
-* Contract crafting;
-* Delivery;
-* Review;
-* Project Intelligence;
-* Graph Review;
-* Operations feedback.
-
-## Advanced
-
-Teach:
-
-* Agent Pack design;
-* Production Skills integration;
-* Extension development;
-* evaluation;
-* lifecycle-shape design;
-* complex project composition.
-
-## Projects
-
-Provide realistic end-to-end exercises.
-
-The Academy should remain useful even when CLI details change.
+Academy lessons should remain useful as CLI details evolve.
 
 ---
 
-# 20. Examples
+# 14. Examples as Executable Validation
 
-Examples are first-class executable assets.
-
-Avoid limiting examples to toy demonstrations.
-
-Suggested examples include:
+Examples are first-class executable assets, not decorative tutorials.
 
 ```text
 examples/
@@ -765,43 +498,26 @@ examples/
 └── end-to-end/
 ```
 
-Each example should demonstrate a complete coherent concern.
-
-A multi-production example could use:
+One example may support:
 
 ```text
-children's television
-→ Narrative + Music + Video Production Skills
+integration test
+README walkthrough
+Docs guide
+Academy exercise
+website demonstration
+case-study foundation
 ```
 
-to demonstrate Production Skills composition without adding domain-specific Pactwright lifecycle stages.
+Examples should run in CI where practical and detect architecture drift.
+
+A multi-production example may use Narrative + Music + Video Production Skills without adding domain-specific Pactwright lifecycle stages.
 
 ---
 
-# 21. Examples as Validation
+# 15. Case Studies
 
-A good example serves several purposes:
-
-```text
-Example
-├── executable workflow
-├── integration test
-├── README walkthrough
-├── Docs guide
-├── Academy exercise
-├── website demonstration
-└── possible case study
-```
-
-Examples should run in CI where practical.
-
-They should therefore detect architecture drift rather than becoming stale documentation.
-
----
-
-# 22. Case Studies
-
-Case studies show complete journeys and real outcomes.
+Case studies are evidence-backed accounts of actual use and outcomes.
 
 Useful cases include:
 
@@ -821,23 +537,15 @@ Pactwright Building Pactwright
 → complete dogfooding journey
 ```
 
-Case studies differ from Examples:
+An Example is reusable executable workflow material.
 
-```text
-Example
-→ reusable executable workflow
-
-Case Study
-→ evidence-backed account of actual use and outcome
-```
+A Case Study demonstrates what actually happened.
 
 ---
 
-# 23. Pactwright Building Pactwright
+# 16. Pactwright Building Pactwright
 
-The Pactwright repository should progressively become a valid Pactwright project.
-
-Pactwright should govern its own:
+The Pactwright repository should progressively become a valid Pactwright project and use Pactwright to govern its own:
 
 ```text
 specifications
@@ -854,20 +562,32 @@ Assets / Publications
 Operations feedback
 ```
 
-This provides both:
-
-* continuous real-world system validation;
-* a flagship case study.
+This provides continuous real-world validation and a flagship case study.
 
 Dogfooding must use the same public mechanisms expected of other Pactwright projects wherever practical.
 
+**Do not manually create or revise project material outside Pactwright when the current Pactwright system can represent that work.**
+
+For dogfooded work, the Project Graph retains the available canonical lineage:
+
+```text
+Intent
++ applicable grounding
++ governing Contract / Brief lineage
++ Delivery Evidence
++ Asset where the output becomes an approved durable artefact
++ Publication where it is released
+```
+
+This is a provenance requirement, not a requirement that every repository change become an Asset or Publication.
+
+The exact acceptance test for deciding when the current implementation is capable enough to represent a class of work remains unresolved. That threshold must not be used as an indefinite excuse to bypass dogfooding once the relevant public mechanism works.
+
 ---
 
-# 24. Graph-Driven Publishing
+# 17. Graph-Driven Publishing
 
-Public product work should use Pactwright itself.
-
-The generic flow is:
+Public product work uses Pactwright itself.
 
 ```text
 project knowledge
@@ -883,9 +603,9 @@ project knowledge
 → future Intent
 ```
 
-A documentation update may end at Evidence.
+Reference documentation or an internal repository update may end at Evidence.
 
-A public video or article may continue:
+A public article, video, diagram or other durable approved output may continue:
 
 ```text
 Evidence
@@ -903,139 +623,170 @@ Publication
 
 There is no separate Creative Delivery lifecycle.
 
-Creative work uses normal Delivery plus relevant Production Skills.
+Public narrative, visual, educational and marketing work uses normal Delivery plus the relevant Production Skills.
 
 ---
 
-# 25. Content Readiness
+# 18. Public Content Readiness
 
-Public content should not invent missing project truth.
+Public content must not compensate for missing project knowledge.
 
-Claims about Pactwright should be grounded in:
+When Project Intelligence is available for the relevant project state, public/outbound work must satisfy the applicable readiness gate before approval.
+
+The required domain matrix is:
 
 ```text
-canonical specifications
-current implementation
-accepted Project Intelligence
-verified examples
-real case-study evidence
+identity
+→ Covered for all public/outbound work whose identity, voice or values matter
+
+content
+→ Covered for editorial, educational or marketing work
+
+product
+→ Covered when making capability, value, behaviour or limitation claims about Pactwright
+
+go-to-market
+→ Covered for acquisition, positioning, CTA or campaign work
+
+delivery/ux
+→ Covered when describing or generating user-facing workflow or UX material
+
+delivery/eng
+→ Covered for technical implementation claims
+
+other applicable subject domain
+→ Covered when factual claims depend on it
 ```
 
-Where Project Intelligence is enabled, project-specific public guidance should use relevant accepted Knowledge.
+`Covered` is owned by Project Intelligence Spec 03. This specification does not create a competing coverage state definition.
 
-Missing knowledge should be researched or decided before public material depends on it.
+For public-content readiness, the specific current claims and constraints relied on by the work must also be represented by accepted, in-horizon Knowledge with traceable Sources.
 
-Production Skills may perform that research or production work.
-
-Project Intelligence governs what Pactwright subsequently accepts as project knowledge.
+Coverage means the required current project truth is sufficiently represented for the intended surface. It does not mean the domain is exhaustively complete.
 
 ---
 
-# 26. Content Ownership
+# 19. Missing Coverage Flow
 
-Each content type should have one canonical owner.
-
-| Information                           | Canonical home   |
-| ------------------------------------- | ---------------- |
-| Product identity                      | README / website |
-| Installation                          | Docs             |
-| Product concepts                      | Docs             |
-| CLI and configuration                 | Reference        |
-| System semantics                      | Canonical specs  |
-| Design rationale                      | Research logs    |
-| Implementation progression            | Checkpoints      |
-| Methodology                           | Academy          |
-| Executable workflows                  | Examples         |
-| Real-world evidence                   | Case Studies     |
-| Current thinking                      | Blog             |
-| Agent Pack metadata                   | Registry         |
-| Pactwright Extension metadata         | Registry         |
-| Compatible Production Skills metadata | Registry         |
-
-A blog post or tutorial may explain product behaviour.
-
-It must not define product behaviour.
-
----
-
-# 27. Content Reuse
-
-Prefer one reusable source over independent copies.
+If required public-content coverage is missing:
 
 ```text
-Canonical specification
-├── architecture documentation
-└── reference documentation
+pactwright intelligence onboard
+↓
+identify missing Source material or strategic decisions
+↓
+normal Delivery / research obtains or creates the required material
+↓
+pactwright intelligence ingest ...
+↓
+triage / reviewed promotion
+↓
+required Knowledge becomes accepted and coverage becomes sufficient
+↓
+public Delivery may proceed
 ```
 
+Missing truth must be researched, observed or decided before public work depends on it.
+
+Production Skills may perform specialised research or production work, but Project Intelligence governs what becomes durable project knowledge.
+
+Strategic identity or positioning choices are **Decisions**. A generation model must not silently invent them as if they were established project truth.
+
+---
+
+# 20. Grounding and Re-grounding
+
+Public Delivery must retain the accepted Knowledge actually relied on where grounding is applicable.
+
+If relied-on Knowledge becomes:
+
 ```text
+challenged
+superseded
+retracted
+```
+
+before approval, the work must be re-grounded and re-evaluated before it can become an approved Asset or Publication.
+
+An existing approved Asset or historical Publication is not silently rewritten when later Knowledge changes. Any correction follows normal Project Intelligence propagation and Delivery governance.
+
+---
+
+# 21. Content Ownership and Reuse
+
+Canonical ownership should remain clear:
+
+```text
+System semantics
+→ Canonical Specs
+
+Implementation behaviour
+→ source + schemas + configuration
+
+Design rationale
+→ Research Logs
+
+Implementation progression
+→ Checkpoints
+
+Product concepts / guides / CLI reference
+→ Docs
+
+Methodology
+→ Academy
+
+Executable workflows
+→ Examples
+
+Observed real-world outcomes
+→ Case Studies
+
+Current exploratory thinking
+→ Blog
+
+Ecosystem metadata
+→ Registry
+```
+
+Public product identity and positioning should be grounded in governing Decisions and accepted Project Intelligence when available; README and website are presentation surfaces, not independent authority.
+
+Prefer reusable sources:
+
+```text
+Canonical spec
+→ architecture/reference explanations
+
 Executable example
-├── README excerpt
-├── Docs walkthrough
-├── Academy exercise
-├── website demo
-└── case-study foundation
-```
+→ README + Docs + Academy + website + case study
 
-```text
 Registry metadata
-├── website catalogue
-├── CLI discovery
-└── documentation
+→ website catalogue + CLI discovery + docs
 ```
-
-The website should primarily be a presentation layer over repository-owned content.
 
 ---
 
-# 28. Blog
+# 22. Blog
 
-The blog should cover three broad streams.
-
-## Pactwright
+The blog may cover:
 
 ```text
-releases
-architecture
-design decisions
-new capabilities
-ecosystem development
-case-study updates
+Pactwright
+→ releases, architecture, design choices, capabilities, ecosystem, case-study updates
+
+AI Delivery
+→ agents, skills, specification-driven development, evaluation, context, graphs, review, production workflows
+
+Practice
+→ Contract design, project knowledge, Production Skills composition, review, operations, evaluation
 ```
 
-## AI Delivery
-
-```text
-coding agents
-Agent Skills
-specification-driven development
-evaluation
-context engineering
-graph engineering
-AI review
-production workflows
-```
-
-## Practice
-
-```text
-Contract design
-project knowledge
-Production Skills composition
-review methodology
-operational feedback
-agent evaluation
-```
-
-Blog content may explore future ideas.
-
-Exploration does not become Pactwright semantics until incorporated into the appropriate canonical specification.
+Blog exploration does not become Pactwright semantics until accepted into the appropriate canonical specification.
 
 ---
 
-# 29. Contribution Model
+# 23. Contribution Model
 
-Contribution routes should be explicit:
+Contribution routes include:
 
 ```text
 runtime contribution
@@ -1048,40 +799,126 @@ Production Skills integration
 ecosystem registry entry
 ```
 
-`CONTRIBUTING.md` should explain:
+`CONTRIBUTING.md` should explain repository structure, package ownership, test expectations, specification authority, when canonical spec changes are required, how examples/docs stay aligned and contribution review.
 
-* repository structure;
-* package ownership;
-* test expectations;
-* specification authority;
-* when a canonical spec change is required;
-* how examples and docs stay aligned;
-* contribution review process.
-
-Third-party Production Skills and Agent Packs need not be moved into the Pactwright repository to participate in the ecosystem.
+Third-party Agent Packs and Production Skills need not move into this repository to participate.
 
 ---
 
-# 30. Public Product Progression
+# 24. Public Product Progression
 
-Public surfaces should grow with usable capabilities.
+Public surfaces advance alongside usable Pactwright capabilities.
 
-Examples:
+This is a progression target, not a requirement to update every surface after every checkpoint.
 
-| Capability                    | Public material              |
-| ----------------------------- | ---------------------------- |
-| Core Delivery                 | Quick Start + core example   |
-| Lifecycle shapes              | lifecycle concept/guide      |
-| Project Intelligence          | concept + onboarding example |
-| Graph Review                  | review guide + example       |
-| Assets / Publication          | approved-output example      |
-| Operations                    | feedback-loop example        |
-| Production Skills integration | multi-domain example         |
-| Full system                   | end-to-end case study        |
+## Core Delivery
 
-Do not update every surface for every implementation change.
+Advance:
 
-Update the smallest set needed to make a capability:
+```text
+README Quick Start
+Getting Started docs
+first Delivery example
+```
+
+## Remote Delivery
+
+Advance:
+
+```text
+deployable website
+GitHub setup guide
+remote Delivery example
+```
+
+The original progression requires this milestone, but the exact canonical acceptance criterion for "Remote Delivery" remains unresolved. GitHub Integration is the obvious supporting surface, but this specification does not redefine its semantics.
+
+## Project Intelligence
+
+Advance:
+
+```text
+Project Intelligence concepts and onboarding docs
+Project Intelligence example
+Academy Project Understanding lesson
+identity/content knowledge foundation for public work
+```
+
+## Graph Review
+
+Advance:
+
+```text
+Graph Review docs
+Graph Review example
+Academy review lesson
+review of the existing public Pactwright corpus
+```
+
+The corpus review uses Graph Review Findings and normal Project Intelligence governance.
+
+## Production Skills + Assets / Publication
+
+This replaces the old Creative Delivery milestone without introducing another lifecycle.
+
+Advance:
+
+```text
+normal Delivery + Production Skills public-production example/guide
+relevant Academy production lesson
+README / website capability update
+first grounded approved public Asset
+first Publication where applicable
+```
+
+## Operations
+
+Advance:
+
+```text
+Operations docs
+production-feedback example
+Academy production-learning lesson
+website capability update
+```
+
+## Publication Feedback
+
+Advance:
+
+```text
+Publication-feedback guide
+real Operations evidence from a selected Publication
+Project Intelligence interpretation
+one evidence-driven revision of an existing Pactwright Publication
+```
+
+The revision follows normal Intent → Contract → Delivery → Review → Evidence → Asset/Publication governance.
+
+## Full Operating Surface
+
+Advance:
+
+```text
+end-to-end operating guide
+end-to-end example
+advanced Academy workflow
+ecosystem / Extension catalogue
+complete README capability map
+```
+
+## Hardened Loop
+
+Advance:
+
+```text
+public-surface audit
+Pactwright-Building-Pactwright case study
+contribution material
+release / launch content
+```
+
+At every milestone, update the **smallest set of surfaces** needed to make the newly delivered capability:
 
 ```text
 discoverable
@@ -1091,13 +928,9 @@ usable
 
 ---
 
-# 31. Release Surface
+# 25. Release Surface
 
-A Pactwright release may include independently versioned workspace packages.
-
-The repository should make package ownership and compatibility explicit.
-
-Conceptually:
+A repository release may contain independently versioned workspace packages.
 
 ```text
 Pactwright release
@@ -1106,15 +939,13 @@ Pactwright release
 └── compatible first-party Extensions
 ```
 
-Packages need not share versions forever if independent versioning provides value.
-
 Compatibility belongs to package and Extension contracts, not repository directory position.
 
 ---
 
-# 32. Turborepo Tasks
+# 26. Repository Task Graph and CI
 
-The root task graph should eventually support consistent commands such as:
+Turborepo should coordinate consistent repository tasks such as:
 
 ```text
 turbo build
@@ -1124,7 +955,7 @@ turbo test
 turbo eval
 ```
 
-Additional repository-wide verification may include:
+Repository-wide verification may include:
 
 ```text
 canonical spec validation
@@ -1135,43 +966,17 @@ website build
 Pactwright self-validation
 ```
 
-Tasks should be cacheable where outputs are deterministic.
+CI validates the monorepo as one coherent product and runs affected build, test, eval, example, docs and website checks.
 
-Turborepo should coordinate package work without embedding Pactwright semantic logic.
+Changes affecting canonical semantics additionally validate relevant Pactwright specs and dogfooded Project Graph state.
 
----
-
-# 33. CI
-
-Repository CI should validate the monorepo as one coherent product.
-
-A normal change may run affected:
-
-```text
-build
-lint
-typecheck
-unit tests
-integration tests
-Pactwright evals
-example validation
-docs validation
-website build
-```
-
-Changes affecting canonical semantics should additionally validate relevant Pactwright specifications and dogfooded Project Graph state.
-
-CI mechanics belong to GitHub Integration and repository tooling.
-
-This specification defines only the repository-wide quality expectation.
+CI mechanics remain owned by GitHub Integration and repository tooling.
 
 ---
 
-# 34. Markdown First
+# 27. Markdown First
 
-Where practical, public product knowledge should remain Markdown-first.
-
-This applies especially to:
+Where practical, public product knowledge remains Markdown-first, especially:
 
 ```text
 Docs
@@ -1183,27 +988,52 @@ registry metadata
 canonical specs
 ```
 
-The website may enhance presentation.
-
-It should not require content authors to maintain equivalent information separately inside application code or a CMS.
+The website enhances presentation without requiring equivalent content to be maintained separately in application code or a CMS.
 
 ---
 
-# 35. Anti-Overengineering Constraints
+# 28. Core Invariants
+
+1. The repository is the canonical product source.
+2. Public surfaces reuse repository-owned knowledge wherever practical.
+3. Canonical system semantics live in `docs/specs/`.
+4. Research logs preserve exploration rather than current authority.
+5. Checkpoints describe implementation progression rather than system semantics.
+6. Documentation explains Pactwright; Academy teaches methodology.
+7. Examples are executable validation assets.
+8. Case studies represent actual journeys and evidence.
+9. The ecosystem distinguishes Agent Packs, Pactwright Extensions and Production Skills.
+10. Production Skills remain independently maintained where appropriate.
+11. First-party Extensions have independent package boundaries.
+12. The standard Agent Pack remains separate from the core runtime.
+13. Turborepo manages the build graph, not the Pactwright Project Graph.
+14. Website content is not an independent product truth store.
+15. Public work progressively dogfoods Pactwright.
+16. When Pactwright can represent public work, that work is not manually maintained outside Pactwright.
+17. Dogfooded public work retains Intent, applicable grounding, Delivery Evidence and applicable Asset/Publication provenance.
+18. Public/outbound work satisfies the applicable Project Intelligence coverage gate before approval.
+19. Identity and positioning choices are Decisions rather than generated assumptions.
+20. Public work is re-grounded when relied-on Knowledge is challenged, superseded or retracted before approval.
+21. The public-product progression includes Remote Delivery, Publication Feedback, Full Operating Surface and Hardened Loop milestones.
+22. New infrastructure requires demonstrated scale, content or community need.
+
+---
+
+# 29. Anti-Overengineering Constraints and Open Gaps
 
 Do not introduce initially:
 
 ```text
 documentation SaaS platform
 learning-management system
-complex extension marketplace
+complex marketplace
 custom package registry
 Pactwright-hosted Production Skills repository
 content database
 CMS
 separate website knowledge model
 one repository per first-party package
-microservice infrastructure for documentation
+microservice documentation infrastructure
 ```
 
 Start with:
@@ -1217,32 +1047,18 @@ repository registries
 static website rendering
 ```
 
-Add richer infrastructure only after actual project or community needs justify it.
+Open gaps remain:
+
+- the acceptance test for when a Pactwright capability is mature enough that dogfooding becomes mandatory for that class of work;
+- the exact completion criterion for the Remote Delivery public milestone;
+- the canonical bootstrap authority for product identity/positioning before Project Intelligence is available, while preserving the rule that such choices are Decisions rather than generated assumptions;
+- the exact policy for selecting which Publications should enter the Publication Feedback milestone when Operations can observe many surfaces.
+
+These gaps should be resolved from observed use rather than by adding parallel content-management or governance systems.
 
 ---
 
-# 36. Core Invariants
-
-1. The repository is the canonical product source.
-2. Public surfaces reuse repository-owned knowledge wherever practical.
-3. Canonical system semantics live in `docs/specs/`.
-4. Research logs preserve exploration rather than becoming current authority.
-5. Checkpoints describe implementation progression rather than system semantics.
-6. Documentation explains Pactwright; Academy teaches methodology.
-7. Examples are executable validation assets, not decorative tutorials.
-8. Case studies demonstrate actual complete journeys.
-9. The ecosystem distinguishes Agent Packs, Pactwright Extensions and compatible Production Skills.
-10. Production Skills remain independently maintained where appropriate.
-11. First-party Pactwright Extensions have independent package boundaries.
-12. The standard Agent Pack remains separate from the core runtime.
-13. Turborepo coordinates the build graph but does not replace the Pactwright Project Graph.
-14. Website content must not become an independent source of product truth.
-15. Public work should progressively dogfood Pactwright.
-16. New infrastructure should be justified by real content, scale or community requirements.
-
----
-
-# 37. Current Implementation Baseline
+# 30. Current Implementation Baseline
 
 Pactwright already has the beginnings of the target workspace model:
 
@@ -1261,10 +1077,10 @@ apps/
 → public applications
 
 packages/
-→ Pactwright runtime, Agent Pack and first-party Extensions
+→ runtime, Agent Pack and first-party Extensions
 
 docs/
-→ canonical and user-facing product knowledge
+→ canonical and user-facing knowledge
 
 examples/
 academy/
@@ -1272,45 +1088,45 @@ registry/
 → public ecosystem and learning assets
 ```
 
-The migration should preserve working `0.0.1` behaviour while moving responsibilities into their canonical package boundaries.
+The migration should preserve working behaviour while moving responsibilities into canonical package boundaries.
 
-The Turborepo structure is therefore an evolution of the existing workspace, not a rewrite of Pactwright's product architecture.
+The repository should progressively dogfood each capability as soon as the capability can represent its own corresponding work.
 
 ---
 
-# 38. Relationship to Other Canonical Specifications
+# 31. Relationship to Other Canonical Specifications
 
 ```text
 01 Core System and Lifecycle
-→ defines Pactwright's core product semantics
+→ defines Pactwright core Delivery semantics used by public work
 
 02 Distribution, Agent Packs, Extensions and Evaluation
-→ defines component packaging and integration contracts
+→ defines package and AI composition contracts
 
 03 Project Intelligence
-→ defines durable project knowledge
+→ owns coverage, grounding and durable public-product knowledge
 
 04 Graph Review
-→ defines specialist analysis
+→ owns public-corpus review Findings
 
 05 Assets and Publication
-→ defines durable approved outputs
+→ owns approved public Assets and Publication records
 
 06 Operations
-→ defines real-world feedback
+→ owns feedback from public production exposure
 
 07 GitHub Integration
-→ defines GitHub automation and projection
+→ owns repository automation and projections
 
 08 Open-Source Project Organisation
-→ defines how all of these become one coherent repository and public product
+→ composes these into one repository and public product
 ```
 
 ---
 
-# 39. Governing Rule
+# 32. Governing Rule
 
-> **Pactwright is one open-source product whose repository is the source of truth for implementation, specifications, documentation, examples, education and ecosystem metadata. Turborepo organises the buildable product, canonical specifications define system semantics, public surfaces progressively disclose and reuse that knowledge, and Pactwright should increasingly govern its own development and publication as a demonstration of the system it provides.**
+> **Pactwright is one open-source product whose repository is the source of truth. Its public material should increasingly be produced by the same Pactwright mechanisms offered to users: grounded project knowledge drives Contract-governed Delivery, durable public outputs become approved Assets and Publications where applicable, Operations feeds real-world evidence back through Project Intelligence, and public surfaces evolve alongside the capabilities that make them possible.**
 
 ---
 
