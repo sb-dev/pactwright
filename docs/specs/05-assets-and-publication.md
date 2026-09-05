@@ -85,7 +85,7 @@ Assets / Publication does not require Graph Review.
 
 It does not require Operations.
 
-Project Intelligence is not required for the basic existence of Asset or Publication records, but applicable grounding must still satisfy the grounding rules in this specification.
+Project Intelligence is not required merely for Asset or Publication records to exist. It becomes required for approval of an Asset when that Asset has a governed project-grounding requirement under section 10.
 
 When Operations is enabled, Publication may be registered as an operational exposure.
 
@@ -255,7 +255,29 @@ The exact mechanism for validating externally stored bytes when a storage target
 
 # 10. Asset Grounding
 
-When an Asset asserts project facts, its grounding must identify the canonical project records and exact content states supporting those assertions.
+Grounding is required when the approved output depends on governed project truth such as:
+
+```text
+project facts
+identity
+voice
+positioning
+product claims
+other accepted project-specific constraints or claims
+```
+
+For such Assets:
+
+```text
+Project Intelligence enabled
+→ accepted Knowledge exists
+→ Asset records exact grounding ids + hashes
+→ approval may proceed
+```
+
+If Project Intelligence is disabled and the output requires this governed grounding, Asset approval must fail until Project Intelligence is enabled and the required Knowledge has been accepted.
+
+An Asset whose approved content does not assert or depend on governed project claims does not require Project Intelligence merely to exist. Examples may include neutral build outputs or other durable artefacts whose approval is fully established by Delivery Evidence and exact content identity.
 
 Conceptually:
 
@@ -267,17 +289,27 @@ grounding:
     hash: ...
 ```
 
-Validation must ensure every declared grounding id exists and every grounding hash matches the referenced canonical state.
+Validation must ensure every declared grounding id exists, references accepted applicable Project Intelligence Knowledge and every grounding hash matches the referenced canonical state.
 
 Applicable grounding may be represented through:
 
 ```text
-Asset --grounded-in--> Project Intelligence record
+Asset --grounded-in--> Project Intelligence Knowledge
 ```
 
 Later challenge, supersession or retraction of grounding may identify the Asset for reconsideration but must not silently mutate it.
 
-The redesign allows Assets / Publication to exist without Project Intelligence, while the earlier grounding contract assumes canonical fact grounding is available. The policy for approving fact-bearing Assets when Project Intelligence is disabled remains unresolved. The invariant is that required grounding must not simply be omitted to bypass validation.
+The rule is therefore conditional rather than contradictory:
+
+```text
+no governed grounding requirement
+→ Project Intelligence not required
+
+governed grounding requirement
+→ Project Intelligence required for Asset approval
+```
+
+Required grounding must never be omitted merely to bypass this dependency.
 
 ---
 
@@ -388,6 +420,8 @@ approved Asset
 
 A Publication must reference an existing approved Asset and its exact approved content hash.
 
+Publication cannot be used to bypass a grounding requirement that should have prevented Asset approval.
+
 ---
 
 # 16. Multiple Publications and Corrections
@@ -420,7 +454,7 @@ Scheduled publication of an already approved Asset may be automated, but the can
 
 # 17. Project Intelligence Integration
 
-Project Intelligence may provide grounding used by Delivery and retained on an approved Asset.
+Project Intelligence provides grounding when an Asset depends on governed project-specific truth.
 
 If grounding Knowledge later changes:
 
@@ -583,6 +617,7 @@ Assets / Publication does **not** own a generated reports subsystem. The earlier
 Failure rules are:
 
 - invalid Evidence, content hash, grounding or approval prevents Asset creation;
+- required governed grounding with Project Intelligence unavailable prevents Asset creation;
 - failed Asset creation must not leave a partial canonical Asset;
 - a failed Publication attempt must not modify the approved Asset;
 - a failed Publication record must not become a valid operational exposure;
@@ -601,17 +636,18 @@ The exact idempotency identity for repeated `record-publication` calls is not de
 2. every Asset records a valid human approver and approval time;
 3. every Asset has a `content_hash`;
 4. every Asset content hash exactly matches the stored or referenced approved output when that output is verifiable;
-5. every declared grounding id/hash pair resolves to the referenced canonical state;
-6. Assets that assert project facts satisfy the applicable grounding requirement;
-7. Asset content identity is immutable after creation;
-8. Asset `supersedes` relationships have valid Asset endpoints;
-9. every Publication references an approved Asset;
-10. every Publication records `asset_hash`, `channel`, `published_by` and `published_at`;
-11. every Publication `asset_hash` exactly equals the referenced Asset `content_hash`;
-12. every `produces`, `grounded-in`, `publishes` and `supersedes` edge uses valid endpoints and the canonical direction;
-13. `publishes` is `Publication → Asset`;
-14. Operations exposure references an existing Publication rather than copied Publication state;
-15. Asset / Publication validation does not depend on operational performance.
+5. every declared grounding id/hash pair resolves to accepted applicable Project Intelligence Knowledge and exact referenced canonical state;
+6. Assets asserting project facts, identity, voice, positioning or other governed project claims require Project Intelligence and valid accepted grounding before approval;
+7. Assets without a governed grounding requirement may remain valid without Project Intelligence;
+8. Asset content identity is immutable after creation;
+9. Asset `supersedes` relationships have valid Asset endpoints;
+10. every Publication references an approved Asset;
+11. every Publication records `asset_hash`, `channel`, `published_by` and `published_at`;
+12. every Publication `asset_hash` exactly equals the referenced Asset `content_hash`;
+13. every `produces`, `grounded-in`, `publishes` and `supersedes` edge uses valid endpoints and the canonical direction;
+14. `publishes` is `Publication → Asset`;
+15. Operations exposure references an existing Publication rather than copied Publication state;
+16. Asset / Publication validation does not depend on operational performance.
 
 Core `pactwright validate` may invoke this validation when the Extension is enabled.
 
@@ -626,6 +662,8 @@ Useful cases include:
 - rejecting candidate output without human Asset approval;
 - rejecting Asset creation when stored content does not match `content_hash`;
 - rejecting invalid grounding id/hash pairs;
+- rejecting governed-claim Asset approval when Project Intelligence is unavailable;
+- allowing a genuinely ungrounded Asset class without forcing Project Intelligence;
 - preventing direct Publication from Evidence or unapproved output;
 - rejecting a Publication whose `asset_hash` differs from the approved Asset hash;
 - preserving Asset immutability and Asset supersession history;
@@ -646,21 +684,22 @@ Production quality remains evaluated before Evidence through Delivery Review and
 5. Every Asset is traceable to valid Delivery Evidence.
 6. Asset content hash identifies the exact approved output and is immutable.
 7. Material Asset changes create a new Asset linked through `supersedes`.
-8. Applicable project-fact grounding is recorded and hash-validated.
-9. Only an approved Asset may have a canonical Publication.
-10. Publication snapshots the approved `asset_hash` and records who published it and when.
-11. The canonical publication edge is `Publication --publishes--> Asset`.
-12. One Asset may have multiple Publications.
-13. Corrections use a new Asset and a new Publication when released.
-14. Publication withdrawal and Publication-to-Publication supersession are not established semantics.
-15. Publication records exposure, not performance.
-16. Operations owns real-world outcomes after exposure and must reference the existing Publication.
-17. Operations failure or absence does not invalidate Publication.
-18. Project Intelligence owns durable meaning derived from later evidence.
-19. Graph Review may inspect Assets and Publications but does not govern them.
-20. Production Skills own how outputs are created.
-21. Assets / Publication does not own provider/model routing, production workflow or generated reports.
-22. Cross-extension relationships never transfer semantic ownership.
+8. Governed project grounding requires Project Intelligence, accepted Knowledge and exact grounding hashes.
+9. Assets without governed project grounding requirements do not require Project Intelligence merely to exist.
+10. Only an approved Asset may have a canonical Publication.
+11. Publication snapshots the approved `asset_hash` and records who published it and when.
+12. The canonical publication edge is `Publication --publishes--> Asset`.
+13. One Asset may have multiple Publications.
+14. Corrections use a new Asset and a new Publication when released.
+15. Publication withdrawal and Publication-to-Publication supersession are not established semantics.
+16. Publication records exposure, not performance.
+17. Operations owns real-world outcomes after exposure and must reference the existing Publication.
+18. Operations failure or absence does not invalidate Publication.
+19. Project Intelligence owns durable meaning derived from later evidence.
+20. Graph Review may inspect Assets and Publications but does not govern them.
+21. Production Skills own how outputs are created.
+22. Assets / Publication does not own provider/model routing, production workflow or generated reports.
+23. Cross-extension relationships never transfer semantic ownership.
 
 ---
 
@@ -697,7 +736,6 @@ Evidence
 The following gaps remain explicit rather than being invented here:
 
 - how Pactwright proves the hash of externally stored Asset bytes when storage is unavailable, mutable or access-controlled;
-- how fact-bearing Asset grounding should behave when Project Intelligence is disabled;
 - the exact CLI operation for attaching `Asset --supersedes--> Asset` during approval of a revision;
 - the idempotency identity used to distinguish an intentional second Publication from a retry of the same publication-recording operation;
 - whether additional generic production provenance beyond Delivery Evidence, content hash and grounding becomes necessary after the old Generation Record machinery has been removed.
@@ -720,6 +758,8 @@ The earlier Graph Review & Creative Delivery research established the surviving 
 - failed Publication does not change the Asset;
 - Operations references Publications without copying or replacing them;
 - Operations failure, absence or poor performance does not invalidate Publication.
+
+The cross-spec correction makes the grounding dependency explicit: Assets / Publication remains independently enableable, but approval of an Asset that depends on governed project truth requires Project Intelligence and accepted hash-valid grounding.
 
 The redesign removes the unrelated machinery previously bundled with these semantics:
 
@@ -752,7 +792,7 @@ Assets / Publication is therefore a small post-Delivery semantic layer rather th
 → distributes this Extension
 
 03 Project Intelligence
-→ owns project-specific durable knowledge and applicable grounding
+→ owns governed project-specific grounding required by applicable Assets
 
 04 Graph Review
 → may identify issues affecting Assets / Publications
@@ -774,7 +814,7 @@ Assets / Publication is therefore a small post-Delivery semantic layer rather th
 
 # 32. Governing Rule
 
-> **Assets / Publication begins after successful Pactwright Delivery. A human approves an exact content hash to create an immutable Asset. A Publication records that exact approved Asset hash being released through a channel and points to the Asset through `Publication --publishes--> Asset`. Production remains owned by Delivery and Production Skills; real-world outcomes remain owned by Operations; durable lessons from those outcomes remain owned by Project Intelligence.**
+> **Assets / Publication begins after successful Pactwright Delivery. A human approves an exact content hash to create an immutable Asset. Where that Asset depends on governed project-specific truth, approval additionally requires accepted Project Intelligence Knowledge with exact grounding hashes; otherwise Project Intelligence is not required merely for Asset existence. A Publication records the exact approved Asset hash being released through a channel and points to the Asset through `Publication --publishes--> Asset`. Production remains owned by Delivery and Production Skills; real-world outcomes remain owned by Operations.**
 
 ---
 
