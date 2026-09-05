@@ -6,36 +6,35 @@ Operations is an optional Pactwright Extension that connects completed Delivery 
 
 Its core flow is:
 
-```text id="u4v5zo"
+```text
 Evidence
 → production exposure
-→ real-world signals
+→ bounded operational evidence
 → Observation
 → Project Intelligence Source
-→ Knowledge / future Delivery candidate
+→ Knowledge / Intent candidate
+→ normal Delivery lifecycle
 ```
 
-It answers:
+Operations answers:
 
 > What happened after delivered or published work reached the real world?
 
-Operations provides:
+It provides:
 
-- production traceability;
 - Deployment semantics for software;
-- support for other registered exposure types such as Publication;
+- support for Extension-contributed exposure types such as Publication;
 - operational source integration;
 - bounded evidence collection;
 - signal compression;
 - durable Observations;
-- operational provenance;
-- Project Intelligence hand-off.
+- operational execution provenance;
+- Project Intelligence hand-off;
+- a corrective Delivery view derived from Project Intelligence candidates.
 
-It is not an observability platform, telemetry database, incident-management system or second roadmap engine.
+Operations is not an observability platform, telemetry database, incident-management system, analytics warehouse or second roadmap engine.
 
-External operational systems remain the detailed evidence stores.
-
-Pactwright retains only durable operational truth worth preserving in the Project Graph.
+External operational systems remain authoritative for detailed runtime evidence.
 
 ---
 
@@ -43,20 +42,22 @@ Pactwright retains only durable operational truth worth preserving in the Projec
 
 Operations owns:
 
-```text id="rmtl5w"
+```text
 Deployment
 Observation
 operational exposure integration
 operational source configuration
+source adapters
 environment configuration
-signal collection and compression
+bounded evidence collection
+operational analysis/compression
 operational execution provenance
-Operations-derived views
+corrective-intent-roadmap projection
 ```
 
 It does not own:
 
-```text id="5x8fqo"
+```text
 Delivery Evidence
 Asset
 Publication
@@ -69,7 +70,7 @@ external observability systems
 
 The ownership boundary is:
 
-```text id="vef4te"
+```text
 Delivery
 → what was successfully delivered
 
@@ -83,89 +84,51 @@ Project Intelligence
 → what the project concludes from those outcomes
 ```
 
----
-
-# 3. Extension Boundary
-
-Operations is a sibling Pactwright Extension:
-
-```text id="q50new"
-Pactwright Project Graph
-├── Delivery Graph                 core
-├── Project Intelligence           optional
-├── Graph Review                   optional
-├── Assets / Publication           optional
-└── Operations                     optional
-```
-
-Operations requires Project Intelligence because durable operational meaning and future Delivery consequences flow through its governance.
-
-```text id="vi3bez"
-Operations
-    ↓ requires
-Project Intelligence
-    ↓
-Pactwright Core
-```
-
-Assets / Publication is an independent sibling.
-
-When both are enabled, a Publication may become an operational exposure.
-
-Graph Review may inspect Operations state but does not own it.
+Operations requires Project Intelligence because every canonical Observation uses Project Intelligence as its durable meaning and consequence path.
 
 ---
 
-# 4. Delivery vs Production Reality
+# 3. Core Invariants
 
-Successful Delivery Evidence and successful real-world operation are different claims.
-
-```text id="tsdvkl"
-Evidence
-→ the Contract was delivered and verified
-
-Deployment / Publication
-→ the result became exposed
-
-Observation
-→ what happened after exposure
-```
-
-A system may satisfy its Contract and later:
-
-- fail under production load;
-- produce unexpected user behaviour;
-- perform better than expected;
-- create operational cost;
-- generate new evidence about user needs.
-
-Likewise, a published Asset may be correct and approved but perform poorly after publication.
-
-Operations must preserve this distinction.
+1. Production exposure is distinct from successful Delivery Evidence.
+2. Deployment is post-Delivery Extension state, not a Delivery lifecycle stage.
+3. Raw logs, traces, metrics, analytics events and support messages are not Project Graph nodes.
+4. Observations are compressed operational facts supported by addressable evidence.
+5. Positive and negative outcomes use the same Observation model.
+6. Every canonical Observation enters Project Intelligence through normal Source ingestion.
+7. An Observation does not automatically become accepted project Knowledge.
+8. Operations cannot directly create or prioritise canonical Delivery Intents.
+9. The corrective intent roadmap is a filtered view of Project Intelligence candidates, not a second roadmap engine.
+10. Operations consumes the deterministic Project Graph revision supplied by Pactwright runtime.
+11. Historical Deployment and Observation records are not silently rewritten.
+12. Canonical corrections use explicit supersession.
+13. Adding an operational data source does not require new Project Graph semantics.
+14. Adding a compatible exposure type does not require new Observation semantics.
+15. External operational systems remain authoritative for detailed telemetry.
 
 ---
 
-# 5. Production Exposure
+# 4. Production Exposure
 
 An operational exposure identifies work that reached a surface where real-world outcomes can occur.
 
 Operations supports:
 
-```text id="9yjp4m"
+```text
 native exposure
 → Deployment
 ```
 
 and:
 
-```text id="mmwc8q"
+```text
 Extension-contributed exposure
-→ registered compatible Project Graph node
+→ compatible registered Project Graph node
 ```
 
 Initially:
 
-```text id="fl9zrk"
+```text
 software:
 Evidence
 → Deployment
@@ -173,10 +136,9 @@ Evidence
 
 and, when Assets / Publication is enabled:
 
-```text id="9mbofz"
+```text
 published output:
-Evidence
-→ Asset
+Asset
 → Publication
 ```
 
@@ -184,38 +146,24 @@ Operations owns Deployment.
 
 Assets / Publication continues to own Publication.
 
-Operations references compatible exposure records rather than copying them into Operations-owned equivalents.
+Operations references compatible exposure records rather than copying them.
+
+A Pactwright Extension may declare compatible exposure node types through its manifest. Operations resolves those registrations rather than hard-coding every future Extension.
 
 ---
 
-# 6. Exposure Registration
-
-A Pactwright Extension may declare that one of its canonical node types can act as an operational exposure.
-
-Conceptually:
-
-```yaml id="3rfiez"
-operations:
-  exposure_types:
-    - publication
-```
-
-Operations resolves compatible exposure types from enabled Extension manifests.
-
-It must not hard-code every future production domain or Extension.
-
-A valid exposure type must provide stable enough identity for an Observation to reference the exact exposed work.
-
----
-
-# 7. Deployment
+# 5. Deployment
 
 A Deployment records that delivered software became active in an operating environment.
 
-Conceptually:
+Minimum structure:
 
-```yaml id="p1n3e0"
+```yaml
 id: deployment-...
+type: deployment
+title: ...
+created: ...
+
 environment: production
 
 delivery_evidence: evidence-...
@@ -226,89 +174,42 @@ artifact:
   hash: ...
 
 deployed_at: ...
-deployed_by: ...
+deployed_by: human:... | automation:...
+```
+
+The canonical relationship is:
+
+```text
+Evidence --deployed-as--> Deployment
 ```
 
 A Deployment must:
 
 - reference valid Delivery Evidence;
-- identify the deployed artefact;
-- identify the environment;
-- preserve deployment time and authority.
+- identify the deployed artefact and exact content/revision identity;
+- reference a configured environment;
+- record deployment time and actor;
+- remain immutable once recorded.
 
-Repeated deployments create distinct records.
+A genuine redeployment or rollback creates another Deployment.
 
-Rollback and redeployment also create new records.
+Correction of canonical Deployment information uses `supersedes` rather than silent mutation.
 
-Deployment does not mutate Evidence.
+Repeated recording of the **same deployment event** must be idempotent and must not create uncontrolled duplicates.
 
-Deployment success does not prove production correctness.
-
----
-
-# 8. Deployment Immutability
-
-A Deployment records a historical exposure event.
-
-It must not be silently rewritten because the deployed state later changes.
-
-Corrections to canonical Deployment information use explicit supersession where needed.
-
-Operational state such as:
-
-```text id="usj51c"
-currently active
-rolled back
-superseded
-```
-
-may be derived from Deployment relationships rather than repeatedly mutating historical records.
+The exact deployment-event identity needed to distinguish a retry from a genuine redeployment is not defined by the existing source and remains an explicit gap.
 
 ---
 
-# 9. Operational Sources
+# 6. Operational Sources and Environments
 
-Operations may gather evidence from systems such as:
+Operational evidence may come from monitoring, logs/traces, error tracking, analytics, deployment systems, support systems, customer feedback, incidents, application databases, publication analytics or repository/issue systems.
 
-- monitoring platforms;
-- logs and traces;
-- error trackers;
-- analytics platforms;
-- deployment systems;
-- support systems;
-- customer-feedback platforms;
-- incident systems;
-- application databases;
-- publication analytics;
-- repository or issue systems.
+These remain external evidence stores.
 
-These remain external systems.
+Repository configuration is conceptually:
 
-Pactwright does not mirror their full datasets.
-
-The integration model is:
-
-```text id="3u3vu6"
-external operational system
-        ↓
-source adapter
-        ↓
-bounded evidence window
-        ↓
-analysis / compression
-        ↓
-Observation
-```
-
----
-
-# 10. Source and Environment Configuration
-
-Repository-specific operational integration belongs under Operations configuration.
-
-Conceptually:
-
-```text id="lnn4ld"
+```text
 .pactwright/operations/
 ├── sources/
 └── environments/
@@ -316,8 +217,9 @@ Conceptually:
 
 A source definition may contain:
 
-```yaml id="nzdpig"
+```yaml
 id: checkout-errors
+type: metrics
 adapter: prometheus
 
 target: ...
@@ -325,58 +227,37 @@ evidence: ...
 schedule: hourly
 ```
 
-An environment definition identifies operating surfaces such as:
+An environment definition identifies a stable operating surface such as `production`, `staging`, a regional deployment or another registered surface.
 
-```text id="wm7438"
-production
-staging
-regional production
-public website
-published channel
-```
-
-Credentials must not be stored in canonical Operations records.
+Credentials must never live in canonical Operations records.
 
 ---
 
-# 11. Source Adapters
+# 7. Source Adapters
 
 Provider-specific operational integrations are adapters.
 
-Adding a source adapter should require only:
+Adding a source adapter requires only:
 
-```text id="sjhpdc"
+```text
 adapter implementation
 source schema
 conformance tests
 ```
 
-It must not require new Project Graph semantics.
+It must not require new graph semantics.
 
-For example:
-
-```text id="8b24rw"
-Prometheus
-Datadog
-Sentry
-CloudWatch
-analytics provider
-support platform
-```
-
-may all provide evidence for the same Observation semantics.
-
-Operations should not become coupled to particular vendors.
+Source adapters collect operational evidence. They do not determine Project Intelligence meaning or Delivery priority.
 
 ---
 
-# 12. Signal Collection Boundary
+# 8. Signal Collection Boundary
 
 The Project Graph must remain high signal.
 
-The following should not become Project Graph nodes:
+Do not create Project Graph nodes for:
 
-```text id="kr9i5r"
+```text
 individual log entries
 traces
 metric samples
@@ -388,32 +269,33 @@ raw support messages
 monitoring payloads
 ```
 
-Operations compresses detailed evidence into durable meaning.
+Operations collects only bounded evidence needed to decide whether a durable Observation is justified.
 
-Conceptually:
-
-```text id="6h695p"
-10,000 operational events
+```text
+high-volume operational evidence
         ↓
-analysis
+bounded collection
         ↓
-1 meaningful Observation
+analysis / compression
+        ↓
+0..n Observations
 ```
 
-A collection run may legitimately produce no Observation.
-
-No graph mutation is required when nothing materially useful was learned.
+Insufficient or unimportant evidence legitimately produces no Observation and no canonical graph mutation.
 
 ---
 
-# 13. Operational Execution Provenance
+# 9. Operational Execution Provenance
 
-Each collection or analysis run should retain enough execution provenance to reproduce or audit the result.
+**Every collection and every analysis run creates immutable operational execution provenance.**
+
+Execution provenance is not a Project Graph node.
 
 Conceptually:
 
-```yaml id="py3x9f"
+```yaml
 id: operations-execution-...
+operation: ingest | observe
 source: checkout-errors
 
 graph_revision: ...
@@ -433,44 +315,34 @@ observations:
 
 status: succeeded | failed
 created: ...
+failure: null | ...
 ```
 
-Execution provenance is not normal Project Graph state.
+It preserves:
 
-It records:
-
-- source;
-- evidence window;
+- operation and source;
+- evidence/query window;
 - Project Graph revision;
-- exposures inspected;
-- external evidence references;
-- resulting Observations;
-- failures.
+- relevant exposures;
+- external evidence locators;
+- resulting or matched Observations;
+- failure information.
+
+External evidence referenced by an Observation must remain addressable enough to audit the finding. The policy for evidence locators that later expire, mutate or become inaccessible remains unresolved; Operations must not pretend an unreachable locator is reproducible evidence.
 
 ---
 
-# 14. Observation
+# 10. Observation
 
 An Observation is a concise durable real-world fact worth retaining in the Project Graph.
 
-Examples:
+Minimum structure:
 
-```text id="fvy9yf"
-Checkout error rate materially increased after deployment X.
-
-Users repeatedly abandon onboarding at step Y.
-
-Support contacts increased after the account-flow release.
-
-Publication X materially exceeded its established engagement baseline.
-
-The new caching approach reduced latency without increasing errors.
-```
-
-Conceptually:
-
-```yaml id="tfek70"
+```yaml
 id: observation-...
+type: observation
+title: ...
+created: ...
 
 exposure:
   id: ...
@@ -494,206 +366,112 @@ evidence:
 baseline: null | ...
 ```
 
----
+The canonical relationship is:
 
-# 15. Observation Rules
+```text
+Observation --observes--> operational exposure
+```
 
 An Observation must:
 
 - state a factual operational finding;
-- identify the relevant exposure or project surface;
-- identify the evidence window;
+- identify the exact exposure or project surface observed;
+- define its evidence window;
 - reference supporting evidence;
 - preserve uncertainty;
 - avoid unsupported causal claims;
 - remain compact enough for normal Project Graph use.
 
-A baseline should be recorded when the finding depends on comparison.
+When the finding depends on comparison, the relevant baseline should be recorded.
 
-`significance` expresses operational importance.
-
-It does not determine:
-
-- Project Intelligence triage class;
-- Knowledge status;
-- roadmap priority;
-- automatic Delivery creation.
+`significance` does not determine Project Intelligence triage class, Knowledge status, roadmap priority or automatic Delivery creation.
 
 ---
 
-# 16. Positive and Negative Evidence
+# 11. Observation Identity, Deduplication and Supersession
 
-Operations is not only a defect system.
+Repeated evidence must not create unlimited duplicate Observations.
 
-Observations may describe:
+Possible outcomes are:
 
-```text id="shda2z"
-failure
-regression
-success
-improvement
-usage pattern
-cost change
-unexpected behaviour
-validated assumption
-```
-
-Positive Observations can be as valuable as failures.
-
-For example:
-
-```text id="0s39va"
-a performance optimisation worked
-a user flow improved completion
-a publication substantially outperformed baseline
-a reliability constraint was achieved
-```
-
-They use the same Project Intelligence governance path.
-
----
-
-# 17. Observation Identity and Deduplication
-
-Repeated collection must not create unlimited duplicate Observations.
-
-Possible outcomes:
-
-```text id="rzd8l0"
+```text
 new durable finding
 → create Observation
-```
 
-```text id="izxp7r"
-same meaning + new evidence
+same meaning + additional evidence
 → retain existing Observation
-```
 
-```text id="nyy93l"
 materially changed meaning
 → create new Observation
 → supersede earlier Observation where appropriate
 ```
 
-External evidence remains available through provenance even when no new canonical Observation is created.
+Observation records are immutable for their evidence window.
 
-Operations deduplication does not replace Project Intelligence Source-level triage.
+Later evidence describing resolution or a materially changed condition creates another Observation rather than rewriting history.
 
----
+`supersedes` relationships between Observations must be explicit and acyclic.
 
-# 18. Active and Resolved Conditions
-
-An Observation records what was true for its evidence window.
-
-It should not be mutated when later production state changes.
-
-Example:
-
-```text id="m4d4jh"
-Observation A:
-error rate increased
-
-        ↓ later evidence
-
-Observation B:
-error rate returned to baseline
-```
-
-Observation B may supersede Observation A as the current operational understanding.
-
-Derived views may classify a condition as:
-
-```text id="pktrqe"
-active
-improved
-resolved
-superseded
-unknown
-```
-
-These may remain derived states rather than canonical fields.
+The exact stable identity/deduplication key used to separate deterministic duplicate detection from semantic comparison is not fully defined and remains an implementation gap.
 
 ---
 
-# 19. Correlation and Causality
+# 12. Correlation and Causality
 
-Operations may correlate evidence with:
-
-- Deployments;
-- Publications;
-- Delivery lineages;
-- prior Observations;
-- accepted Project Intelligence Knowledge.
+Operations may correlate findings with Deployments, Publications, Delivery lineages, prior Observations and accepted Project Intelligence Knowledge.
 
 But:
 
-```text id="9hwxqu"
+```text
 after
 ≠ caused by
 ```
 
-For example:
+An Observation may state that a signal changed after an exposure when supported without claiming that the exposure caused the change.
 
-```text id="cwpyb7"
-error rate increased after deployment X
-```
-
-may be supported while:
-
-```text id="az9is3"
-deployment X caused the increase
-```
-
-may not yet be justified.
-
-Observations must preserve that distinction.
-
-A stronger causal interpretation can later become Project Intelligence Knowledge if sufficient evidence supports it.
+Stronger causal interpretation requires adequate evidence and may later become Project Intelligence Knowledge.
 
 ---
 
-# 20. Project Intelligence Hand-Off
+# 13. Project Intelligence Hand-Off
 
-Every Observation intended to influence durable project understanding enters Project Intelligence through normal Source ingestion.
+Every canonical Observation enters Project Intelligence through normal internal Source ingestion.
 
-```text id="1wtbr3"
+```text
 Observation
 → internal Source
 → triage
 → Knowledge / candidate where justified
 ```
 
-The internal Source should retain provenance to:
+The Source must retain provenance to:
 
-- Observation;
-- exposure;
-- external evidence;
-- Operations execution where useful.
+- Observation id and content hash;
+- observed exposure;
+- supporting external evidence locators;
+- originating Operations execution where applicable.
 
 Operations ends at operational truth.
 
 It must not directly:
 
-```text id="9azef7"
-create Knowledge
-modify Knowledge
-create Delivery Intents
-amend Contracts
-amend Briefs
-reprioritise project work
+```text
+create or edit Knowledge
+alter Domain Definitions
+create canonical Delivery Intents
+amend Contracts or Briefs
+reprioritise Delivery work
 ```
 
-Project Intelligence determines durable project meaning and consequence.
+A failed Project Intelligence hand-off leaves the Observation valid and retryable without rerunning collection or analysis.
 
 ---
 
-# 21. Corrective Delivery
+# 14. Corrective Delivery and Roadmap
 
-Operational evidence may motivate future Delivery.
+Operational evidence may motivate future Delivery only through Project Intelligence:
 
-The required path is:
-
-```text id="ng08nq"
+```text
 Observation
 → Project Intelligence Source
 → accepted Knowledge
@@ -702,219 +480,151 @@ Observation
 → Contract lifecycle
 ```
 
-Operations may provide useful evidence such as:
+Operations may contribute evidence such as significance, frequency, recurrence, user impact, duration, affected exposure, Delivery lineage, regression against baseline and whether a condition remains active.
 
-```text id="qh4a1z"
-significance
-frequency
-recurrence
-user impact
-duration
-affected exposure
-regression against baseline
-whether the condition remains active
+Project Intelligence combines those signals with project-wide constraints and remains authoritative for candidate readiness and ordering.
+
+Operations exposes the derived report:
+
+```text
+docs/operations/reports/corrective-intent-roadmap.md
 ```
 
-Project Intelligence combines these signals with:
+It is a filtered projection of existing Project Intelligence candidates motivated by Operations provenance.
 
-- legal and security requirements;
-- dependencies;
-- strategy;
-- accepted Knowledge;
-- current Intents;
-- other project constraints.
+Roadmap entries are **derived candidates, not canonical Intents**.
 
-Operations does not own global prioritisation.
+Editing the report must not create an Intent or change priority.
+
+Every generated corrective roadmap identifies the Project Graph revision from which it was derived.
+
+Regeneration uses the current deterministic Project Graph revision unless the operation explicitly requests a pinned revision.
+
+The exact CLI syntax for requesting a pinned corrective-roadmap regeneration is not yet defined.
 
 ---
 
-# 22. Corrective Roadmap View
+# 15. Assets / Publication Integration
 
-Operations may expose a derived view of Project Intelligence candidates motivated by operational evidence.
+When Assets / Publication is enabled, Publication may act as an operational exposure.
 
-Conceptually:
-
-```text id="9mgyob"
-Project Intelligence intent candidates
-        ↓
-Operations-origin filter
-        ↓
-corrective intent view
-```
-
-This answers:
-
-> What Delivery work is currently suggested by operational evidence?
-
-It is not a second roadmap engine.
-
-The Project Intelligence intent roadmap remains authoritative for project-wide readiness and ordering.
-
-Editing an Operations report must not create an Intent or change its priority.
-
----
-
-# 23. Assets / Publication Integration
-
-When Assets / Publication is enabled:
-
-```text id="lzl8hi"
-Evidence
-→ Asset
-→ Publication
+```text
+Publication
 → Observation
 ```
 
-Operations may observe Publications without taking ownership of them.
+Operations references the existing Publication and must not copy, replace, mutate or redefine it.
 
-Examples include:
-
-- publication availability;
-- reach;
-- engagement;
-- conversion;
-- audience response;
-- errors or delivery failures.
-
-The boundary remains:
-
-```text id="evj2nt"
-Assets / Publication
-→ what was published
-
-Operations
-→ what happened afterwards
-```
-
-An Observation never mutates the Publication or Asset it observes.
+Publication validity remains independent of Operations processing.
 
 ---
 
-# 24. Graph Review Integration
+# 16. Graph Review and Delivery Context
 
-Graph Review may inspect:
-
-```text id="uwagzo"
-Deployments
-Observations
-accepted operational Knowledge
-```
-
-when conducting wider project analysis.
+Graph Review may inspect Deployments, Observations and accepted operational Knowledge when analysing wider project state.
 
 It must not become an alternative operational evidence pipeline.
 
-New operational facts should originate through Operations.
+Accepted operational meaning may influence future Contract crafting, Brief generation, Delivery and Review through Project Intelligence.
 
-Graph Review may analyse their project-wide implications and produce Findings through its normal Project Intelligence path.
-
----
-
-# 25. Delivery Context
-
-Accepted operational Knowledge may later influence:
-
-```text id="5f7cz5"
-Contract crafting
-Brief generation
-Delivery
-Review
-```
-
-through Project Intelligence.
-
-Raw telemetry should not be loaded directly into Delivery context merely because Operations can access it.
-
-The path is:
-
-```text id="p61z9u"
-raw operational evidence
-→ Observation
-→ Project Intelligence
-→ accepted Knowledge
-→ relevant future context
-```
-
-This preserves compression and semantic governance.
+Raw telemetry must not be loaded directly into normal Delivery context merely because Operations can access it.
 
 ---
 
-# 26. Operations Analysis Capability
+# 17. Operations Analysis Capability
 
-Operations may require one distinct AI responsibility:
+Operations requires one distinct Pactwright AI responsibility:
 
-```text id="7c60xp"
+```text
 operations-analysis
 ```
 
-It covers work such as:
+It covers:
 
 - interpreting bounded operational evidence;
-- correlating signals with exposures;
+- comparing evidence with baselines;
+- correlating signals with known exposures;
 - distinguishing noise from durable findings;
-- compressing evidence into candidate Observations;
-- preserving uncertainty.
+- preserving uncertainty;
+- producing concise candidate Observations.
 
-The selected Agent Pack determines the implementing agent and skills.
+The selected Agent Pack determines the implementation of this capability.
 
-Relevant Production Skills or Deep Research Skills may assist where appropriate.
+No specific Production Skills or Deep Research Skills dependency is established by the source contract and none is required by this specification.
 
-Operations semantics remain owned by this Extension.
+Deterministic responsibilities remain in Pactwright runtime, including source collection, hashing, exposure resolution, schema validation, graph mutation, edge creation, Project Intelligence hand-off and report generation.
 
 ---
 
-# 27. Commands
+# 18. Commands
 
-A compact initial command surface may include:
+The supported Operations command surface is:
 
-```text id="vgtezd"
-pactwright operations deploy ...
-pactwright operations collect <source>
-pactwright operations observe ...
+```text
+pactwright operations record-deployment <evidence-id>
+pactwright operations ingest [<source-id>]
+pactwright operations observe [<source-id>]
 pactwright operations refresh
+pactwright operations corrective-roadmap
 pactwright operations validate
 ```
 
-Exact CLI ergonomics may evolve.
+`record-deployment`
 
-Commands should map to Operations semantics rather than exposing provider-specific monitoring commands through Pactwright.
+Creates a Deployment from valid Delivery Evidence plus configured environment and artefact information.
+
+`ingest`
+
+Collects bounded evidence from configured operational sources and records collection execution provenance. It does not require creation of an Observation.
+
+`observe`
+
+Analyses collected evidence and creates or supersedes Observations only when durable findings are sufficiently supported.
+
+`refresh`
+
+Runs configured ingestion and Observation processing for eligible sources.
+
+`corrective-roadmap`
+
+Regenerates the Operations-filtered corrective roadmap from current Project Intelligence candidates.
+
+`validate`
+
+Validates Operations-owned graph semantics, source/environment configuration, execution provenance and cross-graph relationships.
+
+`ingest` and `observe` are deliberately distinct responsibilities. The exact persistence/lifetime of bounded evidence between those commands is not yet defined; implementations must preserve provenance and retryability without turning raw operational evidence into Project Graph state.
 
 ---
 
-# 28. Automation
+# 19. Automation
 
 Automation may:
 
-- capture Deployments from trusted deployment events;
-- run scheduled source collection;
-- evaluate bounded evidence windows;
-- create candidate Observations;
-- regenerate derived views;
-- trigger Project Intelligence ingestion.
+- record Deployment from trusted deployment events;
+- run scheduled `refresh`;
+- collect bounded source evidence;
+- invoke Observation analysis;
+- hand canonical Observations to Project Intelligence;
+- regenerate the corrective roadmap;
+- run Operations validation.
 
-Automation must not silently:
+Automation must not silently rewrite Evidence, alter Asset/Publication state, accept Project Intelligence Knowledge, create canonical Delivery Intents or alter project-wide priority.
 
-```text id="6nd9kr"
-rewrite Evidence
-change Contracts
-create canonical Delivery Intents
-accept Project Intelligence Knowledge
-alter Asset or Publication semantics
-```
-
-unless authority for the specific owning system explicitly permits it.
+Exact GitHub triggers, workflow paths, checks and Project views belong to the GitHub Integration specification.
 
 ---
 
-# 29. Repository Model
+# 20. Repository Model
 
 Conceptually:
 
-```text id="ghsv89"
+```text
 docs/operations/
 ├── deployments/
 ├── observations/
 └── reports/
+    └── corrective-intent-roadmap.md
 
 .pactwright/operations/
 ├── sources/
@@ -924,120 +634,109 @@ docs/operations/
 └── operations/
 ```
 
-Exact paths may evolve.
+Canonical Operations state is:
 
-Canonical Operations state consists primarily of:
-
-```text id="w2hn6w"
+```text
 Deployment
 Observation
 typed relationships
 ```
 
+Operational execution records and the corrective roadmap are non-canonical provenance/derived views.
+
 External telemetry remains external.
 
-Reports and execution provenance are derived or operational records, not normal Project Graph truth.
+---
+
+# 21. Failure and Idempotency
+
+## Deployment
+
+- invalid Delivery Evidence prevents Deployment creation;
+- deployment-recording failure does not mutate Evidence;
+- repeated recording of the same deployment event is idempotent;
+- genuine redeployments and rollbacks remain distinct Deployment events.
+
+## Collection
+
+- source authentication or availability failure creates a failed Operations execution record;
+- failed collection creates no canonical graph mutation;
+- retries are bounded by adapter policy;
+- deterministic validation failures stop immediately;
+- one unavailable source does not invalidate existing Operations truth.
+
+## Observation analysis
+
+- every analysis attempt records execution provenance;
+- failed analysis creates no canonical Observation;
+- insufficient evidence creates no Observation;
+- duplicate findings do not create uncontrolled graph growth;
+- supersession is explicit;
+- failed Project Intelligence hand-off leaves the Observation valid and retryable.
+
+## Corrective roadmap
+
+- report-generation failure does not mutate canonical graph state;
+- regenerated reports use the current deterministic Project Graph revision unless explicitly pinned.
 
 ---
 
-# 30. Idempotency and Failure
+# 22. Validation
 
-Operations should converge under repeated execution.
+`pactwright operations validate` must enforce at least:
 
-Source collection against the same evidence window should not generate duplicate canonical Observations where meaning is unchanged.
+1. every Deployment references valid Delivery Evidence;
+2. every Deployment identifies a valid deployed artefact and configured environment;
+3. every `deployed-as` edge has valid `Evidence → Deployment` endpoints;
+4. every Observation references a valid registered operational exposure;
+5. every Observation defines a valid evidence window;
+6. every Observation contains supporting evidence references;
+7. every Observation uses valid `direction`, `significance` and `confidence` enum values;
+8. every `observes` edge points from `Observation` to a registered operational exposure type;
+9. Observation and Deployment supersession relationships are valid and acyclic;
+10. canonical Operations records contain no credentials or raw high-volume telemetry;
+11. every collection and analysis attempt has execution provenance with status and Project Graph revision;
+12. failed collection or analysis did not mutate canonical Operations state;
+13. every canonical Observation has either a valid Project Intelligence Source hand-off or a recorded retryable hand-off failure;
+14. Extension-contributed exposures remain owned by their source Extension;
+15. the corrective-intent roadmap identifies its source Project Graph revision;
+16. corrective-roadmap entries are derived Project Intelligence candidates rather than canonical Intents;
+17. Operations does not directly mutate Delivery, Project Intelligence, Asset or Publication canonical state.
 
-A failed:
-
-- source query;
-- analysis;
-- report generation;
-- Project Intelligence hand-off
-
-must not corrupt canonical state.
-
-Transient integrations may retry with bounded backoff.
-
-Deterministic validation failures should stop immediately.
-
-An existing Observation remains valid even if a later collection run fails.
-
----
-
-# 31. Validation
-
-Operations validation should ensure at least:
-
-- every Deployment references valid Evidence;
-- deployed artefact and environment identities are valid;
-- every Observation references a valid exposure or project surface;
-- Observation evidence references are present;
-- evidence windows are valid;
-- unsupported exposure types are rejected;
-- source and environment definitions are structurally valid;
-- canonical records do not contain credentials;
-- Observation supersession is valid;
-- Operations does not directly own Project Intelligence or Delivery mutations;
-- Extension-contributed exposures remain owned by their source Extension;
-- execution provenance is separate from Project Graph state.
-
-Core `pactwright validate` may invoke Operations validation when enabled.
+Core `pactwright validate` may invoke Operations validation when the Extension is enabled.
 
 ---
 
-# 32. Evaluation
+# 23. Evaluation
 
-Operations evaluation should test the `operations-analysis` responsibility and deterministic semantics.
+Operations evaluation tests `operations-analysis` plus deterministic Extension semantics.
 
-Useful cases include:
+It should cover:
 
-- mapping Delivery Evidence to correct Deployment;
-- preserving repeated deployment history;
-- ignoring high-volume operational noise;
-- producing no Observation when nothing durable occurred;
-- compressing many signals into one supported Observation;
-- preserving evidence provenance;
-- avoiding unsupported causal claims;
-- distinguishing positive from negative outcomes;
-- deduplicating repeated findings;
-- handing Observations to Project Intelligence without creating Intents directly;
-- preserving sibling Extension ownership.
+- signal-to-Observation compression;
+- correct exposure attribution;
+- factual grounding;
+- baseline interpretation;
+- false-positive avoidance;
+- unsupported causality avoidance;
+- duplicate finding handling;
+- positive finding recognition;
+- correct Project Intelligence routing;
+- scope discipline;
+- no Observation when evidence is insufficient;
+- no canonical mutation after failed collection or analysis.
 
-Provider-specific adapter quality belongs to adapter conformance tests.
+Prefer deterministic assertions for schema, evidence references, edge direction, forbidden mutations and absence of raw telemetry in Project Graph state.
 
-General domain-analysis expertise remains with relevant Production Skills.
-
----
-
-# 33. Core Invariants
-
-1. Operations is optional and does not redefine Delivery semantics.
-2. Production exposure is distinct from Delivery Evidence.
-3. Deployment is post-Delivery state, not a lifecycle stage.
-4. Publication remains owned by Assets / Publication.
-5. Raw telemetry is not Project Graph state.
-6. Observations are compressed durable operational facts.
-7. Every Observation is supported by addressable evidence.
-8. Observations preserve uncertainty and avoid unsupported causality.
-9. Positive and negative outcomes use the same Observation model.
-10. Repeated evidence does not create unlimited duplicate Observations.
-11. Historical Deployment and Observation records are not silently rewritten.
-12. Operations findings enter Project Intelligence through Source ingestion.
-13. An Observation is not automatically accepted project Knowledge.
-14. Operations cannot directly create or prioritise canonical Delivery Intents.
-15. Project Intelligence owns the single project-wide intent-roadmap model.
-16. Operations-specific corrective views are filtered projections of that model.
-17. Adding a source adapter does not require new graph semantics.
-18. Adding a compatible exposure type does not require new Observation semantics.
-19. External operational systems remain authoritative for detailed telemetry.
-20. Disabling Operations does not change the meaning of Delivery, Asset, Publication or Project Intelligence records.
+Do not collapse semantic quality into one aggregate score.
 
 ---
 
-# 34. Anti-Overengineering Constraints
+# 24. Anti-Overengineering Constraints and Open Gaps
 
 Do not introduce initially:
 
-```text id="50t15z"
+```text
 observability database
 telemetry warehouse
 incident-management platform
@@ -1052,85 +751,67 @@ one Project Graph node per operational event
 
 Use:
 
-```text id="urnqy7"
+```text
 Exposure
 → bounded external evidence
 → Observation
 → Project Intelligence
 ```
 
-External specialised systems should remain responsible for high-volume operational data.
+The following gaps remain explicit rather than being invented here:
 
-Pactwright stores only durable operational truth useful to future project reasoning.
+- stable deployment-event identity for distinguishing command retries from genuine redeployments;
+- stable Observation identity/deduplication rules where semantic equivalence is involved;
+- evidence-retention/addressability policy for external locators that expire, mutate or become inaccessible;
+- persistence and lifetime of bounded evidence between `ingest` and `observe`;
+- CLI ergonomics for explicitly pinned corrective-roadmap regeneration.
 
 ---
 
-# 35. Current Implementation Baseline
+# 25. Current Implementation Baseline
 
-Operations is primarily a canonical target rather than a completed `0.0.1` subsystem.
+The original Operations research established the surviving contracts:
 
-The existing Operations research design already established the important architecture:
-
-```text id="m9y7ki"
-Evidence
-→ production exposure
-→ signals
-→ Observation
-→ Project Intelligence
-→ future Delivery
-```
-
-It also established that:
-
-- Deployment is post-Delivery state;
-- raw telemetry stays outside the Project Graph;
-- Observations compress operational evidence;
 - Operations requires Project Intelligence;
-- Operations cannot directly create Delivery Intents;
-- corrective roadmap output is a filtered Project Intelligence view;
-- source adapters and environment configuration remain Operations-owned;
-- external evidence remains addressable from Observations.
+- Deployment and Observation are the canonical Operations node types;
+- `deployed-as` and `observes` are deterministic typed relationships;
+- raw telemetry remains external;
+- every collection/analysis run records provenance;
+- failed collection/analysis creates no canonical mutation;
+- insufficient evidence creates no Observation;
+- canonical Observations enter Project Intelligence;
+- failed Project Intelligence hand-off is retryable;
+- corrective roadmap is a derived Project Intelligence candidate view;
+- generated corrective roadmaps identify their Project Graph revision;
+- repeated deployment recording must not create uncontrolled duplicates.
 
-The canonical redesign updates the old extension boundaries:
-
-```text id="fbqy6j"
-old Review & Creative Publication
-→ Assets / Publication
-
-Operations Observation
-→ unchanged Operations ownership
-
-durable operational meaning
-→ Project Intelligence
-```
-
-The core Operations model therefore remains valid while becoming cleaner in the redesigned Pactwright architecture.
+The redesign preserves these semantics while separating Graph Review and Assets / Publication and retaining `operations-analysis` as the Operations-specific AI responsibility.
 
 ---
 
-# 36. Relationship to Other Canonical Specifications
+# 26. Relationship to Other Canonical Specifications
 
-```text id="lj487o"
+```text
 01 Core System and Lifecycle
 → owns Delivery through Evidence
 
 02 Distribution, Agent Packs, Extensions and Evaluation
-→ distributes Operations and resolves operations-analysis
+→ distributes Operations and resolves `operations-analysis`
 
 03 Project Intelligence
-→ owns durable meaning and future Delivery candidates
+→ owns durable project meaning and the authoritative Intent-roadmap model
 
 04 Graph Review
-→ may analyse wider operational state
+→ may inspect Operations state but does not produce operational truth
 
 05 Assets and Publication
-→ owns approved Assets and Publications
+→ owns Publication as an optional operational exposure
 
 06 Operations
-→ owns Deployment and Observation
+→ owns Deployment, Observation and operational evidence processing
 
 07 GitHub Integration
-→ may automate deployment and collection integration
+→ owns exact Operations automation and GitHub projections
 
 08 Open-Source Project Organisation
 → governs repository and ecosystem structure
@@ -1138,9 +819,9 @@ The core Operations model therefore remains valid while becoming cleaner in the 
 
 ---
 
-# 37. Governing Rule
+# 27. Governing Rule
 
-> **Operations records what happened after delivered or published work reached the real world. It compresses bounded external evidence into durable Deployments and Observations, then routes operational meaning through Project Intelligence. It does not rewrite Delivery history, own project knowledge or create a second prioritisation system.**
+> **Operations records which delivered work reached real operating surfaces and compresses bounded external evidence into durable Observations. Every canonical Observation enters Project Intelligence for meaning and Delivery consequence. Operations never turns raw telemetry into Project Graph state, never creates canonical Intents directly, and never becomes a second prioritisation or observability system.**
 
 ---
 
