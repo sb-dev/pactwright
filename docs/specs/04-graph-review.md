@@ -2,7 +2,7 @@
 
 ## 1. Purpose
 
-Graph Review is an optional Pactwright Extension for specialist analysis of the current Project Graph.
+Graph Review is an optional Pactwright Extension for specialist analysis of Project Graph state.
 
 Its core flow is:
 
@@ -17,25 +17,13 @@ Project Graph
 
 Graph Review answers:
 
-> What does specialist analysis of the current Project Graph reveal?
+> What does specialist analysis of project state reveal?
 
-It may review concerns such as:
-
-- architecture;
-- product coherence;
-- UX;
-- research quality;
-- production quality;
-- cost;
-- graph integrity;
-- progression;
-- cross-domain consistency.
+It may review architecture, product coherence, UX, research quality, production patterns, cost, graph integrity, progression and cross-domain consistency.
 
 Graph Review does not directly change Project Graph truth.
 
-It proposes Findings.
-
-Project Intelligence determines what durable meaning, if any, the project should retain from them.
+It produces supported Findings. Project Intelligence determines what durable project meaning, if any, follows from them.
 
 ---
 
@@ -44,17 +32,16 @@ Project Intelligence determines what durable meaning, if any, the project should
 Graph Review owns:
 
 - the `graph-review` capability;
-- review scope resolution;
+- review request and scope resolution;
 - specialist Project Graph analysis;
-- review execution provenance;
+- immutable Review Execution provenance;
 - Findings;
-- hand-off of Findings to Project Intelligence.
+- hand-off of every Finding from a successful review to Project Intelligence.
 
 It does not own:
 
 ```text
 Delivery Review
-Production Skills
 Review Definitions
 provider/model routing
 task catalogues
@@ -66,85 +53,36 @@ Project Intelligence Knowledge
 Delivery Graph mutation
 ```
 
-These concerns remain with their respective owners.
-
----
-
-# 3. Extension Boundary
-
-Graph Review is a sibling of the other optional Pactwright Extensions:
-
-```text
-Pactwright Project Graph
-├── Delivery Graph                 core
-├── Project Intelligence           optional
-├── Graph Review                   optional
-├── Assets / Publication           optional
-└── Operations                     optional
-```
+Those concerns remain with their respective owners.
 
 Graph Review requires Project Intelligence because Findings use Project Intelligence as their durable governance path.
 
+---
+
+# 3. Graph Review vs Delivery Review
+
+Delivery Review and Graph Review are different Pactwright responsibilities.
+
+```text
+Delivery Review
+→ verifies current Contract fulfilment
+→ contributes to Evidence
+```
+
 ```text
 Graph Review
-      ↓ requires
-Project Intelligence
-      ↓
-Pactwright Core
+→ analyses wider Project Graph state
+→ emits Findings
+→ feeds Project Intelligence
 ```
 
-Graph Review may read compatible canonical state from any enabled Project Graph extension.
+Graph Review may span multiple Contracts, completed and active Delivery, Project Intelligence, sibling Extension state and cross-graph relationships.
 
-Reading another extension's state does not transfer ownership.
+It does not close Delivery and does not produce Evidence.
 
 ---
 
-# 4. Graph Review vs Delivery Review
-
-Delivery Review and Graph Review serve different purposes.
-
-## Delivery Review
-
-```text
-Contract
-→ Brief
-→ Delivery
-→ Review
-→ Evidence
-```
-
-Delivery Review asks:
-
-> Does the current delivered work satisfy its governing Contract and Brief?
-
-It is part of the core Delivery lifecycle.
-
-## Graph Review
-
-```text
-Project Graph
-→ specialist analysis
-→ Finding
-```
-
-Graph Review asks:
-
-> What issues, inconsistencies, opportunities or risks are visible across current project state?
-
-It may span:
-
-- multiple Contracts;
-- Project Intelligence;
-- completed Delivery;
-- current Delivery;
-- extension-owned state;
-- cross-graph relationships.
-
-Graph Review does not close Delivery and does not produce Evidence.
-
----
-
-# 5. One Graph Review Capability
+# 4. One Graph Review Capability
 
 The semantic capability is:
 
@@ -152,61 +90,33 @@ The semantic capability is:
 graph-review
 ```
 
-Do not introduce separate Pactwright capabilities such as:
+Do not create separate Pactwright capabilities for architecture review, UX review, generation review, product review or cost review when the same responsibility plus different context and Production Skills is sufficient.
 
-```text
-architecture-review
-ux-review
-generation-review
-product-review
-cost-review
-```
-
-Those are specialist applications of the same responsibility.
-
-For example:
-
-```text
-architecture review
-→ graph-review
-→ reviewer
-→ Software Engineering / Deep Research skills
-```
-
-```text
-UX review
-→ graph-review
-→ reviewer
-→ UI/UX evaluation skills
-```
-
-```text
-generation review
-→ graph-review
-→ reviewer
-→ relevant production evaluation skills
-```
-
-```text
-research review
-→ graph-review
-→ reviewer
-→ Deep Research evaluation skills
-```
-
-The Agent Pack determines which agent and Production Skills implement the review.
-
----
-
-# 6. No Review Definition System
-
-Graph Review does not require a separate persistent Review Definition abstraction.
-
-A review should normally be expressible through:
+Conceptually:
 
 ```text
 review request
-+ current Project Graph context
+→ graph-review
+→ selected Agent Pack
+→ reviewer
+→ relevant Production Skills
+```
+
+Several Production Skills may participate in one review.
+
+Specialist agents should be introduced only when evaluation shows the generic capability plus appropriate skills is insufficient.
+
+---
+
+# 5. No Review Definition System
+
+Graph Review does not require a persistent Review Definition abstraction.
+
+A review is normally expressed through:
+
+```text
+review request
++ Project Graph context
 + Agent Pack
 + Production Skills
 ```
@@ -214,35 +124,26 @@ review request
 A review request may identify:
 
 - perspective or question;
+- objective;
 - scope;
 - relevant domains;
 - target records;
 - constraints;
 - required output.
 
-This request is execution input, not automatically Project Graph truth.
+The request is execution input, not automatically Project Graph truth.
 
-Reusable specialist behaviour belongs in:
+Reusable specialist behaviour belongs in Agent Packs or Production Skills.
 
-```text
-Agent Pack
-or
-Production Skills
-```
+Project-specific review guidance belongs in Project Intelligence.
 
-Project-specific review guidance belongs in:
-
-```text
-Project Intelligence
-```
-
-A persistent Graph Review-specific definition mechanism should be introduced only if demonstrated requirements cannot be expressed through those existing owners.
+A separate persistent review-definition mechanism should be introduced only if demonstrated requirements cannot be represented through these existing owners.
 
 ---
 
-# 7. Review Scope
+# 6. Review Scope
 
-Graph Review resolves scope from the registered Project Graph rather than from a hard-coded list of extensions.
+Graph Review resolves scope from the registered Project Graph rather than a hard-coded Extension list.
 
 Conceptually:
 
@@ -253,7 +154,7 @@ available node + edge types
         ↓
 review request
         ↓
-resolved review context
+resolved review scope
 ```
 
 Scope may include:
@@ -270,13 +171,13 @@ Scope may include:
 
 A future compatible Extension can therefore participate in graph-wide review without changing the Graph Review engine.
 
+Reading another Extension's state does not transfer ownership.
+
 ---
 
-# 8. Project Graph Revision
+# 7. Project Graph Revision
 
-Every Graph Review executes against a deterministic Project Graph revision supplied by Pactwright Core.
-
-Conceptually:
+Every Graph Review runs against a deterministic Project Graph revision supplied by Pactwright Core.
 
 ```text
 canonical Project Graph state
@@ -286,22 +187,17 @@ Project Graph revision
 Graph Review
 ```
 
-The review records the revision it inspected.
+The Review Execution records the revision inspected.
 
-This provides:
+Graph Review does not define its own revision scheme.
 
-- reproducibility;
-- provenance;
-- comparison between reviews;
-- protection against ambiguous moving-state analysis.
-
-Graph Review does not define its own revision mechanism.
+The revision provides a stable identity for the reviewed graph state, but **a revision hash alone does not define how historical graph bytes are recovered**. Pinned reruns therefore require a reconstructible historical Project Graph input. The storage/locator mechanism for reconstructing an old revision remains a cross-cutting Pactwright design requirement and must not be silently approximated with current state.
 
 ---
 
-# 9. Review Execution
+# 8. Review Execution
 
-A Graph Review execution records enough provenance to explain and reproduce the analysis.
+Every attempted Graph Review creates an immutable Review Execution record.
 
 Conceptually:
 
@@ -314,40 +210,59 @@ request:
   scope: ...
   objective: ...
 
-resolved_context: ...
+resolved_scope:
+  nodes: []
+  edges: []
 
-agent_pack: ...
-agent: ...
-skills: []
+resolved_environment:
+  agent_pack: ...
+  agent: ...
+  skills: []
 
 findings: []
-
 status: succeeded | failed
 created: ...
 ```
 
-The exact representation may evolve.
-
-A Review Execution is execution provenance, not a normal Project Graph node.
-
-Model output is not expected to be byte-identical when rerun.
-
-Reproduction means that the same:
+The exact representation may evolve, but the execution must preserve enough immutable identity to explain and reconstruct:
 
 ```text
 Project Graph revision
 + review request
++ resolved scope
 + resolved Agent Pack
-+ Production Skills environment
++ relevant Production Skills environment
 ```
 
-can be reconstructed.
+A Review Execution is execution provenance, not a normal Project Graph node.
+
+Failed reviews still record their execution provenance.
+
+A failed review emits **no Findings** for Project Intelligence ingestion.
+
+Partial or failed model output remains execution evidence only and must not be promoted as a successful Finding.
+
+Model output is not required to be byte-identical on rerun.
+
+---
+
+# 9. Historical Environment Reconstruction
+
+The pinned-rerun contract requires the original resolved execution environment to remain identifiable after later upgrades.
+
+Review Execution provenance must therefore preserve immutable identities for the Agent Pack and relevant Production Skills used by the run.
+
+Graph Review must never silently substitute a newer Agent Pack, skill revision or Production Extension Pack during a pinned rerun.
+
+If the original environment cannot be resolved, the pinned rerun must fail clearly rather than becoming an implicit current-environment review.
+
+How Pactwright retains or reacquires historical package/skill revisions is owned by the Distribution and locking design and remains an unresolved cross-spec implementation detail.
 
 ---
 
 # 10. Findings
 
-A Finding is a supported result of Graph Review.
+A Finding is a supported result emitted by a **successful** Graph Review.
 
 Conceptually:
 
@@ -360,33 +275,37 @@ severity: advisory | material | critical
 review_execution: ...
 ```
 
-A Finding should identify:
+A Finding identifies:
 
 - what was found;
-- which Project Graph state supports it;
+- which reviewed Project Graph state supports it;
 - why it matters;
 - a useful next action where appropriate;
-- originating Review Execution.
+- its originating Review Execution.
 
-A Finding is not automatically accepted project truth.
+Findings are immutable Review Execution outputs, not normal Project Graph nodes and not automatically accepted project truth.
+
+They may be stored with or referenced from their Review Execution. Exact physical storage is an implementation detail provided identity, provenance and immutability are preserved.
 
 ---
 
 # 11. Finding Governance
 
-Every successful Finding intended for durable project use enters Project Intelligence as an internal Source.
+**Every Finding emitted by a successful Graph Review enters Project Intelligence as an internal Source.**
+
+Graph Review does not pre-filter Findings according to whether it believes they deserve durable project use.
 
 ```text
 Finding
 → Project Intelligence Source
 → triage
-→ irrelevant / duplicate / corroborating / novel / contradictory
+→ irrelevant / duplicate / corroborating / incremental / novel / contradictory
 → Knowledge or Delivery candidate where justified
 ```
 
-Graph Review ends at the Finding.
+Project Intelligence owns the decision that a Finding is irrelevant, duplicate, merely corroborating or worth durable promotion.
 
-It must not directly create or modify:
+Graph Review ends at the Finding and must not directly create or modify:
 
 ```text
 Knowledge
@@ -402,17 +321,15 @@ Observation
 roadmap priority
 ```
 
-Project Intelligence owns durable interpretation.
+The relevant semantic owner controls all subsequent canonical mutation.
 
-The relevant graph owner controls any subsequent canonical mutation.
+If Finding hand-off fails, the successful Review Execution and Finding remain valid and the hand-off must be retryable without rerunning the review.
 
 ---
 
 # 12. Severity
 
-Finding severity is advisory metadata.
-
-Useful levels are:
+Finding severity is advisory metadata:
 
 ```text
 advisory
@@ -430,187 +347,79 @@ It does not determine:
 - roadmap priority;
 - automatic Delivery creation.
 
-For example:
-
 ```text
 critical Finding
 ≠ automatically class 3 Intelligence change
 ```
 
-Project Intelligence evaluates actual consequences against current project state.
+Project Intelligence evaluates consequences against current project state.
 
 ---
 
-# 13. Agent Pack and Production Skills Integration
+# 13. Research and External Evidence
 
-Graph Review uses the normal Pactwright AI composition model.
+A Graph Review may require evidence not represented in the current Project Graph.
 
-```text
-graph-review
-      ↓
-Agent Pack
-      ↓
-reviewer
-      ↓
-one or more Production Skills
-```
-
-Examples:
+Relevant research skills may gather that evidence, but Graph Review must distinguish:
 
 ```text
-architecture review
-→ software-review
-→ deep-research where evidence is required
-```
-
-```text
-product/UX review
-→ uiux-evaluate
-→ research skills where required
-```
-
-```text
-children's TV review
-→ narrative-evaluate
-→ music-evaluate
-→ video-evaluate
-```
-
-Several Production Skills may participate in one review.
-
-Pactwright does not need a bespoke reviewer agent for every domain.
-
-Specialised agents should be added only when evaluation demonstrates that the generic reviewer plus appropriate skills is insufficient.
-
----
-
-# 14. Research During Review
-
-A review may require evidence that is not currently represented in the Project Graph.
-
-Deep Research Skills may be used to investigate that evidence.
-
-However:
-
-```text
-external evidence
-→ research output
-→ Project Intelligence Source
-```
-
-must occur before the resulting claim is treated as accepted project truth.
-
-Graph Review should distinguish:
-
-```text
-what current Project Graph state supports
+claims supported by the pinned Project Graph
 ```
 
 from:
 
 ```text
-what newly gathered external evidence suggests
+claims suggested by newly gathered external evidence
 ```
 
-Review must not silently smuggle external assumptions into canonical project knowledge.
+External evidence that should become durable project knowledge follows normal Project Intelligence Source ingestion.
+
+A review must not silently turn external assumptions into accepted project truth.
+
+Where external research materially supports a Finding, the Review Execution must retain sufficient provenance to identify that research input.
+
+A fully reproducible pinned rerun involving mutable external sources requires the relevant evidence or immutable provenance to remain reconstructible. The exact external-evidence retention mechanism is not yet defined and must not be assumed.
 
 ---
 
-# 15. Production Review Boundary
+# 14. Production, Operations and Assets Boundaries
 
-Graph Review may analyse production-related project state when the question spans the wider Project Graph.
+Graph Review may analyse production-related Project Graph state when the question spans wider project state or repeated patterns.
 
-Examples include:
-
-- whether recurring video-generation failures reveal a systematic project issue;
-- whether production cost is inconsistent with project constraints;
-- whether multiple outputs violate accepted visual identity;
-- whether research practices are producing unreliable Knowledge.
-
-It must not become the normal mechanism for evaluating an individual Delivery output.
-
-Individual output verification remains:
+It must not become the normal evaluator for an individual Delivery output.
 
 ```text
-Delivery
+individual output
 → delivery-review
 → relevant Production Skills evaluation
 ```
 
-Graph Review is appropriate when the question concerns broader project state or patterns across work.
+Graph Review may inspect Assets, Publications, Deployments and Observations where relevant but does not own or mutate them.
 
----
-
-# 16. Operations Boundary
-
-Graph Review may inspect canonical Operations state when relevant.
-
-For example:
-
-```text
-Deployment
-Observation
-accepted operational Knowledge
-```
-
-may provide useful context for an architecture or progression review.
-
-Graph Review must not become a parallel production-monitoring system.
-
-Operational reality is recorded by Operations:
+Operational reality remains:
 
 ```text
 real-world exposure
-→ Observation
-```
-
-and enters durable project meaning through:
-
-```text
-Observation
+→ Operations Observation
 → Project Intelligence
 ```
 
-Graph Review may analyse that state but does not replace either path.
+Asset and Publication state remains owned by Assets / Publication.
+
+Graph Review may analyse those records and emit Findings, but cannot replace either subsystem's semantics.
 
 ---
 
-# 17. Assets / Publication Boundary
+# 15. Project Progression Review
 
-Graph Review does not own Assets or Publications.
-
-It may inspect them where useful.
-
-For example:
-
-```text
-Asset
-+ Publication
-+ identity Knowledge
-→ graph-review
-→ Finding
-```
-
-A Finding that an Asset conflicts with current project identity does not directly mutate or supersede that Asset.
-
-It enters Project Intelligence and follows normal downstream governance.
-
-Asset approval and Publication remain owned by the Assets / Publication Extension.
-
----
-
-# 18. Project Progression Review
-
-One useful application of Graph Review is project progression.
-
-It may inspect:
+Graph Review may inspect:
 
 - Project Intelligence coverage;
 - stale or challenged Knowledge;
-- Intent roadmap;
+- the Intent roadmap;
 - open Delivery;
 - blocked lifecycle state;
-- unresolved Findings;
+- previous Findings;
 - completed work;
 - relevant operational evidence.
 
@@ -618,76 +427,81 @@ It may answer:
 
 > Given current project state, what deserves attention?
 
-The resulting suggestions are Findings.
+The answers are Findings.
 
 Graph Review does not create a separate roadmap or prioritisation engine.
 
-Project Intelligence remains authoritative for derived Delivery candidates and their readiness.
+Project Intelligence remains authoritative for Delivery candidates and readiness.
 
 ---
 
-# 19. Commands
+# 16. Commands and Rerun Semantics
 
-Graph Review should expose a small command surface.
-
-Conceptually:
+Graph Review exposes a small command surface:
 
 ```text
 pactwright graph-review run
 pactwright graph-review rerun <execution-id>
+pactwright graph-review rerun <execution-id> --current
 pactwright graph-review validate
 ```
 
-A run may accept scope or perspective input through the active adapter.
+Exact argument ergonomics may evolve, but the semantic distinction is fixed.
 
-Exact CLI ergonomics may evolve without changing the semantic model.
+## New run
 
-A rerun should distinguish between:
+`graph-review run` resolves the current Project Graph revision and current compatible locked execution environment.
 
-```text
-pinned rerun
-→ original Project Graph revision and resolved environment
-```
-
-and:
+## Pinned rerun
 
 ```text
-current-state review
-→ latest Project Graph revision
+pactwright graph-review rerun <execution-id>
 ```
 
-where both behaviours are exposed.
+uses the original Review Execution's:
+
+- Project Graph revision;
+- review request;
+- resolved scope/configuration;
+- resolved Agent Pack and Production Skills identities.
+
+Pinned rerun is the default.
+
+## Current-state rerun
+
+```text
+pactwright graph-review rerun <execution-id> --current
+```
+
+reuses the original review request but deliberately resolves the latest Project Graph state and current compatible execution environment.
+
+A current-state rerun is a new Review Execution and must record its own revision and resolved environment.
+
+The runtime must never silently convert a failed pinned rerun into a current-state rerun.
 
 ---
 
-# 20. Automation
+# 17. Automation
 
-Graph Review may run:
-
-```text
-manually
-on a schedule
-in response to a relevant repository event
-```
+Graph Review may run manually, on a schedule or in response to a relevant repository event.
 
 Triggering does not change Graph Review semantics.
 
-GitHub Actions or other automation should remain thin.
-
-They may invoke Graph Review but must not duplicate:
+Automation remains thin. It may invoke Graph Review but must not duplicate:
 
 - scope resolution;
+- Review Execution provenance;
 - Finding semantics;
 - Project Intelligence hand-off;
-- review validation.
+- validation.
 
-Those remain Pactwright responsibilities.
+Exact GitHub triggers and workflows belong to the GitHub Integration specification.
 
 ---
 
-# 21. Repository Model
+# 18. Repository and Derived Reports
 
-Graph Review should keep execution provenance and derived reporting separate from canonical Project Graph state.
+Graph Review keeps execution provenance and derived reporting separate from canonical Project Graph state.
 
 Conceptually:
 
@@ -701,35 +515,60 @@ docs/graph-review/
 
 Exact paths may evolve.
 
-Review executions are provenance.
+Review Executions are immutable provenance.
 
-Reports are derived views.
+Reports are deterministic derived views, not hand-maintained sources of truth.
 
-Neither should become a second hand-maintained source of project truth.
+Every generated report must identify the Project Graph revision from which it was derived and any Review Execution(s) it summarises.
 
-Findings intended for durable project use flow into Project Intelligence.
+Report generation failure must not mutate canonical Project Graph state, Review Execution state or Project Intelligence state.
+
+Regeneration against current state uses the current deterministic Project Graph revision unless the operation explicitly requests a pinned historical input.
 
 ---
 
-# 22. Validation
+# 19. Failure and Idempotency
 
-Graph Review validation should ensure:
+Failure rules are:
 
-- every successful review identifies a Project Graph revision;
-- review scope references valid registered graph state;
-- the resolved Agent Pack supplies `graph-review`;
-- referenced Production Skills are part of the locked environment;
-- Findings reference their Review Execution;
-- supporting Project Graph records are valid;
-- Finding hand-off uses Project Intelligence Source ingestion;
-- Graph Review does not directly mutate sibling-owned graph records;
-- reruns identify whether they use pinned or current Project Graph state.
+- deterministic request, scope or configuration errors fail immediately;
+- every attempted review records immutable execution provenance;
+- a failed review emits no Findings;
+- a successful review remains successful even if Finding hand-off later fails;
+- failed Project Intelligence hand-off is retryable from the existing Finding;
+- pinned rerun uses the original revision and resolved environment by default;
+- current-state rerun requires explicit `--current`;
+- duplicate Findings are handled by Project Intelligence triage rather than Graph Review suppression;
+- report-generation failure never mutates canonical state.
+
+A rerun always creates a new Review Execution rather than mutating the original.
+
+---
+
+# 20. Validation
+
+`pactwright graph-review validate` must ensure at least:
+
+1. every Review Execution is immutable once recorded;
+2. every attempted review records a valid execution status;
+3. every successful review identifies a valid Project Graph revision;
+4. review scope references valid registered graph state for the recorded revision;
+5. the resolved Agent Pack supplied `graph-review`;
+6. referenced Production Skills belong to the recorded resolved environment;
+7. Findings exist only for successful Review Executions;
+8. every Finding references its Review Execution;
+9. supporting Project Graph records are valid against the reviewed revision;
+10. every Finding from a successful review has a Project Intelligence Source hand-off or a recorded retryable hand-off failure;
+11. Graph Review does not directly mutate sibling-owned canonical records;
+12. pinned reruns identify the original Project Graph revision and resolved environment;
+13. current-state reruns are explicitly marked and record the new revision/environment;
+14. generated reports identify their source Project Graph revision and relevant Review Execution provenance.
 
 Core `pactwright validate` may invoke Graph Review validation when the Extension is enabled.
 
 ---
 
-# 23. Evaluation
+# 21. Evaluation
 
 Graph Review evaluation belongs at the Pactwright responsibility boundary.
 
@@ -741,24 +580,22 @@ It should assess whether `graph-review` can:
 - use appropriate Project Intelligence context;
 - distinguish local Delivery defects from project-wide concerns;
 - provide useful evidence and provenance;
-- avoid directly mutating canonical truth;
-- choose appropriate Production Skills for the requested perspective.
+- avoid direct canonical mutation;
+- use appropriate Production Skills for the requested perspective.
 
 Domain expertise remains benchmarked by the relevant Production Skills repositories.
 
-For example:
-
 ```text
-uiux-evaluate quality
-→ UI/UX Design Skills benchmark
+Production Skill evaluation
+→ Is the specialist review technique good?
 
-graph-review + uiux-evaluate integration
-→ Pactwright Graph Review evaluation
+Pactwright Graph Review evaluation
+→ Can the resolved environment use that technique correctly within Graph Review semantics?
 ```
 
 ---
 
-# 24. Core Invariants
+# 22. Core Invariants
 
 1. Graph Review is optional and does not redefine core Delivery semantics.
 2. Graph Review and Delivery Review are distinct responsibilities.
@@ -766,21 +603,24 @@ graph-review + uiux-evaluate integration
 4. Specialist perspectives do not require new Pactwright capabilities.
 5. Review behaviour is supplied through Agent Packs and Production Skills.
 6. Graph Review does not require a persistent Review Definition system.
-7. Every review pins the Project Graph revision it inspects.
+7. Every review records the Project Graph revision it inspects.
 8. Review scope is resolved from the registered Project Graph.
-9. Review Executions are provenance, not normal Project Graph nodes.
-10. Findings are proposals, not automatically accepted truth.
-11. Durable Findings enter Project Intelligence through Source ingestion.
-12. Finding severity does not determine Intelligence consequence class or roadmap priority.
-13. Graph Review does not directly mutate records owned by Delivery, Project Intelligence, Assets / Publication or Operations.
-14. Graph Review does not own provider routing, task catalogues or production guidance.
-15. Multiple Production Skills may participate in one Graph Review.
-16. Production-specific evaluation remains owned by Production Skills.
-17. Graph Review does not create a parallel roadmap, knowledge graph or production-analysis pipeline.
+9. Every attempted review creates an immutable Review Execution.
+10. Failed reviews emit no Findings.
+11. Findings are immutable execution outputs, not normal Project Graph nodes or accepted truth.
+12. Every Finding emitted by a successful review enters Project Intelligence through Source ingestion.
+13. Finding severity does not determine Intelligence consequence class or roadmap priority.
+14. Graph Review does not directly mutate records owned by Delivery, Project Intelligence, Assets / Publication or Operations.
+15. Pinned rerun uses the original graph revision and resolved environment by default.
+16. Current-state rerun requires explicit request.
+17. Generated reports identify their source Project Graph revision.
+18. Report failure does not mutate canonical state.
+19. Multiple Production Skills may participate in one Graph Review.
+20. Graph Review does not create a parallel roadmap, knowledge graph or production-analysis pipeline.
 
 ---
 
-# 25. Anti-Overengineering Constraints
+# 23. Anti-Overengineering Constraints and Open Gaps
 
 Do not introduce initially:
 
@@ -807,26 +647,41 @@ review request
 + graph-review capability
 + Agent Pack
 + Production Skills
++ Review Execution
 + Finding
 + Project Intelligence
 ```
 
-until real use demonstrates that another abstraction is necessary.
+until real use demonstrates another abstraction is necessary.
+
+The following design gaps remain explicit rather than being invented here:
+
+- how a historical Project Graph revision is reconstructed for a pinned rerun;
+- how historical Agent Pack and Production Skills revisions are retained or reacquired after upgrades;
+- how mutable external research inputs are reconstructed for fully reproducible reruns;
+- the physical storage layout for Findings separate from or embedded in Review Execution records.
+
+These gaps affect implementation detail and reproducibility, not the semantic rule that a pinned rerun must never silently substitute current graph or execution state.
 
 ---
 
-# 26. Current Implementation Baseline
+# 24. Current Implementation Baseline
 
-The existing Graph Review & Creative Delivery research design already established several useful Graph Review principles:
+The earlier Graph Review & Creative Delivery research established the surviving Graph Review contracts:
 
-- reviews inspect a deterministic Project Graph revision;
-- scope resolves from the registered Project Graph;
-- executions are provenance rather than graph nodes;
-- reviewers emit Findings;
-- Findings enter Project Intelligence through Source ingestion;
-- review severity is advisory rather than authoritative. 
+- review scope resolves from the registered Project Graph;
+- reviews pin deterministic Project Graph revisions;
+- Review Executions are immutable provenance;
+- reruns use original pinned revision/configuration by default;
+- current-state reruns require explicit request;
+- successful reviews emit Findings;
+- every successful Finding enters Project Intelligence;
+- failed reviews still record execution provenance but emit no Findings;
+- Finding severity is advisory;
+- derived reports identify their source Project Graph revision;
+- report-generation failure never mutates canonical graph state.
 
-The canonical redesign removes the unrelated or duplicative machinery previously bundled with Graph Review:
+The redesign removes the unrelated machinery previously bundled with Graph Review:
 
 ```text
 Creative Delivery
@@ -846,24 +701,22 @@ Assets / Publication has its own Extension.
 
 Project-specific durable guidance belongs in Project Intelligence.
 
-The surviving Graph Review responsibility is therefore substantially smaller than the previous combined extension. The old specification itself already treated Graph Review Findings as proposals routed through Project Intelligence rather than direct canonical mutations. 
-
 ---
 
-# 27. Relationship to Other Canonical Specifications
+# 25. Relationship to Other Canonical Specifications
 
 ```text
 01 Core System and Lifecycle
 → Delivery Review and Project Graph foundation
 
 02 Distribution, Agent Packs, Extensions and Evaluation
-→ graph-review capability implementation and distribution
+→ graph-review capability implementation, locking and historical environment resolution
 
 03 Project Intelligence
-→ durable governance of Findings
+→ durable governance of every successful Finding
 
 04 Graph Review
-→ specialist analysis and Findings
+→ specialist analysis, Review Execution and Findings
 
 05 Assets and Publication
 → approved durable outputs
@@ -880,9 +733,9 @@ The surviving Graph Review responsibility is therefore substantially smaller tha
 
 ---
 
-# 28. Governing Rule
+# 26. Governing Rule
 
-> **Graph Review performs specialist analysis over a pinned view of the current Project Graph and produces supported Findings. Agent Packs and Production Skills determine how each review is performed. Findings do not become project truth directly: durable meaning enters Project Intelligence through normal Source ingestion, while all downstream changes remain governed by their owning Pactwright semantics.**
+> **Graph Review performs specialist analysis over an explicitly identified Project Graph revision and produces supported Findings through immutable Review Executions. Agent Packs and Production Skills determine how analysis is performed. Every Finding from a successful review enters Project Intelligence through normal Source ingestion; all downstream canonical changes remain governed by their owning Pactwright semantics.**
 
 ---
 
