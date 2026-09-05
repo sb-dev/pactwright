@@ -2,11 +2,11 @@
 
 ## 1. Purpose
 
-This specification defines how Pactwright is packaged, configured, extended, composed with AI capabilities, synchronised, locked, upgraded and evaluated.
+This specification defines how Pactwright is packaged, installed, configured, extended, composed with AI capabilities, synchronised, locked, upgraded and evaluated.
 
 The architecture is:
 
-```text id="dauycn"
+```text
 Pactwright Core
       ↓
 enabled Pactwright Extensions
@@ -26,7 +26,7 @@ execution adapter
 
 Responsibilities are deliberately separated:
 
-```text id="oz70sz"
+```text
 Pactwright Core
 → stable semantics and deterministic runtime
 
@@ -54,24 +54,25 @@ Pactwright must not absorb production-domain workflows merely because it can exe
 
 This specification owns:
 
-- Pactwright distribution;
+- Pactwright distribution and initialisation;
 - project configuration;
 - locking and reproducibility;
 - Agent Packs;
 - capability resolution;
-- Pactwright Extensions;
+- Pactwright Extension installation, removal and upgrade;
 - Production Skills integration;
 - Production Extension Pack resolution;
 - adapters;
 - synchronisation;
-- upgrades;
+- upgrades and migrations;
 - compatibility validation;
-- Pactwright-level evaluation.
+- Pactwright-level evaluation and baseline comparison.
 
 It does not own:
 
 - Contract or lifecycle semantics;
 - extension-specific graph semantics;
+- exact GitHub projection mechanics;
 - domain production workflows;
 - Production Skill commands;
 - Production Extension Pack internals;
@@ -79,11 +80,25 @@ It does not own:
 
 ---
 
-# 3. Project Customisation Model
+# 3. Distribution, Initialisation and Project Configuration
+
+Install Pactwright as a Node development dependency:
+
+```text
+pnpm add -D pactwright
+```
+
+Initialise a repository through:
+
+```text
+pnpm pactwright init
+```
+
+The initialised repository contains Pactwright configuration, Project Graph storage and generated adapter/integration surfaces. Users should not manually copy Pactwright runtime scripts, agents or workflow commands between repositories.
 
 The repository-level Pactwright customisation mechanisms are:
 
-```text id="uwr76b"
+```text
 Agent Pack
 Pactwright Extensions
 Adapter
@@ -91,13 +106,11 @@ Lifecycle configuration
 GitHub configuration
 ```
 
-Production Skills are not another peer-level project setting.
-
-They are composed through the selected Agent Pack.
+Production Skills are not another peer-level project setting. They are composed through the selected Agent Pack.
 
 Conceptually:
 
-```yaml id="wjej0o"
+```yaml
 version: 1
 
 agent_pack:
@@ -117,6 +130,14 @@ Configuration records desired state.
 
 `.pactwright/lock.yml` records the exact resolved environment.
 
+One-shot initialisation options must compose the same underlying operations as the corresponding explicit commands rather than implement a separate setup path. For example:
+
+```text
+pactwright init --with project-intelligence --github
+```
+
+must compose normal initialisation, Extension installation and GitHub synchronisation.
+
 ---
 
 # 4. Pactwright Capabilities
@@ -133,7 +154,7 @@ It does not identify:
 
 Core capabilities are:
 
-```text id="0o5ti1"
+```text
 delivery-specification
 delivery-execution
 delivery-review
@@ -141,7 +162,7 @@ delivery-review
 
 Extensions may add genuinely distinct responsibilities such as:
 
-```text id="uce6ng"
+```text
 intelligence-triage
 intelligence-promotion
 intelligence-context
@@ -151,7 +172,7 @@ operations-analysis
 
 Do not create capabilities such as:
 
-```text id="xeza62"
+```text
 software-delivery
 creative-delivery
 video-delivery
@@ -170,7 +191,7 @@ An Agent Pack defines how AI performs Pactwright responsibilities.
 
 It may contain:
 
-```text id="s2zk98"
+```text
 capability mappings
 agents
 prompts
@@ -181,7 +202,7 @@ evaluation cases
 
 Conceptually:
 
-```yaml id="thfu3g"
+```yaml
 capabilities:
   delivery-specification: spec
   delivery-execution: implementer
@@ -190,25 +211,28 @@ capabilities:
 
 Agent identity is not capability identity.
 
-For example:
-
-```text id="nw9oh1"
-delivery-execution
-→ implementer
-```
-
-or:
-
-```text id="o6wh4v"
-delivery-execution
-→ producer
-```
-
-represent the same Pactwright responsibility.
-
 A project selects **one Agent Pack**.
 
 Agent Pack composition is not required because one Agent Pack may already compose multiple Production Skills families.
+
+The supported selection interface is:
+
+```text
+pactwright agent-pack use <source>
+```
+
+The operation must:
+
+1. resolve a compatible complete pack;
+2. validate it against core and enabled-Extension capabilities;
+3. update configuration only after successful resolution;
+4. record exact pack and agent identities in the lock;
+5. run `pactwright sync`;
+6. report any GitHub integration changes.
+
+If required capabilities are missing, selection fails without replacing the current valid lock or generated environment.
+
+Pactwright may recommend a compatible pack but must not silently select one.
 
 ---
 
@@ -218,7 +242,7 @@ Production Skills are independently maintained repositories containing specialis
 
 Examples include:
 
-```text id="gtsasy"
+```text
 software-engineering-skills
 ui-ux-design-skills
 deep-research-skills
@@ -230,7 +254,7 @@ narrative-production-skills
 
 They own their own:
 
-```text id="gou3q7"
+```text
 skills
 skill commands
 production workflows
@@ -244,7 +268,7 @@ evaluation
 
 They must remain usable without Pactwright.
 
-```text id="osz47u"
+```text
 standalone:
 AI agent
 → Production Skills
@@ -263,7 +287,7 @@ Pactwright must not require Production Skills repositories to adopt Pactwright l
 
 A Production Skills repository may optionally expose:
 
-```text id="5prxbv"
+```text
 integrations/
 └── pactwright.yml
 ```
@@ -272,7 +296,7 @@ The manifest declares how its skills can participate in Pactwright responsibilit
 
 Conceptually:
 
-```yaml id="gh99k1"
+```yaml
 version: 1
 id: video-production-skills
 
@@ -296,7 +320,7 @@ The exact schema may evolve.
 
 The manifest should contain only:
 
-```text id="reye6w"
+```text
 identity
 Pactwright compatibility
 capability → skill bindings
@@ -306,7 +330,7 @@ resolution metadata where necessary
 
 It must not define:
 
-```text id="b19lmm"
+```text
 Pactwright agents
 agent prompts
 Pactwright commands
@@ -328,7 +352,7 @@ An Agent Pack may import multiple Production Skills integrations.
 
 Example:
 
-```yaml id="2lythd"
+```yaml
 production_skills:
   - source: github:sb-dev/narrative-production-skills
   - source: github:sb-dev/music-production-skills
@@ -337,7 +361,7 @@ production_skills:
 
 Multiple Production Skills may contribute to the same capability:
 
-```text id="s8hjzf"
+```text
 delivery-execution
         ↓
 producer
@@ -348,7 +372,7 @@ producer
 
 Likewise:
 
-```text id="n4regk"
+```text
 delivery-review
         ↓
 reviewer
@@ -359,7 +383,7 @@ reviewer
 
 Pactwright must therefore assume:
 
-```text id="xpru8k"
+```text
 one capability
 → one agent
 → potentially many Production Skills
@@ -367,16 +391,10 @@ one capability
 
 not:
 
-```text id="9o4zcx"
+```text
 one capability
 → one domain
 ```
-
-A children's television project may combine Narrative, Music and Video.
-
-A game may combine Game Development, Game Assets, Narrative, Music and UI/UX.
-
-A software product may combine Software Engineering, UI/UX and Deep Research.
 
 ---
 
@@ -384,27 +402,9 @@ A software product may combine Software Engineering, UI/UX and Deep Research.
 
 A Production Extension Pack adds specialised production knowledge to one Production Skills family.
 
-Examples:
-
-```text id="v2usip"
-software-engineering-skills
-+ spring-boot
-+ kafka-event-driven
-
-ui-ux-design-skills
-+ mobile-native
-
-video-game-development-skills
-+ godot
-+ arcade
-
-deep-research-skills
-+ market-research
-```
-
 An Agent Pack may select packs while importing the owning family:
 
-```yaml id="jdy7k4"
+```yaml
 production_skills:
   - source: narrative-production-skills
     extension_packs:
@@ -413,7 +413,7 @@ production_skills:
 
 Pactwright owns:
 
-```text id="iw8cwy"
+```text
 selection
 resolution
 locking
@@ -422,7 +422,7 @@ availability
 
 The Production Skills family owns:
 
-```text id="n0nf9x"
+```text
 pack meaning
 production rules
 validation
@@ -432,7 +432,7 @@ behavioural effect
 
 A Production Extension Pack is not a Pactwright Extension.
 
-```text id="z2ityr"
+```text
 Pactwright Extension
 → extends Pactwright semantics
 
@@ -457,31 +457,20 @@ It may contribute:
 - generated repository integration;
 - GitHub profile requirements.
 
-The redesigned first-party extension set is:
+The redesigned first-party Extension set is:
 
-```text id="h9pygu"
+```text
 Project Intelligence
 Graph Review
 Assets / Publication
 Operations
 ```
 
-Conceptually:
-
-```text id="r9la6p"
-Pactwright Project Graph
-├── Delivery Graph                 core
-├── Project Intelligence           optional
-├── Graph Review                   optional
-├── Assets / Publication           optional
-└── Operations                     optional
-```
-
 Extensions may depend on other Extensions when there is a real semantic dependency.
 
 Expected examples include:
 
-```text id="p0nm8d"
+```text
 Graph Review
 → Project Intelligence
 
@@ -489,9 +478,43 @@ Operations
 → Project Intelligence
 ```
 
-because durable findings are routed through Project Intelligence.
-
 Dependencies must not be introduced merely for implementation convenience.
+
+The supported management interfaces are:
+
+```text
+pactwright extension add <id-or-package>
+pactwright extension remove <id>
+pactwright extension upgrade <id>
+```
+
+## Installation
+
+`extension add` must:
+
+1. resolve a compatible package;
+2. resolve and install required Extension dependencies first;
+3. add package dependencies;
+4. register the Extension in project configuration;
+5. record exact package/version/hash and resolved dependencies in the lock;
+6. validate runtime compatibility and required Agent Pack capabilities;
+7. create Extension-owned repository structure;
+8. run `pactwright sync`;
+9. report any GitHub provisioning changes.
+
+Dependency installation uses the same compatibility, locking, capability-validation and synchronisation path as explicit Extension installation.
+
+Installation fails before canonical Project Graph mutation if the complete environment is incompatible.
+
+## Removal
+
+Removing or disabling an Extension must preserve user-authored Extension graph data unless the user separately chooses to delete it.
+
+Only generated local or remote state exclusively owned by that Extension may be removed automatically.
+
+An Extension cannot be disabled or removed while another enabled Extension still depends on it unless the dependent Extension is disabled or removed in the same operation.
+
+If ownership of generated or remote state is ambiguous, Pactwright must preserve it and report the ambiguity rather than delete user state.
 
 ---
 
@@ -501,7 +524,7 @@ A Pactwright Extension manifest declares its integration contract.
 
 Conceptually:
 
-```yaml id="ntxb0o"
+```yaml
 id: graph-review
 package: "@pactwright/graph-review"
 version: ...
@@ -522,7 +545,7 @@ It may additionally register extension-owned graph types.
 
 At runtime:
 
-```text id="kbv47c"
+```text
 core capabilities
 +
 enabled Extension capabilities
@@ -534,19 +557,21 @@ The selected Agent Pack must satisfy the complete set.
 
 If it does not:
 
-- the operation fails;
+- the operation fails before activation or canonical mutation;
 - Pactwright must not silently switch Agent Packs;
-- the current valid lock remains intact.
+- the current valid configuration, lock and generated environment remain intact.
 
 ---
 
-# 12. Resolution and Locking
+# 12. Resolution, Versioning and Locking
 
-Pactwright resolves the complete AI execution environment.
+Pactwright resolves the complete execution environment.
+
+Runtime, Pactwright Extensions and Agent Packs are independently versioned and reviewable. External Production Skills are resolved to exact revisions or versions needed by the selected Agent Pack.
 
 For Production Skills this means:
 
-```text id="4sqpu8"
+```text
 source
 → exact revision/version
 → integration manifest
@@ -555,11 +580,11 @@ source
 → selected Production Extension Packs
 ```
 
-The lock should record enough immutable identity to reproduce the result.
+The lock must record enough immutable identity to reproduce the result.
 
 Conceptually:
 
-```yaml id="ekgzmh"
+```yaml
 runtime:
   version: ...
 
@@ -567,6 +592,8 @@ extensions:
   graph-review:
     version: ...
     hash: ...
+    dependencies:
+      project-intelligence: ...
 
 agent_pack:
   source: "@pactwright/standard"
@@ -587,13 +614,15 @@ production_skills:
 
 Pactwright does not copy or reinterpret a Production Skills repository's own internal lock graph.
 
-```text id="qmr6kj"
+```text
 Production Skills lock
 → owned by Production Skills
 
 Pactwright lock
 → records Pactwright's exact dependency on it
 ```
+
+Configuration expresses intent. The lock records the exact resolved setup.
 
 ---
 
@@ -616,9 +645,7 @@ If two imported skill families produce ambiguous skill identities, Pactwright mu
 
 Compatibility validation does not imply domain quality.
 
-A structurally valid `video-evaluate` skill is not automatically a good evaluator.
-
-Its quality belongs to the Production Skills benchmark.
+A structurally valid `video-evaluate` skill is not automatically a good evaluator. Its quality belongs to the Production Skills benchmark.
 
 ---
 
@@ -628,7 +655,7 @@ Its quality belongs to the Production Skills benchmark.
 
 Conceptually:
 
-```text id="ioehx9"
+```text
 configuration
 + lock
 + Extensions
@@ -640,10 +667,10 @@ pactwright sync
 generated execution environment
 ```
 
-Synchronisation should:
+Synchronisation must:
 
 1. load configuration and lock;
-2. load Extensions;
+2. load enabled Extensions;
 3. derive required capabilities;
 4. load the Agent Pack;
 5. resolve Production Skills and selected Extension Packs;
@@ -652,13 +679,13 @@ Synchronisation should:
 8. render the active adapter;
 9. render Pactwright-managed repository integration.
 
-The same locked inputs must produce equivalent output.
+Repeated `sync` with identical locked inputs **must produce identical generated output**.
 
 Adapters convert the resolved environment into an AI execution surface.
 
 Initial example:
 
-```text id="eubj2n"
+```text
 resolved Pactwright environment
         ↓
 Claude Code adapter
@@ -668,55 +695,62 @@ Claude Code adapter
 
 Adapters do not define Pactwright semantics.
 
-Pactwright may only regenerate files it explicitly owns.
+Pactwright may regenerate only files or managed regions it explicitly owns.
 
-User-authored source and external Production Skills repositories must remain untouched.
+User-authored source, unrelated workflows and external Production Skills repositories must remain untouched.
+
+`pactwright sync` changes local generated integration only. Remote GitHub reconciliation remains owned by `pactwright github sync` and the GitHub Integration specification.
 
 ---
 
-# 15. Upgrades
+# 15. Upgrades and Migrations
 
 Environment-changing operations include:
 
-```text id="knmffj"
-Pactwright upgrade
-Extension add/remove/upgrade
-Agent Pack switch
+```text
+runtime upgrade
+Extension upgrade
+Agent Pack switch or upgrade
 Production Skills revision change
 Production Extension Pack change
 ```
 
-Pactwright must resolve and validate the complete target environment before replacing the current lock or generated integration.
+Supported interfaces include:
 
-An incompatible change must not leave:
+```text
+pnpm up pactwright
+pactwright extension upgrade <id>
+pactwright agent-pack use <source>
+pactwright upgrade
+```
 
-- partial configuration;
-- partial lock state;
-- partial adapter output;
-- invalid canonical Project Graph mutation.
+`pactwright upgrade` upgrades the configured Agent Pack through the same complete-environment validation path used for pack selection.
+
+An Extension upgrade must:
+
+1. resolve a compatible package;
+2. validate the complete Extension dependency graph;
+3. validate schema compatibility and the complete required capability set;
+4. run **explicitly defined, versioned migrations** where canonical Extension state requires migration;
+5. update package/configuration and lock state only after the target environment is valid;
+6. run `pactwright sync`;
+7. report GitHub changes requiring reconciliation.
+
+An Extension upgrade must not silently reinterpret canonical Project Graph state.
+
+A dependency upgrade must satisfy every enabled dependent Extension before the current lock changes.
+
+All environment changes are atomic from Pactwright's perspective: an incompatible target must not leave partial configuration, partial lock state, partial adapter output or partial canonical mutation.
 
 ---
 
 # 16. Production Skill Commands
 
-Production Skills may decompose skills into narrower commands.
+Production Skills may decompose skills into narrower commands for composition, testing and benchmarks.
 
-Example:
+These commands do not automatically become Pactwright commands.
 
-```text id="j8z2iw"
-software-debug
-├── reproduce
-├── gather-evidence
-├── isolate-root-cause
-├── implement-fix
-└── verify-regression
-```
-
-These are Production Skills operations used for composition, testing and benchmarks.
-
-They do not automatically become Pactwright commands.
-
-Pactwright commands remain Contract-driven lifecycle operations.
+Pactwright commands remain Contract-driven lifecycle or Extension operations.
 
 ---
 
@@ -724,7 +758,7 @@ Pactwright commands remain Contract-driven lifecycle operations.
 
 Semantic authority flows from stable Pactwright semantics towards increasingly specialised execution:
 
-```text id="kmow7m"
+```text
 Pactwright Core
         ↓
 Extension semantics within owned scope
@@ -740,9 +774,7 @@ Production Skills
 Production Extension Packs
 ```
 
-Lower layers may specialise execution.
-
-They cannot override higher-layer semantics.
+Lower layers may specialise execution. They cannot override higher-layer semantics.
 
 Examples:
 
@@ -757,7 +789,7 @@ Examples:
 
 Reusable expertise and project-specific knowledge have different owners.
 
-```text id="k8t22h"
+```text
 Production Skills
 → reusable general expertise
 
@@ -768,18 +800,6 @@ Project Intelligence
 → project-specific learned knowledge
 ```
 
-Examples:
-
-```text id="o1v122"
-"Kafka consumers should consider idempotency"
-→ Production Skills
-```
-
-```text id="77bruj"
-"This project's payment consumer requires ordering rule X"
-→ Project Intelligence
-```
-
 Production Skills and Agent Packs should not become hidden project memory.
 
 ---
@@ -788,7 +808,7 @@ Production Skills and Agent Packs should not become hidden project memory.
 
 Pactwright should not recreate:
 
-```text id="xam9ec"
+```text
 provider registry
 model router
 task catalogue
@@ -799,28 +819,25 @@ for work already owned by Production Skills.
 
 Production Skills may know how to invoke coding tools, research services, image/video/audio models or other domain tooling.
 
-Pactwright records only the provenance required for:
-
-```text id="t40y09"
-Contract fulfilment
-Evidence
-reproducibility
-auditability
-```
-
-where applicable.
+Pactwright records only the provenance required for Contract fulfilment, Evidence, reproducibility or auditability where applicable.
 
 ---
 
-# 20. Evaluation Model
+# 20. Evaluation Model and Public Interface
 
 Pactwright Evaluation answers:
 
 > Can the resolved AI execution environment correctly perform its Pactwright responsibilities?
 
+The supported runner is:
+
+```text
+pactwright eval
+```
+
 Evaluation is layered:
 
-```text id="dbgviz"
+```text
 Pactwright Core
 → core responsibility evaluation
 
@@ -834,33 +851,11 @@ Production Skills
 → domain benchmark and evaluation
 ```
 
-Pactwright core evaluation should cover concerns such as:
+Core evaluation should cover Contract fidelity, scope discipline, Brief quality, Review quality, Evidence accuracy and lifecycle compliance.
 
-```text id="kn01rt"
-Intent interpretation
-Contract quality
-Contract preservation
-Brief quality
-scope discipline
-Review quality
-Evidence accuracy
-lifecycle compliance
-```
+Extension evaluations cover the responsibilities owned by each Extension.
 
-Extension evaluations cover their own responsibilities.
-
-Examples:
-
-```text id="8y7hs4"
-Project Intelligence
-→ triage / promotion / context
-
-Graph Review
-→ supported useful findings
-
-Operations
-→ interpretation of operational evidence
-```
+Production-domain quality remains owned by Production Skills benchmarks.
 
 ---
 
@@ -868,60 +863,17 @@ Operations
 
 Domain-specific benchmarks stay in Production Skills.
 
-Examples:
-
-```text id="ic35bi"
-software
-→ build/tests/regression/scope
-
-UI/UX
-→ task clarity/accessibility/state completeness
-
-games
-→ playability/soft locks/balance/performance
-
-research
-→ evidence quality/citation grounding/confidence
-
-video/music/narrative
-→ domain production quality
-```
-
-Pactwright instead tests the integration boundary.
-
-Example:
-
-```text id="dht1fk"
-delivery-execution
-+
-children-TV Agent Pack
-+
-Narrative/Music/Video Production Skills
-        ↓
-Does the result satisfy the Pactwright Brief?
-```
-
-or:
-
-```text id="n8kwap"
-delivery-review
-+
-software Agent Pack
-+
-Software/UIUX Production Skills
-        ↓
-Does Review correctly identify Contract violations?
-```
+Pactwright tests the integration boundary, for example whether an Agent Pack using several Production Skills correctly satisfies a Pactwright Brief or whether Review identifies Contract violations.
 
 Pactwright should not silently execute entire external Production Skills benchmark suites as part of normal Pactwright evaluation.
 
 ---
 
-# 22. Evaluation Cases
+# 22. Evaluation Cases and Artefact Ownership
 
-Evaluation cases belong to the component that owns the behaviour.
+Evaluation cases belong to the component that owns the behaviour:
 
-```text id="b12ddx"
+```text
 core responsibility
 → core case
 
@@ -935,11 +887,11 @@ Production Skill behaviour
 → Production Skills benchmark
 ```
 
+Cases are versioned with their owning component.
+
 Pactwright evaluation may combine deterministic and semantic assertions.
 
-Prefer deterministic validation where possible.
-
-Examples include:
+Prefer deterministic validation where possible, including:
 
 - valid graph mutation;
 - valid capability routing;
@@ -948,23 +900,30 @@ Examples include:
 - forbidden mutation absence;
 - Contract lineage preservation.
 
-Semantic evaluation may assess:
+Semantic evaluation may assess usefulness, unsupported assumptions, scope creep, unnecessary complexity and the quality of Contract, Brief or Review output.
 
-- usefulness;
-- unsupported assumptions;
-- scope creep;
-- unnecessary complexity;
-- quality of Contract, Brief or Review output.
+Routine evaluation results and reports are generated artefacts, not Project Graph nodes or canonical project truth.
 
 ---
 
-# 23. Evaluation Regression
+# 23. Baselines and Regression Reporting
 
-Evaluation should support comparing a candidate environment against an accepted baseline.
+A released Agent Pack establishes a baseline that can be compared with a candidate environment.
 
-Useful regression dimensions include:
+The supported interface is:
 
-```text id="o5lvei"
+```text
+pactwright eval \
+  --baseline <released-pack-or-baseline> \
+  --candidate <candidate-pack-or-environment>
+```
+
+Reports must expose regressions at meaningful dimensions such as:
+
+```text
+capability
+agent
+evaluation case
 Agent Pack change
 prompt change
 Production Skills upgrade
@@ -973,7 +932,9 @@ Extension capability change
 model adaptation
 ```
 
-Report dimension-level regressions rather than relying on one opaque aggregate score.
+Do not rely on one opaque aggregate score to decide whether a candidate is better.
+
+A regression report must make the affected capability/case visible so a release decision is reviewable.
 
 ---
 
@@ -981,7 +942,7 @@ Report dimension-level regressions rather than relying on one opaque aggregate s
 
 Do not introduce initially:
 
-```text id="rwyzeh"
+```text
 Agent Pack composition
 generic executable plugin system
 generic skill dependency solver
@@ -991,11 +952,13 @@ generic task catalogue
 Production Extension Pack interpretation engine
 cross-family pack dependency language
 universal domain benchmark framework
+hosted evaluation
+automatic prompt optimisation/promotion
 ```
 
 The required bridge is deliberately small:
 
-```text id="f6i1lg"
+```text
 Production Skills
 → optional integrations/pactwright.yml
 
@@ -1029,14 +992,21 @@ Add more machinery only when real integrations demonstrate that this model is in
 12. Capability identity is independent from agent and skill identity.
 13. Production Skills selection flows through the Agent Pack.
 14. Configuration expresses desired state; the lock records exact resolved state.
-15. The complete environment is validated before activation.
-16. Synchronisation is deterministic for identical locked inputs.
-17. Adapters project the resolved environment but do not define semantics.
-18. Production Skill commands do not automatically become Pactwright commands.
-19. Pactwright evaluates Pactwright responsibility fulfilment.
-20. Production-domain benchmarks remain owned by Production Skills.
-21. Project-specific learned knowledge belongs in Project Intelligence.
-22. Provider and model routing remain outside Pactwright where Production Skills already own them.
+15. Runtime, Extensions and Agent Packs may version independently under compatibility constraints.
+16. Extension dependencies are installed and locked through the same managed path as explicit Extensions.
+17. Enabled Extension dependencies cannot be removed underneath dependants.
+18. The complete target environment is validated before activation or lock replacement.
+19. Explicit migrations are required when an Extension upgrade changes canonical stored semantics.
+20. Repeated synchronisation with identical locked inputs produces identical generated output.
+21. Adapters project the resolved environment but do not define semantics.
+22. Production Skill commands do not automatically become Pactwright commands.
+23. Evaluation cases remain owned and versioned by the component whose behaviour they test.
+24. Evaluation results are generated artefacts, not Project Graph truth.
+25. Baseline comparison reports regressions by meaningful capability/agent/case dimensions.
+26. Pactwright evaluates Pactwright responsibility fulfilment.
+27. Production-domain benchmarks remain owned by Production Skills.
+28. Project-specific learned knowledge belongs in Project Intelligence.
+29. Provider and model routing remain outside Pactwright where Production Skills already own them.
 
 ---
 
@@ -1052,29 +1022,38 @@ Pactwright `0.0.1` already implements important parts of this model:
 - agent definitions;
 - skills attached to agents;
 - adapter configuration;
-- Extension configuration;
+- Extension configuration and loading;
 - locking concepts;
 - synchronisation foundations;
 - evaluation infrastructure.
+
+The preserved public distribution surface includes:
+
+```text
+pnpm add -D pactwright
+pnpm pactwright init
+pactwright extension add
+pactwright extension remove
+pactwright extension upgrade
+pactwright agent-pack use
+pactwright sync
+pactwright eval
+```
+
+with runtime and Agent Pack upgrade paths as defined above.
 
 The redesigned architecture preserves those mechanisms while simplifying the older domain-specific capability model.
 
 The principal new integration is:
 
-```text id="xz5jhf"
+```text
 Production Skills repository
 → optional Pactwright integration manifest
 → Agent Pack import
 → capability-to-skill bindings
 ```
 
-This adds:
-
-- multi-Production-Skills composition;
-- Production Extension Pack selection;
-- Production Skills revision locking;
-- integration validation;
-- explicit Pactwright vs Production Skills evaluation ownership.
+This adds multi-Production-Skills composition, Production Extension Pack selection, Production Skills revision locking, integration validation and explicit Pactwright vs Production Skills evaluation ownership.
 
 It extends the Agent Pack model rather than introducing a second AI composition system.
 
@@ -1082,7 +1061,7 @@ It extends the Agent Pack model rather than introducing a second AI composition 
 
 # 27. Relationship to Other Canonical Specifications
 
-```text id="flnzai"
+```text
 01 Pactwright Core System and Lifecycle
 → Contracts, Delivery and core capabilities
 
@@ -1102,7 +1081,7 @@ It extends the Agent Pack model rather than introducing a second AI composition 
 → real-world exposure and feedback
 
 07 GitHub Integration
-→ GitHub automation and projection
+→ GitHub automation, provisioning and projection
 
 08 Open-Source Project Organisation
 → repository and ecosystem structure
@@ -1116,7 +1095,7 @@ Production-specific semantics remain in independent Production Skills repositori
 
 # 28. Governing Rule
 
-> **Pactwright defines semantic responsibilities. Pactwright Extensions add optional system semantics. The selected Agent Pack maps responsibilities to agents and may compose multiple independently maintained Production Skills through optional Pactwright integration manifests. Production Skills retain ownership of their workflows, commands, Extension Packs, tools and benchmarks. Pactwright resolves, validates and locks the resulting environment without absorbing production-domain semantics.**
+> **Pactwright defines semantic responsibilities. Pactwright Extensions add optional system semantics. The selected Agent Pack maps responsibilities to agents and may compose multiple independently maintained Production Skills through optional Pactwright integration manifests. Production Skills retain ownership of their workflows, commands, Extension Packs, tools and benchmarks. Pactwright installs, resolves, validates, locks, synchronises, upgrades and evaluates the resulting environment without absorbing production-domain semantics.**
 
 ---
 
