@@ -167,15 +167,14 @@ delivery-execution
 delivery-review
 ```
 
-Extensions may add genuinely distinct responsibilities such as:
+Extensions may add genuinely distinct responsibilities. Current sourced examples include:
 
 ```text
-intelligence-triage
-intelligence-promotion
-intelligence-context
 graph-review
 operations-analysis
 ```
+
+Project Intelligence may also require Agent Pack capabilities, but its exact capability decomposition and identifiers remain unresolved in the Project Intelligence specification.
 
 Do not create capabilities such as:
 
@@ -651,6 +650,34 @@ They must agree on the installed Pactwright and package-backed component version
 
 Configuration expresses intent. The locks record exact resolved state at their respective layers.
 
+## Environment lock identity
+
+Pactwright derives a deterministic `environment_lock_hash` from the exact resolved Pactwright execution environment represented by `.pactwright/lock.yml`.
+
+```text
+exact resolved Pactwright environment
+        ↓
+environment_lock_hash
+```
+
+The same locked environment must produce the same `environment_lock_hash`.
+
+The hash identifies the resolved environment used by replayable execution provenance; it does not replace the lock contents or package/source locations needed to reconstruct that environment.
+
+The shared replay base used across Pactwright is:
+
+```text
+repository_revision
++ project_graph_revision
++ environment_lock_hash
+```
+
+Spec 01 owns repository and Project Graph revision semantics. This specification owns `environment_lock_hash` and exact environment resolution.
+
+For a pinned replay, the environment identified by `environment_lock_hash` must be resolvable without silently substituting newer runtime, Extension, Agent Pack, Production Skills or Production Extension Pack versions. If the historical environment cannot be reconstructed, the replay fails explicitly.
+
+The exact retention or reacquisition mechanism for historical packages and external Production Skills revisions remains an implementation detail. The semantic requirement is exact identity plus explicit failure, not a Pactwright-hosted package archive.
+
 ---
 
 # 13. Validation
@@ -667,7 +694,8 @@ Before accepting a resolved environment, Pactwright validates:
 - selected Production Extension Pack existence;
 - deterministic skill identity;
 - source/revision availability;
-- adapter representability.
+- adapter representability;
+- deterministic `environment_lock_hash` derivation from the resolved lock.
 
 If two imported skill families produce ambiguous skill identities, Pactwright must fail resolution rather than silently select one.
 
@@ -1113,27 +1141,29 @@ Add more machinery only when real integrations demonstrate that this model is in
 13. Production Skills selection flows through the Agent Pack.
 14. Configuration expresses desired state; locks record exact resolved state at their respective layers.
 15. Package-manager and Pactwright lock state must agree on package-backed Pactwright components.
-16. Runtime, Extensions and Agent Packs may version independently under compatibility constraints.
-17. Extension dependencies are installed and locked through the same managed path as explicit Extensions.
-18. Enabled Extension dependencies cannot be removed underneath dependants.
-19. `pactwright upgrade` upgrades the Pactwright runtime, not the Agent Pack.
-20. Pactwright owns upgrade orchestration; the detected project package manager owns package installation.
-21. Post-install upgrade work is performed by the newly installed runtime.
-22. Runtime upgrade does not silently major-upgrade other Pactwright components.
-23. Explicit runtime targets support controlled upgrade or rollback.
-24. Explicit migrations are required when an upgrade changes canonical stored semantics.
-25. Upgrade paths protect canonical Project Graph state from partial migration.
-26. Repeated synchronisation with identical locked inputs produces identical generated output.
-27. `pactwright doctor` is read-only and diagnoses environment drift and compatibility problems.
-28. Adapters project the resolved environment but do not define semantics.
-29. Production Skill commands do not automatically become Pactwright commands.
-30. Evaluation cases remain owned and versioned by the component whose behaviour they test.
-31. Evaluation results are generated artefacts, not Project Graph truth.
-32. Baseline comparison reports regressions by meaningful capability/agent/case dimensions.
-33. Pactwright evaluates Pactwright responsibility fulfilment.
-34. Production-domain benchmarks remain owned by Production Skills.
-35. Project-specific learned knowledge belongs in Project Intelligence.
-36. Provider and model routing remain outside Pactwright where Production Skills already own them.
+16. `environment_lock_hash` deterministically identifies the exact resolved Pactwright execution environment for replay provenance.
+17. Historical replay never silently substitutes a different resolved environment.
+18. Runtime, Extensions and Agent Packs may version independently under compatibility constraints.
+19. Extension dependencies are installed and locked through the same managed path as explicit Extensions.
+20. Enabled Extension dependencies cannot be removed underneath dependants.
+21. `pactwright upgrade` upgrades the Pactwright runtime, not the Agent Pack.
+22. Pactwright owns upgrade orchestration; the detected project package manager owns package installation.
+23. Post-install upgrade work is performed by the newly installed runtime.
+24. Runtime upgrade does not silently major-upgrade other Pactwright components.
+25. Explicit runtime targets support controlled upgrade or rollback.
+26. Explicit migrations are required when an upgrade changes canonical stored semantics.
+27. Upgrade paths protect canonical Project Graph state from partial migration.
+28. Repeated synchronisation with identical locked inputs produces identical generated output.
+29. `pactwright doctor` is read-only and diagnoses environment drift and compatibility problems.
+30. Adapters project the resolved environment but do not define semantics.
+31. Production Skill commands do not automatically become Pactwright commands.
+32. Evaluation cases remain owned and versioned by the component whose behaviour they test.
+33. Evaluation results are generated artefacts, not Project Graph truth.
+34. Baseline comparison reports regressions by meaningful capability/agent/case dimensions.
+35. Pactwright evaluates Pactwright responsibility fulfilment.
+36. Production-domain benchmarks remain owned by Production Skills.
+37. Project-specific learned knowledge belongs in Project Intelligence.
+38. Provider and model routing remain outside Pactwright where Production Skills already own them.
 
 ---
 
@@ -1188,6 +1218,8 @@ Production Skills repository
 
 This adds multi-Production-Skills composition, Production Extension Pack selection, Production Skills revision locking, integration validation and explicit Pactwright vs Production Skills evaluation ownership.
 
+The reproducibility target additionally requires deterministic `environment_lock_hash` identity for the exact resolved execution environment used by replayable provenance. Historical package/skill retention remains an implementation concern so long as unreconstructible pinned replay fails explicitly.
+
 It extends the Agent Pack model rather than introducing a second AI composition system.
 
 ---
@@ -1196,16 +1228,16 @@ It extends the Agent Pack model rather than introducing a second AI composition 
 
 ```text
 01 Pactwright Core System and Lifecycle
-→ Contracts, Delivery and core capabilities
+→ Contracts, Delivery and repository/Project Graph replay identity
 
 02 Distribution, Agent Packs, Extensions and Evaluation
-→ composition, distribution, upgrades, diagnosis and AI execution
+→ composition, distribution, environment-lock identity, upgrades, diagnosis and AI execution
 
 03 Project Intelligence
 → project-specific knowledge
 
 04 Graph Review
-→ specialist Project Graph analysis
+→ specialist Project Graph analysis and pinned replay
 
 05 Assets and Publication
 → approved durable outputs
@@ -1228,7 +1260,7 @@ Production-specific semantics remain in independent Production Skills repositori
 
 # 29. Governing Rule
 
-> **Pactwright defines semantic responsibilities. Pactwright Extensions add optional system semantics. The selected Agent Pack maps responsibilities to agents and may compose multiple independently maintained Production Skills through optional Pactwright integration manifests. Pactwright owns upgrade orchestration and environment diagnosis while the project's package manager owns package installation. Production Skills retain ownership of their workflows, commands, Extension Packs, tools and benchmarks. Pactwright resolves, validates, locks, synchronises, upgrades and evaluates the resulting environment without absorbing production-domain semantics.**
+> **Pactwright defines semantic responsibilities. Pactwright Extensions add optional system semantics. The selected Agent Pack maps responsibilities to agents and may compose multiple independently maintained Production Skills through optional Pactwright integration manifests. Pactwright owns upgrade orchestration, environment identity and environment diagnosis while the project's package manager owns package installation. Production Skills retain ownership of their workflows, commands, Extension Packs, tools and benchmarks. Pactwright resolves, validates, locks, synchronises, upgrades and evaluates the resulting environment without absorbing production-domain semantics or silently substituting a different environment during pinned replay.**
 
 ---
 
