@@ -175,7 +175,7 @@ Reading another Extension's state does not transfer ownership.
 
 ---
 
-# 7. Project Graph Revision
+# 7. Project Graph Revision and Replay Base
 
 Every Graph Review runs against a deterministic Project Graph revision supplied by Pactwright Core.
 
@@ -187,11 +187,25 @@ Project Graph revision
 Graph Review
 ```
 
-The Review Execution records the revision inspected.
+A Project Graph revision identifies canonical semantic state but does not by itself identify the repository bytes or resolved AI execution environment needed to replay the review.
 
-Graph Review does not define its own revision scheme.
+Graph Review therefore uses Pactwright's shared replay base:
 
-The revision provides a stable identity for the reviewed graph state, but **a revision hash alone does not define how historical graph bytes are recovered**. Pinned reruns therefore require a reconstructible historical Project Graph input. The storage/locator mechanism for reconstructing an old revision remains a cross-cutting Pactwright design requirement and must not be silently approximated with current state.
+```text
+repository_revision
++ project_graph_revision
++ environment_lock_hash
+```
+
+`repository_revision` identifies the repository state from which the relevant canonical and non-canonical execution inputs are reconstructed.
+
+`project_graph_revision` identifies the canonical registered Project Graph state derived from that repository state.
+
+`environment_lock_hash` identifies the exact resolved Pactwright execution environment under Spec 02.
+
+A pinned replay must reconstruct the recorded repository revision, derive the recorded Project Graph revision from it, and resolve the exact recorded environment. If any identity cannot be reconstructed or verified, replay fails explicitly rather than approximating with current state.
+
+The repository revision is not itself the Project Graph revision.
 
 ---
 
@@ -203,7 +217,9 @@ Conceptually:
 
 ```yaml
 id: graph-review-...
+repository_revision: ...
 graph_revision: ...
+environment_lock_hash: ...
 
 request:
   perspective: ...
@@ -227,12 +243,14 @@ created: ...
 The exact representation may evolve, but the execution must preserve enough immutable identity to explain and reconstruct:
 
 ```text
-Project Graph revision
+repository_revision
++ project_graph_revision
++ environment_lock_hash
 + review request
 + resolved scope
-+ resolved Agent Pack
-+ relevant Production Skills environment
 ```
+
+Resolved Agent Pack and Production Skills identities remain useful explicit provenance even though they are also covered by the environment lock identity.
 
 A Review Execution is execution provenance, not a normal Project Graph node.
 
@@ -246,17 +264,25 @@ Model output is not required to be byte-identical on rerun.
 
 ---
 
-# 9. Historical Environment Reconstruction
+# 9. Historical Reconstruction
 
-The pinned-rerun contract requires the original resolved execution environment to remain identifiable after later upgrades.
+Pinned replay requires both historical repository state and the historical resolved execution environment to remain reconstructible.
 
-Review Execution provenance must therefore preserve immutable identities for the Agent Pack and relevant Production Skills used by the run.
+Graph Review must never silently substitute:
 
-Graph Review must never silently substitute a newer Agent Pack, skill revision or Production Extension Pack during a pinned rerun.
+```text
+current repository state
+current Project Graph state
+newer Agent Pack
+newer Production Skill revision
+newer Production Extension Pack
+```
 
-If the original environment cannot be resolved, the pinned rerun must fail clearly rather than becoming an implicit current-environment review.
+for a recorded pinned input.
 
-How Pactwright retains or reacquires historical package/skill revisions is owned by the Distribution and locking design and remains an unresolved cross-spec implementation detail.
+If the historical repository revision or environment cannot be recovered, pinned replay fails clearly.
+
+The exact retention/reacquisition mechanism for Git repository objects, packages and external Production Skills revisions is an implementation concern owned by repository/distribution infrastructure. Pactwright does not require a new snapshot database or hosted package archive solely to satisfy this semantic contract.
 
 ---
 
@@ -450,7 +476,7 @@ Exact argument ergonomics may evolve, but the semantic distinction is fixed.
 
 ## New run
 
-`graph-review run` resolves the current Project Graph revision and current compatible locked execution environment.
+`graph-review run` records the current replay base and current review request/scope.
 
 ## Pinned rerun
 
@@ -460,12 +486,15 @@ pactwright graph-review rerun <execution-id>
 
 uses the original Review Execution's:
 
+- `repository_revision`;
 - Project Graph revision;
+- `environment_lock_hash`;
 - review request;
-- resolved scope/configuration;
-- resolved Agent Pack and Production Skills identities.
+- resolved scope/configuration.
 
 Pinned rerun is the default.
+
+Before execution, the runtime must verify that reconstructed repository state derives the recorded Project Graph revision and that the exact recorded environment resolves successfully.
 
 ## Current-state rerun
 
@@ -473,9 +502,9 @@ Pinned rerun is the default.
 pactwright graph-review rerun <execution-id> --current
 ```
 
-reuses the original review request but deliberately resolves the latest Project Graph state and current compatible execution environment.
+reuses the original review request but deliberately resolves the latest repository state, Project Graph state and current compatible execution environment.
 
-A current-state rerun is a new Review Execution and must record its own revision and resolved environment.
+A current-state rerun is a new Review Execution and records its own complete replay base.
 
 The runtime must never silently convert a failed pinned rerun into a current-state rerun.
 
@@ -536,7 +565,7 @@ Failure rules are:
 - a failed review emits no Findings;
 - a successful review remains successful even if Finding hand-off later fails;
 - failed Project Intelligence hand-off is retryable from the existing Finding;
-- pinned rerun uses the original revision and resolved environment by default;
+- pinned rerun requires the original complete replay base by default;
 - current-state rerun requires explicit `--current`;
 - duplicate Findings are handled by Project Intelligence triage rather than Graph Review suppression;
 - report-generation failure never mutates canonical state.
@@ -551,18 +580,19 @@ A rerun always creates a new Review Execution rather than mutating the original.
 
 1. every Review Execution is immutable once recorded;
 2. every attempted review records a valid execution status;
-3. every successful review identifies a valid Project Graph revision;
-4. review scope references valid registered graph state for the recorded revision;
-5. the resolved Agent Pack supplied `graph-review`;
-6. referenced Production Skills belong to the recorded resolved environment;
-7. Findings exist only for successful Review Executions;
-8. every Finding references its Review Execution;
-9. supporting Project Graph records are valid against the reviewed revision;
-10. every Finding from a successful review has a Project Intelligence Source hand-off or a recorded retryable hand-off failure;
-11. Graph Review does not directly mutate sibling-owned canonical records;
-12. pinned reruns identify the original Project Graph revision and resolved environment;
-13. current-state reruns are explicitly marked and record the new revision/environment;
-14. generated reports identify their source Project Graph revision and relevant Review Execution provenance.
+3. every Review Execution records `repository_revision`, Project Graph revision and `environment_lock_hash`;
+4. the recorded repository revision can be verified to derive the recorded Project Graph revision when replay is requested;
+5. review scope references valid registered graph state for the recorded revision;
+6. the resolved Agent Pack supplied `graph-review`;
+7. referenced Production Skills belong to the recorded resolved environment;
+8. Findings exist only for successful Review Executions;
+9. every Finding references its Review Execution;
+10. supporting Project Graph records are valid against the reviewed revision;
+11. every Finding from a successful review has a Project Intelligence Source hand-off or a recorded retryable hand-off failure;
+12. Graph Review does not directly mutate sibling-owned canonical records;
+13. pinned reruns identify and resolve the original complete replay base;
+14. current-state reruns are explicitly marked and record the new replay base;
+15. generated reports identify their source Project Graph revision and relevant Review Execution provenance.
 
 Core `pactwright validate` may invoke Graph Review validation when the Extension is enabled.
 
@@ -603,7 +633,7 @@ Pactwright Graph Review evaluation
 4. Specialist perspectives do not require new Pactwright capabilities.
 5. Review behaviour is supplied through Agent Packs and Production Skills.
 6. Graph Review does not require a persistent Review Definition system.
-7. Every review records the Project Graph revision it inspects.
+7. Every Review Execution records the shared replay base: repository revision, Project Graph revision and environment lock hash.
 8. Review scope is resolved from the registered Project Graph.
 9. Every attempted review creates an immutable Review Execution.
 10. Failed reviews emit no Findings.
@@ -611,7 +641,7 @@ Pactwright Graph Review evaluation
 12. Every Finding emitted by a successful review enters Project Intelligence through Source ingestion.
 13. Finding severity does not determine Intelligence consequence class or roadmap priority.
 14. Graph Review does not directly mutate records owned by Delivery, Project Intelligence, Assets / Publication or Operations.
-15. Pinned rerun uses the original graph revision and resolved environment by default.
+15. Pinned rerun uses the original replay base by default and fails if it cannot be reconstructed exactly.
 16. Current-state rerun requires explicit request.
 17. Generated reports identify their source Project Graph revision.
 18. Report failure does not mutate canonical state.
@@ -654,14 +684,13 @@ review request
 
 until real use demonstrates another abstraction is necessary.
 
-The following design gaps remain explicit rather than being invented here:
+The following implementation gaps remain explicit rather than being invented here:
 
-- how a historical Project Graph revision is reconstructed for a pinned rerun;
-- how historical Agent Pack and Production Skills revisions are retained or reacquired after upgrades;
+- how historical repository objects and exact locked dependencies are retained or reacquired after pruning/upgrades;
 - how mutable external research inputs are reconstructed for fully reproducible reruns;
 - the physical storage layout for Findings separate from or embedded in Review Execution records.
 
-These gaps affect implementation detail and reproducibility, not the semantic rule that a pinned rerun must never silently substitute current graph or execution state.
+These gaps do not weaken the semantic rule that a pinned rerun uses the recorded replay base and fails rather than silently substituting current state.
 
 ---
 
@@ -680,6 +709,14 @@ The earlier Graph Review & Creative Delivery research established the surviving 
 - Finding severity is advisory;
 - derived reports identify their source Project Graph revision;
 - report-generation failure never mutates canonical graph state.
+
+The cross-spec correction adds the minimal shared replay identity required to make those pinned semantics unambiguous:
+
+```text
+repository_revision
++ project_graph_revision
++ environment_lock_hash
+```
 
 The redesign removes the unrelated machinery previously bundled with Graph Review:
 
@@ -707,16 +744,16 @@ Project-specific durable guidance belongs in Project Intelligence.
 
 ```text
 01 Core System and Lifecycle
-→ Delivery Review and Project Graph foundation
+→ repository and Project Graph replay identity
 
 02 Distribution, Agent Packs, Extensions and Evaluation
-→ graph-review capability implementation, locking and historical environment resolution
+→ graph-review capability implementation and environment-lock identity
 
 03 Project Intelligence
 → durable governance of every successful Finding
 
 04 Graph Review
-→ specialist analysis, Review Execution and Findings
+→ specialist analysis, Review Execution, Findings and pinned replay
 
 05 Assets and Publication
 → approved durable outputs
@@ -735,7 +772,7 @@ Project-specific durable guidance belongs in Project Intelligence.
 
 # 26. Governing Rule
 
-> **Graph Review performs specialist analysis over an explicitly identified Project Graph revision and produces supported Findings through immutable Review Executions. Agent Packs and Production Skills determine how analysis is performed. Every Finding from a successful review enters Project Intelligence through normal Source ingestion; all downstream canonical changes remain governed by their owning Pactwright semantics.**
+> **Graph Review performs specialist analysis over an explicitly identified replay base and produces supported Findings through immutable Review Executions. Pinned reruns reconstruct the recorded repository revision, verify its Project Graph revision and resolve its exact environment lock; failure to reconstruct any part fails the rerun rather than substituting current state. Every Finding from a successful review enters Project Intelligence through normal Source ingestion; all downstream canonical changes remain governed by their owning Pactwright semantics.**
 
 ---
 
