@@ -631,7 +631,27 @@ Public narrative, visual, educational and marketing work uses normal Delivery pl
 
 Public content must not compensate for missing project knowledge.
 
-When Project Intelligence is available for the relevant project state, public/outbound work must satisfy the applicable readiness gate before approval.
+## Before Project Intelligence
+
+Before Project Intelligence is enabled, public work still requires explicit authority. For the specific work being delivered:
+
+```text
+Intent
+→ authorised Decision
+→ selected Contract
+→ Brief
+→ Delivery
+```
+
+The authorised Decision and selected Contract are the bootstrap authority for identity, positioning, product claims or other strategic choices required by that work. They are not a substitute for a long-term project knowledge store.
+
+A model must not invent identity or positioning assumptions merely because Project Intelligence does not yet exist.
+
+Verified project evidence and existing authorised repository material may inform Contract crafting, but strategic choices still require explicit Decision authority.
+
+## With Project Intelligence
+
+Once Project Intelligence is available for the relevant project state, public/outbound work must satisfy the applicable readiness gate before approval.
 
 The required domain matrix is:
 
@@ -666,9 +686,27 @@ Coverage means the required current project truth is sufficiently represented fo
 
 ---
 
-# 19. Missing Coverage Flow
+# 19. Project Intelligence Bootstrap and Missing Coverage
 
-If required public-content coverage is missing:
+When Project Intelligence first becomes available, authorised bootstrap material that should become durable project knowledge enters the normal governance path:
+
+```text
+existing authorised Decision / Contract / verified material
+↓
+Project Intelligence Source
+↓
+triage
+↓
+reviewed promotion where required
+↓
+accepted Knowledge
+```
+
+For identity/positioning, this means the pre-PI Decision and Contract remain historical Delivery authority while Project Intelligence becomes the durable current knowledge owner after accepted promotion.
+
+There is no silent conversion from Contract text to Knowledge. Normal Source provenance, triage and approval apply.
+
+If required public-content coverage is later missing:
 
 ```text
 pactwright intelligence onboard
@@ -696,7 +734,11 @@ Strategic identity or positioning choices are **Decisions**. A generation model 
 
 # 20. Grounding and Re-grounding
 
-Public Delivery must retain the accepted Knowledge actually relied on where grounding is applicable.
+Before Project Intelligence exists, public Delivery is grounded through its authorised Decision, Contract, Brief and verified project evidence as applicable.
+
+After Project Intelligence is enabled and relevant bootstrap knowledge has been accepted, later grounded public work uses accepted Project Intelligence Knowledge under the readiness rules in this specification.
+
+Public Delivery must retain the accepted Knowledge actually relied on where Project Intelligence grounding is applicable.
 
 If relied-on Knowledge becomes:
 
@@ -748,7 +790,9 @@ Ecosystem metadata
 → Registry
 ```
 
-Public product identity and positioning should be grounded in governing Decisions and accepted Project Intelligence when available; README and website are presentation surfaces, not independent authority.
+Before Project Intelligence exists, authorised Delivery Decisions and Contracts provide bounded bootstrap authority for the public work they govern. Once Project Intelligence is enabled, accepted Knowledge becomes the durable project-specific grounding source for later public work.
+
+README and website remain presentation surfaces, not independent authority.
 
 Prefer reusable sources:
 
@@ -821,6 +865,8 @@ Getting Started docs
 first Delivery example
 ```
 
+Before Project Intelligence exists, the bootstrap-authority rules in sections 18–20 apply to public material created at this milestone.
+
 ## Remote Delivery
 
 Advance:
@@ -842,6 +888,7 @@ Project Intelligence concepts and onboarding docs
 Project Intelligence example
 Academy Project Understanding lesson
 identity/content knowledge foundation for public work
+promotion of applicable authorised bootstrap material into accepted Knowledge
 ```
 
 ## Graph Review
@@ -1011,11 +1058,13 @@ The website enhances presentation without requiring equivalent content to be mai
 15. Public work progressively dogfoods Pactwright.
 16. When Pactwright can represent public work, that work is not manually maintained outside Pactwright.
 17. Dogfooded public work retains Intent, applicable grounding, Delivery Evidence and applicable Asset/Publication provenance.
-18. Public/outbound work satisfies the applicable Project Intelligence coverage gate before approval.
-19. Identity and positioning choices are Decisions rather than generated assumptions.
-20. Public work is re-grounded when relied-on Knowledge is challenged, superseded or retracted before approval.
-21. The public-product progression includes Remote Delivery, Publication Feedback, Full Operating Surface and Hardened Loop milestones.
-22. New infrastructure requires demonstrated scale, content or community need.
+18. Before Project Intelligence exists, strategic public choices require explicit Decision/Contract authority for the work being delivered.
+19. Once Project Intelligence is available, public/outbound work satisfies the applicable Project Intelligence coverage gate before approval.
+20. Applicable authorised bootstrap material is ingested and governed through normal Project Intelligence promotion rather than silently converted to Knowledge.
+21. Identity and positioning choices are Decisions rather than generated assumptions.
+22. Public work is re-grounded when relied-on Knowledge is challenged, superseded or retracted before approval.
+23. The public-product progression includes Remote Delivery, Publication Feedback, Full Operating Surface and Hardened Loop milestones.
+24. New infrastructure requires demonstrated scale, content or community need.
 
 ---
 
@@ -1051,7 +1100,6 @@ Open gaps remain:
 
 - the acceptance test for when a Pactwright capability is mature enough that dogfooding becomes mandatory for that class of work;
 - the exact completion criterion for the Remote Delivery public milestone;
-- the canonical bootstrap authority for product identity/positioning before Project Intelligence is available, while preserving the rule that such choices are Decisions rather than generated assumptions;
 - the exact policy for selecting which Publications should enter the Publication Feedback milestone when Operations can observe many surfaces.
 
 These gaps should be resolved from observed use rather than by adding parallel content-management or governance systems.
@@ -1092,19 +1140,21 @@ The migration should preserve working behaviour while moving responsibilities in
 
 The repository should progressively dogfood each capability as soon as the capability can represent its own corresponding work.
 
+Before Project Intelligence is available, bounded Decision/Contract authority governs public bootstrap work. After Project Intelligence is available, applicable bootstrap truth migrates through Source ingestion and reviewed promotion into the normal durable-knowledge model.
+
 ---
 
 # 31. Relationship to Other Canonical Specifications
 
 ```text
 01 Core System and Lifecycle
-→ defines Pactwright core Delivery semantics used by public work
+→ defines Pactwright core Delivery authority used for pre-PI bootstrap work
 
 02 Distribution, Agent Packs, Extensions and Evaluation
 → defines package and AI composition contracts
 
 03 Project Intelligence
-→ owns coverage, grounding and durable public-product knowledge
+→ owns coverage, durable public-product knowledge and post-bootstrap grounding
 
 04 Graph Review
 → owns public-corpus review Findings
@@ -1126,7 +1176,7 @@ The repository should progressively dogfood each capability as soon as the capab
 
 # 32. Governing Rule
 
-> **Pactwright is one open-source product whose repository is the source of truth. Its public material should increasingly be produced by the same Pactwright mechanisms offered to users: grounded project knowledge drives Contract-governed Delivery, durable public outputs become approved Assets and Publications where applicable, Operations feeds real-world evidence back through Project Intelligence, and public surfaces evolve alongside the capabilities that make them possible.**
+> **Pactwright is one open-source product whose repository is the source of truth. Before Project Intelligence exists, authorised Decisions and Contracts provide bounded bootstrap authority for the public work they govern; once Project Intelligence is available, applicable project truth enters its normal Source and promotion path and later public work uses accepted Knowledge. Durable public outputs become approved Assets and Publications where applicable, Operations feeds real-world evidence back through Project Intelligence, and public surfaces evolve alongside the capabilities that make them possible.**
 
 ---
 
