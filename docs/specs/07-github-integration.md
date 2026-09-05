@@ -4,8 +4,6 @@
 
 GitHub is Pactwright's primary remote collaboration, automation and projection surface.
 
-The relationship is:
-
 ```text
 Pactwright Project Graph + policy
               ↓
@@ -13,61 +11,20 @@ Pactwright Project Graph + policy
               ↓
         GitHub Actions
               ↓
-         GitHub views
+          GitHub views
 ```
 
 Pactwright remains the source of Project Graph truth.
 
-GitHub may:
+This specification owns the **exact GitHub operating surface**: generated workflows, triggers, checks, PR/Issue summaries, Project fields/views, remote provisioning and runtime projection behaviour.
 
-- run Pactwright commands;
-- enforce checks;
-- host pull requests and issues;
-- project lifecycle and extension state;
-- provision labels, rulesets, Projects, fields and views;
-- surface derived summaries.
-
-GitHub must not become:
-
-```text
-a second Project Graph
-a lifecycle database
-an Extension database
-a knowledge store
-an observability store
-a roadmap engine
-```
-
-GitHub state must be regenerable from Pactwright canonical state and configuration.
+GitHub must not become a second graph, lifecycle store, Extension database, knowledge store, observability store or roadmap engine.
 
 ---
 
-## 2. Scope
+## 2. Operating Boundary
 
-This specification owns:
-
-- GitHub configuration;
-- generated GitHub Actions;
-- checks;
-- pull request summaries;
-- Issue projections;
-- GitHub Projects;
-- fields and views;
-- remote provisioning;
-- profile composition;
-- GitHub reconciliation;
-- permissions and ownership;
-- runtime projection behaviour.
-
-Other specifications may declare GitHub requirements.
-
-They do not define GitHub projection mechanics.
-
----
-
-# 3. Operating Boundary
-
-Semantic ownership remains outside GitHub:
+Semantic ownership remains:
 
 ```text
 Delivery semantics
@@ -105,52 +62,39 @@ Deployment
 Observation
 ```
 
-GitHub invokes Pactwright.
-
-Pactwright decides what canonical mutation is valid.
+GitHub invokes Pactwright. Pactwright validates any canonical mutation.
 
 ---
 
-# 4. Provisioning vs Projection
+# 3. Provisioning vs Projection
 
-GitHub integration has two responsibilities.
+`pactwright github sync` owns Pactwright-managed remote desired state, including:
 
-## Provisioning
-
-```text
-pactwright github sync
-```
-
-owns Pactwright-managed remote structure such as:
-
+- repository settings where supported;
 - labels;
 - rulesets;
-- required checks;
-- repository settings where supported;
-- GitHub Project;
+- required-check configuration;
+- the shared Pactwright GitHub Project;
 - Project fields;
-- Project views;
-- other Pactwright-managed configuration.
+- Project views.
 
-## Projection
-
-GitHub Actions update runtime-derived state such as:
+GitHub Actions own runtime projections, including:
 
 - checks;
-- PR summaries;
-- Issue summaries;
+- PR and Issue summaries;
 - Project items;
-- derived field values.
+- derived Project field values;
+- generated summaries.
 
-Actions must not independently redefine remote structure owned by `github sync`.
+Actions must not independently redefine remote schema owned by `pactwright github sync`.
+
+`pactwright github sync` should support dry-run before mutation and must converge when desired state is unchanged.
 
 ---
 
-# 5. GitHub Profiles
+# 4. GitHub Profile Composition
 
-Core Pactwright and enabled Extensions contribute logical GitHub requirements through profiles.
-
-Conceptually:
+Enabled components contribute GitHub requirements through profiles:
 
 ```text
 Delivery profile
@@ -171,62 +115,19 @@ resolved GitHub desired state
 Rules:
 
 - only enabled components contribute;
+- Extension dependencies resolve before profile composition;
 - identical requirements collapse;
 - compatible requirements merge;
 - incompatible requirements fail validation;
-- Extension dependencies are resolved before GitHub composition;
-- profiles contribute to one repository integration;
-- GitHub-specific configuration does not redefine Extension semantics.
-
-A Pactwright Extension must not create a separate GitHub Project simply to isolate its own views.
+- all profiles contribute to one repository integration;
+- one shared GitHub Project is used per repository by default when Projects are enabled;
+- an Extension must not create an independent Project merely to isolate its views.
 
 ---
 
-# 6. Shared GitHub Project
+# 5. Managed Workflow Surface
 
-When GitHub Projects are enabled, Pactwright should use one shared Project per repository by default.
-
-Conceptually:
-
-```text
-Pactwright Project
-
-Delivery
-Blocked
-
-Project Intelligence
-Coverage
-Roadmap
-Freshness
-Promotions
-
-Graph Review
-Reviews
-Findings
-
-Assets / Publication
-Assets
-Publications
-
-Operations
-Deployments
-Production Findings
-Corrective Work
-```
-
-Only configured views are provisioned.
-
-The Project is a projection.
-
-Canonical records remain in the repository Project Graph.
-
----
-
-# 7. Workflow Surface
-
-Pactwright should generate a small workflow surface.
-
-Conceptually:
+The initial Pactwright-managed workflow surface is:
 
 ```text
 .github/workflows/
@@ -237,58 +138,80 @@ Conceptually:
 └── pactwright-operations.yml
 ```
 
-Extension workflows exist only when their Extension is enabled.
+Responsibilities:
 
-A workflow should:
+```text
+pactwright.yml
+→ Delivery Graph and lifecycle
 
-1. install the locked Pactwright version;
-2. load configuration and lock state;
-3. load enabled Extensions and Agent Pack;
-4. invoke Pactwright commands;
-5. publish checks or projections.
+pactwright-intelligence.yml
+→ Project Intelligence
 
-Workflow YAML must remain thin.
+pactwright-graph-review.yml
+→ Graph Review
 
-Semantic rules belong in Pactwright runtime and Extensions.
+pactwright-assets-publication.yml
+→ Asset / Publication validation and publication integration
+
+pactwright-operations.yml
+→ Operations
+```
+
+Extension workflows exist only while their Extension is enabled.
+
+Scheduled responsibilities should share the owning Extension workflow rather than create one workflow per command.
+
+Every Pactwright workflow:
+
+1. installs the locked Pactwright runtime;
+2. loads configuration and lock state;
+3. loads enabled Extensions and the selected Agent Pack;
+4. uses the same resolved Production Skills environment as interactive execution;
+5. invokes Pactwright runtime commands;
+6. publishes checks and derived projections.
+
+Workflow YAML remains thin. Pactwright semantics must not be reimplemented in Actions.
 
 ---
 
-# 8. Shared Execution Environment
+# 6. Shared Execution Environment
 
-Interactive and GitHub execution must use the same resolved Pactwright environment.
+Interactive and GitHub execution use the same resolved environment:
 
 ```text
-same runtime
+same Pactwright runtime
 same Extensions
 same Agent Pack
 same Production Skills
-same lock
+same Pactwright lock
 ```
 
-There must not be separate:
-
-```text
-interactive AI semantics
-CI AI semantics
-```
-
-implementing equivalent Pactwright responsibilities differently.
-
-GitHub is another execution surface for the same locked system.
+There must not be separate CI agents and interactive agents implementing different semantic behaviour.
 
 ---
 
-# 9. Core Delivery Automation
+# 7. Core Delivery Automation
 
-Meaningful Delivery changes should invoke:
+On meaningful Delivery changes, run:
 
 ```text
 pactwright validate
 ```
 
-and relevant lifecycle checks.
+and the relevant lifecycle validation.
 
-GitHub Actions may continue automatic lifecycle execution:
+Graph or configuration changes under:
+
+```text
+specs/**
+.pactwright/**
+```
+
+must be routed to the validators owning the changed canonical records and relationships.
+
+`specs/graph/edges.yml` is shared graph storage. Changes to it are routed by edge type and endpoints rather than path alone. Cross-graph relationships may require multiple validators.
+
+Where automatic continuation is configured, GitHub may invoke:
 
 ```text
 pactwright lifecycle run
@@ -302,50 +225,35 @@ until:
 - execution fails;
 - lifecycle completes.
 
-GitHub must not infer Pactwright approval merely from:
+GitHub must not infer Pactwright authority merely from generic PR approval, labels, comments or merge state unless repository policy explicitly maps that event into the appropriate Pactwright authority operation.
 
-- PR approval;
-- labels;
-- comments;
-- merge state;
-
-unless repository policy explicitly maps that GitHub event into the appropriate Pactwright authority operation.
+GitHub consumes the **runtime-resolved lifecycle state**. It does not decide where lifecycle-shape identity is stored or persisted.
 
 ---
 
-# 10. Lifecycle Shapes
+# 8. Core Delivery Checks
 
-GitHub does not define lifecycle topology.
-
-The runtime reads the lifecycle shape selected by the Brief.
-
-Actions may invoke:
+Core Delivery checks are:
 
 ```text
-/deliver-brief
-/review
+Pactwright / Graph
+Pactwright / Lifecycle
+Pactwright / Review
 ```
 
-multiple times as the shape progresses.
+`Pactwright / Graph` validates graph structure and coordinates enabled Extension validators for shared relationships.
 
-GitHub should project:
+`Pactwright / Lifecycle` validates current lifecycle state, permitted transitions, Gates and required authority.
 
-```text
-current lifecycle step
-Gate status
-blocked state
-completion
-```
+`Pactwright / Review` reflects whether applicable Delivery Review has blocking findings.
 
-without turning each lifecycle step into GitHub-owned state.
+The implementation of Review may use different Agent Pack/Production Skills composition without changing the check's semantic meaning.
 
 ---
 
-# 11. Delivery Pull Request Summary
+# 9. Delivery Pull Request Projection
 
-A Pactwright Delivery pull request should expose a concise projection.
-
-Example:
+A Pactwright Delivery PR exposes a concise lifecycle projection, for example:
 
 ```text
 Pactwright
@@ -360,200 +268,291 @@ Evidence     blocked
 Current step: Review
 ```
 
-For richer lifecycle shapes it may show the current shape and phase.
+The summary links to canonical records instead of copying their full contents.
 
-The summary should link to canonical records rather than copy their complete contents.
-
----
-
-# 12. Core Checks
-
-Useful core checks include:
-
-```text
-Pactwright / Graph
-Pactwright / Lifecycle
-Pactwright / Review
-```
-
-## Graph
-
-Validates Project Graph structure relevant to the changed records.
-
-## Lifecycle
-
-Validates:
-
-- current lifecycle state;
-- valid transitions;
-- Gate requirements;
-- required authority.
-
-## Review
-
-Reflects whether the applicable Delivery Review passed.
-
-The underlying Review may use different Production Skills without changing the check's meaning.
+It may show the runtime-resolved lifecycle topology/state without making GitHub the owner of that topology.
 
 ---
 
-# 13. Shared Graph Validation
+# 10. Delivery Project Fields
 
-Changes to shared graph relationships may involve several semantic owners.
-
-For example:
+The shared GitHub Project Delivery view supports derived fields including:
 
 ```text
-Knowledge
---satisfied-by-->
-Evidence
+lifecycle step/state
+blocked
+Contract
+Brief
+pull request
+last activity
 ```
 
-may require validation by both Project Intelligence and Delivery semantics.
+When Project Intelligence is enabled it may additionally project:
 
-GitHub workflow routing should therefore use registered graph ownership rather than relying only on file paths.
+```text
+domain
+intelligence grounding
+knowledge blocker
+launch tranche
+```
 
-Cross-graph relationships may invoke multiple validators.
+When Operations is enabled it may additionally project:
+
+```text
+latest Deployment
+production environment
+active production findings
+corrective origin
+```
+
+Fields are derived and regenerable. Editing them does not silently mutate canonical Pactwright state.
 
 ---
 
-# 14. Project Intelligence Automation
+# 11. Project Intelligence Source Capture Automation
 
-When enabled, GitHub may automate:
+When Project Intelligence is enabled, changes to:
 
 ```text
-Source validation
-triage
-promotion validation
-coverage regeneration
-onboarding regeneration
-roadmap regeneration
-propagation
-freshness
+docs/project-intelligence/sources/**
 ```
 
-Relevant operations include:
+run the Project Intelligence capture/validation path.
+
+It validates at least:
+
+- Source schema;
+- canonical identity and content hash;
+- version links;
+- registered domain;
+- origin and trust value;
+- storage mode;
+- secret scan before snapshots;
+- triage output.
+
+Internal Sources from Graph Review and Operations use the same path.
+
+Duplicate or irrelevant material may stop cheaply. Class 0/1 mutations remain bounded by Project Intelligence automatic-mutation rules.
+
+---
+
+# 12. Project Intelligence Promotion Automation
+
+Changes proposing canonical Intelligence mutations under:
+
+```text
+docs/project-intelligence/domains/**
+docs/project-intelligence/knowledge/**
+```
+
+or Intelligence-owned shared relationships run:
 
 ```text
 pactwright intelligence validate
-pactwright intelligence onboard
-pactwright intelligence derive-intent-roadmap
-pactwright intelligence propagate ...
-pactwright intelligence refresh
 ```
 
-GitHub must preserve Project Intelligence's automatic mutation boundary.
+Promotion validation checks:
 
-It must not turn:
+- proposed Knowledge changes;
+- Domain ownership;
+- typed relationships;
+- required human review/approval;
+- automatic-boundary compliance;
+- affected Delivery and sibling-Extension records;
+- required logical owners resolved to GitHub reviewers through repository configuration.
 
-```text
-Source
-→ directly into Knowledge
-```
-
-or:
-
-```text
-roadmap candidate
-→ directly into Intent
-```
-
-without normal governance.
+Promotion validation must not mutate Delivery-owned or sibling-owned canonical records.
 
 ---
 
-# 15. Project Intelligence Checks and Views
+# 13. Project Intelligence Report Automation
 
-Useful checks include:
+After relevant accepted Knowledge changes run:
+
+```text
+pactwright intelligence onboard
+```
+
+and regenerate:
+
+```text
+docs/project-intelligence/reports/domain-map.md
+docs/project-intelligence/reports/onboarding.md
+```
+
+After relevant Intelligence, Delivery or accepted Extension-originated changes run:
+
+```text
+pactwright intelligence derive-intent-roadmap
+```
+
+and regenerate:
+
+```text
+docs/project-intelligence/reports/intent-roadmap.md
+```
+
+After accepted challenge, supersession or retraction run:
+
+```text
+pactwright intelligence propagate <knowledge-id>
+```
+
+On configured freshness schedules run:
+
+```text
+pactwright intelligence refresh
+```
+
+and regenerate:
+
+```text
+docs/project-intelligence/reports/freshness.md
+```
+
+GitHub automation must never turn a roadmap candidate directly into an Intent or propagation proposal directly into sibling canonical mutation.
+
+---
+
+# 14. Project Intelligence Checks
+
+When Project Intelligence is enabled, the exact check surface includes:
 
 ```text
 Pactwright / Intelligence
 Pactwright / Intelligence Promotion
 Pactwright / Intelligence Views
+Pactwright / Intelligence Grounding
 ```
 
-They may validate:
+`Intelligence` validates Sources, the Domain registry, Knowledge, intelligence relationships, cross-graph ownership and internal-source provenance.
 
-- Sources;
-- Domains;
-- Knowledge;
-- typed relationships;
-- promotion authority;
-- derived-view freshness.
+`Intelligence Promotion` validates required approval, canonical-meaning authority, automatic-boundary compliance and proposed cross-graph effects.
 
-Useful views include:
+`Intelligence Views` verifies committed derived reports against the **current runtime-supplied Project Graph revision**.
+
+`Intelligence Grounding` projects one of:
 
 ```text
+grounded
+attention
+blocked
+not-applicable
+```
+
+Stale Knowledge does not automatically mean `blocked`; blocking follows Project Intelligence and lifecycle policy.
+
+---
+
+# 15. Project Intelligence Promotion PR View
+
+A promotion PR has its own governance summary, for example:
+
+```text
+Pactwright Project Intelligence
+
+Source           src-...
+Domain           discovery
+Triage           class 3 · contradictory
+Knowledge        2 changed · 1 new
+Delivery impact  2 Intents · 1 Contract
+Propagation      required
+Review           domain owner + delivery owner
+```
+
+An Operations-originated Source may additionally show its Observation and exposure provenance.
+
+The PR distinguishes Intelligence mutations actually proposed in the branch from downstream Delivery/Extension changes merely recommended for normal handling.
+
+The PR remains a governance surface, not a proposal graph node.
+
+---
+
+# 16. Project Intelligence Project Views
+
+The shared Project supports configured Project Intelligence views:
+
+```text
+Promotions
 Coverage
 Roadmap
 Freshness
 Propagation
 ```
 
-Derived report mismatch means the projection is stale.
+`Coverage` projects domain-map/onboarding state.
 
-It does not automatically mean canonical Project Graph state is invalid.
+`Roadmap` projects the single Project Intelligence candidate model.
+
+`Freshness` projects current/stale/challenged Knowledge.
+
+`Propagation` projects downstream impact before dependant canonical records change.
+
+These views remain derived.
 
 ---
 
-# 16. Delivery Intelligence Projection
+# 17. Delivery Intelligence PR Projection
 
-When Project Intelligence is enabled, Delivery PRs may show relevant grounding.
-
-Example:
+When Project Intelligence is enabled, a Delivery PR may expose relevant grounding:
 
 ```text
 Project Intelligence
 
 Domain          product
-Grounding       accepted
+Grounding       grounded
 Freshness       1 stale item
 Knowledge       6 relevant records
 ```
 
-It may link to:
-
-- motivating Knowledge;
-- relevant Domains;
-- stale or challenged Knowledge;
-- blocking intelligence gaps.
-
-It should not copy full Knowledge records into GitHub summaries.
+It links to motivating Knowledge, Domain Definitions, stale/challenged records and blocking gaps without copying complete Knowledge contents.
 
 ---
 
-# 17. Graph Review Automation
+# 18. Graph Review Automation
 
-When Graph Review is enabled, GitHub may:
+When Graph Review is enabled, GitHub owns automation for:
 
-- invoke graph reviews;
-- validate Review Execution provenance;
-- surface review summaries;
-- hand Findings to Project Intelligence;
-- update review views.
+- Graph Review validation;
+- manual, scheduled or configured event-triggered execution;
+- Review Execution provenance validation;
+- Finding hand-off to Project Intelligence;
+- review projection updates.
 
-Conceptually:
+Execution uses:
 
 ```text
-Project Graph
-→ pactwright graph-review run
-→ Finding
-→ internal Project Intelligence Source
+pactwright graph-review run
 ```
 
-GitHub must not directly promote Findings into Knowledge or Delivery truth.
+and validation uses:
+
+```text
+pactwright graph-review validate
+```
+
+Every run records the Project Graph revision supplied by Pactwright runtime.
+
+Every Finding from a successful review must be handed to Project Intelligence through normal internal Source ingestion.
+
+A failed hand-off leaves the successful Finding valid and retryable. GitHub must not rerun the review merely to retry Source hand-off.
+
+A failed Review Execution records failure provenance and emits no Findings.
 
 ---
 
-# 18. Graph Review Checks and Views
+# 19. Graph Review Paths and Projections
 
-Useful projection surfaces include:
+Relevant managed/validated Graph Review state includes:
 
 ```text
-Pactwright / Graph Review
+.pactwright/executions/graph-reviews/**
+docs/graph-review/reports/**
 ```
 
-and Project views such as:
+plus shared Project Graph relationships affected by Graph Review-owned semantics.
+
+The shared Project may expose:
 
 ```text
 Reviews
@@ -563,575 +562,576 @@ Findings
 A review summary may show:
 
 ```text
+Pactwright Graph Review
+
 Perspective      architecture
-Graph revision   ...
+Graph revision   <revision>
 Status           succeeded
 Critical         0
 Material         2
 Advisory         3
-Findings         5
+Source hand-off  5
 ```
 
-Review Executions remain provenance.
-
-Findings remain Graph Review output until Project Intelligence governs their durable meaning.
+Review Executions and Findings remain execution provenance/output until Findings enter Project Intelligence as Sources.
 
 ---
 
-# 19. Assets / Publication Automation
+# 20. Assets / Publication Automation
 
-When enabled, GitHub may support:
-
-- Asset validation;
-- repository-backed content-hash validation;
-- approval projection;
-- Publication validation;
-- publication-trigger automation for already approved Assets;
-- Asset and Publication views.
-
-GitHub must not turn candidate output into an Asset merely because it appears in a pull request.
-
-Canonical authority remains:
+When Assets / Publication is enabled, changes to canonical records or repository-backed Asset content must run:
 
 ```text
-Evidence
-→ Asset approval
-→ Asset
-→ Publication
+pactwright assets validate
 ```
+
+Relevant paths include:
+
+```text
+assets/**
+docs/assets-publication/assets/**
+docs/assets-publication/publications/**
+```
+
+Asset validation checks at least:
+
+- referenced Delivery Evidence;
+- human Asset approval;
+- exact stored/referenced content hash where verifiable;
+- required grounding id/hash pairs;
+- Asset immutability and valid supersession relationships.
+
+Changes under `assets/**` must validate affected Asset records so repository-backed content cannot diverge from approved `content_hash`.
+
+Publication validation checks at least:
+
+- referenced Asset exists and is approved;
+- `Publication.asset_hash == Asset.content_hash`;
+- channel and locator information;
+- `published_by` and `published_at`;
+- canonical `Publication --publishes--> Asset` relationship.
+
+GitHub approval metadata alone cannot create an Asset.
 
 ---
 
-# 20. Asset Approval Boundary
+# 21. Asset Approval and Publication Automation Boundary
 
-GitHub review approval alone is not automatically Asset approval.
-
-Repository policy may explicitly use a GitHub event as the trigger for the Pactwright Asset approval operation, but Pactwright must still record the canonical Asset authority state.
-
-GitHub metadata is therefore:
+Repository policy may explicitly map a safe GitHub authority event to:
 
 ```text
-approval input
+pactwright assets approve-asset <evidence-id>
 ```
 
-not:
+but Pactwright must still create the canonical Asset with human approval and exact content identity.
+
+Scheduled or event-triggered release of an already approved Asset may invoke:
 
 ```text
-Asset truth
+pactwright assets record-publication <asset-id> <channel>
 ```
+
+Scheduling must not bypass Asset approval.
+
+A failed Publication operation leaves the approved Asset unchanged.
+
+When Operations is enabled, a valid Publication may subsequently become an operational exposure without transferring Publication ownership.
 
 ---
 
-# 21. Assets / Publication Checks and Views
+# 22. Assets / Publication Checks and Views
 
-Useful checks may include:
+The exact check surface includes:
 
 ```text
 Pactwright / Assets
 Pactwright / Publication
 ```
 
-They may validate:
+`Assets` validates Asset structure, Evidence provenance, approval, content identity, grounding and supersession.
 
-- Evidence provenance;
-- approval;
-- content hash;
-- supersession;
-- Publication reference;
-- Publication configuration.
+`Publication` validates the referenced approved Asset, asset-hash equality, publication provenance and `publishes` relationship.
 
-Views may expose:
+The shared Project may expose:
 
 ```text
 Assets
 Publications
 ```
 
-Useful derived fields include:
+Asset fields may include:
 
 ```text
-Asset:
 title
-type
+media type
 Delivery lineage
-approval
+grounding state
+approved by
 current/superseded
-publication count
+Publication count
+```
 
-Publication:
+Publication fields may include:
+
+```text
 Asset
 channel
-location
+locator
+published by
 published at
-status
+linked operational Observations when Operations is enabled
 ```
 
-Candidate outputs must not appear as canonical Assets.
+Candidate outputs never appear as canonical Assets.
 
 ---
 
-# 22. Operations Automation
+# 23. Operations Deployment Automation
 
-When Operations is enabled, GitHub may support:
+When Operations is enabled, Deployment recording may be triggered by:
 
-- Deployment recording;
-- Deployment validation;
-- source/environment configuration validation;
-- scheduled evidence collection;
-- Observation validation;
-- Project Intelligence hand-off;
-- derived corrective views.
+- a trusted repository deployment event;
+- completion of a configured deployment workflow;
+- manual dispatch;
+- another configured trusted integration.
 
-A deployment event may invoke Pactwright to record:
+The workflow invokes:
 
 ```text
-Evidence
-→ Deployment
+pactwright operations record-deployment <evidence-id>
 ```
 
-GitHub deployment metadata itself is not the canonical Deployment record. The previous design already enforced that distinction between GitHub metadata and Operations truth. 
+and records exact production exposure through Operations semantics.
+
+GitHub deployment metadata is not canonical Deployment state.
+
+Recording preserves traceability to Delivery Evidence, deployed artifact/revision, environment, deployment time and responsible human/automation.
 
 ---
 
-# 23. Operations Collection
+# 24. Operations Source and Refresh Automation
 
-Scheduled or event-driven automation may invoke:
+Changes to:
 
 ```text
-pactwright operations collect ...
+.pactwright/operations/sources/**
+.pactwright/operations/environments/**
 ```
 
-or an equivalent runtime operation.
+run Operations configuration validation through:
 
-A run may:
+```text
+pactwright operations validate
+```
 
-1. collect bounded external evidence;
-2. create execution provenance;
-3. analyse signals;
-4. create or supersede Observations where justified;
-5. pass Observations to Project Intelligence.
+On configured schedules run:
 
-A successful run may produce no Observation.
+```text
+pactwright operations refresh
+```
 
-Raw telemetry must not be copied into GitHub merely because Actions retrieved it.
+`refresh` may:
+
+1. ingest bounded evidence from configured sources;
+2. create immutable Operations execution provenance;
+3. analyse evidence;
+4. create or supersede Observations when durable findings exist;
+5. hand every canonical Observation to Project Intelligence as an internal Source.
+
+A successful refresh may produce no Observation. Absence of sufficient evidence is not an execution failure.
+
+Raw operational payloads must not be written into the Project Graph or GitHub projection simply because Actions retrieved them.
 
 ---
 
-# 24. Operations Checks and Views
+# 25. Operations Observation and Hand-Off Automation
 
-Useful checks include:
+Changes to:
+
+```text
+docs/operations/observations/**
+```
+
+validate:
+
+- exposure identity;
+- evidence window and evidence references;
+- direction, significance and confidence values;
+- `Observation --observes--> exposure` endpoints;
+- registered exposure type;
+- acyclic supersession;
+- separation between correlation and unsupported causality.
+
+A valid Observation enters Project Intelligence through normal Source ingestion.
+
+GitHub must not directly create Knowledge, create canonical Intents, assign Project Intelligence consequence class or reorder the global roadmap.
+
+A failed hand-off leaves the canonical Observation valid and retryable.
+
+---
+
+# 26. Operations Corrective Roadmap Automation
+
+After relevant accepted Project Intelligence changes originating from Operations run:
+
+```text
+pactwright operations corrective-roadmap
+```
+
+and regenerate:
+
+```text
+docs/operations/reports/corrective-intent-roadmap.md
+```
+
+The report is a filtered projection of Project Intelligence candidates whose accepted motivation traces to Operations.
+
+It must not create a second candidate model, independent priority or canonical Intent.
+
+---
+
+# 27. Operations Checks and Views
+
+The exact check surface includes:
 
 ```text
 Pactwright / Operations
 Pactwright / Operations Views
 ```
 
-Useful views include:
+`Operations` validates Deployment schema/Evidence, artifact/environment identity, Observation schema, evidence provenance, registered exposure relationships, `deployed-as`, `observes`, supersession, source/environment configuration and relevant execution provenance.
+
+External source/authentication/analysis failure is distinguishable from invalid canonical Operations state.
+
+`Operations Views` verifies `corrective-intent-roadmap.md` against both the current applicable Project Intelligence candidate derivation and the current runtime Project Graph revision.
+
+The shared Project may expose:
 
 ```text
 Operations
 Deployments
 Production Findings
-Corrective Work
+Corrective Roadmap
 ```
 
-These project:
+Deployment fields may include environment, Delivery Evidence, artifact revision, deployed time/by, active Observation count and current/superseded state.
 
-- canonical Deployments;
-- canonical Observations;
-- derived Project Intelligence candidates motivated by Operations.
-
-They must not create:
-
-- new operational semantics;
-- a second roadmap;
-- independent priority.
+Production Finding fields may include exposure, exposure type, direction, significance, confidence, evidence window, current derived state, resulting Source and resulting Knowledge/promotion PR when available.
 
 ---
 
-# 25. Corrective Work Projection
+# 28. Operations Delivery PR Context
 
-Operations may expose a filtered view:
+When Operations is enabled, a Delivery PR may expose relevant historical production context before merge:
 
 ```text
-Project Intelligence candidates
-        ↓
-Operations provenance filter
-        ↓
-Corrective Work
+Operations
+
+Previous deployment   production · current
+Active findings       2 material
+Prior regression      checkout latency
+Corrective origin     observation-...
 ```
 
-The global Project Intelligence roadmap remains authoritative.
+The section may link to prior Deployments, relevant Observations, accepted operational Knowledge and corrective provenance.
 
-Editing GitHub Project fields must not:
+It must not display raw telemetry.
 
-- create candidates;
-- reorder canonical priority;
-- create Intents.
-
-Unless explicitly designed as an authorised Pactwright input, GitHub field edits are projection edits only and should be reconciled back to desired state.
+A PR is not considered deployed merely because it merges or completes Delivery. Deployment remains Operations-owned post-Delivery state.
 
 ---
 
-# 26. Issues
+# 29. Intent Issue Projection
 
 An Intent may have a GitHub Issue projection.
 
-Useful fields include:
+Core fields include:
 
 ```text
-Intent
+title
+current lifecycle state
 current Contract
 current Brief
-lifecycle state
-blocked state
 linked pull request
+blocking state
 ```
 
-Enabled Extensions may contribute derived fields such as:
+Project Intelligence may add motivating Domain/Knowledge, grounding, missing knowledge dependencies, onboarding guidance and launch tranche.
+
+Graph Review may add relevant Findings.
+
+Assets / Publication may add linked approved Asset or Publication.
+
+Operations may add corrective origin, motivating Observation, affected Deployment/Publication, significance and current condition.
+
+The Issue owns none of these values.
+
+---
+
+# 30. Pull Request Model
+
+One meaningful repository-backed Delivery normally uses one branch and one pull request. There is no requirement for one PR per lifecycle step.
+
+Separate Pactwright-managed PRs may represent genuine governance boundaries such as:
+
+- Project Intelligence promotion;
+- headless Graph Review Finding → Source hand-off;
+- Operations canonical-state review where repository policy requires it.
+
+Routine raw telemetry never enters such PRs.
+
+Asset approval, Publication, Deployment and Observation do not create new core Delivery stages.
+
+---
+
+# 31. Deterministic Project Graph Revision
+
+GitHub consumes one deterministic Project Graph revision supplied by Pactwright runtime.
 
 ```text
+canonical registered Project Graph state
+        ↓
+Pactwright runtime revision
+        ↓
+reviews + generated reports + GitHub projections
+```
+
+GitHub must not derive an independent revision scheme.
+
+The revision:
+
+- **includes canonical Extension records**, including Project Intelligence canonical state, Assets, Publications, Deployments and Observations;
+- **excludes generated reports and derived views**;
+- **excludes execution provenance and other non-canonical execution outputs**, including Review/Operations execution records;
+- is independent of the Git commit containing generated output.
+
+The same canonical Project Graph state must produce the same revision.
+
+**Every generated Pactwright report records its source Project Graph revision.**
+
+Every applicable view-freshness check compares the report's recorded revision with the current runtime-supplied revision.
+
+A mismatch means derived state is stale. It does not by itself mean canonical Project Graph state is invalid.
+
+---
+
+# 32. Shared GitHub Project
+
+When enabled, one shared Project per repository is the default projection surface.
+
+Configured views may include:
+
+```text
+Core
+→ Delivery
+→ Blocked
+
 Project Intelligence
-→ domain, grounding, knowledge blockers
+→ Promotions
+→ Coverage
+→ Roadmap
+→ Freshness
+→ Propagation
 
 Graph Review
-→ relevant Findings
+→ Reviews
+→ Findings
 
 Assets / Publication
-→ linked Asset or Publication
+→ Assets
+→ Publications
 
 Operations
-→ motivating Observation or exposure
+→ Operations
+→ Deployments
+→ Production Findings
+→ Corrective Roadmap
 ```
 
-The Issue remains a navigation and collaboration surface.
+`pactwright github sync` owns Project creation, fields and views.
 
-It does not own these values.
+Actions update items and derived values.
+
+Canonical records and execution provenance remain owned by Pactwright, not GitHub Projects.
 
 ---
 
-# 27. Pull Request Model
+# 33. GitHub Configuration and Logical Ownership
 
-One meaningful Delivery normally uses one branch and one pull request.
+Repository configuration may selectively enable checks, PR summaries, Issue projections, Project views, schedules and ruleset details.
 
-The PR may accumulate:
+It may also map logical Pactwright owners/stewards to GitHub users or teams.
 
-```text
-Intent
-Decision + Contract
-Brief
-delivered repository changes
-Evidence
-```
+Semantic specifications refer to logical authority. GitHub usernames/team names remain integration configuration, not core semantics.
 
-There is no requirement for one PR per lifecycle step.
+Extension GitHub configuration is ignored when the Extension is disabled.
 
-Separate PRs may be appropriate for governance boundaries such as:
+Project-backed views require GitHub Projects; checks and PR summaries may operate without Projects.
 
-```text
-Project Intelligence promotion
-headless Graph Review Source hand-off
-Operations canonical-state approval
-```
-
-where repository policy requires them.
-
-GitHub collaboration structure must not redefine Pactwright lifecycle structure.
+Enabling an Extension does not force every optional view.
 
 ---
 
-# 28. Project Graph Revision
+# 34. Managed Ownership and Reconciliation
 
-GitHub consumes the deterministic Project Graph revision supplied by Pactwright runtime.
+Pactwright may mutate only remote GitHub resources it owns or has explicitly adopted.
 
-```text
-canonical Project Graph state
-        ↓
-Pactwright revision
-        ↓
-GitHub projections
-```
-
-GitHub must not derive a separate revision scheme.
-
-Generated reports and views should identify the Project Graph revision they project where useful.
-
-A Git commit containing generated output is not itself the Project Graph revision.
-
----
-
-# 29. GitHub Configuration
-
-Repository configuration may enable GitHub features selectively.
-
-Conceptually:
-
-```yaml
-github:
-  enabled: true
-
-  pull_request:
-    lifecycle_summary: true
-
-  checks:
-    graph: true
-    lifecycle: true
-    review: true
-
-  issues:
-    intents: true
-
-  project:
-    enabled: true
-
-  extensions:
-    project-intelligence:
-      enabled: true
-
-    graph-review:
-      enabled: true
-
-    assets-publication:
-      enabled: true
-
-    operations:
-      enabled: true
-```
-
-Exact schema may evolve.
-
-Rules:
-
-- Extension GitHub configuration is ignored when that Extension is disabled;
-- Project-backed views require GitHub Projects to be enabled;
-- checks and PR summaries may work without Projects;
-- enabling an Extension does not force every optional GitHub projection;
-- Extension dependency resolution happens before GitHub profile composition.
-
----
-
-# 30. Repository Overrides
-
-Repository configuration may override logical GitHub requirements such as:
-
-```text
-owners
-stewards
-GitHub users or teams
-enabled views
-required checks
-schedules
-ruleset details
-```
-
-Semantic specifications should refer to logical ownership.
-
-GitHub configuration maps those logical roles to GitHub identities.
-
-This prevents GitHub usernames and team names from becoming core Pactwright semantics.
-
----
-
-# 31. Reconciliation
-
-GitHub integration should operate as desired-state reconciliation.
-
-```text
-Pactwright config
-+ enabled profiles
-+ repository overrides
-        ↓
-resolved desired state
-        ↓
-compare with GitHub
-        ↓
-create / update / remove managed state
-```
-
-`pactwright github sync` should support dry-run before applying changes.
-
-Re-running sync with unchanged desired state should converge without unnecessary mutation.
-
----
-
-# 32. Managed Ownership
-
-Pactwright may change only GitHub resources it owns or has explicitly adopted.
-
-It must not delete or overwrite unrelated:
+It must preserve unrelated user-owned:
 
 ```text
 workflows
 labels
 Projects
+fields
 rulesets
 repository settings
-Issue fields
 ```
 
-Managed resources should be identifiable.
+Disabling a feature or Extension removes/updates only its managed contribution where safe.
 
-Disabling a Pactwright feature should remove or disable its managed projection where safe without affecting unrelated user-owned GitHub configuration.
+Managed resources must be identifiable strongly enough for deterministic reconciliation.
+
+The exact persistent ownership/adoption identity for remote GitHub resources, including rename/collision handling, remains an open implementation contract and must not be inferred from display names alone.
 
 ---
 
-# 33. Failure Behaviour
+# 35. Failure Behaviour
 
-GitHub automation should fail closed where canonical validity or lifecycle authority is affected.
+GitHub automation fails closed where canonical validity or lifecycle authority is affected.
 
-Examples:
+Component-specific guarantees are:
 
-```text
-invalid Project Graph
-→ block relevant check
-
-failed Delivery Review
-→ block lifecycle progression
-
-unresolved Gate
-→ stop automation
-
-invalid Asset
-→ prevent canonical approval/publication operation
-
-invalid Observation
-→ prevent canonical Operations acceptance
-```
-
-By contrast:
-
-```text
-stale derived report
-failed optional projection refresh
-failed Project view update
-```
-
-should not automatically corrupt or rewrite valid canonical state.
+- invalid Delivery graph/lifecycle/review state blocks the relevant checks;
+- Project Intelligence ingestion failures are surfaced; failed promotion does not remove accepted Source capture; report failure does not mutate canonical state;
+- failed Graph Review execution remains failed execution provenance and emits no Findings;
+- failed Graph Review → Project Intelligence hand-off leaves successful Findings valid and retryable without promoting truth;
+- invalid Asset prevents Asset acceptance;
+- failed Publication leaves the approved Asset unchanged;
+- Operations authentication/availability failure records failed execution provenance and leaves existing canonical Operations state valid;
+- failed Operations collection or analysis creates no canonical mutation;
+- insufficient operational evidence is a successful no-Observation outcome;
+- failed Observation → Project Intelligence hand-off leaves the Observation valid and retryable;
+- failed corrective-roadmap or other projection generation does not mutate canonical state;
+- failed optional Project/summary updates do not rewrite otherwise valid Pactwright truth.
 
 Execution failure and canonical invalidity must remain distinguishable.
 
+The exact GitHub check conclusion mapping for distinctions such as external execution failure versus canonical validation failure remains an implementation detail and should be made consistent when the workflows are implemented.
+
 ---
 
-# 34. Permissions
+# 36. Permissions and Untrusted Contributions
 
-GitHub Actions should use least privilege.
+GitHub Actions use least privilege.
 
-Workflows receive only the permissions required for their responsibility.
-
-For example:
+Examples:
 
 ```text
 validation
 → repository read + check write
 
-managed PR mutation
-→ contents/pull-request write where required
+managed repository mutation
+→ only required contents/PR write permissions
 
 Project projection
-→ Project permissions where enabled
+→ Project permissions only when enabled
 
-publication/deployment integration
+publication/deployment/operational integrations
 → only explicitly configured external permissions
 ```
 
-Credentials belong in GitHub secrets or appropriate external secret stores.
+Credentials belong in GitHub secrets or external secret stores, never canonical Pactwright state.
 
-They must not be committed into Pactwright canonical state.
+Untrusted pull-request content must not automatically gain access to privileged secrets, publication/deployment credentials, operational systems or write-capable tokens.
 
----
-
-# 35. Security Boundary
-
-Untrusted pull-request content must not automatically receive access to privileged:
-
-```text
-secrets
-publication credentials
-deployment credentials
-operational systems
-write-capable tokens
-```
-
-Privileged automation should run only under safe trigger and repository-policy conditions.
-
-GitHub integration must preserve Pactwright authority boundaries even when repository events originate from untrusted contributors.
+Privileged automation runs only under safe triggers and repository policy.
 
 ---
 
-# 36. Generated vs User-Owned Workflows
+# 37. Generated vs User-Owned Workflows
 
-Pactwright-managed workflows may be regenerated by `pactwright sync`.
+Pactwright-managed workflows may be regenerated by Pactwright synchronisation.
 
 User-authored workflows remain user-owned.
 
-The integration should prefer a small number of generated workflows that invoke Pactwright rather than generating large amounts of semantic YAML.
-
-The rule is:
+Prefer a small number of generated workflows:
 
 ```text
 GitHub workflow
 → trigger + environment + Pactwright invocation
 
-Pactwright
+Pactwright runtime
 → semantics
 ```
 
-not:
-
-```text
-GitHub workflow
-→ reimplementation of Pactwright
-```
+not semantic YAML duplication.
 
 ---
 
-# 37. Evaluation
+# 38. Automation Mutation Concurrency
 
-GitHub Integration evaluation should verify projection and automation semantics.
+Headless Graph Review, Project Intelligence promotion and Operations hand-offs may require Pactwright-managed branch or pull-request mutation.
 
-Useful cases include:
+The source architecture establishes those repository mutations but does not define how concurrent automation targeting the same canonical files is serialised, rebased or deduplicated.
 
-- profile composition;
-- conflict detection;
-- deterministic generation;
+This remains an explicit implementation gap. Implementations must preserve canonical validation against current Project Graph state and must not use last-writer-wins behaviour that can silently discard another accepted mutation.
+
+---
+
+# 39. Evaluation
+
+GitHub Integration evaluation should verify:
+
+- profile composition and conflict detection;
+- deterministic workflow generation;
+- exact trigger/path routing;
 - lifecycle Gate stopping;
-- correct check status;
-- Issue and PR projection accuracy;
-- stale-view detection;
+- check semantics;
+- PR/Issue projection accuracy;
+- Intelligence Grounding states;
+- promotion PR projection;
+- Project field/view derivation;
+- Operations PR context;
+- report revision and stale-view detection;
 - Extension enable/disable behaviour;
 - remote reconciliation;
 - preservation of unmanaged GitHub state;
 - least-privilege configuration;
+- failure-state separation;
 - canonical-state independence from GitHub metadata.
 
 Extension-specific business semantics remain evaluated by their owning Extensions.
 
 ---
 
-# 38. Core Invariants
+# 40. Core Invariants
 
-1. The repository Project Graph is canonical; GitHub is projection.
-2. GitHub Actions invoke Pactwright rather than reimplement its semantics.
-3. GitHub metadata alone does not create canonical Pactwright truth.
+1. The Pactwright Project Graph is canonical; GitHub is execution and projection.
+2. GitHub Actions invoke Pactwright rather than reimplement semantics.
+3. GitHub metadata alone cannot create canonical Pactwright truth.
 4. `pactwright github sync` owns managed remote structure.
 5. Actions own runtime projection updates.
-6. Enabled component profiles compose into one desired GitHub state.
-7. One shared GitHub Project is used per repository by default.
-8. Extension views remain projections of their owning semantics.
-9. GitHub does not derive its own Project Graph revision.
-10. Lifecycle Gates cannot be bypassed by generic GitHub approval metadata.
-11. Interactive and CI execution use the same locked Pactwright environment.
-12. Shared graph changes are validated according to semantic ownership.
-13. Operations telemetry remains outside GitHub and the Project Graph.
-14. Generated views and reports are not canonical truth.
-15. GitHub Project edits do not silently mutate canonical Pactwright state.
-16. Reconciliation is deterministic and preserves unmanaged resources.
-17. Permissions follow least privilege.
-18. Disabling an Extension removes only its managed GitHub contribution.
+6. Enabled profiles compose into one desired GitHub state.
+7. One shared GitHub Project per repository is the default.
+8. Interactive and CI execution use the same locked Pactwright environment.
+9. Shared graph changes are routed by semantic ownership, not path alone.
+10. GitHub consumes but does not define lifecycle topology or Project Graph revision.
+11. Every generated Pactwright report records its source Project Graph revision.
+12. Applicable view checks compare the recorded report revision with the current runtime revision.
+13. Generated reports and execution provenance are excluded from Project Graph revision; canonical Extension records are included.
+14. `Pactwright / Intelligence Grounding` uses `grounded | attention | blocked | not-applicable`.
+15. Graph Review execution and Finding hand-off preserve Spec 04 failure/provenance boundaries.
+16. Asset and Publication automation preserves Spec 05 hash, approval and failure boundaries.
+17. Operations automation uses `record-deployment`, `refresh`, `corrective-roadmap` and `validate` rather than inventing alternate semantics.
+18. Insufficient operational evidence is not an error and creates no Observation.
+19. GitHub Project edits do not silently mutate canonical Pactwright state.
+20. Reconciliation preserves unmanaged resources.
+21. Permissions follow least privilege.
+22. Disabling an Extension affects only its managed GitHub contribution.
 
 ---
 
-# 39. Anti-Overengineering Constraints
+# 41. Anti-Overengineering Constraints and Open Gaps
 
 Do not introduce initially:
 
@@ -1139,10 +1139,10 @@ Do not introduce initially:
 one GitHub Project per Extension
 one workflow per command
 GitHub-owned lifecycle state
-two-way generic Project-field synchronisation
+generic two-way Project-field synchronisation
 GitHub-native knowledge semantics
 GitHub-native roadmap semantics
-custom GitHub app when Actions + CLI are sufficient
+custom GitHub App while Actions + CLI are sufficient
 alert-management platform
 observability dashboard replacement
 complex cross-repository portfolio system
@@ -1155,85 +1155,77 @@ profiles
 → desired state
 → github sync
 → thin Actions
-→ derived checks/views
+→ checks / summaries / views
 ```
 
-Add richer GitHub surfaces only when the existing projections prove insufficient.
+Open implementation gaps remain:
+
+- stable ownership/adoption identity for managed GitHub resources and rename/collision behaviour;
+- concurrency/rebase/idempotency policy for automation-generated branches and PRs;
+- exact GitHub check conclusion mapping between execution failure, stale derived state and canonical invalidity;
+- the concrete repository configuration that maps a safe GitHub human-authority event to canonical Pactwright operations such as Asset approval.
+
+These gaps must not be resolved by making GitHub metadata canonical.
 
 ---
 
-# 40. Current Implementation Baseline
+# 42. Current Implementation Baseline
 
-The existing GitHub research design already establishes the main architecture:
+The established GitHub design provides the required architecture:
 
 - Pactwright remains canonical;
 - GitHub Actions execute Pactwright responsibilities;
 - GitHub views are derived;
 - `pactwright github sync` owns remote provisioning;
-- Actions own runtime projection updates;
-- component profiles compose into one GitHub desired state;
-- incompatible profile requirements fail validation;
-- one shared GitHub Project is used by default. 
+- component profiles compose into one desired GitHub state;
+- incompatible profiles fail validation;
+- one shared GitHub Project is used by default;
+- PRs, Issues and Projects remain collaboration/projection surfaces.
 
-It also establishes that PRs, Issues and Projects are collaboration and projection surfaces rather than canonical lifecycle storage. 
-
-The canonical redesign changes the component decomposition:
+The redesign separates the old Review & Creative surface into:
 
 ```text
-old:
-Review & Creative
-
-new:
 Graph Review
 Assets / Publication
 ```
 
-and removes obsolete GitHub concerns associated with:
-
-```text
-Review Definitions
-creative-delivery
-generation provider/task configuration
-generation guidance
-```
-
-The surviving GitHub architecture remains valid and becomes simpler.
+while preserving the sourced GitHub behaviours under their new owners.
 
 ---
 
-# 41. Relationship to Other Canonical Specifications
+# 43. Relationship to Other Canonical Specifications
 
 ```text
 01 Core System and Lifecycle
-→ owns Contract and lifecycle semantics
+→ owns Delivery/lifecycle semantics consumed by GitHub
 
 02 Distribution, Agent Packs, Extensions and Evaluation
-→ owns component profiles and resolved execution environment
+→ owns GitHub profile contribution and resolved environment
 
 03 Project Intelligence
-→ owns knowledge governance and roadmap semantics
+→ owns Intelligence commands, reports and governance
 
 04 Graph Review
-→ owns specialist analysis and Findings
+→ owns Review Executions, Findings and PI hand-off
 
 05 Assets and Publication
-→ owns approved outputs and Publication
+→ owns Asset approval, hashes and Publication truth
 
 06 Operations
-→ owns Deployment and Observation
+→ owns Deployment, Observation and corrective-roadmap semantics
 
 07 GitHub Integration
-→ owns GitHub execution and projection
+→ owns exact remote automation and projection surface
 
 08 Open-Source Project Organisation
-→ owns repository and ecosystem structure
+→ governs repository/ecosystem organisation
 ```
 
 ---
 
-# 42. Governing Rule
+# 44. Governing Rule
 
-> **GitHub is Pactwright's remote execution, collaboration and projection surface, never its source of semantic truth. Pactwright runtime and Extensions own behaviour; GitHub profiles describe desired integration; `github sync` provisions managed remote state; Actions invoke Pactwright; checks, Issues, pull requests and Projects project the resulting canonical state.**
+> **GitHub executes and projects Pactwright; it does not become Pactwright. Every workflow invokes the owning Pactwright semantics, every generated report and applicable view is revision-aware, and every GitHub field, check, PR, Issue and Project remains a derived collaboration surface unless repository policy explicitly routes a safe authority event through a canonical Pactwright operation.**
 
 ---
 
