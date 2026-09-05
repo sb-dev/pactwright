@@ -6,11 +6,11 @@ Project Intelligence is an optional Pactwright Extension that turns project mate
 
 Its core flow is:
 
-```text id="eprb6u"
+```text
 Source
 → triage
 → Knowledge
-→ future context or delivery candidate
+→ future context or Delivery candidate
 ```
 
 Project Intelligence answers:
@@ -28,7 +28,9 @@ It supports:
 - impact propagation;
 - future Intent candidates.
 
-It does not redefine the Delivery Graph or create a parallel delivery lifecycle.
+The founding corpus uses the same ingestion path as later Sources. Cold start is ingestion against an empty Project Intelligence graph, not a separate pipeline.
+
+Project Intelligence does not redefine the Delivery Graph or create a parallel delivery lifecycle.
 
 ---
 
@@ -36,7 +38,7 @@ It does not redefine the Delivery Graph or create a parallel delivery lifecycle.
 
 Project Intelligence owns:
 
-```text id="aj4nr3"
+```text
 Source
 Domain Definition
 Knowledge
@@ -57,7 +59,7 @@ plus:
 
 Other Pactwright semantics retain their own ownership:
 
-```text id="ma8ggo"
+```text
 Delivery
 → Intent, Decision, Contract, Brief, Evidence
 
@@ -77,15 +79,39 @@ It must not redefine or mutate them on their owner's behalf.
 
 Cross-graph relationships connect records without transferring ownership.
 
+Disabling Project Intelligence must not change the meaning of Delivery or sibling-Extension records. An enabled Extension that requires Project Intelligence cannot remain enabled if Project Intelligence is removed.
+
 ---
 
-# 3. Knowledge Boundary
+# 3. Core Invariants
+
+1. Every accepted Knowledge record is traceable to at least one Source.
+2. Source content is immutable; changed material creates a new Source version.
+3. Every Source and Knowledge record belongs to a registered domain.
+4. Every project using Project Intelligence has the nine-domain core registry.
+5. Ingestion may propose Delivery-owned changes but never silently apply them.
+6. Changes to canonical Knowledge meaning require human approval.
+7. Corroborating evidence may auto-apply only when canonical meaning is unchanged.
+8. Challenges, supersessions and retractions propagate through explicit graph relationships.
+9. Onboarding and the Intent roadmap are generated views, not hand-maintained canonical state.
+10. Missing knowledge is an intelligence gap, not automatically a Delivery Intent.
+11. Delivery work enters the normal Delivery Graph lifecycle.
+12. Findings from other Extensions enter through normal Source ingestion.
+13. An Operations Observation is operational truth, not automatically accepted project knowledge.
+14. Extension-originated findings cannot directly create canonical Delivery Intents.
+15. There is one Project Intelligence Intent-roadmap derivation model.
+16. Extension-specific roadmap views may filter Project Intelligence candidates but must not introduce independent candidate or prioritisation models.
+17. Project Intelligence consumes the deterministic Project Graph revision supplied by Pactwright runtime.
+
+---
+
+# 4. Knowledge Boundary
 
 Project Intelligence holds **project-specific knowledge**.
 
 It does not replace reusable expertise owned by Agent Packs or Production Skills.
 
-```text id="zdd94e"
+```text
 Production Skills
 → reusable general expertise
 
@@ -96,127 +122,108 @@ Project Intelligence
 → project-specific accepted knowledge
 ```
 
-Examples:
+For example:
 
-```text id="2vukid"
+```text
 "Kafka consumers require careful idempotency handling"
 → Software Engineering Skills
-```
 
-```text id="c2jyf6"
 "This project's subscription consumer requires ordering by account ID"
 → Project Intelligence
 ```
 
-Likewise:
-
-```text id="eqpv3j"
-"This visual model often struggles with character continuity"
-→ reusable Video Production knowledge
-```
-
-while:
-
-```text id="br1kny"
-"For this series, model X repeatedly breaks the approved character design"
-→ Project Intelligence
-```
+Likewise, reusable production guidance belongs in Production Skills, while lessons specific to this project belong in Project Intelligence.
 
 Agent Packs and Production Skills must not become hidden project memory.
 
 ---
 
-# 4. Sources
+# 5. Source Model
 
 A Source records material received by the project.
 
-Sources may originate from:
-
-- founding project material;
-- research;
-- requirements;
-- feedback;
-- experiments;
-- metrics;
-- incidents;
-- Delivery Evidence;
-- Graph Review Findings;
-- Operations Observations;
-- Production Skills outputs;
-- other enabled Extensions.
+Sources may originate from founding material, research, requirements, feedback, experiments, metrics, incidents, Delivery Evidence, Graph Review Findings, Operations Observations, Production Skills outputs or other enabled Extensions.
 
 Conceptually:
 
-```yaml id="1qln53"
+```yaml
 id: src-...
 canonical_id: ...
 content_hash: ...
 captured_at: ...
 observed_at: ...
-source_type: document | internal | reference
+source_type: document | internal | digest
+storage: snapshot | reference
 location: ...
 version_of: null | src-...
 status: active | withdrawn | retracted
 origin: ...
 trust: T0 | T1 | T2 | T3
+
+triage:
+  disposition: irrelevant | duplicate | corroborating | incremental | novel | contradictory
+  class: 0 | 1 | 2 | 3
+  domain: ...
+  affected_nodes: []
+  graph_revision: ...
+  agent_version: ...
+  rationale: ...
 ```
 
-Source identity is based on:
+Source identity is:
 
-```text id="c3z6rh"
-canonical identity
-+
-content hash
+```text
+canonical_id + content_hash
 ```
 
-The same identity is idempotent.
+Rules:
 
-Changed content creates a new Source version rather than rewriting evidential history.
+- the same identity is a no-op;
+- the same `canonical_id` with a new hash creates a new Source linked through `version_of`;
+- `source_type` describes the evidential form;
+- `storage` independently describes whether permitted content is stored as a repository `snapshot` or retained as a `reference` with provenance, hash and pointer;
+- secret detection must run before snapshot content is committed;
+- if stored bytes must later be removed, provenance and hash remain and dependent Knowledge must be revalidated;
+- every Source must resolve to a registered domain through triage.
 
-Where permitted, Source content may be stored as a repository snapshot.
-
-Otherwise Pactwright stores provenance, hash and reference.
+`digest` remains a supported Source type. This specification does not invent additional digest semantics beyond the existing Source identity, provenance, trust and triage rules.
 
 ---
 
-# 5. Internal Sources
+# 6. Internal Sources
 
 Other Pactwright Extensions may contribute internal Sources.
 
 Examples:
 
-```text id="u9xqqv"
+```text
 Graph Review Finding
 → internal Source
-```
 
-```text id="dm7biq"
 Operations Observation
 → internal Source
-```
 
-```text id="x6xmvg"
 Delivery or Production evaluation
 → internal Source
 ```
 
-The Source must preserve enough provenance to identify:
+The Source must preserve enough provenance to recover:
 
 - originating Extension or process;
 - originating canonical record where applicable;
 - content hash;
-- supporting evidence;
-- Project Graph revision.
+- supporting evidence where applicable;
+- originating Project Graph revision.
 
 The originating record remains owned by its original subsystem.
 
-Capture as a Source does **not** mean its interpretation has automatically become accepted project knowledge.
+Capture as a Source does not mean its interpretation has automatically become accepted project knowledge.
 
 Normal triage still applies.
 
 ---
 
-# 6. Trust
+# 7. Trust
 
 Trust is qualitative and claim-relative.
 
@@ -227,25 +234,21 @@ Trust is qualitative and claim-relative.
 | **T2** | unverified evidence or anecdote |
 | **T3** | speculative or unchecked inference |
 
-Trust is not assigned solely from Source type.
+Trust is not assigned solely from Source type or origin.
 
-For example, an Operations Observation is not automatically T0 merely because it originated from Operations.
+An Operations Observation is not automatically T0. An AI-generated research synthesis is not automatically trusted because it came from Deep Research Skills.
 
-Likewise, an AI-generated research synthesis does not become trusted simply because it was generated by Deep Research Skills.
-
-The strength of the underlying evidence determines trust.
+The strength and independence of the underlying evidence determine trust.
 
 Project-specific trust guidance may be expressed through Domain Definitions.
 
 ---
 
-# 7. Domain Definitions
+# 8. Domain Definitions
 
-Domains organise project knowledge.
+Domains organise project knowledge and drive:
 
-They guide:
-
-```text id="m91d4z"
+```text
 coverage
 onboarding
 freshness
@@ -256,8 +259,9 @@ roadmap readiness
 
 Conceptually:
 
-```yaml id="i0j3cp"
-id: product
+```yaml
+id: discovery
+core: true
 scope: ...
 steward: ...
 review_horizon: 180d
@@ -275,9 +279,10 @@ brief_recipe:
 trust_examples: []
 ```
 
-A Domain Definition may specify:
+A Domain Definition specifies, where applicable:
 
 - scope;
+- whether the domain is core;
 - steward;
 - review horizon;
 - dependencies;
@@ -288,41 +293,60 @@ A Domain Definition may specify:
 
 Projects and compatible Extensions may register additional domains without changing the Project Intelligence engine.
 
----
+Registering or retiring a non-core domain requires review.
 
-# 8. Default Domains
+Core domains must never be silently removed.
 
-Project Intelligence should ship with a useful default registry covering common project knowledge:
+The supported registration interface is:
 
-| Domain | Typical knowledge |
-|---|---|
-| `discovery` | users, needs, research, market and problems |
-| `product` | vision, requirements, bets and outcomes |
-| `identity` | identity, values, tone, ethics and boundaries |
-| `go-to-market` | positioning, messaging and launch strategy |
-| `content` | public/editorial surfaces and content strategy |
-| `decisions` | durable project decisions and rationale |
-| `delivery/ux` | interaction and experience knowledge |
-| `delivery/eng` | architecture, stack, APIs, data and engineering constraints |
-| `handbooks` | ways of working, quality, release, security and compliance |
-
-The registry is extensible.
-
-Not every project must require complete coverage in every domain.
-
-A children's television project, for example, may add domains for narrative, music or visual identity if those represent durable project knowledge not captured cleanly elsewhere.
-
-Domain proliferation should be avoided when existing domains already express the knowledge adequately.
+```text
+pactwright intelligence register-domain <id>
+```
 
 ---
 
-# 9. Knowledge
+# 9. Core Domain Registry
+
+Every project using Project Intelligence starts with these nine domains.
+
+| Domain | Canonical knowledge | Default horizon |
+|---|---|---|
+| `discovery` | user research, personas, market landscape, competitor analysis, ranked problem inventory | 2 quarters |
+| `product` | vision, roadmap, product requirements, product bets and metrics | 2 quarters |
+| `identity` | identity, values, tone/voice, ethics boundaries | 2 quarters |
+| `go-to-market` | positioning, messaging, GTM strategy, campaign briefs/results, content strategy | 1 quarter |
+| `content` | published surfaces, social strategy, content calendar | 1 quarter |
+| `decisions` | durable project decisions and rationale | no decay |
+| `delivery/ux` | UX principles, flows, wireframes, component patterns | 2 quarters |
+| `delivery/eng` | tech stack, architecture, engineering specs, APIs, data/event models, observability | 6–12 months |
+| `handbooks` | ways of working, quality bar, release process, security/compliance expectations | 12 months |
+
+The core registry is part of the Project Intelligence contract, not an example.
+
+Core dependency conventions are:
+
+1. `go-to-market` depends on accepted `discovery`, `product` and `identity` knowledge.
+2. `content` depends on `go-to-market`.
+3. `discovery` evidence supports `product` bets and requirements.
+4. `identity` constrains Delivery producing outbound language.
+5. `handbooks` constrain Delivery through quality, release, security and compliance rules.
+6. accepted `go-to-market` strategy may affect motivated Intents and launch sequencing.
+
+`discovery`, `product` and `identity` are the strategic upstream core and have no domain prerequisite for onboarding.
+
+Other domains may be populated in parallel unless their Domain Definition declares dependencies.
+
+An Extension does not automatically require a matching intelligence domain. Add a domain only when durable project knowledge does not fit the existing registry cleanly.
+
+---
+
+# 10. Knowledge Model
 
 Knowledge represents a conclusion the project currently relies on.
 
 Conceptually:
 
-```yaml id="83nu2w"
+```yaml
 id: knowledge-...
 domain: ...
 kind: observation | interpretation | hypothesis | requirement | constraint | decision | recommendation | forecast
@@ -337,6 +361,7 @@ evidence:
 last_refreshed: ...
 review_by: ...
 superseded_by: null | knowledge-...
+recurrence: null | { cadence_or_trigger: ..., owner: ..., command: ... }
 ```
 
 Every accepted Knowledge record must:
@@ -345,15 +370,19 @@ Every accepted Knowledge record must:
 - be traceable to at least one Source;
 - have explicit governance state.
 
+Recurring obligations use the `recurrence` policy instead of remaining permanently unsatisfied one-off obligations.
+
+The recurrence record defines the durable obligation policy. The mechanism that schedules or triggers recurrence execution is not defined here and must not be inferred as Project Intelligence-owned scheduling infrastructure.
+
 ---
 
-# 10. Knowledge Governance
+# 11. Knowledge Governance
 
 Different kinds of Knowledge gain authority differently.
 
-## Evidence-driven
+Evidence-driven kinds include:
 
-```text id="cpfa1f"
+```text
 observation
 interpretation
 hypothesis
@@ -361,33 +390,33 @@ recommendation
 forecast
 ```
 
-depend on evidence, trust and freshness.
+Authority-driven kinds include:
 
-## Authority-driven
-
-```text id="4wrz2q"
+```text
 requirement
 constraint
 decision
 ```
 
-depend primarily on explicit project authority.
+Rules:
 
-A requirement cannot be overturned merely because more Sources disagree with it.
+- new canonical Knowledge and changed conclusions require human review and approval;
+- `observation`, `interpretation` and `hypothesis` gain authority from evidence and may decay;
+- `requirement` and `constraint` gain authority through approval, not evidence counts;
+- Project Intelligence `decision` is durable project knowledge distinct from a Delivery Graph Decision and changes only through a new approved decision that supersedes it;
+- `recommendation` requires steward acceptance and may decay;
+- `forecast` remains provisional until resolved and expires at its stated horizon;
+- evidence may challenge authority-driven Knowledge but does not silently overturn it.
 
-A project decision cannot be outvoted by evidence counts.
-
-Evidence may reveal that a requirement or decision should be reconsidered, but the canonical change requires the appropriate project decision path.
-
-A Project Intelligence `decision` represents durable project knowledge and is distinct from a Delivery Graph Decision authorising a Contract.
+A requirement cannot be outvoted by Source count.
 
 ---
 
-# 11. Supersession and Retraction
+# 12. Supersession and Retraction
 
 Knowledge does not silently mutate when its meaning changes.
 
-```text id="dnqpnl"
+```text
 new Knowledge
 --supersedes-->
 old Knowledge
@@ -397,22 +426,22 @@ Supersession replaces an older conclusion with a newer accepted one.
 
 Retraction means the basis is no longer considered valid.
 
-Retraction requires affected dependants to be revalidated.
+Retraction requires direct dependants to be revalidated.
 
-Historical Sources remain traceable even when the resulting Knowledge is superseded or retracted.
+Historical Sources remain traceable even when resulting Knowledge is superseded or retracted.
 
 ---
 
-# 12. Relationships
+# 13. Relationships and Delivery Obligations
 
 Project Intelligence uses the shared typed-edge graph.
 
-Useful intelligence relations include:
+Core intelligence relations are:
 
-```text id="a9yzu0"
+```text
+depends-on
 supports
 contradicts
-depends-on
 constrains
 affects
 requires-delivery
@@ -422,24 +451,33 @@ retracts
 informs-only
 ```
 
-Examples:
+Typical semantics include:
 
-```text id="q8d9et"
-Knowledge --supports--------> Knowledge
-Knowledge --contradicts-----> Knowledge
-Knowledge --depends-on------> Knowledge
-
-Knowledge --constrains------> Delivery record
-Knowledge --affects---------> Delivery record
-Knowledge --requires-delivery--> Intent
-Knowledge --satisfied-by----> Evidence
+```text
+Knowledge --supports----------> Knowledge
+Knowledge --contradicts-------> Knowledge
+Knowledge --depends-on--------> Knowledge
+Knowledge --constrains--------> Delivery record
+Knowledge --affects-----------> Delivery record
+Knowledge --requires-delivery-> Intent
+Knowledge --satisfied-by------> Evidence
 ```
 
-Cross-graph relationships preserve record ownership.
+Delivery-obligation rules:
+
+- accepted `requirement` Knowledge produces a roadmap candidate unless already satisfied;
+- accepted Knowledge whose approved conclusion explicitly requires Delivery may produce a roadmap candidate;
+- once captured as an Intent, motivating Knowledge links to it with `requires-delivery`;
+- `constraint` normally contributes `constrains`;
+- `observation`, `interpretation`, `hypothesis` and `recommendation` are normally `informs-only` unless an approved conclusion explicitly creates a Delivery obligation;
+- a reviewed Project Intelligence decision may create whichever relation its conclusion requires;
+- recurring work is surfaced through its recurrence policy rather than as a permanently unsatisfied one-off obligation.
+
+An Operations Observation cannot directly create a `requires-delivery` edge. Its promoted Project Intelligence meaning may do so after approval.
 
 ---
 
-# 13. Ingestion and Triage
+# 14. Ingestion and Triage
 
 Every Source is triaged before expensive analysis.
 
@@ -447,13 +485,16 @@ Triage determines:
 
 1. identity;
 2. relevance;
-3. domain;
-4. relationship to current knowledge;
-5. consequence level.
+3. primary registered domain;
+4. comparison with accepted Knowledge and linked dependants;
+5. disposition;
+6. consequence class.
+
+If no registered domain fits, triage proposes a new Domain Definition and treats the change as class 2.
 
 The main dispositions are:
 
-```text id="8gi2nc"
+```text
 irrelevant
 duplicate
 corroborating
@@ -462,33 +503,30 @@ novel
 contradictory
 ```
 
-Pactwright uses four consequence classes:
-
 | Class | Meaning | Behaviour |
 |---|---|---|
-| **0** | irrelevant, duplicate, pure corroboration | stop or attach evidence |
-| **1** | additive evidence, meaning unchanged | update evidence/freshness |
-| **2** | new knowledge or delivery impact | reviewed promotion |
-| **3** | contradiction or invalidation | reviewed promotion + propagation |
+| **0** | irrelevant, duplicate, pure corroboration | stop or attach eligible evidence |
+| **1** | additive evidence, canonical meaning unchanged | add Source/evidence links and eligible freshness updates |
+| **2** | genuinely new Knowledge or non-conflicting Delivery impact | reviewed promotion |
+| **3** | contradiction or invalidation of accepted Knowledge or delivered work | reviewed promotion + propagation |
 
 Class depends on consequences, not Source origin.
 
-An Operations Observation, Deep Research output or Graph Review Finding may therefore be class 0, 1, 2 or 3.
-
 ---
 
-# 14. Automatic Mutation Boundary
+# 15. Automatic Mutation Boundary and Promotion
 
 Class 0/1 processing may automatically:
 
 - capture Sources;
 - add supporting evidence;
-- refresh eligible Knowledge;
+- update derived evidence state;
+- refresh freshness when eligible;
 - regenerate derived reports.
 
 It must not automatically change:
 
-```text id="w71wrj"
+```text
 Knowledge conclusions
 requirements
 constraints
@@ -499,94 +537,79 @@ Delivery Graph records
 other Extension-owned canonical records
 ```
 
-Changes to canonical meaning require reviewed promotion.
+Any such change is class 2/3.
 
-This is the central Project Intelligence authority boundary.
+For class 2/3 material, Project Intelligence:
 
----
+1. analyses against current Project Graph state;
+2. extracts relevant statements;
+3. proposes Knowledge and edge changes;
+4. identifies affected Delivery and Extension-owned records;
+5. includes Delivery proposals where needed;
+6. creates one reviewed promotion unit through normal repository review infrastructure;
+7. routes review through relevant owners;
+8. applies validated Project Intelligence mutations after human approval;
+9. runs propagation for class 3.
 
-# 15. Promotion
+Separate proposal graph nodes are not required initially.
 
-For class 2/3 material, Project Intelligence may propose:
-
-- new Knowledge;
-- changed Knowledge;
-- new relationships;
-- challenges or supersessions;
-- delivery candidates;
-- review of affected existing work.
-
-Conceptually:
-
-```text id="mufhax"
-Source
-→ analysis
-→ proposed Knowledge changes
-→ review
-→ accepted mutation
-```
-
-The proposal mechanism should use normal repository review infrastructure rather than inventing a separate proposal graph unless scale later requires one.
-
-Canonical changes must pass validation and the appropriate steward review.
+Extension-originated Sources use exactly the same path. Origin does not pre-decide project meaning, consequence class, Delivery work or roadmap priority.
 
 ---
 
 # 16. Evidence and Freshness
 
-Project Intelligence does not compute one numeric "truth score".
+Project Intelligence does not compute one numeric truth score.
 
 For empirical Knowledge:
 
-- strong primary evidence may be sufficient;
-- secondary evidence should normally be corroborated;
-- speculative evidence cannot independently establish accepted empirical knowledge;
-- multiple derivatives of the same underlying Source count as one evidential origin.
+- one T0 Source may be sufficient when appropriate;
+- T1 normally requires independent corroboration;
+- T2/T3 cannot alone establish accepted empirical Knowledge;
+- copied, syndicated or agent-generated derivatives sharing one origin count as one evidential origin.
 
-Every accepted Knowledge record should have a freshness horizon where freshness is meaningful.
+A corroborating Source may refresh Knowledge only when the evidence is newly observed, from a distinct origin, in scope and trusted enough for the domain.
 
-When overdue:
+Every accepted Knowledge record has `review_by` where freshness is meaningful.
 
-```text id="tg221g"
-accepted
-→ stale
-```
+A freshness run marks overdue Knowledge `stale` and regenerates the freshness view.
 
-Staleness flags review.
+Staleness flags review. It does not silently change canonical meaning.
 
-It does not silently change the underlying conclusion.
-
-Requirements, durable decisions and similar normative Knowledge may use different or no decay policy.
+Normative Knowledge such as requirements and durable decisions may use different or no decay policy.
 
 ---
 
 # 17. Coverage and Onboarding
 
-Project Intelligence derives how well the project understands each relevant domain.
+Project Intelligence derives coverage for every registered domain.
 
-Useful coverage states are:
+Coverage states have precise meanings:
 
-```text id="0e8bl9"
-Missing
-Seeded
-Covered
-```
+- **Missing**: one or more canonical artifact types have no accepted, in-horizon Knowledge.
+- **Seeded**: every canonical artifact type has at least one accepted, in-horizon Knowledge record.
+- **Covered**: the domain is Seeded and every declared `coverage_slot` is answered by accepted current Knowledge.
 
-Where:
-
-- **Missing**: required knowledge is absent;
-- **Seeded**: minimum canonical knowledge categories exist;
-- **Covered**: required coverage questions are also answered by accepted current Knowledge.
+A domain without coverage slots stops at **Seeded**.
 
 Onboarding asks:
 
 > What does this project still need to know?
 
-It derives missing knowledge from Domain Definitions and current Knowledge.
+It compares the domain registry with current Knowledge and produces dependency-aware Source-ingestion guidance.
 
-It should recommend **Sources to provide, create or research**, not fabricate Knowledge directly.
+Ordering rules are:
 
-```text id="g4h23v"
+1. surface gaps in domains whose prerequisites are already Seeded;
+2. at cold start prioritise `discovery`, `product` and `identity`;
+3. surface independent Delivery and `handbooks` gaps in parallel;
+4. unlock `go-to-market` guidance when the strategic upstream core is Seeded;
+5. unlock `content` guidance when `go-to-market` is Seeded;
+6. continue until required domains are Seeded or Covered.
+
+Onboarding recommends Sources to provide, create or research. It must not fabricate Knowledge directly.
+
+```text
 knowledge gap
 → obtain/create Source
 → ingest
@@ -594,6 +617,8 @@ knowledge gap
 → promote
 → accepted Knowledge
 ```
+
+Coverage is regenerated after accepted Knowledge changes, staleness, domain changes, supersessions and retractions.
 
 Missing knowledge is not automatically a Delivery Intent.
 
@@ -603,28 +628,7 @@ Missing knowledge is not automatically a Delivery Intent.
 
 Production Skills may create material suitable for Project Intelligence ingestion.
 
-Examples:
-
-```text id="7bzpbl"
-Deep Research
-→ evidence-backed research output
-→ Source
-→ Knowledge
-```
-
-```text id="rwuxko"
-UI/UX evaluation
-→ project-specific finding
-→ Source
-→ Knowledge
-```
-
-```text id="6qvm1n"
-Video evaluation
-→ repeated project-specific production lesson
-→ Source
-→ Knowledge
-```
+Examples include Deep Research outputs, UI/UX evaluation, Delivery evaluation and repeated project-specific production lessons.
 
 The boundary is:
 
@@ -632,47 +636,17 @@ The boundary is:
 
 Not every Production Skills result should become Knowledge.
 
-Only information worth future project reliance belongs in Project Intelligence.
+Reusable generic rules remain in Production Skills or Production Extension Packs.
+
+Project-specific guidance worth retaining follows normal Source → Knowledge governance rather than a separate generation-guidance subsystem.
 
 ---
 
-# 19. Durable Production Guidance
-
-The redesign removes the need for specialised Pactwright subsystems such as:
-
-```text id="0hgycj"
-generation-guidance/
-provider guidance registry
-task guidance registry
-```
-
-Project-specific guidance worth retaining follows normal Project Intelligence semantics.
-
-Example:
-
-```text id="63a4n3"
-production or evaluation evidence
-→ Source
-→ accepted Knowledge
-→ future Delivery / Review context
-```
-
-Examples include:
-
-- an approved visual style consistently requires a particular production constraint;
-- a project's architecture requires a specific event-ordering rule;
-- users consistently misunderstand a particular interaction pattern;
-- a research source category repeatedly proves unreliable for a project question.
-
-Reusable generic rules remain in Production Skills or Extension Packs.
-
----
-
-# 20. Delivery Context
+# 19. Delivery Context
 
 Project Intelligence contributes relevant accepted Knowledge when Pactwright constructs context for:
 
-```text id="4r2x4e"
+```text
 Contract crafting
 Brief generation
 Delivery
@@ -680,29 +654,23 @@ Review
 Graph Review
 ```
 
-Context selection should be driven by:
+Context selection is driven by:
 
 - relevant domains;
 - graph relationships;
-- Domain Definition recipes;
+- Domain Definition `brief_recipe` rules;
 - current status and freshness;
 - the requested responsibility.
 
-Only relevant accepted Knowledge should be loaded by default.
+Only accepted, relevant and sufficiently current Knowledge is included by default.
 
-Do not load:
-
-- every project document;
-- raw telemetry;
-- complete Source histories;
-- execution logs;
-- stale or challenged Knowledge without explicit reason.
+Do not load every project document, raw telemetry, complete Source histories, execution logs or stale/challenged Knowledge without explicit reason.
 
 Agents should not reconstruct durable project knowledge from conversation history when Project Intelligence can provide canonical context.
 
 ---
 
-# 21. Project Intelligence Does Not Override Contracts
+# 20. Project Intelligence Does Not Override Contracts
 
 Accepted Knowledge may inform a Contract.
 
@@ -710,23 +678,17 @@ It does not silently modify one.
 
 If new Knowledge shows that an authorised outcome should change:
 
-```text id="lv297i"
+```text
 new Knowledge
-→ delivery candidate
+→ Delivery candidate
 → normal Intent / Decision / Contract lifecycle
 ```
 
-Project Intelligence may flag:
-
-- an affected Contract;
-- an affected Brief;
-- delivered work needing reconsideration.
-
-The owning Delivery semantics decide what changes.
+Project Intelligence may identify affected Contracts, Briefs or delivered work, but the owning Delivery semantics decide what changes.
 
 ---
 
-# 22. Intent Roadmap
+# 21. Intent Roadmap
 
 Project Intelligence derives one project-wide view of Delivery obligations.
 
@@ -734,107 +696,94 @@ The roadmap answers:
 
 > What does the project currently need to build, change or reconsider?
 
-Potential candidates include:
+Candidates may come from:
 
 - accepted requirements not yet satisfied;
 - accepted Knowledge explicitly requiring Delivery;
 - existing open Intents;
-- delivered work whose grounding Knowledge was invalidated;
+- delivered work whose grounding Knowledge was challenged, superseded or retracted;
 - accepted operational meaning requiring corrective work.
 
-A raw Source does not directly create Delivery work.
+Raw Sources, Graph Review Findings and Operations Observations do not directly create Delivery work.
 
-For example:
+The required path is:
 
-```text id="s4u2gu"
-Operations Observation
+```text
+Finding / Observation / other Source
 → Source
 → accepted Knowledge
 → Intent candidate
 ```
 
-Likewise:
+Recurring obligations are surfaced through their recurrence policy rather than as permanently unimplemented work.
 
-```text id="24uct4"
-Graph Review Finding
-→ Source
-→ accepted Knowledge
-→ Intent candidate
-```
+The exact scheduler or event mechanism that determines when a recurrence becomes due is outside this specification.
 
-The roadmap proposes Intents.
-
-It does not create them.
+The roadmap proposes Intents. It does not create them.
 
 ---
 
-# 23. Candidate Provenance and Readiness
+# 22. Candidate Provenance, Readiness and Ordering
 
-Every roadmap candidate should retain traceability to:
+Every roadmap candidate retains traceability to:
 
-```text id="zkswix"
+```text
 motivating Knowledge
 supporting Sources
 relevant existing Intent
 originating Extension records where applicable
 ```
 
-Candidates are:
+Candidate states are:
 
-```text id="vht35f"
+```text
 ready
 blocked
 open
 reopen-proposed
 ```
 
-A candidate is ready when:
+A candidate is `ready` when:
 
 - hard Delivery dependencies are satisfied;
-- required knowledge dependencies are sufficiently covered.
+- required domain dependencies are Seeded.
 
-Blocked work should link back to the corresponding knowledge gaps.
+Otherwise it is `blocked` and links back to corresponding knowledge gaps.
 
----
+The roadmap is a dependency DAG rendered as waves, not an artificial total ranking.
 
-# 24. Roadmap Ordering
-
-The roadmap is a dependency DAG rather than an artificial total ranking.
-
-Within otherwise ready work, useful precedence includes:
+Within otherwise ready work, precedence is:
 
 1. legal, security and safety obligations;
 2. active reliability risk;
-3. hard dependencies;
-4. committed obligations;
-5. approved launch sequencing;
+3. hard technical dependencies;
+4. committed Delivery obligations;
+5. approved go-to-market launch sequencing;
 6. uncertainty reduction and strategic value.
 
-Operations evidence may inform severity, recurrence and user impact.
+Operational evidence may inform severity, frequency, recurrence, user impact, duration and active regression state only after that meaning has passed through Project Intelligence governance.
 
-It must not become a separate Operations-owned prioritisation engine.
-
-Likewise Graph Review does not own roadmap priority merely because a candidate originated from a Finding.
-
-Project Intelligence combines accepted meaning into one roadmap model.
+Extensions may filter this candidate set for specialised views but must not introduce candidates absent from the Project Intelligence roadmap or define an independent priority engine.
 
 ---
 
-# 25. Delivery Satisfaction
+# 23. Delivery Satisfaction and Recurrence
 
 When delivered work satisfies a Project Intelligence obligation:
 
-```text id="zu5yb0"
+```text
 Knowledge
 --satisfied-by-->
 Evidence
 ```
 
-This removes the obligation from the outstanding set where appropriate.
+For one-off obligations this removes the obligation from the outstanding set where appropriate.
+
+For recurring obligations, satisfaction closes the current occurrence while the recurrence policy remains the durable source for future occurrences. Recurring work must not remain permanently represented as an unsatisfied one-off candidate.
 
 If later evidence shows that the real-world outcome was not achieved:
 
-```text id="t2teq9"
+```text
 Observation
 → Source
 → new Knowledge
@@ -845,105 +794,58 @@ Prior Delivery Evidence remains factual history and is not rewritten.
 
 ---
 
-# 26. Propagation
+# 24. Propagation
 
-Propagation runs when accepted Knowledge is:
+Propagation runs when accepted Knowledge is challenged, superseded or retracted.
 
-```text id="7vok57"
-challenged
-superseded
-retracted
-```
-
-It traverses existing relationships and identifies affected dependants.
+It traverses existing relationships and produces review/change proposals rather than silently editing dependants.
 
 Typical consequences:
 
 | Relation | Consequence |
 |---|---|
 | `depends-on` | review dependant Knowledge |
-| `supports` | recompute evidential support |
-| `constrains` | re-evaluate affected Delivery |
-| `affects` | notify owner / reconsider roadmap |
-| `requires-delivery` | reconsider linked Intent |
-| `satisfied-by` | reconsider whether delivered work remains grounded |
+| `supports` | recompute or flag evidential support |
+| `contradicts` | challenge affected Knowledge |
+| `constrains` | re-evaluate affected Delivery context |
+| `affects` | notify owner and reconsider roadmap ordering |
+| `requires-delivery` | re-evaluate linked Intent |
+| `satisfied-by` | re-evaluate whether delivered Evidence remains grounded |
 
-Propagation produces review or change proposals.
+Retraction always requires direct dependant revalidation.
 
-It must not silently mutate another subsystem's canonical records.
+Propagation never directly mutates Delivery, Graph Review, Assets / Publication or Operations records.
 
 ---
 
-# 27. Graph Review Integration
+# 25. Graph Review and Operations Integration
 
-Graph Review uses Project Intelligence as the durable governance path for Findings.
+Graph Review Findings and Operations Observations use the same governance boundary:
 
-```text id="0vp4o6"
-Project Graph
-→ Graph Review
-→ Finding
+```text
+Extension-owned canonical record
 → internal Source
 → triage
 → Knowledge / candidate
 ```
 
-A Finding does not automatically become accepted Knowledge.
+Every successful Graph Review Finding is handed to Project Intelligence as a Source by the Graph Review Extension. Project Intelligence triage decides whether that Source is irrelevant, corroborating, novel or contradictory.
 
-Review severity does not automatically determine triage class.
+Operations Observations remain operational truth. Project Intelligence owns only the project meaning accepted from them.
 
-Project Intelligence decides durable project meaning through normal governance.
-
-This is why Graph Review depends on Project Intelligence.
+Extension metadata such as severity, significance, direction or confidence may inform analysis but does not directly determine trust, triage class, Knowledge status or roadmap priority.
 
 ---
 
-# 28. Operations Integration
+# 26. Commands and Required Capabilities
 
-Operations contributes Observations through the same Source boundary.
+Initial Project Intelligence commands are:
 
-```text id="2h6nrc"
-Deployment / Publication
-→ Observation
-→ internal Source
-→ triage
-→ Knowledge / candidate
-```
-
-An Operations Observation records operational reality.
-
-Project Intelligence records what the project concludes from that reality.
-
-For example:
-
-```text id="zxmnkh"
-Operations Observation:
-"Checkout error rate increased after deployment X"
-
-            ↓
-
-Project Intelligence Knowledge:
-"Checkout reliability is below the accepted operating level"
-```
-
-Operations metadata may inform analysis.
-
-It does not directly determine:
-
-- trust;
-- triage class;
-- Knowledge status;
-- roadmap priority.
-
----
-
-# 29. Commands
-
-Initial Project Intelligence operations should include:
-
-```text id="5726km"
-pactwright intelligence ingest <source>
+```text
+pactwright intelligence ingest <path-or-url>
 pactwright intelligence triage <source-id>
 pactwright intelligence promote <source-id>
+pactwright intelligence register-domain <id>
 pactwright intelligence onboard
 pactwright intelligence derive-intent-roadmap
 pactwright intelligence propagate <knowledge-id>
@@ -951,141 +853,127 @@ pactwright intelligence refresh
 pactwright intelligence validate
 ```
 
-Domain registration may also be exposed where required.
+Enabled Extensions invoke the same ingestion path for internal Sources rather than introducing Extension-specific Knowledge mutation commands.
 
-The runtime owns deterministic mutation and validation.
+Project Intelligence requires these Pactwright capabilities:
 
-Semantic analysis uses the configured Agent Pack capabilities.
-
----
-
-# 30. Agent Capabilities
-
-Project Intelligence may require AI capabilities such as:
-
-```text id="cbxpt7"
+```text
 intelligence-triage
 intelligence-promotion
 intelligence-context
 ```
 
-Capabilities identify Pactwright responsibilities.
+The selected Agent Pack decides which agents and Production Skills implement them.
 
-The selected Agent Pack decides which agents and Production Skills perform them.
-
-For example, Deep Research Skills may assist analysis without becoming the owner of Project Intelligence semantics.
+The runtime owns deterministic transition, validation and canonical mutation mechanics.
 
 ---
 
-# 31. Repository Model
+# 27. Repository Model
 
-When enabled, Project Intelligence should keep canonical records and derived reports clearly separated.
+When enabled, Project Intelligence keeps canonical records and derived reports separate.
 
 Conceptually:
 
-```text id="r173rr"
+```text
 docs/project-intelligence/
 ├── sources/
 ├── domains/
-├── knowledge/
+├── knowledge/<domain>/
 └── reports/
     ├── onboarding.md
     ├── domain-map.md
     ├── freshness.md
-    └── intent-roadmap.md
+    ├── intent-roadmap.md
+    └── failed-ingestion.md
 ```
 
-Exact paths may evolve.
+Canonical records are Sources, Domain Definitions, Knowledge and typed relationships.
 
-Canonical records are:
+Reports are deterministic derived views over a Project Graph revision and must not become hand-maintained second sources of truth.
 
-```text id="bubuz1"
-Sources
-Domain Definitions
-Knowledge
-typed relationships
-```
-
-Reports are deterministic derived views.
-
-They must not become hand-maintained second sources of truth.
+Exact paths may evolve without changing these ownership rules.
 
 ---
 
-# 32. Idempotency and Failure
+# 28. Automation
 
-Ingestion should converge for the same Source identity.
+Automation may run:
 
-Derived reports should converge for the same Project Graph revision.
+1. capture validation, including Source schema, identity/hash and secret scan;
+2. promotion validation, including Knowledge/edge changes and required review;
+3. coverage/onboarding regeneration;
+4. Intent-roadmap regeneration after relevant Knowledge, Delivery or accepted Extension-originated changes;
+5. propagation after class-3 changes;
+6. scheduled freshness scans.
 
-Git branches and pull requests provide normal repository isolation for reviewed promotions.
-
-A failed:
-
-- report generation;
-- semantic analysis;
-- extension hand-off
-
-must not corrupt canonical state.
-
-Failed promotion leaves already captured Source provenance intact.
-
-Canonical mutation must validate against current Project Graph state before application.
+Workflow definitions remain thin. Project Intelligence semantics belong in Pactwright rather than being duplicated in GitHub Actions.
 
 ---
 
-# 33. Validation
+# 29. Idempotency, Concurrency and Failure
 
-Project Intelligence validation must ensure at least:
+Idempotency rules:
 
-- valid Source identity, provenance and hashes;
-- valid registered domains;
-- acyclic domain dependencies;
-- every accepted Knowledge record references Sources;
-- Knowledge kinds obey their governance rules;
-- supersession and retraction are valid;
-- automatic class 0/1 processing did not change canonical meaning;
-- reviewed changes have required authority;
-- typed intelligence edges use valid endpoints;
-- cross-graph edges preserve ownership;
-- `requires-delivery` targets Delivery Intents;
-- `satisfied-by` targets Delivery Evidence;
-- roadmap candidates retain motivating provenance;
-- derived reports identify their Project Graph revision;
-- Extension Findings cannot bypass normal Source ingestion.
+- Source identity is `canonical_id + content_hash`;
+- rerunning ingestion for the same identity converges on the same Source;
+- Extension-originated Sources use stable originating record identity and content hash;
+- reports are deterministic views over a pinned Project Graph revision;
+- mutations validate against current graph state before application.
 
-Core `pactwright validate` may invoke this validation when Project Intelligence is enabled.
+Concurrency uses normal repository isolation. Conflicting promotions must rebase and rerun validation against current state. No application-level lease system is required initially.
 
----
+Failure rules:
 
-# 34. Core Invariants
-
-1. Project Intelligence is optional and does not redefine core Delivery semantics.
-2. Every accepted Knowledge record is traceable to Source evidence.
-3. Sources are immutable by identity; changed material creates a new version.
-4. Canonical meaning changes require appropriate review.
-5. Corroborating evidence may update support without changing canonical meaning.
-6. Requirements, constraints and decisions are governed by authority, not source voting.
-7. Missing knowledge is not automatically Delivery work.
-8. Roadmap candidates enter Delivery only through normal Intent capture.
-9. Findings from other Extensions enter through Source ingestion.
-10. Extension-originated records retain their original ownership.
-11. Project Intelligence owns accepted project meaning, not raw operational or review records.
-12. Staleness flags review but does not silently rewrite Knowledge.
-13. Challenges, supersessions and retractions propagate explicitly.
-14. Delivery context uses relevant accepted Knowledge rather than conversation reconstruction.
-15. Generic expertise remains in Production Skills; project-specific learning belongs in Project Intelligence.
-16. Derived onboarding, freshness and roadmap reports are views, not canonical graph state.
-17. There is one Project Intelligence roadmap derivation model; Extensions may filter it but not create competing priority engines.
-18. Project Intelligence may propose Delivery changes but cannot directly rewrite Delivery Graph truth.
+- transient automation failures may retry with bounded backoff;
+- deterministic validation failures stop immediately;
+- failed ingestion is recorded in `reports/failed-ingestion.md`;
+- failed promotion never removes an already captured Source;
+- failed Extension hand-off leaves the originating Extension record valid and retryable;
+- rerunning triage or promotion uses current Project Graph state;
+- report-generation failure never mutates canonical state.
 
 ---
 
-# 35. Anti-Overengineering Constraints
+# 30. Validation
+
+`pactwright intelligence validate` must enforce at least:
+
+1. Source IDs, hashes, version links, domains, origins and trust values are valid.
+2. Source type and storage mode are valid independent fields.
+3. Snapshot Sources passed required secret scanning before canonical capture.
+4. Removing stored Source bytes retains provenance/hash and causes dependent Knowledge revalidation.
+5. Internal Sources reference valid originating provenance when declared.
+6. All nine core Domain Definitions exist while Project Intelligence is enabled.
+7. Domain Definitions contain required scope, stewardship, horizon, artifact and dependency information.
+8. Domain dependencies reference registered domains and are acyclic.
+9. Every accepted Knowledge record references a registered domain and at least one Source.
+10. Knowledge kinds follow their governance rules.
+11. Superseded Knowledge points to valid replacements.
+12. Retracted Knowledge triggers direct-dependant revalidation.
+13. Class 0/1 mutations do not change canonical meaning, Delivery state or Extension-owned canonical state.
+14. Class 2/3 canonical changes have required human approval.
+15. Intelligence-specific edge types use valid endpoints.
+16. Cross-graph edges preserve record ownership.
+17. `requires-delivery` targets a valid Delivery Intent.
+18. `satisfied-by` targets valid Delivery Evidence.
+19. Recurring obligations are not simultaneously treated as permanently unsatisfied one-off obligations without explicit justification.
+20. Roadmap candidates preserve valid motivating Knowledge and Source provenance.
+21. Extension-originated roadmap provenance traces through valid Sources.
+22. An Extension finding alone cannot create a canonical Delivery Intent.
+23. Generated onboarding and roadmap reports identify the Project Graph revision they derive from.
+24. Extension-specific roadmap projections do not introduce candidates absent from Project Intelligence roadmap derivation.
+25. Coverage states obey the exact Missing/Seeded/Covered rules, including that domains without coverage slots stop at Seeded.
+
+Core `pactwright validate` may invoke Project Intelligence validation when the Extension is enabled.
+
+---
+
+# 31. Anti-Overengineering Constraints
 
 Do not introduce initially:
 
-```text id="tyr0s6"
+```text
 numeric truth scores
 Claim nodes
 proposal graph nodes
@@ -1096,12 +984,12 @@ complex confidence matrices
 optimisation-based roadmap planning
 separate Extension-specific knowledge pipelines
 generation-guidance subsystem
-independent extension roadmap engines
+independent Extension roadmap engines
 ```
 
 Use:
 
-```text id="7e1qsh"
+```text
 Source
 Domain
 Knowledge
@@ -1111,15 +999,23 @@ review
 derived views
 ```
 
-until real scale or quality problems demonstrate that additional machinery is necessary.
+until observed scale or quality problems demonstrate that additional machinery is necessary.
+
+The following remain deliberately unresolved rather than being invented here:
+
+- richer semantics for the `digest` Source type;
+- the scheduler or trigger mechanism that materialises recurring obligations;
+- richer evidence-independence metadata beyond `origin`;
+- first-class processing/promotion records;
+- richer coverage scoring.
 
 ---
 
-# 36. Current Implementation Baseline
+# 32. Current Implementation Baseline
 
 Project Intelligence is primarily a canonical target rather than a completed `0.0.1` subsystem.
 
-The existing Pactwright architecture already provides important foundations:
+The existing Pactwright architecture already provides:
 
 - optional Extension loading;
 - Project Graph ownership boundaries;
@@ -1128,29 +1024,28 @@ The existing Pactwright architecture already provides important foundations:
 - repository-native canonical state;
 - Git-based review and history.
 
-The canonical redesign preserves the existing Project Intelligence model of:
+The canonical redesign preserves:
 
-```text id="yn5wud"
+```text
 Source
 → triage
 → Knowledge
 → Delivery context / Intent candidate
 ```
 
-while updating its integration boundaries:
+while updating integration boundaries:
 
-- Graph Review replaces the old combined Review & Creative ownership;
-- Assets / Publication is independent;
-- durable production guidance moves into Project Intelligence;
+- Graph Review is independent from Assets / Publication;
+- durable production guidance belongs in Project Intelligence;
 - Production Skills outputs may become Sources;
 - reusable Production Skills expertise remains outside Project Intelligence;
-- Operations and Graph Review use the same Source ingestion boundary.
+- Operations and Graph Review use the same Source-ingestion boundary.
 
 ---
 
-# 37. Relationship to Other Canonical Specifications
+# 33. Relationship to Other Canonical Specifications
 
-```text id="ap1nqj"
+```text
 01 Core System and Lifecycle
 → owns Contract and Delivery semantics
 
@@ -1178,7 +1073,7 @@ while updating its integration boundaries:
 
 ---
 
-# 38. Governing Rule
+# 34. Governing Rule
 
 > **Project Intelligence turns project material, research, Delivery experience, Review Findings and operational evidence into traceable accepted project knowledge. It contributes that knowledge to future Pactwright work and may propose Delivery obligations, but it never bypasses Contract authority, Delivery ownership or the normal Intent lifecycle. Reusable expertise stays in Production Skills; only project-specific knowledge worth future reliance belongs in Project Intelligence.**
 
