@@ -8,37 +8,22 @@ Its core flow is:
 
 ```text
 Evidence
-→ approval
+→ human approval
 → Asset
 → Publication
 ```
 
-It answers two questions:
+It answers:
 
 ```text
 Asset
-→ What approved durable output exists?
+→ What exact output was approved as a durable project artefact?
 
 Publication
-→ Where and how was that Asset exposed?
+→ Where, when and by whom was that approved Asset released?
 ```
 
-The Extension is production-domain neutral.
-
-An Asset may originate from:
-
-- software Delivery;
-- design work;
-- research;
-- narrative production;
-- music production;
-- video production;
-- game development;
-- documentation;
-- generated media;
-- manually produced work.
-
-The Extension does not define how those outputs are created.
+The Extension is production-domain neutral and does not define how outputs are created.
 
 ---
 
@@ -50,11 +35,12 @@ Assets / Publication owns:
 Asset
 Publication
 Asset approval
+Asset content identity
 Asset provenance
 Asset supersession
-publication traceability
+Publication traceability
 Evidence → Asset relationships
-Asset → Publication relationships
+Publication → Asset relationships
 ```
 
 It does not own:
@@ -74,22 +60,9 @@ Observation
 operational performance
 ```
 
-Production remains:
+Production remains owned by Delivery, Agent Packs and Production Skills.
 
-```text
-Delivery
-→ delivery-execution
-→ Agent Pack
-→ Production Skills
-```
-
-Verification remains:
-
-```text
-Delivery
-→ delivery-review
-→ Evidence
-```
+Verification remains part of core Delivery and ends at Evidence.
 
 Assets / Publication begins after successful Delivery Evidence.
 
@@ -110,26 +83,28 @@ Pactwright Project Graph
 
 Assets / Publication does not require Graph Review.
 
-It does not require Project Intelligence for its basic meaning.
+It does not require Operations.
 
-Operations is an independent sibling Extension.
+Project Intelligence is not required for the basic existence of Asset or Publication records, but applicable grounding must still satisfy the grounding rules in this specification.
 
-When both are enabled:
+When Operations is enabled, Publication may be registered as an operational exposure.
 
 ```text
-Publication
-→ may become an Operations exposure
+Assets / Publication
+→ owns what was approved and published
+
+Operations
+→ owns what happened after exposure
+
+Project Intelligence
+→ owns durable project meaning derived from later evidence
 ```
-
-Operations then owns what happened after publication.
-
-Assets / Publication continues to own what was approved and published.
 
 ---
 
 # 4. Post-Delivery Boundary
 
-Core Delivery ends at Evidence.
+Core Delivery ends at Evidence:
 
 ```text
 Intent
@@ -141,141 +116,104 @@ Intent
 → Evidence
 ```
 
-Assets / Publication extends that lifecycle only when a durable approved output needs to be recorded:
+An Asset is not another Delivery stage.
 
 ```text
 Evidence
-→ approval
+→ human approval
 → Asset
-→ Publication
 ```
 
-This distinction is important.
+Evidence means the governing Contract and Brief were delivered and verified.
 
-Evidence means:
+Asset means the exact output was separately approved as a durable project artefact.
 
-> The governing Contract and Brief were delivered and verified.
+Publication means that approved Asset was released through a defined channel or surface.
 
-Asset means:
-
-> This specific output has been approved as a durable project artefact.
-
-Publication means:
-
-> This approved Asset was exposed through a defined channel or surface.
-
-These are different claims.
+These are distinct claims.
 
 ---
 
-# 5. Asset
+# 5. Candidate Outputs Are Not Assets
 
-An Asset is an approved durable output produced or selected through completed Delivery.
+Drafts, alternatives, renders, mixes, candidate images, prototypes, research drafts, build artefacts and temporary exports do not become Project Graph Assets merely because they exist.
 
-Conceptually:
+They remain production or execution artefacts until the exact output is approved.
+
+Successful Delivery Evidence also does not automatically create an Asset.
+
+---
+
+# 6. Asset
+
+An Asset is an approved durable project output.
+
+Minimum structure:
 
 ```yaml
 id: asset-...
-type: ...
+type: asset
 title: ...
-content:
-  location: ...
-  hash: ...
+created: ...
 
-derived_from:
-  evidence: evidence-...
+media_type: ...
+content_hash: ...
+storage_pointer: ...
 
+delivery_evidence: evidence-...
+
+grounding:
+  - id: ...
+    hash: ...
+
+approved_by: human:...
 approved_at: ...
-approved_by: ...
-
-status: current | superseded | withdrawn
-superseded_by: null | asset-...
-
-provenance: ...
 ```
 
-The exact schema may evolve.
+Additional production provenance may be referenced where necessary for traceability or reproducibility, but this Extension does not define provider-specific Generation Records or copy Production Skills execution history into the Asset model.
 
-An Asset should record enough information to establish:
+An Asset must establish:
 
 - stable identity;
-- content identity;
-- originating Evidence;
-- approval;
-- provenance;
-- current/superseded state.
+- exact content identity;
+- valid originating Delivery Evidence;
+- human approval of that exact content;
+- storage or retrieval location;
+- applicable grounding;
+- sufficient provenance for auditability.
 
 ---
 
-# 6. Asset Approval
+# 7. Human Asset Approval
 
-Successful Delivery does not automatically create an Asset.
-
-The transition is explicit:
+Human approval is required before an output becomes a canonical Asset.
 
 ```text
 Evidence
-→ approval
+→ human approval of exact content hash
 → Asset
 ```
 
-Approval answers:
-
-> Is this output authorised to become a durable project Asset?
-
-This approval does not change the governing Contract.
-
-It is therefore not a Delivery Graph Decision.
-
-It is a post-Delivery Asset authority check.
-
-A project may choose different approval policies depending on Asset type.
-
-For example:
+Every Asset records:
 
 ```text
-internal architecture document
-→ delegated approval
-
-public campaign video
-→ human approval
+approved_by: human:...
+approved_at: ...
 ```
 
-The exact authority is repository policy.
+Automation may prepare hashes, provenance and validation, but must not independently convert a candidate output into an Asset.
+
+Asset approval is a post-Delivery authority check. It does not change the governing Contract and is not a Delivery Graph Decision.
 
 ---
 
-# 7. Candidate Outputs Are Not Assets
+# 8. Asset Identity, Immutability and Supersession
 
-Production may create:
+An Asset identifies one exact approved content state.
 
-```text
-drafts
-alternatives
-renders
-mixes
-candidate images
-prototype screens
-research drafts
-build artefacts
-temporary exports
-```
+`content_hash` identifies that state and must never be silently changed.
 
-These do not become Project Graph Assets merely because they exist.
-
-They remain production or execution artefacts until explicitly approved.
-
-This avoids turning the Project Graph into an archive of every production attempt.
-
----
-
-# 8. Asset Identity and Immutability
-
-An approved Asset represents a specific approved content state.
-
-Its content identity should be immutable.
-
-When the output changes materially:
+A material revision creates a new Asset:
 
 ```text
 new Asset
@@ -283,194 +221,159 @@ new Asset
 old Asset
 ```
 
-Do not silently mutate the content behind an existing Asset record.
+The previous Asset remains historical canonical truth.
 
-This preserves:
-
-- auditability;
-- approval history;
-- Publication traceability;
-- operational provenance;
-- reproducibility.
-
-An Asset may be marked withdrawn without erasing its history.
+The source design establishes Asset supersession. It does **not** establish a separate Asset withdrawal lifecycle, so no withdrawal state or command is defined here.
 
 ---
 
-# 9. Asset Storage
+# 9. Asset Storage and Content Verification
 
-The canonical Asset record and the Asset bytes are distinct concerns.
-
-Repository-friendly content may live directly in the repository.
-
-Large or externally managed artefacts may use a durable reference.
-
-Conceptually:
+The canonical Asset record and Asset bytes are separate concerns.
 
 ```text
 Asset record
-→ content hash
-→ repository path or external location
+→ content_hash
+→ repository path or external storage pointer
 ```
 
-Examples include:
+Repository-suitable files may live directly in Git. Large or externally managed binaries may use durable external storage.
+
+Validation must establish that:
 
 ```text
-Markdown
-source code
-small images
-configuration
+recorded Asset content_hash
+=
+hash of the stored or referenced approved output
 ```
 
-stored directly, while:
+External storage does not become canonical Project Graph state.
 
-```text
-large videos
-audio masters
-large design exports
-build binaries
-```
-
-may use external storage.
-
-The Asset record remains canonical Pactwright state.
-
-The storage system does not become the Project Graph.
+The exact mechanism for validating externally stored bytes when a storage target is unavailable, mutable or access-controlled remains an explicit implementation gap. Pactwright must not treat an unverifiable pointer as proof that the recorded hash still matches.
 
 ---
 
-# 10. Asset Provenance
+# 10. Asset Grounding
 
-An Asset must remain traceable to the Delivery that produced it.
+When an Asset asserts project facts, its grounding must identify the canonical project records and exact content states supporting those assertions.
 
-At minimum:
+Conceptually:
 
-```text
-Evidence
-→ Asset
+```yaml
+grounding:
+  - id: knowledge-product-positioning
+    hash: ...
+  - id: knowledge-brand-voice
+    hash: ...
 ```
 
-Additional provenance may include:
+Validation must ensure every declared grounding id exists and every grounding hash matches the referenced canonical state.
 
-- contributing files;
-- production outputs;
-- selected candidate;
-- relevant content hashes;
-- tool or model metadata where needed;
-- relevant Project Intelligence grounding.
-
-Pactwright should record only provenance necessary for:
+Applicable grounding may be represented through:
 
 ```text
-traceability
-reproducibility
-approval
-auditability
+Asset --grounded-in--> Project Intelligence record
 ```
 
-It should not recreate complete Production Skills execution history inside the Asset record.
+Later challenge, supersession or retraction of grounding may identify the Asset for reconsideration but must not silently mutate it.
+
+The redesign allows Assets / Publication to exist without Project Intelligence, while the earlier grounding contract assumes canonical fact grounding is available. The policy for approving fact-bearing Assets when Project Intelligence is disabled remains unresolved. The invariant is that required grounding must not simply be omitted to bypass validation.
 
 ---
 
-# 11. Production Skills Boundary
+# 11. Evidence and Asset Relationships
 
-Production Skills own how an output is made.
-
-Examples:
+The canonical Delivery relationship is:
 
 ```text
-Narrative Skills
-→ script
-
-Music Skills
-→ score/master
-
-Video Skills
-→ final episode
-
-UI/UX Skills
-→ approved prototype/design package
-
-Deep Research Skills
-→ research dossier
+Evidence --produces--> Asset
 ```
 
-Assets / Publication does not interpret their internal workflows.
+One Delivery Evidence record may produce multiple Assets where those outputs have useful independent identity, approval or Publication traceability.
 
-The boundary is:
+Do not force several independently meaningful outputs into one Asset, and do not split one coherent output without semantic need.
+
+---
+
+# 12. Production Skills Boundary
+
+Production Skills own how an output is made and evaluated within Delivery.
 
 ```text
 Production Skills
-→ produce and evaluate work
+→ production expertise and workflows
 
 Pactwright Delivery
-→ verifies Contract fulfilment
+→ Contract fulfilment and Evidence
 
 Assets / Publication
-→ records approved durable output
+→ exact approved durable output and exposure record
 ```
 
----
-
-# 12. Multiple Assets from One Delivery
-
-One Delivery may produce several Assets.
-
-For example:
-
-```text
-children's TV episode Delivery
-        ↓
-Evidence
-        ├── episode master
-        ├── subtitle file
-        ├── soundtrack master
-        └── key artwork
-```
-
-Each may become its own Asset when independent identity, approval or Publication traceability is useful.
-
-Do not force all outputs into one composite Asset when they have distinct lifecycle or Publication needs.
-
-Likewise, avoid splitting one coherent output into many Assets without a real semantic need.
+Assets / Publication must not interpret Production Skill internals or introduce a second creative/production lifecycle.
 
 ---
 
 # 13. Publication
 
-A Publication records the exposure of an approved Asset through a defined channel or surface.
+A Publication records that an approved Asset was released to an external or project-facing surface.
 
-Conceptually:
+Minimum structure:
 
 ```yaml
 id: publication-...
+type: publication
+title: ...
+created: ...
+
 asset: asset-...
+asset_hash: ...
 channel: ...
-location: ...
+locator: null | ...
+published_by: human:... | automation:...
 published_at: ...
-status: active | withdrawn | superseded
-metadata: ...
 ```
 
-Publication should answer:
+The Publication records the **approved Asset hash at the time of publication**.
+
+Validation must ensure:
 
 ```text
-what Asset?
-where?
-when?
-through which channel/surface?
-under what publication identity?
+Publication.asset_hash
+=
+referenced Asset.content_hash
 ```
 
-It does not record whether the publication performed well.
-
-That belongs to Operations.
+Publication records exposure, not performance.
 
 ---
 
-# 14. Only Assets May Be Published
+# 14. Publication Relationship Direction
 
-Canonical Pactwright Publication must originate from an approved Asset.
+The shared typed-edge relationship is:
+
+```text
+Publication --publishes--> Asset
+```
+
+This direction is canonical and must not be reversed.
+
+Together with Asset provenance:
+
+```text
+Evidence ----produces-----> Asset
+Publication -publishes----> Asset
+Asset -------grounded-in--> Knowledge      where applicable
+Asset -------supersedes---> Asset
+```
+
+Cross-graph relationships do not transfer semantic ownership.
+
+---
+
+# 15. Only Approved Assets May Be Published
+
+Publication cannot bypass Asset approval.
 
 ```text
 candidate output
@@ -483,298 +386,170 @@ approved Asset
 ✓ Publication
 ```
 
-This preserves a clean authority chain:
-
-```text
-Contract
-→ Delivery
-→ Evidence
-→ Asset approval
-→ Asset
-→ Publication
-```
-
-Publication must not become a shortcut around Asset approval.
+A Publication must reference an existing approved Asset and its exact approved content hash.
 
 ---
 
-# 15. Multiple Publications
+# 16. Multiple Publications and Corrections
 
-One Asset may have several Publications.
-
-Example:
+One Asset may have multiple Publications representing distinct release events or surfaces.
 
 ```text
-Asset: episode-trailer-v1
-        ├── YouTube Publication
-        ├── website Publication
-        └── social Publication
-```
-
-These are distinct exposure events or surfaces referencing the same approved Asset.
-
-If the underlying content changes materially, a new Asset should normally be created rather than mutating the old Asset while retaining its Publications.
-
----
-
-# 16. Publication Withdrawal and Supersession
-
-A Publication may be:
-
-```text
-active
-withdrawn
-superseded
-```
-
-Withdrawal means the Asset is no longer exposed through that Publication.
-
-It does not erase:
-
-- the Asset;
-- the Publication record;
-- historical Operations evidence.
-
-A replacement Publication may reference:
-
-```text
-same Asset
-```
-
-when only the exposure changes, or:
-
-```text
-new superseding Asset
-```
-
-when the content itself changes.
-
----
-
-# 17. Relationships
-
-The Extension uses the shared typed-edge graph.
-
-Core relationships include conceptually:
-
-```text
-Evidence ----produces------> Asset
-Asset -------publishes-----> Publication
-Asset -------supersedes----> Asset
-Publication -supersedes----> Publication
-```
-
-Exact relation names should remain consistent with the shared Project Graph vocabulary.
-
-Optional cross-graph relationships may include:
-
-```text
-Asset --grounded-in--> Knowledge
-```
-
-where Project Intelligence grounding matters.
-
-Cross-graph edges connect canonical records without transferring ownership.
-
----
-
-# 18. Project Intelligence Integration
-
-Project Intelligence may provide grounding or guidance used during Delivery.
-
-An approved Asset may retain references to relevant accepted Knowledge where useful.
-
-Example:
-
-```text
-brand identity Knowledge
-        ↓
-Delivery
-        ↓
-Evidence
-        ↓
 Asset
+├── Publication A
+├── Publication B
+└── Publication C
 ```
 
-If that Knowledge later changes, Project Intelligence propagation may identify affected Assets for reconsideration.
+If content changes materially:
 
-It must not silently mutate them.
+```text
+new content
+→ new Asset
+→ Asset supersedes old Asset
+→ new Publication when released
+```
 
-The result may be:
+The original design does **not** establish Publication-to-Publication supersession or a Publication withdrawal lifecycle. Those semantics and related commands are therefore not defined here.
+
+A Publication records that release occurred. A scheduling intent or pending release is not itself a Publication.
+
+Scheduled publication of an already approved Asset may be automated, but the canonical Publication records the actual release and its `published_by` / `published_at` provenance.
+
+---
+
+# 17. Project Intelligence Integration
+
+Project Intelligence may provide grounding used by Delivery and retained on an approved Asset.
+
+If grounding Knowledge later changes:
 
 ```text
 Knowledge change
-→ affected Asset review
-→ new Delivery if correction is required
-→ new Asset
+→ affected Asset identified
+→ review / Delivery candidate where justified
+→ new Delivery
+→ new Asset if corrected
 ```
 
-Asset history remains intact.
+Project Intelligence must not silently alter existing Asset history.
 
 ---
 
-# 19. Graph Review Integration
+# 18. Graph Review Integration
 
 Graph Review may inspect Assets and Publications.
 
-Example:
-
 ```text
-Asset
-+ Publication
-+ identity Knowledge
+Asset + Publication + wider Project Graph
 → Graph Review
 → Finding
+→ Project Intelligence
 ```
 
-A Finding does not directly change an Asset or Publication.
+A Finding does not directly alter an Asset or Publication.
 
-It enters Project Intelligence through normal Source ingestion.
-
-If corrective Delivery is justified, it follows the normal Contract lifecycle.
-
-Graph Review therefore remains analysis, not Asset governance.
+Any corrective work follows normal Project Intelligence and Delivery governance.
 
 ---
 
-# 20. Operations Integration
+# 19. Operations Integration
 
-When Operations is enabled, Publication may be registered as an operational exposure.
-
-```text
-Asset
-→ Publication
-→ Observation
-```
-
-Operations may then record:
-
-- availability;
-- engagement;
-- errors;
-- reach;
-- conversion;
-- user response;
-- other real-world signals.
-
-Assets / Publication does not own those outcomes.
-
-The boundary is:
+When Operations is enabled, Publication may be an operational exposure.
 
 ```text
-Assets / Publication
-→ what was exposed
-
-Operations
-→ what happened after exposure
-
-Project Intelligence
-→ what the project concludes from it
+Publication
+→ Operations Observation
 ```
 
-An Operations Observation must not mutate the Asset or Publication it observes.
+Operations must reference the existing Publication. It must not copy, replace or reinterpret Publication as Operations-owned canonical state.
+
+The following safeguards are mandatory:
+
+- a failed Publication attempt never changes the approved Asset;
+- Publication remains valid if Operations processing later fails;
+- Publication remains valid when Operations is disabled or absent;
+- a failed Operations Observation does not alter Publication or Asset state;
+- poor real-world performance does not make a valid Publication invalid;
+- operational performance becomes project meaning only through Operations → Project Intelligence governance.
+
+Publication validity concerns whether the correct approved Asset was actually recorded as released, not whether that release succeeded commercially or operationally.
 
 ---
 
-# 21. Software Boundary
+# 20. Software Boundary
 
 Not every software Delivery needs an Asset.
 
-For normal software changes:
+Ordinary software repository state and Deployment may already provide the appropriate durable and operational semantics.
 
-```text
-Evidence
-→ Deployment
-```
+Asset semantics are useful only when a distinct approved output has independent value, such as a distributable package, SDK, binary, published specification or documentation bundle.
 
-may be sufficient when Operations is enabled.
-
-Assets are useful where a distinct approved durable output has value beyond ordinary repository state.
-
-Examples might include:
-
-```text
-release package
-SDK distribution
-downloadable binary
-published specification
-public documentation bundle
-```
-
-Do not force all software commits or builds into Asset semantics.
+Do not turn every commit or build into an Asset.
 
 ---
 
-# 22. Research and Documentation
+# 21. Research and Documentation Boundary
 
-Research or documentation Delivery may produce Assets where the approved output itself is significant.
-
-Example:
+Research or documentation Delivery may produce an Asset when the approved output itself is a durable project artefact.
 
 ```text
-research Contract
-→ research Delivery
+research Delivery
 → Evidence
-→ approved dossier
+→ human approval
 → Asset
-→ public Publication
+→ Publication where released
 ```
 
-The research evidence supporting the conclusions remains owned by the relevant research process and Project Intelligence Sources.
-
-The Asset represents the approved output, not every supporting Source.
+The Asset represents the approved output, not all supporting research Sources.
 
 ---
 
-# 23. Commands
+# 22. Commands
 
-The Extension should expose a small command surface.
-
-Conceptually:
+The separated Extension preserves the operations established by the earlier combined design under an Assets / Publication namespace:
 
 ```text
-pactwright asset approve <evidence-or-output>
-pactwright asset supersede <asset-id>
-pactwright asset withdraw <asset-id>
-
-pactwright publication create <asset-id>
-pactwright publication withdraw <publication-id>
-
-pactwright assets-publication validate
+pactwright assets approve-asset <evidence-id>
+pactwright assets record-publication <asset-id> <channel>
+pactwright assets validate
 ```
 
-Exact CLI ergonomics may evolve.
+`approve-asset` creates an Asset only after validating the referenced Evidence, exact output hash, required grounding and human approval.
 
-Commands must preserve ownership boundaries and authority rules.
+`record-publication` records an actual release of the exact approved Asset hash and captures `channel`, `locator`, `published_by` and `published_at` as applicable.
+
+`assets validate` validates the Extension's canonical state and relationships.
+
+No `withdraw`, Publication-supersession or standalone Asset-supersede command is defined by the source contract. Asset supersession remains a graph semantic applied when a revised approved Asset replaces an earlier one; exact command ergonomics for declaring that relationship remain unresolved.
 
 ---
 
-# 24. Automation
+# 23. Automation
 
 Automation may assist with:
 
-- content hashing;
+- exact content hashing;
 - provenance capture;
+- grounding validation;
 - schema validation;
 - Publication metadata capture;
-- generated reporting;
-- detecting missing or broken references.
+- scheduled release of an already approved Asset;
+- detecting broken references.
 
-Automation must not silently:
+Automation must not:
 
 ```text
-approve Assets
-publish unapproved Assets
-rewrite approved content
-delete historical provenance
-reinterpret operational outcomes
+approve an Asset without the required human approval
+publish an unapproved Asset
+rewrite approved Asset content
+rewrite historical Publication records to hide previous releases
+reinterpret operational outcomes as Publication validity
 ```
-
-unless repository policy explicitly delegates the relevant authority.
 
 ---
 
-# 25. Repository Model
+# 24. Repository Model
 
 Conceptually:
 
@@ -784,15 +559,12 @@ assets/
 
 docs/assets-publication/
 ├── assets/
-├── publications/
-└── reports/
+└── publications/
 ```
-
-Large artefacts may be external.
 
 Exact paths may evolve.
 
-Canonical state consists of:
+Canonical Extension state consists of:
 
 ```text
 Asset records
@@ -800,54 +572,68 @@ Publication records
 typed relationships
 ```
 
-Generated reports are derived views.
+Asset bytes may live inside or outside the repository depending on storage suitability.
 
-Asset bytes themselves may live inside or outside the repository depending on storage suitability.
+Assets / Publication does **not** own a generated reports subsystem. The earlier sourced generated report belonged to Graph Review, not this separated Extension.
+
+---
+
+# 25. Failure and Idempotency
+
+Failure rules are:
+
+- invalid Evidence, content hash, grounding or approval prevents Asset creation;
+- failed Asset creation must not leave a partial canonical Asset;
+- a failed Publication attempt must not modify the approved Asset;
+- a failed Publication record must not become a valid operational exposure;
+- Operations failure does not invalidate an otherwise valid Publication;
+- downstream performance failure does not alter Asset approval or Publication history.
+
+The exact idempotency identity for repeated `record-publication` calls is not defined by the earlier source and remains unresolved. Implementations must not silently create duplicate canonical Publications when retrying an uncertain publication-recording operation.
 
 ---
 
 # 26. Validation
 
-Validation should ensure at least:
+`pactwright assets validate` must enforce at least:
 
-- every Asset references valid Delivery Evidence;
-- every Asset has valid approval;
-- Asset content identity is present and immutable;
-- supersession relationships are valid;
-- every Publication references an approved Asset;
-- Publication identity and channel information are valid;
-- withdrawn records remain historically traceable;
-- cross-graph relationships preserve ownership;
-- external Asset references retain content identity where possible;
-- Operations exposure references valid Publications when used;
-- generated reports do not become canonical state.
+1. every Asset references valid Delivery Evidence;
+2. every Asset records a valid human approver and approval time;
+3. every Asset has a `content_hash`;
+4. every Asset content hash exactly matches the stored or referenced approved output when that output is verifiable;
+5. every declared grounding id/hash pair resolves to the referenced canonical state;
+6. Assets that assert project facts satisfy the applicable grounding requirement;
+7. Asset content identity is immutable after creation;
+8. Asset `supersedes` relationships have valid Asset endpoints;
+9. every Publication references an approved Asset;
+10. every Publication records `asset_hash`, `channel`, `published_by` and `published_at`;
+11. every Publication `asset_hash` exactly equals the referenced Asset `content_hash`;
+12. every `produces`, `grounded-in`, `publishes` and `supersedes` edge uses valid endpoints and the canonical direction;
+13. `publishes` is `Publication → Asset`;
+14. Operations exposure references an existing Publication rather than copied Publication state;
+15. Asset / Publication validation does not depend on operational performance.
 
-Core `pactwright validate` may invoke Extension validation when enabled.
+Core `pactwright validate` may invoke this validation when the Extension is enabled.
 
 ---
 
 # 27. Evaluation
 
-Evaluation should focus on Assets / Publication semantics rather than production quality.
+Assets / Publication evaluation tests its semantic boundary rather than production quality.
 
 Useful cases include:
 
-- rejecting an unapproved output as an Asset;
-- preventing Publication of a non-Asset candidate;
-- preserving immutable Asset identity;
-- superseding rather than rewriting an approved Asset;
-- maintaining Publication traceability;
-- preserving provenance to Evidence;
-- keeping Operations outcomes separate from Publication truth.
+- rejecting candidate output without human Asset approval;
+- rejecting Asset creation when stored content does not match `content_hash`;
+- rejecting invalid grounding id/hash pairs;
+- preventing direct Publication from Evidence or unapproved output;
+- rejecting a Publication whose `asset_hash` differs from the approved Asset hash;
+- preserving Asset immutability and Asset supersession history;
+- enforcing `Publication --publishes--> Asset` direction;
+- preserving Publication validity when Operations is absent or fails;
+- keeping real-world performance separate from Publication validity.
 
-Production quality remains evaluated by:
-
-```text
-delivery-review
-+ relevant Production Skills
-```
-
-before Evidence and Asset approval.
+Production quality remains evaluated before Evidence through Delivery Review and relevant Production Skills.
 
 ---
 
@@ -855,26 +641,30 @@ before Evidence and Asset approval.
 
 1. Assets / Publication is optional and does not redefine Delivery semantics.
 2. Core Delivery ends at Evidence.
-3. An Asset is an explicitly approved durable output.
-4. Delivery attempts and candidate outputs are not automatically Assets.
-5. Every Asset is traceable to Delivery Evidence.
-6. Asset content identity is immutable.
-7. Material Asset changes create a new Asset linked through supersession.
-8. Only an approved Asset may have a canonical Publication.
-9. One Asset may have multiple Publications.
-10. Publication records exposure, not performance.
-11. Operations owns real-world outcomes after exposure.
-12. Project Intelligence owns durable project meaning derived from later evidence.
-13. Graph Review may inspect Assets and Publications but does not govern them.
-14. Production Skills own how outputs are created.
-15. Provider/model routing does not belong in this Extension.
-16. Asset provenance records only what is necessary for traceability, reproducibility and audit.
-17. Withdrawal preserves historical records.
-18. Cross-extension relationships never transfer semantic ownership.
+3. An Asset is an exact durable output created only after human approval.
+4. Candidate outputs and Delivery attempts are not Assets.
+5. Every Asset is traceable to valid Delivery Evidence.
+6. Asset content hash identifies the exact approved output and is immutable.
+7. Material Asset changes create a new Asset linked through `supersedes`.
+8. Applicable project-fact grounding is recorded and hash-validated.
+9. Only an approved Asset may have a canonical Publication.
+10. Publication snapshots the approved `asset_hash` and records who published it and when.
+11. The canonical publication edge is `Publication --publishes--> Asset`.
+12. One Asset may have multiple Publications.
+13. Corrections use a new Asset and a new Publication when released.
+14. Publication withdrawal and Publication-to-Publication supersession are not established semantics.
+15. Publication records exposure, not performance.
+16. Operations owns real-world outcomes after exposure and must reference the existing Publication.
+17. Operations failure or absence does not invalidate Publication.
+18. Project Intelligence owns durable meaning derived from later evidence.
+19. Graph Review may inspect Assets and Publications but does not govern them.
+20. Production Skills own how outputs are created.
+21. Assets / Publication does not own provider/model routing, production workflow or generated reports.
+22. Cross-extension relationships never transfer semantic ownership.
 
 ---
 
-# 29. Anti-Overengineering Constraints
+# 29. Anti-Overengineering Constraints and Open Gaps
 
 Do not introduce initially:
 
@@ -885,53 +675,70 @@ provider/model registry
 generation task catalogue
 creative production lifecycle
 Asset version-control engine
+Publication withdrawal lifecycle
+Publication-to-Publication supersession
 publication scheduler platform
 content management system
 approval workflow engine
 binary storage service
 analytics subsystem
+Extension-owned generated reports
 ```
 
-Use the smallest semantic model:
+Use:
 
 ```text
 Evidence
-→ approval
+→ human approval
 → Asset
 → Publication
 ```
 
-and integrate with existing repository, storage and Operations systems rather than replacing them.
+The following gaps remain explicit rather than being invented here:
+
+- how Pactwright proves the hash of externally stored Asset bytes when storage is unavailable, mutable or access-controlled;
+- how fact-bearing Asset grounding should behave when Project Intelligence is disabled;
+- the exact CLI operation for attaching `Asset --supersedes--> Asset` during approval of a revision;
+- the idempotency identity used to distinguish an intentional second Publication from a retry of the same publication-recording operation;
+- whether additional generic production provenance beyond Delivery Evidence, content hash and grounding becomes necessary after the old Generation Record machinery has been removed.
 
 ---
 
 # 30. Current Implementation Baseline
 
-The earlier combined Graph Review & Creative Delivery design already identified several useful durable output semantics:
+The earlier Graph Review & Creative Delivery research established the surviving durable-output contracts:
 
-- Assets are distinct from transient production candidates;
-- human or authorised approval occurs before durable Asset creation;
-- Assets are immutable and revisions use supersession;
-- Publications reference approved Assets;
-- Operations observes Publications without taking ownership of them.
+- Assets are distinct from transient candidates;
+- human approval creates the durable Asset;
+- Asset content identity is immutable;
+- revised Assets use `supersedes`;
+- `Evidence --produces--> Asset`;
+- applicable grounding uses exact id/hash references;
+- Publications reference approved Assets and snapshot `asset_hash`;
+- Publications record channel, locator, publisher and publication time;
+- `Publication --publishes--> Asset`;
+- failed Publication does not change the Asset;
+- Operations references Publications without copying or replacing them;
+- Operations failure, absence or poor performance does not invalidate Publication.
 
-The canonical redesign preserves those principles while removing unrelated concerns from the Extension:
+The redesign removes the unrelated machinery previously bundled with these semantics:
 
 ```text
 Creative Delivery
+Graph Review
 Review Definitions
-generation-review
 creative-verification
+generation-review
 provider registry
 task catalogue
 generation guidance
 ```
 
-Creative and other production now use normal Pactwright Delivery plus Production Skills.
+Production now uses normal Pactwright Delivery plus Production Skills.
 
 Graph Review is a separate Extension.
 
-Assets / Publication therefore becomes a small post-Delivery semantic layer rather than a production system.
+Assets / Publication is therefore a small post-Delivery semantic layer rather than a production system.
 
 ---
 
@@ -945,19 +752,19 @@ Assets / Publication therefore becomes a small post-Delivery semantic layer rath
 → distributes this Extension
 
 03 Project Intelligence
-→ owns project-specific durable knowledge
+→ owns project-specific durable knowledge and applicable grounding
 
 04 Graph Review
-→ may identify issues affecting Assets/Publications
+→ may identify issues affecting Assets / Publications
 
 05 Assets and Publication
-→ owns approved outputs and exposure records
+→ owns approved exact outputs and Publication records
 
 06 Operations
 → observes real-world exposure and outcomes
 
 07 GitHub Integration
-→ may project approval/publication automation
+→ may automate validation and publication integration
 
 08 Open-Source Project Organisation
 → governs ecosystem and repository structure
@@ -967,7 +774,7 @@ Assets / Publication therefore becomes a small post-Delivery semantic layer rath
 
 # 32. Governing Rule
 
-> **Assets / Publication begins after successful Pactwright Delivery. It records which outputs were explicitly approved as durable Assets and where those Assets were published. Production remains owned by Delivery, Agent Packs and Production Skills; real-world outcomes remain owned by Operations; durable lessons from those outcomes remain owned by Project Intelligence.**
+> **Assets / Publication begins after successful Pactwright Delivery. A human approves an exact content hash to create an immutable Asset. A Publication records that exact approved Asset hash being released through a channel and points to the Asset through `Publication --publishes--> Asset`. Production remains owned by Delivery and Production Skills; real-world outcomes remain owned by Operations; durable lessons from those outcomes remain owned by Project Intelligence.**
 
 ---
 
