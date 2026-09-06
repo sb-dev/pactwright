@@ -1,4 +1,6 @@
-# Pactwright Implementation Runbooks v4
+# Pactwright Implementation Runbooks v5
+
+Canonical Pactwright semantics live in `docs/specs/01–08`. These runbooks define the implementation progression used to reach and prove that canonical system.
 
 - `00-implementation-guide.md`
 - `00-implementation-principles.md`
@@ -6,9 +8,9 @@
 - `02-remote-delivery.md`
 - `03-project-intelligence.md`
 - `04-graph-review.md`
-- `05-creative-production.md`
+- `05-production-skills-and-assets-publication.md`
 - `06-operations.md`
-- `07-published-work-feedback.md`
+- `07-publication-feedback.md`
 - `08-github-project-surface.md`
 - `09-hardened-closed-loop.md`
 - `10-graduation-truelayer.md`
@@ -16,12 +18,14 @@
 Project progression:
 
 ```text
-capability
+build capability
 → use it on Pactwright
-→ update the Project Graph
 → advance the public product
-→ publish a real release
+→ publish an installable release
 → prove it on Kakeido
+→ capture governed feedback
 ```
 
-From Project Intelligence onward, public content is grounded in accepted Knowledge. Public creative work cannot start until its required domains—especially identity—are sufficiently covered.
+Before Project Intelligence exists, authorised Decisions and Contracts provide bounded authority for project truth required by the work being delivered.
+
+Once Project Intelligence exists, applicable project truth is grounded in accepted Knowledge and public/outbound work follows the readiness rules owned by the canonical Project Intelligence and Open-Source Project Organisation specifications.
