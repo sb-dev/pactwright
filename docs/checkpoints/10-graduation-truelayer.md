@@ -1,101 +1,91 @@
 # Pactwright — Graduation — TrueLayer
 
-**Version:** 9 
-**Entry condition:** Checkpoint 9 is accepted, Kakeido runs the exact accepted `0.1.0` registry packages, and a dedicated Kakeido TrueLayer integration specification exists. 
-**Exit capability:** TrueLayer is added as a second financial-data source without semantic drift, the new integration is observed in production, and graduation findings are captured as governed Pactwright evidence.
+**Version:** 10  
+**Entry condition:** Checkpoint 9 is accepted, Kakeido runs the exact accepted Pactwright `0.1.0` family, and a dedicated current Kakeido TrueLayer integration specification exists.  
+**Exit capability:** TrueLayer is added as a second financial-data source without semantic drift, the integration is observed through the existing Operations model, and any Pactwright generalisation failures discovered during graduation are captured as governed evidence rather than fixed ad hoc inside Kakeido.
 
 ## 1. Goal
 
-Use the complete Pactwright system on a materially different external integration while preserving Kakeido canonical financial/review/assistant semantics.
+Use the complete Pactwright system on a materially different external integration while preserving Kakeido's canonical financial, review, UX, privacy/security and assistant semantics.
 
-## 2. Specification baseline
+Graduation tests whether the system generalises. It is not another Pactwright implementation checkpoint.
 
-- [Pactwright — Delivery Graph and Lifecycle Engineering Spec](../research-logs/2026-08-11-pactwright-delivery-graph-and-lifecycle-engineering-spec.md)
-- [Pactwright — Distribution, Agents and Evaluation](../research-logs/2026-08-11-pactwright-distribution-agents-and-evaluation.md)
-- [Pactwright — GitHub Actions and Views](../research-logs/2026-08-11-pactwright-github-actions-and-views.md)
-- [Pactwright — Project Intelligence Graph Engineering Spec](../research-logs/2026-08-11-pactwright-project-intelligence-graph-engineering-spec.md)
-- [Pactwright — Graph Review & Creative Delivery Engineering Spec](../research-logs/2026-08-11-pactwright-graph-review-and-creative-delivery-engineering-spec.md)
-- [Pactwright — Operations Graph Engineering Spec](../research-logs/2026-08-11-pactwright-operations-graph-engineering-spec.md)
-- [Pactwright — System Architecture](../research-logs/2026-08-11-pactwright-system-architecture.md)
-- [Pactwright — Implementation Principles](./00-implementation-principles.md)
-- [Pactwright — Implementation Guide](./00-implementation-guide.md)
-- [Pactwright Open-Source Project Organisation](../research-logs/2026-08-11-pactwright-open-source-project-organisation.md)
-- [Design Specification: Astro + Cloudflare Workers + Meta CAPI](../research-logs/2026-08-11-astro-design-spec.md)
-- [Kakeido — Financial Model Spec](../research-logs/2026-08-11-kakeido-financial-model-spec.md)
-- [Kakeido — Product & UX Spec](../research-logs/2026-08-11-kakeido-product-and-ux-spec.md)
-- [Kakeido — Mobile Design Spec](../research-logs/2026-08-11-kakeido-mobile-design-spec.md)
-- [Kei — Assistant Spec](../research-logs/2026-08-11-kakeido-assistant-spec.md)
-- [Kakeido — Tech Stack Engineering Spec](../research-logs/2026-08-11-kakeido-tech-stack-engineering-spec.md)
+## 2. Canonical baseline
 
-Only the owning specifications listed in each step define semantics. This runbook defines execution order, not new product meaning.
+Pactwright behaviour is governed by canonical Specs 01–08, the Implementation Principles and the Implementation Guide.
 
-Once accepted through Stage 1, the dedicated Kakeido TrueLayer integration specification is the owning specification for provider-specific semantics: connect flow, consent, sync/webhook mechanics and provider error handling. This runbook does not define them.
+Kakeido behaviour is governed by the **current canonical Kakeido specifications in the Kakeido repository**, including the dedicated TrueLayer integration specification.
 
-## 3. Execution contract
+Research logs and stale embedded Kakeido copies in Pactwright are not authoritative.
 
-Every implementation action is a runnable step with the same shape:
+Once accepted through Stage 1, the dedicated TrueLayer specification owns provider-specific semantics such as:
 
 ```text
-Step
-→ References
-→ Run (prompt or command)
-→ Expected result
-→ Verify
-→ continue only if verification passes
+connect/consent flow
+provider authentication/token handling
+sync/webhook mechanics
+provider-specific errors/retries
+source mapping constraints
 ```
 
-Use a prompt for repository/code changes. Once Pactwright owns a deterministic operation, use the Pactwright command instead of asking the model to emulate it.
+This runbook must not invent those semantics.
 
-**Default execution location:** the Kakeido repository root. Stage 4 runs from the Pactwright repository root.
+## 3. Graduation constraints
 
-For repository/code changes, finish with `pnpm verify`.
+During Graduation:
 
-Land coherent repository changes through pull requests and required checks rather than direct default-branch commits.
+- do not change Pactwright core, first-party Extensions or `@pactwright/standard` merely to make TrueLayer work;
+- Pactwright gaps are captured as evidence for future governed Pactwright Delivery;
+- do not create TrueLayer-specific Project Graph semantics when existing Kakeido ingestion and Operations boundaries are sufficient;
+- raw provider payloads, access tokens, refresh tokens, client secrets and unnecessary personal data never become Pactwright canonical state;
+- use Production Skills appropriate to the implementation domain, but keep Kakeido-specific/domain quality in those skills and Kakeido specs rather than Pactwright semantics.
 
-Dynamic ids such as `<source-id>`, `<brief-id>` and `<evidence-id>` must come from an earlier command in the runbook. Commands that create or resolve durable records must print the ids required by later steps.
+## 4. Target architecture
 
-Fixture verification means repository test fixtures unless a step explicitly creates a real repository or GitHub resource.
+The ingestion boundary remains:
 
-## 4. Checkpoint specification map
+```text
+CSV --------┐
+            │
+TrueLayer --┼→ canonical ingestion / normalisation
+            │
+future -----┘
+                 ↓
+       canonical Kakeido financial model
+                 ↓
+            weekly review
+                 ↓
+                 Kei
+```
 
-- **Existing ingestion boundary** — Implementation Principles §16; Kakeido — Tech Stack Engineering Spec §§8–9
-- **Financial semantics** — Kakeido — Financial Model Spec §§2–18
-- **Security and privacy** — Kakeido — Tech Stack Engineering Spec §17
-- **Product/review semantics** — Kakeido — Product & UX Spec §§2–10
-- **Mobile semantics** — Kakeido — Mobile Design Spec §§5–18
-- **Kei authority** — Kei — Assistant Spec §§6–14
-- **Full Pactwright loop** — PI/Review/Delivery/Operations owning specs
-- **Checkpoint closure** — Implementation Principles §§7, 13–14; Implementation Guide transition rule
+TrueLayer must not create a parallel downstream financial/review model.
 
-## 5. Out of scope
+The delivery/feedback path remains:
 
-- **Pactwright core, extension or agent-pack changes.** A Pactwright gap discovered during graduation is captured through Stage 4 and delivered as normal future Pactwright work (Implementation Principles §§14, 17). Do not modify the Pactwright runtime mid-graduation.
-- **Provider mechanics not defined by the accepted TrueLayer specification.** Do not implement connect-flow UX, sync scheduling, webhook handling or consent behaviour from provider assumptions.
-- **New Operations graph semantics.** Observing TrueLayer uses existing source-adapter and Observation semantics; adding an operational data source does not change Operations Graph semantics (Operations §3, invariant 14).
+```text
+accepted Kakeido spec
+→ PI Source / governed Knowledge
+→ explicit Intent
+→ normal Delivery
+→ Evidence
+→ Deployment
+→ Operations evidence
+→ Observation
+→ PI Source
+→ future Delivery where justified
+```
 
-## Stage 1 — Ingest/govern the TrueLayer specification
+## Stage 1 — Govern and analyse the TrueLayer specification
 
-Do not begin implementation from provider assumptions outside an accepted Kakeido spec.
-
-### Step 1 — Ingest the dedicated integration spec
-
-**References:** PI §§8–11
+### Step 1 — Ingest the dedicated TrueLayer specification
 
 **Run**
 
 ```bash
-pnpm pactwright intelligence ingest "<Kakeido-TrueLayer-spec-path>"
+pnpm pactwright intelligence ingest "<current-kakeido-truelayer-spec-path>"
 pnpm pactwright intelligence triage <source-id>
-```
 
-**Expected result**
-
-The integration spec enters normal PI governance.
-
-**Run**
-
-```bash
-# only when triage requires reviewed promotion and the proposal is accepted
+# only when reviewed promotion is required and accepted
 pnpm pactwright intelligence promote <source-id>
 
 pnpm pactwright intelligence onboard
@@ -104,151 +94,183 @@ pnpm pactwright intelligence validate
 pnpm pactwright validate
 ```
 
+**Expected result**
+
+Provider semantics enter normal Kakeido project knowledge governance without automatically creating an Intent.
+
 **Verify before continuing**
 
-The integration specification is represented as governed project knowledge/candidates and has not created a Delivery Intent automatically.
+The accepted TrueLayer knowledge/candidate provenance traces to the current source spec and no provider assumption outside it has become canonical truth.
 
-### Step 2 — Review integration impact
-
-**References:** Review & Creative §§6–7
+### Step 2 — Run bounded Graph Review requests before Delivery
 
 **Run**
 
+Run explicit Graph Review requests through:
+
 ```bash
-pnpm pactwright review run architecture-reviewer
-pnpm pactwright review run product-strategist
-pnpm pactwright review run ux-researcher
-pnpm pactwright review run graph-auditor
+pnpm pactwright graph-review run
 ```
+
+using the implemented request-input interface for at least these questions:
+
+```text
+Architecture
+→ Does TrueLayer preserve the canonical ingestion/normalisation boundary and avoid provider leakage downstream?
+
+Product/UX
+→ Does the accepted integration fit existing Kakeido review/mobile interaction semantics?
+
+Authority/privacy
+→ Do provider data/consent/error states preserve Kei authority and Kakeido privacy/security boundaries?
+
+Graph coherence
+→ Do the accepted specification and current Kakeido Project Graph contradict existing financial/review rules?
+```
+
+Do not invoke named reviewer ids or a persistent reviewer roster.
 
 **Expected result**
 
-Architecture/product/UX contradictions are surfaced before Delivery.
+Material contradictions are surfaced as Graph Review Findings before implementation.
 
-**Run**
+**Verify before continuing**
 
-For every internal Source id printed by the reviews:
+For every Finding-derived PI Source:
 
 ```bash
 pnpm pactwright intelligence triage <source-id>
 
-# only when triage requires reviewed promotion and the proposal is accepted
+# where reviewed promotion is required and accepted
 pnpm pactwright intelligence promote <source-id>
 ```
 
-Then:
+Then regenerate the PI roadmap. Every accepted concern remains traceable to Review Execution → Finding → PI Source.
 
-```bash
-pnpm pactwright intelligence derive-intent-roadmap
-```
+## Stage 2 — Deliver TrueLayer behind the canonical Kakeido boundary
 
-**Verify before continuing**
-
-Every accepted integration concern is traceable to Review evidence and PI governance, and the accepted TrueLayer work appears as a derived intent-roadmap candidate with provenance to its motivating Knowledge and Sources.
-
-## Stage 2 — Deliver the second ingestion source
-
-Run the TrueLayer implementation on a Kakeido feature branch. Merge only after the existing Kakeido CI/Pactwright checks pass.
-
-Add provider-specific ingestion behind the canonical Kakeido boundary (Implementation Principles §16).
-
-If the accepted TrueLayer specification includes mobile connect-flow surfaces, mobile changes follow the Kakeido Mobile Design Spec and mobile delivery follows Tech Stack §14; they remain part of this same Delivery lineage.
-
-### Step 3 — Capture/deliver the accepted TrueLayer outcome
-
-**References:** Financial semantics §§6–18; Tech Stack §§3, 7–9, 12, 17
+### Step 3 — Capture the accepted TrueLayer Intent
 
 **Run**
 
+Capture one explicit Intent corresponding to the accepted PI candidate, then complete:
+
 ```text
-/capture-intent "Add TrueLayer as an additional Kakeido financial-data source behind the canonical ingestion/normalisation boundary defined by the accepted TrueLayer specification, satisfying the intent-roadmap candidate derived from that specification. Provider credentials, tokens and consent state are handled per Kakeido Tech Stack §17; raw provider payloads and secrets never appear in logs or canonical graph state."
-/propose-contracts <intent-id>
-/approve-contract <contract-id> "<selection notes>"
-/write-brief <contract-id>
-/deliver-brief <brief-id>
-/review <brief-id>
-/prepare-evidence <brief-id>
+Intent
+→ Contract alternatives
+→ authorised Decision
+→ Contract
+→ Brief
+→ Delivery
+→ Review
+→ Evidence
 ```
 
-Capture the intent for the roadmap candidate derived in Stage 1 so the motivating Knowledge links to the Intent through `requires-delivery` and candidate provenance is preserved.
+The Brief must ground itself in the current TrueLayer spec plus applicable accepted Kakeido Knowledge.
+
+Use relevant Production Skills for software engineering, security/privacy review, mobile/UI work and testing where applicable.
 
 **Expected result**
 
-CSV and TrueLayer feed compatible canonical spending semantics rather than separate downstream models.
+TrueLayer is implemented as another input to existing canonical Kakeido semantics rather than a separate product path.
 
-**Verify before continuing**
-
-Run `pnpm verify`. Run Kakeido tests for source equivalence, duplicates, reviewed state and canonical financial invariants against Financial Model §§15, 17–18.
-
-### Step 4 — Verify canonical surfaces did not absorb provider semantics
-
-**References:** Product & UX §4; Mobile §§7–11; Kei §§6, 9, 14; Review & Creative §§6–7
+### Step 4 — Verify source equivalence and no semantic leakage
 
 **Run**
+
+Run Kakeido repository tests and acceptance scenarios proving at least:
 
 ```text
-Complete one weekly review in the operational Kakeido build over spendings originating from both CSV and TrueLayer. Confirm review states, decision cards, group checks, Looks Safe and totals behave identically regardless of source, and that Kei explains patterns from reviewed evidence without provider-specific language or authority changes.
+CSV + TrueLayer inputs
+→ compatible canonical financial records
+
+same economic transaction
+→ same downstream financial semantics regardless of source
+
+review states/totals/classification invariants
+→ source independent
+
+Kei explanations/authority
+→ source independent except where provider provenance is genuinely relevant
+
+mobile/review UX
+→ no provider-specific domain semantics leak into canonical review behaviour
 ```
-
-**Run**
-
-```bash
-pnpm pactwright review run architecture-reviewer
-pnpm pactwright review run graph-auditor
-```
-
-For every internal Source id printed by the reviews, run triage/promotion as in Step 2, then `pnpm pactwright intelligence derive-intent-roadmap`.
 
 **Expected result**
 
-Review/Kei/mobile semantics show no source-specific behaviour; the regression review surfaces no new structural drift.
+The provider boundary is contained.
 
 **Verify before continuing**
 
-No review finding shows provider semantics leaking into review, Kei or domain layers; every accepted finding is traceable through PI governance.
+`pnpm verify` and all current Kakeido spec-defined acceptance tests pass.
 
-## Stage 3 — Deploy and observe TrueLayer
-
-Use the full production feedback loop on the new integration.
-
-### Step 5 — Deploy the TrueLayer integration
-
-**References:** Operations §7; Kakeido Tech Stack §13; Kakeido Tech Stack §14 when mobile surfaces changed
+### Step 5 — Run post-delivery Graph Review
 
 **Run**
+
+Run bounded Graph Review requests for:
 
 ```text
-Execute Kakeido's existing deployment/release mechanism for the accepted TrueLayer Evidence in the configured operational environment: backend through the Tech Stack §13 Wrangler path, and mobile through the Tech Stack §14 EAS path when the accepted scope changed mobile surfaces. Report the Evidence id plus each deployed artifact revision/locator. Do not introduce a provider-specific release path.
+architecture boundary leakage
+financial semantic drift
+security/privacy violations
+UX/review semantic divergence
 ```
 
+Route Findings through PI as usual.
+
+**Expected result**
+
+The delivered implementation is reviewed through the same generic Graph Review capability used elsewhere.
+
+**Verify before continuing**
+
+No accepted Finding remains blocking before production exposure.
+
+## Stage 3 — Deploy and observe through existing Operations semantics
+
+### Step 6 — Deploy the accepted TrueLayer Evidence
+
 **Run**
+
+Use Kakeido's existing deployment/release mechanisms for every changed deployable surface.
+
+For each genuine deployment event:
 
 ```bash
 pnpm pactwright operations record-deployment <evidence-id>
 pnpm pactwright operations validate
 ```
 
-Record one Deployment per deployed artifact; repeated or multi-surface deployments create distinct immutable Deployment records.
+A backend/mobile multi-surface release may create distinct immutable Deployment records where they are genuinely distinct exposure events.
+
+Do not define a TrueLayer-specific deployment model.
 
 **Expected result**
 
-The TrueLayer Delivery has a canonical Deployment tied to exact Evidence for each deployed artifact.
+Production exposure is traceable to exact Delivery Evidence/artifact identity.
 
 **Verify before continuing**
 
-Deployment identity is exact per artifact, and raw TrueLayer payloads and credentials are absent from canonical graph state and Deployment records.
+Deployment records contain no credentials or raw provider payloads. Same-event retry does not duplicate where event identity is known; ambiguous retry-vs-redeployment remains an explicit Operations gap rather than being guessed.
 
-### Step 6 — Configure the TrueLayer operational source
-
-**References:** Operations §§5, 8–10; Kakeido Tech Stack §11, §17
+### Step 7 — Configure bounded TrueLayer operational evidence
 
 **Run**
+
+Configure the minimum Operations source(s) needed to observe the integration through existing evidence systems, for example where supported by the accepted Kakeido architecture:
 
 ```text
-Configure or extend the minimum Kakeido Operations source needed to observe the TrueLayer integration through existing Better Stack or Cloudflare evidence: provider API errors/latency, token/consent failures, sync or webhook failures and ingestion outcomes. Store only configuration and provenance. Do not store or log access tokens, client secrets, raw provider payloads or unnecessary personal data. Print the source id.
+provider API availability/latency
+consent/token failures
+sync/webhook failures
+ingestion success/failure/duplication outcomes
 ```
 
-**Run**
+Store only source configuration and provenance. Do not store raw TrueLayer payloads, credentials or unnecessary personal data in Pactwright state/logs.
+
+Then:
 
 ```bash
 pnpm pactwright operations validate
@@ -256,15 +278,9 @@ pnpm pactwright operations validate
 
 **Expected result**
 
-TrueLayer production behaviour is observable without copying sensitive provider payloads or credentials.
+The integration is observable using the generic Operations adapter/source model.
 
-**Verify before continuing**
-
-Inspect the source configuration and logging path and confirm `operations validate` passes.
-
-### Step 7 — Observe and govern TrueLayer production evidence
-
-**References:** Operations §§8–15; PI §§8, 11, 14
+### Step 8 — Ingest, observe and govern production evidence
 
 **Run**
 
@@ -274,12 +290,12 @@ pnpm pactwright operations observe <source-id>
 pnpm pactwright operations validate
 ```
 
-`<source-id>` is the id printed by Step 6. `observe` prints created/matched Observation ids and the internal PI Source ids produced by the hand-off; use those internal Source ids below.
+For every Observation-derived PI Source:
 
 ```bash
 pnpm pactwright intelligence triage <internal-source-id>
 
-# only when triage requires reviewed promotion and the proposal is accepted
+# where reviewed promotion is required and accepted
 pnpm pactwright intelligence promote <internal-source-id>
 
 pnpm pactwright intelligence derive-intent-roadmap
@@ -288,33 +304,71 @@ pnpm pactwright operations corrective-roadmap
 
 **Expected result**
 
-The new provider integration is production-traceable and governed like prior Kakeido work.
+TrueLayer production behaviour enters the same Observation → PI governance path as every other operational surface.
 
 **Verify before continuing**
 
-Inspect the Observation evidence and confirm raw provider payloads are not Project Graph state.
+No provider payload becomes a Project Graph node; no Observation directly creates or prioritises an Intent.
 
-## Stage 4 — Capture graduation feedback as Pactwright evidence
+## Stage 4 — Prove a corrective loop when evidence justifies one
 
-**Execution location:** the Pactwright repository root.
+### Step 9 — Select one evidence-supported corrective candidate
 
-### Step 8 — Route graduation findings into Pactwright governance
+If Operations evidence produces a material accepted PI candidate, capture an explicit Intent and deliver the correction through normal Delivery.
 
-**References:** Implementation Principles §§7, 13–14; PI §§8, 11
+If the evidence is healthy and no corrective Delivery is justified, do not manufacture a defect merely to exercise the loop. Instead record that Graduation observed the integration without a corrective requirement and use other acceptance evidence to prove the feedback path is operational.
+
+**Expected result**
+
+Corrective work is driven by real evidence, not checkpoint choreography.
+
+### Step 10 — Re-expose and re-observe any correction
+
+If Step 9 produced a correction:
+
+```text
+Delivery → Evidence
+→ real deployment
+→ operations record-deployment
+→ operations refresh
+```
+
+**Expected result**
+
+Second-round evidence either confirms improvement, identifies further learning, or legitimately produces no new durable Observation.
+
+## Stage 5 — Capture Pactwright graduation findings without changing Pactwright
+
+**Execution location:** Pactwright repository root.
+
+### Step 11 — Inventory generalisation failures
 
 **Run**
 
+Create a source document containing only Pactwright-level findings observed while using the fixed `0.1.0` system on TrueLayer, such as:
+
 ```text
-Inventory Pactwright defects, friction and generalisation failures observed during the TrueLayer graduation — installation problems, context selection, semantic loss across domains, review misses, Operations gaps — distinguishing Kakeido-specific choices from Pactwright responsibility failures. Write the findings to a source document and print its path.
+installation/distribution friction
+context selection failures
+Production Skills composition problems
+Graph Review misses
+PI governance/context problems
+Operations integration gaps
+GitHub projection/reconciliation problems
+open identity/idempotency gaps that became materially blocking
 ```
+
+Separate those from Kakeido/TrueLayer-specific design choices.
+
+### Step 12 — Ingest graduation findings into Pactwright PI
 
 **Run**
 
 ```bash
-pnpm pactwright intelligence ingest "<findings-path>"
+pnpm pactwright intelligence ingest "<graduation-findings-path>"
 pnpm pactwright intelligence triage <source-id>
 
-# only when triage requires reviewed promotion and the proposal is accepted
+# where reviewed promotion is required and accepted
 pnpm pactwright intelligence promote <source-id>
 
 pnpm pactwright intelligence derive-intent-roadmap
@@ -322,16 +376,76 @@ pnpm pactwright intelligence derive-intent-roadmap
 
 **Expected result**
 
-Graduation findings are governed Pactwright evidence, and repeatable Pactwright responsibility failures appear as intent-roadmap candidates.
+Repeatable Pactwright responsibility failures become governed candidates for future Pactwright work.
 
 **Verify before continuing**
 
-Every blocking finding is captured, and no Pactwright runtime, extension or agent-pack change was made during graduation.
+No Pactwright runtime/Extension/Agent Pack code was changed during Graduation.
+
+## Stage 6 — Final graduation acceptance
+
+### Step 13 — Validate the full Kakeido Pactwright surface
+
+**Run**
+
+```bash
+pnpm pactwright validate
+pnpm pactwright intelligence validate
+pnpm pactwright graph-review validate
+pnpm pactwright assets validate
+pnpm pactwright operations validate
+pnpm pactwright github sync --dry-run
+```
+
+`assets validate` may report no relevant TrueLayer Asset work if the integration produced no Assets; the Extension must nevertheless remain valid when enabled.
+
+**Expected result**
+
+The complete installed Pactwright system remains coherent after a materially different external integration.
+
+### Step 14 — Assess the six system-level acceptance dimensions
+
+Record evidence for:
+
+```text
+Semantics
+→ Kakeido financial/review/assistant meaning remained correct.
+
+Execution
+→ Pactwright could govern and deliver the integration.
+
+Boundaries
+→ provider semantics stayed inside the accepted Kakeido integration boundary; Pactwright ownership did not collapse.
+
+Installation
+→ fixed `0.1.0` packages worked in Kakeido without mid-graduation Pactwright changes.
+
+Content
+→ shipped Pactwright/Kakeido guidance was sufficient to execute the work or gaps were captured explicitly.
+
+Feedback
+→ operational/generalisation findings entered normal PI governance.
+```
 
 ## Exit gate
 
-Graduation passes only when: the accepted TrueLayer specification governs all provider semantics through normal PI governance; equivalent CSV/TrueLayer inputs converge on compatible canonical Kakeido semantics with Financial Model §§17–18 invariants and acceptance criteria intact; a completed weekly review and regression Graph Review show no source-specific behaviour leaking into review/Kei/domain layers; deployment identity is exact per deployed artifact; production feedback follows Operations → PI → Delivery without storing raw provider payloads, tokens or credentials in canonical graph state, source configuration or logs; and graduation findings are captured as governed Pactwright evidence with no mid-graduation Pactwright changes — satisfying the six System-Level Acceptance dimensions of Implementation Principles §13.
+Graduation passes only when:
+
+- a current accepted Kakeido TrueLayer specification governs all provider-specific semantics;
+- CSV and TrueLayer converge on compatible canonical Kakeido financial/review semantics;
+- Graph Review uses explicit review requests, not named reviewer ids;
+- relevant Production Skills are used without becoming Pactwright-specific semantics;
+- no source-specific behaviour improperly leaks into Kakeido financial/review/Kei authority layers;
+- TrueLayer deployment uses existing Operations Deployment semantics;
+- production evidence uses existing Operations source/Observation semantics;
+- raw provider payloads, credentials and unnecessary personal data remain outside canonical Pactwright state;
+- any corrective work follows Observation → PI → explicit Intent → normal Delivery;
+- open Deployment/Observation/evidence-retention identity gaps are not guessed around;
+- all Pactwright validation surfaces remain coherent;
+- Pactwright `0.1.0` itself was not modified during Graduation;
+- repeatable Pactwright generalisation failures are captured as governed Pactwright evidence for future work;
+- all six System-Level Acceptance dimensions have concrete supporting evidence.
 
 ---
 
-**Pactwright — Graduation — TrueLayer v9**
+**Pactwright — Graduation — TrueLayer v10**
