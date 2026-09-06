@@ -1,898 +1,747 @@
 # Pactwright — Checkpoint 1 — Self-Hosted Delivery
 
-**Version:** 12 
-**Entry condition:** No installable Pactwright runtime exists. 
+**Version:** 13  
+**Entry condition:** No installable Pactwright runtime exists.  
 **Release:** `0.0.1`  
-**Exit capability:** Pactwright is installable by consumers, manages its own repository, and completes Intent → Evidence in Pactwright and Kakeido without manual graph-coherence work.
+**Exit capability:** Pactwright is installable, can govern one complete Contract-driven Delivery in its own repository and in Kakeido, and requires no manual Project Graph coherence work.
 
 ## 1. Goal
 
-Bootstrap the smallest installable Pactwright core, then immediately use it on Pactwright and Kakeido. This is the only checkpoint whose implementation cannot itself be delivered through Pactwright.
+Bootstrap the smallest installable Pactwright core, prove it in a clean consumer, adopt it in Pactwright, publish `0.0.1`, then install the same release in Kakeido and complete one real external Delivery.
 
-## 2. Specification baseline
+This is the only checkpoint whose implementation begins before Pactwright can govern its own work.
 
-- [Pactwright — Delivery Graph and Lifecycle Engineering Spec](../research-logs/2026-08-11-pactwright-delivery-graph-and-lifecycle-engineering-spec.md)
-- [Pactwright — Distribution, Agents and Evaluation](../research-logs/2026-08-11-pactwright-distribution-agents-and-evaluation.md)
-- [Pactwright — GitHub Actions and Views](../research-logs/2026-08-11-pactwright-github-actions-and-views.md)
-- [Pactwright — Project Intelligence Graph Engineering Spec](../research-logs/2026-08-11-pactwright-project-intelligence-graph-engineering-spec.md)
-- [Pactwright — Graph Review & Creative Delivery Engineering Spec](../research-logs/2026-08-11-pactwright-graph-review-and-creative-delivery-engineering-spec.md)
-- [Pactwright — Operations Graph Engineering Spec](../research-logs/2026-08-11-pactwright-operations-graph-engineering-spec.md)
-- [Pactwright — System Architecture](../research-logs/2026-08-11-pactwright-system-architecture.md)
-- [Pactwright — Implementation Principles](./00-implementation-principles.md)
-- [Pactwright — Implementation Guide](./00-implementation-guide.md)
-- [Pactwright Open-Source Project Organisation](../research-logs/2026-08-11-pactwright-open-source-project-organisation.md)
-- [Kakeido — Financial Model Spec](../research-logs/2026-08-11-kakeido-financial-model-spec.md)
+## 2. Canonical baseline
 
-Only the owning specifications listed in each step define semantics. This runbook defines execution order, not new product meaning.
+Canonical Pactwright semantics come from:
 
-Repository engineering infrastructure and the npm release model (CI workflow rules, trusted publishing, dist-tag policy, versioning, CHANGELOG, release-failure handling) are owned by the Implementation Guide's **Engineering baseline** and **npm release model** sections, not by the Distribution specification. Steps in Stages 5 and 9 cite the Implementation Guide for those semantics.
+- [01 — Core System and Lifecycle](../specs/01-pactwright-core-system-and-lifecycle.md)
+- [02 — Distribution, Agent Packs, Extensions and Evaluation](../specs/02-distribution-agent-packs-extensions-and-evaluation.md)
+- [08 — Open-Source Project Organisation](../specs/08-open-source-project-organisation.md)
+- [Implementation Principles](./00-implementation-principles.md)
+- [Implementation Guide](./00-implementation-guide.md)
 
-Other Kakeido specifications (Product & UX, Mobile Design, Assistant, Tech Stack, Astro) become baseline material in later checkpoints; Checkpoint 1 exercises only the Financial Model Spec.
+Research logs are rationale only.
+
+Kakeido acceptance uses the current canonical Kakeido specifications in the Kakeido repository. Do not use stale copies embedded in Pactwright as authority.
+
+This runbook defines implementation order, not new Pactwright semantics.
 
 ## 3. Execution contract
 
-Every implementation action is a runnable step with the same shape:
+Every implementation action follows:
 
 ```text
 Step
 → References
-→ Run (prompt or command)
+→ Run
 → Expected result
-→ Verify
-→ continue only if verification passes
+→ Verify before continuing
 ```
 
-Use a prompt for repository/code changes. Once Pactwright owns a deterministic operation, use the Pactwright command instead of asking the model to emulate it.
+For repository/code changes, finish with `pnpm verify`.
 
-Lifecycle adapter commands become available only after Checkpoint 1 generates the active adapter.
+Once a deterministic Pactwright responsibility exists, use the runtime rather than asking an agent to emulate it.
 
-## 4. Checkpoint specification map
+## 4. Checkpoint scope
 
-- **Delivery Graph** — Pactwright — Delivery Graph and Lifecycle Engineering Spec §§2–24 (§23 is writing guidance for node-authoring agents)
-- **Distribution** — Pactwright — Distribution, Agents and Evaluation §§2–8, §§15–19
-- **Open-Source Project Organisation** — Pactwright Open-Source Project Organisation §§1.3, 2–3, 8, 15–16
-- **Implementation Principles** — §§6–7, 12, 14
-- **Implementation Guide** — Engineering baseline; npm release model
-- **First Kakeido semantic acceptance** — Kakeido — Financial Model Spec §§2–18
+Checkpoint 1 implements:
 
-### Explicitly out of scope for Checkpoint 1
+```text
+Core Project Graph semantics
+Contract authority
+initial direct Delivery shape
+lifecycle execution policy and Gates
+runtime validation
+Project Graph revision
+repository revision resolution
+Agent Pack capability resolution
+@pactwright/standard
+Claude Code adapter
+exact environment locking
+pactwright init / sync / validate / doctor / eval
+Agent Pack selection
+Pactwright Extension package/dependency framework
+clean-consumer installation
+Pactwright self-hosting
+first Kakeido Delivery
+```
 
-The following capabilities fall inside the cited specification ranges but are deliberately deferred:
+The initial built-in fulfilment shape is:
 
-- `pactwright agent-pack use` and `pactwright upgrade` (Distribution §§7, 15) — deferred until a second complete first-party pack exists (Checkpoint 5 introduces `@pactwright/creative`). Checkpoint 1 ships one pack selected by default.
-- `pactwright eval --baseline` comparison (Distribution §16) — deferred until a released pack baseline exists. Checkpoint 1 implements the runner and initial core suite only.
-- GitHub provisioning, `pactwright github sync` and all generated GitHub workflow surfaces (Distribution §§9–14 and the workflow-rendering part of §8) — deferred to Checkpoint 2. In Checkpoint 1, `init` sets `github.enabled: false`, creates no `.github/` content, and `sync` renders no GitHub workflow files.
+```text
+Brief
+→ Delivery
+→ Review
+→ Evidence
+```
 
-## Stage 1 — Build the repository-native Project Graph substrate
+Contract crafting and authorisation remain the stable authority spine around that fulfilment shape.
 
-Implement canonical graph storage and deterministic core mechanics before any agent or extension behaviour.
+Checkpoint 1 must not turn adapter responsibilities such as capture-intent or write-brief into a fixed lifecycle topology.
+
+### Explicitly out of scope
+
+- GitHub provisioning, managed product workflows, Projects and remote projections: Checkpoint 2.
+- Project Intelligence, Graph Review, Assets / Publication and Operations semantics: later checkpoints.
+- `pactwright eval --baseline`: requires a released baseline.
+- historical environment retention/reacquisition machinery: identity and fail-explicitly semantics are implemented, archival strategy is not.
+- lifecycle-shape hashing or a universal lifecycle-shape persistence scheme: still unresolved.
+
+## Stage 1 — Build the canonical Project Graph substrate
 
 ### Step 1 — Create the runtime/package foundation
 
-**References:** Delivery Graph §§4–5; Distribution §§2–3
+**References:** Specs 01–02; Implementation Guide engineering baseline.
 
 **Run**
 
 ```text
-Read Delivery Graph §§4–5 and Distribution §§2–3.
+Create the Pactwright runtime and CLI package foundation.
 
-Implement the Pactwright runtime/package foundation and parsers for:
-- .pactwright/config.yml
-- .pactwright/lifecycle.yml
-- .pactwright/lock.yml
-- specs/nodes/
-- specs/graph/edges.yml
+Implement one canonical loader for Pactwright configuration, lifecycle configuration, .pactwright/lock.yml, core Project Graph records and typed edges.
 
-Make the root Node package distributable as `pactwright`:
-- `pnpm build` produces the executable distribution
-- `package.json` exposes the built CLI as `bin.pactwright`
-- `packageManager` pins the repository pnpm version
-- package metadata declares the supported Node range, repository, licence and published files
-- `prepack` runs the package build so `pnpm pack`/`pnpm publish` package the current distribution
-- a repository-local `pactwright` script invokes the same built CLI so this source repository can later run `pnpm pactwright ...` without adding itself as a dependency
-- `pnpm pack` includes only the runtime files required by a consumer
-- a root `pnpm verify` script runs formatting check, lint, typecheck, tests and build using the repository's chosen tools
+Make the runtime publishable as `pactwright` with the repository's normal build/prepack/verify discipline and a repository-local `pnpm pactwright ...` path using the same built runtime.
 
-Use one canonical loader path. Do not implement optional extensions or GitHub provisioning. Add repository tests using existing project conventions.
+Do not implement optional Extension semantics or GitHub provisioning.
 ```
 
 **Expected result**
 
-The runtime has one canonical project/config/graph loading path, a buildable/packable `pactwright` CLI package, and no optional-extension dependency.
+One buildable, testable and packable Pactwright runtime exists with one canonical loading path.
 
 **Verify before continuing**
 
-Run `pnpm verify`. Confirm the built package exposes `bin.pactwright`, package metadata matches the declared support surface, and no verification stage is skipped.
+Run `pnpm verify`, pack the runtime and inspect the archive.
 
-### Step 2 — Implement the five core Delivery node schemas
+### Step 2 — Implement the five durable core Delivery record types
 
-**References:** Delivery Graph §§5–12
+**References:** Spec 01 core Project Graph model.
 
 **Run**
 
 ```text
-Implement exactly the five durable core Delivery node types from Delivery Graph: intent, decision, contract, brief, evidence.
+Implement exactly:
+- Intent
+- Decision
+- Contract
+- Brief
+- Evidence
 
-Enforce common frontmatter, the ID format `<type>-<slug>-<short-hash>`, ID immutability, type-specific required fields and Decision outcomes proceed/reject/defer.
-
-Do NOT create durable types for contract alternatives, Delivery execution or Review execution. Add positive and negative schema fixtures, including fixtures for malformed IDs and for an ID change being rejected.
+Enforce canonical identity, immutability and type-specific validation.
+Contract alternatives remain transient.
+Delivery and Review executions remain execution provenance rather than core Project Graph record types.
 ```
 
 **Expected result**
 
-The runtime can parse and validate all five core node types; transient/execution concepts are not graph node types.
+The runtime validates the complete core record set without inventing execution nodes.
 
 **Verify before continuing**
 
-Run schema tests. Inspect the schema registry and confirm it contains only the five core Delivery node types at this stage.
+Add positive/negative fixtures for every record type and identity mutation.
 
-### Step 3 — Implement the shared typed-edge registry/store
+### Step 3 — Implement the shared typed-edge store
 
-**References:** Delivery Graph §§13, 21
+**References:** Spec 01 relationships and supersession.
 
 **Run**
 
 ```text
-Implement specs/graph/edges.yml and the shared typed-edge registry. Register core relations: resolves, selects, decomposes, evidences and same-type supersedes.
-
-Validate source/target existence, endpoint types, unique tuples, no self-supersession and acyclic supersession. Keep the registry extensible for later extension-owned edge types.
+Implement the shared typed-edge registry/store for core lineage and same-type supersession.
+Validate endpoint existence/types, duplicate tuples, self-supersession and supersession cycles.
+Keep the registry extensible for later Pactwright Extension relations.
 ```
 
 **Expected result**
 
-Core edge semantics are deterministic and later extensions can register additional owned edge types without changing Delivery semantics.
+Core relationships are deterministic and extension-ready.
 
 **Verify before continuing**
 
-Run fixtures for invalid endpoint, invalid endpoint type, duplicate tuple, self-supersession and cycle; all must fail.
+Run invalid endpoint/type, duplicate, self-supersession and cycle fixtures.
 
-### Step 4 — Implement current-lineage derivation
+### Step 4 — Implement current-lineage and authority derivation
 
-**References:** Delivery Graph §§14–15, 21
+**References:** Spec 01 authority and supersession.
 
 **Run**
 
 ```text
-Implement current Delivery lineage derivation from graph structure. Enforce at most one current Decision per Intent, proceed selecting one current Contract, reject/defer selecting none, at most one current Brief per Contract and one current Evidence per Brief. Superseded records are not current.
-
-Derive lifecycle state; do not store redundant state fields.
+Derive current Delivery lineage from canonical graph structure.
+Decision changes WHAT authorised outcome is current.
+Gate state controls HOW execution continues and cannot substitute for Decision authority.
+Do not store redundant derived lifecycle state.
 ```
 
 **Expected result**
 
-Open, deferred, rejected, contracted, delivering and done are derived views of canonical graph structure.
+The runtime derives authoritative current lineage from Project Graph state.
 
 **Verify before continuing**
 
-Run lineage fixtures including an ambiguous lineage and confirm validation fails.
+Use proceed/reject/defer, supersession and ambiguous-lineage fixtures; invalid ambiguity fails closed.
 
-### Step 5 — Implement the deterministic Project Graph revision
+### Step 5 — Implement repository and Project Graph revision identity
 
-**References:** Delivery Graph §5
+**References:** Spec 01 replay/revision semantics; Implementation Guide replay provenance.
 
 **Run**
 
 ```text
-Implement one deterministic Project Graph revision over canonical registered Project Graph state. Include registered canonical nodes/edges and future extension canonical records. Exclude generated reports, adapter output, execution provenance, operational projections, GitHub state and other derived state. Canonicalise ordering before hashing.
+Implement runtime-provided repository revision and deterministic Project Graph revision.
+Project Graph revision includes registered canonical Pactwright state and excludes generated reports, adapter output, execution provenance, GitHub projections and other derived state.
+Canonicalise ordering before hashing.
 ```
 
 **Expected result**
 
-The same canonical graph state always produces the same revision and non-canonical files cannot change it.
+Repository revision and Project Graph revision are stable, distinct identities.
 
 **Verify before continuing**
 
-Run three fixtures: identical state => identical revision; generated-file change => unchanged revision; canonical node/edge change => changed revision.
+Prove identical state gives identical graph revision; generated-file change does not; canonical mutation does.
 
-## Stage 2 — Build the core Delivery lifecycle runtime
+## Stage 2 — Implement Contract-driven lifecycle execution
 
-Make lifecycle progression deterministic and graph-backed before adding AI execution.
+### Step 6 — Implement the initial direct lifecycle shape and execution policy
 
-### Step 6 — Implement lifecycle configuration
-
-**References:** Delivery Graph §17
+**References:** Spec 01 lifecycle shape, policy and Gate boundaries.
 
 **Run**
 
 ```text
-Implement .pactwright/lifecycle.yml parsing/validation for the stable stages capture-intent, propose-contracts, approve-contract, write-brief, deliver-brief, review and prepare-evidence. Support manual/automatic execution, authorised Decision actor and human gates. Do not add Deployment, Asset, Publication or Observation as stages.
+Implement the initial built-in direct fulfilment shape:
+Brief → Delivery → Review → Evidence
+
+Keep separate:
+- Contract/Decision authority;
+- lifecycle shape/topology;
+- execution policy such as automatic/manual execution and human Gates.
+
+Do not encode capture-intent, propose-contracts, approve-contract or write-brief as shape stages.
+Do not add Deployment, Asset, Publication or Observation to the core lifecycle.
+Do not invent lifecycle-shape hashes.
 ```
 
 **Expected result**
 
-Repositories can configure execution/gates without changing the stable lifecycle structure.
+The runtime represents the initial fulfilment topology without conflating it with Contract crafting or execution policy.
 
 **Verify before continuing**
 
-Run tests for both lifecycle examples in Delivery Graph §17 plus invalid actor/stage fixtures.
+Test automatic/manual policy, Gate stopping and invalid shape/policy configuration.
 
-### Step 7 — Implement lifecycle graph mutations
+### Step 7 — Implement authoritative core mutations
 
-**References:** Delivery Graph §§6–15, 19
+**References:** Spec 01 authority, graph mutation and supersession.
 
 **Run**
 
 ```text
-Implement runtime graph-mutation responsibilities for creating Intent, recording Decision, creating the canonical Contract, creating Brief and creating Evidence plus required core edges and explicit supersession. Recording a Decision must enforce Delivery Graph §8: the acting actor must be authorised for approve-contract by lifecycle.yml, and the actual actor is recorded in decided_by. Mutations must validate the complete proposed state before commit and use atomic file replacement so validation or write failure cannot leave partial graph state. Contract alternatives remain transient. Delivery execution and Review do not directly mutate the Delivery Graph.
+Implement runtime mutation responsibilities for Intent, Decision, selected Contract, Brief, Evidence, required edges and explicit supersession.
+Contract alternatives remain transient until selection.
+Approval/Gate state never auto-creates a Decision.
+All mutations use plan → validate complete proposed state → atomic write → validate resulting state.
 ```
 
 **Expected result**
 
-Proceed/reject/defer produce the exact canonical structures defined by the Delivery spec, and a Decision by an unauthorised actor is rejected before any graph mutation.
+Authorised paths produce valid canonical structures and failed mutation leaves no partial state.
 
 **Verify before continuing**
 
-Run proceed, reject and defer fixtures and inspect resulting graph state. Run an unauthorised-actor Decision fixture and confirm it fails with no graph mutation.
+Exercise authorised/unauthorised Decisions plus forced write/validation failure.
 
-### Step 8 — Implement lifecycle status/next/run
+### Step 8 — Implement lifecycle status, next and run
 
-**References:** Delivery Graph §§18, 20
+**References:** Spec 01 lifecycle command surface.
 
 **Run**
 
 ```text
-Implement pactwright lifecycle status, next and run. The runtime derives transitions from graph state + lifecycle.yml + repository state. lifecycle run stops at a human gate, completion, failure or validation error and never skips configured gates. When current Evidence exists, next reports no further core Delivery stage.
+Implement:
+pactwright lifecycle status
+pactwright lifecycle next
+pactwright lifecycle run
+
+Derive progression from current Contract/Brief lineage, resolved shape, policy, Gate state and repository state.
+Run stops at human Gate, failure, validation error or completion.
 ```
 
 **Expected result**
 
-The runtime—not prompts—owns stage progression.
+The runtime owns fulfilment progression.
 
 **Verify before continuing**
 
-Use fixture repositories to prove run stops at a manual gate and no next core stage exists after Evidence.
+Prove Gate/failure stopping and no next core fulfilment stage after current Evidence.
 
-### Step 9 — Implement validate and context
+### Step 9 — Implement core validation and bounded context assembly
 
-**References:** Delivery Graph §§21–22
+**References:** Spec 01 validation/context responsibilities.
 
 **Run**
 
 ```text
-Implement pactwright validate and pactwright context <node-id> [--history]. Default context returns the current core lineage only and excludes rejected alternatives, superseded nodes, review transcripts, obsolete reasoning and execution provenance. Keep a namespaced extension-context seam for later checkpoints.
+Implement `pactwright validate` and the runtime context-assembly API consumed by Agent Packs/adapters.
+Default Delivery context contains current relevant Contract/Brief lineage and excludes rejected alternatives, superseded state, execution transcripts and unrelated history unless explicitly required.
+Keep a namespaced context-contribution seam for later Extensions.
+Do not introduce `pactwright context` as a required public CLI contract.
 ```
 
 **Expected result**
 
-A user or agent can recover high-signal current Delivery context from one command.
+Agents receive bounded canonical Delivery context without reconstructing truth from chat history.
 
 **Verify before continuing**
 
-Run validate and context against open, delivering and done fixtures; inspect output for excluded historical/transient material.
+Test context assembly against multiple lineage states and verify exclusions.
 
 ## Stage 3 — Add replaceable AI execution
 
-Connect core responsibilities to an agent pack and generated Claude Code adapter without moving lifecycle semantics into prompts.
+### Step 10 — Implement core capabilities and `@pactwright/standard`
 
-### Step 10 — Implement the core capability model and default agent pack
-
-**References:** Distribution §7; Delivery Graph §16
+**References:** Spec 02 capabilities and Agent Packs.
 
 **Run**
 
 ```text
-Implement the initial capability model and `@pactwright/standard` agent pack for delivery-specification, delivery-execution and delivery-review.
+Implement:
+- delivery-specification
+- delivery-execution
+- delivery-review
 
-Create `@pactwright/standard` as a publishable workspace package with the same normal build/prepack discipline as `pactwright`. Make `pactwright` depend on it through `workspace:*` so a normal `pnpm add -D pactwright@<version>` installs the default pack automatically. This satisfies Distribution §2's "the core package contains the default agent pack" as an automatic dependency rather than an inlined copy; consumers still receive the pack from one `pnpm add -D pactwright`.
-
-During the `0.0.x` development series, the pack manifest declares the exact matching `0.0.x` runtime version as its `pactwright` compatibility (the `^1.0.0` examples in Distribution §7 apply from `0.1.0` onward, since caret ranges do not span `0.0.x` versions).
-
-Resolve agents/skills and lock their hashes. Reject a pack missing a required capability before canonical graph mutation.
-
-Do not implement `pactwright agent-pack use` or `pactwright upgrade` in this checkpoint; the standard pack is the only pack and is selected by default (see §4 deferrals).
+Create `@pactwright/standard` as a separate publishable Agent Pack package.
+The pack maps capabilities to agents/prompts/skills but does not own graph or lifecycle semantics.
+Do not make Pactwright semantics depend on this specific pack identity.
 ```
 
 **Expected result**
 
-Core AI behaviour is replaceable and capability-checked.
+Core AI responsibilities are replaceable and capability checked.
 
 **Verify before continuing**
 
-Run a complete-pack fixture and an incomplete-pack fixture; the latter must fail without lock/graph mutation.
+Test complete and incomplete fixture packs; incomplete selection leaves valid state intact.
 
-### Step 11 — Implement Claude Code adapter rendering
+### Step 11 — Implement Agent Pack selection
 
-**References:** Distribution §8; Delivery Graph §19
+**References:** Spec 02 Agent Pack selection.
 
 **Run**
 
 ```text
-Implement the initial Claude Code adapter generation into .claude/agents and .claude/commands. Generate /capture-intent, /propose-contracts, /approve-contract, /write-brief, /deliver-brief, /review and /prepare-evidence. Generated commands invoke runtime responsibilities; prompts must not own transition rules.
+Implement `pactwright agent-pack use <source>`.
+Resolve a compatible complete pack, validate all required capabilities, update configuration only after success, lock exact identity, run sync and report later GitHub reconciliation needs.
+Never silently switch packs.
 ```
 
 **Expected result**
 
-The adapter is generated and deterministic.
+Projects explicitly select one complete Agent Pack.
 
 **Verify before continuing**
 
-Run the adapter renderer twice against the same fixture inputs and require byte-identical generated output. Full `sync` idempotency is verified in Step 16.
+Select standard, switch to a compatible fixture pack, then reject an incompatible pack without state loss.
 
-### Step 12 — Implement the initial evaluation runner
+### Step 12 — Implement the initial Claude Code adapter
 
-**References:** Distribution §16
+**References:** Specs 01–02 adapter boundary.
 
 **Run**
 
 ```text
-Implement pactwright eval with an initial core Delivery suite. Keep deterministic assertions separate from semantic judgement. Add cases for contract fidelity, scope discipline, required graph/output structure, forbidden mutation and Review defect detection. Do not calculate one aggregate quality score. Do not implement `--baseline` comparison yet; it requires a released pack baseline (see §4 deferrals).
+Render deterministic Pactwright-managed Claude Code agents/commands for useful responsibilities around Intent, Contract alternatives/selection, Brief, Delivery, Review and Evidence.
+These invoke runtime responsibilities and selected Agent Pack capabilities.
+Their decomposition does not define lifecycle topology.
 ```
 
 **Expected result**
 
-Core agent behaviour can be evaluated independently from project Delivery.
+The adapter is deterministic and contains no duplicated graph-transition semantics.
 
 **Verify before continuing**
 
-Run `pnpm pactwright eval` once the CLI is wired and inspect per-case output.
+Render twice from identical locked inputs and require byte-identical output.
 
-## Stage 4 — Make Pactwright installable and composable
+### Step 13 — Implement initial Pactwright evaluation
 
-Implement Distribution commands and deterministic local generation.
-
-### Step 13 — Implement `pactwright init`
-
-**References:** Distribution §§2–3
+**References:** Spec 02 evaluation.
 
 **Run**
 
 ```text
-Implement pactwright init. In a clean repository create only Pactwright-owned core configuration/graph structure from Distribution §§2–3 using @pactwright/standard and Claude Code defaults. In this checkpoint, init writes `github.enabled: false` and creates no `.github/` content; the `.github/workflows/` entry in Distribution §2's core structure activates with GitHub provisioning in Checkpoint 2. Do not copy runtime scripts into the consumer repository. Handle existing files safely.
+Implement `pactwright eval` with core responsibility cases for Contract fidelity, scope discipline, Brief quality, Review defect detection, required output structure and forbidden mutation.
+Keep deterministic assertions separate from semantic judgement.
+Do not compute one aggregate score or baseline comparison yet.
 ```
 
 **Expected result**
 
-A clean repository can initialise Pactwright with no manual copying.
+The AI execution environment is evaluable independently from a real Delivery.
 
 **Verify before continuing**
 
-Run the `init` integration tests against a temporary repository using the repository-local CLI implementation. Confirm only the owned core structure is created. Packaged-consumer installation is verified in Stage 6.
+Run eval and inspect per-capability/per-case results.
 
-### Step 14 — Implement config/lock resolution
+## Stage 4 — Implement exact environment resolution and local composition
 
-**References:** Distribution §§3, 6
+### Step 14 — Implement `pactwright init`
+
+**References:** Spec 02 initialisation/configuration.
 
 **Run**
 
 ```text
-Implement desired-state config resolution and exact lock state. Lock runtime version, selected agent pack version/hash and resolved agent/skill hashes; prepare extension lock structure for later use. Same desired state must resolve reproducibly.
+Implement init so a clean repository receives only Pactwright-owned core configuration/Project Graph structure.
+Checkpoint 1 keeps GitHub disabled and creates no Pactwright-managed GitHub workflow.
+Do not silently switch Agent Pack identity.
 ```
 
 **Expected result**
 
-Config expresses intent; lock records exact resolved runtime/AI state.
+A clean repository can initialise Pactwright safely.
 
 **Verify before continuing**
 
-Resolve the same fixture twice and compare lock output byte-for-byte.
+Run init in a temporary repository with unrelated files and prove ownership boundaries.
 
-### Step 15 — Implement extension manifests/dependency resolution
+### Step 15 — Implement config/lock resolution and `environment_lock_hash`
 
-**References:** Distribution §§4–5
+**References:** Spec 02 locking; Implementation Guide replay provenance.
 
 **Run**
 
 ```text
-Implement package-backed extension manifest loading, compatibility checks, dependency resolution, graph contribution registration, command namespaces, required capabilities and GitHub profile metadata. Implement extension add/remove/upgrade using an internal fixture extension first. Block dependency removal while enabled dependants exist and preserve user-authored canonical extension data on removal.
+Resolve and lock the exact Pactwright execution environment, including runtime, selected Agent Pack and resolved agents/skills, with seams for later Extensions/Production Skills.
+Derive deterministic `environment_lock_hash` from `.pactwright/lock.yml`.
+The shared replay base is:
+repository_revision + project_graph_revision + environment_lock_hash
 ```
 
 **Expected result**
 
-The runtime can safely compose independently versioned extensions before first-party extensions are implemented.
+Identical exact environment produces identical lock and hash.
 
 **Verify before continuing**
 
-Run fixture tests for add, dependency add, blocked removal, safe disable and preserved canonical data.
+Resolve twice, compare byte-for-byte, then change one resolved identity and require hash change.
 
-### Step 16 — Implement deterministic `pactwright sync`
+### Step 16 — Implement generic Pactwright Extension package/dependency mechanics
 
-**References:** Distribution §8
+**References:** Spec 02 Extensions.
 
 **Run**
 
 ```text
-Implement pactwright sync: load config/lock/extensions, validate capability union, assemble agents/skills and render only Pactwright-managed local integration. In this checkpoint, sync renders the `.claude/` adapter surface only: the Distribution §8 rendering step for Pactwright-managed GitHub workflow files is a seam that activates in Checkpoint 2, and sync must never claim ownership of user-authored `.github/workflows/**` (including this repository's hand-written `ci.yml` and `release.yml`). It must not mutate GitHub remote state or unrelated user files. Repeated sync with unchanged inputs must be byte-identical.
+Using fixture Extensions only, implement manifest loading, compatibility/dependency resolution, graph contribution registration, command namespaces, capability contribution, GitHub profile metadata, add/remove/upgrade and blocked dependency removal.
+Preserve user-authored Extension state on disable/removal.
+Do not implement first-party Extension semantics yet.
 ```
 
 **Expected result**
 
-Local generated integration converges from config + lock.
+Later first-party Extensions can compose without changing core architecture.
 
 **Verify before continuing**
 
-Run the `sync` integration test against a temporary repository using the repository-local CLI implementation. Invoke `sync` twice with identical inputs and require byte-identical managed output after the second run.
+Exercise add, dependency add, compatible upgrade, blocked removal, safe disable and preserved canonical data.
+
+### Step 17 — Implement deterministic `pactwright sync`
+
+**References:** Spec 02 synchronisation.
+
+**Run**
+
+```text
+Implement sync over config + lock + enabled Extensions + selected Agent Pack + any Production Skills imports.
+Validate the complete composition and render only Pactwright-managed local integration.
+Checkpoint 1 renders no GitHub product workflow.
+Repeated sync with identical locked inputs must be byte-identical.
+```
+
+**Expected result**
+
+Local generated integration converges.
+
+**Verify before continuing**
+
+Run sync twice in a fixture and require a clean second run.
+
+### Step 18 — Implement `pactwright doctor`
+
+**References:** Spec 02 doctor.
+
+**Run**
+
+```text
+Implement read-only doctor diagnostics for runtime/package-manager state, config/lock consistency, capability/dependency compatibility, unresolved Production Skills, migrations, generated local drift and validation failures.
+Report healthy / warning / action required with deterministic remediation commands where known.
+Do not auto-fix.
+```
+
+**Expected result**
+
+Environment problems can be diagnosed without mutation.
+
+**Verify before continuing**
+
+Run healthy and broken fixtures and prove doctor performs no writes.
 
 ## Stage 5 — Establish repository CI and release safety
 
-These workflows are Pactwright repository engineering infrastructure. They are not generated Pactwright product workflows.
+### Step 19 — Implement repository verification workflow
 
-### Step 17 — Implement the repository verification workflow
-
-**References:** Implementation Guide — Engineering baseline (Verification, GitHub Actions); Distribution §§18–19
+**References:** Implementation Guide GitHub Actions baseline.
 
 **Run**
 
 ```text
-Create `.github/workflows/ci.yml`.
-
-Requirements:
-- run on pull requests and pushes to the default branch;
-- checkout with `persist-credentials: false`;
-- pin every third-party action to a full commit SHA;
-- use the Node versions the package explicitly supports; do not claim untested compatibility;
-- enable Corepack/use the repository-pinned pnpm;
-- run `pnpm install --frozen-lockfile`;
-- run `pnpm verify`;
-- grant only `contents: read`;
-- set a bounded timeout;
-- cancel superseded runs for the same pull request.
-
-Name the required check `CI / Verify`.
-Do not use `pull_request_target`.
+Create repository-owned `.github/workflows/ci.yml` using least privilege, SHA-pinned actions, frozen install, `pnpm verify`, bounded timeout/concurrency and no pull_request_target.
+This is repository engineering infrastructure, not generated Pactwright product integration.
 ```
 
 **Expected result**
 
-A clean checkout can prove the same repository verification gate used locally without write credentials.
+A clean checkout proves the same repository gate used locally.
 
 **Verify before continuing**
 
-Run `pnpm verify` and inspect the workflow file for SHA-pinned actions and least-privilege permissions. The first real `CI / Verify` run is required when the self-hosting commit is pushed in Stage 7.
+Run `pnpm verify` and inspect workflow hardening.
 
-### Step 18 — Implement the trusted release workflow
+### Step 20 — Implement trusted release workflow
 
-**References:** Implementation Guide — npm release model, Engineering baseline (GitHub Actions); Distribution §§2, 18–19
+**References:** Implementation Guide npm release model.
 
 **Run**
 
 ```text
-Create `.github/workflows/release.yml` as repository-owned release infrastructure.
-
-Requirements:
-- trigger only on pushed tags matching `v*`;
-- run on a GitHub-hosted runner;
-- use the `npm-release` GitHub environment;
-- permissions are `contents: read` and `id-token: write`;
-- checkout uses `persist-credentials: false`;
-- pin every third-party action to a full commit SHA;
-- use a Node/npm version compatible with npm trusted publishing and the repository-pinned pnpm;
-- do not use dependency caching for the release job;
-- run `pnpm install --frozen-lockfile`;
-- run `pnpm verify`;
-- assert the tag version equals all publishable workspace package versions;
-- assert the tagged commit belongs to the default-branch history;
-- run a recursive publish dry-run before the first immutable registry write;
-- use `next` for `0.0.x`, otherwise `latest`;
-- publish recursively with public access and provenance;
-- skip workspace versions already present in the registry so a rerun or a tag whose versions were bootstrap-published interactively completes successfully without attempting an immutable-registry rewrite (recursive pnpm publishing provides this; the workflow must not defeat it);
-- after publishing, verify each expected package/version resolves from the registry and fail the run if any is missing;
-- because tag checkouts are detached, disable pnpm's built-in git checks only after the explicit tag/default-branch assertions pass;
-- use release concurrency with `cancel-in-progress: false`;
-- store no npm publish token.
+Create repository-owned `.github/workflows/release.yml` following the trusted-release contract: exact tagged source, frozen install, verify, publish dry-run, OIDC publishing after bootstrap, registry verification, no npm publish token.
 ```
 
 **Expected result**
 
-After trusted publishers are configured, a version tag is sufficient to verify and publish the exact tagged source through OIDC.
+A version tag can later release accepted source reproducibly.
 
 **Verify before continuing**
 
-Validate the workflow syntax and inspect that it has no npm token secret, no write-capable checkout credential and no release path that bypasses `pnpm verify`.
+Validate workflow syntax, permissions and release assertions.
 
-## Stage 6 — Package and prove the bootstrap runtime
+## Stage 6 — Prove packed consumer behaviour
 
-Build a real consumer artefact, then run it outside the Pactwright source repository.
-
-### Step 19 — Pack the bootstrap distribution
-
-**References:** Distribution §§2, 18–19
+### Step 21 — Pack runtime and standard Agent Pack
 
 **Run**
 
-From the Pactwright repository root:
-
 ```bash
-pnpm pack --out /tmp/pactwright-checkpoint-1-bootstrap.tgz
-pnpm --filter @pactwright/standard pack --out /tmp/pactwright-standard-checkpoint-1-bootstrap.tgz
+pnpm pack --out /tmp/pactwright-checkpoint-1.tgz
+pnpm --filter @pactwright/standard pack --out /tmp/pactwright-standard-checkpoint-1.tgz
 ```
-
-`prepack` builds the current distribution before pnpm creates each archive.
-
-Both tarballs are required: `pnpm pack` rewrites the `workspace:*` dependency on `@pactwright/standard` to a concrete registry version, and that version is not published to npm until Stage 9. A fixture installing only the runtime tarball would fail dependency resolution.
 
 **Expected result**
 
-`/tmp/pactwright-checkpoint-1-bootstrap.tgz` and `/tmp/pactwright-standard-checkpoint-1-bootstrap.tgz` are the installable bootstrap packages produced by pnpm.
+Real consumer artefacts exist for both components.
 
 **Verify before continuing**
 
-```bash
-test -f /tmp/pactwright-checkpoint-1-bootstrap.tgz
-test -f /tmp/pactwright-standard-checkpoint-1-bootstrap.tgz
-```
+Inspect both archives.
 
-### Step 20 — Install and initialise the bootstrap package in a clean fixture
-
-**References:** Distribution §§2, 8; Delivery Graph §§20–22
+### Step 22 — Install and initialise a clean consumer fixture
 
 **Run**
 
-From a temporary directory outside the Pactwright source repository:
+Install the two packed artefacts in a clean repository outside the workspace, using a local-package override only if needed before first registry publication, then run:
 
 ```bash
-rm -rf /tmp/pactwright-checkpoint-1-fixture
-mkdir -p /tmp/pactwright-checkpoint-1-fixture
-cd /tmp/pactwright-checkpoint-1-fixture
-
-pnpm init
-printf 'overrides:\n  "@pactwright/standard": file:/tmp/pactwright-standard-checkpoint-1-bootstrap.tgz\n' > pnpm-workspace.yaml
-pnpm add -D /tmp/pactwright-checkpoint-1-bootstrap.tgz
 pnpm pactwright init
+pnpm pactwright agent-pack use @pactwright/standard
 pnpm pactwright sync
+pnpm pactwright doctor
 pnpm pactwright validate
 pnpm pactwright lifecycle status
 ```
 
-The override satisfies the runtime's `@pactwright/standard` dependency from the local tarball because that package does not exist on npm until Stage 9. It is a bootstrap-fixture mechanism only; published consumers (Stage 10) resolve the dependency normally from the registry.
-
 **Expected result**
 
-The fixture becomes a valid Pactwright consumer using only the packed artefacts and generated project integration.
+The repository becomes a valid Pactwright consumer from packed artefacts only.
 
 **Verify before continuing**
 
-`validate` and `lifecycle status` complete successfully without any manual repair to Pactwright-managed files.
+Doctor has no action-required issue; validation/status pass; second sync is clean.
 
-### Step 21 — Complete one full Delivery in the fixture
-
-**References:** Delivery Graph §19
+### Step 23 — Complete one full fixture Delivery
 
 **Run**
 
-From `/tmp/pactwright-checkpoint-1-fixture`:
+Use the generated adapter to complete:
 
 ```text
-/capture-intent "Create one small repository artefact that proves the complete Pactwright Delivery lifecycle."
-/propose-contracts <intent-id>
-/approve-contract <contract-id> "<selection notes>"
-/write-brief <contract-id>
-/deliver-brief <brief-id>
-/review <brief-id>
-/prepare-evidence <brief-id>
+Intent → Contract alternatives → authorised Decision → Contract → Brief → Delivery → Review → Evidence
 ```
 
-Then, from the same repository:
-
-```bash
-pnpm pactwright validate
-pnpm pactwright lifecycle status
-pnpm pactwright context <intent-id>
-```
+Then run validation/status.
 
 **Expected result**
 
-The packed consumer installation completes Intent → Decision → Contract → Brief → Delivery → Review → Evidence; rejected alternatives remain transient.
+The full canonical Delivery lineage completes with alternatives/execution transcripts remaining non-canonical.
 
 **Verify before continuing**
 
-Confirm all three commands pass and the current graph contains exactly the expected durable Delivery lineage.
+Inspect durable Project Graph state.
 
 ## Stage 7 — Adopt Pactwright in Pactwright
 
-Cross the self-hosting boundary using the repository-local CLI built from the same package source. The `pactwright` package does not add itself as a dependency of its own source repository.
-
-### Step 22 — Initialise the Pactwright repository
-
-**References:** Distribution §§2, 8
+### Step 24 — Initialise the Pactwright repository
 
 **Run**
 
-From the Pactwright repository root:
-
 ```bash
-DEFAULT_BRANCH="$(gh repo view --json defaultBranchRef -q .defaultBranchRef.name)"
-
-git switch "$DEFAULT_BRANCH"
-git pull --ff-only
-test -z "$(git status --porcelain)"
-
 pnpm build
 pnpm pactwright init
+pnpm pactwright agent-pack use @pactwright/standard
 pnpm pactwright sync
+pnpm pactwright doctor
 pnpm pactwright validate
 pnpm pactwright lifecycle status
 pnpm verify
-
-git add -A
-git commit -m "Adopt Pactwright for self-hosting"
-git push origin "$DEFAULT_BRANCH"
 ```
+
+Land self-hosting state through the repository process available before Checkpoint 2 product GitHub integration exists.
 
 **Expected result**
 
-The Pactwright repository is now managed by Pactwright using its repository-local CLI and generated integration.
+Pactwright is now a valid Pactwright project.
 
 **Verify before continuing**
 
-From the Pactwright repository root:
+Second sync is clean and repository CI passes.
 
-```bash
-pnpm pactwright validate
-pnpm pactwright lifecycle status
-pnpm pactwright sync
-test -z "$(git status --porcelain)"
-```
+### Step 25 — Deliver a real self-hosted Quick Start improvement
 
-The second `sync` must leave the committed self-hosting state unchanged. Confirm the `CI / Verify` run triggered by the push passed before continuing.
-
-### Step 23 — Deliver the first self-hosted Quick Start improvement
-
-**References:** Open-Source Project Organisation §§2–3, 8, 15–16; Delivery Graph §19
+**References:** Spec 08 Core Delivery public milestone.
 
 **Run**
 
-From the Pactwright repository root:
+Use Pactwright itself to improve the Quick Start based only on behaviour proven in this checkpoint.
+Before PI exists, identity/positioning/product choices required by this public work must be authorised through Decision + Contract rather than invented.
+
+**Expected result**
+
+Pactwright completes a real public-product change through itself.
+
+**Verify before continuing**
+
+Evidence and public instructions agree with clean-consumer behaviour.
+
+## Stage 8 — Complete the `0.0.1` public learning path
+
+### Step 26 — Deliver Core Delivery learning material
+
+Through normal Pactwright Delivery, produce/update:
 
 ```text
-/capture-intent "Create or refine Pactwright's core Quick Start so it documents the installation and Delivery commands that now actually work."
-/propose-contracts <intent-id>
-/approve-contract <contract-id> "<selection notes>"
-/write-brief <contract-id>
-/deliver-brief <brief-id>
-/review <brief-id>
-/prepare-evidence <brief-id>
+README Quick Start
+Getting Started guide
+one executable Core Delivery example
 ```
 
-Then:
-
-```bash
-pnpm pactwright validate
-pnpm pactwright lifecycle status
-pnpm verify
-
-git add -A
-git commit -m "Deliver Pactwright Quick Start through Pactwright"
-git push origin "$DEFAULT_BRANCH"
-```
+Only document proven behaviour.
 
 **Expected result**
 
-Pactwright has completed a real change to its own repository through its own Delivery lifecycle.
+A new user can understand/install/execute `0.0.1` without future Extensions.
 
 **Verify before continuing**
 
-Confirm the Quick Start only documents commands proven in the bootstrap/fixture stages, the corresponding Intent → Evidence lineage is valid, and the triggered `CI / Verify` run passes.
+Follow the material in a clean packed-consumer fixture.
 
-## Stage 8 — Complete the `0.0.1` public product
+## Stage 9 — Publish `0.0.1`
 
-Before Project Intelligence exists, public-product work still goes through the normal Delivery lifecycle. This stage runs before the release: the Implementation Guide's public-product progression maps `0.0.1` to "README Quick Start + Getting Started + core Delivery example", so that content set must exist in the source that Stage 9 tags and publishes.
+### Step 27 — Bootstrap first npm publication
 
-### Step 24 — Deliver the core Delivery learning path
+**References:** Implementation Guide npm release model.
 
-**References:** Open-Source Project Organisation §§1.3, 3; Implementation Principles §§6, 12; Implementation Guide — Public-product progression
-
-**Run**
-
-From the Pactwright repository root:
+Publish exactly:
 
 ```text
-/capture-intent "Publish Pactwright's first usable learning path for Core Delivery: keep the README Quick Start current, add a concise Getting Started guide, and add one runnable core Delivery example. Reuse the same commands and semantics already proven in this checkpoint."
-/propose-contracts <intent-id>
-/approve-contract <contract-id> "<selection notes>"
-/write-brief <contract-id>
-/deliver-brief <brief-id>
-/review <brief-id>
-/prepare-evidence <brief-id>
+pactwright@0.0.1
+@pactwright/standard@0.0.1
 ```
 
-Then:
-
-```bash
-DEFAULT_BRANCH="$(gh repo view --json defaultBranchRef -q .defaultBranchRef.name)"
-
-pnpm pactwright validate
-pnpm verify
-
-git add -A
-git commit -m "Deliver the core Delivery learning path through Pactwright"
-git push origin "$DEFAULT_BRANCH"
-```
-
-**Expected result**
-
-A new user can understand, install and try the exact Core Delivery capability that `0.0.1` will ship, without depending on future extensions, and the content is part of the source that Stage 9 releases.
-
-**Verify before continuing**
-
-Follow the Getting Started guide and example from a clean consumer fixture built with the Stage 6 tarballs. README, guide and example must agree on the same working command surface, the corresponding Intent → Evidence lineage must be valid, and the triggered `CI / Verify` run must pass.
-
-## Stage 9 — Publish `0.0.1` and bootstrap npm trusted publishing
-
-Release the accepted source, including the Stage 8 public content, as the Checkpoint 1 package family.
-
-### Step 25 — Publish `0.0.1` and bootstrap npm trusted publishing
-
-**References:** Implementation Guide — npm release model; Distribution §§2, 6–8, 18–19
-
-**Run**
-
-First update `CHANGELOG.md` from accepted Checkpoint 1 Evidence only.
-
-From the Pactwright repository root:
-
-```bash
-DEFAULT_BRANCH="$(gh repo view --json defaultBranchRef -q .defaultBranchRef.name)"
-
-pnpm whoami || npm login
-
-pnpm -r --include-workspace-root exec npm version 0.0.1 --no-git-tag-version --allow-same-version
-pnpm install
-pnpm verify
-pnpm publish -r --dry-run --tag next --access public
-
-git add -A
-git commit -m "chore: release 0.0.1"
-git push origin "$DEFAULT_BRANCH"
-
-pnpm publish -r --tag next --access public
-```
-
-The interactive publish is the one-time bootstrap required before npm can attach a trusted publisher to a new package (Implementation Guide — First publication of a package). It requires an authenticated npm account with 2FA; the `npm login` fallback establishes it if `pnpm whoami` fails.
-
-Then configure the trusted release workflow for both published packages:
-
-```bash
-REPO="$(gh repo view --json nameWithOwner -q .nameWithOwner)"
-
-npx -y npm@^11.15 trust github pactwright \
-  --repo "$REPO" \
-  --file release.yml \
-  --environment npm-release \
-  --allow-publish
-
-npx -y npm@^11.15 trust github @pactwright/standard \
-  --repo "$REPO" \
-  --file release.yml \
-  --environment npm-release \
-  --allow-publish
-```
-
-If the installed npm version does not provide the `trust` subcommand, configure the trusted publisher for each package in the npm web interface instead (package settings → trusted publisher: this repository, workflow `release.yml`, environment `npm-release`), then continue.
-
-Finally tag the accepted release commit:
-
-```bash
-git tag -a v0.0.1 -m "v0.0.1"
-git push origin v0.0.1
-```
-
-**Expected result**
-
-`pactwright@0.0.1` and `@pactwright/standard@0.0.1` exist under `next`, and both packages trust `.github/workflows/release.yml` for subsequent OIDC publishing.
+Use the one-time interactive bootstrap, configure `release.yml` as trusted publisher for both, tag accepted source as `v0.0.1`, and verify the tag workflow.
 
 **Verify before continuing**
 
 ```bash
 pnpm view pactwright@0.0.1 version
 pnpm view @pactwright/standard@0.0.1 version
-
-npx -y npm@^11.15 trust list pactwright
-npx -y npm@^11.15 trust list @pactwright/standard
 ```
 
-If the `trust` subcommand is unavailable, confirm the trusted-publisher configuration for both packages in the npm web interface instead.
+## Stage 10 — Prove the published release in Kakeido
 
-Confirm the tag-triggered release workflow also completes successfully; because `0.0.1` already exists in the registry, the Step 18 skip-already-published behaviour must leave it unaltered and the run must still finish green, including its registry-verification stage.
-
-## Stage 10 — Prove the published release on Kakeido
-
-Use the final Checkpoint 1 package on the persistent external proving project.
-
-### Step 26 — Install the published Checkpoint 1 release in Kakeido
-
-**References:** Distribution §§2–3
-
-**Run**
-
-From the Kakeido repository root:
+### Step 28 — Install Pactwright `0.0.1` in Kakeido
 
 ```bash
-pnpm add -D pactwright@0.0.1
+pnpm add -D pactwright@0.0.1 @pactwright/standard@0.0.1
 pnpm pactwright init
+pnpm pactwright agent-pack use @pactwright/standard
 pnpm pactwright sync
+pnpm pactwright doctor
 pnpm pactwright validate
 pnpm pactwright lifecycle status
 ```
 
 **Expected result**
 
-Kakeido is running the final Checkpoint 1 package with core Delivery only; no optional extension is enabled.
+Kakeido runs the exact published runtime and Agent Pack without optional Extensions.
 
-**Verify before continuing**
+### Step 29 — Deliver one current Kakeido financial-domain outcome
 
-`validate` and `lifecycle status` complete successfully using the installed Checkpoint 1 package.
+Resolve the current Kakeido canonical specification(s) governing the first bounded financial-domain target and record their paths/versions in the Brief grounding.
 
-### Step 27 — Deliver Kakeido financial-domain invariants
-
-**References:** First Kakeido semantic acceptance — Kakeido — Financial Model Spec §§2–18; Delivery Graph §19
-
-**Run**
-
-From the Kakeido repository root:
-
-```text
-/capture-intent "Implement Kakeido's shared financial-domain model and deterministic invariant tests from Kakeido — Financial Model Spec v1.0 §§2–17, accepted against §18."
-/propose-contracts <intent-id>
-/approve-contract <contract-id> "<selection notes>"
-/write-brief <contract-id>
-/deliver-brief <brief-id>
-/review <brief-id>
-/prepare-evidence <brief-id>
-```
-
-Then:
-
-```bash
-pnpm pactwright validate
-pnpm pactwright lifecycle status
-```
-
-Run the Kakeido repository-defined financial-domain tests as part of the same acceptance step.
+Use normal Pactwright Delivery to implement one meaningful outcome proving current financial invariants and deterministic domain tests.
 
 **Expected result**
 
-Implementation preserves fixed/flexible separation, envelope reconciliation, split/duplicate determinism, reviewed-only totals, user-confirmed classification and immutable historical spendings across plan changes.
+Kakeido completes a real full Delivery lineage using the published family.
 
 **Verify before continuing**
 
-Pactwright validation/status and the Kakeido financial-domain tests all pass, and the delivered behaviour satisfies the acceptance criteria in Kakeido — Financial Model Spec §18. The Kakeido graph contains a valid Intent → Evidence lineage for the delivered work.
+Run Pactwright validation plus the Kakeido repository-defined tests required by current specifications.
 
-## Stage 11 — Capture checkpoint feedback
+## Stage 11 — Capture Checkpoint 1 feedback
 
-Close the checkpoint's learning loop before declaring it complete.
+### Step 30 — Capture material findings as future Intents
 
-### Step 28 — Capture Checkpoint 1 findings as future project work
+Before PI exists, material Pactwright responsibility failures become explicit open Intents through normal Delivery authority. Do not generalise Kakeido-specific preferences.
 
-**References:** Implementation Principles §§7, 14; Implementation Guide — Transition rule
-
-**Run**
-
-Review the execution of Stages 1–10, including bootstrap-fixture friction, self-hosting friction, Kakeido installation and onboarding problems, content gaps and any deviation between specification and implementation.
-
-From the Pactwright repository root, for each finding worth acting on:
-
-```text
-/capture-intent "<finding phrased as a requested outcome>"
-```
-
-Project Intelligence does not exist yet, so findings are captured directly as Intents through normal Delivery (Implementation Principles §14). Leave the captured Intents open; they are future work, not part of this checkpoint's Delivery.
-
-Blocking failures must instead be fixed within this checkpoint: repeat the affected stage's steps until its verification passes.
-
-**Expected result**
-
-Every material Checkpoint 1 finding exists as an open Intent in the Pactwright graph, and no known blocking failure is carried into Checkpoint 2.
+Blocking failures are fixed inside this checkpoint.
 
 **Verify before continuing**
 
-Run `pnpm pactwright validate` and `pnpm pactwright lifecycle status`; captured Intents are valid open lineages. Confirm no blocking failure remains unresolved.
+`pactwright validate` passes and no known blocking failure remains.
 
 ## Exit gate
 
-All Stage 1–11 verifications pass.
+Checkpoint 1 closes only when:
 
-The checkpoint is complete only when:
-
-- `pactwright` has been built and packed as a real Node package;
-- the bootstrap tarballs install and complete a full lifecycle in a clean external fixture;
-- Pactwright manages its own repository and completes a real self-hosted Delivery;
-- the `0.0.1` public content set (README Quick Start, Getting Started guide, core Delivery example) is delivered through Pactwright and included in the tagged release source;
-- `0.0.1` is published to npm and installs into Kakeido;
-- Kakeido completes a real Intent → Evidence Delivery using that final package;
-- repeated `sync` operations converge;
-- no lifecycle or graph coherence requires hand-maintained relationships;
-- checkpoint findings are captured as open Intents and no known blocking failure is carried into Checkpoint 2.
+- the runtime and `@pactwright/standard` are real publishable packages;
+- the five core durable record types and typed relationships validate;
+- Contract authority is distinct from Gate/execution policy;
+- direct `Brief → Delivery → Review → Evidence` works without encoding adapter responsibilities as lifecycle topology;
+- repository revision, Project Graph revision and `environment_lock_hash` provide the shared replay base;
+- Agent Pack selection is explicit and capability checked;
+- generic Extension package/dependency mechanics are fixture-proven;
+- `init`, `sync`, `doctor`, `validate`, lifecycle commands and core `eval` work;
+- a clean packed consumer completes a full Delivery;
+- Pactwright completes real self-hosted Delivery;
+- public learning material matches shipped capability;
+- `pactwright@0.0.1` and `@pactwright/standard@0.0.1` are registry verified;
+- Kakeido completes one real Delivery from current canonical specifications;
+- repeated sync converges and graph coherence is not hand maintained;
+- no known blocking failure is carried into Checkpoint 2.
 
 ---
 
-**Pactwright — Checkpoint 1 — Self-Hosted Delivery v12**
+**Pactwright — Checkpoint 1 — Self-Hosted Delivery v13**
