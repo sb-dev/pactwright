@@ -383,15 +383,7 @@ Render twice from identical locked inputs and require byte-identical output.
 **Run**
 
 ```text
-Implement `pactwright eval` with core responsibility cases for:
-- Contract fidelity;
-- scope discipline;
-- Brief quality;
-- Review defect detection/quality;
-- Evidence accuracy;
-- lifecycle compliance;
-- required output structure;
-- forbidden mutation.
+Implement `pactwright eval` with core responsibility cases for Contract fidelity, scope discipline, Brief quality, Review defect detection, required output structure and forbidden mutation.
 
 Implement the canonical comparison surface:
 pactwright eval --baseline <released-pack-or-baseline> --candidate <candidate-pack-or-environment>
@@ -411,9 +403,9 @@ The AI execution environment is evaluable independently from a real Delivery and
 
 Run core eval, compare compatible baseline/candidate fixtures, introduce a known regression and require it to appear at the affected capability/agent/case dimensions.
 
-## Stage 4 — Implement exact environment resolution, initialisation and local composition
+## Stage 4 — Implement exact environment resolution and local composition
 
-### Step 14 — Implement `pactwright init` and one-shot composition
+### Step 14 — Implement `pactwright init`
 
 **References:** Spec 02 initialisation/configuration.
 
@@ -422,20 +414,16 @@ Run core eval, compare compatible baseline/candidate fixtures, introduce a known
 ```text
 Implement init so a clean repository receives only Pactwright-owned core configuration/Project Graph structure.
 Checkpoint 1 keeps GitHub disabled and creates no Pactwright-managed GitHub workflow.
-Do not silently switch or select Agent Pack identity.
-
-Implement one-shot init as a composition surface over the same underlying operations, never as a second setup path.
-At Checkpoint 1, prove `pactwright init --with <fixture-extension>` composes normal init + Extension installation + sync using the generic Extension mechanism implemented in Step 16.
-Later first-party Extension ids and `--github` reuse this composition mechanism when those capabilities exist; they do not create a new initialisation implementation.
+Do not silently switch Agent Pack identity.
 ```
 
 **Expected result**
 
-A clean repository can initialise Pactwright safely and one-shot options compose the same managed operations as explicit setup.
+A clean repository can initialise Pactwright safely.
 
 **Verify before continuing**
 
-Run plain init in a temporary repository with unrelated files and prove ownership boundaries. In a second clean fixture, compare one-shot `init --with <fixture-extension>` against the equivalent explicit `init` + `extension add` + `sync` path and require equivalent resolved state/generated output.
+Run init in a temporary repository with unrelated files and prove ownership boundaries.
 
 ### Step 15 — Implement config/lock resolution and `environment_lock_hash`
 
@@ -458,9 +446,9 @@ Identical exact environment produces identical lock and hash.
 
 Resolve twice, compare byte-for-byte, then change one resolved identity and require hash change.
 
-### Step 16 — Implement generic Pactwright Extension package/dependency mechanics
+### Step 16 — Implement generic Pactwright Extension package/dependency mechanics and one-shot init composition
 
-**References:** Spec 02 Extensions.
+**References:** Spec 02 Extensions and one-shot initialisation.
 
 **Run**
 
@@ -468,15 +456,20 @@ Resolve twice, compare byte-for-byte, then change one resolved identity and requ
 Using fixture Extensions only, implement manifest loading, compatibility/dependency resolution, graph contribution registration, command namespaces, capability contribution, GitHub profile metadata, add/remove/upgrade and blocked dependency removal.
 Preserve user-authored Extension state on disable/removal.
 Do not implement first-party Extension semantics yet.
+
+Implement one-shot init as a composition surface over the same underlying operations, never as a second setup path.
+Prove `pactwright init --with <fixture-extension>` composes normal init + Extension installation + sync.
+Later first-party Extension ids and `--github` reuse this composition mechanism when those capabilities exist; they do not create a new initialisation implementation.
 ```
 
 **Expected result**
 
-Later first-party Extensions can compose without changing core architecture.
+Later first-party Extensions can compose without changing core architecture, and one-shot initialisation uses the same managed operations as explicit setup.
 
 **Verify before continuing**
 
 Exercise add, dependency add, compatible upgrade, blocked removal, safe disable and preserved canonical data.
+In a second clean fixture, compare one-shot `init --with <fixture-extension>` against the equivalent explicit `init` + `extension add` + `sync` path and require equivalent resolved state/generated output.
 
 ### Step 17 — Implement deterministic `pactwright sync`
 
@@ -766,7 +759,7 @@ pnpm pactwright lifecycle status
 
 **Expected result**
 
-Kakeido runs the exact published runtime and Agent Pack without optional first-party Extensions.
+Kakeido runs the exact published runtime and Agent Pack without optional Extensions.
 
 ### Step 30 — Deliver one current Kakeido financial-domain outcome
 
