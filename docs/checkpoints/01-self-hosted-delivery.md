@@ -1,13 +1,15 @@
 # Pactwright — Checkpoint 1 — Self-Hosted Delivery
 
-**Version:** 13  
+**Version:** 14  
 **Entry condition:** No installable Pactwright runtime exists.  
 **Release:** `0.0.1`  
-**Exit capability:** Pactwright is installable, can govern one complete Contract-driven Delivery in its own repository and in Kakeido, and requires no manual Project Graph coherence work.
+**Exit capability:** Pactwright is installable, upgradeable, can govern one complete Contract-driven Delivery in its own repository and in Kakeido, can compare an Agent Pack candidate against a released baseline, and requires no manual Project Graph coherence work.
 
 ## 1. Goal
 
 Bootstrap the smallest installable Pactwright core, prove it in a clean consumer, adopt it in Pactwright, publish `0.0.1`, then install the same release in Kakeido and complete one real external Delivery.
+
+Checkpoint 1 also establishes the complete core distribution surface needed by later checkpoints: compositional one-shot initialisation, runtime upgrade, Agent Pack upgrade and released-baseline evaluation.
 
 This is the only checkpoint whose implementation begins before Pactwright can govern its own work.
 
@@ -60,8 +62,11 @@ Agent Pack capability resolution
 Claude Code adapter
 exact environment locking
 pactwright init / sync / validate / doctor / eval
-Agent Pack selection
+one-shot init composition
+pactwright upgrade / pactwright upgrade --to
+Agent Pack selection and agent-pack upgrade
 Pactwright Extension package/dependency framework
+baseline evaluation and regression reporting
 clean-consumer installation
 Pactwright self-hosting
 first Kakeido Delivery
@@ -84,7 +89,6 @@ Checkpoint 1 must not turn adapter responsibilities such as capture-intent or wr
 
 - GitHub provisioning, managed product workflows, Projects and remote projections: Checkpoint 2.
 - Project Intelligence, Graph Review, Assets / Publication and Operations semantics: later checkpoints.
-- `pactwright eval --baseline`: requires a released baseline.
 - historical environment retention/reacquisition machinery: identity and fail-explicitly semantics are implemented, archival strategy is not.
 - lifecycle-shape hashing or a universal lifecycle-shape persistence scheme: still unresolved.
 
@@ -325,25 +329,32 @@ Core AI responsibilities are replaceable and capability checked.
 
 Test complete and incomplete fixture packs; incomplete selection leaves valid state intact.
 
-### Step 11 — Implement Agent Pack selection
+### Step 11 — Implement Agent Pack selection and upgrade
 
-**References:** Spec 02 Agent Pack selection.
+**References:** Spec 02 Agent Pack selection and upgrade.
 
 **Run**
 
 ```text
-Implement `pactwright agent-pack use <source>`.
-Resolve a compatible complete pack, validate all required capabilities, update configuration only after success, lock exact identity, run sync and report later GitHub reconciliation needs.
+Implement:
+pactwright agent-pack use <source>
+pactwright agent-pack upgrade
+
+`agent-pack use` resolves a compatible complete pack, validates all required capabilities, updates configuration only after success, locks exact identity, runs sync and reports later GitHub reconciliation needs.
 Never silently switch packs.
+
+`agent-pack upgrade` upgrades the currently selected pack within its configured compatibility constraints without changing Agent Pack identity.
+It validates the complete required capability set before changing the current lock or generated environment.
+Failure leaves the previous valid configuration, lock and generated environment intact.
 ```
 
 **Expected result**
 
-Projects explicitly select one complete Agent Pack.
+Projects explicitly select one complete Agent Pack and can upgrade it independently from the runtime.
 
 **Verify before continuing**
 
-Select standard, switch to a compatible fixture pack, then reject an incompatible pack without state loss.
+Select standard, switch to a compatible fixture pack, reject an incompatible pack without state loss, upgrade a selected fixture pack to a compatible newer version, then reject an incompatible upgrade while preserving the previous valid environment.
 
 ### Step 12 — Implement the initial Claude Code adapter
 
@@ -365,29 +376,44 @@ The adapter is deterministic and contains no duplicated graph-transition semanti
 
 Render twice from identical locked inputs and require byte-identical output.
 
-### Step 13 — Implement initial Pactwright evaluation
+### Step 13 — Implement Pactwright evaluation and baseline comparison
 
-**References:** Spec 02 evaluation.
+**References:** Spec 02 evaluation and baseline/regression reporting.
 
 **Run**
 
 ```text
-Implement `pactwright eval` with core responsibility cases for Contract fidelity, scope discipline, Brief quality, Review defect detection, required output structure and forbidden mutation.
+Implement `pactwright eval` with core responsibility cases for:
+- Contract fidelity;
+- scope discipline;
+- Brief quality;
+- Review defect detection/quality;
+- Evidence accuracy;
+- lifecycle compliance;
+- required output structure;
+- forbidden mutation.
+
+Implement the canonical comparison surface:
+pactwright eval --baseline <released-pack-or-baseline> --candidate <candidate-pack-or-environment>
+
 Keep deterministic assertions separate from semantic judgement.
-Do not compute one aggregate score or baseline comparison yet.
+Report regressions by meaningful dimensions such as capability, agent, evaluation case and changed Agent Pack/prompt/skill environment.
+Do not compute one opaque aggregate score.
+
+Before the first public release, prove comparison mechanics with exact fixture/pinned package inputs. After `0.0.1` is published, Step 28 must prove resolution against the real released baseline.
 ```
 
 **Expected result**
 
-The AI execution environment is evaluable independently from a real Delivery.
+The AI execution environment is evaluable independently from a real Delivery and candidate changes can be compared against an exact baseline.
 
 **Verify before continuing**
 
-Run eval and inspect per-capability/per-case results.
+Run core eval, compare compatible baseline/candidate fixtures, introduce a known regression and require it to appear at the affected capability/agent/case dimensions.
 
-## Stage 4 — Implement exact environment resolution and local composition
+## Stage 4 — Implement exact environment resolution, initialisation and local composition
 
-### Step 14 — Implement `pactwright init`
+### Step 14 — Implement `pactwright init` and one-shot composition
 
 **References:** Spec 02 initialisation/configuration.
 
@@ -396,16 +422,20 @@ Run eval and inspect per-capability/per-case results.
 ```text
 Implement init so a clean repository receives only Pactwright-owned core configuration/Project Graph structure.
 Checkpoint 1 keeps GitHub disabled and creates no Pactwright-managed GitHub workflow.
-Do not silently switch Agent Pack identity.
+Do not silently switch or select Agent Pack identity.
+
+Implement one-shot init as a composition surface over the same underlying operations, never as a second setup path.
+At Checkpoint 1, prove `pactwright init --with <fixture-extension>` composes normal init + Extension installation + sync using the generic Extension mechanism implemented in Step 16.
+Later first-party Extension ids and `--github` reuse this composition mechanism when those capabilities exist; they do not create a new initialisation implementation.
 ```
 
 **Expected result**
 
-A clean repository can initialise Pactwright safely.
+A clean repository can initialise Pactwright safely and one-shot options compose the same managed operations as explicit setup.
 
 **Verify before continuing**
 
-Run init in a temporary repository with unrelated files and prove ownership boundaries.
+Run plain init in a temporary repository with unrelated files and prove ownership boundaries. In a second clean fixture, compare one-shot `init --with <fixture-extension>` against the equivalent explicit `init` + `extension add` + `sync` path and require equivalent resolved state/generated output.
 
 ### Step 15 — Implement config/lock resolution and `environment_lock_hash`
 
@@ -489,9 +519,43 @@ Environment problems can be diagnosed without mutation.
 
 Run healthy and broken fixtures and prove doctor performs no writes.
 
+### Step 19 — Implement Pactwright runtime upgrade and rollback-safe failure
+
+**References:** Spec 02 upgrade model; Implementation Guide package/release rules.
+
+**Run**
+
+```text
+Implement:
+pactwright upgrade
+pactwright upgrade --to <version>
+
+The runtime upgrade flow must:
+- detect the project package manager from explicit declaration or unambiguous lock state;
+- resolve the target Pactwright release;
+- delegate package replacement to that package manager;
+- re-enter through the newly installed Pactwright runtime;
+- validate the complete resolved environment;
+- run explicit versioned migrations where required;
+- update `.pactwright/lock.yml`;
+- run `pactwright sync` and `pactwright validate` using the new runtime.
+
+`pactwright upgrade` upgrades the runtime only. It must not silently change Agent Pack or Extension identity or major-upgrade them.
+`--to` supports explicit forward upgrade or rollback target selection.
+If the target environment cannot complete safely, canonical Project Graph state must not be left partially migrated and enough prior package/config/lock state must remain to recover or explicitly target the previous runtime.
+```
+
+**Expected result**
+
+Pactwright can safely replace its own runtime without becoming a second package manager or corrupting canonical state.
+
+**Verify before continuing**
+
+Use packed fixture runtime versions to prove latest-compatible upgrade, explicit `--to` upgrade/rollback, package-manager detection, new-runtime re-entry, unchanged Agent Pack/Extension identities, migration execution and failed-target recovery with the previous valid Project Graph/config/lock intact.
+
 ## Stage 5 — Establish repository CI and release safety
 
-### Step 19 — Implement repository verification workflow
+### Step 20 — Implement repository verification workflow
 
 **References:** Implementation Guide GitHub Actions baseline.
 
@@ -510,7 +574,7 @@ A clean checkout proves the same repository gate used locally.
 
 Run `pnpm verify` and inspect workflow hardening.
 
-### Step 20 — Implement trusted release workflow
+### Step 21 — Implement trusted release workflow
 
 **References:** Implementation Guide npm release model.
 
@@ -530,7 +594,7 @@ Validate workflow syntax, permissions and release assertions.
 
 ## Stage 6 — Prove packed consumer behaviour
 
-### Step 21 — Pack runtime and standard Agent Pack
+### Step 22 — Pack runtime and standard Agent Pack
 
 **Run**
 
@@ -547,11 +611,11 @@ Real consumer artefacts exist for both components.
 
 Inspect both archives.
 
-### Step 22 — Install and initialise a clean consumer fixture
+### Step 23 — Install and initialise clean consumer fixtures
 
 **Run**
 
-Install the two packed artefacts in a clean repository outside the workspace, using a local-package override only if needed before first registry publication, then run:
+Install the two packed artefacts in a clean repository outside the workspace, using a local-package override only if needed before first registry publication, then run the explicit path:
 
 ```bash
 pnpm pactwright init
@@ -562,15 +626,17 @@ pnpm pactwright validate
 pnpm pactwright lifecycle status
 ```
 
+In a second clean fixture, prove the supported one-shot init composition path with a fixture Extension and compare the result with the equivalent explicit operations.
+
 **Expected result**
 
-The repository becomes a valid Pactwright consumer from packed artefacts only.
+A repository becomes a valid Pactwright consumer from packed artefacts only, and one-shot init does not create a divergent setup path.
 
 **Verify before continuing**
 
-Doctor has no action-required issue; validation/status pass; second sync is clean.
+Doctor has no action-required issue; validation/status pass; second sync is clean; explicit and one-shot composition resolve equivalent state.
 
-### Step 23 — Complete one full fixture Delivery
+### Step 24 — Complete one full fixture Delivery
 
 **Run**
 
@@ -592,7 +658,7 @@ Inspect durable Project Graph state.
 
 ## Stage 7 — Adopt Pactwright in Pactwright
 
-### Step 24 — Initialise the Pactwright repository
+### Step 25 — Initialise the Pactwright repository
 
 **Run**
 
@@ -617,7 +683,7 @@ Pactwright is now a valid Pactwright project.
 
 Second sync is clean and repository CI passes.
 
-### Step 25 — Deliver a real self-hosted Quick Start improvement
+### Step 26 — Deliver a real self-hosted Quick Start improvement
 
 **References:** Spec 08 Core Delivery public milestone.
 
@@ -636,7 +702,7 @@ Evidence and public instructions agree with clean-consumer behaviour.
 
 ## Stage 8 — Complete the `0.0.1` public learning path
 
-### Step 26 — Deliver Core Delivery learning material
+### Step 27 — Deliver Core Delivery learning material
 
 Through normal Pactwright Delivery, produce/update:
 
@@ -646,11 +712,11 @@ Getting Started guide
 one executable Core Delivery example
 ```
 
-Only document proven behaviour.
+Only document proven behaviour, including the core distribution commands shipped in `0.0.1`.
 
 **Expected result**
 
-A new user can understand/install/execute `0.0.1` without future Extensions.
+A new user can understand/install/execute/upgrade `0.0.1` without future Extensions.
 
 **Verify before continuing**
 
@@ -658,9 +724,9 @@ Follow the material in a clean packed-consumer fixture.
 
 ## Stage 9 — Publish `0.0.1`
 
-### Step 27 — Bootstrap first npm publication
+### Step 28 — Bootstrap first npm publication and prove a real released baseline
 
-**References:** Implementation Guide npm release model.
+**References:** Implementation Guide npm release model; Spec 02 baseline evaluation.
 
 Publish exactly:
 
@@ -676,11 +742,17 @@ Use the one-time interactive bootstrap, configure `release.yml` as trusted publi
 ```bash
 pnpm view pactwright@0.0.1 version
 pnpm view @pactwright/standard@0.0.1 version
+
+pnpm pactwright eval \
+  --baseline @pactwright/standard@0.0.1 \
+  --candidate @pactwright/standard
 ```
+
+The comparison must resolve the published `0.0.1` baseline exactly and emit per-capability/agent/case comparison results. An unchanged accepted candidate may correctly report no regressions; the purpose is to prove the real released-baseline path, not manufacture a difference.
 
 ## Stage 10 — Prove the published release in Kakeido
 
-### Step 28 — Install Pactwright `0.0.1` in Kakeido
+### Step 29 — Install Pactwright `0.0.1` in Kakeido
 
 ```bash
 pnpm add -D pactwright@0.0.1 @pactwright/standard@0.0.1
@@ -694,9 +766,9 @@ pnpm pactwright lifecycle status
 
 **Expected result**
 
-Kakeido runs the exact published runtime and Agent Pack without optional Extensions.
+Kakeido runs the exact published runtime and Agent Pack without optional first-party Extensions.
 
-### Step 29 — Deliver one current Kakeido financial-domain outcome
+### Step 30 — Deliver one current Kakeido financial-domain outcome
 
 Resolve the current Kakeido canonical specification(s) governing the first bounded financial-domain target and record their paths/versions in the Brief grounding.
 
@@ -712,7 +784,7 @@ Run Pactwright validation plus the Kakeido repository-defined tests required by 
 
 ## Stage 11 — Capture Checkpoint 1 feedback
 
-### Step 30 — Capture material findings as future Intents
+### Step 31 — Capture material findings as future Intents
 
 Before PI exists, material Pactwright responsibility failures become explicit open Intents through normal Delivery authority. Do not generalise Kakeido-specific preferences.
 
@@ -732,8 +804,12 @@ Checkpoint 1 closes only when:
 - direct `Brief → Delivery → Review → Evidence` works without encoding adapter responsibilities as lifecycle topology;
 - repository revision, Project Graph revision and `environment_lock_hash` provide the shared replay base;
 - Agent Pack selection is explicit and capability checked;
+- `pactwright agent-pack upgrade` safely upgrades the selected pack without changing identity or corrupting the previous valid environment on failure;
+- `pactwright upgrade` and `pactwright upgrade --to` are fixture-proven, re-enter through the new runtime and preserve recoverability on failure;
+- one-shot `pactwright init` composition is equivalent to the corresponding explicit operations rather than a separate setup path;
 - generic Extension package/dependency mechanics are fixture-proven;
 - `init`, `sync`, `doctor`, `validate`, lifecycle commands and core `eval` work;
+- baseline/candidate evaluation reports meaningful per-dimension regressions and resolves the real released `@pactwright/standard@0.0.1` baseline after publication;
 - a clean packed consumer completes a full Delivery;
 - Pactwright completes real self-hosted Delivery;
 - public learning material matches shipped capability;
@@ -744,4 +820,4 @@ Checkpoint 1 closes only when:
 
 ---
 
-**Pactwright — Checkpoint 1 — Self-Hosted Delivery v13**
+**Pactwright — Checkpoint 1 — Self-Hosted Delivery v14**
