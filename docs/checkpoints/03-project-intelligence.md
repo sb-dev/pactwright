@@ -1,13 +1,15 @@
 # Pactwright — Checkpoint 3 — Project Intelligence
 
-**Version:** 10  
+**Version:** 11  
 **Entry condition:** Checkpoint 2 is accepted.  
 **Release:** `0.0.3`  
-**Exit capability:** Project Intelligence can cold-start Pactwright and Kakeido, govern durable project knowledge, contribute bounded context and derive one dependency-aware Intent roadmap without automatically creating Delivery work.
+**Exit capability:** Project Intelligence can cold-start Pactwright and Kakeido, govern durable project knowledge, contribute bounded context, compose into the established GitHub integration and derive one dependency-aware Intent roadmap without automatically creating Delivery work.
 
 ## 1. Goal
 
-Implement Project Intelligence as the first real optional Pactwright Extension, adopt it in Pactwright, ingest the current Pactwright authoritative/public corpus, then prove cold-start onboarding, grounding, context contribution and roadmap behaviour on Kakeido.
+Implement Project Intelligence as the first real optional Pactwright Extension, prove its complete canonical validation/governance surface and compositional installation path, adopt it in Pactwright, ingest the current Pactwright authoritative/public corpus, then prove cold-start onboarding, grounding, context contribution, roadmap behaviour and published-version installation on Kakeido.
+
+Checkpoint 3 must consume the generic Extension, one-shot initialisation and GitHub profile-composition machinery established by Checkpoints 1–2. It must not introduce PI-specific alternatives to those mechanisms.
 
 ## 2. Canonical baseline
 
@@ -51,27 +53,34 @@ Class 2/3 PI promotion uses normal reviewed repository change infrastructure and
 
 ## 4. Checkpoint scope
 
-Checkpoint 3 implements:
+Checkpoint 3 implements and proves:
 
 ```text
 @pactwright/project-intelligence
+pactwright init --with project-intelligence --github
 Source
 Domain Definition
 Knowledge
 Source ingestion
 triage classes 0–3
 promotion boundary
+promotion concurrency/failure rules
 nine-domain registry
 trust/evidence rules
 coverage: Missing / Seeded / Covered
 onboarding
 one Intent roadmap derivation
+ready / blocked / open / reopen-proposed candidate states
+Delivery satisfaction and recurrence handling
 propagation
 freshness
 bounded PI context contribution
-PI GitHub workflow/checks/views
+complete Spec 03 validation matrix
+PI GitHub profile/workflow/checks/views
 PI evaluation cases
 Pactwright corpus ingestion
+public-content readiness gates
+real 0.0.2 → 0.0.3 runtime/Agent Pack + PI installation
 Kakeido cold start
 ```
 
@@ -202,7 +211,7 @@ Remove a core domain and require failure; register a valid non-core domain; reje
 
 ### Step 4 — Implement Source identity, versioning and storage boundary
 
-**References:** Spec 03 Source model.
+**References:** Spec 03 Source/internal-Source model.
 
 **Run**
 
@@ -221,9 +230,14 @@ Support:
 Run secret detection before committing snapshot content.
 If stored bytes are later removed, retain provenance/hash and require dependent Knowledge revalidation.
 
-Internal Source provenance must support both:
+Internal Source provenance must preserve enough information to recover:
+- originating Extension/process;
 - originating canonical record identity + hash where one exists;
-- originating execution-output identity + hash where the upstream object is non-canonical.
+- originating execution-output identity + hash where the upstream object is non-canonical;
+- supporting evidence where applicable;
+- originating Project Graph revision.
+
+Source capture never transfers ownership or changes whether the originating object is canonical Project Graph state.
 ```
 
 **Expected result**
@@ -232,7 +246,7 @@ Source capture is immutable, traceable and idempotent across external and future
 
 **Verify before continuing**
 
-Test duplicate, changed version, reference-only, secret rejection, byte removal/revalidation, valid canonical-origin internal Source and valid non-canonical execution-output internal Source.
+Test duplicate, changed version, reference-only, secret rejection, byte removal/revalidation, valid canonical-origin internal Source and valid non-canonical execution-output internal Source. For both internal forms verify origin/process, hash and originating Project Graph revision are retained.
 
 ### Step 5 — Implement triage classes 0–3
 
@@ -241,7 +255,7 @@ Test duplicate, changed version, reference-only, secret rejection, byte removal/
 **Run**
 
 ```text
-Implement triage over identity, relevance, primary domain, comparison with current Knowledge, disposition and consequence class.
+Implement triage over identity, relevance, primary domain, comparison with current Knowledge and linked dependants, disposition and consequence class.
 
 Dispositions:
 - irrelevant
@@ -251,22 +265,24 @@ Dispositions:
 - novel
 - contradictory
 
-Class 0/1 may capture Sources, evidence links and eligible freshness effects only.
+Class 0/1 may capture Sources, evidence links, derived evidence state and eligible freshness effects only.
 Class 2/3 require reviewed promotion before canonical meaning changes.
 No registered domain fit => propose a new Domain Definition as class 2; do not write one silently.
+
+Consequence, not Source origin or Extension metadata, determines governance ceremony.
 ```
 
 **Expected result**
 
-Consequence, not origin, determines governance ceremony.
+Triage stops cheap cases early and routes meaning-changing cases through review.
 
 **Verify before continuing**
 
-Prove a class-1 Source cannot alter a requirement/constraint/decision/Delivery record and no-domain-fit produces a reviewed proposal.
+Prove a class-1 Source cannot alter Knowledge conclusions, requirement/constraint/decision meaning, Delivery records or sibling-Extension canonical state; prove no-domain-fit produces a reviewed class-2 proposal.
 
 ### Step 6 — Expose `ingest`, `triage` and `promote`
 
-**References:** Spec 03 command/promotion/failure model.
+**References:** Spec 03 command/promotion/concurrency/failure model.
 
 **Run**
 
@@ -276,18 +292,32 @@ Implement:
 - pactwright intelligence triage <source-id>
 - pactwright intelligence promote <source-id>
 
-Promotion assembles reviewed PI mutations and affected-record information, performs no canonical class-2/3 mutation before approval, and preserves captured Source state on failure.
+Promotion must:
+- analyse against current Project Graph state;
+- propose PI Knowledge/edge mutations and affected-record information;
+- identify Delivery/sibling effects without mutating their records;
+- perform no canonical class-2/3 mutation before required approval;
+- route review through the relevant logical owners;
+- apply only validated PI-owned mutations after approval;
+- run propagation after accepted class-3 change.
 
-Failed ingestion is represented in the canonical derived failure report without partial canonical mutation.
+Conflicting promotions use normal repository isolation: rebase and rerun validation against current Project Graph state. Do not use last-writer-wins semantics.
+
+Failure rules:
+- failed ingestion is recorded in derived `reports/failed-ingestion.md` without partial canonical mutation;
+- failed promotion preserves the captured Source;
+- rerunning triage/promotion uses current Project Graph state;
+- failed future Extension hand-off leaves its originating object valid/retryable under the owning semantics;
+- report-generation failure never mutates canonical PI state.
 ```
 
 **Expected result**
 
-One ingestion/promotion path serves founding material, research and future Extension-originated Sources.
+One ingestion/promotion path serves founding material, research and future Extension-originated Sources while preserving review and concurrency boundaries.
 
 **Verify before continuing**
 
-Run duplicate/versioned ingestion, class-2 no-preapproval-mutation and failed-ingestion fixtures.
+Run duplicate/versioned ingestion, class-2 no-preapproval-mutation, failed-ingestion, failed-promotion, stale-promotion/rebase/revalidation and retryable hand-off fixtures.
 
 ## Stage 3 — Implement Knowledge and relationships
 
@@ -301,20 +331,29 @@ Run duplicate/versioned ingestion, class-2 no-preapproval-mutation and failed-in
 Implement Knowledge fields, status, evidence links, review horizon, supersession/retraction and recurrence policy.
 
 Enforce:
-- accepted Knowledge has at least one Source;
+- every accepted Knowledge record belongs to a registered domain and has at least one Source;
 - new/changed canonical conclusion requires human approval;
-- empirical kinds derive authority from evidence;
-- requirement/constraint/decision authority is approval-governed and cannot be outvoted by Source counts;
+- trust is claim-relative and is not assigned solely from Source type/origin;
+- empirical observation/interpretation/hypothesis gain authority from evidence and may decay;
+- one T0 Source may be sufficient where appropriate;
+- T1 normally requires independent corroboration;
+- T2/T3 cannot alone establish accepted empirical Knowledge;
+- derivatives sharing one evidential origin count as one origin;
+- requirement/constraint authority is approval-governed and cannot be outvoted by Source counts;
+- PI `decision` is durable project Knowledge distinct from a Delivery Graph Decision and changes by approved superseding decision;
+- recommendation requires steward acceptance and may decay;
+- forecast remains provisional until resolved and expires at its horizon;
+- evidence may challenge authority-driven Knowledge but never silently overturn it;
 - recurrence records durable policy only; no scheduler is introduced here.
 ```
 
 **Expected result**
 
-Knowledge represents accepted current project meaning without replacing Source provenance.
+Knowledge represents accepted current project meaning without replacing Source provenance or Delivery authority.
 
 **Verify before continuing**
 
-Test evidence sufficiency/origin independence, normative-governance, supersession, retraction and recurrence validation.
+Test T0 sufficiency, T1 independent corroboration, T2/T3 insufficiency, shared-origin derivatives, requirement/constraint authority, PI-decision distinction/supersession, recommendation acceptance, forecast expiry, supersession, retraction and recurrence validation.
 
 ### Step 8 — Implement PI and cross-graph relationships
 
@@ -339,6 +378,13 @@ Preserve ownership across graph boundaries.
 `requires-delivery` targets a Delivery Intent.
 `satisfied-by` targets Delivery Evidence.
 Raw Sources, Findings and Observations cannot directly create Delivery Intents.
+
+Delivery-obligation semantics remain PI-derived but Delivery-owned:
+- accepted requirement Knowledge produces a candidate unless already satisfied;
+- other accepted Knowledge produces a candidate only when its approved conclusion explicitly requires Delivery;
+- once an Intent is explicitly captured, motivating Knowledge may link through `requires-delivery`;
+- constraints normally contribute `constrains`;
+- observations/interpretations/hypotheses/recommendations are normally `informs-only` unless approved meaning creates an obligation.
 ```
 
 **Expected result**
@@ -347,11 +393,11 @@ PI connects project meaning to Delivery without owning Delivery records.
 
 **Verify before continuing**
 
-Run valid/invalid cross-owner relation fixtures.
+Run valid/invalid cross-owner relation fixtures and prove no raw Source/Finding/Observation can create `requires-delivery` or a canonical Intent directly.
 
-## Stage 4 — Implement onboarding, roadmap, propagation and freshness
+## Stage 4 — Implement onboarding, roadmap, satisfaction, propagation and freshness
 
-### Step 9 — Implement coverage and onboarding
+### Step 9 — Implement exact coverage and onboarding semantics
 
 **References:** Spec 03 coverage/onboarding.
 
@@ -359,27 +405,39 @@ Run valid/invalid cross-owner relation fixtures.
 
 ```text
 Implement exact states:
+
 Missing
+→ one or more canonical artifact types have no accepted, in-horizon Knowledge
+
 Seeded
+→ every canonical artifact type has at least one accepted, in-horizon Knowledge record
+
 Covered
+→ domain is Seeded and every declared coverage_slot is answered by accepted current Knowledge
 
 A domain without coverage slots stops at Seeded.
 
 Implement `pactwright intelligence onboard` and deterministic revision-stamped onboarding/domain-map reports.
-Follow the canonical dependency-aware ordering: discovery/product/identity strategic core, then go-to-market, then content, while independent applicable domains may proceed in parallel.
 
-Knowledge gaps produce Source/research/Decision guidance, never automatic Intents.
+Follow canonical dependency-aware ordering:
+1. surface gaps whose prerequisites are already Seeded;
+2. at cold start prioritise discovery/product/identity;
+3. surface independent delivery/ux, delivery/eng, decisions and handbooks gaps in parallel where applicable;
+4. unlock go-to-market when discovery/product/identity are Seeded;
+5. unlock content when go-to-market is Seeded.
+
+Knowledge gaps produce Source/research/Decision guidance, never fabricated Knowledge or automatic Intents.
 ```
 
 **Expected result**
 
-Onboarding answers what the project still needs to know.
+Onboarding answers what the project still needs to know using the exact canonical coverage model.
 
 **Verify before continuing**
 
-Test Missing→Seeded→Covered, slot-free Seeded ceiling, dependency unlock and regeneration after staleness/supersession.
+Test Missing→Seeded→Covered, canonical-artifact requirements, slot-free Seeded ceiling, dependency unlock and regeneration after staleness/domain change/supersession/retraction.
 
-### Step 10 — Implement the single Intent roadmap derivation
+### Step 10 — Implement the single Intent roadmap derivation and ordering
 
 **References:** Spec 03 Intent roadmap/readiness/ordering.
 
@@ -388,23 +446,47 @@ Test Missing→Seeded→Covered, slot-free Seeded ceiling, dependency unlock and
 ```text
 Implement `pactwright intelligence derive-intent-roadmap`.
 
-Derive one project-wide candidate set from accepted Delivery obligations, current/open Intents and reconsideration needs.
-Preserve motivating Knowledge/Source provenance, readiness, blocked dependencies and dependency waves.
-Do not create Intents automatically.
-Do not invent an Extension-specific second ranking model.
+Derive exactly one project-wide candidate set from:
+- accepted requirements not yet satisfied;
+- accepted Knowledge whose approved conclusion explicitly requires Delivery;
+- existing open Intents;
+- delivered work whose grounding Knowledge became challenged/superseded/retracted;
+- future accepted operational meaning requiring corrective work.
+
+Raw Sources, Findings and Observations never directly become candidates.
+
+Every candidate preserves motivating Knowledge, supporting Sources, relevant existing Intent and originating Extension provenance where applicable.
+
+Implement exact candidate states:
+- ready
+- blocked
+- open
+- reopen-proposed
+
+Ready requires hard Delivery dependencies satisfied and required domain dependencies Seeded. Otherwise the candidate is blocked and links to the missing dependency/knowledge conditions.
+
+Represent ordering as a dependency DAG rendered in waves, not a total ranking. Within otherwise ready work apply canonical precedence:
+1. legal/security/safety obligations;
+2. active reliability risk;
+3. hard technical dependencies;
+4. committed Delivery obligations;
+5. approved go-to-market launch sequencing;
+6. uncertainty reduction and strategic value.
+
+Do not create Intents automatically and do not introduce an Extension-specific second candidate/ranking model.
 ```
 
 **Expected result**
 
-The roadmap proposes work while Delivery remains authoritative for creating Intents.
+The roadmap proposes traceable dependency-aware work while Delivery remains authoritative for creating Intents.
 
 **Verify before continuing**
 
-Prove roadmap generation creates no Intent and blocked candidates point back to missing knowledge/dependency conditions.
+Exercise each candidate origin/state, dependency-wave ordering and precedence tier. Prove roadmap generation creates no Intent, blocked candidates point to exact gaps, and Extension-specific filtered fixture views cannot introduce candidates absent from the PI roadmap.
 
-### Step 11 — Implement propagation and freshness
+### Step 11 — Implement Delivery satisfaction, recurrence, propagation and freshness
 
-**References:** Spec 03 propagation/freshness.
+**References:** Spec 03 satisfaction/recurrence/propagation/freshness.
 
 **Run**
 
@@ -413,19 +495,27 @@ Implement:
 - pactwright intelligence propagate <knowledge-id>
 - pactwright intelligence refresh
 
-Propagation produces review/change proposals for affected dependants and never silently edits sibling-owned canonical records.
-Freshness marks/report staleness without changing Knowledge conclusion.
+Delivery satisfaction:
+- `Knowledge --satisfied-by--> Evidence` closes the outstanding one-off obligation where appropriate;
+- for recurring obligations, satisfying Evidence closes the current occurrence while recurrence policy remains durable;
+- recurring work must not remain represented as a permanently unsatisfied one-off candidate;
+- later accepted evidence that the real-world outcome failed may produce a new/reopen-proposed candidate through normal Source → Knowledge governance;
+- prior Delivery Evidence remains factual history.
+
+Propagation runs when accepted Knowledge is challenged, superseded or retracted and produces review/change proposals for affected dependants. It never silently edits Delivery or sibling-Extension canonical records. Retraction always requires direct-dependant revalidation.
+
+Freshness marks overdue Knowledge stale and regenerates freshness views without changing the Knowledge conclusion.
 ```
 
 **Expected result**
 
-Changed/stale knowledge is surfaced mechanically without ownership violations.
+Outstanding obligations, changed grounding and staleness are surfaced mechanically without ownership violations or scheduler overengineering.
 
 **Verify before continuing**
 
-Run challenged/superseded/retracted propagation plus freshness fixtures.
+Test one-off satisfaction removal, recurring-occurrence closure with durable recurrence, reopen-proposed behaviour after later governed evidence, challenged/superseded/retracted propagation, direct-dependant revalidation and freshness without conclusion mutation.
 
-## Stage 5 — Integrate PI with Delivery, GitHub and evaluation
+## Stage 5 — Integrate PI with Delivery, GitHub, evaluation and validation
 
 ### Step 12 — Implement bounded PI context contribution
 
@@ -435,45 +525,89 @@ Run challenged/superseded/retracted propagation plus freshness fixtures.
 
 ```text
 Contribute namespaced PI context into the existing Pactwright context-assembly API.
-Select accepted, relevant and sufficiently current Knowledge using Domain Definition recipes and graph relationships.
-Do not load every Source, report or stale/challenged record by default.
+Select accepted, relevant and sufficiently current Knowledge using Domain Definition recipes, graph relationships and requested responsibility.
+Do not load every Source, report, execution log, raw telemetry or stale/challenged record by default.
 Do not introduce `pactwright context` as a required public CLI contract merely for this checkpoint.
+
+The same generic context seam must support:
+- Contract crafting;
+- Brief generation;
+- Delivery;
+- Review;
+- future Graph Review consumption through a fixture responsibility.
 ```
 
 **Expected result**
 
-Contract crafting, Brief creation, Delivery and Review can receive bounded project grounding.
+Pactwright responsibilities can receive bounded project grounding without reconstructing durable knowledge from conversation history.
 
 **Verify before continuing**
 
-Use fixture responsibilities needing different domains and inspect selected context.
+Use fixture responsibilities needing different domains, including a future Graph Review-style responsibility, and inspect selected/excluded context.
 
-### Step 13 — Implement PI GitHub workflow/checks/views
+### Step 13 — Compose the PI GitHub profile into the established integration
 
-**References:** Spec 07 Project Intelligence workflow/profile.
+**References:** Specs 07 Project Intelligence automation/profile and Checkpoint 2 composition/reconciliation foundation.
 
 **Run**
 
 ```text
-Implement generated `.github/workflows/pactwright-intelligence.yml` and the canonical PI GitHub surface:
-- Pactwright / Intelligence
-- Pactwright / Intelligence Promotion
-- Pactwright / Intelligence Views
-- Pactwright / Intelligence Grounding
-- promotion view/summary
-- Coverage/Roadmap/Freshness/Propagation projections where defined
+Contribute the PI GitHub profile through the generic Checkpoint 2 composition engine. Do not create a PI-specific GitHub planner, Project or reconciliation path.
 
-Reports remain revision-stamped derived views.
-GitHub never owns Source/Knowledge/candidate semantics.
+Generate `.github/workflows/pactwright-intelligence.yml` and implement the canonical PI GitHub surface:
+
+Source capture automation
+→ validates Source schema, identity/hash, registered domain, origin/trust, storage mode, secret scan and triage output
+
+Promotion automation
+→ validates proposed Knowledge/edges, required approval, automatic-boundary compliance, affected records and logical-owner review routing
+
+Report automation
+→ runs onboard / derive-intent-roadmap / propagate / refresh at the canonical events while reports remain derived
+
+Checks
+→ Pactwright / Intelligence
+→ Pactwright / Intelligence Promotion
+→ Pactwright / Intelligence Views
+→ Pactwright / Intelligence Grounding
+
+Grounding states
+→ grounded
+→ attention
+→ blocked
+→ not-applicable
+
+Promotion PR projection
+→ proposed PI mutations distinguished from downstream recommendations
+
+Shared Project contributions
+→ Promotions
+→ Coverage
+→ Roadmap
+→ Freshness
+→ Propagation
+
+Delivery PR grounding contribution
+→ relevant domain/grounding/freshness/Knowledge links without copying complete Knowledge.
+
+GitHub never owns Source, Knowledge, coverage, candidate or propagation semantics.
+Reports remain revision-stamped derived views and stale reports are distinguishable from invalid canonical state.
 ```
 
 **Expected result**
 
-PI operates remotely through thin runtime execution/projection.
+PI operates remotely through the same thin workflow, shared Project and desired-state composition model established in Checkpoint 2.
 
 **Verify before continuing**
 
-Run sync + GitHub dry-run and verify only PI-owned contributions appear; stale derived reports are distinguishable from invalid canonical Knowledge.
+Prove:
+- Core-only state remains unchanged when PI is disabled;
+- Core + PI composes into the same shared Project;
+- enabling PI adds only PI-managed workflow/check/view/profile contributions;
+- disabling/removing PI removes only safely owned generated/remote contributions while preserving user-authored and PI canonical data;
+- all four exact checks and Grounding states operate;
+- stale derived reports are distinguishable from invalid Knowledge;
+- GitHub metadata cannot directly promote Knowledge or create an Intent.
 
 ### Step 14 — Add PI evaluation cases without canonising capability names
 
@@ -484,10 +618,12 @@ Run sync + GitHub dry-run and verify only PI-owned contributions appear; stale d
 ```text
 Add Project Intelligence evaluation cases for:
 - source triage/disposition/class;
-- evidence comparison;
+- evidence/trust comparison and independence;
 - unsupported promotion;
+- promotion revalidation against changed graph state;
 - bounded Knowledge selection/context contribution;
-- roadmap provenance/no automatic Intents.
+- roadmap provenance/state/ordering/no automatic Intents;
+- recurrence/satisfaction behaviour where AI-mediated interpretation participates.
 
 Route cases through the actual PI AI execution seam used by the implementation.
 Do not name a public PI capability decomposition unless implementation evidence first justifies updating Specs 02–03.
@@ -499,11 +635,92 @@ PI AI-mediated behaviour is measurable without speculative capability contracts.
 
 **Verify before continuing**
 
-Run `pactwright eval` and inspect PI cases individually.
+Run `pactwright eval`, inspect PI cases individually and inject at least one known regression so the affected PI dimension is surfaced.
+
+### Step 15 — Complete the canonical PI validation matrix
+
+**References:** Spec 03 validation.
+
+**Run**
+
+`pactwright intelligence validate` must now enforce the complete minimum Spec 03 contract:
+
+```text
+1. Source IDs, hashes, version links, domains, origins and trust values are valid.
+2. Source type and storage mode are valid independent fields.
+3. Snapshot Sources passed secret scanning before canonical capture.
+4. Removed stored bytes retain provenance/hash and force dependent Knowledge revalidation.
+5. Internal Sources reference valid canonical-record or execution-output provenance as applicable.
+6. Graph Review-originated Source provenance does not make Findings Project Graph nodes.
+7. Operations-originated Source provenance references canonical Observations without transferring ownership.
+8. All nine core Domain Definitions exist while PI is enabled.
+9. Domain Definitions contain required scope, stewardship, horizon, artifact and dependency information.
+10. Domain dependencies reference registered domains and are acyclic.
+11. Every accepted Knowledge record references a registered domain and at least one Source.
+12. Knowledge kinds follow their governance rules.
+13. Superseded Knowledge points to valid replacements.
+14. Retracted Knowledge forces direct-dependant revalidation.
+15. Class 0/1 mutations do not change canonical meaning, Delivery state or sibling canonical state.
+16. Class 2/3 canonical changes have required human approval.
+17. PI edge types use valid endpoints.
+18. Cross-graph edges preserve record ownership.
+19. `requires-delivery` targets a valid Delivery Intent.
+20. `satisfied-by` targets valid Delivery Evidence.
+21. Recurring obligations are not simultaneously treated as permanently unsatisfied one-off obligations without explicit justification.
+22. Roadmap candidates preserve motivating Knowledge and Source provenance.
+23. Extension-originated roadmap provenance traces through valid Sources.
+24. An Extension Finding/Observation alone cannot create a canonical Delivery Intent.
+25. Generated onboarding and roadmap reports record the Project Graph revision they derive from.
+26. Extension-specific roadmap projections cannot introduce candidates absent from the PI roadmap.
+27. Coverage obeys exact Missing/Seeded/Covered semantics including the slot-free Seeded ceiling.
+```
+
+Core `pactwright validate` must invoke PI validation when PI is enabled and must not reinterpret PI semantics itself.
+Validation is read-only.
+
+**Expected result**
+
+The complete Project Intelligence semantic contract is machine-enforced before Pactwright adopts PI.
+
+**Verify before continuing**
+
+Maintain positive fixtures plus at least one failing fixture for every numbered rule or tightly coupled rule group. Run both `pactwright intelligence validate` and core `pactwright validate`; deliberate PI invalidity must fail both without mutating state.
+
+### Step 16 — Prove compositional one-shot initialisation with real PI
+
+**References:** Spec 02 one-shot initialisation; Specs 03 and 07 integration.
+
+**Run**
+
+Using clean fixture repositories, prove:
+
+```text
+pactwright init --with project-intelligence --github
+```
+
+composes the same underlying mechanisms as:
+
+```text
+pactwright init
+pactwright extension add project-intelligence
+# enable GitHub through the same normal configuration operation
+pactwright sync
+pactwright github sync
+```
+
+Use workspace/packed Checkpoint 3 packages rather than inventing a separate test-only installation path.
+
+**Expected result**
+
+The canonical first real Extension + GitHub one-shot path produces the same resolved Pactwright environment and integration as explicit operations.
+
+**Verify before continuing**
+
+Compare configuration, package state, `.pactwright/lock.yml`, environment lock identity, generated adapter/workflow files and GitHub desired/applied state. Require semantic equivalence and convergence, not merely command success.
 
 ## Stage 6 — Adopt Project Intelligence in Pactwright
 
-### Step 15 — Enable PI from the workspace
+### Step 17 — Enable PI from the workspace
 
 **References:** Spec 02 Extension add; Spec 03.
 
@@ -521,13 +738,13 @@ pnpm pactwright validate
 
 **Expected result**
 
-Pactwright has PI enabled from its workspace build with no invented capability requirement.
+Pactwright has PI enabled from its workspace build with no invented capability requirement and the composed GitHub surface converges.
 
 **Verify before continuing**
 
-All PI/core validations pass and remote state converges.
+All PI/core validations pass, the shared Project remains singular and remote state converges.
 
-### Step 16 — Ingest the current Pactwright authoritative corpus
+### Step 18 — Ingest the current Pactwright authoritative corpus
 
 **References:** Specs 03 and 08 document authority.
 
@@ -569,7 +786,7 @@ Current Pactwright truth enters PI through normal Source governance.
 
 Accepted Knowledge remains Source-traceable; class 2/3 changes have approved promotion; no roadmap candidate became an Intent automatically.
 
-### Step 17 — Promote pre-PI bootstrap authority into durable Knowledge where applicable
+### Step 19 — Promote pre-PI bootstrap authority into durable Knowledge where applicable
 
 **References:** Spec 08 PI bootstrap/public-content authority.
 
@@ -590,7 +807,7 @@ Pre-PI Delivery authority remains historical lineage while accepted PI Knowledge
 
 Sample each promoted strategic item and trace Source → approval → accepted Knowledge.
 
-### Step 18 — Deliver one real Pactwright roadmap candidate
+### Step 20 — Deliver and satisfy one real Pactwright roadmap candidate
 
 **Run**
 
@@ -600,17 +817,19 @@ pnpm pactwright intelligence derive-intent-roadmap
 
 Select one ready Pactwright outcome, explicitly capture it as an Intent, then deliver it through normal Contract-driven Delivery using bounded PI context.
 
+Where the candidate represents a one-off PI obligation, record the valid `satisfied-by` relationship to resulting Delivery Evidence and regenerate the roadmap.
+
 **Expected result**
 
-PI proposes; Delivery authorises and executes.
+PI proposes; Delivery authorises/executes; accepted Evidence can satisfy the motivating obligation without rewriting historical Knowledge or Evidence.
 
 **Verify before continuing**
 
-Trace candidate → motivating Knowledge/Sources → explicit Intent → Evidence.
+Trace candidate → motivating Knowledge/Sources → explicit Intent → Evidence → `satisfied-by`; prove the completed one-off obligation is no longer outstanding while unrelated/recurring obligations remain correctly represented.
 
 ## Stage 7 — Establish Pactwright public-content readiness
 
-### Step 19 — Establish required public domains in dependency order
+### Step 21 — Establish exact applicable public-domain readiness
 
 **References:** Specs 03 and 08 public-content readiness.
 
@@ -620,29 +839,47 @@ Trace candidate → motivating Knowledge/Sources → explicit Intent → Evidenc
 pnpm pactwright intelligence onboard
 ```
 
-For the Checkpoint 3 public learning path, establish only the coverage actually required by the work.
-
-At minimum, preserve the canonical dependency ordering:
+Determine which domains the Checkpoint 3 public learning path actually depends on and require the canonical Spec 08 readiness matrix:
 
 ```text
-discovery/product/identity strategic upstream
-→ go-to-market where required
-→ content where required
+identity
+→ Covered for public/outbound work whose identity, voice or values matter
+
+content
+→ Covered for editorial, educational or marketing work
+
+product
+→ Covered when making Pactwright capability, value, behaviour or limitation claims
+
+go-to-market
+→ Covered for acquisition, positioning, CTA or campaign work
+
+delivery/ux
+→ Covered for user-facing workflow or UX claims
+
+delivery/eng
+→ Covered for technical implementation claims
+
+other applicable subject domain
+→ Covered when factual claims depend on it
 ```
 
-Any missing strategic choice must become an explicit Decision through normal Delivery before it is promoted into PI Knowledge.
+For every relied-on claim/constraint, require accepted, in-horizon Knowledge with traceable Sources.
+Preserve domain dependency ordering while closing gaps.
 
+Any missing strategic choice must become an explicit Decision through normal Delivery before it is promoted into PI Knowledge.
 Do not require unrelated domains to become Covered merely for ceremony.
+```
 
 **Expected result**
 
-Required public claims/constraints are accepted, in-horizon and Source-traceable.
+Every domain applicable to the planned public work satisfies the exact public-content readiness gate and every relied-on claim is governed current Knowledge.
 
 **Verify before continuing**
 
-Inspect domain-map/onboarding plus the exact Knowledge used by the planned public work.
+Inspect domain-map/onboarding, assert `Covered` for every applicable domain, and trace the exact Knowledge/Sources used by the planned public work. Missing applicable coverage must block approval of that public Delivery.
 
-### Step 20 — Publish the Project Intelligence learning path
+### Step 22 — Publish the Project Intelligence learning path
 
 **References:** Spec 08 Project Intelligence milestone.
 
@@ -653,12 +890,12 @@ Through normal Pactwright Delivery, publish/update:
 ```text
 Project Intelligence concepts
 PI onboarding guide
-one project-intelligence example
+one executable project-intelligence example
 Academy Project Understanding lesson
 README/website discovery links where needed
 ```
 
-Ground applicable public claims in accepted current PI Knowledge.
+Ground applicable public claims in accepted current PI Knowledge and retain the Knowledge actually relied on by the Delivery where grounding applies.
 
 After acceptance, ingest material public content as Sources when it materially represents current project claims. Do not promote derivative copy back into Knowledge unless it contains genuinely new accepted meaning.
 
@@ -668,11 +905,11 @@ Project Intelligence both governs the project and explains itself from governed 
 
 **Verify before continuing**
 
-Public claims agree with accepted PI Knowledge and resulting Sources remain traceable.
+Public claims agree with accepted PI Knowledge, the example runs in CI where practical, resulting Sources remain traceable and challenged/superseded/retracted relied-on Knowledge before approval requires re-grounding rather than silent continuation.
 
 ## Stage 8 — Release `0.0.3`
 
-### Step 21 — Publish the `0.0.3` package family
+### Step 23 — Publish the `0.0.3` package family
 
 **References:** Implementation Guide npm release model.
 
@@ -698,31 +935,36 @@ All three versions resolve and trusted-publisher/provenance expectations hold.
 
 ## Stage 9 — Cold-start Kakeido
 
-### Step 22 — Upgrade/install PI in Kakeido
+### Step 24 — Upgrade Kakeido from accepted `0.0.2` and install PI through Pactwright ownership paths
+
+**References:** Spec 02 upgrade/Extension installation ownership.
 
 **Run**
 
-```bash
-pnpm add -D \
-  pactwright@0.0.3 \
-  @pactwright/standard@0.0.3 \
-  @pactwright/project-intelligence@0.0.3
+Start from the accepted Checkpoint 2 Kakeido environment. Do not preinstall `0.0.3` packages manually before exercising Pactwright upgrade/install commands.
 
+```bash
 pnpm pactwright upgrade --to 0.0.3
 pnpm pactwright agent-pack upgrade
-pnpm pactwright extension add project-intelligence
-pnpm pactwright sync
+pnpm pactwright extension add @pactwright/project-intelligence@0.0.3
 pnpm pactwright intelligence validate
+pnpm pactwright sync
 pnpm pactwright github sync --dry-run
 pnpm pactwright github sync
 pnpm pactwright validate
 ```
 
+`pactwright upgrade` owns runtime upgrade orchestration through the project package manager. `agent-pack upgrade` owns the selected Agent Pack. `extension add` owns installation/registration/locking of the new PI package.
+
 **Expected result**
 
-Kakeido runs the exact published Checkpoint 3 family with PI enabled.
+Kakeido moves from the real published `0.0.2` environment to the exact published Checkpoint 3 family without bypassing Pactwright's ownership-specific upgrade/install mechanisms.
 
-### Step 23 — Discover and ingest the current Kakeido canonical corpus
+**Verify before continuing**
+
+Verify package-manager state and `.pactwright/lock.yml` identify `pactwright@0.0.3`, `@pactwright/standard@0.0.3` and `@pactwright/project-intelligence@0.0.3`; the new runtime performed migration/validation; the PI GitHub profile composed into the existing shared integration; a second GitHub dry-run converges; user-owned workflows/remote state remain unchanged.
+
+### Step 25 — Discover and ingest the current Kakeido canonical corpus
 
 **References:** current Kakeido repository document authority.
 
@@ -757,9 +999,9 @@ Kakeido knowledge is distributed across the canonical domain registry rather tha
 
 **Verify before continuing**
 
-Onboarding/roadmap reflect the current Kakeido project and no candidate became a canonical Intent automatically.
+Onboarding/roadmap reflect the current Kakeido project, candidate states/readiness are explainable from current Knowledge/dependencies and no candidate became a canonical Intent automatically.
 
-### Step 24 — Deliver one current cross-domain Kakeido candidate
+### Step 26 — Deliver one current cross-domain Kakeido candidate
 
 Select one ready Kakeido candidate requiring multiple current knowledge domains, explicitly capture it as an Intent and complete normal Delivery.
 
@@ -771,15 +1013,15 @@ The Delivery preserves relevant Kakeido product/domain/engineering constraints w
 
 **Verify before continuing**
 
-Trace candidate → Knowledge/Sources → Intent → Evidence and run current Kakeido repository-defined tests.
+Trace candidate → Knowledge/Sources → Intent → Evidence, record `satisfied-by` where the Delivery satisfies a PI obligation, regenerate the roadmap and run current Kakeido repository-defined tests.
 
 ## Stage 10 — Capture Checkpoint 3 feedback through PI
 
-### Step 25 — Ingest checkpoint findings as Sources
+### Step 27 — Ingest checkpoint findings as Sources
 
 **References:** Implementation Principles feedback/evaluation rules.
 
-Capture defects, installation friction, context-selection failures, promotion/governance problems and public-content corrections from Pactwright/Kakeido as Sources.
+Capture defects, installation friction, context-selection failures, promotion/governance problems, GitHub-profile problems, roadmap errors and public-content corrections from Pactwright/Kakeido as Sources.
 
 For each:
 
@@ -806,25 +1048,32 @@ Each material finding has Source provenance/triage and justified candidates rema
 Checkpoint 3 closes only when:
 
 - `@pactwright/project-intelligence` is independently installable;
+- `pactwright init --with project-intelligence --github` is proven compositionally equivalent to the explicit Extension + GitHub setup path;
 - no unsupported PI capability identifiers have been canonised;
 - all nine core domains exist and validate;
-- Source identity/versioning/storage/provenance works for both canonical-record and non-canonical execution-output origins;
+- Source identity/versioning/storage/provenance works for canonical-record and non-canonical execution-output origins, including originating Project Graph revision;
 - triage classes and class 0/1 automatic-mutation boundaries are enforced;
+- promotion revalidates against current graph state, preserves captured Sources on failure and does not use last-writer-wins semantics;
 - changed/new canonical Knowledge meaning requires approval;
-- trust/evidence, supersession, retraction and recurrence-policy rules validate;
-- Missing/Seeded/Covered and dependency-aware onboarding work;
-- exactly one PI Intent-roadmap derivation exists and creates no Intents automatically;
+- the canonical trust/evidence rules, Knowledge-kind governance, supersession, retraction and recurrence-policy rules validate;
+- exact Missing/Seeded/Covered semantics and dependency-aware onboarding work;
+- exactly one PI Intent-roadmap derivation exists, supports `ready | blocked | open | reopen-proposed`, applies canonical dependency-wave/precedence rules and creates no Intents automatically;
+- one-off satisfaction and recurring-obligation semantics work without introducing a scheduler;
 - propagation/freshness preserve ownership boundaries;
-- bounded PI context contributes through the existing Pactwright context assembly seam;
-- `pactwright-intelligence.yml` and all four canonical PI GitHub checks/projections operate as thin runtime surfaces;
+- bounded PI context contributes through the existing Pactwright context assembly seam, including a fixture proving future Graph Review can consume the same generic seam;
+- all 27 minimum Spec 03 validation rules are machine-enforced by `pactwright intelligence validate`, and core `pactwright validate` delegates to it when PI is enabled;
+- PI contributes through the Checkpoint 2 GitHub profile-composition/reconciliation engine rather than a second integration path;
+- `pactwright-intelligence.yml`, all four canonical PI checks, exact Grounding states, promotion projection, Delivery grounding and shared Project PI views operate as thin runtime surfaces;
 - Pactwright's current canonical/public corpus and applicable pre-PI bootstrap authority are governed through Source ingestion/promotion;
-- Pactwright delivers one real roadmap candidate only after explicit Intent capture;
-- the PI public learning path is grounded in accepted current Knowledge;
+- Pactwright delivers and satisfies one real roadmap candidate only after explicit Intent capture;
+- every applicable Spec 08 public-content domain is Covered before the PI learning path is approved, and relied-on claims are accepted/in-horizon/Source-traceable;
+- the PI public learning path is grounded in accepted current Knowledge and its executable example is validated;
 - the `0.0.3` family is registry verified;
+- Kakeido performs a real `0.0.2 → 0.0.3` runtime/Agent Pack upgrade and PI installation through Pactwright-owned commands rather than preinstallation;
 - Kakeido is cold-started from its current canonical specification corpus and completes one cross-domain Delivery;
 - checkpoint findings flow through PI itself;
 - no known blocking failure is carried into Checkpoint 4.
 
 ---
 
-**Pactwright — Checkpoint 3 — Project Intelligence v10**
+**Pactwright — Checkpoint 3 — Project Intelligence v11**
