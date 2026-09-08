@@ -1,9 +1,9 @@
 # Pactwright — Checkpoint 5 — Production Skills + Assets / Publication
 
-**Version:** 10  
+**Version:** 11  
 **Entry condition:** Checkpoint 4 is accepted.  
 **Release:** `0.0.5`  
-**Exit capability:** Pactwright and Kakeido can use specialised external Production Skills through the selected Agent Pack during normal Delivery, then turn successful Delivery Evidence into exact human-approved Assets and real Publications without introducing a second production lifecycle.
+**Exit capability:** Pactwright and Kakeido can resolve exact external Production Skills and Production Extension Packs through the selected Agent Pack during normal Delivery, then turn successful Delivery Evidence into exact human-approved Assets and real Publications without introducing a second production lifecycle.
 
 ## 1. Goal
 
@@ -26,6 +26,8 @@ Evidence
 → actual release
 → Publication
 ```
+
+Checkpoint 5 consumes the capability, Agent Pack, Extension, locking, replay, Project Intelligence and GitHub composition machinery established by Checkpoints 1–4. It must not introduce Production Skills or Assets / Publication-specific alternatives to those mechanisms.
 
 Checkpoint 5 must demonstrate specialised production and durable publication **without** recreating Creative Delivery, provider routing or generation-specific Pactwright semantics.
 
@@ -63,7 +65,7 @@ Step
 → Verify before continuing
 ```
 
-Default execution location is the Pactwright repository root unless a step names Kakeido, a Production Skills repository or a fixture.
+Default execution location is Pactwright unless a step names Kakeido, a Production Skills repository or a fixture.
 
 For repository/code changes:
 
@@ -87,24 +89,30 @@ Checkpoint 5 implements and proves:
 
 ```text
 Production Skills integration manifest support
+Production Skills resolved-environment validation and doctor diagnostics
 multiple Production Skills contributing to one Pactwright capability
-Production Extension Pack resolution/locking where selected
+Production Extension Pack selection/resolution/locking
+Production Skills / Extension Pack regression attribution
 Pactwright integration-boundary validation for Production Skills
 @pactwright/assets-publication
-Asset schema / approval / immutability / grounding
+exact Asset / Publication canonical schemas
+Asset approval atomicity / immutability / grounding
 Evidence --produces--> Asset
 Asset --grounded-in--> Knowledge where applicable
 Asset --supersedes--> Asset semantic support
-Publication schema / exact Asset hash / release provenance
+Publication exact Asset hash / release provenance
 Publication --publishes--> Asset
+multiple Publications and correction history
+complete Spec 05 validation matrix
 pactwright assets approve-asset
 pactwright assets record-publication
 pactwright assets validate
-Assets / Publication GitHub workflow/checks/views from Spec 07
+Assets / Publication GitHub workflow/checks/views through the shared integration
+first grounded approved Pactwright public Asset + Publication
 real Pactwright Production Skills use
-real Pactwright Asset + Publication
-real Kakeido Production Skills use
-real Kakeido Asset + Publication where appropriate
+real Kakeibo Production Skills use
+real Kakeibo Asset + Publication where appropriate
+real 0.0.4 → 0.0.5 ownership-specific upgrade/install path
 ```
 
 ### Explicitly removed
@@ -129,6 +137,8 @@ pactwright creative ...
 
 Delivery Review remains the verification point before Evidence. Production quality uses relevant Production Skills evaluation/benchmarks.
 
+Production Skills remain composed **through the selected Agent Pack**. Do not introduce peer-level project `production_skills` configuration beside Agent Pack / Extensions / Adapter / Lifecycle / GitHub configuration.
+
 ### Explicitly unresolved
 
 Do not silently solve:
@@ -141,9 +151,9 @@ Do not silently solve:
 
 ## Stage 1 — Prove Production Skills integration
 
-### Step 1 — Implement Production Skills integration manifest resolution
+### Step 1 — Implement Production Skills integration manifest resolution and complete environment validation
 
-**References:** Spec 02 Production Skills integration manifest and resolution.
+**References:** Spec 02 Production Skills integration manifest, validation and resolution.
 
 **Run**
 
@@ -157,10 +167,25 @@ Resolve only the canonical integration concerns:
 - Production Extension Pack discovery/selection where configured;
 - exact revision/version and manifest identity for locking.
 
-Do not allow the manifest to define:
-- Pactwright agents;
+Before accepting the resolved environment, validate:
+- integration manifest syntax;
+- Pactwright compatibility;
+- referenced skill existence;
+- selected Production Extension Pack existence in the owning family;
+- deterministic skill identity;
+- source/revision availability;
+- adapter representability;
+- ambiguity across imported skill identities;
+- complete runtime / Extension / Agent Pack compatibility;
+- package-manager lock ↔ `.pactwright/lock.yml` consistency where both identify package-backed components;
+- deterministic environment-lock derivation.
+
+If two imported families expose an ambiguous skill identity, fail resolution rather than silently selecting one.
+
+Do not allow a Production Skills integration manifest to define:
+- Pactwright agents or prompts;
 - lifecycle shapes;
-- Project Graph node types;
+- Project Graph node/edge types;
 - Pactwright commands;
 - provider routing;
 - Project Intelligence rules;
@@ -169,15 +194,15 @@ Do not allow the manifest to define:
 
 **Expected result**
 
-Pactwright can consume Production Skills integration metadata without absorbing the Production Skills system.
+Pactwright can consume Production Skills integration metadata and fail closed on an invalid complete environment without absorbing the Production Skills system.
 
 **Verify before continuing**
 
-Use fixture manifests for valid compatibility, invalid compatibility, missing skill, ambiguous skill identity and malformed Extension Pack references.
+Use fixtures for valid compatibility, invalid compatibility, missing source/revision, missing skill, ambiguous skill identity, adapter-unrepresentable skill, malformed manifest and invalid Extension Pack references. Every failed resolution preserves the previous valid configuration, lock and generated environment.
 
-### Step 2 — Implement exact Production Skills locking and sync
+### Step 2 — Implement exact Production Skills / Extension Pack locking and deterministic sync
 
-**References:** Spec 02 locking/synchronisation.
+**References:** Spec 02 locking, Production Extension Pack and synchronisation rules.
 
 **Run**
 
@@ -189,18 +214,34 @@ Extend `.pactwright/lock.yml` and sync resolution to lock exact external Product
 - referenced skills;
 - selected Production Extension Packs.
 
+Prove the Production Extension Pack boundary with at least one selected pack from an owning Production Skills family:
+- Pactwright owns selection, resolution, locking and availability;
+- the Production Skills family owns pack meaning, rules, validation, evaluation and behavioural effect;
+- a Production Extension Pack never appears as a Pactwright Extension.
+
 Do not copy or reinterpret the Production Skills repository's own internal lock graph.
 
-Changing a locked Production Skills revision must change `environment_lock_hash`.
+Changing any of these must change `environment_lock_hash`:
+- Production Skills revision/version;
+- integration manifest identity when effective resolution changes;
+- selected Production Extension Pack.
+
+`pactwright sync` must materialise the resolved skills/packs into the active adapter without writing into external Production Skills repositories.
 ```
 
 **Expected result**
 
-Production Skills become part of the exact Pactwright execution environment without becoming Pactwright-owned packages or semantics.
+Production Skills and selected Production Extension Packs become exact parts of the Pactwright execution environment without becoming Pactwright-owned packages or semantics.
 
 **Verify before continuing**
 
-Resolve identical inputs twice; require identical lock/environment hash. Change one Production Skills revision and require the environment hash to change.
+Prove:
+- identical locked inputs produce identical lock, environment hash and generated adapter output;
+- changing one Production Skills revision changes the hash;
+- changing one selected Production Extension Pack changes the hash;
+- nonexistent/wrong-family packs fail closed;
+- external Production Skills repository hashes remain unchanged before/after `pactwright sync`;
+- repeated sync converges.
 
 ### Step 3 — Prove multiple Production Skills on one capability
 
@@ -224,6 +265,7 @@ and/or
 The Agent Pack decides how to compose them. Pactwright resolves, validates, locks and exposes them through the adapter.
 
 Do not create one Pactwright capability per production domain.
+Do not expose Production Skills as a peer-level project configuration surface.
 ```
 
 **Expected result**
@@ -232,15 +274,25 @@ One Delivery can use multiple specialised production domains without changing li
 
 **Verify before continuing**
 
-Run a fixture Delivery whose Brief genuinely needs two Production Skills families and prove both are available to the selected agent while the capability remains `delivery-execution` / `delivery-review`.
+Run a fixture Delivery whose Brief genuinely needs two Production Skills families and prove both are available to one selected agent while the capability remains `delivery-execution` / `delivery-review`.
 
-### Step 4 — Add Production Skills integration-boundary evaluation
+### Step 4 — Diagnose, evaluate and baseline the Production Skills integration boundary
 
-**References:** Spec 02 evaluation/benchmark ownership.
+**References:** Spec 02 doctor, evaluation, benchmark ownership and baseline reporting.
 
 **Run**
 
 ```text
+Extend `pactwright doctor` to diagnose the new resolved-environment failures read-only, including:
+- missing/unresolvable Production Skills source or revision;
+- missing referenced skill;
+- invalid/missing Production Extension Pack;
+- package/Pactwright lock drift;
+- adapter inability to represent the resolved skill;
+- validation failures affecting the resolved environment.
+
+Where remediation is deterministic, report the appropriate command without running it.
+
 Extend Pactwright evaluation only at the integration boundary:
 - required Production Skills binding resolves;
 - multiple skills can be supplied to one Pactwright responsibility;
@@ -250,15 +302,28 @@ Extend Pactwright evaluation only at the integration boundary:
 
 Do not execute or duplicate entire external Production Skills benchmark suites as Pactwright evaluation.
 Domain quality remains owned by those repositories.
+
+Use the existing baseline interface to prove regression attribution for:
+- a changed Production Skills revision;
+- a changed Production Extension Pack selection.
+
+Reports must identify the affected capability/case and the relevant Production Skills / Production Extension Pack change rather than relying on one opaque aggregate score.
 ```
 
 **Expected result**
 
-Pactwright can verify correct Production Skills integration without becoming a universal domain benchmark framework.
+Pactwright can diagnose, validate and regress its Production Skills integration boundary without becoming a universal domain benchmark framework.
 
 **Verify before continuing**
 
-Run `pnpm pactwright eval` and inspect the new integration-boundary cases separately from Production Skills benchmark output.
+Run:
+
+```bash
+pnpm pactwright doctor
+pnpm pactwright eval
+```
+
+and baseline/candidate fixture comparisons. Confirm doctor is read-only and regression output attributes the changed Production Skills / Extension Pack dimension.
 
 ## Stage 2 — Package Assets / Publication
 
@@ -281,6 +346,8 @@ Its manifest/runtime owns:
 - `assets` command namespace;
 - Assets / Publication GitHub profile.
 
+Do not require a new Agent Pack capability: approval, hashing, validation and recording are deterministic Extension responsibilities under the current spec.
+
 Do not require Graph Review or Operations.
 Do not require Project Intelligence merely for the Extension to be enabled or for ungrounded Assets to exist.
 PI becomes a semantic prerequisite only when an Asset requires governed project grounding.
@@ -298,31 +365,35 @@ Test enablement with:
 - Graph Review disabled;
 - Operations disabled.
 
-All structurally valid combinations remain valid.
+All structurally valid combinations remain valid and no new production-domain capability is required.
 
 ## Stage 3 — Implement Asset semantics and approval
 
-### Step 6 — Implement Asset schema and exact content identity
+### Step 6 — Implement the exact Asset schema and content identity
 
 **References:** Spec 05 Asset identity/immutability/storage.
 
 **Run**
 
 ```text
-Implement Asset canonical state with at least:
-- stable Asset identity;
+Implement Asset canonical state with at least the canonical minimum fields:
+- id;
+- type: asset;
+- title;
+- created;
 - media_type;
 - exact content_hash;
 - storage_pointer;
-- originating Delivery Evidence;
-- applicable grounding ids/hashes;
+- delivery_evidence;
+- grounding id/hash pairs where applicable;
 - approved_by human identity;
 - approved_at;
 - sufficient generic audit provenance.
 
-Do not include provider-specific Generation Records or Production Skills execution history in the canonical Asset schema.
+Do not include provider-specific Generation Records or copy Production Skills execution history into the canonical Asset schema.
 
-Candidate outputs, drafts, renders, prototypes and temporary exports remain non-canonical until exact human approval.
+Candidate outputs, drafts, renders, mixes, prototypes, build artefacts, research drafts and temporary exports remain non-canonical until exact human approval.
+Successful Delivery Evidence does not automatically create an Asset.
 ```
 
 **Expected result**
@@ -331,11 +402,11 @@ Asset identity means one exact approved durable output, independent of how it wa
 
 **Verify before continuing**
 
-Test valid Asset structure, missing Evidence, missing approver, missing hash, attempted content-hash mutation and candidate-output non-canonicality.
+Test valid Asset structure, missing title/created/Evidence/approver/hash/storage identity, attempted content-hash mutation and candidate-output non-canonicality.
 
-### Step 7 — Implement conditional grounding validation
+### Step 7 — Implement conditional grounding and post-approval reconsideration
 
-**References:** Specs 03, 05 and 08 public grounding/readiness.
+**References:** Specs 03, 05 and 08 grounding/readiness.
 
 **Run**
 
@@ -352,12 +423,18 @@ governed project facts / identity / voice / positioning / product claims / accep
 
 Required grounding may not be omitted to bypass PI.
 
-Grounding changes after approval never silently rewrite the historical Asset.
+Before approval, challenged/superseded/retracted or mismatched grounding requires re-grounding/re-evaluation.
+
+After approval, later Knowledge challenge/supersession/retraction:
+- never rewrites the historical Asset or its recorded grounding hashes;
+- identifies the affected Asset through existing graph relationships;
+- flows through normal PI propagation/review/candidate governance where correction is justified;
+- requires normal new Delivery and a new Asset if corrected content is produced.
 ```
 
 **Expected result**
 
-Neutral durable outputs can be approved without PI, while fact-bearing/project-grounded outputs fail closed when durable project truth is unavailable or mismatched.
+Neutral durable outputs can be approved without PI, while governed outputs fail closed and historical grounded Assets remain immutable when project knowledge changes.
 
 **Verify before continuing**
 
@@ -365,8 +442,9 @@ Use fixtures for:
 - ungrounded neutral Asset with PI disabled => allowed;
 - governed-claim Asset with PI disabled => rejected;
 - valid accepted Knowledge grounding => allowed;
-- stale/mismatched grounding hash => rejected;
-- challenged/superseded/retracted grounding before approval => rejected/re-ground required.
+- mismatched grounding hash => rejected;
+- challenged/superseded/retracted grounding before approval => re-ground required;
+- approved grounded Asset followed by Knowledge challenge/supersession/retraction => Asset unchanged, affected Asset surfaced through normal PI propagation/reconsideration.
 
 ### Step 8 — Implement Asset relationships and supersession semantics
 
@@ -381,22 +459,27 @@ Evidence --produces--> Asset
 Asset --grounded-in--> Knowledge        where applicable
 Asset --supersedes--> Asset
 
+One Evidence may produce multiple Assets when those outputs have useful independent identity.
+
 A material revision creates a new Asset; the earlier Asset remains immutable historical truth.
 
-Implement the graph/runtime semantic support needed for supersession, but do not invent a public standalone `assets supersede` command unless the owning canonical spec is first updated to establish that interface.
+Implement graph/runtime semantic support for supersession, but do not invent:
+- a public standalone `assets supersede` command;
+- Asset withdrawal state/command;
+- Publication supersession semantics.
 ```
 
 **Expected result**
 
-Asset provenance and revision history are explicit without a withdrawal lifecycle.
+Asset provenance and correction history are explicit without a withdrawal lifecycle.
 
 **Verify before continuing**
 
-Test valid Evidence production, multiple Assets from one Evidence, invalid endpoints, immutable superseded Asset and acyclic supersession.
+Test valid Evidence production, multiple Assets from one Evidence, invalid endpoints/directions, immutable superseded Asset, acyclic supersession and rejection/absence of invented withdrawal semantics.
 
-### Step 9 — Implement `pactwright assets approve-asset`
+### Step 9 — Implement atomic `pactwright assets approve-asset`
 
-**References:** Spec 05 commands/human approval.
+**References:** Spec 05 commands/human approval/failure semantics.
 
 **Run**
 
@@ -405,21 +488,25 @@ Implement:
 
 pactwright assets approve-asset <evidence-id>
 
-The command prepares/validates the candidate Asset from successful Delivery Evidence, exact output content identity, required grounding and explicit human approval.
+The command prepares and validates the candidate Asset from successful Delivery Evidence, exact output content identity, required grounding and explicit human approval.
 
 Human approval must apply to the exact content hash being recorded.
-Automation may calculate and validate but cannot independently create the approval authority.
+Automation may calculate and validate but cannot independently create approval authority.
 
-Print the created Asset id.
+Asset creation is atomic:
+- invalid Evidence/content identity/grounding/approval => no canonical Asset;
+- no partial `produces` / `grounded-in` relationships remain after failure.
+
+Print the created Asset id only after successful canonical creation.
 ```
 
 **Expected result**
 
-Only an exact reviewed and human-approved durable output becomes an Asset.
+Only an exact reviewed and human-approved durable output becomes an Asset, and failed approval leaves no partial canonical state.
 
 **Verify before continuing**
 
-Approve a repository-backed fixture output, then mutate its bytes and prove `assets validate` fails against the recorded hash.
+Approve a repository-backed fixture output, mutate its bytes and prove `assets validate` fails against the recorded hash. Separately induce invalid grounding and invalid Evidence during approval and prove no partial Asset or relationship is created.
 
 ### Step 10 — Handle external Asset verification conservatively
 
@@ -434,7 +521,7 @@ For external storage pointers:
 - verify bytes/hash when the storage mechanism is actually accessible and deterministic;
 - if current bytes cannot be verified, report the Asset as unverifiable according to validation semantics rather than treating the pointer itself as proof.
 
-Do not introduce a new universal storage provider/replication system merely to close this checkpoint.
+Do not introduce a universal storage provider, replication layer, DAM or binary archive merely to close this checkpoint.
 ```
 
 **Expected result**
@@ -443,19 +530,22 @@ Pactwright never equates an inaccessible pointer with verified content identity.
 
 **Verify before continuing**
 
-Test repository-backed success, externally accessible success and inaccessible external pointer handling. Keep the broader cross-provider verification mechanism explicitly open.
+Test repository-backed success, externally accessible success and inaccessible/mutable/access-controlled external pointer handling. Keep the broader cross-provider verification mechanism explicitly open.
 
 ## Stage 4 — Implement Publication
 
-### Step 11 — Implement Publication schema and canonical relationship
+### Step 11 — Implement the exact Publication schema and canonical relationship
 
 **References:** Spec 05 Publication semantics.
 
 **Run**
 
 ```text
-Implement Publication canonical state with at least:
-- Publication identity;
+Implement Publication canonical state with at least the canonical minimum fields:
+- id;
+- type: publication;
+- title;
+- created;
 - referenced approved Asset;
 - exact asset_hash;
 - channel;
@@ -472,15 +562,15 @@ Publication records an actual release event, not scheduling intent and not perfo
 
 **Expected result**
 
-Publication records where/when/by whom an exact approved Asset was released.
+Publication records where/when/by whom an exact approved Asset was actually released.
 
 **Verify before continuing**
 
-Test valid Publication, unapproved Asset, mismatched asset hash, missing channel/provenance and reversed relation direction.
+Test valid Publication, unapproved Asset, mismatched asset hash, missing title/created/channel/publication provenance and reversed relation direction.
 
-### Step 12 — Implement `pactwright assets record-publication`
+### Step 12 — Implement safe `record-publication`, multiple releases and correction history
 
-**References:** Spec 05 command/failure semantics.
+**References:** Spec 05 command/failure/idempotency/multiple-Publication semantics.
 
 **Run**
 
@@ -492,49 +582,78 @@ pactwright assets record-publication <asset-id> <channel>
 The command records canonical Publication only after the project/channel mechanism has actually released the approved Asset.
 Capture actual release provenance and locator where available.
 
-A failed publication attempt never mutates the Asset and never creates a valid Publication.
+A failed publication attempt:
+- never mutates the Asset;
+- never creates a valid Publication;
+- never becomes a valid Operations exposure.
 
-The canonical idempotency identity for uncertain/retried recording is unresolved. Implement the minimum safe retry protection required by the current channel integration without claiming a universal semantic identity; surface ambiguity rather than silently duplicating canonical Publications.
+One approved Asset may have multiple Publications when they represent intentional distinct release events/surfaces.
+
+A material content correction follows:
+
+new content
+→ new Asset
+→ new Asset supersedes old Asset
+→ new Publication when released
+
+Do not introduce Publication-to-Publication supersession or Publication withdrawal semantics.
+
+The canonical idempotency identity for uncertain/retried recording remains unresolved. Implement minimum safe retry protection for the current channel integration and surface ambiguity rather than silently treating an uncertain retry as either a new intentional Publication or a duplicate.
 ```
 
 **Expected result**
 
-Only actual release of the exact approved Asset becomes canonical Publication history.
+Only actual release of exact approved Assets becomes Publication history, while intentional multiple releases and corrections remain distinguishable from uncertain retries.
 
 **Verify before continuing**
 
-Test successful recording, failed release, mismatched hash and an uncertain retry scenario that does not silently create duplicate canonical Publications.
+Test:
+- successful recording;
+- failed release;
+- mismatched hash;
+- two intentional Publications of one Asset;
+- uncertain retry does not silently create a duplicate;
+- corrected content uses a new superseding Asset + new Publication;
+- no Publication withdrawal or Publication→Publication supersession appears.
 
-### Step 13 — Implement `pactwright assets validate`
+### Step 13 — Implement the complete `pactwright assets validate` contract
 
 **References:** Spec 05 validation.
 
 **Run**
 
-```text
-Implement Assets / Publication validation covering:
-- valid Delivery Evidence provenance;
-- human approval and exact Asset content hash;
-- conditional grounding rules;
-- Asset immutability;
-- valid produces/grounded-in/supersedes relationships;
-- approved Asset prerequisite for Publication;
-- Publication.asset_hash == Asset.content_hash;
-- Publication → Asset direction;
-- actual release provenance;
-- independence from Operations performance/availability;
-- conservative handling of unverifiable external bytes.
+Implement `pactwright assets validate` to enforce all canonical minimum rules:
 
-Core `pactwright validate` invokes this when the Extension is enabled.
+```text
+1. every Asset references valid Delivery Evidence;
+2. every Asset records a valid human approver and approval time;
+3. every Asset has a content_hash;
+4. every Asset content hash exactly matches the stored/referenced approved output when verifiable;
+5. every declared grounding id/hash pair resolves to accepted applicable PI Knowledge and exact referenced canonical state;
+6. Assets asserting governed project claims require PI and valid accepted grounding before approval;
+7. Assets without governed grounding requirements may remain valid without PI;
+8. Asset content identity is immutable after creation;
+9. Asset supersedes relationships have valid Asset endpoints;
+10. every Publication references an approved Asset;
+11. every Publication records asset_hash, channel, published_by and published_at;
+12. every Publication asset_hash exactly equals the referenced Asset content_hash;
+13. every produces, grounded-in, publishes and supersedes edge uses valid endpoints and canonical direction;
+14. publishes is Publication → Asset;
+15. where an Operations exposure fixture/integration is present, it references an existing Publication rather than copied Publication state;
+16. Asset / Publication validity does not depend on operational performance.
 ```
+
+Core `pactwright validate` invokes Assets / Publication validation when the Extension is enabled and does not reinterpret Extension semantics itself.
+
+Validation is read-only. Unverifiable external bytes must never be reported as verified merely because a pointer exists.
 
 **Expected result**
 
-Assets and Publications fail closed without acquiring production or Operations semantics.
+The complete Assets / Publication canonical contract is machine-enforced without acquiring Production Skills or Operations semantics.
 
 **Verify before continuing**
 
-Run one invalid fixture per major invariant and prove validation failure does not mutate canonical state.
+Maintain positive fixtures plus at least one failing fixture for every numbered rule or tightly coupled rule group. Use a future-Operations fixture for rule 15 rather than implementing Operations early. Run both `pactwright assets validate` and core `pactwright validate`; deliberate invalidity must fail without mutation.
 
 ## Stage 5 — GitHub integration and evaluation
 
@@ -546,15 +665,20 @@ Run one invalid fixture per major invariant and prove validation failure does no
 
 ```text
 Contribute Assets / Publication cases to `pactwright eval` for semantic-boundary failures:
-- candidate output cannot become Asset without human approval;
+- candidate output cannot become Asset without exact human approval;
+- failed Asset approval leaves no partial canonical state;
 - wrong content hash rejected;
 - invalid/missing required grounding rejected;
-- genuinely ungrounded Asset class allowed without forcing PI;
+- genuinely ungrounded Asset allowed without forcing PI;
+- post-approval grounding change preserves historical Asset and routes reconsideration normally;
 - direct Publication from Evidence/unapproved output rejected;
 - Publication hash mismatch rejected;
 - Asset immutability/supersession preserved;
+- multiple intentional Publications allowed;
+- uncertain retry does not silently duplicate;
 - Publication → Asset direction enforced;
-- Operations absence/failure does not invalidate Publication.
+- Publication withdrawal / Publication supersession are not invented;
+- Operations absence/failure/performance does not invalidate Publication.
 
 Do not evaluate domain production quality here.
 ```
@@ -567,39 +691,75 @@ The post-Delivery durable-output boundary has repeatable Pactwright-level evalua
 
 Run `pnpm pactwright eval` and inspect Assets / Publication cases individually.
 
-### Step 15 — Implement Assets / Publication GitHub profile/workflow
+### Step 15 — Implement Assets / Publication GitHub profile/workflow through the shared integration
 
 **References:** Spec 07 Assets / Publication integration; Implementation Guide GitHub Actions baseline.
 
 **Run**
 
 ```text
-Implement the Assets / Publication GitHub profile and generated:
+Contribute the Assets / Publication profile to the generic GitHub composition/reconciliation engine established in Checkpoint 2.
+
+Generate:
 
 .github/workflows/pactwright-assets-publication.yml
 
-Implement the exact checks defined by Spec 07:
+Relevant managed/validated paths include:
+- assets/**
+- docs/assets-publication/assets/**
+- docs/assets-publication/publications/**
+
+Implement the exact checks:
 - Pactwright / Assets
 - Pactwright / Publication
 
-and the configured Asset/Publication projections/views owned by Spec 07.
+The shared Project may add the configured views:
+- Assets
+- Publications
 
-GitHub may validate/project approval metadata already represented through Pactwright authority but must never convert GitHub approval metadata alone into an Asset.
+Asset projection may include:
+- title;
+- media type;
+- Delivery lineage;
+- grounding state;
+- approved by;
+- current/superseded;
+- Publication count.
 
-Repository-backed Asset changes must trigger exact hash validation where relevant.
-GitHub must not own Publication truth.
+Publication projection may include:
+- Asset;
+- channel;
+- locator;
+- published by;
+- published at;
+- linked operational Observations only when Operations later exists.
+
+Candidate outputs never appear as canonical Assets.
+Changes under `assets/**` validate affected approved Asset hashes.
+GitHub never owns Publication truth.
+
+Generic GitHub approval metadata alone cannot create an Asset.
+If repository policy maps a trusted authority event to `pactwright assets approve-asset`, the runtime must still verify exact human authority, Evidence, content hash and required grounding.
+
+If scheduled/event-triggered release is supported, it may invoke `record-publication` only for an already approved Asset; failed release leaves the Asset unchanged.
+
+Disabling Assets / Publication removes only generated local/remote state exclusively owned by this profile. Preserve canonical Asset/Publication records and Core/PI/Graph Review surfaces.
 ```
 
 **Expected result**
 
-GitHub exposes durable output/publication state while canonical authority remains in Pactwright.
+Assets / Publication composes into the existing one-repository/one-shared-Project GitHub integration without moving authority into GitHub.
 
 **Verify before continuing**
 
-Run local/remote sync dry-run fixtures including:
+Run local/remote sync and dry-run fixtures proving:
+- Core + PI + Graph Review + Assets / Publication still uses one shared Project;
 - candidate-only output absent from Asset projection;
-- GitHub approval without canonical Asset => no Asset created;
-- valid Asset/Publication projected correctly.
+- generic GitHub approval without canonical authority creates no Asset;
+- valid Asset/Publication projects exact fields;
+- repository-backed byte drift fails the Assets check;
+- disabling Assets / Publication removes only its managed workflow/views and preserves canonical records/other profiles;
+- second dry-run converges.
 
 ## Stage 6 — Adopt Production Skills and Assets / Publication in Pactwright
 
@@ -619,9 +779,11 @@ ui-ux-design-skills or narrative-production-skills
 
 or another combination genuinely required by the selected work.
 
-Add/validate their `integrations/pactwright.yml` manifests where needed, then configure `@pactwright/standard` to import and bind them to existing `delivery-execution` / `delivery-review` responsibilities.
+Add/validate their `integrations/pactwright.yml` manifests where needed, then update `@pactwright/standard` as the owning Agent Pack to import/bind them to existing `delivery-execution` / `delivery-review` responsibilities.
 
-Do not change Pactwright core capabilities for the domains.
+Where one selected family exposes a Production Extension Pack genuinely useful to the proof, select it through the Agent Pack and lock it. Do not select a pack merely for ceremony; the Stage 1 fixture already proves the general pack mechanism.
+
+Do not add peer-level project Production Skills configuration and do not change Pactwright core capabilities for the domains.
 ```
 
 **Expected result**
@@ -636,7 +798,7 @@ pnpm pactwright doctor
 pnpm pactwright validate
 ```
 
-Inspect `.pactwright/lock.yml` and confirm exact external revisions/manifests/skills are locked and reflected in `environment_lock_hash`.
+Inspect `.pactwright/lock.yml` and confirm exact external revisions/manifests/skills/packs are locked as applicable and reflected in `environment_lock_hash`. Confirm external Production Skills repositories remain untouched.
 
 ### Step 17 — Enable Assets / Publication in Pactwright
 
@@ -660,9 +822,9 @@ Pactwright has the post-Delivery Assets / Publication surface without enabling O
 
 **Verify before continuing**
 
-A second local/remote sync converges and all validation passes.
+A second local/remote sync converges, the same shared Project is retained and all validation passes.
 
-### Step 18 — Verify public-content readiness for the selected Pactwright work
+### Step 18 — Enforce the existing public-content readiness gate for the selected Pactwright work
 
 **References:** Specs 03, 05 and 08 readiness/grounding.
 
@@ -673,27 +835,45 @@ pnpm pactwright intelligence onboard
 pnpm pactwright intelligence validate
 ```
 
-Determine the **actual** domain coverage required by the selected public work rather than forcing a fixed matrix.
+Determine the actual domains the selected public work depends on and enforce the existing Spec 08 gate:
 
-For example:
-- identity if voice/identity matters;
-- content for editorial/educational material;
-- product for capability/value/behaviour claims;
-- go-to-market for acquisition/CTA/positioning work;
-- delivery/ux for workflow/UX claims;
-- delivery/eng for technical implementation claims;
-- other subject domains where factual claims depend on them.
+```text
+identity
+→ Covered where identity/voice/values matter
+
+content
+→ Covered for editorial/educational/marketing work
+
+product
+→ Covered for Pactwright capability/value/behaviour/limitation claims
+
+go-to-market
+→ Covered for acquisition/positioning/CTA/campaign work
+
+delivery/ux
+→ Covered for user-facing workflow/UX claims
+
+delivery/eng
+→ Covered for technical implementation claims
+
+other applicable subject domain
+→ Covered where factual claims depend on it
+```
+
+Every relied-on claim/constraint must also be accepted, in-horizon Knowledge with traceable Sources.
 
 If required coverage is missing, use the existing PI gap → Delivery/research → ingest → triage/promotion path before proceeding.
+
+Asset grounding is not a substitute for public-content readiness.
 ```
 
 **Expected result**
 
-The selected public Delivery is grounded in current accepted project truth and does not use Asset grounding as a substitute for missing PI readiness.
+Every applicable domain is Covered and the selected public Delivery is grounded in current accepted project truth.
 
 **Verify before continuing**
 
-Inspect the exact accepted Knowledge relied on by the Brief/Delivery and ensure claims are traceable.
+Inspect domain-map/onboarding, assert Covered for every applicable domain and trace the exact accepted Knowledge/Sources relied on by the Brief/Delivery. Missing applicable coverage blocks public approval.
 
 ### Step 19 — Deliver one real cross-domain Pactwright public output
 
@@ -737,13 +917,15 @@ Specialised cross-domain production succeeds through normal Delivery and finishe
 
 **Verify before continuing**
 
-Run relevant Production Skills benchmarks/evaluations according to their owning repositories plus `pnpm pactwright validate`. Confirm no production-domain Pactwright nodes/capabilities were introduced.
+Run relevant Production Skills benchmarks/evaluations according to their owning repositories plus `pnpm pactwright validate`. Confirm no production-domain Pactwright nodes/capabilities were introduced and Contract/Brief authority was not weakened by lower-layer skills.
 
-### Step 20 — Approve and publish the Pactwright Asset
+### Step 20 — Approve the first grounded Pactwright public Asset and record its Publication
 
-**References:** Spec 05 Asset/Publication authority.
+**References:** Specs 05 and 08 Asset/Publication authority and public milestone.
 
 **Run**
+
+Use the real public output from Step 19 so Checkpoint 5 proves the Spec 08 milestone's first **grounded approved public Asset**.
 
 After a human inspects the exact successful Delivery output:
 
@@ -751,7 +933,9 @@ After a human inspects the exact successful Delivery output:
 pnpm pactwright assets approve-asset <evidence-id>
 ```
 
-Use the project's real publication/release mechanism to release the approved Asset. Then:
+The Asset must record the exact accepted PI Knowledge ids/hashes required by the public claims/identity/constraints used by this output.
+
+Use Pactwright's real project publication/release mechanism to release the approved Asset. Then:
 
 ```bash
 pnpm pactwright assets record-publication <asset-id> <channel>
@@ -760,16 +944,17 @@ pnpm pactwright assets validate
 
 **Expected result**
 
-Pactwright records a real Evidence → approved Asset → Publication lineage for the exact output.
+Pactwright records a real Evidence → grounded human-approved Asset → Publication lineage for the exact public output.
 
 **Verify before continuing**
 
 Confirm:
 - Asset content hash matches exact approved bytes;
-- required grounding ids/hashes are valid;
+- required grounding ids/hashes match accepted Knowledge used by the public Delivery;
 - Publication asset hash matches;
 - Publication records actual release provenance;
-- no candidate output appears as canonical Asset.
+- no candidate output appears as canonical Asset;
+- changing grounding later would not mutate the historical Asset.
 
 ## Stage 7 — Publish the Production Skills + Assets / Publication learning path
 
@@ -783,11 +968,13 @@ Through normal Pactwright Delivery with relevant Production Skills, publish/upda
 
 ```text
 Production Skills integration guide
-one multi-Production-Skills Delivery example
-Assets / Publication guide
+one executable multi-Production-Skills Delivery example
+Assets / Publication guide/example
 Academy production lesson
 README/website capability summary
 ```
+
+The multi-production and Assets / Publication examples may share one end-to-end scenario where that keeps the material simpler, but both boundaries must be executable and covered in CI where practical.
 
 The material must make clear:
 
@@ -811,7 +998,7 @@ Users can understand how specialised production and durable publication compose 
 
 **Verify before continuing**
 
-Run Graph Review over the new public material, triage all Findings through PI, and resolve blocking inconsistencies through normal Delivery.
+Run executable examples, then Graph Review over the new public material; triage all Findings through PI and resolve blocking inconsistencies through normal Delivery.
 
 ## Stage 8 — Release `0.0.5`
 
@@ -859,49 +1046,53 @@ pnpm view @pactwright/assets-publication@0.0.5 version
 
 Every command returns `0.0.5`.
 
-## Stage 9 — Prove specialised production and publication in Kakeido
+## Stage 9 — Prove specialised production and publication in Kakeibo
 
-### Step 23 — Upgrade Kakeido to the published `0.0.5` family
+### Step 23 — Upgrade Kakeibo from accepted `0.0.4` through ownership-specific paths
 
-**References:** Spec 02 upgrades; current Kakeido specs.
+**References:** Spec 02 upgrades; current Kakeibo specs.
 
 **Run**
 
-```bash
-pnpm add -D \
-  pactwright@0.0.5 \
-  @pactwright/standard@0.0.5 \
-  @pactwright/project-intelligence@0.0.5 \
-  @pactwright/graph-review@0.0.5 \
-  @pactwright/assets-publication@0.0.5
+Start from the accepted Checkpoint 4 Kakeibo environment. Do **not** preinstall `0.0.5` packages manually before exercising Pactwright upgrade/install commands.
 
+```bash
 pnpm pactwright upgrade --to 0.0.5
 pnpm pactwright agent-pack upgrade
 pnpm pactwright extension upgrade project-intelligence
 pnpm pactwright extension upgrade graph-review
-pnpm pactwright extension add assets-publication
-pnpm pactwright sync
+pnpm pactwright extension add @pactwright/assets-publication@0.0.5
 pnpm pactwright assets validate
+pnpm pactwright sync
 pnpm pactwright github sync --dry-run
 pnpm pactwright github sync
 pnpm pactwright validate
 ```
 
+Ownership remains explicit:
+- `pactwright upgrade` orchestrates runtime package replacement through the project package manager and re-enters through the new runtime;
+- `agent-pack upgrade` upgrades the selected Agent Pack within its configured compatibility constraints;
+- `extension upgrade` upgrades existing PI/Graph Review Extensions;
+- `extension add` installs/registers/locks the new Assets / Publication package.
+
+Do not use runtime upgrade as shorthand for Agent Pack or Extension upgrades.
+```
+
 **Expected result**
 
-Kakeido consumes the exact compatible Pactwright `0.0.5` family.
+Kakeibo moves from the real published `0.0.4` environment to the exact compatible `0.0.5` family without bypassing Pactwright's ownership-specific upgrade/install mechanisms.
 
 **Verify before continuing**
 
-All validation passes and remote desired state converges.
+Verify package-manager state and `.pactwright/lock.yml` agree on the `0.0.5` runtime, standard Agent Pack and enabled first-party Extensions; target migration/validation completed through the new runtime; remote desired state converges; unrelated user state is preserved.
 
-### Step 24 — Resolve Production Skills appropriate to one real Kakeido outcome
+### Step 24 — Resolve Production Skills appropriate to one real Kakeibo outcome through the selected Agent Pack
 
-**References:** current Kakeido owner specs; Spec 02 Production Skills.
+**References:** current Kakeibo owner specs; Spec 02 Production Skills.
 
 **Run**
 
-Select one real Kakeido Delivery whose constraints make specialist Production Skills useful. Examples may include:
+Select one real Kakeibo Delivery whose constraints make specialist Production Skills useful. Examples may include:
 
 ```text
 product/UX + software implementation
@@ -909,41 +1100,47 @@ research + product content
 narrative/content + UI/UX
 ```
 
-Choose only Production Skills families genuinely required by the owning Kakeido specs.
+Choose only Production Skills families genuinely required by the owning Kakeibo specs.
 
-Configure the selected Agent Pack imports/bindings, sync and lock exact revisions.
+Production Skills must remain owned by the selected Agent Pack:
+- use the Production Skills imports/bindings already supplied by the published selected pack; or
+- explicitly select another compatible Agent Pack with `pactwright agent-pack use <source>` if a different pack is required.
+
+Do not add a Kakeibo peer-level Production Skills configuration mechanism.
+
+Run sync so the exact Production Skills revisions and any genuinely selected Production Extension Packs are resolved/locked through the Agent Pack.
 ```
 
 **Expected result**
 
-Kakeido uses the same generic Production Skills integration model for a materially different product/domain.
+Kakeibo uses the same generic Agent Pack → Production Skills integration model for a materially different product/domain.
 
 **Verify before continuing**
 
-Doctor/validation pass; lock shows exact Production Skills identities without copying their internal semantics into Pactwright.
+Run doctor/validation; lock shows exact Production Skills identities/packs without copying their internal semantics into Pactwright, and project configuration still treats Agent Pack—not Production Skills—as the project-level AI composition surface.
 
-### Step 25 — Deliver the Kakeido outcome through normal Delivery
+### Step 25 — Deliver the Kakeibo outcome through normal Delivery
 
-**References:** current Kakeido canonical specs; Specs 01–03.
+**References:** current Kakeibo canonical specs; Specs 01–03.
 
 **Run**
 
-Use normal Contract-driven Delivery with the selected Production Skills and the current Kakeido governing specifications.
+Use normal Contract-driven Delivery with the selected Production Skills and current Kakeibo governing specifications.
 
-Review must preserve Kakeido-specific invariants such as deterministic financial authority, product/UX constraints, assistant uncertainty/authority boundaries, technical/security/privacy constraints and any other rules applicable to the selected outcome.
+Review must preserve Kakeibo-specific invariants such as deterministic financial authority, product/UX constraints, assistant uncertainty/authority boundaries, technical/security/privacy constraints and any other rules applicable to the selected outcome.
 ```
 
 **Expected result**
 
-A real Kakeido cross-domain Delivery completes at valid Evidence without production-domain Pactwright semantics.
+A real Kakeibo cross-domain Delivery completes at valid Evidence without production-domain Pactwright semantics.
 
 **Verify before continuing**
 
-Run Kakeido repository-defined tests plus relevant Production Skills benchmark/evaluation and Pactwright validation.
+Run Kakeibo repository-defined tests plus relevant Production Skills benchmark/evaluation and Pactwright validation.
 
-### Step 26 — Create a Kakeido Asset/Publication where the output warrants durable identity
+### Step 26 — Create a Kakeibo Asset/Publication where the output warrants durable identity
 
-**References:** Spec 05; current Kakeido product/public-surface specs.
+**References:** Spec 05; current Kakeibo product/public-surface specs.
 
 **Run**
 
@@ -953,23 +1150,23 @@ If the selected Evidence contains an output that genuinely warrants durable inde
 pnpm pactwright assets approve-asset <evidence-id>
 ```
 
-Publish it through Kakeido's existing real channel mechanism, then:
+Publish it through Kakeibo's existing real channel mechanism, then:
 
 ```bash
 pnpm pactwright assets record-publication <asset-id> <channel>
 pnpm pactwright assets validate
 ```
 
-If the selected Delivery is ordinary software repository state for which Asset semantics add no independent value, select a separate bounded Kakeido public/durable output for this acceptance step rather than turning every build/commit into an Asset.
+If the selected Delivery is ordinary software repository state for which Asset semantics add no independent value, select a separate bounded Kakeibo public/durable output for this acceptance step rather than turning every build/commit into an Asset.
 ```
 
 **Expected result**
 
-Kakeido proves Assets / Publication on an output where the abstraction is semantically useful, not mechanically mandatory.
+Kakeibo proves Assets / Publication on an output where the abstraction is semantically useful, not mechanically mandatory.
 
 **Verify before continuing**
 
-Inspect exact hash, approval, grounding where applicable, channel/locator and Publication relationship direction.
+Inspect exact hash, approval, grounding where applicable, channel/locator and Publication relationship direction. Confirm no direct Evidence→Publication shortcut and no candidate output became an Asset.
 
 ## Stage 10 — Capture Checkpoint 5 feedback
 
@@ -981,13 +1178,14 @@ Inspect exact hash, approval, grounding where applicable, channel/locator and Pu
 
 Capture material findings from:
 - external Production Skills integration;
+- Production Extension Pack resolution;
 - multi-skill composition;
-- environment locking;
+- environment locking/doctor/regression attribution;
 - Asset approval/hash/grounding;
 - external-byte verification;
-- publication recording/retry behaviour;
-- GitHub projection;
-- Pactwright and Kakeido usage.
+- publication recording/retry/multiple-release behaviour;
+- GitHub projection/composition;
+- Pactwright and Kakeibo usage.
 
 Route Pactwright responsibility failures through PI Source/triage/promotion/candidate governance.
 
@@ -1008,29 +1206,43 @@ Every blocking Pactwright failure is resolved or explicitly governed before Chec
 
 Checkpoint 5 closes only when:
 
-- external Production Skills integration manifests resolve and lock exactly;
-- changing a Production Skills revision changes `environment_lock_hash`;
-- one Pactwright capability can use multiple Production Skills without creating domain-specific Pactwright capabilities;
+- external Production Skills manifests resolve through the selected Agent Pack and the complete resolved environment fails closed on incompatibility/ambiguity/unavailable revisions;
+- Production Skills and selected Production Extension Packs lock exact source/revision/manifest/skill/pack identity;
+- changing a Production Skills revision or selected Production Extension Pack changes `environment_lock_hash`;
+- repeated sync is deterministic and never rewrites external Production Skills repositories;
+- one Pactwright capability can use multiple Production Skills without domain-specific Pactwright capabilities or peer-level project Production Skills configuration;
+- `pactwright doctor` diagnoses Production Skills resolution/lock/adapter failures read-only;
+- baseline regression reporting attributes Production Skills / Production Extension Pack changes at meaningful capability/case dimensions;
 - Production-domain quality remains owned by Production Skills benchmarks;
-- `@pactwright/assets-publication` exists as an independent post-Delivery Extension;
+- `@pactwright/assets-publication` exists as an independent post-Delivery Extension requiring no new production AI capability;
 - Assets / Publication does not require Graph Review or Operations;
 - PI is required only when an Asset has governed project-grounding requirements;
-- candidate outputs remain non-canonical until exact human approval;
+- Asset and Publication canonical records implement their exact Spec 05 minimum fields;
+- candidate outputs and successful Evidence remain non-canonical until exact human Asset approval;
+- failed Asset approval creates no partial Asset or relationships;
 - every Asset references valid Evidence and exact content identity;
-- Asset grounding uses accepted Knowledge ids/hashes where required;
+- Asset grounding uses accepted applicable Knowledge ids/hashes where required;
+- post-approval grounding change never mutates Asset history and flows through normal PI reconsideration;
 - Asset content identity is immutable and supersession preserves history;
 - exact supersession command ergonomics remain open rather than invented;
+- multiple intentional Publications of one Asset are supported;
+- corrected content uses a new Asset and new Publication rather than historical mutation;
+- Publication withdrawal and Publication-to-Publication supersession are not invented;
 - Publications reference approved Assets and exact matching hashes through `Publication --publishes--> Asset`;
 - publication recording does not silently duplicate uncertain retries despite unresolved universal idempotency identity;
 - external Asset bytes are never treated as verified merely because a pointer exists;
+- the complete 16-rule Assets / Publication validation contract passes and core validation delegates when enabled;
 - `pactwright assets approve-asset`, `record-publication` and `validate` work;
-- `pactwright-assets-publication.yml`, `Pactwright / Assets` and `Pactwright / Publication` integrate through Spec 07 without moving authority into GitHub;
-- Pactwright completes a real specialised cross-domain Delivery and records a real Asset/Publication;
-- Kakeido proves the same architecture on a materially different outcome;
+- `pactwright-assets-publication.yml`, `Pactwright / Assets`, `Pactwright / Publication`, relevant paths and Assets/Publications views compose into the existing shared GitHub integration;
+- GitHub approval/release automation cannot bypass exact Asset authority/hash/grounding or Publication semantics;
+- disabling Assets / Publication removes only owned generated integration and preserves canonical records plus Core/PI/Graph Review surfaces;
+- Pactwright's public work passes the existing PI Covered-domain readiness gate and produces the first grounded approved public Asset plus real Publication;
+- Pactwright completes a real specialised cross-domain Delivery using external Production Skills;
+- Kakeibo upgrades from real `0.0.4` to `0.0.5` through ownership-specific commands and proves the same architecture on a materially different outcome;
 - no Creative Delivery, provider registry, Generation Guidance or creative Agent Pack has been recreated;
 - the `0.0.5` first-party package family is registry verified;
 - no known blocking failure is carried into Checkpoint 6.
 
 ---
 
-**Pactwright — Checkpoint 5 — Production Skills + Assets / Publication v10**
+**Pactwright — Checkpoint 5 — Production Skills + Assets / Publication v11**
