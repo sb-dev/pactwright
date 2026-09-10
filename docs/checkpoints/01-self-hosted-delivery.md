@@ -1,6 +1,6 @@
 # Pactwright — Checkpoint 1 — Self-Hosted Delivery
 
-**Version:** 14  
+**Version:** 15  
 **Entry condition:** No installable Pactwright runtime exists.  
 **Release:** `0.0.1`  
 **Exit capability:** Pactwright is installable, upgradeable, can govern one complete Contract-driven Delivery in its own repository and in Kakeido, can compare an Agent Pack candidate against a released baseline, and requires no manual Project Graph coherence work.
@@ -50,22 +50,21 @@ Once a deterministic Pactwright responsibility exists, use the runtime rather th
 Checkpoint 1 implements:
 
 ```text
-Core Project Graph semantics
-Contract authority
+Core Project Graph semantics and the complete Spec 01 validation contract
+Contract authority and Evidence closure preconditions
 initial direct Delivery shape
-lifecycle execution policy and Gates
-runtime validation
+lifecycle execution state, policy and Gates
 Project Graph revision
 repository revision resolution
 Agent Pack capability resolution
 @pactwright/standard
-Claude Code adapter
-exact environment locking
+seven canonical Claude Code adapter commands
+exact environment locking and package-manager lock agreement
 pactwright init / sync / validate / doctor / eval
-one-shot init composition
+one-shot init composition with explicit Agent Pack selection
 pactwright upgrade / pactwright upgrade --to
 Agent Pack selection and agent-pack upgrade
-Pactwright Extension package/dependency framework
+transaction-safe Pactwright Extension package/dependency framework
 baseline evaluation and regression reporting
 clean-consumer installation
 Pactwright self-hosting
@@ -89,8 +88,9 @@ Checkpoint 1 must not turn adapter responsibilities such as capture-intent or wr
 
 - GitHub provisioning, managed product workflows, Projects and remote projections: Checkpoint 2.
 - Project Intelligence, Graph Review, Assets / Publication and Operations semantics: later checkpoints.
-- historical environment retention/reacquisition machinery: identity and fail-explicitly semantics are implemented, archival strategy is not.
-- lifecycle-shape hashing or a universal lifecycle-shape persistence scheme: still unresolved.
+- External Production Skills integration manifests, import resolution, Production Extension Packs and their diagnostics: Checkpoint 5. Direct skills contained in an Agent Pack remain in scope. Earlier runtimes must report unsupported external imports rather than silently ignore them or claim to resolve them.
+- Historical environment retention/reacquisition machinery: identity and fail-explicitly semantics are implemented, archival strategy is not.
+- Lifecycle-shape hashing or a universal lifecycle-shape persistence scheme: still unresolved.
 
 ## Stage 1 — Build the canonical Project Graph substrate
 
@@ -194,7 +194,8 @@ Use proceed/reject/defer, supersession and ambiguous-lineage fixtures; invalid a
 
 ```text
 Implement runtime-provided repository revision and deterministic Project Graph revision.
-Project Graph revision includes registered canonical Pactwright state and excludes generated reports, adapter output, execution provenance, GitHub projections and other derived state.
+Project Graph revision includes registered canonical Delivery records, typed edges and enabled Extension-owned canonical records.
+It excludes generated reports, adapter output, lifecycle execution state, execution provenance, GitHub projections and other derived state.
 Canonicalise ordering before hashing.
 ```
 
@@ -204,13 +205,13 @@ Repository revision and Project Graph revision are stable, distinct identities.
 
 **Verify before continuing**
 
-Prove identical state gives identical graph revision; generated-file change does not; canonical mutation does.
+Prove identical state gives identical graph revision; generated-file or execution-state change does not; canonical mutation does. Repeat the inclusion/exclusion proof with an enabled fixture Extension in Step 16 once its registration path exists.
 
 ## Stage 2 — Implement Contract-driven lifecycle execution
 
 ### Step 6 — Implement the initial direct lifecycle shape and execution policy
 
-**References:** Spec 01 lifecycle shape, policy and Gate boundaries.
+**References:** Spec 01 lifecycle shape, execution state, policy and Gate boundaries.
 
 **Run**
 
@@ -221,24 +222,29 @@ Brief → Delivery → Review → Evidence
 Keep separate:
 - Contract/Decision authority;
 - lifecycle shape/topology;
-- execution policy such as automatic/manual execution and human Gates.
+- execution policy such as automatic/manual execution and human Gates;
+- fine-grained lifecycle execution state.
+
+Execution state must identify the current Brief, resolved shape, current/completed steps, Gate state, iteration counts where applicable and execution status.
+Broad Delivery state remains derived from canonical lineage; fine-grained progression is not stored as Delivery Graph truth.
 
 Do not encode capture-intent, propose-contracts, approve-contract or write-brief as shape stages.
 Do not add Deployment, Asset, Publication or Observation to the core lifecycle.
-Do not invent lifecycle-shape hashes.
+Do not invent lifecycle-shape hashes or make shape identity part of Brief identity.
+Any configured corrective transition must exist in its declared shape and have bounded execution policy; AI cannot invent routes.
 ```
 
 **Expected result**
 
-The runtime represents the initial fulfilment topology without conflating it with Contract crafting or execution policy.
+The runtime represents fulfilment topology and execution progress without conflating either with Contract authority or durable graph state.
 
 **Verify before continuing**
 
-Test automatic/manual policy, Gate stopping and invalid shape/policy configuration.
+Test automatic/manual policy, authorised and unauthorised Gate progression, invalid shape/policy configuration, impossible corrective routes and unbounded-loop rejection. Changing execution progress alone must leave canonical graph records and `project_graph_revision` unchanged.
 
-### Step 7 — Implement authoritative core mutations
+### Step 7 — Implement authoritative core mutations and Evidence closure guards
 
-**References:** Spec 01 authority, graph mutation and supersession.
+**References:** Spec 01 authority, graph mutation, supersession and `/prepare-evidence`.
 
 **Run**
 
@@ -247,19 +253,29 @@ Implement runtime mutation responsibilities for Intent, Decision, selected Contr
 Contract alternatives remain transient until selection.
 Approval/Gate state never auto-creates a Decision.
 All mutations use plan → validate complete proposed state → atomic write → validate resulting state.
+
+Before creating Evidence or its evidences edge, require:
+- the Brief is current;
+- the latest delivered state has been reviewed;
+- the closing Review permits successful Evidence closure;
+- no required Gate remains unresolved;
+- Contract and Brief lineage is valid.
+
+Enforce these as pre-mutation runtime guards, not only as checks after writing Evidence.
+A delivery change after Review requires Review of the new delivered state before closure.
 ```
 
 **Expected result**
 
-Authorised paths produce valid canonical structures and failed mutation leaves no partial state.
+Only authorised paths produce canonical structures; successful closing Review of the latest state is required for Evidence, and failed mutation leaves no partial state.
 
 **Verify before continuing**
 
-Exercise authorised/unauthorised Decisions plus forced write/validation failure.
+Exercise authorised/unauthorised Decisions and forced write/validation failure. For each Evidence precondition, provide a failing fixture and require no Evidence or partial edge to be written. Include superseded Brief, unreviewed delivery change, blocking closing Review, pending Gate and invalid-lineage cases, plus successful closure.
 
 ### Step 8 — Implement lifecycle status, next and run
 
-**References:** Spec 01 lifecycle command surface.
+**References:** Spec 01 lifecycle command surface and execution-state boundary.
 
 **Run**
 
@@ -269,38 +285,64 @@ pactwright lifecycle status
 pactwright lifecycle next
 pactwright lifecycle run
 
+`status` reports current/completed steps, blocking step, required actor, validation problems and current lineage.
+`next` determines the next permitted lifecycle action without executing it.
+Both are read-only.
+
+`run` executes automatic responsibilities through the resolved shape/policy until a required Gate, completion, execution failure or validation failure.
+It cannot skip Gates, invent transitions or create Evidence before the Step 7 closure guards pass.
+
 Derive progression from current Contract/Brief lineage, resolved shape, policy, Gate state and repository state.
-Run stops at human Gate, failure, validation error or completion.
+Keep execution progress outside the Delivery Graph.
 ```
 
 **Expected result**
 
-The runtime owns fulfilment progression.
+The runtime owns fulfilment progression and exposes inspection separately from execution.
 
 **Verify before continuing**
 
-Prove Gate/failure stopping and no next core fulfilment stage after current Evidence.
+Prove status/next perform no writes, report the correct actor/blocker/lineage, and next does not invoke an agent. Prove Gate/failure stopping, no next core fulfilment stage after current Evidence, and execution-state changes do not alter graph truth.
 
-### Step 9 — Implement core validation and bounded context assembly
+### Step 9 — Implement the complete core validation contract and bounded context assembly
 
-**References:** Spec 01 validation/context responsibilities.
+**References:** Spec 01 sections 39, 46–57.
 
 **Run**
 
+Implement read-only `pactwright validate` with the full minimum detection contract:
+
 ```text
-Implement `pactwright validate` and the runtime context-assembly API consumed by Agent Packs/adapters.
-Default Delivery context contains current relevant Contract/Brief lineage and excludes rejected alternatives, superseded state, execution transcripts and unrelated history unless explicitly required.
-Keep a namespaced context-contribution seam for later Extensions.
-Do not introduce `pactwright context` as a required public CLI contract.
+1. malformed core nodes;
+2. invalid core relationships;
+3. missing required lineage;
+4. contradictory current records;
+5. multiple unsuperseded canonical Decisions or Contracts for one active direction;
+6. invalid Brief-to-Contract lineage;
+7. invalid Evidence-to-Brief lineage;
+8. illegal supersession;
+9. missing lifecycle shape;
+10. unresolved or incompatible shape identity;
+11. impossible shape transitions;
+12. Evidence attempted before successful closing Review;
+13. unauthorised Decision;
+14. unauthorised Gate progression;
+15. unbounded configured corrective loops;
+16. Extension state illegally redefining core Delivery semantics;
+17. repository replay provenance that does not derive the recorded Project Graph revision when replay validation is requested.
 ```
+
+Use the same validation mechanics before canonical mutation wherever possible. Do not repair graph state as a side effect of validation.
+
+Implement the runtime context-assembly API consumed by Agent Packs/adapters. Default Delivery context contains current relevant Contract/Brief lineage and excludes rejected alternatives, superseded state, execution transcripts and unrelated history unless explicitly required. Keep a namespaced context-contribution seam for later Extensions. Do not introduce `pactwright context` as a required public CLI contract.
 
 **Expected result**
 
-Agents receive bounded canonical Delivery context without reconstructing truth from chat history.
+The core semantic contract is machine-enforced and agents receive bounded canonical context rather than reconstructing truth from chat history.
 
 **Verify before continuing**
 
-Test context assembly against multiple lineage states and verify exclusions.
+Maintain valid controls and a failing fixture mapped to each numbered rule. Use a fixture graph contribution for rule 16 now and rerun it through real fixture Extension loading in Step 16. Verify rule 17 on a requested replay check, not by requiring historical reconstruction on every ordinary validation. Test context inclusions/exclusions and prove validation failures perform no writes.
 
 ## Stage 3 — Add replaceable AI execution
 
@@ -354,27 +396,44 @@ Projects explicitly select one complete Agent Pack and can upgrade it independen
 
 **Verify before continuing**
 
-Select standard, switch to a compatible fixture pack, reject an incompatible pack without state loss, upgrade a selected fixture pack to a compatible newer version, then reject an incompatible upgrade while preserving the previous valid environment.
+Select standard, switch to a compatible fixture pack, reject an incompatible pack without state loss, upgrade a selected fixture pack to a compatible newer version, then reject an incompatible upgrade while preserving the previous valid environment. Prove an exact configured target remains selected even when a newer compatible package is available; desired constraints do not authorise silently changing pack identity.
 
-### Step 12 — Implement the initial Claude Code adapter
+### Step 12 — Implement the seven canonical Claude Code adapter commands
 
-**References:** Specs 01–02 adapter boundary.
+**References:** Specs 01 sections 46–53 and 02 adapter boundary.
 
 **Run**
 
 ```text
-Render deterministic Pactwright-managed Claude Code agents/commands for useful responsibilities around Intent, Contract alternatives/selection, Brief, Delivery, Review and Evidence.
-These invoke runtime responsibilities and selected Agent Pack capabilities.
+Render deterministic Pactwright-managed Claude Code agents and these exact commands:
+/capture-intent
+/propose-contracts
+/approve-contract
+/write-brief
+/deliver-brief
+/review
+/prepare-evidence
+
+The commands invoke runtime responsibilities and the selected Agent Pack capabilities:
+- capture-intent creates an Intent through the runtime;
+- propose-contracts is graph-read-only and keeps alternatives transient;
+- approve-contract applies normal Decision authority and, for proceed, creates the selected Contract and required lineage;
+- write-brief inspects current state and creates the Brief under its canonical Contract;
+- deliver-brief executes the active Delivery step without directly mutating the Delivery Graph or independently selecting transitions;
+- review evaluates the latest delivered state without creating Evidence or inventing transitions;
+- prepare-evidence invokes all Step 7 preconditions before creating Evidence and its evidences relationship.
+
 Their decomposition does not define lifecycle topology.
+Do not duplicate graph-transition or authority semantics in prompts.
 ```
 
 **Expected result**
 
-The adapter is deterministic and contains no duplicated graph-transition semantics.
+The adapter exposes the canonical command surface with explicit, runtime-enforced mutation boundaries.
 
 **Verify before continuing**
 
-Render twice from identical locked inputs and require byte-identical output.
+Assert the exact seven command names, render twice from identical locked inputs and require byte-identical output. Exercise every command's permitted/forbidden mutations, including graph-read-only alternatives, no direct Delivery graph writes, no Evidence from review, and failed premature prepare-evidence. Then complete one valid command lineage.
 
 ### Step 13 — Implement Pactwright evaluation and baseline comparison
 
@@ -383,13 +442,16 @@ Render twice from identical locked inputs and require byte-identical output.
 **Run**
 
 ```text
-Implement `pactwright eval` with core responsibility cases for Contract fidelity, scope discipline, Brief quality, Review defect detection, required output structure and forbidden mutation.
+Implement `pactwright eval` with core responsibility cases for Contract fidelity, scope discipline, Brief quality, Review quality/defect detection, Evidence accuracy and lifecycle compliance, plus required output structure and forbidden mutation.
+
+Evidence accuracy cases compare claimed delivered work and verification with actual recorded results.
+Lifecycle compliance cases cover authority, Gate stopping, valid transitions and successful closing Review before Evidence.
 
 Implement the canonical comparison surface:
 pactwright eval --baseline <released-pack-or-baseline> --candidate <candidate-pack-or-environment>
 
 Keep deterministic assertions separate from semantic judgement.
-Report regressions by meaningful dimensions such as capability, agent, evaluation case and changed Agent Pack/prompt/skill environment.
+Report regressions by meaningful dimensions such as capability, agent, evaluation case and changed Agent Pack/prompt/direct-skill environment.
 Do not compute one opaque aggregate score.
 
 Before the first public release, prove comparison mechanics with exact fixture/pinned package inputs. After `0.0.1` is published, Step 28 must prove resolution against the real released baseline.
@@ -401,75 +463,112 @@ The AI execution environment is evaluable independently from a real Delivery and
 
 **Verify before continuing**
 
-Run core eval, compare compatible baseline/candidate fixtures, introduce a known regression and require it to appear at the affected capability/agent/case dimensions.
+Run core eval, compare compatible baseline/candidate fixtures and introduce known regressions in Evidence accuracy and lifecycle compliance. Require each to appear at its affected capability/agent/case dimensions rather than being hidden in an aggregate result.
 
 ## Stage 4 — Implement exact environment resolution and local composition
 
-### Step 14 — Implement `pactwright init`
+### Step 14 — Implement `pactwright init` with explicit Agent Pack selection
 
-**References:** Spec 02 initialisation/configuration.
+**References:** Spec 02 initialisation/configuration and Agent Pack selection.
 
 **Run**
 
 ```text
 Implement init so a clean repository receives only Pactwright-owned core configuration/Project Graph structure.
 Checkpoint 1 keeps GitHub disabled and creates no Pactwright-managed GitHub workflow.
-Do not silently switch Agent Pack identity.
+Do not silently select or switch Agent Pack identity.
+
+A plain init may create the initial scaffold before `agent-pack use` explicitly selects a pack; do not claim that scaffold is a complete activated execution environment.
+For compositional init that activates an Extension or later GitHub integration, obtain an explicit compatible Agent Pack choice through the documented normal init selection interaction/input before activation. Reuse agent-pack selection/resolution, not a second resolver.
+
+Tests must supply the same explicit pack source and target version in both the one-shot and explicit setup paths. With no supplied choice, do not activate dependent features or silently choose standard.
+Exact input ergonomics are implementation details; do not invent an additional canonical CLI flag in this runbook.
 ```
 
 **Expected result**
 
-A clean repository can initialise Pactwright safely.
+A clean repository can initialise safely, and one-shot activation preserves explicit pack authority.
 
 **Verify before continuing**
 
-Run init in a temporary repository with unrelated files and prove ownership boundaries.
+Run init in a temporary repository with unrelated files. Test scaffold then explicit `agent-pack use`, explicit selection during one-shot init, missing selection, incompatible selection and preservation of an existing pack choice. Require no Extension activation on missing/incompatible selection and no unrelated writes.
 
-### Step 15 — Implement config/lock resolution and `environment_lock_hash`
+### Step 15 — Implement config/lock agreement and `environment_lock_hash`
 
 **References:** Spec 02 locking; Implementation Guide replay provenance.
 
 **Run**
 
 ```text
-Resolve and lock the exact Pactwright execution environment, including runtime, selected Agent Pack and resolved agents/skills, with seams for later Extensions/Production Skills.
-Derive deterministic `environment_lock_hash` from `.pactwright/lock.yml`.
+Resolve and lock the exact Pactwright execution environment: runtime, selected Agent Pack, resolved agents/direct skills and fixture Extensions once Step 16 is available.
+Retain integration seams for the external Production Skills resolver delivered in Checkpoint 5; do not implement or pretend to resolve those imports here.
+
+Configuration records desired constraints. The package-manager manifest/lock records installed packages; `.pactwright/lock.yml` records the resolved Pactwright environment.
+The two locks must agree on every runtime and package-backed component version they both identify.
+Record exact package/source, version, content identity and resolved dependencies as applicable.
+Reject lock mismatch or incompatible resolution before accepting a new environment or replacing generated integration.
+
+Derive deterministic `environment_lock_hash` from the exact resolved `.pactwright/lock.yml` state.
 The shared replay base is:
 repository_revision + project_graph_revision + environment_lock_hash
 ```
 
 **Expected result**
 
-Identical exact environment produces identical lock and hash.
+Identical exact environments produce identical locks/hashes and inconsistent installed/resolved state is not accepted.
 
 **Verify before continuing**
 
-Resolve twice, compare byte-for-byte, then change one resolved identity and require hash change.
+Resolve twice and compare byte-for-byte, then change one resolved identity and require a hash change. Test runtime/Agent Pack lock disagreement and tampered component identity; repeat for package-backed fixture Extensions in Step 16. Failed resolution preserves the previous valid environment.
 
-### Step 16 — Implement generic Pactwright Extension package/dependency mechanics and one-shot init composition
+### Step 16 — Implement transaction-safe Extension mechanics and one-shot init composition
 
-**References:** Spec 02 Extensions and one-shot initialisation.
+**References:** Spec 02 sections 10–15 and one-shot initialisation.
 
 **Run**
 
 ```text
-Using fixture Extensions only, implement manifest loading, compatibility/dependency resolution, graph contribution registration, command namespaces, capability contribution, GitHub profile metadata, add/remove/upgrade and blocked dependency removal.
-Preserve user-authored Extension state on disable/removal.
+Using fixture Extensions only, implement manifest loading, graph contribution registration, command namespaces, capability contribution and GitHub profile metadata.
+
+Implement:
+pactwright extension add <id-or-package>
+pactwright extension remove <id>
+pactwright extension upgrade <id>
+
+Installation must:
+- resolve a compatible package and the complete Extension dependency graph;
+- validate runtime/schema compatibility and the selected pack's complete required capability set before activation or canonical mutation;
+- install required dependencies first through the same normal installation path;
+- delegate package installation to the project package manager;
+- register the Extension in project configuration;
+- record exact package/version/hash and resolved dependencies in the Pactwright lock, consistent with the package-manager lock;
+- create owned repository structure only for the valid environment;
+- run normal sync;
+- report any later GitHub provisioning needs without mutating remote state.
+
+On incompatibility or installation/sync failure, preserve or restore the previous valid package/configuration/lock/generated environment and leave no partial canonical graph mutation. Never silently switch Agent Packs.
+
+Upgrade validates every enabled dependent Extension and the complete capability set. Canonical schema changes use explicitly defined versioned migrations, not silent reinterpretation. Protect canonical state from partial migration and preserve recovery to the prior valid environment.
+
+Removal/disable preserves user-authored canonical data. Remove only unambiguously owned generated contributions no enabled component still requires. Reject removal of a required dependency unless the dependent is disabled/removed in the same supported operation. Preserve ambiguous ownership and report it.
+
 Do not implement first-party Extension semantics yet.
 
-Implement one-shot init as a composition surface over the same underlying operations, never as a second setup path.
-Prove `pactwright init --with <fixture-extension>` composes normal init + Extension installation + sync.
-Later first-party Extension ids and `--github` reuse this composition mechanism when those capabilities exist; they do not create a new initialisation implementation.
+One-shot `pactwright init --with <fixture-extension>` composes normal init + explicit Agent Pack selection + normal Extension installation + sync, using Step 14's documented selection input.
+Later first-party Extension ids and `--github` reuse this composition mechanism; they do not create a new setup implementation.
 ```
 
 **Expected result**
 
-Later first-party Extensions can compose without changing core architecture, and one-shot initialisation uses the same managed operations as explicit setup.
+Later Extensions can compose through one transactional distribution path, and one-shot initialisation uses the same explicit selection and managed operations as separate setup.
 
 **Verify before continuing**
 
-Exercise add, dependency add, compatible upgrade, blocked removal, safe disable and preserved canonical data.
-In a second clean fixture, compare one-shot `init --with <fixture-extension>` against the equivalent explicit `init` + `extension add` + `sync` path and require equivalent resolved state/generated output.
+Exercise dependency-first add, exact lock agreement, compatible upgrade/migration, incompatible dependent upgrade, missing capability, blocked removal, safe disable and preserved canonical data. Inject package, migration and sync failures; require no partial graph records and restoration/recoverability of the previous valid environment without a pack switch.
+
+Repeat Steps 5 and 9 through the actual fixture Extension loader: its canonical node/edge mutation changes `project_graph_revision`; its generated files and execution output do not; attempted redefinition of core semantics fails.
+
+Compare clean one-shot and explicit init + `agent-pack use` + `extension add` + sync paths using the same explicitly chosen compatible fixture pack/version. Require equivalent configuration, package locks, resolved environment identity, canonical structure and generated output, not merely successful exit codes.
 
 ### Step 17 — Implement deterministic `pactwright sync`
 
@@ -478,19 +577,20 @@ In a second clean fixture, compare one-shot `init --with <fixture-extension>` ag
 **Run**
 
 ```text
-Implement sync over config + lock + enabled Extensions + selected Agent Pack + any Production Skills imports.
-Validate the complete composition and render only Pactwright-managed local integration.
+Implement sync over config + lock + enabled fixture Extensions + selected Agent Pack and its direct skills.
+Validate the complete supported composition and lock agreement before rendering only Pactwright-managed local integration.
 Checkpoint 1 renders no GitHub product workflow.
+External Production Skills imports remain a Checkpoint 5 capability; report them as unsupported rather than silently dropping or resolving them.
 Repeated sync with identical locked inputs must be byte-identical.
 ```
 
 **Expected result**
 
-Local generated integration converges.
+Local generated integration converges without claiming later Production Skills support.
 
 **Verify before continuing**
 
-Run sync twice in a fixture and require a clean second run.
+Run sync twice in a fixture and require a clean second run. An unsupported external import or lock mismatch must fail without replacing the previous generated environment; unrelated local files remain unchanged.
 
 ### Step 18 — Implement `pactwright doctor`
 
@@ -499,18 +599,20 @@ Run sync twice in a fixture and require a clean second run.
 **Run**
 
 ```text
-Implement read-only doctor diagnostics for runtime/package-manager state, config/lock consistency, capability/dependency compatibility, unresolved Production Skills, migrations, generated local drift and validation failures.
+Implement read-only diagnostics for runtime/package-manager state, config/lock consistency, capability/dependency compatibility, migrations, generated local drift and validation failures.
+Report available runtime upgrades where determinable.
+Identify configured external Production Skills imports as unsupported by this release, rather than claiming the full dependency diagnostics implemented in Checkpoint 5.
 Report healthy / warning / action required with deterministic remediation commands where known.
-Do not auto-fix.
+Do not auto-fix or create a second GitHub reconciler.
 ```
 
 **Expected result**
 
-Environment problems can be diagnosed without mutation.
+Environment problems can be diagnosed without mutation and the reported capability boundary matches the installed release.
 
 **Verify before continuing**
 
-Run healthy and broken fixtures and prove doctor performs no writes.
+Run healthy, lock-drift, missing-capability, pending-migration and unsupported-import fixtures. Prove doctor performs no writes and gives concrete remediation only when supported and deterministic.
 
 ### Step 19 — Implement Pactwright runtime upgrade and rollback-safe failure
 
@@ -619,11 +721,11 @@ pnpm pactwright validate
 pnpm pactwright lifecycle status
 ```
 
-In a second clean fixture, prove the supported one-shot init composition path with a fixture Extension and compare the result with the equivalent explicit operations.
+In a second clean fixture, prove one-shot init with a fixture Extension and explicitly supply the same compatible packed Agent Pack source/version through the documented init selection input. Compare against the equivalent explicit operations; pack installation alone is not pack selection.
 
 **Expected result**
 
-A repository becomes a valid Pactwright consumer from packed artefacts only, and one-shot init does not create a divergent setup path.
+A repository becomes a valid Pactwright consumer from packed artefacts only, and one-shot init does not create a divergent setup or silently select a pack.
 
 **Verify before continuing**
 
@@ -639,7 +741,7 @@ Use the generated adapter to complete:
 Intent → Contract alternatives → authorised Decision → Contract → Brief → Delivery → Review → Evidence
 ```
 
-Then run validation/status.
+Then run validation/status and the complete core invariant suite through the assembled runtime, adapter and fixture Extension loader.
 
 **Expected result**
 
@@ -647,7 +749,7 @@ The full canonical Delivery lineage completes with alternatives/execution transc
 
 **Verify before continuing**
 
-Inspect durable Project Graph state.
+Inspect durable Project Graph state. Require all 17 validation cases, Evidence precondition failures, seven adapter mutation-boundary cases and complete core evaluation dimensions to pass before self-hosting.
 
 ## Stage 7 — Adopt Pactwright in Pactwright
 
@@ -792,16 +894,23 @@ Blocking failures are fixed inside this checkpoint.
 Checkpoint 1 closes only when:
 
 - the runtime and `@pactwright/standard` are real publishable packages;
-- the five core durable record types and typed relationships validate;
+- the five durable core record types and typed relationships validate, including all 17 Spec 01 minimum validation rules;
 - Contract authority is distinct from Gate/execution policy;
 - direct `Brief → Delivery → Review → Evidence` works without encoding adapter responsibilities as lifecycle topology;
+- fine-grained execution state remains outside the Delivery Graph, and status/next are read-only while run respects authority and declared bounded transitions;
+- all five Evidence closure preconditions are enforced before atomic canonical mutation;
+- the seven exact adapter commands preserve their permitted and forbidden mutation boundaries;
 - repository revision, Project Graph revision and `environment_lock_hash` provide the shared replay base;
-- Agent Pack selection is explicit and capability checked;
-- `pactwright agent-pack upgrade` safely upgrades the selected pack without changing identity or corrupting the previous valid environment on failure;
+- fixture Extension canonical state contributes to graph revision while generated and execution state does not;
+- package-manager and Pactwright locks agree on every shared package-backed identity;
+- Agent Pack selection is explicit and capability checked, including clean one-shot initialisation;
+- `pactwright agent-pack upgrade` safely upgrades the selected pack within configured constraints without changing identity or corrupting the previous valid environment on failure;
 - `pactwright upgrade` and `pactwright upgrade --to` are fixture-proven, re-enter through the new runtime and preserve recoverability on failure;
-- one-shot `pactwright init` composition is equivalent to the corresponding explicit operations rather than a separate setup path;
-- generic Extension package/dependency mechanics are fixture-proven;
+- one-shot init composes the same explicit pack selection, Extension installation and sync operations as separate setup;
+- Extension dependency-first installation, exact locking, versioned migration, failure recovery, blocked removal and preservation of user-authored data are fixture-proven;
+- external Production Skills resolution remains explicitly assigned to Checkpoint 5, and unsupported imports are not silently ignored;
 - `init`, `sync`, `doctor`, `validate`, lifecycle commands and core `eval` work;
+- core evaluation covers Contract fidelity, scope discipline, Brief quality, Review quality, Evidence accuracy and lifecycle compliance;
 - baseline/candidate evaluation reports meaningful per-dimension regressions and resolves the real released `@pactwright/standard@0.0.1` baseline after publication;
 - a clean packed consumer completes a full Delivery;
 - Pactwright completes real self-hosted Delivery;
@@ -813,4 +922,4 @@ Checkpoint 1 closes only when:
 
 ---
 
-**Pactwright — Checkpoint 1 — Self-Hosted Delivery v14**
+**Pactwright — Checkpoint 1 — Self-Hosted Delivery v15**
