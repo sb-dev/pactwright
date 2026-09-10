@@ -1,6 +1,6 @@
 # Pactwright — Checkpoint 4 — Graph Review
 
-**Version:** 11  
+**Version:** 12  
 **Entry condition:** Checkpoint 3 is accepted.  
 **Release:** `0.0.4`  
 **Exit capability:** Pactwright and Kakeido can run reproducible specialist Graph Reviews over registered Project Graph state, retain immutable Review Execution provenance, route every successful Finding through Project Intelligence, and turn accepted Project Intelligence consequences motivated by Findings into normal governed Delivery.
@@ -73,9 +73,11 @@ Before invoking newly implemented repository-local commands:
 pnpm build
 ```
 
-After Checkpoint 2, coherent changes land through pull requests and required checks.
+After Checkpoint 2, coherent changes land through pull requests and required checks. New generated workflows follow its existing workflow-availability preflight before any corresponding required checks are enabled.
 
 Dynamic ids consumed by later steps must be printed or resolved by earlier steps.
+
+Release and consumer upgrades follow [Checkpoint 2 — Exact-version upgrade acceptance](./02-remote-delivery.md#exact-version-upgrade-acceptance), including explicit desired component constraints, compatible intermediate environments and package/lock verification after each owning command.
 
 ## 4. Checkpoint scope
 
@@ -83,7 +85,7 @@ Checkpoint 4 implements and proves:
 
 ```text
 @pactwright/graph-review
-real Graph Review → Project Intelligence dependency lifecycle
+real Graph Review → Project Intelligence dependency lifecycle with explicit fixture-pack prerequisites
 one graph-review semantic capability
 Graph Review request input
 extension-aware scope resolution
@@ -93,6 +95,7 @@ Finding → PI Source hand-off
 retryable hand-off without rerunning review
 pinned replay and explicit --current rerun
 complete Spec 04 Graph Review validation matrix
+derived-report determinism and failure isolation
 bounded external-evidence provenance/replay behaviour
 graph-review Pactwright evaluation cases
 pactwright-graph-review.yml
@@ -101,7 +104,7 @@ real Pactwright Graph Reviews
 real Kakeido Graph Reviews
 review-driven corrective Delivery
 Graph Review public learning path under existing PI readiness gates
-real 0.0.3 → 0.0.4 ownership-specific upgrade/install path
+exact real 0.0.3 → 0.0.4 ownership-specific upgrade/install path
 ```
 
 ### Explicitly removed from the checkpoint
@@ -138,7 +141,7 @@ Do not silently solve:
 - any persistent Review Definition abstraction;
 - specialised Graph Review capabilities beyond `graph-review`.
 
-Full Production Skills integration/locking remains owned by Checkpoint 5. Checkpoint 4 must support the already resolved skills available through the selected Agent Pack without pulling that later implementation forward.
+Full external Production Skills integration/locking remains owned by Checkpoint 5. Checkpoint 4 uses resolved direct skills from the selected Agent Pack and representative environment fixtures without claiming external imports already work. Checkpoint 5 repeats replay conformance with real external skill and Production Extension Pack dependencies.
 
 ## Stage 1 — Package the Graph Review Extension
 
@@ -160,20 +163,23 @@ Its manifest must:
 - not register Asset, Publication or Operations semantics.
 
 Keep Review Executions and Findings as execution provenance/output rather than normal Project Graph node types.
-
 Use the existing generic Extension dependency path. Do not add PI-specific dependency installation logic.
+
+Before the positive installation fixture, prepare and explicitly select a compatible fixture Agent Pack providing the core capabilities plus `graph-review` using normal `agent-pack use`. Record its exact source/version/lock identity.
+This fixture implements only enough AI behaviour for dependency testing. It is not a replacement public pack or reviewer system.
+Do not assume the current standard pack already provides graph-review; Step 2 adds that real implementation and repeats this installation proof with it.
 ```
 
 **Expected result**
 
-Distribution can install Graph Review independently, automatically resolve PI first where absent, record the dependency exactly, and validate the complete selected Agent Pack capability set.
+With its explicit fixture-pack prerequisite satisfied, Distribution can install Graph Review, resolve PI first where absent, record the exact dependency and validate the complete capability set.
 
 **Verify before continuing**
 
 Prove the real dependency lifecycle with fixtures:
 
 ```text
-PI absent
+compatible fixture Agent Pack explicitly selected; PI absent
 → extension add graph-review
 → PI resolves/installs first through normal Extension installation
 → Graph Review installs
@@ -189,8 +195,8 @@ Graph Review removed/disabled
 
 Also prove:
 
-- an incompatible environment or missing `graph-review` capability fails before canonical mutation;
-- failure preserves the previous valid configuration, package state, lock and generated environment;
+- an incompatible environment or pack missing `graph-review` fails before canonical mutation;
+- failure preserves the previous valid configuration, package state, lock and generated environment without silently replacing the selected pack;
 - Operations and Assets / Publication are not Graph Review dependencies;
 - dependency install/removal uses the same compatibility, locking and synchronisation machinery as explicit Extension operations.
 
@@ -207,24 +213,25 @@ Implement a generic Graph Review agent that consumes:
 - the review request;
 - runtime-resolved Graph Review context/scope;
 - accepted relevant Project Intelligence context;
-- one or more relevant skills already available in the selected Agent Pack.
+- one or more relevant skills already resolved from the selected Agent Pack.
 
 Do not create architecture-review, ux-review, product-review, cost-review or other Pactwright capabilities.
 Do not introduce reviewer identities as canonical configuration.
 Do not assume one Graph Review capability maps to one production domain or one skill.
+Resolve and lock the built standard pack through normal Agent Pack mechanisms before exercising real Extension activation; untracked workspace bytes are not a locked environment.
 ```
 
 **Expected result**
 
-The standard pack can satisfy Graph Review through one semantic responsibility while allowing multiple already resolved specialist skills to participate.
+The standard pack satisfies Graph Review through one semantic responsibility while allowing multiple already resolved specialist skills to participate.
 
 **Verify before continuing**
 
-Run capability-resolution fixtures:
+Repeat Step 1's successful dependency lifecycle with the built/packed standard Agent Pack explicitly selected and locked, then require:
 
-- standard passes;
-- a pack lacking `graph-review` fails Extension activation without mutating the valid environment;
-- a fixture resolved environment can expose multiple relevant skills to one Graph Review without creating additional Pactwright capabilities;
+- standard supplies the complete capability set;
+- a pack lacking `graph-review` fails activation without mutating the valid environment;
+- a fixture resolved environment exposes multiple relevant direct skills to one Graph Review without additional Pactwright capabilities;
 - Production Skill technique quality remains outside Pactwright evaluation ownership.
 
 ## Stage 2 — Implement request, scope and immutable execution provenance
@@ -304,7 +311,7 @@ Every execution records at least:
 - environment_lock_hash;
 - review request;
 - resolved scope;
-- resolved Agent Pack / agent / Production Skill identities as useful explicit provenance;
+- resolved Agent Pack / agent / skill identities as useful explicit provenance;
 - status: succeeded | failed;
 - Finding identities when successful;
 - creation time.
@@ -476,9 +483,9 @@ Exercise:
 - every rerun creates a new immutable Review Execution;
 - no failed pinned replay silently substitutes current repository/environment state.
 
-### Step 10 — Implement the complete `graph-review validate` contract
+### Step 10 — Implement the complete validator and derived-report failure guards
 
-**References:** Spec 04 validation.
+**References:** Spec 04 sections 18–20, derived reports, failure and validation.
 
 **Run**
 
@@ -502,17 +509,21 @@ Implement `pactwright graph-review validate` to enforce all canonical minimum ru
 15. generated reports identify their source Project Graph revision and relevant Review Execution provenance.
 ```
 
-Core `pactwright validate` invokes Graph Review validation when Graph Review is enabled and does not reinterpret Graph Review semantics itself.
+Core `pactwright validate` invokes Graph Review validation when enabled and does not reinterpret Graph Review semantics itself. Validation is read-only. Test skill-environment membership with representative resolved-environment fixtures here and repeat with actual external imports in Checkpoint 5.
 
-Validation is read-only.
+For every Graph Review report implemented in this checkpoint, use deterministic derived generation. A report records the runtime-supplied graph revision from which it was derived and the Review Execution identities it summarises. Ordinary regeneration uses current graph state; an explicitly pinned historical report uses its requested historical input. Never replace an execution's original reviewed revision with a report's current source revision.
+
+A report-generation failure must leave canonical Project Graph state, Review Execution/Finding provenance and Project Intelligence state unchanged. It must not turn a successful review into a failed review, create or suppress Findings, or pretend a Source hand-off succeeded. Do not introduce a new report command or canonical report node merely for testing.
 
 **Expected result**
 
-The complete Graph Review structural/replay/governance contract is machine-enforced before Pactwright adopts Graph Review.
+The full Graph Review contract is validated, and derived reporting cannot corrupt canonical or immutable execution state.
 
 **Verify before continuing**
 
-Maintain positive fixtures plus at least one failing fixture for every numbered rule or tightly coupled rule group. Run both `pactwright graph-review validate` and core `pactwright validate`; deliberate Graph Review invalidity must fail both without mutating canonical or execution state.
+Maintain positive fixtures and a failing fixture mapped to every numbered rule or tightly coupled group. Run both Extension and core validation; deliberate invalidity must fail without mutating canonical or execution state.
+
+For each implemented report path, compare repeated generation from identical inputs; verify current versus explicitly pinned source-revision stamps. Inject render/write failures and compare before/after hashes for Project Graph records, Review Executions, Findings and PI Sources/Knowledge. All must remain unchanged, and retrying only report generation must not rerun specialist analysis or duplicate hand-offs.
 
 ### Step 11 — Keep external research provenance bounded
 
@@ -521,7 +532,7 @@ Maintain positive fixtures plus at least one failing fixture for every numbered 
 **Run**
 
 ```text
-Support recording immutable provenance for external evidence used materially by a Graph Review when such evidence is supplied by the selected Agent Pack/skills.
+Support recording immutable provenance for external evidence used materially by a Graph Review when supplied by the selected Agent Pack/skills.
 
 Distinguish:
 - claims supported by the pinned Project Graph;
@@ -530,7 +541,7 @@ Distinguish:
 Do not build a provider/search subsystem in Graph Review.
 Do not claim a mutable external source is historically replayable unless the relevant evidence/provenance can actually be reconstructed.
 
-If external evidence itself should become durable project knowledge, hand it to Project Intelligence through the normal Source path; do not hide it inside accepted Finding meaning.
+If external evidence itself should become durable project knowledge, hand it to Project Intelligence through the normal Source path; a Finding is not a substitute for accepted Knowledge or traceable research Sources.
 ```
 
 **Expected result**
@@ -559,7 +570,8 @@ Contribute Graph Review cases to `pactwright eval` covering:
 - useful supporting evidence/provenance;
 - Finding severity not bypassing PI governance;
 - forbidden direct canonical mutation;
-- correct use of available specialist skills for the request.
+- correct use of available specialist skills for the request;
+- report-failure isolation from canonical truth and immutable execution provenance.
 
 Keep Production Skill technique quality in the owning Production Skills benchmarks.
 Do not compute one aggregate quality score.
@@ -571,7 +583,7 @@ The Pactwright Graph Review responsibility is measurable independently of specia
 
 **Verify before continuing**
 
-Run `pnpm pactwright eval` and inspect Graph Review cases individually, including at least one multi-skill fixture environment when available through the currently resolved Agent Pack seam.
+Run `pnpm pactwright eval` and inspect Graph Review cases individually, including the resolved multi-direct-skill fixture and deterministic report-failure cases. External Production Skills integration remains a Checkpoint 5 conformance extension, not a prerequisite hidden here.
 
 ### Step 13 — Implement and prove the Graph Review GitHub profile/workflow
 
@@ -613,16 +625,18 @@ Review summaries may project:
 The workflow invokes Pactwright runtime commands and preserves runtime-provided replay provenance.
 Do not recreate scope, Finding, replay or PI hand-off semantics inside YAML.
 Do not invent a new required check name not defined by Spec 07.
+Apply the shared workflow-availability preflight to any already specified/configured required-check contribution.
 GitHub never promotes a Finding or treats workflow metadata as canonical Graph Review truth.
+Report/projection failure retains the same state-isolation guarantees as local report generation.
 ```
 
 **Expected result**
 
-Core + PI + Graph Review compose into the same repository integration and shared Project while Graph Review executes/projects remotely through thin runtime automation.
+Core + PI + Graph Review compose into the same integration and shared Project while Graph Review executes/projects remotely through thin runtime automation.
 
 **Verify before continuing**
 
-Run:
+In a configured fixture with workflow prerequisites satisfied, run:
 
 ```bash
 pnpm pactwright sync
@@ -640,9 +654,10 @@ Require:
 - least privilege, SHA pinning, frozen install and bounded timeout/concurrency are preserved;
 - manual, scheduled/configured-event routes invoke the same runtime semantics;
 - remote hand-off failure retries the existing Finding without rerunning Graph Review;
-- remote pinned replay with unreconstructible recorded inputs fails instead of using workflow-current checkout/environment.
+- remote pinned replay with unreconstructible inputs fails instead of using workflow-current checkout/environment;
+- remote report/projection failure leaves canonical state, Review Executions, Findings and PI state unchanged.
 
-Disable/remove Graph Review in a fixture and prove only Graph Review-owned generated/remote contributions are removed; PI/Core integration remains and existing Review Executions/Findings are preserved as user/repository provenance unless separately deleted by an explicit supported operation.
+Disable/remove Graph Review in a fixture and prove only its owned generated/remote contributions are removed; PI/Core integration and historical Review Execution/Finding provenance remain unless separately deleted through an explicit supported operation.
 
 ## Stage 6 — Adopt Graph Review in Pactwright
 
@@ -652,25 +667,33 @@ Disable/remove Graph Review in a fixture and prove only Graph Review-owned gener
 
 **Run**
 
+Verify that the built standard pack from Step 2 has been explicitly resolved/locked in the selected environment before Extension activation.
+
 ```bash
 pnpm build
 pnpm pactwright extension add graph-review
 pnpm pactwright sync
 pnpm pactwright graph-review validate
+```
+
+Land the generated Graph Review workflow through normal repository authority. Preserve the existing required Core/PI checks and satisfy the shared availability preflight for any configured contribution before applying remote state.
+
+```bash
 pnpm pactwright github sync --dry-run
 pnpm pactwright github sync
+pnpm pactwright github sync --dry-run
 pnpm pactwright validate
 ```
 
-`extension add` resolves the workspace Graph Review package, its PI dependency and the standard pack's `graph-review` capability through the already proven generic mechanisms.
+`extension add` resolves the workspace package, its PI dependency and the explicitly selected standard pack's `graph-review` capability through the existing generic mechanisms.
 
 **Expected result**
 
-Pactwright uses the new Graph Review Extension before its public release.
+Pactwright uses Graph Review before public release without silently changing its selected AI environment.
 
 **Verify before continuing**
 
-All validation passes, PI remains the installed dependency, the shared Project remains singular and a second local/remote sync converges.
+All validation passes, PI remains the recorded dependency, the shared Project remains singular, no implicit pack substitution occurred and a second local/remote sync converges.
 
 ### Step 15 — Run real Pactwright Graph Reviews
 
@@ -698,7 +721,7 @@ Invoke each through `pnpm pactwright graph-review run` using the implemented req
 
 **Expected result**
 
-Real Review Executions and Findings are created; every successful Finding is handed to PI.
+Real Review Executions and supported Findings are created; every Finding from a successful review is handed to PI. Do not manufacture Findings to satisfy a count.
 
 **Verify before continuing**
 
@@ -735,7 +758,7 @@ explicitly capture Intent
 → Evidence
 ```
 
-Do not describe the Finding itself as accepted truth. The accepted authority is the governed PI meaning and/or normal Delivery authority that follows it.
+Do not describe the Finding itself as accepted truth. The accepted authority is governed PI meaning and/or the normal Delivery authority that follows it.
 
 **Expected result**
 
@@ -790,21 +813,21 @@ Do not document Review Definitions, reviewer rosters or provider infrastructure.
 
 **Expected result**
 
-Users can understand the distinction between Delivery Review and Graph Review and can execute a review from shipped, governed material.
+Users can distinguish Delivery Review from Graph Review and execute a review from shipped, governed material.
 
 **Verify before continuing**
 
-Run the executable example in CI where practical, then run a fresh Graph Review against the public Pactwright material and triage every resulting Finding through PI. Missing applicable readiness must block public approval, and challenged/superseded/retracted relied-on Knowledge before approval requires re-grounding.
+Run the executable example in CI where practical, then a fresh Graph Review against public Pactwright material and triage every resulting Finding through PI. Missing applicable readiness blocks approval; challenged/superseded/retracted relied-on Knowledge before approval requires re-grounding.
 
 ## Stage 8 — Release `0.0.4`
 
 ### Step 18 — Publish the `0.0.4` family
 
-**References:** Implementation Guide npm release model.
+**References:** Implementation Guide npm release model; Checkpoint 2 exact-version upgrade acceptance.
 
 **Run**
 
-Prepare the release from accepted Checkpoint 4 Evidence.
+Prepare the release from accepted Checkpoint 4 Evidence. First fixture-prove Step 19's exact `0.0.3 → 0.0.4` runtime, standard pack, PI and new Graph Review transition, including compatibility after each operation. Verify desired constraints prevent accidentally resolving newer compatible component versions and the pack supplies `graph-review` before new Extension activation.
 
 The new package is:
 
@@ -812,13 +835,13 @@ The new package is:
 @pactwright/graph-review@0.0.4
 ```
 
-Existing family members also release as compatible `0.0.4`, including the updated `@pactwright/standard` with `graph-review` capability.
+Existing family members also release as compatible `0.0.4`, including `@pactwright/standard` with the new capability.
 
 Use the Implementation Guide release PR/tag flow. Bootstrap only the new Graph Review package's first npm publication/trusted publisher; do not interactively republish existing packages.
 
 **Expected result**
 
-The compatible family is published under `next` with provenance.
+The compatible family is published under `next` with provenance and a fixture-proven exact consumer transition.
 
 **Verify before continuing**
 
@@ -829,52 +852,61 @@ pnpm view @pactwright/project-intelligence@0.0.4 version
 pnpm view @pactwright/graph-review@0.0.4 version
 ```
 
-Every command returns `0.0.4`.
+Every command returns `0.0.4`; the complete transition fixtures pass before real consumer upgrade.
 
 ## Stage 9 — Prove Graph Review on Kakeido
 
-### Step 19 — Upgrade Kakeido from accepted `0.0.3` and install Graph Review through ownership-specific paths
+### Step 19 — Upgrade Kakeido from accepted `0.0.3` through exact ownership-specific targets
 
-**References:** Spec 02 upgrades/Extension dependencies; current Kakeido canonical specs.
+**References:** Spec 02 upgrades/Extension dependencies; current Kakeido canonical specs; Checkpoint 2 exact-version upgrade acceptance.
 
 **Run**
 
-Start from the accepted Checkpoint 3 Kakeido `0.0.3` environment. Do not preinstall `0.0.4` packages manually before exercising Pactwright upgrade/install commands.
+Record the accepted Checkpoint 3 Kakeido `0.0.3` installed/configuration/lock state and use the fixture-proven compatible sequence. Do not preinstall `0.0.4` packages or edit either lock manually.
 
 ```bash
 pnpm pactwright upgrade --to 0.0.4
-pnpm pactwright agent-pack upgrade
-pnpm pactwright extension upgrade project-intelligence
-pnpm pactwright extension add @pactwright/graph-review@0.0.4
-pnpm pactwright graph-review validate
-pnpm pactwright sync
-pnpm pactwright github sync --dry-run
-pnpm pactwright github sync
-pnpm pactwright github sync --dry-run
 pnpm pactwright validate
 ```
 
-Ownership remains separate:
+Verify runtime `0.0.4`, new-runtime migration provenance and compatibility with the existing selected pack/PI. Set only the selected `@pactwright/standard` desired version to exact `0.0.4` through existing configuration, preserving its identity:
 
-```text
-pactwright upgrade
-→ runtime package replacement/migrations
-
-agent-pack upgrade
-→ selected Agent Pack
-
-extension upgrade project-intelligence
-→ existing PI Extension
-
-extension add @pactwright/graph-review@0.0.4
-→ new Graph Review package + dependency/capability validation
+```bash
+pnpm pactwright agent-pack upgrade
+pnpm pactwright validate
 ```
 
-Do not use runtime upgrade as shorthand for Agent Pack or Extension upgrades.
+Verify exact pack/lock identity and the `graph-review` capability. Then set only the existing PI Extension's desired version constraint to exact `0.0.4` through its supported configuration:
+
+```bash
+pnpm pactwright extension upgrade project-intelligence
+pnpm pactwright intelligence validate
+pnpm pactwright validate
+```
+
+Verify exact PI package/version/hash and compatible dependency state before installing Graph Review:
+
+```bash
+pnpm pactwright extension add @pactwright/graph-review@0.0.4
+pnpm pactwright graph-review validate
+pnpm pactwright sync
+```
+
+Verify the complete exact family and land the generated workflow through the normal repository process. Then:
+
+```bash
+pnpm pactwright github sync --dry-run
+pnpm pactwright github sync
+pnpm pactwright github sync --dry-run
+pnpm pactwright doctor
+pnpm pactwright validate
+```
+
+Each owning command must finish in a valid environment before the next begins. Recover failures rather than bypassing validation. Runtime upgrade is not shorthand for pack/Extension upgrades, and a floating later compatible version does not satisfy this checkpoint.
 
 **Expected result**
 
-Kakeido moves from the real published `0.0.3` environment to the exact compatible `0.0.4` family through Pactwright's ownership-specific mechanisms.
+Kakeido moves from the real published `0.0.3` environment to the exact compatible `0.0.4` family through the respective component owners.
 
 **Verify before continuing**
 
@@ -887,13 +919,7 @@ pactwright@0.0.4
 @pactwright/graph-review@0.0.4
 ```
 
-Also require:
-
-- runtime migration/validation was performed by the new runtime;
-- PI remains the recorded Graph Review dependency;
-- Graph Review's GitHub profile composes into the existing shared Project;
-- the final dry-run converges;
-- user-owned workflows/remote state remain unchanged.
+Also require compatibility/lock agreement after every operation, preserved identities and historical provenance, new-runtime migration/validation, PI as the recorded Graph Review dependency, the existing shared Project, a converged final dry-run and unchanged user-owned workflows/remote state.
 
 ### Step 20 — Run cross-spec Kakeido Graph Reviews
 
@@ -901,7 +927,7 @@ Also require:
 
 **Run**
 
-Resolve the current Kakeido canonical specification set and run bounded Graph Review requests that cover at least:
+Resolve the current Kakeido canonical specification set and run bounded review requests covering at least:
 
 ```text
 financial/domain semantics ↔ product/review UX
@@ -914,7 +940,7 @@ Use request perspectives/objectives, not persistent reviewer ids.
 
 **Expected result**
 
-Graph Review finds supported cross-domain issues without flattening Kakeido into generic Pactwright semantics.
+Graph Review identifies supported cross-domain issues without flattening Kakeido into generic Pactwright semantics.
 
 **Verify before continuing**
 
@@ -949,33 +975,33 @@ Run the Kakeido repository-defined tests required by the owning specifications.
 
 ## Stage 10 — Capture Checkpoint 4 feedback
 
-### Step 22 — Route material checkpoint findings through PI
+### Step 22 — Route material checkpoint findings through PI and resolve blockers
 
-**References:** Implementation Principles feedback/evaluation rules.
+**References:** Implementation Principles feedback/evaluation rules; Implementation Guide transition rule.
 
 **Run**
 
-Capture defects, friction, replay problems, bad scope selection, unsupported Finding patterns, installation problems and public-documentation gaps observed while implementing and using Graph Review.
+Capture defects, friction, replay problems, bad scope selection, unsupported Finding patterns, report failures, installation problems and public-documentation gaps observed while implementing and using Graph Review.
 
-Ingest each material Pactwright finding through Project Intelligence, distinguishing Kakeido-specific choices from repeatable Pactwright responsibility failures.
+Ingest each material Pactwright finding through PI, distinguishing Kakeido-specific choices from repeatable Pactwright responsibility failures. Convert repeatable failures into evaluation/product candidates where justified; do not automatically create Intents.
 
-Convert repeatable failures into future evaluation/product candidates where justified; do not automatically create Intents.
+A blocking failure must be corrected and its acceptance rerun inside this checkpoint. Merely recording a blocker as a governed future candidate does not resolve it. Only non-blocking findings/design gaps may cross the checkpoint under the Implementation Guide conditions.
 
 **Expected result**
 
-Checkpoint learning becomes governed evidence rather than a new reviewer-definition/configuration layer.
+Learning remains governed evidence and no blocker is deferred into Checkpoint 5 under another label.
 
 **Verify before continuing**
 
-Every blocking finding is resolved or represented by an explicit governed future candidate before Checkpoint 5 begins.
+Trace each blocker to its correction and passing re-verification. Require no unresolved blocking failure before closing; retained future candidates must be explicitly non-blocking and must not undermine the current canonical contract.
 
 ## Exit gate
 
 Checkpoint 4 closes only when:
 
 - `@pactwright/graph-review` exists as an independent Extension requiring PI;
-- the real Graph Review → PI dependency install/remove lifecycle is proven through generic Extension machinery;
-- incompatible dependency/capability resolution preserves the previous valid environment;
+- its real dependency lifecycle is proven first with an explicitly compatible fixture pack and then with the built standard pack after that capability exists;
+- incompatible dependency/capability resolution preserves the previous valid environment without implicit pack substitution;
 - `@pactwright/standard` supplies exactly the `graph-review` Pactwright capability for specialist Graph Review;
 - one Graph Review may consume multiple already resolved specialist skills without creating extra Pactwright capabilities;
 - there is no Review Definition system, reviewer roster, provider registry, Generation Record or Review & Creative package;
@@ -983,24 +1009,27 @@ Checkpoint 4 closes only when:
 - every attempted review creates immutable Review Execution provenance;
 - every Review Execution records `repository_revision + project_graph_revision + environment_lock_hash` plus request/scope;
 - failed reviews emit no Findings;
-- Findings remain immutable non-graph execution outputs and are never described as accepted project truth;
+- Findings remain immutable non-graph execution outputs and are never accepted project truth;
 - Finding severity cannot directly determine PI trust/class/Knowledge/roadmap/Delivery consequences;
 - every successful Finding enters PI as an internal Source;
 - failed PI hand-off is retryable without rerunning the review and converges idempotently;
 - pinned replay fails explicitly when repository, graph, environment or required external-evidence inputs cannot be reconstructed;
 - `--current` is the only path to current-state rerun and creates a new replay base;
-- all 15 canonical Graph Review validation rules are machine-enforced through Graph Review and core validation;
-- Graph Review evaluation uses the runtime and keeps Production Skill technique quality with Production Skills;
-- the Graph Review GitHub profile composes through the existing shared integration/Project and implements the Spec 07 automation/projection surface without semantic YAML duplication;
-- remote hand-off retry and pinned-replay failure preserve the same semantics as local execution;
-- disabling/removing Graph Review removes only its managed GitHub/generated contribution while preserving PI/Core state and historical Review Execution/Finding provenance;
+- all 15 canonical Graph Review validation rules are enforced through Extension and core validation;
+- implemented reports are deterministic, correctly revision-stamped, and their render/write failures leave canonical Project Graph, Review Execution/Finding provenance and PI state unchanged;
+- report-only retry does not rerun review, alter execution success or duplicate Source hand-offs;
+- Graph Review evaluation uses the runtime and leaves Production Skill technique quality with its owner;
+- the GitHub profile composes through the existing integration/Project and implements Spec 07 automation/projection without semantic YAML duplication;
+- remote hand-off retry, pinned-replay failure and report-failure isolation preserve local semantics;
+- disabling/removing Graph Review removes only its managed contribution while preserving PI/Core state and historical execution provenance;
 - Pactwright and Kakeido each complete one Finding → PI → explicit Delivery correction path;
-- the public Graph Review learning path satisfies the existing PI public-content readiness gate and matches shipped behaviour;
+- the public learning path satisfies existing PI readiness and matches shipped behaviour;
 - the `0.0.4` family including `@pactwright/graph-review` is registry verified;
-- Kakeido proves the real published `0.0.3 → 0.0.4` runtime/Agent Pack/PI/Graph Review ownership-specific transition;
-- unresolved historical-package/external-evidence retention mechanisms remain explicit rather than silently invented;
+- Kakeido proves the exact published `0.0.3 → 0.0.4` transition with explicit desired component constraints and compatible verified intermediate environments;
+- historical-package/external-evidence retention mechanisms remain explicit open implementation concerns, not invented infrastructure;
+- every blocking failure has a correction and passing re-verification; only non-blocking findings may remain future candidates;
 - no known blocking failure is carried into Checkpoint 5.
 
 ---
 
-**Pactwright — Checkpoint 4 — Graph Review v11**
+**Pactwright — Checkpoint 4 — Graph Review v12**
