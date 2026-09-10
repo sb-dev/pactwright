@@ -1,6 +1,6 @@
 # Pactwright — Checkpoint 2 — Remote Delivery
 
-**Version:** 11  
+**Version:** 12  
 **Entry condition:** Checkpoint 1 is accepted and Pactwright can self-host core Delivery.  
 **Release:** `0.0.2`  
 **Exit capability:** Pactwright and Kakeido can initialise, execute, evaluate and project Contract-driven Delivery through GitHub using one deterministic profile-composition/reconciliation model while repository canonical state remains authoritative.
@@ -54,12 +54,25 @@ pnpm build
 
 After GitHub integration becomes active, coherent repository changes land through pull requests and required checks.
 
+### Exact-version upgrade acceptance
+
+This procedure applies to the real consumer upgrade in this checkpoint and the corresponding upgrades in Checkpoints 3–5. It exercises Spec 02's existing desired configuration and ownership-specific commands; it does not add a new upgrade interface.
+
+Before a release or consumer mutation, record the starting package/configuration/lock state and the exact intended runtime, selected Agent Pack and enabled/new Extension versions. Resolve their compatibility metadata and prove the intended sequence in an isolated fixture first. The default sequence is runtime, selected Agent Pack, existing dependency Extensions, their dependants, then new Extensions. Every completed operation must leave a compatible resolved environment; fix an incompatible sequence or release constraint before acceptance rather than running subsequent commands through invalid state.
+
+Target the runtime through `pactwright upgrade --to <version>`. Immediately before each Agent Pack or existing Extension upgrade, set only that component's desired version constraint to the exact checkpoint version through its existing supported configuration fields. Preserve its source/identity. The owning upgrade command performs package replacement, reconciles authorised package constraints, regenerates locks and runs validation; do not preinstall the package, edit either lock, or disguise an upgrade as `agent-pack use` or `extension add`.
+
+Do not assume an unconstrained upgrade, a floating dist-tag, a caret range or an unchanged old exact pin will select the checkpoint version. Do not invent `--to` flags for component commands that do not define them. If the existing configuration/upgrade path cannot honour an exact desired version safely, correct that implementation before passing acceptance.
+
+After each operation, compare installed package versions and package-manager lock with `.pactwright/lock.yml`; verify the unchanged selected identities and compatibility of all still-enabled components. Record the new runtime's migration/sync/validation provenance. On failure, recover the prior valid state and do not proceed with later upgrades. Preserve prior execution provenance and the information required for pinned replay.
+
 ## 4. Checkpoint scope
 
 Checkpoint 2 implements and proves:
 
 ```text
-pactwright init --github
+pactwright init --github with explicit Agent Pack selection
+workflow-before-required-checks activation for explicit and one-shot setup
 generic GitHub profile composition
 repository override composition
 profile conflict detection
@@ -79,7 +92,7 @@ shared locked interactive/Actions environment
 runtime replay provenance in remote execution/projection
 GitHub Integration evaluation cases
 remote drift reconciliation
-real 0.0.1 → 0.0.2 runtime/Agent Pack upgrade
+exact real 0.0.1 → 0.0.2 runtime/Agent Pack upgrade
 ```
 
 GitHub remains:
@@ -169,15 +182,16 @@ Print planned creates/updates/removals without mutation.
 Validate repository identity, permissions and required scopes.
 Never silently broaden authentication scopes.
 Preserve ambiguous/unowned state and report it.
+Identify required-check activation prerequisites, including whether the matching managed workflow is available on the default branch.
 ```
 
 **Expected result**
 
-Dry-run is deterministic, non-mutating and ownership-aware.
+Dry-run is deterministic, non-mutating and ownership-aware, including any prerequisite preventing full activation.
 
 **Verify before continuing**
 
-Run fixtures for create/update/no-op/removal-plan/unowned collision plus one real Pactwright dry-run before apply. Repeated dry-run against unchanged desired/remote state must be stable.
+Run fixtures for create/update/no-op/removal-plan/unowned collision and missing workflow prerequisite, plus one real Pactwright dry-run before apply. Repeated dry-run against unchanged desired/remote state must be stable.
 
 ### Step 3 — Implement `github sync` apply/reconciliation
 
@@ -191,16 +205,20 @@ Own only Pactwright-managed remote repository/Project integration.
 Remove a remote object only when ownership is established and no enabled component still requires it.
 Leave ambiguous/unowned objects untouched and report them.
 
+Never enable a managed required check before the workflow capable of producing it is available on the default branch.
+If that prerequisite is missing, preserve existing policy, report incomplete activation and identify the normal workflow-landing/reconciliation actions. Do not falsely report full convergence.
+Use this same prerequisite handling for explicit setup, one-shot init and later Extension workflows; no bootstrap-only planner or implicit bypass is allowed.
+
 Actions/runtime projection state such as PR summaries, Issue summaries, Project items and derived field values is not remote schema owned by this planner.
 ```
 
 **Expected result**
 
-Apply converges without deleting or adopting unrelated GitHub state.
+Apply converges when prerequisites are met without deleting unrelated state or installing unavailable required checks.
 
 **Verify before continuing**
 
-Run reconciliation fixtures for create/update/no-op/owned removal/unowned preservation and require a clean second dry-run after apply.
+Run reconciliation fixtures for create/update/no-op/owned removal/unowned preservation. With the workflow absent, require no unavailable check to be enforced and no false success; after normal workflow landing, the same apply path must converge with a clean second dry-run.
 
 ## Stage 2 — Generate the Core Delivery workflow and projection surface
 
@@ -215,7 +233,8 @@ Extend `pactwright sync` to render `.github/workflows/pactwright.yml` when GitHu
 
 The workflow must:
 - install/use the complete locked Pactwright execution environment;
-- load the same runtime, enabled Extensions, Agent Pack, Production Skills and Pactwright lock as interactive execution;
+- load the same runtime, enabled Extensions, selected Agent Pack, resolved direct skills and Pactwright lock as interactive execution;
+- consume external Production Skills through the same resolver when that capability arrives in Checkpoint 5, not add CI-only imports before it exists;
 - invoke Pactwright runtime responsibilities rather than duplicate semantics in YAML;
 - use the runtime-supplied environment identity rather than derive a CI-specific identity;
 - validate graph/lifecycle/review state;
@@ -232,7 +251,7 @@ Core remote execution is a thin runtime surface using the same semantic/AI envir
 
 **Verify before continuing**
 
-Run sync twice and require byte-identical managed output on the second run. Compare local and Actions-resolved `environment_lock_hash` for the same lock and require equality. Inspect triggers/permissions to prove untrusted PR execution cannot access privileged credentials.
+Run sync twice and require byte-identical managed output on the second run. Compare local and Actions-resolved `environment_lock_hash` for the same lock and require equality. Inspect triggers/permissions to prove untrusted PR execution cannot access privileged credentials. Checkpoint 5 repeats this identity test with real external Production Skills and selected packs.
 
 ### Step 5 — Implement semantic trigger and validator routing
 
@@ -368,7 +387,7 @@ Run core-only, fixture-profile and project-disabled projection fixtures. Mutate 
 
 ### Step 9 — Implement and prove `pactwright init --github`
 
-**References:** Spec 02 one-shot initialisation; Specs 02 and 07 sync ownership.
+**References:** Spec 02 one-shot initialisation; Specs 02 and 07 sync ownership; Checkpoint 1 explicit pack selection.
 
 **Run**
 
@@ -379,34 +398,44 @@ pactwright init --github
 
 It must compose the same underlying operations as explicit setup:
 normal init
+→ explicit compatible Agent Pack selection
 → enable GitHub configuration
 → pactwright sync
 → pactwright github sync
 
-Do not create a second initialisation/provisioning implementation.
-Use the same local sync, profile planner, remote dry-run/apply/reconciliation and ownership rules implemented above.
+In both clean fixtures, explicitly select the same Agent Pack source and exact version. The explicit path uses `agent-pack use`; one-shot init receives the same choice through the documented normal init selection interaction/input established in Checkpoint 1. Package installation alone is not selection.
+With no compatible explicit choice, do not activate GitHub or silently choose standard.
+
+Use the same local sync, profile planner and remote reconciliation/ownership rules.
+One-shot init must honour Step 3's workflow-before-required-checks preflight. A clean remote without the workflow is not fully activated merely because local files were generated.
+Report the unmet prerequisite, land generated workflows through normal repository authority, then complete remote activation through the same `github sync` path.
+Do not add an implicit push, alternate setup implementation or required-check bypass.
 ```
 
 **Expected result**
 
-A clean repository can initialise the complete Core Remote Delivery surface through one compositional command.
+One-shot and explicit setup resolve the same selected environment and safe GitHub state. Complete activation is possible once the normal workflow prerequisite is satisfied.
 
 **Verify before continuing**
 
-In isolated clean test repositories, compare `init --github` against the equivalent explicit operations and require equivalent Pactwright configuration/lock, generated managed files and resolved managed remote state while preserving unrelated repository/remote resources.
+In isolated clean repositories, compare both setup paths with identical explicit pack selection and GitHub configuration. Require equivalent lock/environment identity, generated files and remote desired state, normalising only repository-specific resource identities.
 
-### Step 10 — Land the generated Core workflow before requiring its checks
+Test missing/incompatible selection, workflow absent, and workflow already available. For an absent workflow, neither path may enforce unavailable checks or report full convergence. Land the same generated workflow in each fixture, reconcile normally and verify equivalent applied state, checks and clean second dry-runs. Preserve unrelated local/remote resources throughout.
+
+### Step 10 — Enable GitHub and land the Core workflow before requiring its checks
 
 **References:** Spec 07; Implementation Guide repository changes.
 
 **Run**
+
+Pactwright enters from Checkpoint 1 with GitHub disabled. Explicitly enable the owning GitHub configuration (`github.enabled: true` in the supported project configuration), preserving the selected Agent Pack, exact lock and unrelated settings. Do not reinitialise or silently select a new pack.
 
 ```bash
 pnpm build
 pnpm pactwright sync
 ```
 
-Land the generated Pactwright-managed workflow through the safest repository path available before its own required checks/rules are enabled.
+Verify `.github/workflows/pactwright.yml` was generated. Land the Pactwright-managed workflow through the safest repository path available before its own required checks/rules are enabled.
 
 Then:
 
@@ -418,11 +447,11 @@ Review the exact managed plan for settings, labels, rulesets/required checks and
 
 **Expected result**
 
-The workflow exists on the default branch before remote policy requires its checks.
+GitHub is explicitly enabled and the workflow exists on the default branch before remote policy requires its checks.
 
 **Verify before continuing**
 
-Ensure only Pactwright-owned remote state is planned and the three required Core checks are not required before the workflow capable of producing them exists.
+Verify GitHub configuration, generated workflow presence and default-branch availability. Ensure only Pactwright-owned remote state is planned and no required Core check is activated before its producing workflow exists.
 
 ### Step 11 — Apply and prove Pactwright GitHub desired state
 
@@ -499,6 +528,8 @@ Check history, PR projection and local runtime state agree before and after reso
 ```text
 Contribute Checkpoint-2 GitHub Integration cases to `pactwright eval` covering the currently implemented surface:
 - profile composition and conflict detection;
+- explicit pack selection in one-shot and separate setup;
+- missing-workflow activation safety and subsequent convergence;
 - deterministic workflow generation;
 - semantic trigger/path routing;
 - lifecycle Gate stopping;
@@ -539,7 +570,7 @@ GitHub setup/operating guide
 one executable Remote Delivery example
 ```
 
-Document `pactwright init --github`, explicit setup, ownership boundaries, checks/projections and safe reconciliation using only behaviour proven in this checkpoint.
+Document `pactwright init --github`, explicit pack selection and setup, workflow activation prerequisites, ownership boundaries, checks/projections and safe reconciliation using only behaviour proven in this checkpoint. Include the exact-version upgrade procedure and distinguish incomplete bootstrap from converged remote activation.
 
 **Expected result**
 
@@ -553,7 +584,9 @@ Follow the guide against the real Pactwright GitHub setup and a clean test repos
 
 ### Step 16 — Prepare and tag `0.0.2`
 
-**References:** Implementation Guide npm release model.
+**References:** Implementation Guide npm release model; section 3 exact-version upgrade acceptance.
+
+Before release, prove in isolated consumer fixtures that the intended `0.0.1 → 0.0.2` runtime-then-pack transition leaves a compatible environment after each owning command. Include a newer available pack in a resolver fixture to prove the exact configured target is honoured rather than a floating latest release.
 
 Use the standard release PR path, update CHANGELOG from accepted Evidence, tag the merged release commit `v0.0.2`, and let trusted publishing release:
 
@@ -564,13 +597,13 @@ pactwright@0.0.2
 
 **Verify before continuing**
 
-Both registry versions resolve and the trusted release workflow succeeds.
+Both registry versions resolve, the trusted release workflow succeeds and the upgrade compatibility/targeting fixtures pass.
 
 ## Stage 7 — Prove published upgrade and Remote Delivery in Kakeido
 
-### Step 17 — Upgrade Kakeido from `0.0.1` to `0.0.2` through Pactwright ownership-specific commands
+### Step 17 — Upgrade Kakeido from `0.0.1` to exact `0.0.2` through ownership-specific commands
 
-**References:** Spec 02 upgrade model; Checkpoint 1 upgrade capability.
+**References:** Spec 02 upgrade model; Checkpoint 1 upgrade capability; section 3 exact-version upgrade acceptance.
 
 **Run**
 
@@ -581,21 +614,27 @@ pactwright@0.0.1
 @pactwright/standard@0.0.1
 ```
 
-Do **not** preinstall `0.0.2` with `pnpm add`.
+Record the initial installed/configuration/lock state and confirm the fixture-proven compatible sequence from Step 16. Do **not** preinstall `0.0.2` with `pnpm add`.
 
-Run:
+Upgrade the runtime first:
 
 ```bash
 pnpm pactwright upgrade --to 0.0.2
+pnpm pactwright validate
+```
+
+Verify runtime `0.0.2` with the still-compatible selected pack and new-runtime migration/validation provenance. Then set the selected `@pactwright/standard` Agent Pack's desired `version` constraint to exact `0.0.2` through the existing configuration, preserving its source. Do not edit installed packages or either lock.
+
+```bash
 pnpm pactwright agent-pack upgrade
 pnpm pactwright doctor
 pnpm pactwright sync
 pnpm pactwright validate
 ```
 
-Confirm the project package manager performed the package replacements and the newly installed runtime completed migration/lock/sync/validation.
+Verify the pack upgrade resolved `0.0.2` exactly and both locks agree. Recover a failed operation before continuing; do not pass by resolving a newer compatible pack.
 
-Then enable GitHub through the same compositional operations delivered in this checkpoint. For an existing Pactwright project, update the owning GitHub configuration and run:
+Then explicitly enable the owning GitHub configuration (`github.enabled: true`) while preserving the selected pack and run:
 
 ```bash
 pnpm pactwright sync
@@ -611,11 +650,11 @@ pnpm pactwright github sync --dry-run
 
 **Expected result**
 
-Kakeido proves a real published `0.0.1 → 0.0.2` runtime/Agent Pack upgrade and gains GitHub integration without losing user-authored local or remote state.
+Kakeido proves a real, exact published `0.0.1 → 0.0.2` runtime/Agent Pack upgrade and gains GitHub integration without losing user-authored local or remote state.
 
 **Verify before continuing**
 
-Package manifest/package-manager lock/`.pactwright/lock.yml` agree on the expected `0.0.2` runtime and Agent Pack. Second GitHub dry-run converges. Pre-existing user workflow hashes and unmanaged remote resources remain unchanged.
+Record compatibility and package/lock agreement after each upgrade. Final manifest/package-manager lock/`.pactwright/lock.yml` identify the expected `0.0.2` runtime and Agent Pack. Second GitHub dry-run converges. Pre-existing user workflow hashes and unmanaged remote resources remain unchanged.
 
 ### Step 18 — Resolve current Kakeido ingestion prerequisites
 
@@ -692,7 +731,9 @@ Checkpoint 2 closes only when:
 
 - the generic GitHub profile-composition engine exists before first-party Extension profiles and deterministically collapses/merges/rejects requirements;
 - repository overrides compose through the same desired-state model;
-- `pactwright init --github` is proven equivalent to the corresponding explicit operations rather than a second setup path;
+- `pactwright init --github` is equivalent to explicit setup with the same explicitly chosen compatible Agent Pack;
+- both setup paths preserve workflow-before-required-checks activation, report unmet prerequisites and converge through normal reconciliation after workflow landing;
+- Pactwright and Kakeido explicitly enable GitHub configuration before expecting generated workflows;
 - deterministic `github sync --dry-run` and apply reconciliation share one planner;
 - the applicable configured/supported Core remote surface covers managed settings/labels/rulesets/required checks plus one shared Project schema;
 - `.github/workflows/pactwright.yml` is generated from the exact locked Pactwright environment and local/Actions `environment_lock_hash` agrees;
@@ -707,7 +748,8 @@ Checkpoint 2 closes only when:
 - Pactwright completes one real GitHub-operated Delivery;
 - public Remote Delivery guidance matches the implemented surface;
 - `pactwright@0.0.2` and `@pactwright/standard@0.0.2` are registry verified;
-- Kakeido proves a real published `0.0.1 → 0.0.2` runtime/Agent Pack upgrade without manually preinstalling the target packages;
+- exact-version targeting and compatible intermediate upgrade states are fixture-proven before consumer mutation;
+- Kakeido proves the exact published `0.0.1 → 0.0.2` runtime/Agent Pack upgrade through explicit desired constraints and owning commands, without preinstalling targets or silently selecting later versions;
 - Kakeido completes one real Remote Delivery from its current canonical specs;
 - unmanaged local/remote GitHub state is preserved;
 - local generated ownership, remote structural ownership and Actions projection ownership are proven separately;
@@ -716,4 +758,4 @@ Checkpoint 2 closes only when:
 
 ---
 
-**Pactwright — Checkpoint 2 — Remote Delivery v11**
+**Pactwright — Checkpoint 2 — Remote Delivery v12**
