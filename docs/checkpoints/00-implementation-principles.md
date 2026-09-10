@@ -1,18 +1,29 @@
 # Pactwright — Implementation Principles
 
-**Version:** 1  
+**Version:** 3  
 **Status:** Implementation guidance
 
 ## 1. Purpose
 
-This document defines the principles used to implement Pactwright.
+This document defines how Pactwright should be implemented and proven.
 
-It is intentionally separate from the operational implementation guide.
+It is intentionally separate from canonical system semantics.
 
-- **System Architecture** defines how Pactwright fits together.
-- **Engineering specs** define subsystem semantics.
-- **Implementation Principles** define how the project should be built and proven.
-- **Implementation Guide** defines the concrete build sequence and commands.
+Authority is:
+
+```text
+docs/specs/01–08
+→ canonical Pactwright semantics
+
+Implementation Principles
+→ how the system should be built and proven
+
+Implementation Guide
+→ checkpoint sequence, engineering baseline and release model
+
+Checkpoint files
+→ executable implementation runbooks
+```
 
 This document does not redefine Pactwright semantics.
 
@@ -56,17 +67,19 @@ The bootstrap phase is the only exception.
 Before Pactwright has:
 
 - Project Graph storage;
-- Delivery lifecycle;
+- Contract and Delivery lifecycle mechanics;
 - an AI adapter;
 - installation/distribution;
 
 those capabilities must be implemented directly.
 
-As soon as the first installable core exists, subsequent Pactwright work should use Pactwright wherever the implemented capability set allows it.
+As soon as the first installable core exists, subsequent Pactwright work should use Pactwright wherever the implemented capability set can represent that work safely.
 
 A later implementation stage must not ignore an already working Pactwright capability merely because using it introduces ceremony.
 
-If the ceremony is obstructive, that is product feedback.
+If the ceremony is obstructive, that is product evidence.
+
+The exact acceptance threshold for when a newly implemented capability becomes mandatory for dogfooding remains an open design gap. It must not become an indefinite excuse to bypass a working public mechanism.
 
 ---
 
@@ -74,7 +87,7 @@ If the ceremony is obstructive, that is product feedback.
 
 A capability cannot depend on itself to introduce itself.
 
-Each stage therefore uses the workflow that exists **at the end of the previous accepted stage**.
+Each stage uses the system available at the end of the previous accepted stage.
 
 Examples:
 
@@ -88,20 +101,23 @@ Project Intelligence
 Graph Review
 → built using Delivery + GitHub + Project Intelligence
 
-Creative Delivery
-→ built using the existing Review & Creative extension foundation
+Production Skills + Assets / Publication
+→ built using Delivery + PI + Graph Review where applicable
 
 Operations
-→ built using the existing Delivery + Intelligence system
+→ built using Delivery + Project Intelligence
+
+Publication Feedback
+→ built using Assets / Publication + Operations + Project Intelligence
 ```
 
-Do not write implementation instructions that assume a command, extension or automation exists before its own stage has delivered it.
+Do not write implementation instructions that assume a command, Extension or automation exists before its own stage has delivered it.
 
 ---
 
 ## 5. Vertical Slices, Not Spec-by-Spec Construction
 
-Engineering specifications overlap at integration boundaries.
+Canonical specifications overlap at integration boundaries.
 
 Implementation should therefore follow vertical capabilities rather than:
 
@@ -111,9 +127,7 @@ finish spec A
 → finish spec C
 ```
 
-A good slice should include enough of the relevant layers to prove one real behaviour end to end.
-
-For example:
+A useful early slice is:
 
 ```text
 Intent
@@ -125,72 +139,125 @@ Intent
 → Evidence
 ```
 
-is a better early milestone than independently completing graph schemas, prompts and GitHub files with no working lifecycle.
+That is more valuable than independently completing schemas, prompts and GitHub files with no working lifecycle.
+
+A vertical slice may cross multiple subsystem boundaries.
+
+It must not erase those boundaries.
 
 ---
 
-## 5A. Use the Strongest Available Pactwright Capability
+## 6. Use the Strongest Available Pactwright Capability
 
-Pactwright must increasingly build the whole project through itself, not only its code.
+Pactwright should increasingly build the whole project through itself, not only its runtime source.
 
-The capability available at the current checkpoint defines the execution path:
+Use the strongest capability currently proven:
 
 ```text
 Delivery exists
-→ all material project changes use Delivery
+→ material project changes use normal Contract-governed Delivery
 
 Project Intelligence exists
 → knowledge-dependent work uses accepted PI context
-→ new project meaning returns through Sources / triage / Knowledge
+→ new project meaning returns through Sources and governance
 
 Graph Review exists
-→ relevant project-wide/public work is reviewed through Graph Review
+→ specialist Project Graph analysis uses Graph Review
+→ Findings enter Project Intelligence before consequence
 
-Creative Delivery exists
-→ public narrative, visual and educational creative work uses Creative Delivery
+Production Skills are integrated
+→ specialised software, research, design, narrative, video, music, game and other work uses the relevant Production Skills through the selected Agent Pack
+
+Assets / Publication exists
+→ approved durable outputs become Assets
+→ real release of an Asset becomes a Publication where applicable
 
 Operations exists
-→ deployed software is observed through Operations
+→ deployed or otherwise registered real-world exposures can produce Observations
+→ Observations enter Project Intelligence
 
-Publication exposure exists
-→ selected real Publications are observed through Operations
+Publication feedback is available
+→ selected Publications may enter the same Operations → PI feedback loop
 ```
 
-Do not bypass an available Pactwright capability merely because a direct file edit is faster.
+Do not create a parallel lifecycle for specialised production.
 
-The purpose is not ceremony. It is to keep the Project Graph current while Pactwright is being built.
+The model remains:
 
-### Creative readiness gate
+```text
+normal Delivery
++ selected Agent Pack
++ relevant Production Skills
++ Assets / Publication where the output becomes a durable approved artefact
+```
 
-Once Project Intelligence exists, public creative work may begin only when its grounding domains are sufficiently covered.
+---
 
-Always require:
+## 7. Public-Content Authority and Readiness
 
-- `identity` = **Covered**;
-- `content` = **Covered** for editorial/educational/marketing work;
-- `product` = **Covered** for product/capability/value claims;
-- `go-to-market` = **Covered** for acquisition/positioning/campaign work;
-- any subject domain required by factual claims = **Covered**.
+Public content must not compensate for missing project truth.
 
-Coverage is scoped to the work. It means the necessary current claims and constraints are represented by accepted Knowledge, not that the entire domain is complete.
+### Before Project Intelligence
+
+Before PI exists, strategic public choices require bounded Delivery authority for the specific work:
+
+```text
+Intent
+→ authorised Decision
+→ selected Contract
+→ Brief
+→ Delivery
+```
+
+Identity, positioning, product claims and other strategic choices must not be invented by the production model merely because no project knowledge store exists yet.
+
+### With Project Intelligence
+
+Once PI exists for the relevant project state, public/outbound work uses accepted current Knowledge and must satisfy the applicable coverage gate before approval.
+
+Typical domain requirements are:
+
+```text
+identity
+→ when identity, voice or values matter
+
+content
+→ editorial, educational or marketing work
+
+product
+→ capability, value, behaviour or limitation claims
+
+go-to-market
+→ acquisition, positioning, CTA or campaign work
+
+delivery/ux
+→ user-facing workflow or UX material
+
+delivery/eng
+→ technical implementation claims
+
+other subject domains
+→ factual claims that depend on them
+```
+
+Coverage is scoped to the work. It means the necessary current claims and constraints are represented by accepted, in-horizon Knowledge with traceable Sources, not that the whole domain is complete.
 
 If coverage is insufficient:
 
 ```text
 intelligence onboard
-→ identify missing Sources / Decisions
-→ normal Delivery creates or collects the missing material
+→ identify missing Sources or Decisions
+→ normal Delivery / research creates or collects the missing material
 → intelligence ingest
-→ triage / promotion where required
+→ triage / reviewed promotion where required
 → re-check coverage
 ```
 
-Creative generation must not silently invent identity, positioning or other missing project truth.
-
+If relied-on Knowledge is challenged, superseded or retracted before approval, re-ground and re-evaluate the work before it becomes an Asset or Publication.
 
 ---
 
-## 6. Two Longitudinal Acceptance Projects
+## 8. Two Longitudinal Acceptance Projects
 
 Pactwright uses two persistent real projects.
 
@@ -202,13 +269,14 @@ It includes:
 
 ```text
 runtime + CLI
-first-party extensions
+standard Agent Pack
+first-party Extensions
 GitHub integration
 README
 Docs
 Examples
 Academy
-Extension registry
+registry
 Website
 Case Studies
 Blog
@@ -216,7 +284,7 @@ Blog
 
 The public project is implementation work, not post-launch decoration.
 
-Every checkpoint must advance code **and** the smallest useful part of the public product enabled by that capability. Public content should not accumulate as a final-documentation phase.
+Every checkpoint should advance code and the smallest useful public surface enabled by that capability.
 
 Pactwright must prove it can deliver:
 
@@ -226,14 +294,15 @@ Pactwright must prove it can deliver:
 - education;
 - examples;
 - public content;
-- creative assets;
+- approved durable Assets;
+- releases;
 - production improvements.
 
 ### Kakeido
 
 Kakeido is the external consumer project.
 
-It exercises:
+It exercises a materially different product/domain surface, including:
 
 ```text
 financial-domain rules
@@ -258,13 +327,16 @@ Kakeido exists to catch assumptions that self-hosting can hide:
 - semantic loss across unrelated domains;
 - generated-file ownership mistakes;
 - GitHub provisioning problems;
-- weak UX or content guidance.
+- weak production guidance;
+- weak UX/content guidance.
 
-Do not add another acceptance project unless neither Pactwright nor Kakeido can realistically exercise a required capability class.
+Use Kakeido's current canonical project specifications for acceptance. Do not treat stale copies embedded in Pactwright as authoritative.
+
+Do not add another longitudinal acceptance project unless neither Pactwright nor Kakeido can realistically exercise a required capability class.
 
 ---
 
-## 7. Checkpoints Are Installable Product Milestones
+## 9. Checkpoints Are Installable Product Milestones
 
 A checkpoint is not simply the end of a coding phase.
 
@@ -292,13 +364,13 @@ Kakeido completes a meaningful System-Level Acceptance Scenario.
 
 ### Learn
 
-Problems found during installation and use become future project work.
+Problems found during installation and use become future governed project work.
 
 A checkpoint is not accepted when only its happy-path unit tests pass.
 
 ---
 
-## 8. Real Work Before Synthetic Demos
+## 10. Real Work Before Synthetic Demos
 
 Prefer real acceptance work whenever possible.
 
@@ -306,14 +378,15 @@ Use Pactwright work to test Pactwright capabilities.
 
 Use Kakeido work to test external consumption.
 
-Synthetic fixtures still belong in deterministic and semantic evaluation suites, but they are not substitutes for system-level use.
+Synthetic fixtures remain essential for deterministic semantics, failure boundaries and regression suites, but they are not substitutes for system-level use.
 
 The strongest acceptance result is:
 
 ```text
 real project requirement
 → correct durable state
-→ useful delivery
+→ useful Delivery
+→ real exposure where applicable
 → observable result
 → traceable feedback
 ```
@@ -326,64 +399,88 @@ command exited 0
 
 ---
 
-## 9. Commands Must Follow Ownership
+## 11. Commands Must Follow Ownership
 
 Pactwright has distinct execution surfaces.
 
 ### Runtime CLI
 
-Use for deterministic mechanics:
+Use the runtime for deterministic Pactwright mechanics:
 
 ```text
 pactwright init
 pactwright sync
 pactwright validate
-pactwright context
+pactwright doctor
+pactwright upgrade
 pactwright lifecycle ...
+pactwright agent-pack use ...
+pactwright agent-pack upgrade
 pactwright extension ...
 pactwright github sync
 pactwright intelligence ...
-pactwright review ...
-pactwright creative ...
+pactwright graph-review ...
+pactwright assets ...
 pactwright operations ...
 pactwright eval
 ```
 
-When Pactwright is installed as a project dependency, invoke these through:
+When Pactwright is installed as a project dependency, invoke through:
 
 ```bash
 pnpm pactwright ...
 ```
 
-### AI adapter commands
-
-Use the generated adapter for lifecycle responsibilities:
+Upgrade ownership is explicit:
 
 ```text
-/capture-intent
-/propose-contracts
-/approve-contract
-/write-brief
-/deliver-brief
-/review
-/prepare-evidence
+pactwright upgrade
+→ runtime
+
+pactwright agent-pack upgrade
+→ selected Agent Pack
+
+pactwright extension upgrade <id>
+→ Extension
 ```
 
-Adapter commands execute lifecycle responsibilities.
+### AI adapter responsibilities
 
-The Pactwright runtime remains authoritative for graph semantics and valid transitions.
+The generated adapter exposes AI responsibilities such as Contract crafting, Brief creation, Delivery and Review according to the active adapter and selected Agent Pack.
+
+Conceptually:
+
+```text
+capture Intent
+propose Contract alternatives
+record authorised Contract selection
+write Brief
+deliver Brief
+review Delivery
+prepare Evidence
+```
+
+Adapter commands execute responsibilities.
+
+The Pactwright runtime remains authoritative for graph semantics, authority and valid transitions.
+
+### Production Skills commands
+
+Production Skills may expose narrower production commands for their own composition, tooling, tests and benchmarks.
+
+Those commands remain owned by the Production Skills repositories and do not automatically become Pactwright CLI commands.
 
 ### Configuration
 
-Do not invent commands for behaviour that is intentionally configuration-driven.
+Do not invent commands for behaviour intentionally driven by configuration.
 
-Edit the owning Pactwright configuration and then run:
+Edit the owning Pactwright configuration, then run:
 
 ```bash
 pnpm pactwright sync
 ```
 
-and, when GitHub remote state changes:
+and, when GitHub remote structure changes:
 
 ```bash
 pnpm pactwright github sync --dry-run
@@ -392,30 +489,33 @@ pnpm pactwright github sync
 
 ---
 
-## 10. Repository and Graph Boundaries Remain Intact During Implementation
+## 12. Repository and Graph Boundaries Remain Intact
 
-Implementation convenience must not collapse architectural boundaries.
+Implementation convenience must not collapse architectural ownership.
 
 Keep:
 
 ```text
 Delivery
-→ what was requested, agreed and delivered
+→ what was requested, authorised and delivered
 
 Project Intelligence
 → what the project currently understands
 
 Graph Review
-→ specialist critique and finding production
+→ specialist Project Graph analysis and Finding production
 
-Creative Delivery
-→ creative execution plus approved Assets and Publications
+Production Skills
+→ specialised reusable production expertise
+
+Assets / Publication
+→ approved durable outputs and release records
 
 Operations
-→ what happened after work reached production
+→ what happened after work reached a real-world exposure
 
 Distribution
-→ installation, composition and reconciliation
+→ installation, composition, locking, upgrades and reconciliation
 
 GitHub
 → remote execution and projection
@@ -425,44 +525,38 @@ In particular:
 
 - Evidence is not Deployment.
 - Evidence is not Publication.
-- Review findings are not accepted Knowledge.
-- Observation is not accepted Knowledge.
+- a Graph Review Finding is not accepted Knowledge.
+- a Finding is execution output, not a normal Project Graph node.
+- an Observation is canonical Operations state but not accepted Knowledge.
 - Project Intelligence candidates are not canonical Intents.
+- candidate production outputs are not Assets.
 - GitHub fields are not canonical graph state.
 - execution provenance is not normal Project Graph truth.
+- Production Skills do not own Pactwright lifecycle semantics.
 
-A vertical slice may cross boundaries.
-
-It must not erase them.
+A vertical slice may cross boundaries. It must not erase them.
 
 ---
 
-## 11. Repository as Source of Truth
+## 13. Repository as Source of Truth
 
-The Pactwright repository remains the source of truth for the open-source project.
+The Pactwright repository remains the source of truth for the open-source product.
 
 Public surfaces should reuse canonical project material wherever practical.
 
 ```text
-authoritative project knowledge
+authoritative project semantics / knowledge
         ↓
 README / Docs / Academy / Examples / Website
 ```
 
-Do not allow:
+Do not allow tutorials, blog posts, case studies or generated website copy to silently become alternative definitions of product behaviour.
 
-- tutorials;
-- blog posts;
-- case studies;
-- generated website copy;
-
-to silently become alternative definitions of product behaviour.
-
-If public content reveals that product semantics are missing or wrong, fix the authoritative specification or Project Intelligence first.
+If public content reveals that product semantics are missing or wrong, fix the owning canonical specification or Project Intelligence first.
 
 ---
 
-## 12. Content Is Part of Product Quality
+## 14. Content Is Part of Product Quality
 
 Installation and execution alone are insufficient.
 
@@ -480,11 +574,13 @@ At every checkpoint, evaluate whether a new user could discover and operate the 
 
 Deliver the smallest concrete content set needed to close those gaps during the same checkpoint.
 
-Once Project Intelligence exists, derive and ground this work from accepted Knowledge. Once Creative Delivery exists, use it for public narrative, visual and educational creative artefacts.
+Once Project Intelligence exists, ground applicable public work in accepted Knowledge.
+
+Specialised public production uses normal Delivery plus relevant Production Skills. When the result becomes an approved durable output, record it through Assets / Publication.
 
 Content failures are product failures.
 
-The Pactwright public project should progressively cover:
+The public journey should progressively cover:
 
 ```text
 Discover
@@ -505,30 +601,30 @@ Remote Delivery
 → website foundation + GitHub guide + remote example
 
 Project Intelligence
-→ PI docs + onboarding example + Academy lesson + identity/content readiness
+→ PI docs + onboarding example + Academy lesson + public-content knowledge foundation
 
 Graph Review
-→ Review docs/example/Academy + review the existing public corpus
+→ Graph Review docs/example/Academy + review the existing public corpus
 
-Creative Delivery
-→ creative docs/example/Academy + first grounded public Publication
+Production Skills + Assets / Publication
+→ specialised-production guide/example/Academy + first grounded approved public Asset/Publication
 
 Operations
-→ Operations docs/example/Academy + production-learning content
+→ Operations docs/example/Academy + production-feedback content
 
-Publication feedback
-→ revise a real Publication from production evidence
+Publication Feedback
+→ revise a selected real Publication from Operations evidence
 
-Full operating surface
-→ end-to-end guide/example + advanced Academy + extension catalogue
+Full Operating Surface
+→ end-to-end guide/example + advanced Academy + ecosystem/Extension catalogue
 
-Hardened loop
+Hardened Loop
 → case study + contribution/launch material + final public-surface audit
 ```
 
 ---
 
-## 13. System-Level Acceptance Dimensions
+## 15. System-Level Acceptance Dimensions
 
 Every checkpoint scenario should test six dimensions.
 
@@ -554,19 +650,19 @@ Could a user understand and operate it from shipped project material?
 
 ### Feedback
 
-Could discovered defects become normal future project work?
+Could discovered defects become normal governed future project work?
 
 A checkpoint may pass its internal tests and still fail System-Level Acceptance.
 
 ---
 
-## 14. Feedback Becomes Product Evidence
+## 16. Feedback Becomes Product Evidence
 
 Real use should create evidence about Pactwright itself.
 
-Before Project Intelligence exists, capture important findings and public-content changes through normal Delivery work.
+Before Project Intelligence exists, capture important findings and corrections through normal Delivery work.
 
-When Project Intelligence first becomes available, ingest the existing Pactwright public corpus so identity/content/product knowledge and public claims can be inspected against the same project understanding.
+When Project Intelligence becomes available, ingest applicable existing authorised Pactwright material and the current public corpus through the normal Source path.
 
 After Project Intelligence exists:
 
@@ -576,8 +672,11 @@ finding / feedback
 → triage
 → Knowledge where justified
 → intent candidate where justified
+→ explicit Intent
 → normal Delivery
 ```
+
+Graph Review Findings and Operations Observations enter this same governance boundary through their required PI hand-offs.
 
 Do not automatically generalise every project preference into Pactwright behaviour.
 
@@ -589,36 +688,68 @@ Only repeatable Pactwright responsibility failures belong in generic evaluation 
 
 ---
 
-## 15. Evaluation Grows From Real Failures
+## 17. Evaluation Grows From Real Failures
 
 Evaluation should combine:
 
 - deterministic fixtures;
-- extension-owned semantic cases;
+- Extension-owned semantic cases;
+- Agent Pack responsibility cases;
 - failures observed while building Pactwright;
 - failures observed while using Pactwright on Kakeido.
 
-Useful real-derived evaluation cases include:
+Useful Pactwright-level cases include:
 
 - a Contract loses a financial invariant;
 - Delivery widens scope;
-- Project Intelligence selects irrelevant knowledge;
-- Graph Review misses a cross-spec contradiction;
-- creative output violates grounded product voice;
+- Project Intelligence selects irrelevant Knowledge;
+- Graph Review misses a supported cross-spec contradiction;
+- a Finding bypasses PI governance;
+- an Asset is accepted without required approval/hash/grounding;
 - Operations makes an unsupported causal claim;
 - installation output omits a required step.
+
+Production-domain quality belongs to Production Skills benchmarks.
+
+For example, voice quality, video quality, music quality or framework-specific engineering quality should not be reinvented as generic Pactwright evaluation when the owning Production Skills family already has the benchmark responsibility.
 
 Do not collapse evaluation into one aggregate quality score.
 
 ---
 
-## 16. Kakeido Ingestion Progression
+## 18. Replay Must Be Exact or Fail Explicitly
+
+Replayable execution provenance uses:
+
+```text
+repository_revision
++ project_graph_revision
++ environment_lock_hash
+```
+
+Execution-specific records may add their own immutable provenance on top.
+
+A pinned replay must not silently use current repository state, current Project Graph state or current dependencies when recorded inputs cannot be reconstructed.
+
+If historical inputs are unavailable:
+
+```text
+fail explicitly
+→ preserve the original execution/provenance
+→ do not fabricate replay equivalence
+```
+
+The exact mechanism for retaining or reacquiring historical runtime packages, Extensions, Agent Packs and external Production Skills revisions is intentionally not prescribed until implementation evidence requires it.
+
+---
+
+## 19. Kakeido Ingestion Progression
 
 Kakeido initially uses CSV ingestion.
 
 That is deliberate.
 
-The initial boundary is:
+The boundary is:
 
 ```text
 CSV
@@ -632,7 +763,7 @@ weekly review
 
 TrueLayer is a later graduation scenario.
 
-When introduced, the intended boundary is:
+When introduced:
 
 ```text
 CSV --------┐
@@ -655,24 +786,28 @@ The new source must not silently redefine:
 - weekly-review UX;
 - Kei's authority.
 
-A dedicated TrueLayer specification must exist before that work begins.
+A dedicated current Kakeido TrueLayer specification must exist before that work begins.
 
 ---
 
-## 17. Keep the Core Lean
+## 20. Keep the Core Lean
 
 Do not add future sophistication merely because the implementation programme can foresee it.
 
 Prefer:
 
 ```text
-existing core capability
-→ existing extension
-→ agent/skill improvement
-→ small explicit extension
+existing core responsibility
+→ existing Pactwright Extension
+→ Agent Pack / Production Skill improvement
+→ small explicit new Extension only when stable Pactwright semantics genuinely require one
 ```
 
 before changing stable Delivery semantics.
+
+Do not create Pactwright capabilities for production domains when an existing responsibility plus Production Skills is sufficient.
+
+Do not add provider registries, model routers, task catalogues or generation platforms that belong to Production Skills/tooling.
 
 Future improvements remain future improvements until observed usage justifies them.
 
@@ -680,16 +815,43 @@ Implementation should maximise learning rate, not feature count.
 
 ---
 
-## 18. Completion Principle
+## 21. Open Gaps Stay Open Until Evidence Resolves Them
+
+When a canonical spec deliberately leaves a question unresolved, implementation should expose and test the boundary rather than invent hidden semantics.
+
+Examples include:
+
+- lifecycle-shape persistence identity;
+- historical environment retention/reacquisition;
+- Deployment event identity;
+- Observation semantic identity/deduplication;
+- external Asset byte verification;
+- Asset supersession command ergonomics;
+- Publication idempotency;
+- GitHub managed-resource identity;
+- automation branch/PR concurrency;
+- exact GitHub check-conclusion mapping;
+- the dogfooding maturity threshold;
+- Remote Delivery public milestone completion;
+- selection policy for Publications entering feedback.
+
+Resolve these from observed use and then update the owning canonical specification deliberately.
+
+Do not let checkpoint code become the only place where new semantics exist.
+
+---
+
+## 22. Completion Principle
 
 The programme succeeds when Pactwright repeatedly demonstrates:
 
 ```text
 understanding
 → Intent
+→ authorised Contract
 → Delivery
-→ production
-→ Observation
+→ real exposure where applicable
+→ Observation / Finding / feedback
 → improved understanding
 → future Delivery
 ```
@@ -701,11 +863,11 @@ Pactwright
 Kakeido
 ```
 
-and can do so without manual graph-coherence work or hidden subsystem ownership changes.
+without manual graph-coherence work, hidden subsystem ownership changes or silent semantic fallback.
 
 ---
 
-## 19. Governing Questions
+## 23. Governing Questions
 
 For implementation planning:
 
@@ -717,7 +879,7 @@ For sequencing:
 
 For self-hosting:
 
-> Can Pactwright use this capability on its next change?
+> Can Pactwright safely represent this class of its own work now?
 
 For checkpoints:
 
@@ -734,6 +896,10 @@ For feedback:
 For architecture:
 
 > Can the change stay within existing ownership boundaries?
+
+For open gaps:
+
+> Is this behaviour already canonical, or are we about to invent semantics inside an implementation step?
 
 Prefer:
 
@@ -754,8 +920,4 @@ build everything
 
 ---
 
-
-
----
-
-**Pactwright — Implementation Principles v2**
+**Pactwright — Implementation Principles v3**

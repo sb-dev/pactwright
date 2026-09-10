@@ -1,621 +1,815 @@
 # Pactwright — Checkpoint 8 — Full Project Operating Surface
 
-**Version:** 9 
-**Entry condition:** Checkpoint 7 is accepted and all first-party graph semantics exist. 
-**Release:** `0.0.8` 
-**Exit capability:** One shared GitHub Project and generated workflow surface project the complete enabled Pactwright system in both projects.
+**Version:** 11  
+**Entry condition:** Checkpoint 7 is accepted and all first-party semantic Extensions exist.  
+**Release:** `0.0.8`  
+**Exit capability:** Pactwright and Kakeido prove the complete configured operating surface through the existing five workflows and one shared Project, with deterministic generation, ownership-safe reconciliation, exact runtime provenance and no transfer of canonical authority to GitHub.
 
 ## 1. Goal
 
-Complete all remaining GitHub profile composition, checks, summaries, fields and views, then prove regeneration and extension-disable reconciliation.
+Complete and harden cumulative conformance across:
 
-## 2. Specification baseline
+```text
+Delivery
+Project Intelligence
+Graph Review
+Assets / Publication
+Operations
+```
 
-- [Pactwright — Delivery Graph and Lifecycle Engineering Spec](../research-logs/2026-08-11-pactwright-delivery-graph-and-lifecycle-engineering-spec.md)
-- [Pactwright — Distribution, Agents and Evaluation](../research-logs/2026-08-11-pactwright-distribution-agents-and-evaluation.md)
-- [Pactwright — GitHub Actions and Views](../research-logs/2026-08-11-pactwright-github-actions-and-views.md)
-- [Pactwright — Project Intelligence Graph Engineering Spec](../research-logs/2026-08-11-pactwright-project-intelligence-graph-engineering-spec.md)
-- [Pactwright — Graph Review & Creative Delivery Engineering Spec](../research-logs/2026-08-11-pactwright-graph-review-and-creative-delivery-engineering-spec.md)
-- [Pactwright — Operations Graph Engineering Spec](../research-logs/2026-08-11-pactwright-operations-graph-engineering-spec.md)
-- [Pactwright — System Architecture](../research-logs/2026-08-11-pactwright-system-architecture.md)
-- [Pactwright — Implementation Principles](./00-implementation-principles.md)
-- [Pactwright — Implementation Guide](./00-implementation-guide.md)
-- [Pactwright Open-Source Project Organisation](../research-logs/2026-08-11-pactwright-open-source-project-organisation.md)
-- [Design Specification: Astro + Cloudflare Workers + Meta CAPI](../research-logs/2026-08-11-astro-design-spec.md)
-- [Kakeido — Financial Model Spec](../research-logs/2026-08-11-kakeido-financial-model-spec.md)
-- [Kakeido — Product & UX Spec](../research-logs/2026-08-11-kakeido-product-and-ux-spec.md)
-- [Kakeido — Mobile Design Spec](../research-logs/2026-08-11-kakeido-mobile-design-spec.md)
-- [Kei — Assistant Spec](../research-logs/2026-08-11-kakeido-assistant-spec.md)
-- [Kakeido — Tech Stack Engineering Spec](../research-logs/2026-08-11-kakeido-tech-stack-engineering-spec.md)
+Reuse the composition, registration, validation, evaluation, authority, context, upgrade and GitHub mechanisms established in Checkpoints 1–7. Correct gaps in their existing owners rather than introducing a second planner, validator, projection engine or lifecycle.
 
-Only the owning specifications listed in each step define semantics. This runbook defines execution order, not new product meaning.
+Prove that the combined environment routes real events correctly, projects current runtime truth, preserves failure and security boundaries, reconstructs promised pinned executions exactly, and remains safe when features are disabled and re-enabled.
+
+Use genuine records from the earlier checkpoints for longitudinal acceptance, plus labelled isolated fixtures for controlled failures. The complete operating proof must not manufacture another operational defect, force every Delivery into Asset semantics or repeat the live Publication-revision milestone merely for ceremony.
+
+## 2. Canonical baseline
+
+Canonical semantics come from:
+
+- [01 — Core System and Lifecycle](../specs/01-pactwright-core-system-and-lifecycle.md)
+- [02 — Distribution, Agent Packs, Extensions and Evaluation](../specs/02-distribution-agent-packs-extensions-and-evaluation.md)
+- [03 — Project Intelligence](../specs/03-project-intelligence.md)
+- [04 — Graph Review](../specs/04-graph-review.md)
+- [05 — Assets and Publication](../specs/05-assets-and-publication.md)
+- [06 — Operations](../specs/06-operations.md)
+- [07 — GitHub Integration](../specs/07-github-integration.md)
+- [08 — Open-Source Project Organisation](../specs/08-open-source-project-organisation.md)
+- [Implementation Principles](./00-implementation-principles.md)
+- [Implementation Guide](./00-implementation-guide.md)
+
+Research logs are rationale only. Kakeido acceptance uses the current canonical specifications in the Kakeido repository, not stale embedded copies.
+
+This runbook defines implementation progression and acceptance, not new Pactwright semantics.
 
 ## 3. Execution contract
 
-Every implementation action is a runnable step with the same shape:
+Every implementation action follows:
 
 ```text
 Step
 → References
-→ Run (prompt or command)
+→ Run
 → Expected result
-→ Verify
-→ continue only if verification passes
+→ Verify before continuing
 ```
 
-Use a prompt for repository/code changes. Once Pactwright owns a deterministic operation, use the Pactwright command instead of asking the model to emulate it.
+Default execution location is the Pactwright repository root unless a step names Kakeido or an isolated fixture. Print or resolve every dynamic record, execution, Source, candidate, environment and remote-resource identity before a later action consumes it. Keep fixture evidence outside real project truth.
 
-Lifecycle adapter commands become available only after Checkpoint 1 generates the active adapter.
+For repository/code changes:
 
-**Default execution location:** the Pactwright repository root unless the step explicitly names Kakeido or a fixture
+```bash
+pnpm verify
+```
 
-For repository/code changes, finish with `pnpm verify`. Before invoking a newly implemented Pactwright runtime command during implementation, run `pnpm build` so the repository-local CLI is not using stale distribution output.
+Before newly implemented repository-local commands:
 
-After Checkpoint 2 activates GitHub, land coherent repository changes through pull requests and required checks rather than direct default-branch commits.
+```bash
+pnpm build
+```
 
-Dynamic ids such as `<source-id>`, `<brief-id>`, `<evidence-id>` and `<asset-id>` must come from an earlier command in the runbook. Commands that create or resolve durable records must print the ids required by later steps.
+Land coherent changes through pull requests and required checks. Use Pactwright's available public/runtime mechanisms for work it can represent; do not maintain canonical graph coherence by hand.
 
-Fixture verification means repository test fixtures unless a step explicitly creates a real repository or GitHub resource.
+Use [Checkpoint 2 — Exact-version upgrade acceptance](./02-remote-delivery.md#exact-version-upgrade-acceptance) for the `0.0.7 → 0.0.8` transition. Prove exact desired targets and compatible intermediate states before release. Do not preinstall target packages, edit either lock, silently switch Agent Packs or invent component upgrade flags.
 
-Step references use the labels defined in the checkpoint specification map below.
+Use the existing workflow-activation prerequisite handling: land the workflow version capable of producing a required check before enforcing that check, and land changed routes before claiming their remote behaviour works. An unmet managed prerequisite is incomplete activation, not convergence.
 
-## 4. Checkpoint specification map
+## 4. Exact operating surface
 
-- **GitHub operating/profile/workflow** — Pactwright — GitHub Actions and Views §§1–4
-- **Actions** — Pactwright — GitHub Actions and Views §§5–8
-- **Revision/failure/PR/checks** — Pactwright — GitHub Actions and Views §§9–16
-- **Issues/views** — Pactwright — GitHub Actions and Views §§17–24
-- **Configuration/DoD** — Pactwright — GitHub Actions and Views §§25–27
-- **Provisioning/reconciliation** — Pactwright — Distribution, Agents and Evaluation §§9–14
-- **Distribution/upgrade** — Pactwright — Distribution, Agents and Evaluation §§2, 4, 6–8, 15, 18–19
-- **Release model** — Pactwright — Implementation Guide (npm release model, trusted release workflow, preparing a development release)
-- **Public product** — Pactwright Open-Source Project Organisation §1.3
-- **Roadmap/corrective feedback** — Pactwright — Project Intelligence Graph Engineering Spec §11; Pactwright — Operations Graph Engineering Spec §§13–15
-- **Graph validation** — Delivery Graph §21; Project Intelligence §17; Review & Creative §21; Operations §22
-- **Feedback capture** — Pactwright — Implementation Principles §§5A, 7, 14
+The all-first-party-enabled reference configuration, with GitHub enabled, has exactly five Pactwright-managed product workflows:
 
-## Stage 1 — Complete profile composition
+```text
+.github/workflows/
+├── pactwright.yml
+├── pactwright-intelligence.yml
+├── pactwright-graph-review.yml
+├── pactwright-assets-publication.yml
+└── pactwright-operations.yml
+```
 
-Resolve one deterministic GitHub desired state from enabled components.
+Its supported canonical check catalogue contains exactly:
 
-### Step 1 — Implement requirement merge/conflict handling
+```text
+Pactwright / Graph
+Pactwright / Lifecycle
+Pactwright / Review
 
-**References:** GitHub operating/profile/workflow §3; Provisioning/reconciliation §10
+Pactwright / Intelligence
+Pactwright / Intelligence Promotion
+Pactwright / Intelligence Views
+Pactwright / Intelligence Grounding
+
+Pactwright / Assets
+Pactwright / Publication
+
+Pactwright / Operations
+Pactwright / Operations Views
+```
+
+Exercise all eleven meanings across applicable acceptance scenarios. This is not a requirement that every check run on every PR or that every repository enable every optional check, view, summary, schedule or authority mapping. Disabled components do not contribute active integration. Preserve Projects-disabled and GitHub-disabled operation.
+
+Repository-owned `ci.yml`, `release.yml` and unrelated workflows are outside this five-file product set and must remain untouched by product sync. Do not add Graph Review or Publication Feedback check names absent from Spec 07, or legacy Review Creative, Creative Grounding, Next Actions or named-reviewer surfaces.
+
+Three mutation owners remain distinct:
+
+```text
+pactwright sync
+→ Pactwright-managed local integration
+
+pactwright github sync
+→ managed remote settings / labels / rulesets / required checks / Project schema
+
+GitHub Actions invoking Pactwright
+→ checks / summaries / Project items / derived values
+```
+
+GitHub consumes runtime-supplied repository, Project Graph and environment identities. Generated reports and execution provenance are not canonical graph records. Do not add a two-way field synchronisation system, archive service, marketplace, provider layer or new canonical record type for this checkpoint.
+
+## Stage 1 — Complete profile composition and remote ownership
+
+### Step 1 — Prove the existing composition engine across all five profiles
+
+**References:** Specs 02 Extension/capability resolution and 07 §§3–6; Checkpoints 2–7.
 
 **Run**
 
 ```text
-Implement deterministic composition across Delivery, Project Intelligence, Review & Creative and Operations GitHub profiles. Identical requirements collapse, compatible requirements merge and incompatible requirements fail validation before remote mutation.
+Use the existing desired-state planner with Delivery, PI, Graph Review, Assets / Publication, Operations and repository overrides.
+
+Resolve dependencies and the complete selected Agent Pack capability set before activation.
+Only enabled components contribute; identical requirements collapse, compatible requirements merge and incompatible requirements fail before remote mutation.
+Do not introduce another full-system planner or silently switch the selected pack.
+
+Extend existing conformance cases for combined interactions. Map each changed behaviour to its semantic owner and existing test/evaluation case; keep this mapping in test metadata or acceptance evidence, not a new graph model.
 ```
 
 **Expected result**
 
-One desired-state model composes all enabled profiles safely.
+The already established engine deterministically resolves the complete first-party environment and supported partial configurations.
 
 **Verify before continuing**
 
-Run fixtures for identical, compatible and incompatible requirements.
+Test Core only, each Extension with its real prerequisites, all enabled, identical/compatible/conflicting contributions and repository overrides. Include missing capabilities, dependency incompatibility and disabled-profile overrides. Failed composition preserves the prior valid package/configuration/lock/generated environment and performs no remote mutation. Repeated resolution of identical inputs must produce the same desired state.
 
-### Step 2 — Enforce one shared GitHub Project
+### Step 2 — Prove one shared Project and configurable projection scope
 
-**References:** Issues/views §18; Provisioning/reconciliation §12
+**References:** Spec 07 §§10, 16, 19, 22, 27, 32–34.
 
 **Run**
 
 ```text
-Complete shared Project provisioning so all enabled profiles contribute fields/views to one repository Project by default. Do not create a Project per extension. Preserve only enabled-profile requirements.
+Contribute enabled configured fields/views to the existing shared Pactwright Project.
+Do not create one Project per Extension or adopt another Project merely because its display name matches.
+
+Record the selected full-system reference configuration. Separately support partial views/checks/summaries/schedules and github.project.enabled: false.
+With Projects disabled, do not require Project permissions or perform Project-backed projection; configured checks and PR summaries remain usable.
 ```
 
 **Expected result**
 
-One Project represents the whole Pactwright operating surface.
+One active shared Project serves the configured system; optional UI choices do not change canonical semantics or force unrelated permissions.
 
 **Verify before continuing**
 
-Run an all-enabled fixture plus partial-combination fixtures (core-only, core + Project Intelligence, each sibling extension alone) and inspect exactly one linked Pactwright Project in each.
+Verify one stable Project identity across all-enabled and partial-profile fixtures. A clean Projects-disabled fixture provisions no Project. Disabling Projects in a populated fixture stops Project-backed work and follows existing safe ownership cleanup without deleting unrelated resources or pretending preserved historical resources are newly provisioned. Test individually disabled views/schedules and prove they are not re-enabled by another profile.
 
-### Step 3 — Prove configuration gating
+### Step 3 — Enforce remote ownership and activation prerequisites without inventing gap policy
 
-**References:** Configuration/DoD §25; Provisioning/reconciliation §12
+**References:** Spec 07 §§3–4, 33–38, 41; Implementation Guide gap discipline; Checkpoint 2 reconciliation.
 
 **Run**
 
 ```text
-Implement and test configuration gating for the GitHub surface: individual view toggles omit unconfigured views from desired state; github.project.enabled: false suppresses all Project-backed views while extension checks and PR summaries remain operational; enabling an extension does not force every optional view or scheduled action on; scheduled publication and scheduled Operations refresh activate only from their explicit configuration.
+Cover the configured/supported managed structural surface:
+repository settings, labels, rulesets, required-check configuration, shared Project, fields and views.
+
+Use the same planner for dry-run and apply. Remove a resource only when ownership is established and no enabled component still requires it.
+Do not infer persistent ownership from display names alone. Preserve ambiguous/unowned resources and report them.
+
+Distinguish converged managed state, preserved unmanaged ambiguity and unmet managed prerequisites. A report of ambiguity is not a waiver for required behaviour that cannot safely be supplied.
+Never enforce a check before its producing workflow is available through normal repository authority.
 ```
+
+Keep remote rename/adoption identity, arbitrary GitHub authority mapping, universal check-conclusion mapping and automation concurrency implementation gaps explicit. Supported mechanisms must still preserve current-state validation, runtime authority and no-lost-update semantics; uncertainty is not permission for last-writer-wins or unsafe adoption.
 
 **Expected result**
 
-Desired state contains exactly the configured surface and nothing more.
+Reconciliation supplies the required owned structure or reports a specific incomplete condition without destructive assumptions or false convergence.
 
 **Verify before continuing**
 
-Run fixtures for each gating rule, including a `github.project.enabled: false` fixture whose checks and PR summaries still resolve.
+Reuse create/update/no-op/removal, unowned collision, ambiguous rename, missing permission and missing producing-workflow fixtures. Dry-run must not mutate or broaden scopes. Apply must preserve unrelated settings, labels, rulesets and Projects. After authorised prerequisites are met, the same apply path converges. Record which reported ambiguities are genuinely non-blocking and which prevent required acceptance.
 
-## Stage 2 — Complete Delivery and PI projections
+## Stage 2 — Complete Delivery and Project Intelligence projections
 
-Fill the core and Intelligence operating views.
+### Step 4 — Verify complete Delivery PR, Issue and Project navigation
 
-### Step 4 — Complete Intent Issue/Delivery Project projection
-
-**References:** Issues/views §§17, 19
+**References:** Specs 01 lifecycle/authority and 07 §§7–10, 17, 28–30.
 
 **Run**
 
 ```text
-Implement the remaining Intent Issue and Delivery Project fields from GitHub, deriving title/stage/Contract/Brief/PR/blocking and enabled-extension context fields from Pactwright state. Editing these fields must not mutate canonical graph state.
+Use runtime outputs and canonical links, not copies of entire records.
+
+Delivery PR:
+Intent → Contract → Brief → Delivery → Delivery Review → Evidence,
+plus current runtime-resolved step/state and blocking information.
+
+Intent Issue:
+title, current lifecycle state, current Contract, current Brief, linked pull request, blocking state.
+
+Delivery Project:
+lifecycle step/state, blocked, Contract, Brief, pull request, last activity;
+Delivery and Blocked views where configured.
+
+Configured PI additions may include domain, grounding, knowledge blocker and launch tranche.
+Configured Operations additions may include latest Deployment, environment, active findings and corrective origin.
+Link applicable Graph Review Findings, Assets/Publications and motivating Knowledge/Observations without transferring authority.
 ```
 
 **Expected result**
 
-Delivery navigation and status are fully projected.
+Users can navigate the current governed lineage and applicable cross-Extension context from derived GitHub surfaces.
 
 **Verify before continuing**
 
-Use a fixture Intent/PR and compare GitHub values to runtime-derived state.
+Compare each applicable field with runtime output across open, deferred, rejected, contracted, delivering, blocked and completed lineages. Verify canonical links, last-activity derivation and supersession handling. Test Gate stopping and blocking Delivery Review through the runtime. Editing a Project/Issue field, approving a PR or merging must not create a Decision, satisfy a Gate or make Evidence, Deployment or Publication true. Keep unresolved non-Delivery-PR policy explicit rather than inventing it here.
 
-### Step 5 — Complete PR lifecycle and extension summaries
+### Step 5 — Verify PI checks, Grounding states, promotion summaries and derived views
 
-**References:** Revision/failure/PR/checks §§11–16
+**References:** Spec 03 governance/coverage/roadmap and Spec 07 §§11–17, 31.
 
 **Run**
 
 ```text
-Audit the implemented Delivery PR surface against the specification and complete any remaining gaps in: the Delivery lifecycle summary, the Project Intelligence grounding section, the Review & Creative section, the Operations context section and the core Delivery checks. Summaries link to graph nodes rather than copying contents; no prompts, generation logs, binary assets or raw telemetry appear in a summary; no summary or check owns lifecycle state.
+Use the four existing Intelligence checks and configured views:
+Promotions, Coverage, Roadmap, Freshness, Propagation.
+
+Intelligence validates canonical Source/Domain/Knowledge and relationship/provenance rules.
+Intelligence Promotion validates required approval, automatic boundaries and proposed cross-owner consequences.
+Intelligence Views checks reports against the current runtime graph revision.
+Intelligence Grounding projects exactly grounded | attention | blocked | not-applicable.
+Stale Knowledge does not automatically mean blocked; the owner and lifecycle policy determine blocking.
+
+Promotion summaries show Source/domain/triage, proposed Knowledge mutations, downstream recommendations, propagation and logical-owner review routing.
+Distinguish mutations actually proposed from merely recommended Delivery/sibling changes.
+Finding-origin Sources retain non-graph execution-output provenance; Observation-origin Sources retain canonical Operations provenance.
 ```
 
 **Expected result**
 
-Every PR summary and Delivery check defined by the specification exists and projects only derived state.
+PI governance and current derived views remain understandable without GitHub accepting Knowledge, owning coverage or creating candidates independently.
 
 **Verify before continuing**
 
-Use a fixture Delivery PR with all extensions enabled and compare each rendered section and check field-by-field against the owning specification sections.
+Exercise all four Grounding states, stale-but-not-blocking Knowledge, missing required approval and both internal Source origins. Compare configured views with the owning PI derivations, including candidate readiness/dependencies/ordering. Change canonical inputs and detect stale reports; regeneration must restore correct content and revision stamps without rewriting canonical meaning. A stale derived report is not itself evidence of invalid canonical Knowledge. GitHub metadata must not promote Knowledge or turn a candidate into an Intent.
 
-### Step 6 — Complete PI checks/views and the promotion PR summary
+## Stage 3 — Complete Graph Review and Assets / Publication projections
 
-**References:** Issues/views §§20–21
+### Step 6 — Verify Graph Review projection and hand-off boundaries
+
+**References:** Spec 04 and Spec 07 §§18–19, 31, 35.
 
 **Run**
 
 ```text
-Complete Pactwright / Intelligence, / Intelligence Promotion and / Intelligence Views plus Coverage, Roadmap, Freshness and Propagation views, and complete the Project Intelligence promotion PR summary including the Operations-origin fields (Origin, Observation, Exposure) for operationally motivated Sources. Detect stale generated reports by Project Graph revision without treating stale derived views as invalid canonical Knowledge.
+Use pactwright-graph-review.yml and configured Reviews/Findings views.
+Project request perspective, reviewed graph revision, execution status, advisory/material/critical counts, Source hand-off count and links to immutable execution provenance and resulting Sources.
+Preserve runtime-supplied replay identities.
+
+Manual, configured scheduled/event execution and hand-off retry use the existing runtime responsibilities.
+A failed review emits no Findings. A failed Source hand-off preserves successful Findings and retries without repeating the review.
+Findings remain non-graph outputs, never accepted project truth or Delivery Review results.
 ```
 
 **Expected result**
 
-PI GitHub surface is complete and correctly distinguishes canonical vs derived state.
+Graph Review is navigable as specialist graph analysis, not a replacement for Delivery Review, Evidence closure or its own provenance store.
 
 **Verify before continuing**
 
-Create a stale report fixture and confirm the view check fails while `intelligence validate` can still distinguish canonical validity; render a promotion PR summary fixture for an Operations-originated Source and inspect its origin fields.
+Project successful, failed, no-Finding and pending/retried-hand-off executions. Compare counts, statuses and Source links with the runtime; lost acknowledgement must not rerun analysis or duplicate Sources. Verify report/projection failure preserves execution/Finding history and PI state. Do not add reviewer rosters, Review Definitions, Next Actions, named reviewer views or a new Graph Review check. Step 12 separately proves actual pinned execution, not only displayed provenance.
 
-## Stage 3 — Complete Review & Creative projections
+### Step 7 — Verify approved Asset and actual Publication projections
 
-Project executions/findings/assets/publications without promoting transient state.
-
-### Step 7 — Complete Review checks/summaries/views
-
-**References:** Issues/views §22
+**References:** Spec 05 and Spec 07 §§20–22, 29; Checkpoint 7 Publication conformance.
 
 **Run**
 
 ```text
-Complete Pactwright / Review Creative structural/execution validation, Review summary, Reviews view and Next Actions view. Keep Review Executions operational provenance and link resulting Sources/promotion PRs rather than copying them.
+Use Pactwright / Assets and Pactwright / Publication plus configured Assets/Publications views.
+
+Asset projection may include title, media type, Delivery lineage, exact content identity, applicable grounding state, human approver, current/superseded state and Publication count.
+Publication projection may include Asset, channel, locator, publisher/time and linked Operations Observations when enabled.
+
+Candidate outputs never appear as canonical Assets. Evidence is already canonical and does not automatically create an Asset.
+Generic GitHub approval is not Asset approval; supported trusted mappings still invoke exact human-authority/hash/grounding checks in the runtime.
+A Publication records an actual release of an approved Asset, not a schedule, merge or performance claim.
 ```
 
 **Expected result**
 
-Review activity is visible but remains non-canonical execution/proposal state.
+GitHub exposes approved output and release history without taking over approval, content identity or operational meaning.
 
 **Verify before continuing**
 
-Run one Review and inspect all projected fields/links.
+Compare configured fields with canonical records. Exercise repository-backed byte drift, missing human approval/grounding, mismatched Publication asset hash, candidates, superseded Assets and intentional multiple Publications. Preserve distinct exposure identities when Publications share Asset bytes or a locator. Failed release leaves the approved Asset unchanged; poor performance does not invalidate a valid Publication. Any configured automated release must use an already approved Asset and actual release provenance. Unsupported optional authority/release routes must not be generated or advertised.
 
-### Step 8 — Complete Creative checks/views
+## Stage 4 — Complete Operations projection
 
-**References:** Issues/views §23
+### Step 8 — Verify Operations checks, exact configured views and corrective provenance
+
+**References:** Specs 03 roadmap ownership, 06 and 07 §§23–29, 31–32; Checkpoints 6–7.
 
 **Run**
 
 ```text
-Complete Pactwright / Creative Grounding, / Publication, Assets and Publications views, including the Publications-view field showing linked operational Observations when Operations is enabled. Candidate generation outputs must never appear as Assets. GitHub approval cannot create Asset/Publication state.
+Use Pactwright / Operations and Pactwright / Operations Views.
+Configured views are Operations, Deployments, Production Findings and Corrective Roadmap.
+Production Findings projects canonical Operations Observations; it is distinct from Graph Review Findings.
+
+Deployment fields may include environment, Evidence, artefact revision, deployed time/by, active Observation count and current/superseded state.
+Observation fields may include exact exposure/type, direction, significance, confidence, evidence window, current derived state, resulting Source and Knowledge/promotion PR.
+
+Operations Views compares the corrective report with BOTH the current applicable PI candidate derivation and current runtime Project Graph revision.
+Preserve PI candidate identities, readiness, dependencies and relative ordering, including relevant dependencies outside the filtered set.
+A fresh stamp on stale candidate contents is not a current view.
+
+Configured PR/Issue context links prior exposures, Observations, accepted operational Knowledge and corrective origin.
+Refresh summaries contain bounded aggregate/provenance information, never raw telemetry or credentials.
 ```
 
 **Expected result**
 
-Only canonical approved Assets/Publications appear in the project views.
+GitHub shows durable operational facts and governed corrective work without becoming a telemetry store or second roadmap.
 
 **Verify before continuing**
 
-Use a candidate-only fixture and confirm it is absent from Assets view; use an observed-Publication fixture and confirm its Observation link renders.
+Compare fields and cross-Extension Publication → Observation → Source/Knowledge/candidate links with the owners. Test canonical invalidity, external authentication/analysis failure, successful no-Observation and stale views as distinct outcomes. Change PI candidates while retaining/copying revision stamps and require stale content detection. Significance/confidence must not accept Knowledge or reprioritise work. Failed hand-off retries the existing Observation; failed optional Project/summary/report updates leave valid canonical and immutable execution state unchanged.
 
-## Stage 4 — Complete Operations projections
+## Stage 5 — Prove exact workflow and validation composition
 
-Expose durable production state without duplicating observability systems.
+### Step 9 — Activate the workspace environment and verify deterministic workflow routing
 
-### Step 9 — Complete Operations checks/summaries/views
-
-**References:** Issues/views §24
+**References:** Specs 02 resolution/sync and 07 §§5–7, 11–13, 18–27; Checkpoints 2–7.
 
 **Run**
 
-```text
-Complete Pactwright / Operations and / Operations Views, the Operations refresh summary, plus Operations, Deployments, Production Findings and Corrective Roadmap views. Project only durable Deployments/Observations and PI-derived corrective candidates; never raw telemetry or a separate Operations priority model. The refresh summary must never dump raw source payloads.
-```
-
-**Expected result**
-
-The Project shows the current production picture at graph-level signal density.
-
-**Verify before continuing**
-
-Run a refresh and inspect that individual raw events are absent while Observations appear and the refresh summary contains only aggregated fields.
-
-## Stage 5 — Reconcile Pactwright and prove regeneration
-
-Run this stage from the Pactwright repository root.
-
-Make GitHub fully reproducible from Pactwright-owned desired/canonical state.
-
-### Step 10 — Regenerate local integration
-
-**References:** Distribution/upgrade §8
-
-**Run**
+Preserve the explicitly selected Agent Pack and enabled Extensions. Resolve changed workspace manifests through the existing supported environment/lock mechanism before using them; do not edit locks by hand. Start from the committed dependency state, build and generate:
 
 ```bash
 pnpm install --frozen-lockfile
 pnpm build
-
+pnpm pactwright sync
+pnpm pactwright doctor
 pnpm pactwright sync
 ```
 
-The Pactwright repository consumes its own workspace packages; registry consumption of the `0.0.8` family is proven post-release in Stage 8.
+Record the active workspace package/manifest identities and generated-file hashes. The second sync with unchanged inputs must be byte-identical. Use existing generated-workflow and runtime integration fixtures to exercise the routing below, not just count files.
+
+| Input or event | Existing responsibility to exercise |
+|---|---|
+| Core records, `specs/**`, relevant `.pactwright/**` changes | Core and registered owning validators; configured continuation through `lifecycle run`. |
+| `specs/graph/edges.yml` | Validators chosen by registered edge type/endpoints, including multiple owners for cross-graph relationships. |
+| PI Sources, Domain/Knowledge proposals and accepted changes | Source capture, promotion validation, onboard/roadmap/propagation and configured freshness processing. |
+| Graph Review execution/report paths and configured manual/scheduled/event routes | Review execution/provenance validation, Finding hand-off and projection; retry hand-off without rerunning review. |
+| `assets/**` and Asset/Publication canonical paths | Exact hash, approval, grounding and release validation; only configured trusted release/feedback operations. |
+| Operations source/environment, Deployment/Observation/execution paths and configured events | Configuration/record validation, trusted deployment recording, bounded refresh and PI hand-off. |
+| Relevant accepted Operations-originated PI changes | Current PI-filtered corrective-roadmap generation and view checks. |
+
+Use the exact owning paths and events specified in Spec 07 and the upstream conformance cases. Keep schedules in the owning workflow. Include irrelevant-path, disabled-feature and cross-owner-change cases; broad validation does not automatically authorise collection or publication.
 
 **Expected result**
 
-All four managed workflows/adapter files reflect enabled profiles.
+The active workspace resolves the intended complete environment and generates the five correct thin workflows with deterministic, ownership-aware routing.
 
 **Verify before continuing**
 
-Inspect git diff; only Pactwright-managed files/regions may change. Repository-owned release infrastructure (`release.yml`) and user-authored workflows are untouched.
+Compare both sync outputs, the exact five-file reference set and the expected subsets for disabled configurations. Verify runtime invocations/results for each routing class. Preserve `ci.yml`, `release.yml`, unrelated user workflows/source and external Production Skills repositories by before/after hashes. Missing or drifting locked dependencies must be diagnosed rather than silently replaced. No extra per-command workflow, CI-only agent or Publication-monitoring policy may appear.
 
-### Step 11 — Land regenerated integration
+### Step 10 — Land changed workflows and reconcile the complete remote structure
 
-**References:** Implementation Guide (engineering baseline: repository changes)
-
-**Run**
-
-```bash
-DEFAULT_BRANCH="$(gh repo view --json defaultBranchRef -q .defaultBranchRef.name)"
-
-git switch -c chore/checkpoint-8-regeneration
-git add -A
-git commit -m "chore: regenerate managed integration for checkpoint 8"
-git push -u origin HEAD
-
-gh pr create \
-  --title "Regenerate managed integration for Checkpoint 8" \
-  --body "Stage 5 regeneration of Pactwright-managed adapters and workflows."
-
-gh pr checks --watch
-gh pr merge --squash --delete-branch
-
-git switch "$DEFAULT_BRANCH"
-git pull --ff-only
-```
-
-**Expected result**
-
-The default branch contains the regenerated managed files and the working tree is clean before remote reconciliation and release preparation.
-
-**Verify before continuing**
-
-`git status` is clean on the default branch and all required checks passed on the merged PR.
-
-### Step 12 — Preview/apply complete remote desired state
-
-**References:** Provisioning/reconciliation §§9–14
+**References:** Spec 07 §§3–4, 33–34; Checkpoint 2 activation/convergence contract.
 
 **Run**
+
+Inspect the generated diff and remote plan:
 
 ```bash
 pnpm pactwright github sync --dry-run
+```
+
+Land the changed generated workflows through normal reviewed repository authority. Verify the remote version contains the routes and can produce the configured required checks before enabling those requirements. Do not bypass current policy or treat locally generated files as remote activation.
+
+Once prerequisites are met:
+
+```bash
 pnpm pactwright github sync
 pnpm pactwright github sync --dry-run
+pnpm pactwright validate
 ```
+
+Inspect the configured/supported settings, labels, rulesets, required checks and shared Project schema. Keep runtime projection updates separate from structural convergence.
 
 **Expected result**
 
-All fields/views/check/ruleset requirements are applied and converged.
+Managed remote structure converges through the same planner and safe activation rules, while unrelated resources remain unchanged.
 
 **Verify before continuing**
 
-The final dry-run is clean except intentional external drift.
+Require no unresolved managed drift or unmet prerequisite needed for acceptance. Report preserved unmanaged ambiguity separately; it may remain only when it does not prevent the required surface and meets the non-blocking gap rules. Test actual configured check execution after activation. Verify stable shared Project identity and preserved unrelated resources; a clean structural dry-run does not certify current summaries/items/values.
 
-### Step 13 — Validate all enabled graph semantics
+### Step 11 — Run cumulative semantic, GitHub, security and failure conformance
 
-**References:** Graph validation — Delivery Graph §21; Project Intelligence §17; Review & Creative §21; Operations §22
+**References:** Specs 01–06 owning validators/evaluation; Spec 07 §§35–40; Spec 02 §§21–24; Implementation Guide verification.
 
 **Run**
+
+In the fully enabled reference environment, run the existing owners and evaluation runner explicitly:
 
 ```bash
 pnpm pactwright validate
 pnpm pactwright intelligence validate
-pnpm pactwright creative validate
+pnpm pactwright graph-review validate
+pnpm pactwright assets validate
 pnpm pactwright operations validate
+pnpm pactwright eval
+pnpm pactwright github sync --dry-run
 ```
+
+Map the cumulative GitHub Integration suite to the Spec 07 §39 contract:
+
+```text
+1. profile composition and conflict detection;
+2. deterministic workflow generation;
+3. exact trigger/path routing;
+4. lifecycle Gate stopping;
+5. check semantics;
+6. PR/Issue projection accuracy;
+7. Intelligence Grounding states;
+8. promotion PR projection;
+9. Project field/view derivation;
+10. Operations PR context;
+11. report revision and stale-view detection;
+12. runtime replay provenance without GitHub-derived substitution;
+13. pinned replay failure without current checkout/environment fallback;
+14. Extension enable/disable behaviour;
+15. remote reconciliation;
+16. preservation of unmanaged GitHub state;
+17. least-privilege configuration;
+18. failure-state separation;
+19. canonical-state independence from GitHub metadata.
+```
+
+Reuse the cases implemented earlier; add only missing combined interactions. Keep cases versioned with their owners and deterministic assertions separate from semantic judgement. No duplicate validators, new benchmark service or automatic execution of whole external domain benchmark suites is required. Complete the corresponding live/replay/reconciliation scenarios in Steps 12–14 before accepting this cumulative suite.
+
+Across all five workflows, verify least-privilege tokens, SHA-pinned actions, frozen installs, bounded timeout/concurrency, appropriate checkout credential handling and safe triggers. Normal untrusted PR validation must not receive publication/deployment/Operations secrets, privileged external access or write-capable credentials. Enabling a privileged profile must not broaden another path's authority. Avoid `pull_request_target` for normal validation.
+
+Exercise supported trusted-event mappings through their existing runtime authority checks. Generic approval, labels, comments or merge metadata alone cannot create canonical records, satisfy Gates, approve Assets, establish exposure or accept Knowledge.
+
+Inject failures in isolated local and remote fixtures for blocking Delivery Review, missing promotion approval, Graph Review execution, both PI hand-off paths, Publication, Operations collection/analysis, stale reports and optional projection updates. Preserve each owner's canonical and immutable execution state. Successful no-Observation is not failure. Retry only the failed hand-off/report responsibility; concurrent accepted changes must survive revalidation without last-writer-wins.
+
+When changes affect Agent Pack/prompt/skill/adapter execution behaviour, record an exact candidate identifier supported by the existing evaluator and compare against the published baseline:
+
+```bash
+pnpm pactwright eval \
+  --baseline @pactwright/standard@0.0.7 \
+  --candidate <recorded-candidate-pack-or-environment>
+```
+
+Use meaningful capability/agent/case/change dimensions. A projection-only change need not manufacture an AI behaviour difference; record why baseline comparison is not applicable where appropriate.
 
 **Expected result**
 
-Canonical state across all subgraphs is valid.
+The combined system passes its actual integration contract, detects deliberate regressions and preserves semantic authority under both failures and privileged/untrusted execution boundaries.
 
 **Verify before continuing**
 
-All four commands pass.
+Retain a case-to-requirement result map, not just a single green score. Inject known misrouting, wrong Grounding state, stale-content/fresh-stamp, forbidden-mutation and permission regressions and require the responsible cases to fail. Negative tests must assert expected failure in isolated fixtures, not leave real canonical state broken. Restore valid fixtures and rerun the full suite plus `pnpm verify`. Keep execution failure, canonical invalidity, stale derived state and incomplete activation distinguishable without inventing a universal GitHub conclusion mapping.
 
-### Step 14 — Prove remote drift reconciliation
+### Step 12 — Prove shared execution identity and actual pinned remote replay
 
-**References:** Provisioning/reconciliation §14; GitHub operating/profile/workflow §2
+**References:** Specs 01 revision identity, 02 locking/replay, 04 Graph Review replay and 07 §§6, 18, 31, 35.
 
 **Run**
 
 ```text
-Using one safe Pactwright-owned Project field/view in the Pactwright repository's own shared Project, record current state, make one reversible remote change, run github sync --dry-run to detect drift, apply github sync, and verify desired state is restored. Do not touch unrelated user-owned objects.
+For each of the five workflows, compare its resolved environment with equivalent local execution using the same lock:
+runtime, Extensions, selected Agent Pack, resolved agents/skills, external Production Skills and selected Production Extension Packs.
+Require the same runtime-supplied environment_lock_hash; do not derive a CI identity.
+
+Use existing Graph Review run/rerun operations to prove actual local and GitHub-triggered pinned execution, not just projection of an old tuple.
+Pinned reconstruction must verify repository_revision → project_graph_revision and resolve the exact recorded environment/request/scope.
+Explicit --current reruns use a new current replay base and a new immutable execution.
+
+Where another existing Delivery/execution surface promises pinned replay, apply the same conformance. Do not invent a new replay promise or command merely to expand coverage.
 ```
+
+Exercise the existing interfaces with recorded IDs:
+
+```bash
+pnpm pactwright graph-review rerun <execution-id>
+pnpm pactwright graph-review rerun <execution-id> --current
+```
+
+Invoke the same supported runtime operations from safe remote fixtures. Test unavailable repository state, graph mismatch, missing historical package/skill/pack and unreconstructible required external evidence. Pinned execution must fail without using newer dependencies or the workflow's current checkout.
+
+Distinguish the original execution replay base from the current source revision of a regenerated report. Every generated report records its actual source Project Graph revision; revision awareness alone does not require a full replay tuple. Graph Review Findings, lifecycle/Operations/Review execution provenance, generated reports, adapter output and GitHub state remain excluded from Project Graph revision; registered canonical records and edges remain included.
 
 **Expected result**
 
-Owned remote drift is detectable/recoverable.
+Remote execution and its projections consume exact Pactwright identities, and promised historical replay either reconstructs the real recorded inputs or fails explicitly.
 
 **Verify before continuing**
 
-Record before/drift/after state and final clean dry-run.
+Compare identities and actual resolved inputs for all five workflows. Retain successful pinned and explicit-current cases plus each failure class locally/remotely. Modify GitHub-only metadata and generated output without changing the graph revision or original execution identity; mutate registered canonical state and require a graph-revision change. Verify report-current and execution-historical stamps are not interchanged. Failed replay creates the owning failure provenance but no successful Findings or current-state substitute. No archive or Operations rerun subsystem is introduced.
 
-### Step 15 — Prove extension disable/removal reconciliation
+## Stage 6 — Reconciliation and disablement tests
 
-**References:** Distribution/upgrade §4; Provisioning/reconciliation §14
+### Step 13 — Prove all three reconciliation owners and the live Pactwright surface
+
+**References:** Spec 07 §§3, 9–10, 29, 31–35; Spec 08 dogfooding; Checkpoints 2–7.
+
+**Run**
+
+Prove each ownership layer independently:
+
+| Layer | Controlled exercise | Correct owner |
+|---|---|---|
+| Local generated integration | Drift one managed file/region in a fixture, regenerate and repeat. | `pactwright sync` restores deterministic managed output only. |
+| Managed remote structure | Exercise supported create/update/remove/no-op cases for settings, labels, rulesets, required checks and Project schema in isolated repositories. | `pactwright github sync` uses its shared dry-run/apply planner and preserves unowned resources. |
+| Runtime projections | Alter or remove a safe derived summary, managed item or field value, then invoke its existing projection route. | Actions invoking Pactwright regenerate from runtime truth; structural sync does not claim to repair runtime values. |
+
+On the real Pactwright repository, make one reversible change to a clearly owned Project field/view and reconcile it safely. Use isolated repositories for risky rule/permission cases. Do not infer rename/adoption semantics from this test.
+
+Build a live acceptance trace using genuine prior Delivery, PI, Graph Review, Asset/Publication and Operations records where applicable. Map runtime identities to current checks, canonical links, summaries, shared Project items and derived fields. Then perform one normal governed bounded change or safe configured runtime event and verify the relevant projections update through the correct owner. Reuse earlier genuine histories rather than creating fake operational findings or re-recording old Publications.
+
+**Expected result**
+
+Structural convergence and runtime projection freshness are independently demonstrated, and the real complete surface processes meaningful state rather than merely existing as empty workflows/views.
+
+**Verify before continuing**
+
+Compare before/after managed and unmanaged state at every layer. Repeat local sync and remote dry-run after repair; separately inspect restored summaries/items/values. Require canonical and immutable historical state to remain unchanged by projection edits, failed repair or optional projection failure. Retain the live record-to-projection trace and new event result with normal authority provenance. Synthetic failure fixtures must not be described as real operational outcomes.
+
+### Step 14 — Prove populated-history disablement, re-enablement and optional configuration
+
+**References:** Spec 02 removal/dependencies and Spec 07 §§4–6, 32–34; Checkpoint 7 populated exposure history.
 
 **Run**
 
 ```text
-In fixture repositories test: disable Operations while Review & Creative remains; disable Review & Creative while Operations remains; attempt to remove Project Intelligence while either dependant remains. Verify through composed desired state and github sync --dry-run diffs that only owned GitHub integration would be removed and shared Project Intelligence integration is preserved while another enabled extension requires it; fixtures perform no remote mutation. Verify remaining sibling/profile state stays valid and PI dependency removal is blocked.
+In populated isolated fixtures exercise:
+- Graph Review disabled while PI remains;
+- Operations disabled while Assets / Publication remains;
+- Assets / Publication disabled after Publication Observations exist;
+- PI-only removal while Graph Review or Operations still depends on it;
+- owner re-enablement after each permitted disablement;
+- selected views/checks/summaries/schedules disabled without disabling their semantic owner;
+- Projects disabled while configured checks/PR summaries remain usable;
+- GitHub integration disabled while local Pactwright remains usable.
+
+Remove only safely owned generated/remote contributions no enabled component still requires.
+Preserve canonical records and immutable execution history.
+Block required-dependency removal through the existing manager.
+Do not delete data, silently change the Agent Pack or create substitute records to make a disabled configuration look valid.
 ```
+
+For a Publication owner disabled after Observations exist, new exposure resolution becomes unavailable; preserve history and diagnose unavailable references rather than copying/retargeting them. Native Deployment Operations remains independently usable. Re-enabling the owner restores original identity resolution without duplicate Publications, Observations or PI Sources.
+
+With GitHub disabled, generate no active product workflows or remote projection work according to existing safe cleanup; unrelated repository-owned CI/release workflows remain intact. Preserved resources whose deletion is unsafe must be reported, not silently adopted or treated as active required integration.
 
 **Expected result**
 
-Profile composition/removal obeys extension ownership/dependencies.
+The full system supports safe partial operation and restoration without hidden dependencies, permission creep or loss of historical truth.
 
 **Verify before continuing**
 
-Run all relevant validation commands after each fixture transition and inspect each dry-run diff for owned-only removals.
+Run enabled owning validators and core validation at each transition, recording expected unavailable-command/registration or unresolved-reference diagnostics explicitly. An unavailable validator is not a pass. Compare canonical/execution hashes, workflow/check subsets, shared Project identity, fields/views/routes and unmanaged resources. Re-enable through normal resolution/sync/reconciliation and require restored references, no duplicate hand-offs and a clean second convergence check. Re-run the cumulative suite for the supported configuration classes.
 
-## Stage 6 — Publish the full operating workflow
+## Stage 7 — Publish the full operating path
 
-### Step 16 — Publish the end-to-end operating path
+### Step 15 — Deliver and execute the governed end-to-end learning path
 
-**References:** Public product §1.3; Issues/views §§17–24; Configuration/DoD §§26–27; Feedback capture §5A
+**References:** Spec 01 Delivery closure, Spec 03 readiness, Spec 04 Graph Review boundary and Spec 08 §§8, 14–21, 24, 26.
 
 **Run**
 
-First confirm creative readiness:
+Before approval, reuse the existing PI public-content readiness gate:
 
 ```bash
 pnpm pactwright intelligence onboard
+pnpm pactwright intelligence validate
 ```
 
-`identity`, `content`, `product` and `go-to-market` must be **Covered** for this work. If coverage is missing, stop and create/ingest the missing project knowledge through normal Delivery before continuing.
+Require every applicable domain to be Covered: identity for identity/voice/values; content for educational/editorial/marketing work; product for capability/value/behaviour/limitation claims; go-to-market for acquisition/positioning; delivery/ux for user workflow claims; delivery/eng for technical claims; and other factual domains relied upon. Do not require unrelated coverage. Each used claim/constraint must be accepted, in-horizon Knowledge with traceable Sources. Retain exact grounding; missing readiness blocks approval and challenged/superseded/retracted relied-on Knowledge requires re-grounding and re-evaluation before approval.
 
-Then use current Project Intelligence and Graph Review to deliver:
+Through normal Pactwright Delivery, the selected Agent Pack and relevant Production Skills, publish/update:
 
 ```text
-Docs
-→ full Pactwright operating/GitHub guide
-
-Examples
-→ one end-to-end Project Intelligence → Delivery → Review → Deployment/Publication → Operations workflow
-
-Academy
-→ advanced closed-loop workflow lesson
-
-Extensions
-→ current first-party extension catalogue
-
-README
-→ complete capability map linking to the correct deeper surfaces
+full operating/GitHub guide
+one executable end-to-end example
+advanced Academy operating-workflow lesson
+ecosystem / Extension catalogue
+complete README capability map
 ```
 
-Run the work through normal Delivery; use Creative Delivery for public-facing narrative/visual material and Graph Review before acceptance.
+The example must show the correct authority and closure path:
+
+```text
+applicable PI grounding
+→ explicit Intent
+→ transient Contract alternatives
+→ authorised Decision and selected Contract
+→ Brief
+→ Delivery
+→ Delivery Review
+→ canonical Evidence
+```
+
+Graph Review is a separate wider-project branch:
+
+```text
+Project Graph
+→ Graph Review
+→ Finding
+→ PI Source
+→ governed Knowledge/candidate where justified
+```
+
+Graph Review does not close Delivery or produce Evidence. Its Findings cannot replace mandatory Delivery Review.
+
+Show a semantically appropriate post-Delivery continuation:
+
+```text
+software: Evidence → actual deployment → Deployment
+
+published output: Evidence → exact human approval → Asset
+→ actual channel release → Publication
+
+exposure → bounded evidence → Observation → PI Source
+→ accepted Knowledge → PI candidate → explicit future Intent when authorised
+```
+
+Do not force every output into both post-Delivery paths, fabricate a live defect or imply a completed revision has already improved performance. A controlled executable fixture must remain labelled and isolated; case-study statements must trace actual outcomes.
+
+The lightweight repository-owned catalogue distinguishes Agent Packs, Pactwright Extensions and compatible Production Skills. Include the standard pack, first-party Extensions and genuinely supported external integrations with category, compatibility, installation and documentation metadata. Reuse registry metadata in docs/website where practical; do not build a marketplace, second plugin system or exhaustive third-party directory. Verify discovery links from the README and website without duplicating product truth.
 
 **Expected result**
 
-The public project now exposes the full implemented operating model without forcing users to infer it from individual subsystem docs.
+Users can discover, understand and execute the full configured operating path without confusing Delivery Review, Graph Review, publication authority or PI consequence governance.
 
 **Verify before continuing**
 
-Run `product-strategist`, `voice-auditor`, `architecture-reviewer` and `graph-auditor` against current state; route any accepted findings through Project Intelligence and resolve blocking public-product drift. Inspect the Pactwright repository's shared Project and confirm this delivery lineage is fully projected (Intent Issue, Delivery view, Review, Assets/Publications where applicable).
+Run the example in a clean supported consumer and in CI where practical, using the same runtime commands and locked environment. Verify all included lineage, approval, actual-release/deployment and PI boundaries; simulated fixture events must not be presented as live exposure. Validate guide commands, catalogue metadata/links, README capability claims and applicable readiness. Separately run architecture/coherence and public-product Graph Reviews, triage every Finding through PI and resolve blockers through normal Delivery. Prose review does not replace example execution. Retain accepted Evidence and applicable Asset/Publication provenance for the public work.
 
-## Stage 7 — Release `0.0.8`
+## Stage 8 — Release and Kakeido proof
 
-### Step 17 — Prepare, publish and tag `0.0.8`
+### Step 16 — Publish exact `0.0.8` after cumulative and upgrade acceptance
 
-**References:** Release model — Implementation Guide; Distribution/upgrade §§2, 6–8, 15, 18–19
+**References:** Implementation Guide release model; Spec 02 upgrades; Checkpoint 2 exact-version upgrade acceptance.
 
 **Run**
 
-Update `CHANGELOG.md` from accepted Checkpoint 8 Evidence only, then create the release PR:
+Before publication, prove the accepted `0.0.7 → 0.0.8` transition in isolated consumers using built/packed targets through the existing owning upgrade paths. Resolve compatibility metadata and verify every intermediate state, including PI with its enabled dependants and the selected external skills/packs. A resolver fixture with newer available versions must still honour the exact desired targets. Do not use manual preinstallation to bypass the upgrade commands.
 
-```bash
-VERSION=0.0.8
-DEFAULT_BRANCH="$(gh repo view --json defaultBranchRef -q .defaultBranchRef.name)"
+Require cumulative conformance, the live Pactwright surface trace and the executed end-to-end material to pass. If execution behaviour changed, review the applicable baseline comparison from Step 11.
 
-git switch "$DEFAULT_BRANCH"
-git pull --ff-only
-git switch -c "release/$VERSION"
-
-pnpm version "$VERSION" -r --no-git-tag-version --allow-same-version
-pnpm install
-pnpm verify
-pnpm publish -r --dry-run --tag next --access public
-
-git add -A
-git commit -m "chore: release $VERSION"
-git push -u origin HEAD
-
-gh pr create \
-  --title "Release $VERSION" \
-  --body "Prepare Pactwright $VERSION."
-
-gh pr checks --watch
-gh pr merge --squash --delete-branch
-
-git switch "$DEFAULT_BRANCH"
-git pull --ff-only
-```
-
-Tag the accepted merge commit:
-
-```bash
-git tag -a "v$VERSION" -m "v$VERSION"
-git push origin "v$VERSION"
-```
+Use the normal release PR, CHANGELOG from accepted Evidence, merged release commit/tag and trusted-publishing flow. No new package or publisher bootstrap is introduced. Release the existing six compatible first-party packages as `0.0.8`; external Production Skills retain their own exact versions/revisions and are not republished as Pactwright packages.
 
 **Expected result**
 
-The tag-triggered trusted `release.yml` workflow verifies the exact merged source and publishes every still-unpublished package in the `0.0.8` family under `next`. Existing published members are not overwritten.
+The exact compatible first-party family is published under the existing release policy with provenance and a fixture-proven safe consumer transition.
 
 **Verify before continuing**
-
-Confirm the `release.yml` run for `v0.0.8` succeeded, then:
 
 ```bash
 pnpm view pactwright@0.0.8 version
 pnpm view @pactwright/standard@0.0.8 version
 pnpm view @pactwright/project-intelligence@0.0.8 version
-pnpm view @pactwright/review-creative@0.0.8 version
-pnpm view @pactwright/creative@0.0.8 version
+pnpm view @pactwright/graph-review@0.0.8 version
+pnpm view @pactwright/assets-publication@0.0.8 version
 pnpm view @pactwright/operations@0.0.8 version
 ```
 
-Every command must return `0.0.8`. All six packages were introduced by `0.0.6`, so no bootstrap publication occurs at this release; every package must show npm provenance/trusted-publisher metadata.
+All return `0.0.8`. Verify tagged-source/release-workflow provenance, registry results and exact-target/intermediate-compatibility fixtures. Package existence alone does not prove upgrade or operating-surface acceptance.
 
-## Stage 8 — Upgrade Kakeido and run a full projected lineage
+### Step 17 — Upgrade Kakeido exactly and prove its live complete surface
 
-Run this stage from the Kakeido repository root unless a step explicitly says otherwise.
-
-Prove the complete operating surface in the consumer repository.
-
-### Step 18 — Upgrade/reconcile Kakeido fully
-
-**References:** Distribution/upgrade §15
+**References:** Spec 02 upgrade ownership; Specs 01–08; Checkpoint 2 exact-version upgrade acceptance; current Kakeido canonical specs.
 
 **Run**
 
-```bash
-pnpm add -D \
-  pactwright@0.0.8 \
-  @pactwright/project-intelligence@0.0.8 \
-  @pactwright/review-creative@0.0.8 \
-  @pactwright/creative@0.0.8 \
-  @pactwright/operations@0.0.8
+Start from Kakeido's real accepted published `0.0.7` environment. Record package/configuration/both-lock state, selected external dependencies, enabled profiles and historical canonical/execution identities. Use Step 16's proven compatible sequence. Do not preinstall targets, reinitialise the project, change selected pack identity or re-create prior records.
 
+Upgrade the runtime and verify the still-compatible environment and new-runtime migration/validation provenance:
+
+```bash
+pnpm pactwright upgrade --to 0.0.8
+pnpm pactwright validate
+```
+
+Set the currently selected standard Agent Pack's desired version to exact `0.0.8` through its existing supported configuration, preserving its source. Then:
+
+```bash
+pnpm pactwright agent-pack upgrade
+pnpm pactwright doctor
+pnpm pactwright validate
+```
+
+Upgrade each existing Extension separately in the proven dependency-safe order. Immediately before each command, set only that component's desired constraint to exact `0.0.8` through supported configuration; after it completes, verify installed versions, both locks and compatibility before proceeding:
+
+```bash
 pnpm pactwright extension upgrade project-intelligence
-pnpm pactwright extension upgrade review-creative
+pnpm pactwright extension upgrade graph-review
+pnpm pactwright extension upgrade assets-publication
 pnpm pactwright extension upgrade operations
-pnpm pactwright upgrade
+```
+
+The block lists the order, not permission to skip the per-component configuration and verification. Do not use `extension add`, `agent-pack use`, invented component `--to` flags or manual lock edits as upgrade shortcuts. Recover a failed operation before attempting the next one.
+
+Activate and check the updated generated integration:
+
+```bash
 pnpm pactwright sync
+pnpm pactwright doctor
 pnpm pactwright github sync --dry-run
+```
+
+Land changed workflows through normal Kakeido repository authority before relying on new remote behaviour. Then:
+
+```bash
 pnpm pactwright github sync
+pnpm pactwright github sync --dry-run
+pnpm pactwright validate
+pnpm pactwright intelligence validate
+pnpm pactwright graph-review validate
+pnpm pactwright assets validate
+pnpm pactwright operations validate
+pnpm pactwright eval
 ```
 
-`pnpm pactwright upgrade` upgrades the already configured `@pactwright/creative` agent pack per the Distribution upgrade semantics.
+Run the current Kakeido repository-defined tests for any real change. Reuse genuine histories from earlier checkpoints to trace all applicable profile surfaces as in Step 13. Perform one bounded governed change or safe configured runtime event and verify actual resulting checks/summaries/items/values. Inspect the five reference workflows and same shared Project, but do not count their mere presence as complete acceptance.
 
 **Expected result**
 
-Kakeido has the complete first-party GitHub profile set.
+Kakeido runs exact `0.0.8` through the same upgrade and projection model, with real cross-profile navigation and event processing and no Kakeido-specific GitHub semantics.
 
 **Verify before continuing**
 
-Run all four graph validation commands; inspect exactly one linked Pactwright Project containing every enabled-profile field and view; confirm a final `pnpm pactwright github sync --dry-run` is clean.
+Record exact versions and compatible package/Pactwright lock agreement after every operation; verify the six-package reference family, unchanged selected identities and preserved historical records/approved content. Explicit migrations, if required, retain their versioned provenance and must not silently reinterpret truth. Require healthy doctor, owner validation, cumulative integration cases, actual configured check execution and live record-to-projection/event evidence. Verify the final structural dry-run, current runtime projections and second local sync separately. Preserve unrelated workflows/resources and external repositories. Use isolated fixtures for destructive/failure tests, never invented live findings.
 
-### Step 19 — Run one real end-to-end Kakeido lineage
+## Stage 9 — Capture feedback
 
-**References:** Configuration/DoD §26; Roadmap/corrective feedback
+### Step 18 — Govern failures and close only after blocker re-verification
 
-**Run**
-
-```bash
-pnpm pactwright intelligence derive-intent-roadmap
-```
+**References:** Spec 03 governance; Spec 07 open gaps; Implementation Guide transition conditions.
 
 **Run**
 
-```text
-/capture-intent "<selected real Kakeido candidate>"
-/propose-contracts <intent-id>
-/approve-contract <contract-id> "<selection notes>"
-/write-brief <contract-id>
-/deliver-brief <brief-id>
-/review <brief-id>
-/prepare-evidence <brief-id>
-```
+Capture material ownership, composition, routing, permission, check, projection, replay, upgrade, example and disablement failures from Pactwright and Kakeido through normal PI Source/triage/promotion governance. Distinguish repeatable Pactwright responsibility failures from project-specific choices. Reuse or add the smallest responsible regression case; do not automatically create Intents.
 
-**Run**
+Correct every blocking failure through normal Delivery and rerun the affected acceptance plus cumulative checks. Recording a blocker as a future candidate is not resolution. Only explicitly non-blocking findings/design gaps may remain under the Implementation Guide transition conditions.
 
-Software path — after the delivered work is active in the Kakeido environment configured in Checkpoint 6:
-
-```bash
-pnpm pactwright operations record-deployment <evidence-id>
-```
-
-Creative path — for public-facing output (`<asset-id>` is printed by `approve-asset`):
-
-```bash
-pnpm pactwright creative approve-asset <evidence-id>
-pnpm pactwright creative record-publication <asset-id> <channel>
-```
-
-Then close the loop on whichever path was exercised:
-
-```bash
-pnpm pactwright operations refresh
-pnpm pactwright intelligence derive-intent-roadmap
-pnpm pactwright operations corrective-roadmap
-```
+Preserve remote-resource identity/adoption, general concurrency, exact check mapping, arbitrary authority-event mapping and retention/interface gaps unless evidence requires a deliberate owning-spec change before implementation relies on new semantics. No new subsystem is justified merely by reaching this checkpoint.
 
 **Expected result**
 
-GitHub projects the complete lineage/feedback without owning any of its canonical state.
+The complete operating surface has evidence-backed acceptance and governed non-blocking learning, not unresolved failures hidden behind a green workflow count.
 
 **Verify before continuing**
 
-Inspect the shared Project and trace every projected field back to repository graph/provenance.
-
-## Stage 9 — Capture Checkpoint 8 feedback
-
-### Step 20 — Route checkpoint findings through Project Intelligence
-
-**References:** Feedback capture §§7, 14
-
-**Run**
-
-```text
-Capture every defect, friction point, provisioning problem and content gap discovered during Checkpoint 8 across Pactwright and Kakeido as internal Sources through pnpm pactwright intelligence ingest, then triage them. Promote to Knowledge or intent candidates only where justified. Distinguish Kakeido-specific choices from Pactwright responsibility failures. Do not automatically create Delivery Intents.
-```
-
-**Expected result**
-
-Checkpoint 8 learning exists as durable Project Intelligence Sources with triage outcomes.
-
-**Verify before continuing**
-
-`pnpm pactwright intelligence validate` passes and every blocking finding is either resolved in this checkpoint or exists as a triaged candidate before the checkpoint closes.
+Trace each blocker to its correction and passing re-verification. Review the full result map, live Pactwright/Kakeido traces, example/public-readiness evidence and exact release/upgrade proof. Require no known blocking failure before Checkpoint 9; retain explicit owner, evidence and non-blocking disposition for every open gap carried forward.
 
 ## Exit gate
 
-Both projects use one shared GitHub Project projecting every enabled profile; configuration gating provisions only configured views while checks and PR summaries operate without Projects; PR summaries, checks and Project views match the owning specification sections; remote state regenerates and converges from Pactwright-owned state, including after reversible drift; extension disable/removal affects only owned integration and Project Intelligence removal remains blocked under dependants; regenerated integration landed through reviewed pull requests; the full operating guide, end-to-end example, advanced Academy lesson, extension catalogue and README capability map are published from covered knowledge through Creative Delivery and Graph Review; `0.0.8` is published with verified provenance and installed in Kakeido; one real Kakeido lineage is fully projected and traceable; no GitHub edit alone mutates canonical Pactwright state; Checkpoint 8 feedback is captured as Project Intelligence Sources.
+Checkpoint 8 closes only when:
+
+- the existing composition engine covers all five first-party profiles, dependency-first capability validation and repository overrides without a second planner;
+- the all-enabled GitHub reference has exactly five managed product workflows and supports the eleven canonical check meanings, with no legacy or invented Graph Review/Publication Feedback checks;
+- optional checks/views/summaries/schedules, Projects-disabled and GitHub-disabled configurations preserve local semantics and least privilege;
+- configured Project-backed profiles use the same shared Project and stable runtime-derived navigation rather than one Project per Extension;
+- Delivery PR/Issue/Project fields include the complete applicable lineage, blocking, canonical links and last activity;
+- all four Intelligence Grounding states, promotion mutation/recommendation distinctions and current PI view derivations are verified;
+- Graph Review remains non-graph execution/Finding provenance and never substitutes for Delivery Review or Evidence closure;
+- Asset/Publication and Operations views retain approval, exact release/exposure identity, history, bounded evidence and PI-only consequence governance;
+- every owning route and relevant shared-edge interaction is tested, including disabled/irrelevant paths, configured schedules and trusted/untrusted events;
+- semantic validation and the mapped nineteen-dimension GitHub Integration evaluation pass, including injected failure/regression and security cases;
+- all five workflows use the same exact local/Actions resolved environment and runtime-provided identities, including selected external skills/packs;
+- actual pinned remote replay reconstructs recorded inputs or fails without current-state/newer-dependency substitution; explicit current reruns remain distinct;
+- canonical records affect Project Graph revision while reports, Findings, execution provenance, adapter output and GitHub metadata do not;
+- local generation, remote structural reconciliation and Actions runtime projection regeneration are independently proven through their correct owners;
+- configured settings/labels/rulesets/required checks/Project schema converge only after workflow prerequisites, without hiding blocking drift as reported ambiguity;
+- populated disable/re-enable tests preserve canonical/execution history, diagnose unavailable references, enforce dependencies and restore identities without duplicate records or hand-offs;
+- failed execution, hand-off, release, report and optional projection operations preserve the respective owner's failure and authority boundaries;
+- the public learning path passes applicable Covered-domain readiness and retains accepted, in-horizon, Source-traceable grounding;
+- the end-to-end example actually executes, explicitly includes Delivery Review, separates Graph Review and preserves real approval/exposure and PI governance boundaries;
+- the lightweight catalogue distinguishes Agent Packs, Extensions and genuinely supported Production Skills using validated reusable repository metadata;
+- Pactwright and Kakeido each retain a live cross-profile record-to-projection trace and a verified new governed event without manufactured operational findings;
+- the complete six-package `0.0.8` family is registry/provenance verified and the real `0.0.7 → 0.0.8` consumer transition uses exact desired constraints and owning commands with compatible intermediate states;
+- every blocker has a correction and passing re-verification; only explicitly non-blocking gaps remain governed future work;
+- no known blocking failure enters Checkpoint 9.
 
 ---
 
-**Pactwright — Checkpoint 8 — Full Project Operating Surface v9**
+**Pactwright — Checkpoint 8 — Full Project Operating Surface v11**
