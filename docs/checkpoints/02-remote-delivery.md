@@ -1,6 +1,6 @@
 # Pactwright — Checkpoint 2 — Remote Delivery
 
-**Version:** 14  
+**Version:** 15  
 **Entry condition:** Checkpoint 1 is accepted and Pactwright can self-host core Delivery.  
 **Release:** `0.0.2`  
 **Exit capability:** Pactwright and Kakeido can initialise, execute, evaluate and project Contract-driven Delivery through GitHub using one deterministic profile-composition/reconciliation model while repository canonical state remains authoritative.
@@ -56,7 +56,7 @@ After GitHub integration becomes active, coherent repository changes land throug
 
 ### Exact-version upgrade acceptance
 
-This procedure applies to the real consumer upgrade in this checkpoint and the corresponding upgrades in Checkpoints 3–7. It exercises Spec 02's existing desired configuration and ownership-specific commands; it does not add a new upgrade interface.
+This procedure applies to the real consumer upgrade in this checkpoint and the corresponding upgrades in Checkpoints 3–8. It exercises Spec 02's existing desired configuration and ownership-specific commands; it does not add a new upgrade interface.
 
 Before a release or consumer mutation, record the starting package/configuration/lock state and the exact intended runtime, selected Agent Pack and enabled/new Extension versions. Resolve their compatibility metadata and prove the intended sequence in an isolated fixture first. The default sequence is runtime, selected Agent Pack, existing dependency Extensions, their dependants, then new Extensions. Every completed operation must leave a compatible resolved environment; fix an incompatible sequence or release constraint before acceptance rather than running subsequent commands through invalid state.
 
@@ -758,4 +758,4 @@ Checkpoint 2 closes only when:
 
 ---
 
-**Pactwright — Checkpoint 2 — Remote Delivery v14**
+**Pactwright — Checkpoint 2 — Remote Delivery v15**
