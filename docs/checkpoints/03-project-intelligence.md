@@ -1,6 +1,6 @@
 # Pactwright — Checkpoint 3 — Project Intelligence
 
-**Version:** 11  
+**Version:** 12  
 **Entry condition:** Checkpoint 2 is accepted.  
 **Release:** `0.0.3`  
 **Exit capability:** Project Intelligence can cold-start Pactwright and Kakeido, govern durable project knowledge, contribute bounded context, compose into the established GitHub integration and derive one dependency-aware Intent roadmap without automatically creating Delivery work.
@@ -47,9 +47,17 @@ For repository/code changes:
 pnpm verify
 ```
 
-After Checkpoint 2, coherent changes land through pull requests and required checks.
+Before newly implemented repository-local runtime commands:
+
+```bash
+pnpm build
+```
+
+After Checkpoint 2, coherent changes land through pull requests and required checks. Reuse its workflow-before-required-checks prerequisite handling for PI activation, including one-shot init.
 
 Class 2/3 PI promotion uses normal reviewed repository change infrastructure and applies canonical Knowledge mutations only after required approval.
+
+Release and consumer upgrades follow [Checkpoint 2 — Exact-version upgrade acceptance](./02-remote-delivery.md#exact-version-upgrade-acceptance): explicit desired component constraints, compatible intermediate environments, owning commands and package/lock verification after each operation.
 
 ## 4. Checkpoint scope
 
@@ -57,7 +65,7 @@ Checkpoint 3 implements and proves:
 
 ```text
 @pactwright/project-intelligence
-pactwright init --with project-intelligence --github
+pactwright init --with project-intelligence --github with explicit pack selection
 Source
 Domain Definition
 Knowledge
@@ -66,7 +74,7 @@ triage classes 0–3
 promotion boundary
 promotion concurrency/failure rules
 nine-domain registry
-trust/evidence rules
+trust/evidence rules and corroboration-refresh eligibility
 coverage: Missing / Seeded / Covered
 onboarding
 one Intent roadmap derivation
@@ -80,7 +88,7 @@ PI GitHub profile/workflow/checks/views
 PI evaluation cases
 Pactwright corpus ingestion
 public-content readiness gates
-real 0.0.2 → 0.0.3 runtime/Agent Pack + PI installation
+exact real 0.0.2 → 0.0.3 runtime/Agent Pack + PI installation
 Kakeido cold start
 ```
 
@@ -265,7 +273,8 @@ Dispositions:
 - novel
 - contradictory
 
-Class 0/1 may capture Sources, evidence links, derived evidence state and eligible freshness effects only.
+Class 0/1 may capture Sources, evidence links, derived evidence state, eligible freshness effects and regenerated reports without changing canonical meaning.
+Freshness effects must satisfy every corroboration-refresh condition in Step 11; a new capture timestamp alone is insufficient.
 Class 2/3 require reviewed promotion before canonical meaning changes.
 No registered domain fit => propose a new Domain Definition as class 2; do not write one silently.
 
@@ -278,7 +287,7 @@ Triage stops cheap cases early and routes meaning-changing cases through review.
 
 **Verify before continuing**
 
-Prove a class-1 Source cannot alter Knowledge conclusions, requirement/constraint/decision meaning, Delivery records or sibling-Extension canonical state; prove no-domain-fit produces a reviewed class-2 proposal.
+Prove a class-1 Source cannot alter Knowledge conclusions, requirement/constraint/decision meaning, Delivery records or sibling-Extension canonical state; prove no-domain-fit produces a reviewed class-2 proposal. A duplicate or ineligible corroboration must not reset Knowledge freshness.
 
 ### Step 6 — Expose `ingest`, `triage` and `promote`
 
@@ -308,7 +317,8 @@ Failure rules:
 - failed promotion preserves the captured Source;
 - rerunning triage/promotion uses current Project Graph state;
 - failed future Extension hand-off leaves its originating object valid/retryable under the owning semantics;
-- report-generation failure never mutates canonical PI state.
+- report-generation failure never mutates canonical PI state;
+- transient automation failures may retry with bounded backoff, while deterministic validation failures stop immediately.
 ```
 
 **Expected result**
@@ -317,7 +327,7 @@ One ingestion/promotion path serves founding material, research and future Exten
 
 **Verify before continuing**
 
-Run duplicate/versioned ingestion, class-2 no-preapproval-mutation, failed-ingestion, failed-promotion, stale-promotion/rebase/revalidation and retryable hand-off fixtures.
+Run duplicate/versioned ingestion, class-2 no-preapproval-mutation, failed-ingestion, failed-promotion, stale-promotion/rebase/revalidation and retryable hand-off fixtures. Inject report-generation failure and require canonical state to remain unchanged; verify deterministic failures are not repeatedly retried.
 
 ## Stage 3 — Implement Knowledge and relationships
 
@@ -344,6 +354,7 @@ Enforce:
 - recommendation requires steward acceptance and may decay;
 - forecast remains provisional until resolved and expires at its horizon;
 - evidence may challenge authority-driven Knowledge but never silently overturn it;
+- accepted Knowledge has review_by where freshness is meaningful; normative requirements and durable decisions may use different or no decay policy;
 - recurrence records durable policy only; no scheduler is introduced here.
 ```
 
@@ -353,7 +364,7 @@ Knowledge represents accepted current project meaning without replacing Source p
 
 **Verify before continuing**
 
-Test T0 sufficiency, T1 independent corroboration, T2/T3 insufficiency, shared-origin derivatives, requirement/constraint authority, PI-decision distinction/supersession, recommendation acceptance, forecast expiry, supersession, retraction and recurrence validation.
+Test T0 sufficiency, T1 independent corroboration, T2/T3 insufficiency, shared-origin derivatives, requirement/constraint authority, PI-decision distinction/supersession, recommendation acceptance, forecast expiry, meaningful/no-decay horizons, supersession, retraction and recurrence validation.
 
 ### Step 8 — Implement PI and cross-graph relationships
 
@@ -379,7 +390,7 @@ Preserve ownership across graph boundaries.
 `satisfied-by` targets Delivery Evidence.
 Raw Sources, Findings and Observations cannot directly create Delivery Intents.
 
-Delivery-obligation semantics remain PI-derived but Delivery-owned:
+Delivery-obligation meaning and candidate derivation remain PI-owned; canonical Intent creation remains Delivery-owned:
 - accepted requirement Knowledge produces a candidate unless already satisfied;
 - other accepted Knowledge produces a candidate only when its approved conclusion explicitly requires Delivery;
 - once an Intent is explicitly captured, motivating Knowledge may link through `requires-delivery`;
@@ -486,7 +497,7 @@ Exercise each candidate origin/state, dependency-wave ordering and precedence ti
 
 ### Step 11 — Implement Delivery satisfaction, recurrence, propagation and freshness
 
-**References:** Spec 03 satisfaction/recurrence/propagation/freshness.
+**References:** Spec 03 satisfaction/recurrence/propagation and section 16 evidence/freshness.
 
 **Run**
 
@@ -505,15 +516,27 @@ Delivery satisfaction:
 Propagation runs when accepted Knowledge is challenged, superseded or retracted and produces review/change proposals for affected dependants. It never silently edits Delivery or sibling-Extension canonical records. Retraction always requires direct-dependant revalidation.
 
 Freshness marks overdue Knowledge stale and regenerates freshness views without changing the Knowledge conclusion.
+
+A corroborating Source may refresh Knowledge only when all four conditions hold:
+- the evidence is newly observed, not merely newly captured;
+- its evidential origin is distinct from the evidence already relied on;
+- it is in scope for the Knowledge claim;
+- it is sufficiently trusted under the relevant Domain Definition.
+
+Copies, syndicated material and agent-generated derivatives sharing one origin do not manufacture independent corroboration or reset freshness.
+Eligible refresh may update freshness/evidence state but cannot alter a conclusion, authority-governed requirement or decision.
+Respect different/no-decay policies for normative Knowledge; do not force universal expiry or a numeric truth score.
 ```
 
 **Expected result**
 
-Outstanding obligations, changed grounding and staleness are surfaced mechanically without ownership violations or scheduler overengineering.
+Outstanding obligations, changed grounding and staleness are surfaced mechanically, and only eligible corroboration refreshes Knowledge without changing its meaning.
 
 **Verify before continuing**
 
-Test one-off satisfaction removal, recurring-occurrence closure with durable recurrence, reopen-proposed behaviour after later governed evidence, challenged/superseded/retracted propagation, direct-dependant revalidation and freshness without conclusion mutation.
+Test one-off satisfaction removal, recurring-occurrence closure with durable recurrence, reopen-proposed behaviour after later governed evidence, challenged/superseded/retracted propagation and direct-dependant revalidation.
+
+For freshness, provide one positive fixture satisfying all four conditions and separate negative fixtures for old observation/new capture, same-origin derivative, out-of-scope evidence and inadequate trust. Require no refresh in every negative case, unchanged canonical conclusions in every case, idempotent duplicate processing, overdue staleness and preserved no-decay policy. Regenerate coverage after valid freshness changes.
 
 ## Stage 5 — Integrate PI with Delivery, GitHub, evaluation and validation
 
@@ -592,6 +615,7 @@ Delivery PR grounding contribution
 
 GitHub never owns Source, Knowledge, coverage, candidate or propagation semantics.
 Reports remain revision-stamped derived views and stale reports are distinguishable from invalid canonical state.
+Use the existing workflow-availability preflight before activating required PI checks; an absent workflow cannot be bypassed by one-shot init.
 ```
 
 **Expected result**
@@ -604,6 +628,7 @@ Prove:
 - Core-only state remains unchanged when PI is disabled;
 - Core + PI composes into the same shared Project;
 - enabling PI adds only PI-managed workflow/check/view/profile contributions;
+- missing PI workflow prevents premature required-check activation, then normal landing/reconciliation converges;
 - disabling/removing PI removes only safely owned generated/remote contributions while preserving user-authored and PI canonical data;
 - all four exact checks and Grounding states operate;
 - stale derived reports are distinguishable from invalid Knowledge;
@@ -619,6 +644,7 @@ Prove:
 Add Project Intelligence evaluation cases for:
 - source triage/disposition/class;
 - evidence/trust comparison and independence;
+- eligible versus ineligible corroboration-refresh effects;
 - unsupported promotion;
 - promotion revalidation against changed graph state;
 - bounded Knowledge selection/context contribution;
@@ -684,11 +710,11 @@ The complete Project Intelligence semantic contract is machine-enforced before P
 
 **Verify before continuing**
 
-Maintain positive fixtures plus at least one failing fixture for every numbered rule or tightly coupled rule group. Run both `pactwright intelligence validate` and core `pactwright validate`; deliberate PI invalidity must fail both without mutating state.
+Maintain positive fixtures plus at least one failing fixture for every numbered rule or tightly coupled rule group. Run both `pactwright intelligence validate` and core `pactwright validate`; deliberate PI invalidity must fail both without mutating state. Include the Step 11 freshness fixtures in the complete suite.
 
 ### Step 16 — Prove compositional one-shot initialisation with real PI
 
-**References:** Spec 02 one-shot initialisation; Specs 03 and 07 integration.
+**References:** Spec 02 one-shot initialisation; Specs 03 and 07 integration; Checkpoints 1–2 explicit selection and safe activation.
 
 **Run**
 
@@ -702,37 +728,50 @@ composes the same underlying mechanisms as:
 
 ```text
 pactwright init
+pactwright agent-pack use <explicit-compatible-pack-source>
 pactwright extension add project-intelligence
 # enable GitHub through the same normal configuration operation
 pactwright sync
 pactwright github sync
 ```
 
-Use workspace/packed Checkpoint 3 packages rather than inventing a separate test-only installation path.
+Use workspace/packed Checkpoint 3 packages rather than a separate test-only installation path. Record the exact chosen pack source/version and PI target, and explicitly supply that same pack choice through the normal documented init selection input in the one-shot case. Do not silently choose standard or equate installed packages with selected configuration.
+
+Both paths must use Checkpoint 2's workflow-availability prerequisite handling. On a clean remote without the generated Core/PI workflows, report incomplete activation rather than enforcing unavailable required checks. Land the generated workflows through normal repository authority, then finish activation through the same `github sync` path.
 
 **Expected result**
 
-The canonical first real Extension + GitHub one-shot path produces the same resolved Pactwright environment and integration as explicit operations.
+The first real Extension + GitHub one-shot path preserves explicit selection and produces the same resolved environment and safe integration as separate operations.
 
 **Verify before continuing**
 
-Compare configuration, package state, `.pactwright/lock.yml`, environment lock identity, generated adapter/workflow files and GitHub desired/applied state. Require semantic equivalence and convergence, not merely command success.
+Compare selected pack identity, configuration, package state, `.pactwright/lock.yml`, environment lock identity, canonical PI registry, generated adapter/workflow files and GitHub desired/applied state, normalising only repository-specific resource identities. Require equivalence and convergence after prerequisites are satisfied.
+
+Test missing/incompatible pack choice and absent workflows as negative controls: no silent pack selection, no dependent activation on invalid choice and no premature required checks. Neither path may claim full remote activation before workflow availability.
 
 ## Stage 6 — Adopt Project Intelligence in Pactwright
 
 ### Step 17 — Enable PI from the workspace
 
-**References:** Spec 02 Extension add; Spec 03.
+**References:** Spec 02 Extension add; Specs 03 and 07.
 
 **Run**
+
+Preserve Pactwright's existing explicit compatible Agent Pack selection and enabled GitHub configuration.
 
 ```bash
 pnpm build
 pnpm pactwright extension add project-intelligence
 pnpm pactwright intelligence validate
 pnpm pactwright sync
+```
+
+Land the generated PI workflow on the default branch before its checks become required, using the existing repository process. Then:
+
+```bash
 pnpm pactwright github sync --dry-run
 pnpm pactwright github sync
+pnpm pactwright github sync --dry-run
 pnpm pactwright validate
 ```
 
@@ -742,7 +781,7 @@ Pactwright has PI enabled from its workspace build with no invented capability r
 
 **Verify before continuing**
 
-All PI/core validations pass, the shared Project remains singular and remote state converges.
+All PI/core validations pass, the shared Project remains singular, no pack identity changed implicitly and remote state converges after the workflow prerequisite is satisfied.
 
 ### Step 18 — Ingest the current Pactwright authoritative corpus
 
@@ -869,7 +908,6 @@ Preserve domain dependency ordering while closing gaps.
 
 Any missing strategic choice must become an explicit Decision through normal Delivery before it is promoted into PI Knowledge.
 Do not require unrelated domains to become Covered merely for ceremony.
-```
 
 **Expected result**
 
@@ -911,7 +949,9 @@ Public claims agree with accepted PI Knowledge, the example runs in CI where pra
 
 ### Step 23 — Publish the `0.0.3` package family
 
-**References:** Implementation Guide npm release model.
+**References:** Implementation Guide npm release model; Checkpoint 2 exact-version upgrade acceptance.
+
+Before release, fixture-prove the exact `0.0.2 → 0.0.3` runtime, selected Agent Pack and new PI sequence from Step 24. Verify compatibility after each operation and exact desired-version targeting even with a newer compatible pack available. Do not publish an acceptance path that requires bypassing normal component ownership or running through an incompatible intermediate environment.
 
 Use the normal release PR path.
 
@@ -931,38 +971,57 @@ pactwright@0.0.3
 
 **Verify before continuing**
 
-All three versions resolve and trusted-publisher/provenance expectations hold.
+All three versions resolve, trusted-publisher/provenance expectations hold and the exact-version transition fixtures pass.
 
 ## Stage 9 — Cold-start Kakeido
 
-### Step 24 — Upgrade Kakeido from accepted `0.0.2` and install PI through Pactwright ownership paths
+### Step 24 — Upgrade Kakeido from accepted `0.0.2` and install exact `0.0.3` through owning paths
 
-**References:** Spec 02 upgrade/Extension installation ownership.
+**References:** Spec 02 upgrade/Extension installation ownership; Checkpoint 2 exact-version upgrade acceptance.
 
 **Run**
 
-Start from the accepted Checkpoint 2 Kakeido environment. Do not preinstall `0.0.3` packages manually before exercising Pactwright upgrade/install commands.
+Start from the accepted Checkpoint 2 Kakeido environment and record its installed/configuration/lock state. Use the fixture-proven sequence from Step 23. Do not preinstall `0.0.3` packages or edit installed package/lock state manually.
 
 ```bash
 pnpm pactwright upgrade --to 0.0.3
-pnpm pactwright agent-pack upgrade
-pnpm pactwright extension add @pactwright/project-intelligence@0.0.3
-pnpm pactwright intelligence validate
-pnpm pactwright sync
-pnpm pactwright github sync --dry-run
-pnpm pactwright github sync
 pnpm pactwright validate
 ```
 
-`pactwright upgrade` owns runtime upgrade orchestration through the project package manager. `agent-pack upgrade` owns the selected Agent Pack. `extension add` owns installation/registration/locking of the new PI package.
+Verify runtime `0.0.3` and compatibility with the still-selected pack. Set only the selected `@pactwright/standard` Agent Pack's desired version constraint to exact `0.0.3` through existing configuration, preserving its source, then:
+
+```bash
+pnpm pactwright agent-pack upgrade
+pnpm pactwright validate
+```
+
+Verify installed pack and both locks identify `@pactwright/standard@0.0.3`, not a floating later release. Install the new Extension through its exact package reference:
+
+```bash
+pnpm pactwright extension add @pactwright/project-intelligence@0.0.3
+pnpm pactwright intelligence validate
+pnpm pactwright sync
+```
+
+Verify exact PI package/version/hash and the complete environment. Land the generated PI workflow before enabling its required checks, then:
+
+```bash
+pnpm pactwright github sync --dry-run
+pnpm pactwright github sync
+pnpm pactwright github sync --dry-run
+pnpm pactwright doctor
+pnpm pactwright validate
+```
+
+Each owning command must complete its compatible transition before the next begins; recover failures before proceeding. Runtime upgrade owns runtime package replacement/new-runtime migration, Agent Pack upgrade owns the selected pack, and Extension add owns PI installation/registration/locking.
 
 **Expected result**
 
-Kakeido moves from the real published `0.0.2` environment to the exact published Checkpoint 3 family without bypassing Pactwright's ownership-specific upgrade/install mechanisms.
+Kakeido moves from the real published `0.0.2` environment to the exact Checkpoint 3 family without bypassing upgrade ownership or implicitly choosing a different Agent Pack.
 
 **Verify before continuing**
 
-Verify package-manager state and `.pactwright/lock.yml` identify `pactwright@0.0.3`, `@pactwright/standard@0.0.3` and `@pactwright/project-intelligence@0.0.3`; the new runtime performed migration/validation; the PI GitHub profile composed into the existing shared integration; a second GitHub dry-run converges; user-owned workflows/remote state remain unchanged.
+Record compatibility and package-manager/Pactwright lock agreement after each operation. Final state identifies `pactwright@0.0.3`, `@pactwright/standard@0.0.3` and `@pactwright/project-intelligence@0.0.3`. Require new-runtime migration/validation provenance, one shared GitHub integration, a converged second dry-run and preserved user-owned workflows/remote state.
 
 ### Step 25 — Discover and ingest the current Kakeido canonical corpus
 
@@ -1033,7 +1092,7 @@ pnpm pactwright intelligence triage <source-id>
 
 Then regenerate the Intent roadmap.
 
-Do not generalise Kakeido-specific preferences into Pactwright semantics.
+Do not generalise Kakeido-specific preferences into Pactwright semantics. Resolve all blocking failures before closing; only non-blocking findings may remain governed future candidates under the Implementation Guide transition rule.
 
 **Expected result**
 
@@ -1041,14 +1100,15 @@ Checkpoint learning is durable project evidence rather than chat/repository folk
 
 **Verify before continuing**
 
-Each material finding has Source provenance/triage and justified candidates remain candidates until explicitly captured as Intents.
+Each material finding has Source provenance/triage and justified candidates remain candidates until explicitly captured as Intents. No unresolved blocking failure crosses into Checkpoint 4.
 
 ## Exit gate
 
 Checkpoint 3 closes only when:
 
 - `@pactwright/project-intelligence` is independently installable;
-- `pactwright init --with project-intelligence --github` is proven compositionally equivalent to the explicit Extension + GitHub setup path;
+- `pactwright init --with project-intelligence --github` is equivalent to explicit setup with the same explicitly selected compatible Agent Pack and exact package targets;
+- both initialisation paths honour workflow-before-required-checks prerequisites and do not claim complete activation before those prerequisites are satisfied;
 - no unsupported PI capability identifiers have been canonised;
 - all nine core domains exist and validate;
 - Source identity/versioning/storage/provenance works for canonical-record and non-canonical execution-output origins, including originating Project Graph revision;
@@ -1056,10 +1116,11 @@ Checkpoint 3 closes only when:
 - promotion revalidates against current graph state, preserves captured Sources on failure and does not use last-writer-wins semantics;
 - changed/new canonical Knowledge meaning requires approval;
 - the canonical trust/evidence rules, Knowledge-kind governance, supersession, retraction and recurrence-policy rules validate;
+- corroboration refresh requires newly observed, distinct-origin, in-scope and sufficiently trusted evidence, with positive and independent negative fixtures;
 - exact Missing/Seeded/Covered semantics and dependency-aware onboarding work;
 - exactly one PI Intent-roadmap derivation exists, supports `ready | blocked | open | reopen-proposed`, applies canonical dependency-wave/precedence rules and creates no Intents automatically;
 - one-off satisfaction and recurring-obligation semantics work without introducing a scheduler;
-- propagation/freshness preserve ownership boundaries;
+- propagation/freshness preserve ownership boundaries and report-generation failure leaves canonical state unchanged;
 - bounded PI context contributes through the existing Pactwright context assembly seam, including a fixture proving future Graph Review can consume the same generic seam;
 - all 27 minimum Spec 03 validation rules are machine-enforced by `pactwright intelligence validate`, and core `pactwright validate` delegates to it when PI is enabled;
 - PI contributes through the Checkpoint 2 GitHub profile-composition/reconciliation engine rather than a second integration path;
@@ -1069,11 +1130,11 @@ Checkpoint 3 closes only when:
 - every applicable Spec 08 public-content domain is Covered before the PI learning path is approved, and relied-on claims are accepted/in-horizon/Source-traceable;
 - the PI public learning path is grounded in accepted current Knowledge and its executable example is validated;
 - the `0.0.3` family is registry verified;
-- Kakeido performs a real `0.0.2 → 0.0.3` runtime/Agent Pack upgrade and PI installation through Pactwright-owned commands rather than preinstallation;
+- Kakeido performs an exact `0.0.2 → 0.0.3` runtime/Agent Pack upgrade and PI installation through explicit desired constraints and owning commands, verifying every compatible intermediate state rather than preinstalling or accepting later versions;
 - Kakeido is cold-started from its current canonical specification corpus and completes one cross-domain Delivery;
 - checkpoint findings flow through PI itself;
 - no known blocking failure is carried into Checkpoint 4.
 
 ---
 
-**Pactwright — Checkpoint 3 — Project Intelligence v11**
+**Pactwright — Checkpoint 3 — Project Intelligence v12**
