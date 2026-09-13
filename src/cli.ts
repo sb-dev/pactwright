@@ -49,7 +49,8 @@ Commands:
   lifecycle record <command> --file <yaml>   Record the content of a graph-marking command
                                              (capture-intent, approve-contract, write-brief,
                                              prepare-evidence) after the runtime checks the
-                                             transition
+                                             transition, or the result of an execution step
+                                             (delivery, review) as execution provenance
   extension add <id|package> [--json]        Enable an extension (and its dependencies),
                                              validate the capability union and update
                                              config and lock
@@ -214,9 +215,17 @@ function record(args: readonly string[]): number {
     const result = recordStage(root, options.positional[0]!, options.file);
     if (options.json) {
       const created = result.created.map((node) => ({ id: node.id, type: node.type }));
-      out(`${JSON.stringify({ stage: result.stage, created }, null, 2)}\n`);
+      out(
+        `${JSON.stringify({ stage: result.stage, created, ...(result.advanced === undefined ? {} : { advanced: result.advanced }) }, null, 2)}\n`,
+      );
     } else {
       out(result.created.map((node) => `created ${node.type} ${node.id}\n`).join(""));
+      if (result.advanced !== undefined) {
+        const { brief, status, nextStep } = result.advanced;
+        out(
+          `recorded ${result.stage} for brief ${brief}; run is ${status}${nextStep === undefined ? "" : ` at ${nextStep}`}\n`,
+        );
+      }
     }
     return 0;
   } catch (error) {

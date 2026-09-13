@@ -50,9 +50,31 @@ const RECORD = (command: CommandName, fields: string): string =>
 const TRANSIENT = [
   `## 3. Report, do not record`,
   ``,
-  `This stage leaves no graph record. Present the result to the user. Do not`,
+  `This command leaves no graph record. Present the result to the user. Do not`,
   `create or edit anything under \`specs/\`.`,
 ].join("\n");
+
+/**
+ * Delivery and Review leave no *graph* record, but their result is execution
+ * provenance the runtime needs: it is what the Evidence closure guards read
+ * (Spec 01 §53). The command reports what it did; the runtime decides the
+ * transition, so the command never selects one.
+ */
+const PROVENANCE = (kind: "delivery" | "review", fields: string): string =>
+  [
+    `## 3. Hand the result to the runtime`,
+    ``,
+    `This leaves no graph record, but the runtime tracks the run. Write a YAML`,
+    `file in a temporary location outside the repository with:`,
+    ``,
+    "```yaml",
+    fields,
+    "```",
+    ``,
+    `Then run \`pnpm pactwright lifecycle record ${kind} --file <path>\`.`,
+    `The runtime decides what happens next. Do not choose the next step`,
+    `yourself, and do not create or edit anything under \`specs/\`.`,
+  ].join("\n");
 
 const STOP = [
   `## 4. Stop`,
@@ -175,7 +197,7 @@ export const COMMAND_TEMPLATES: readonly CommandTemplate[] = [
           `Execute the brief within the contract's scope, run the verification it names and report what changed, file by file, with the real verification result.`,
         ),
         ``,
-        TRANSIENT,
+        PROVENANCE("delivery", `intent: <brief-id or intent-id>`),
         `Repository changes stay in the working tree for the user to review.`,
         ``,
         STOP,
@@ -195,8 +217,9 @@ export const COMMAND_TEMPLATES: readonly CommandTemplate[] = [
           `Review the contract, the brief, the delivered changes and the required verification. Report findings with file references.`,
         ),
         ``,
-        TRANSIENT,
-        `Review reasoning is not graph state.`,
+        PROVENANCE("review", `intent: <brief-id or intent-id>\noutcome: pass | revise | blocked`),
+        `Review reasoning is not graph state; only the verdict is recorded, and`,
+        `a Review never creates Evidence.`,
         ``,
         STOP,
       ].join("\n"),

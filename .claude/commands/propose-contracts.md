@@ -18,7 +18,7 @@ Use the `spec` agent (from `.claude/agents/spec.md`) for this. Give it the runti
 
 ## 3. Report, do not record
 
-This stage leaves no graph record. Present the result to the user. Do not
+This command leaves no graph record. Present the result to the user. Do not
 create or edit anything under `specs/`.
 Alternatives are transient material for a decision; they are not saved.
 

@@ -207,6 +207,16 @@ export {
 } from "./lifecycle/run.js";
 export { canonicalJson, HASH_PATTERN } from "./canonical.js";
 export {
+  PROVENANCE_KINDS,
+  isProvenanceKind,
+  recordDelivery,
+  recordReview,
+  type ProvenanceKind,
+  type ProvenanceResult,
+  type RecordDeliveryInput,
+  type RecordReviewInput,
+} from "./lifecycle/provenance.js";
+export {
   EVIDENCE_PRECONDITIONS,
   assertEvidenceClosure,
   checkEvidenceClosure,

@@ -16,10 +16,18 @@ If the runtime reports a validation problem, or lists `deliver-brief` as already
 
 Use the `implementer` agent (from `.claude/agents/implementer.md`) for this. Give it the runtime context verbatim. Execute the brief within the contract's scope, run the verification it names and report what changed, file by file, with the real verification result.
 
-## 3. Report, do not record
+## 3. Hand the result to the runtime
 
-This stage leaves no graph record. Present the result to the user. Do not
-create or edit anything under `specs/`.
+This leaves no graph record, but the runtime tracks the run. Write a YAML
+file in a temporary location outside the repository with:
+
+```yaml
+intent: <brief-id or intent-id>
+```
+
+Then run `pnpm pactwright lifecycle record delivery --file <path>`.
+The runtime decides what happens next. Do not choose the next step
+yourself, and do not create or edit anything under `specs/`.
 Repository changes stay in the working tree for the user to review.
 
 ## 4. Stop

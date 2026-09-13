@@ -355,9 +355,14 @@ test("cli: lifecycle record rejects transient stages, bad input and missing opti
   const root = project({ lineage: "open", responsibilities: defaultResponsibilities() });
   const input = path.join(root, "x.yml");
   fs.writeFileSync(input, "title: t\nbody: b\nextra: 1\n");
-  const transient = runIn(root, "lifecycle", "record", "review", "--file", input);
+  // propose-contracts records nothing at all: its alternatives are transient
+  // and it is not an execution step either.
+  const transient = runIn(root, "lifecycle", "record", "propose-contracts", "--file", input);
   assert.equal(transient.status, 1);
   assert.match(transient.stdout, /no-graph-record/);
+  // review is an execution step, but this lineage has no run to record against.
+  const noRun = runIn(root, "lifecycle", "record", "review", "--file", input);
+  assert.equal(noRun.status, 1);
   const unknown = runIn(root, "lifecycle", "record", "capture-intent", "--file", input);
   assert.equal(unknown.status, 1);
   assert.match(unknown.stdout, /unknown-field/);

@@ -16,11 +16,21 @@ If the runtime reports a validation problem, or lists `review` as already comple
 
 Use the `reviewer` agent (from `.claude/agents/reviewer.md`) for this. Give it the runtime context verbatim. Review the contract, the brief, the delivered changes and the required verification. Report findings with file references.
 
-## 3. Report, do not record
+## 3. Hand the result to the runtime
 
-This stage leaves no graph record. Present the result to the user. Do not
-create or edit anything under `specs/`.
-Review reasoning is not graph state.
+This leaves no graph record, but the runtime tracks the run. Write a YAML
+file in a temporary location outside the repository with:
+
+```yaml
+intent: <brief-id or intent-id>
+outcome: pass | revise | blocked
+```
+
+Then run `pnpm pactwright lifecycle record review --file <path>`.
+The runtime decides what happens next. Do not choose the next step
+yourself, and do not create or edit anything under `specs/`.
+Review reasoning is not graph state; only the verdict is recorded, and
+a Review never creates Evidence.
 
 ## 4. Stop
 

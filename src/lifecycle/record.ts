@@ -27,6 +27,14 @@ import {
   pendingResponsibilities,
   selectLineages,
 } from "./engine.js";
+import {
+  PROVENANCE_KINDS,
+  isProvenanceKind,
+  recordDelivery,
+  recordReview,
+  type ProvenanceKind,
+} from "./provenance.js";
+import { REVIEW_OUTCOMES, type ReviewOutcome } from "./state.js";
 
 /**
  * The canonical commands that leave a durable Delivery Graph record
@@ -52,10 +60,66 @@ export function isRecordingStage(stage: string): stage is RecordingStage {
   return (RECORDING_COMMANDS as readonly string[]).includes(stage);
 }
 
-/** The nodes one `lifecycle record` created, in creation order. */
+/**
+ * What one `lifecycle record` did. A graph-marking command creates nodes; an
+ * execution step creates none and advances the run instead, which is the
+ * boundary Spec 01 §11 draws between canonical records and provenance.
+ */
 export interface RecordResult {
-  readonly stage: RecordingStage;
+  readonly stage: RecordingStage | ProvenanceKind;
   readonly created: readonly GraphNode[];
+  /** Set for an execution step: the step recorded and where the run went next. */
+  readonly advanced?: {
+    readonly brief: string;
+    readonly status: string;
+    readonly nextStep?: string;
+  };
+}
+
+/**
+ * Records a Delivery or Review result as execution provenance. The input
+ * names the lineage and, for a Review, its verdict; the runtime decides the
+ * transition, so the adapter can neither invent a route nor write a record.
+ */
+function recordProvenance(root: string, kind: ProvenanceKind, inputPath: string): RecordResult {
+  const file = readYamlFile(inputPath);
+  if (file.problems.length > 0)
+    throw PactwrightError.fromProblems("invalid-record-input", file.problems);
+  const c = new Checker(inputPath);
+  if (!isRecord(file.value)) {
+    c.fail("invalid-type", "record input must be a mapping");
+    throw PactwrightError.fromProblems("invalid-record-input", c.problems);
+  }
+  const record = file.value;
+  const required = kind === "review" ? ["intent", "outcome"] : ["intent"];
+  const allowed = kind === "review" ? ["intent", "outcome"] : ["intent", "revision"];
+  requireKeys(c, record, "record input", required);
+  rejectUnknownKeys(c, record, "record input", allowed);
+  const anchor = expectString(c, record["intent"], "intent");
+  const outcome =
+    kind === "review" ? expectEnum(c, record["outcome"], "outcome", REVIEW_OUTCOMES) : undefined;
+  const revision =
+    kind === "delivery" && record["revision"] !== undefined
+      ? expectString(c, record["revision"], "revision")
+      : undefined;
+  if (!c.ok) throw PactwrightError.fromProblems("invalid-record-input", c.problems);
+
+  const result =
+    kind === "delivery"
+      ? recordDelivery(root, {
+          anchor: anchor!,
+          ...(revision === undefined ? {} : { revision }),
+        })
+      : recordReview(root, { anchor: anchor!, outcome: outcome as ReviewOutcome });
+  return {
+    stage: kind,
+    created: [],
+    advanced: {
+      brief: result.brief,
+      status: result.state.status,
+      ...(result.state.currentStep === undefined ? {} : { nextStep: result.state.currentStep }),
+    },
+  };
 }
 
 /**
@@ -177,10 +241,13 @@ function assertPermitted(project: Project, stage: RecordingStage, anchor: string
  * complete proposed state atomically. Nothing is written on any failure.
  */
 export function recordStage(root: string, stage: string, inputPath: string): RecordResult {
+  if (isProvenanceKind(stage)) {
+    return recordProvenance(root, stage, inputPath);
+  }
   if (!isRecordingStage(stage)) {
     throw new PactwrightError(
       "no-graph-record",
-      `"${stage}" leaves no graph record; only ${RECORDING_COMMANDS.join(", ")} can be recorded`,
+      `"${stage}" is neither a graph-marking command (${RECORDING_COMMANDS.join(", ")}) nor an execution step (${PROVENANCE_KINDS.join(", ")})`,
     );
   }
   const fields = readFields(stage, inputPath);

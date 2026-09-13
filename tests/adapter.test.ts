@@ -23,7 +23,7 @@ import { fixture, makeTempProject, repoRoot } from "./helpers.js";
  * value: bump it on purpose, in the same commit, after reading the diff.
  */
 const COMPLETE_RENDER_HASH =
-  "sha256:e566d791b866eda6c2603c6b392c00fe44a9794dbbd394a9218a84b37973f022";
+  "sha256:45a872208787a3b11b21fbc55a634bba44f0c02b78c744ff78843ac54437cc50";
 
 /**
  * A file shaped as a stale render: frontmatter, then the banner in the
@@ -133,11 +133,24 @@ test("adapter: commands invoke the runtime and own no transition rules", () => {
       assert.match(text, /pnpm pactwright (context|validate)/, `${stage} asks the runtime`);
       assert.doesNotMatch(text, FORBIDDEN, `${stage} must not state transition rules`);
       assert.doesNotMatch(text, /\$\{/, `${stage} has no unrendered placeholders`);
+      // Three distinct mutation boundaries (Spec 01 §§47–53):
       if ((RECORDING_COMMANDS as readonly string[]).includes(stage)) {
+        // graph-marking: hands content to the runtime, which writes the record
         assert.match(text, new RegExp(`pnpm pactwright lifecycle record ${stage} --file`), stage);
+      } else if (stage === "deliver-brief" || stage === "review") {
+        // execution steps: provenance only, never a graph record
+        const kind = stage === "review" ? "review" : "delivery";
+        assert.match(text, new RegExp(`pnpm pactwright lifecycle record ${kind} --file`), stage);
+        assert.match(text, /leaves no graph record/, stage);
+        assert.match(text, /runtime decides what happens next/, stage);
       } else {
+        // graph-read-only: alternatives stay transient, nothing is recorded
+        assert.equal(stage, "propose-contracts");
         assert.doesNotMatch(text, /lifecycle record/, `${stage} records nothing`);
         assert.match(text, /leaves no graph record/, stage);
+      }
+      if (stage === "review") {
+        assert.match(text, /never creates Evidence/, "review must not create Evidence");
       }
     }
     for (const [stage, agent] of [
