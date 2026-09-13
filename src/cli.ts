@@ -12,6 +12,7 @@ import { loadContext, type DeliveryContext, type HistoryRecord } from "./context
 import { loadConfig, type PactwrightConfig } from "./config/config.js";
 import { CORE_DELIVERY_SUITE } from "./eval/core-suite.js";
 import { evalPassed, runEval, type EvalCaseResult, type EvalReport } from "./eval/runner.js";
+import { compareEvalReports, formatComparison } from "./eval/compare.js";
 import type { GraphNode } from "./graph/nodes.js";
 import {
   addExtension,
@@ -24,8 +25,8 @@ import { finishUpgrade, upgradeRuntime } from "./upgrade.js";
 import { initProject } from "./init.js";
 import { syncProject } from "./sync.js";
 import { loadProject } from "./loader.js";
-import { resolvePack } from "./pack/resolve.js";
-import { upgradeAgentPack, useAgentPack, type PackChangeReport } from "./pack/select.js";
+import { resolvePack, type ResolvedPack } from "./pack/resolve.js";
+import { parseSpec, upgradeAgentPack, useAgentPack, type PackChangeReport } from "./pack/select.js";
 import { validateProject } from "./validate.js";
 import { findProjectRoot, projectPaths } from "./project.js";
 import { runtimeVersion } from "./version.js";
@@ -81,6 +82,9 @@ Commands:
   eval [--json]                              Run the core Delivery evaluation suite against
                                              the selected agent pack (deterministic assertions
                                              and semantic dimensions reported separately)
+  eval --baseline <pack> --candidate <pack>  Compare a candidate against a released baseline and
+       [--json]                              report regressions per capability, agent and case;
+                                             no aggregate score is computed
 
 Options:
   -h, --help     Show this help
@@ -98,6 +102,10 @@ interface CommonOptions {
   readonly withExtensions?: readonly string[];
   /** Explicit `upgrade --to` target. */
   readonly to?: string;
+  /** `eval --baseline`: the released pack or baseline to compare against. */
+  readonly baseline?: string;
+  /** `eval --candidate`: the pack or environment under evaluation. */
+  readonly candidate?: string;
   /** `upgrade --finish`: the half the newly installed runtime runs. */
   readonly finish: boolean;
   /** Positional arguments, in order. */
@@ -114,12 +122,16 @@ function parseOptions(
     with?: boolean;
     to?: boolean;
     finish?: boolean;
+    baseline?: boolean;
+    candidate?: boolean;
   } = {},
 ): CommonOptions | string {
   let intent: string | undefined;
   let file: string | undefined;
   let agentPack: string | undefined;
   let to: string | undefined;
+  let baseline: string | undefined;
+  let candidate: string | undefined;
   let finish = false;
   const withExtensions: string[] = [];
   let json = false;
@@ -136,6 +148,18 @@ function parseOptions(
     } else if (arg === "--file" && allow.file === true) {
       file = args[i + 1];
       if (file === undefined || file.startsWith("--")) return "--file needs a path";
+      i += 1;
+    } else if (arg === "--baseline" && allow.baseline === true) {
+      baseline = args[i + 1];
+      if (baseline === undefined || baseline.startsWith("--")) {
+        return "--baseline needs a released pack or baseline";
+      }
+      i += 1;
+    } else if (arg === "--candidate" && allow.candidate === true) {
+      candidate = args[i + 1];
+      if (candidate === undefined || candidate.startsWith("--")) {
+        return "--candidate needs a pack or environment";
+      }
       i += 1;
     } else if (arg === "--to" && allow.to === true) {
       to = args[i + 1];
@@ -166,6 +190,8 @@ function parseOptions(
     ...(agentPack === undefined ? {} : { agentPack }),
     ...(withExtensions.length === 0 ? {} : { withExtensions }),
     ...(to === undefined ? {} : { to }),
+    ...(baseline === undefined ? {} : { baseline }),
+    ...(candidate === undefined ? {} : { candidate }),
     finish,
   };
 }
@@ -730,8 +756,74 @@ function formatEvalReport(report: EvalReport): string {
  * `@pactwright/standard` pack, since evaluation is independent from any
  * project's Delivery (Distribution §16).
  */
+/** Resolves one side of a comparison from a pack source. */
+function resolveSide(root: string, source: string): ResolvedPack | PactwrightError {
+  const config: PactwrightConfig = {
+    version: 1,
+    agentPack: packSpecToConfig(source),
+    adapter: { type: "claude-code" },
+    extensions: {},
+    github: { enabled: false },
+  };
+  const resolved = resolvePack({ root, config });
+  if (resolved.value === undefined) {
+    return PactwrightError.fromProblems("pack-unresolved", resolved.problems);
+  }
+  return resolved.value;
+}
+
+function packSpecToConfig(source: string): { source: string; version?: string } {
+  const parsed = parseSpec(source);
+  if ("code" in parsed) return { source };
+  return parsed.version === undefined
+    ? { source: parsed.source }
+    : { source: parsed.source, version: parsed.version };
+}
+
+async function evalCompare(
+  root: string,
+  baselineSource: string,
+  candidateSource: string,
+  json: boolean,
+): Promise<number> {
+  const sides: Array<[string, string]> = [
+    ["baseline", baselineSource],
+    ["candidate", candidateSource],
+  ];
+  const packs: ResolvedPack[] = [];
+  for (const [which, source] of sides) {
+    const resolved = resolveSide(root, source);
+    if (resolved instanceof PactwrightError) {
+      err(`pactwright: could not resolve the ${which} "${source}"\n`);
+      printProblems(resolved, json);
+      return 1;
+    }
+    packs.push(resolved);
+  }
+  const [baselinePack, candidatePack] = packs as [ResolvedPack, ResolvedPack];
+  const baseline = await runEval({ pack: baselinePack, suite: CORE_DELIVERY_SUITE });
+  const candidate = await runEval({ pack: candidatePack, suite: CORE_DELIVERY_SUITE });
+  const comparison = compareEvalReports({
+    baseline,
+    candidate,
+    baselineEnvironment: { agents: baselinePack.hashes.agents, skills: baselinePack.hashes.skills },
+    candidateEnvironment: {
+      agents: candidatePack.hashes.agents,
+      skills: candidatePack.hashes.skills,
+    },
+  });
+  out(
+    json
+      ? `${JSON.stringify({ baseline, candidate, comparison }, null, 2)}\n`
+      : formatComparison(comparison),
+  );
+  // A comparison reports; it does not gate on the candidate's own pass/fail,
+  // which `pactwright eval` already does. A regression is the failure here.
+  return comparison.hasRegressions ? 1 : 0;
+}
+
 async function evalCommand(args: readonly string[]): Promise<number> {
-  const options = parseOptions(args);
+  const options = parseOptions(args, { baseline: true, candidate: true });
   if (typeof options === "string" || options.positional.length > 0) {
     const why =
       typeof options === "string" ? options : `unexpected argument "${options.positional[0]}"`;
@@ -758,6 +850,13 @@ async function evalCommand(args: readonly string[]): Promise<number> {
       extensions: {},
       github: { enabled: false },
     };
+  }
+  if ((options.baseline === undefined) !== (options.candidate === undefined)) {
+    err("pactwright: --baseline and --candidate are used together\n\n" + HELP);
+    return 1;
+  }
+  if (options.baseline !== undefined && options.candidate !== undefined) {
+    return evalCompare(root, options.baseline, options.candidate, options.json);
   }
   const resolved = resolvePack({ root, config });
   if (resolved.value === undefined) {

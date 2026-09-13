@@ -610,7 +610,7 @@ test("cli: eval --json emits the per-case report", () => {
   };
   assert.equal(report.suite, "core-delivery");
   assert.equal(report.pack.name, "@pactwright/standard");
-  assert.equal(report.cases.length, 5);
+  assert.equal(report.cases.length, 8);
   for (const entry of report.cases) {
     assert.ok(
       entry.deterministic.every((a) => a.passed),
@@ -640,4 +640,37 @@ test("cli: eval fails a pack missing a required capability (exit 1)", () => {
 test("cli: eval rejects unexpected arguments", () => {
   assert.equal(run("eval", "extra").status, 1);
   assert.equal(run("eval", "--nope").status, 1);
+});
+
+test("cli: eval --baseline/--candidate compares and reports no regression for an unchanged pack", () => {
+  const result = run(
+    "eval",
+    "--baseline",
+    "@pactwright/standard",
+    "--candidate",
+    "@pactwright/standard",
+  );
+  assert.equal(result.status, 0, result.stderr);
+  assert.match(result.stdout, /Comparison of suite "core-delivery"/);
+  assert.match(result.stdout, /No differences/);
+  // §24: no opaque aggregate decides whether a candidate is better.
+  assert.doesNotMatch(result.stdout, /score/i);
+});
+
+test("cli: eval rejects --baseline without --candidate", () => {
+  const result = run("eval", "--baseline", "@pactwright/standard");
+  assert.equal(result.status, 1);
+  assert.match(result.stderr, /--baseline and --candidate are used together/);
+});
+
+test("cli: eval reports an unresolvable baseline rather than comparing against nothing", () => {
+  const result = run(
+    "eval",
+    "--baseline",
+    "@pactwright/does-not-exist",
+    "--candidate",
+    "@pactwright/standard",
+  );
+  assert.equal(result.status, 1);
+  assert.match(result.stderr, /could not resolve the baseline/);
 });

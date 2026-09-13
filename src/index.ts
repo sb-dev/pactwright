@@ -364,3 +364,14 @@ export {
   type SemanticResult,
 } from "./eval/runner.js";
 export { CORE_DELIVERY_SUITE } from "./eval/core-suite.js";
+export { CLOSURE_CASES } from "./eval/closure-cases.js";
+export {
+  compareEvalReports,
+  formatComparison,
+  type AssertionDelta,
+  type AssertionMovement,
+  type CaseComparison,
+  type ComparisonEnvironment,
+  type ComparisonReport,
+  type EnvironmentDelta,
+} from "./eval/compare.js";
