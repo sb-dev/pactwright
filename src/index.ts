@@ -207,6 +207,17 @@ export {
 } from "./lifecycle/run.js";
 export { canonicalJson, HASH_PATTERN } from "./canonical.js";
 export {
+  RUNTIME_PACKAGE,
+  cliReentry,
+  finishUpgrade,
+  packageManagerInstaller,
+  upgradeRuntime,
+  type PackageInstaller,
+  type Reentry,
+  type UpgradeOptions,
+  type UpgradeReport,
+} from "./upgrade.js";
+export {
   DOCTOR_STATUSES,
   doctor,
   formatDoctor,

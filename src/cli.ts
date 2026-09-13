@@ -20,6 +20,7 @@ import {
   type ExtensionChangeReport,
 } from "./extension/manage.js";
 import { doctor, formatDoctor } from "./doctor.js";
+import { finishUpgrade, upgradeRuntime } from "./upgrade.js";
 import { initProject } from "./init.js";
 import { syncProject } from "./sync.js";
 import { loadProject } from "./loader.js";
@@ -43,6 +44,11 @@ Commands:
                                              surface from config + lock (deterministic; only
                                              files carrying the Pactwright banner are written
                                              or removed, so user-authored files are kept)
+  upgrade [--to <version>] [--json]          Upgrade the Pactwright runtime: detect the project
+                                             package manager, delegate package replacement to it,
+                                             then re-enter through the new runtime to migrate,
+                                             re-lock, sync and validate. --to takes an exact
+                                             release for a forward upgrade or a rollback
   doctor [--json]                            Read-only diagnostics of the distribution and
                                              execution environment; reports healthy, warning
                                              or action required and names the deterministic
@@ -90,6 +96,10 @@ interface CommonOptions {
   readonly agentPack?: string;
   /** Extension ids to install as part of one-shot `init`. */
   readonly withExtensions?: readonly string[];
+  /** Explicit `upgrade --to` target. */
+  readonly to?: string;
+  /** `upgrade --finish`: the half the newly installed runtime runs. */
+  readonly finish: boolean;
   /** Positional arguments, in order. */
   readonly positional: readonly string[];
 }
@@ -102,11 +112,15 @@ function parseOptions(
     file?: boolean;
     agentPack?: boolean;
     with?: boolean;
+    to?: boolean;
+    finish?: boolean;
   } = {},
 ): CommonOptions | string {
   let intent: string | undefined;
   let file: string | undefined;
   let agentPack: string | undefined;
+  let to: string | undefined;
+  let finish = false;
   const withExtensions: string[] = [];
   let json = false;
   let history = false;
@@ -123,6 +137,12 @@ function parseOptions(
       file = args[i + 1];
       if (file === undefined || file.startsWith("--")) return "--file needs a path";
       i += 1;
+    } else if (arg === "--to" && allow.to === true) {
+      to = args[i + 1];
+      if (to === undefined || to.startsWith("--")) return "--to needs a version";
+      i += 1;
+    } else if (arg === "--finish" && allow.finish === true) {
+      finish = true;
     } else if (arg === "--agent-pack" && allow.agentPack === true) {
       agentPack = args[i + 1];
       if (agentPack === undefined || agentPack.startsWith("--")) {
@@ -145,6 +165,8 @@ function parseOptions(
     ...(file === undefined ? {} : { file }),
     ...(agentPack === undefined ? {} : { agentPack }),
     ...(withExtensions.length === 0 ? {} : { withExtensions }),
+    ...(to === undefined ? {} : { to }),
+    finish,
   };
 }
 
@@ -504,6 +526,49 @@ function agentPackCommand(sub: string | undefined, args: readonly string[]): num
   return report.ok ? 0 : 1;
 }
 
+function upgradeCommand(args: readonly string[]): number {
+  const options = parseOptions(args, { to: true, finish: true });
+  if (typeof options === "string" || options.positional.length > 0) {
+    const why =
+      typeof options === "string" ? options : `unexpected argument "${options.positional[0]}"`;
+    err(`pactwright: ${why}\n\n${HELP}`);
+    return 1;
+  }
+  let root: string;
+  try {
+    root = findProjectRoot();
+  } catch (error) {
+    if (!(error instanceof PactwrightError)) throw error;
+    printProblems(error, options.json);
+    return 1;
+  }
+  // `--finish` is the half the *newly installed* runtime runs; it is not a
+  // user-facing operation, which is why the help does not advertise it.
+  const report = options.finish
+    ? finishUpgrade(root)
+    : upgradeRuntime(root, options.to === undefined ? {} : { to: options.to });
+  if (options.json) {
+    out(`${JSON.stringify(report, null, 2)}\n`);
+  } else {
+    if (report.ok) {
+      out(
+        report.unchanged
+          ? `unchanged: runtime ${report.from} is already the target\n`
+          : `upgraded runtime ${report.from} -> ${report.to}${report.manager === undefined ? "" : ` via ${report.manager}`}\n`,
+      );
+      for (const migration of report.migrations) out(`  migrated ${migration}\n`);
+      for (const file of report.synced) out(`  wrote ${file}\n`);
+    } else {
+      if (report.restored === true) {
+        out("upgrade failed; the previous environment was restored\n");
+      }
+      out("Problems:\n");
+      for (const problem of report.problems) out(`  - ${formatProblem(problem)}\n`);
+    }
+  }
+  return report.ok ? 0 : 1;
+}
+
 function doctorCommand(args: readonly string[]): number {
   const options = parseOptions(args);
   if (typeof options === "string" || options.positional.length > 0) {
@@ -743,6 +808,7 @@ export async function main(argv: readonly string[]): Promise<number> {
   if (first === "sync") return syncCommand(rest);
   if (first === "agent-pack") return agentPackCommand(rest[0], rest.slice(1));
   if (first === "doctor") return doctorCommand(rest);
+  if (first === "upgrade") return upgradeCommand(rest);
   if (first === "extension") return extensionCommand(rest[0], rest.slice(1));
   if (first === "lifecycle") return lifecycle(rest[0], rest.slice(1));
   if (first === "validate") return validate(rest);
