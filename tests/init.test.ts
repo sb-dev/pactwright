@@ -166,11 +166,11 @@ test("init: one-shot setup with an explicit pack resolves, locks and syncs", () 
 
 test("init: one-shot and explicit setup produce equivalent state, not just equal exit codes", () => {
   const oneShot = emptyRepo();
-  assert.equal(initProject(oneShot, { agentPack: `${STANDARD}@0.0.1` }).ok, true);
+  assert.equal(initProject(oneShot, { agentPack: `${STANDARD}@${runtimeVersion()}` }).ok, true);
 
   const explicit = emptyRepo();
   assert.equal(initProject(explicit).ok, true);
-  assert.equal(useAgentPack(explicit, `${STANDARD}@0.0.1`).ok, true);
+  assert.equal(useAgentPack(explicit, `${STANDARD}@${runtimeVersion()}`).ok, true);
   assert.equal(syncProject(explicit).ok, true);
 
   for (const relPath of [".pactwright/config.yml", ".pactwright/lock.yml"]) {
@@ -220,7 +220,7 @@ test("init: an incompatible pack choice activates nothing", () => {
 
 test("init: a pre-existing pack choice is preserved", () => {
   const dir = emptyRepo();
-  assert.equal(initProject(dir, { agentPack: `${STANDARD}@0.0.1` }).ok, true);
+  assert.equal(initProject(dir, { agentPack: `${STANDARD}@${runtimeVersion()}` }).ok, true);
   const config = read(dir, ".pactwright/config.yml");
   // A second init must not re-select or widen the choice already recorded.
   assert.equal(initProject(dir).ok, true);

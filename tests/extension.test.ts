@@ -11,6 +11,7 @@ import { requiredCapabilities } from "../src/pack/capabilities.js";
 import { resolveDesiredState, serialiseLock } from "../src/pack/resolve.js";
 import { validateProject } from "../src/validate.js";
 import type { PackageInstaller } from "../src/upgrade.js";
+import { runtimeVersion } from "../src/version.js";
 import { fixture, makeTempProject } from "./helpers.js";
 
 const dirs: string[] = [];
@@ -322,7 +323,9 @@ test("extension remove: runs when the extension being removed is what is broken"
   const manifest = installedManifest(root, "fixture-base");
   fs.writeFileSync(
     manifest,
-    fs.readFileSync(manifest, "utf8").replace("pactwright: 0.0.1", "pactwright: ^9.9.0"),
+    fs
+      .readFileSync(manifest, "utf8")
+      .replace(`pactwright: ${runtimeVersion()}`, "pactwright: ^9.9.0"),
   );
   assert.equal(validateProject({ root }).ok, false);
 
@@ -369,7 +372,9 @@ test("extension remove: a broken dependency is still blocked by its enabled depe
   const manifest = installedManifest(root, "fixture-base");
   fs.writeFileSync(
     manifest,
-    fs.readFileSync(manifest, "utf8").replace("pactwright: 0.0.1", "pactwright: ^9.9.0"),
+    fs
+      .readFileSync(manifest, "utf8")
+      .replace(`pactwright: ${runtimeVersion()}`, "pactwright: ^9.9.0"),
   );
 
   const blocked = removeExtension(root, "fixture-base");
@@ -431,7 +436,9 @@ test("extension remove: runs when other extensions are broken too", () => {
     const manifest = installedManifest(root, id);
     fs.writeFileSync(
       manifest,
-      fs.readFileSync(manifest, "utf8").replace("pactwright: 0.0.1", "pactwright: ^9.9.0"),
+      fs
+        .readFileSync(manifest, "utf8")
+        .replace(`pactwright: ${runtimeVersion()}`, "pactwright: ^9.9.0"),
     );
   }
   assert.equal(validateProject({ root }).ok, false);

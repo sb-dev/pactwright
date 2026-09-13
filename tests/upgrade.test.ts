@@ -278,10 +278,11 @@ test("upgrade --finish: a scaffold upgrades without inventing a pack", () => {
 
 test("upgrade: the agent pack and extension identities are not touched", () => {
   const root = consumer({ extensions: ["fixture-base"] });
-  assert.equal(useAgentPack(root, "@pactwright/standard@0.0.1").ok, true);
+  const pinned = runtimeVersion();
+  assert.equal(useAgentPack(root, `@pactwright/standard@${pinned}`).ok, true);
   const before = loadLock(path.join(root, ".pactwright", "lock.yml")).value!;
   const report = upgradeRuntime(root, {
-    install: fixtureInstaller("0.0.2").install,
+    install: fixtureInstaller("9.0.0").install,
     reenter: noReentry,
   });
   assert.equal(report.ok, true, report.problems.map((p) => p.message).join("\n"));
@@ -290,7 +291,7 @@ test("upgrade: the agent pack and extension identities are not touched", () => {
   assert.deepEqual(after.extensions, before.extensions, "nor any extension");
   assert.equal(
     loadConfig(path.join(root, ".pactwright", "config.yml")).value?.agentPack?.version,
-    "0.0.1",
+    pinned,
     "the configured constraint stays authoritative",
   );
 });

@@ -2,7 +2,7 @@ version: 1
 
 agent_pack:
   source: "@pactwright/standard"
-  version: "^0.0.1"
+  version: "^0.0.2"
 
 adapter:
   type: claude-code

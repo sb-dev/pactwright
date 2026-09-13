@@ -9,6 +9,7 @@ import { environmentLockHash, loadLock } from "../src/config/lock.js";
 import { detectPackageManager, installedVersion } from "../src/config/package-manager.js";
 import { repositoryRevision, NO_REPOSITORY_REVISION } from "../src/graph/repository.js";
 import { loadProject } from "../src/loader.js";
+import { runtimeVersion } from "../src/version.js";
 import { syncProject } from "../src/sync.js";
 import { makeTempProject, repoRoot } from "./helpers.js";
 
@@ -140,7 +141,7 @@ test("environment: a project with no package manager is reported, not assumed", 
 });
 
 test("environment: installed versions come from the package the manager resolved", () => {
-  assert.equal(installedVersion(repoRoot, "@pactwright/standard"), "0.0.1");
+  assert.equal(installedVersion(repoRoot, "@pactwright/standard"), runtimeVersion());
   assert.equal(installedVersion(repoRoot, "not-a-real-package-xyz"), undefined);
 });
 

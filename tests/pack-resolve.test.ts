@@ -148,8 +148,14 @@ test("resolve: runtime and requested-version compatibility are checked", () => {
     resolvePack({ root: ok, config: config("./pack", "^0.1.0") }).problems.map((p) => p.code),
     ["incompatible-pack-version"],
   );
+  // The fixture pack declares the current runtime, so resolving against that
+  // runtime and the pack's own version is clean.
   assert.deepEqual(
-    resolvePack({ root: ok, config: config("./pack", "0.0.0"), runtimeVersion: "0.0.1" }).problems,
+    resolvePack({
+      root: ok,
+      config: config("./pack", "0.0.0"),
+      runtimeVersion: runtimeVersion(),
+    }).problems,
     [],
   );
 });

@@ -1,8 +1,8 @@
 # Pactwright — Checkpoint 1 — Self-Hosted Delivery
 
-**Version:** 16  
+**Version:** 17  
 **Entry condition:** No installable Pactwright runtime exists.  
-**Release:** `0.0.1`  
+**Release:** `0.0.2` (corrective; `0.0.1` was published against version 14 of this runbook and remains the released baseline)  
 **Exit capability:** Pactwright is installable, upgradeable, can govern one complete Contract-driven Delivery in its own repository and in Kakeibo, can compare an Agent Pack candidate against a released baseline, and requires no manual Project Graph coherence work.
 
 ## 1. Goal
@@ -851,31 +851,41 @@ Follow the material in a clean packed-consumer fixture.
 
 ## Stage 9 — Publish `0.0.1`
 
-### Step 28 — Bootstrap first npm publication and prove a real released baseline
+### Step 28 — Publish the corrective release and prove a real released baseline
 
 **References:** Implementation Guide npm release model; Spec 02 baseline evaluation.
+
+`0.0.1` was published on 2026-09-01 against version 14 of this runbook, before
+the corrections version 15 introduced. npm reserves a version number
+permanently once used, so `0.0.1` cannot be re-cut; it stays on the registry
+as the released baseline, which is what the comparison below needs.
 
 Publish exactly:
 
 ```text
-pactwright@0.0.1
-@pactwright/standard@0.0.1
+pactwright@0.0.2
+@pactwright/standard@0.0.2
 ```
 
-Use the one-time interactive bootstrap, configure `release.yml` as trusted publisher for both, tag accepted source as `v0.0.1`, and verify the tag workflow.
+The npm trusted-publisher bootstrap was completed for `0.0.1`, so `release.yml`
+already publishes both packages without a token. Tag accepted source as
+`v0.0.2` and verify the tag workflow.
 
 **Verify before continuing**
 
 ```bash
-pnpm view pactwright@0.0.1 version
-pnpm view @pactwright/standard@0.0.1 version
+pnpm view pactwright@0.0.2 version
+pnpm view @pactwright/standard@0.0.2 version
 
 pnpm pactwright eval \
   --baseline @pactwright/standard@0.0.1 \
-  --candidate @pactwright/standard
+  --candidate @pactwright/standard@0.0.2
 ```
 
-The comparison must resolve the published `0.0.1` baseline exactly and emit per-capability/agent/case comparison results. An unchanged accepted candidate may correctly report no regressions; the purpose is to prove the real released-baseline path, not manufacture a difference.
+The comparison must resolve the published `0.0.1` baseline exactly and emit
+per-capability/agent/case comparison results. A candidate whose behaviour is
+unchanged may correctly report no regressions; the purpose is to prove the
+real released-baseline path, not manufacture a difference.
 
 ## Stage 10 — Prove the published release on Kakeibo
 
@@ -883,7 +893,7 @@ Use the final Checkpoint 1 package on the persistent external proving project.
 
 Kakeibo may still be a documentation-first/pre-implementation repository at this point. The only pre-Pactwright bootstrap permitted here is the minimum pnpm package/workspace root required to install a development dependency. Full Turborepo/application infrastructure belongs to Checkpoint 2.
 
-### Step 29 — Establish the minimum Kakeibo consumer root and install `0.0.1`
+### Step 29 — Establish the minimum Kakeibo consumer root and install `0.0.2`
 
 **References:** Distribution §§2–3; Kakeibo Acceptance Profile §5; current Kakeibo 05 package/layer boundary
 
@@ -910,7 +920,7 @@ packages:
 YAML
 fi
 
-pnpm add -D pactwright@0.0.1
+pnpm add -D pactwright@0.0.2
 pnpm pactwright init
 pnpm pactwright sync
 pnpm pactwright validate
@@ -1044,12 +1054,12 @@ Checkpoint 1 closes only when:
 - external Production Skills resolution remains explicitly assigned to Checkpoint 5, and unsupported imports are not silently ignored;
 - `init`, `sync`, `doctor`, `validate`, lifecycle commands and core `eval` work;
 - core evaluation covers Contract fidelity, scope discipline, Brief quality, Review quality, Evidence accuracy and lifecycle compliance;
-- baseline/candidate evaluation reports meaningful per-dimension regressions and resolves the real released `@pactwright/standard@0.0.1` baseline after publication;
+- baseline/candidate evaluation reports meaningful per-dimension regressions and resolves the real released `@pactwright/standard@0.0.1` baseline;
 - a clean packed consumer completes a full Delivery;
 - Pactwright completes real self-hosted Delivery;
 - public learning material matches shipped capability;
-- `pactwright@0.0.1` and `@pactwright/standard@0.0.1` are registry verified;
-- `0.0.1` is published to npm and installs into Kakeibo;
+- `pactwright@0.0.2` and `@pactwright/standard@0.0.2` are registry verified, and `0.0.1` remains resolvable as the comparison baseline;
+- `0.0.2` is published to npm and installs into Kakeibo;
 - the `0.0.1` public content set (README Quick Start, Getting Started guide, core Delivery example) is delivered through Pactwright and included in the tagged release source;
 - a documentation-first Kakeibo repository can establish the minimum consumer package/workspace root without prematurely building CP2 infrastructure;
 - Kakeibo completes a real Intent → Evidence Delivery implementing the deterministic `packages/domain` financial foundation;
@@ -1060,4 +1070,4 @@ Checkpoint 1 closes only when:
 
 ---
 
-**Pactwright — Checkpoint 1 — Self-Hosted Delivery v16**
+**Pactwright — Checkpoint 1 — Self-Hosted Delivery v17**

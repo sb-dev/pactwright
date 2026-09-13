@@ -2,7 +2,10 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 import { CORE_CAPABILITIES, missingCapabilities } from "../src/pack/capabilities.js";
 import { loadPackManifest, parsePackManifest } from "../src/pack/manifest.js";
-import { fixture } from "./helpers.js";
+import * as fs from "node:fs";
+import * as path from "node:path";
+import { runtimeVersion } from "../src/version.js";
+import { fixture, repoRoot } from "./helpers.js";
 
 const pack = (name: string): string => fixture(`packs/${name}`);
 
@@ -10,7 +13,7 @@ test("pack manifest: the complete fixture parses to the §7 shape", () => {
   const result = loadPackManifest(pack("complete"));
   assert.deepEqual(result.problems, []);
   assert.equal(result.value?.name, "@pactwright/standard");
-  assert.equal(result.value?.pactwright, "0.0.1");
+  assert.equal(result.value?.pactwright, runtimeVersion());
   assert.deepEqual(
     { ...result.value?.capabilities },
     {
@@ -141,4 +144,30 @@ test("pack manifest: skills are optional", () => {
   );
   assert.deepEqual(result.problems, []);
   assert.deepEqual(result.value?.agents["spec"]?.skills, []);
+});
+
+test("fixtures: every compatible fixture declares the current runtime version", () => {
+  // Pre-1.0, `^0.0.z` means that exact patch, so a fixture pinning the runtime
+  // has to move with it. Failing here names the one thing to update, instead
+  // of every pack and extension test failing with an incompatibility.
+  const pinned: Array<[string, string]> = [];
+  for (const dir of fs.readdirSync(fixture("packs"))) {
+    if (dir === "wrong-runtime") continue; // deliberately incompatible
+    const file = path.join(fixture("packs"), dir, "pack.yml");
+    if (fs.existsSync(file)) pinned.push([file, fs.readFileSync(file, "utf8")]);
+  }
+  for (const dir of fs.readdirSync(fixture("extensions"))) {
+    const file = path.join(fixture("extensions"), dir, "extension.yml");
+    if (fs.existsSync(file)) pinned.push([file, fs.readFileSync(file, "utf8")]);
+  }
+  const stale = pinned
+    .filter(
+      ([, text]) => !new RegExp(String.raw`^pactwright: \^?${runtimeVersion()}$`, "m").test(text),
+    )
+    .map(([file]) => path.relative(repoRoot, file));
+  assert.deepEqual(
+    stale,
+    [],
+    `these fixtures pin an old runtime; set "pactwright: ${runtimeVersion()}" in each`,
+  );
 });

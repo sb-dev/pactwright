@@ -6,6 +6,7 @@ import { doctor } from "../src/doctor.js";
 import { loadConfig } from "../src/config/config.js";
 import { loadLock } from "../src/config/lock.js";
 import { parseSpec, upgradeAgentPack, useAgentPack } from "../src/pack/select.js";
+import { runtimeVersion } from "../src/version.js";
 import { fixture, makeTempProject } from "./helpers.js";
 
 const dirs: string[] = [];
@@ -87,16 +88,20 @@ test("agent-pack: an unresolvable source is rejected without touching the projec
 
 test("agent-pack: an exact configured target stays selected", () => {
   const root = temp();
-  const report = useAgentPack(root, "@pactwright/standard@0.0.1");
+  const report = useAgentPack(root, `@pactwright/standard@${runtimeVersion()}`);
   assert.equal(report.ok, true, report.problems.map((p) => p.message).join("\n"));
-  assert.equal(configOf(root).agentPack!.version, "0.0.1");
+  assert.equal(configOf(root).agentPack!.version, runtimeVersion());
   // A desired constraint does not authorise changing pack identity, so an
   // upgrade under an exact pin resolves to the same version.
   const upgraded = upgradeAgentPack(root);
   assert.equal(upgraded.ok, true, upgraded.problems.map((p) => p.message).join("\n"));
-  assert.equal(upgraded.selected?.version, "0.0.1");
+  assert.equal(upgraded.selected?.version, runtimeVersion());
   assert.equal(upgraded.unchanged, true);
-  assert.equal(configOf(root).agentPack!.version, "0.0.1", "upgrade never rewrites desired state");
+  assert.equal(
+    configOf(root).agentPack!.version,
+    runtimeVersion(),
+    "upgrade never rewrites desired state",
+  );
 });
 
 test("agent-pack: an incompatible exact target is rejected", () => {
