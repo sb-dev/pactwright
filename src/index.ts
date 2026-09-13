@@ -206,6 +206,13 @@ export {
   type ActionRequest,
 } from "./lifecycle/run.js";
 export { canonicalJson, HASH_PATTERN } from "./canonical.js";
+export {
+  EVIDENCE_PRECONDITIONS,
+  assertEvidenceClosure,
+  checkEvidenceClosure,
+  type ClosureCheck,
+  type EvidencePrecondition,
+} from "./graph/closure.js";
 export { checkEnvironmentAgreement, type EnvironmentAgreement } from "./config/agreement.js";
 export {
   PACKAGE_MANAGERS,

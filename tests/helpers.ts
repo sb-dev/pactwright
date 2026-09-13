@@ -9,6 +9,7 @@ import { loadNodes, type GraphNode } from "../src/graph/nodes.js";
 import { CORE_NODE_SCHEMAS, validateNodes } from "../src/graph/schema.js";
 import { loadConfig } from "../src/config/config.js";
 import { resolveDesiredState, writeLock } from "../src/pack/resolve.js";
+import { writeExecutionState, type ExecutionState } from "../src/lifecycle/state.js";
 
 export const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 export const fixtures = path.join(repoRoot, "tests", "fixtures");
@@ -252,4 +253,33 @@ export function lifecycleDocument(
     }
   }
   return `${lines.join("\n")}\n`;
+}
+
+/**
+ * Advances a Brief's run to its Evidence closure step with a passing Review
+ * of the latest delivered state — the state a real run reaches after
+ * Delivery and Review. Tests that legitimately close a lineage use this;
+ * tests that must be refused deliberately skip it or vary one field.
+ */
+export function reachEvidenceClosure(
+  root: string,
+  briefId: string,
+  overrides: Partial<ExecutionState> = {},
+): ExecutionState {
+  const delivered = overrides.deliveredRevision ?? "delivered-1";
+  const state: ExecutionState = {
+    version: 1,
+    brief: briefId,
+    shape: "direct",
+    status: "running",
+    currentStep: "evidence",
+    completedSteps: ["delivery", "review"],
+    gates: {},
+    iterations: {},
+    deliveredRevision: delivered,
+    review: { step: "review", outcome: "pass", revision: delivered },
+    ...overrides,
+  };
+  writeExecutionState(root, state);
+  return state;
 }

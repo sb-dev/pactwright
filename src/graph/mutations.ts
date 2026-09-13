@@ -4,6 +4,7 @@ import { dump } from "js-yaml";
 import { tempSibling } from "../atomic.js";
 import { PactwrightError, type Problem } from "../errors.js";
 import { decisionActor, type Actor } from "../config/lifecycle.js";
+import { assertEvidenceClosure } from "./closure.js";
 import { loadProject, type Project } from "../loader.js";
 import { assertPackComplete } from "../pack/resolve.js";
 import { composedRegistries } from "../extension/resolve.js";
@@ -441,13 +442,18 @@ export interface CreateEvidenceInput {
 }
 
 /**
- * Creates the Evidence record for a Brief (§12), completing the core
- * Delivery lifecycle. Existing current evidence is superseded explicitly
- * (§15, evidence correction). Current graph state is loaded at commit time;
- * see `createIntent`.
+ * Creates the Evidence record for a Brief (§12), completing the Delivery
+ * lifecycle. Existing current evidence is superseded explicitly (§15,
+ * evidence correction). Current graph state is loaded at commit time; see
+ * `createIntent`.
+ *
+ * All five §53 closure preconditions are enforced *before* anything is
+ * planned or written (Checkpoint 1 Step 7), so a refused closure leaves no
+ * Evidence node and no partial `evidences` edge.
  */
 export function createEvidence(root: string, input: CreateEvidenceInput): GraphNode {
   const project = loadProject({ root });
+  assertEvidenceClosure(project, input.briefId);
   const brief = requireNode(project, input.briefId, "brief");
   const evidence = buildNode(project, {
     type: "evidence",
