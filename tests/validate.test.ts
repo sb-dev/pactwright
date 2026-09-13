@@ -17,12 +17,15 @@ test("validate: a valid project reports ok with counts and the graph revision", 
   assert.equal(report.ok, true);
   assert.deepEqual(report.problems, []);
   const project = loadProject({ root });
-  assert.deepEqual(report.summary, {
-    nodes: 3,
-    edges: 2,
-    lineages: 1,
-    revision: graphRevision(project.graph),
-  });
+  assert.deepEqual(report.rules, []);
+  assert.equal(report.summary?.nodes, 3);
+  assert.equal(report.summary?.edges, 2);
+  assert.equal(report.summary?.lineages, 1);
+  assert.equal(report.summary?.revision, graphRevision(project.graph));
+  // The summary carries the other two replay identities alongside the graph
+  // revision (Spec 01 §56).
+  assert.match(report.summary!.environmentLockHash, /^sha256:[0-9a-f]{64}$/);
+  assert.ok(report.summary!.repositoryRevision.length > 0);
 });
 
 const invalid: Array<[string, string]> = [

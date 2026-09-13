@@ -435,7 +435,12 @@ function validate(args: readonly string[]): number {
   } else if (report.ok) {
     const s = report.summary!;
     out(
-      `Valid: ${s.nodes} nodes, ${s.edges} edges, ${s.lineages} lineages (revision ${s.revision})\n`,
+      [
+        `Valid: ${s.nodes} nodes, ${s.edges} edges, ${s.lineages} lineages\n`,
+        `  repository_revision:   ${s.repositoryRevision}\n`,
+        `  project_graph_revision: ${s.revision}\n`,
+        `  environment_lock_hash: ${s.environmentLockHash}\n`,
+      ].join(""),
     );
   } else {
     out("Validation problems:\n");

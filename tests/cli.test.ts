@@ -187,10 +187,11 @@ test("cli: help lists validate and context", () => {
 test("cli: validate reports a valid project (exit 0)", () => {
   const result = runIn(fixture("valid-project"), "validate");
   assert.equal(result.status, 0, result.stderr);
-  assert.match(
-    result.stdout,
-    /^Valid: 3 nodes, 2 edges, 1 lineages \(revision sha256:[0-9a-f]{64}\)\n$/,
-  );
+  assert.match(result.stdout, /^Valid: 3 nodes, 2 edges, 1 lineages\n/);
+  // The three replay identities are reported together (Spec 01 §56).
+  assert.match(result.stdout, /repository_revision: {3}\S+\n/);
+  assert.match(result.stdout, /project_graph_revision: sha256:[0-9a-f]{64}\n/);
+  assert.match(result.stdout, /environment_lock_hash: sha256:[0-9a-f]{64}\n/);
   const json = runIn(fixture("valid-project"), "validate", "--json");
   assert.equal(json.status, 0);
   assert.equal((JSON.parse(json.stdout) as { ok: boolean }).ok, true);
