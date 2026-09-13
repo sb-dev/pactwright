@@ -203,7 +203,8 @@ function noTemps(root: string): void {
 }
 
 test("lock: a complete pack resolves and writes a lock that round-trips, byte-identical on rerun", () => {
-  const root = temp({ pack: "complete" });
+  // Starts from the fixture's placeholder lock, so the write is observable.
+  const root = temp({ pack: "complete", resolveLock: false });
   const before = lockBytes(root);
   const { pack, lock } = resolveAndLock(root);
   const written = lockBytes(root);

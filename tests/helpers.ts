@@ -7,6 +7,8 @@ import { CORE_EDGE_SCHEMAS, validateEdges } from "../src/graph/edge-schema.js";
 import { loadEdges, type Edge } from "../src/graph/edges.js";
 import { loadNodes, type GraphNode } from "../src/graph/nodes.js";
 import { CORE_NODE_SCHEMAS, validateNodes } from "../src/graph/schema.js";
+import { loadConfig } from "../src/config/config.js";
+import { resolveDesiredState, writeLock } from "../src/pack/resolve.js";
 
 export const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 export const fixtures = path.join(repoRoot, "tests", "fixtures");
@@ -74,6 +76,8 @@ export function makeTempProject(
     readonly extensions?: ReadonlyArray<
       string | { readonly id: string; readonly enabled?: boolean; readonly configure?: boolean }
     >;
+    /** Keep the fixture's placeholder lock, for lock-drift tests. */
+    readonly resolveLock?: boolean;
   } = {},
 ): string {
   const dir = mkdtempSync(path.join(repoRoot, ".tmp-pactwright-test-"));
@@ -144,6 +148,17 @@ export function makeTempProject(
         options.transitions ?? DEFAULT_TRANSITIONS,
       ),
     );
+  }
+  // A real project's lock describes the environment it actually resolves to,
+  // and sync now refuses to render from one that does not. Resolve the lock
+  // from the finished configuration, exactly as `init` does.
+  if (options.resolveLock !== false) {
+    const config = loadConfig(path.join(dir, ".pactwright", "config.yml"));
+    if (config.value !== undefined) {
+      const desired = resolveDesiredState({ root: dir, config: config.value });
+      if (desired.value !== undefined)
+        writeLock(path.join(dir, ".pactwright", "lock.yml"), desired.value.lock);
+    }
   }
   return dir;
 }

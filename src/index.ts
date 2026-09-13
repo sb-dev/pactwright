@@ -66,8 +66,9 @@ export {
   type ReviewRecord,
 } from "./lifecycle/state.js";
 export {
+  ENVIRONMENT_LOCK_VERSION,
   EXTENSION_ID_PATTERN,
-  HASH_PATTERN,
+  environmentLockHash,
   loadLock,
   parseLock,
   type LockExtension,
@@ -150,7 +151,6 @@ export {
   REVISION_PATTERN,
   REVISION_VERSION,
   canonicalGraphPayload,
-  canonicalJson,
   graphRevision,
   type CanonicalRecord,
   type RevisionInput,
@@ -205,6 +205,23 @@ export {
   type ActionOutcome,
   type ActionRequest,
 } from "./lifecycle/run.js";
+export { canonicalJson, HASH_PATTERN } from "./canonical.js";
+export { checkEnvironmentAgreement, type EnvironmentAgreement } from "./config/agreement.js";
+export {
+  PACKAGE_MANAGERS,
+  detectPackageManager,
+  installedVersion,
+  type DetectedPackageManager,
+  type PackageManager,
+  type PackageManagerDetection,
+} from "./config/package-manager.js";
+export {
+  NO_REPOSITORY_REVISION,
+  formatReplayBase,
+  repositoryRevision,
+  type ReplayBase,
+  type RepositoryRevision,
+} from "./graph/repository.js";
 export { validateProject, type ValidationReport } from "./validate.js";
 export { renderGitHubWorkflows, syncProject, type SyncReport } from "./sync.js";
 export {
