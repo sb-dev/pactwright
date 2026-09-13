@@ -1,63 +1,88 @@
 import { PactwrightError, type Problem } from "../errors.js";
-import type { Actor, StageName } from "../config/lifecycle.js";
+import { isRecordingResponsibility, type Actor } from "../config/lifecycle.js";
 import { deriveLineage, type Lineage } from "../graph/lineage.js";
 import { loadProject, type Project } from "../loader.js";
-import { isActive, isTransientStage, nextActionFor, selectLineages } from "./engine.js";
+import {
+  executionFor,
+  inShapePhase,
+  isActive,
+  nextActionFor,
+  selectLineages,
+  routeAfter,
+  type LifecycleAction,
+} from "./engine.js";
+import { stepNamed } from "./shape.js";
+import {
+  clearExecutionState,
+  routeKey,
+  writeExecutionState,
+  type ExecutionState,
+  type ReviewOutcome,
+} from "./state.js";
 
-/** What a stage executor reports back to the runtime. */
-export type StageOutcome =
-  { readonly status: "completed" } | { readonly status: "failed"; readonly message: string };
+/** What an executor reports back to the runtime. */
+export type ActionOutcome =
+  | {
+      readonly status: "completed";
+      /** Required from a Review step: what it concluded (§32). */
+      readonly review?: ReviewOutcome;
+      /** The delivered state's identity, recorded by a Delivery step. */
+      readonly revision?: string;
+    }
+  | { readonly status: "failed"; readonly message: string };
 
-export interface StageRequest {
-  readonly stage: StageName;
+export interface ActionRequest {
+  readonly action: LifecycleAction;
   /**
-   * Read-only derivation input (which lineage, which config) — never a
-   * mutation base. Executors that mutate the graph pass
-   * `project.paths.root` to the typed mutations, which load and validate
-   * the current graph state themselves at commit time.
+   * Read-only derivation input (which lineage, which policy) — never a
+   * mutation base. Executors that mutate the graph pass `project.paths.root`
+   * to the typed mutations, which load and validate the current graph state
+   * themselves at commit time.
    */
   readonly project: Project;
   /** Absent for capture-intent on a graph with no active lineage. */
   readonly lineage?: Lineage;
+  /** The run this action belongs to; absent for Contract-crafting responsibilities. */
+  readonly execution?: ExecutionState;
 }
 
 /**
- * Executes one automatic stage's responsibility (Delivery Graph §16). The
- * runtime decides *which* stage runs and when; the executor only performs
- * it, mutating the graph through the Step 7 mutations where the stage
- * leaves a record. Later checkpoints plug the agent pack in here.
+ * Performs one automatic lifecycle action. The runtime decides *which* action
+ * runs and when, enforces Gates and bounded iteration, and owns every
+ * canonical mutation; the executor only performs the responsibility, through
+ * the selected Agent Pack's capability.
  */
-export type StageExecutor = (request: StageRequest) => StageOutcome | Promise<StageOutcome>;
+export type ActionExecutor = (request: ActionRequest) => ActionOutcome | Promise<ActionOutcome>;
 
-/** Why `lifecycle run` stopped (Delivery Graph §20). */
-export type RunStop = "completed" | "human-gate" | "stage-failed" | "validation-error";
+/** Why `lifecycle run` stopped (§20). */
+export type RunStop = "completed" | "human-gate" | "stage-failed" | "validation-error" | "blocked";
 
 export interface RunResult {
   readonly intent?: string;
   readonly stop: RunStop;
-  /** The gate reached or the stage that failed. */
-  readonly stage?: StageName;
+  /** The gate reached, the step that failed, or the blocked step. */
+  readonly action?: string;
   readonly requiredActor?: Actor;
-  /** Stages executed in this run, in order. */
-  readonly executed: readonly StageName[];
+  /** Actions executed in this run, in order. */
+  readonly executed: readonly string[];
   readonly message?: string;
   readonly problems?: readonly Problem[];
 }
 
 export interface RunOptions {
   readonly root: string;
-  readonly execute: StageExecutor;
+  readonly execute: ActionExecutor;
   readonly intentId?: string;
 }
 
 /**
- * The runtime has no way to perform automatic stages until an agent pack is
- * installed (Checkpoint 1, Step 10): every automatic stage fails, so `run`
- * stops there instead of pretending.
+ * The executor a project has before an Agent Pack capability runner is
+ * configured: it performs nothing, so `run` stops at the first automatic
+ * action rather than pretending the responsibility was discharged.
  */
-export const noExecutor: StageExecutor = ({ stage }) => ({
+export const noExecutor: ActionExecutor = ({ action }) => ({
   status: "failed",
-  message: `no executor for automatic stage "${stage}"; agent-pack execution arrives with the default agent pack`,
+  message: `no executor configured for automatic ${action.kind} "${action.name}"`,
 });
 
 function load(root: string): Project | PactwrightError {
@@ -72,14 +97,87 @@ function load(root: string): Project | PactwrightError {
 function validationStop(
   intent: string | undefined,
   error: PactwrightError,
-  executed: StageName[],
+  executed: readonly string[],
 ): RunResult {
   return {
     ...(intent === undefined ? {} : { intent }),
     stop: "validation-error",
-    executed,
+    executed: [...executed],
     message: error.message,
     problems: error.problems,
+  };
+}
+
+/**
+ * Applies a completed shape step to the run's state: records the step,
+ * carries the Delivery revision or the Review verdict, then takes the route
+ * the shape permits. A corrective route increments its bounded iteration
+ * counter, so policy — not the agent — decides when to stop looping.
+ */
+function advance(
+  project: Project,
+  state: ExecutionState,
+  stepName: string,
+  outcome: Extract<ActionOutcome, { status: "completed" }>,
+): { readonly state: ExecutionState; readonly stop?: RunStop; readonly message?: string } {
+  const shape = project.lifecycle.shape;
+  const step = stepNamed(shape, stepName);
+  if (step === undefined) {
+    return {
+      state: { ...state, status: "failed" },
+      stop: "stage-failed",
+      message: `step "${stepName}" is not part of the "${shape.id}" shape`,
+    };
+  }
+
+  const completedSteps = state.completedSteps.includes(stepName)
+    ? state.completedSteps
+    : [...state.completedSteps, stepName];
+  let carried: ExecutionState = { ...state, completedSteps };
+  if (step.kind === "delivery" && outcome.revision !== undefined) {
+    // The identity of what was delivered, so a later change invalidates the
+    // Review taken against it (§53 precondition 2).
+    carried = { ...carried, deliveredRevision: outcome.revision };
+  }
+  if (step.kind === "review") {
+    if (outcome.review === undefined) {
+      return {
+        state: { ...carried, status: "failed" },
+        stop: "stage-failed",
+        message: `review step "${stepName}" completed without reporting an outcome; the runtime cannot choose a transition without one`,
+      };
+    }
+    carried = {
+      ...carried,
+      review: {
+        step: stepName,
+        outcome: outcome.review,
+        // A Review is taken against the delivered state currently recorded.
+        revision: carried.deliveredRevision ?? "",
+      },
+    };
+  }
+
+  const routing = routeAfter(shape, carried, step, outcome.review);
+  if (routing.stop !== undefined) {
+    return {
+      state: { ...carried, status: "blocked", currentStep: stepName },
+      stop: "blocked",
+      message: routing.reason ?? `the run is blocked at "${stepName}"`,
+    };
+  }
+  if (routing.to === undefined) {
+    // A completed run has no current step: the shape is finished.
+    const rest = { ...carried };
+    delete (rest as { currentStep?: string }).currentStep;
+    return { state: { ...rest, status: "completed" } };
+  }
+  let iterations = carried.iterations;
+  if (routing.route !== undefined) {
+    iterations = { ...iterations, [routing.route]: (iterations[routing.route] ?? 0) + 1 };
+  }
+  return {
+    state: { ...carried, status: "running", currentStep: routing.to, iterations },
   };
 }
 
@@ -89,8 +187,8 @@ async function runLineage(
   intent: string | undefined,
   first: Project,
 ): Promise<RunResult> {
-  const executed: StageName[] = [];
-  const done = new Set<StageName>();
+  const executed: string[] = [];
+  const done = new Set<string>();
   let project = first;
   let previousState: string | undefined;
   const tag = intent === undefined ? {} : { intent };
@@ -112,18 +210,33 @@ async function runLineage(
       previousState = lineage.state;
     }
 
+    const execution = executionFor(project, lineage);
     const next = nextActionFor(project, lineage, done);
-    if (next.stage === undefined) return { ...tag, stop: "completed", executed };
+    if (next.action === undefined) {
+      if (execution?.state.status === "blocked") {
+        return { ...tag, stop: "blocked", executed, message: next.reason };
+      }
+      return { ...tag, stop: "completed", executed };
+    }
+    // The Gate check happens on every step, before the executor is consulted,
+    // so a configured Gate is never skipped whatever the executor could do.
     if (next.gate) {
-      return { ...tag, stop: "human-gate", stage: next.stage, requiredActor: "human", executed };
+      return {
+        ...tag,
+        stop: "human-gate",
+        action: next.action.name,
+        requiredActor: next.action.actor ?? "human",
+        executed,
+      };
     }
 
-    let outcome: StageOutcome;
+    let outcome: ActionOutcome;
     try {
       outcome = await options.execute({
-        stage: next.stage,
+        action: next.action,
         project,
         ...(lineage ? { lineage } : {}),
+        ...(execution ? { execution: execution.state } : {}),
       });
     } catch (error) {
       outcome = {
@@ -132,39 +245,80 @@ async function runLineage(
       };
     }
     if (outcome.status === "failed") {
+      if (execution !== undefined) {
+        writeExecutionState(options.root, { ...execution.state, status: "failed" });
+      }
       return {
         ...tag,
         stop: "stage-failed",
-        stage: next.stage,
+        action: next.action.name,
         executed,
         message: outcome.message,
       };
     }
-    executed.push(next.stage);
+    executed.push(next.action.name);
 
-    // Repository state is re-read after every stage: a validation error stops the run.
+    // Repository state is re-read after every action: a validation error stops the run.
     const reloaded = load(options.root);
     if (reloaded instanceof PactwrightError) return validationStop(intent, reloaded, executed);
     project = reloaded;
 
-    if (isTransientStage(next.stage)) {
-      done.add(next.stage);
+    if (next.action.kind === "step") {
+      if (execution === undefined) {
+        return {
+          ...tag,
+          stop: "stage-failed",
+          action: next.action.name,
+          executed,
+          message: `shape step "${next.action.name}" ran without execution state`,
+        };
+      }
+      const advanced = advance(project, execution.state, next.action.name, outcome);
+      const closed =
+        intent !== undefined &&
+        deriveLineage(intent, project.graph.nodes, project.graph.edges)?.state === "done";
+      if (closed) {
+        // Evidence closed the lineage: the run is over and its progression
+        // state has nothing left to govern.
+        clearExecutionState(options.root, execution.state.brief);
+        return { ...tag, stop: "completed", executed };
+      }
+      writeExecutionState(options.root, advanced.state);
+      if (advanced.stop !== undefined) {
+        return {
+          ...tag,
+          stop: advanced.stop,
+          action: next.action.name,
+          executed,
+          ...(advanced.message === undefined ? {} : { message: advanced.message }),
+        };
+      }
+      if (advanced.state.status === "completed") return { ...tag, stop: "completed", executed };
       continue;
     }
-    // A graph-marking stage must have advanced the lineage, else the run would loop forever.
-    const advanced =
+
+    // A responsibility whose output is transient leaves no graph trace, so
+    // its completion is only known inside this run.
+    if (!isRecordingResponsibility(next.action.name)) {
+      done.add(next.action.name);
+      continue;
+    }
+
+    // A recording responsibility must have advanced the lineage, else the
+    // run would loop forever.
+    const advancedGraph =
       intent === undefined
         ? selectLineages(project).some(
             (candidate) => candidate !== undefined && isActive(candidate),
           )
         : deriveLineage(intent, project.graph.nodes, project.graph.edges)?.state !== previousState;
-    if (!advanced) {
+    if (!advancedGraph) {
       return {
         ...tag,
         stop: "stage-failed",
-        stage: next.stage,
+        action: next.action.name,
         executed,
-        message: `${next.stage} completed without advancing the graph`,
+        message: `${next.action.name} completed without advancing the graph`,
       };
     }
     if (intent === undefined) {
@@ -175,11 +329,11 @@ async function runLineage(
 }
 
 /**
- * `lifecycle run` (Delivery Graph §20): runs automatic stages of every
- * active lineage (or the one `intentId`) until a human gate, completion, a
- * stage failure or a validation error. Gates are checked by the runtime on
- * every step, so a configured gate is never skipped whatever the executor
- * could do. Never throws for expected failures.
+ * `lifecycle run` (§20): runs automatic actions of every active lineage (or
+ * the one `intentId`) until a Gate, completion, a block, an execution failure
+ * or a validation failure. It cannot skip a Gate, cannot invent a transition
+ * and cannot create Evidence before the closure guards pass. Never throws for
+ * expected failures.
  */
 export async function runLifecycle(options: RunOptions): Promise<readonly RunResult[]> {
   const project = load(options.root);
@@ -223,3 +377,5 @@ export async function runLifecycle(options: RunOptions): Promise<readonly RunRes
   }
   return results;
 }
+
+export { inShapePhase, routeKey };

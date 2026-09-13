@@ -5,7 +5,7 @@ import * as fs from "node:fs";
 import { rmSync } from "node:fs";
 import * as path from "node:path";
 import {
-  defaultStages,
+  defaultResponsibilities,
   fixture,
   makeEmptyRepo,
   makeTempProject,
@@ -94,10 +94,10 @@ test("cli: lifecycle status reports the contracted fixture", () => {
   assert.equal(result.status, 0, result.stderr);
   assert.match(result.stdout, /Intent: intent-hello-world-a1b2/);
   assert.match(result.stdout, /state: contracted/);
-  assert.match(result.stdout, /current stage: write-brief/);
+  assert.match(result.stdout, /current: write-brief \(responsibility\)/);
   assert.match(
     result.stdout,
-    /completed stages: capture-intent, propose-contracts, approve-contract/,
+    /completed responsibilities: capture-intent, propose-contracts, approve-contract/,
   );
   assert.match(
     result.stdout,
@@ -109,22 +109,25 @@ test("cli: lifecycle status reports the contracted fixture", () => {
 test("cli: lifecycle status --json emits the structure", () => {
   const result = runIn(fixture("valid-project"), "lifecycle", "status", "--json");
   assert.equal(result.status, 0, result.stderr);
-  const parsed = JSON.parse(result.stdout) as { lineages: Array<{ currentStage: string }> };
-  assert.equal(parsed.lineages[0]?.currentStage, "write-brief");
+  const parsed = JSON.parse(result.stdout) as {
+    lineages: Array<{ current: { name: string; kind: string } }>;
+  };
+  assert.equal(parsed.lineages[0]?.current.name, "write-brief");
+  assert.equal(parsed.lineages[0]?.current.kind, "responsibility");
 });
 
 test("cli: lifecycle next reports write-brief for the contracted fixture", () => {
   const result = runIn(fixture("valid-project"), "lifecycle", "next");
   assert.equal(result.status, 0, result.stderr);
-  assert.match(result.stdout, /next stage: write-brief \(automatic\)/);
+  assert.match(result.stdout, /next: write-brief \(responsibility, automatic\)/);
 });
 
-test("cli: lifecycle next reports no next stage after current Evidence", () => {
+test("cli: lifecycle next reports no next action after current Evidence", () => {
   const root = project({ lineage: "done" });
   const result = runIn(root, "lifecycle", "next", "--intent", "intent-quick-start-a1b2");
   assert.equal(result.status, 0, result.stderr);
-  assert.match(result.stdout, /next stage: none/);
-  assert.match(result.stdout, /no next stage/);
+  assert.match(result.stdout, /next: none/);
+  assert.match(result.stdout, /no next action/);
 });
 
 test("cli: lifecycle status/next print validation problems and exit 1", () => {
@@ -140,7 +143,7 @@ test("cli: lifecycle status/next print validation problems and exit 1", () => {
 test("cli: lifecycle run stops at a manual gate (exit 0)", () => {
   const root = project({
     lineage: "open",
-    stages: defaultStages({ "propose-contracts": { execution: "manual" } }),
+    responsibilities: defaultResponsibilities({ "propose-contracts": { execution: "manual" } }),
   });
   const result = runIn(root, "lifecycle", "run");
   assert.equal(result.status, 0, result.stderr);
@@ -151,7 +154,7 @@ test("cli: lifecycle run stops with a stage failure when no executor exists (exi
   const root = project({ lineage: "contracted" });
   const result = runIn(root, "lifecycle", "run");
   assert.equal(result.status, 1);
-  assert.match(result.stdout, /stopped: stage write-brief failed: no executor/);
+  assert.match(result.stdout, /stopped: write-brief failed: no executor/);
 });
 
 test("cli: lifecycle run stops on a validation error (exit 1)", () => {
@@ -252,11 +255,11 @@ test("cli: context argument and option errors", () => {
 });
 
 test("cli: help lists lifecycle record", () => {
-  assert.match(run("--help").stdout, /lifecycle record <stage> --file <yaml>/);
+  assert.match(run("--help").stdout, /lifecycle record <command> --file <yaml>/);
 });
 
 test("cli: lifecycle record capture-intent creates an intent from a YAML file", () => {
-  const root = project({ stages: defaultStages() });
+  const root = project({ responsibilities: defaultResponsibilities() });
   const input = path.join(root, "intent.yml");
   fs.writeFileSync(input, "title: Hello world\nbody: |\n  Make hello world print.\n");
   const result = runIn(root, "lifecycle", "record", "capture-intent", "--file", input, "--json");
@@ -270,11 +273,11 @@ test("cli: lifecycle record capture-intent creates an intent from a YAML file", 
   assert.match(parsed.created[0]!.id, /^intent-hello-world-/);
   assert.ok(fs.existsSync(path.join(root, "specs", "nodes", `${parsed.created[0]!.id}.md`)));
   const next = runIn(root, "lifecycle", "next", "--intent", parsed.created[0]!.id);
-  assert.match(next.stdout, /next stage: propose-contracts/);
+  assert.match(next.stdout, /next: propose-contracts/);
 });
 
 test("cli: lifecycle record walks a lineage from contract to evidence through the runtime", () => {
-  const root = project({ lineage: "contracted", stages: defaultStages() });
+  const root = project({ lineage: "contracted", responsibilities: defaultResponsibilities() });
   const brief = path.join(root, "brief.yml");
   fs.writeFileSync(brief, "contract: contract-quick-start-c3d4\ntitle: Do it\nbody: |\n  Steps.\n");
   const wrote = runIn(root, "lifecycle", "record", "write-brief", "--file", brief);
@@ -284,17 +287,24 @@ test("cli: lifecycle record walks a lineage from contract to evidence through th
   const again = runIn(root, "lifecycle", "record", "write-brief", "--file", brief);
   assert.equal(again.status, 1);
   assert.match(again.stdout, /stage-not-permitted/);
-  assert.match(again.stdout, /deliver-brief/);
+  // With a Brief in place the shape governs, and its first step is Delivery.
+  assert.match(again.stdout, /delivery/);
 
+  // Evidence cannot be minted straight off a Brief: the run has delivered
+  // nothing and reviewed nothing, so the closing step has not been reached
+  // (Spec 01 §53, Checkpoint 1 Step 7).
   const evidence = path.join(root, "evidence.yml");
   fs.writeFileSync(evidence, `brief: ${briefId}\ntitle: Done\nbody: |\n  Verified.\n`);
-  const done = runIn(root, "lifecycle", "record", "prepare-evidence", "--file", evidence);
-  assert.equal(done.status, 0, done.stdout + done.stderr);
-  assert.match(runIn(root, "lifecycle", "status").stdout, /state: done/);
+  const premature = runIn(root, "lifecycle", "record", "prepare-evidence", "--file", evidence);
+  assert.equal(premature.status, 1, premature.stdout);
+  assert.match(premature.stdout, /stage-not-permitted/);
+  const after = runIn(root, "lifecycle", "status");
+  assert.match(after.stdout, /state: delivering/);
+  assert.doesNotMatch(after.stdout, /state: done/);
 });
 
 test("cli: lifecycle record approve-contract checks the actor through the Step 7 mutation", () => {
-  const root = project({ lineage: "open", stages: defaultStages() });
+  const root = project({ lineage: "open", responsibilities: defaultResponsibilities() });
   const decision = path.join(root, "decision.yml");
   fs.writeFileSync(
     decision,
@@ -320,7 +330,7 @@ test("cli: lifecycle record approve-contract checks the actor through the Step 7
 });
 
 test("cli: lifecycle record approve-contract resumes a deferred lineage", () => {
-  const root = project({ lineage: "deferred", stages: defaultStages() });
+  const root = project({ lineage: "deferred", responsibilities: defaultResponsibilities() });
   const decision = path.join(root, "decision.yml");
   fs.writeFileSync(
     decision,
@@ -341,7 +351,7 @@ test("cli: lifecycle record approve-contract resumes a deferred lineage", () => 
 });
 
 test("cli: lifecycle record rejects transient stages, bad input and missing options", () => {
-  const root = project({ lineage: "open", stages: defaultStages() });
+  const root = project({ lineage: "open", responsibilities: defaultResponsibilities() });
   const input = path.join(root, "x.yml");
   fs.writeFileSync(input, "title: t\nbody: b\nextra: 1\n");
   const transient = runIn(root, "lifecycle", "record", "review", "--file", input);

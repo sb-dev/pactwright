@@ -9,7 +9,7 @@ argument-hint: <brief-id>
 
 ## 1. Ask the runtime first
 
-Run `pnpm pactwright context <brief-id>` for the current lineage and `pnpm pactwright lifecycle status --intent <intent-id>` for the completed stages. The runtime owns the lifecycle: it decides what is permitted, who may decide and how records are linked. Never reason about that yourself.
+Run `pnpm pactwright context <brief-id>` for the current lineage and `pnpm pactwright lifecycle status --intent <intent-id>` for what is completed. The runtime owns the lifecycle: it decides what is permitted, who may decide and how records are linked. Never reason about that yourself.
 If the runtime reports a validation problem, or lists `deliver-brief` as already completed, show its output and stop. The runtime refuses any record that is out of order.
 
 ## 2. Execute the brief

@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-import { formatProblem, PactwrightError } from "./errors.js";
+import { formatProblem, PactwrightError, type Problem } from "./errors.js";
 import {
   lifecycleNext,
   lifecycleStatus,
@@ -8,7 +8,6 @@ import {
 } from "./lifecycle/engine.js";
 import { noExecutor, runLifecycle, type RunResult } from "./lifecycle/run.js";
 import { recordStage } from "./lifecycle/record.js";
-import type { StageName } from "./config/lifecycle.js";
 import { loadContext, type DeliveryContext, type HistoryRecord } from "./context.js";
 import { loadConfig, type PactwrightConfig } from "./config/config.js";
 import { CORE_DELIVERY_SUITE } from "./eval/core-suite.js";
@@ -41,11 +40,13 @@ Commands:
                                              or removed, so user-authored files are kept)
   validate [--json]                          Validate the Delivery Graph and typed-edge store
   context <node-id> [--history] [--json]     Print the current core Delivery lineage of a node
-  lifecycle status [--intent <id>] [--json]  Report stage, completed stages, gates and lineage
-  lifecycle next   [--intent <id>] [--json]  Report the next permitted core Delivery action
-  lifecycle run    [--intent <id>] [--json]  Run automatic stages until a gate, completion,
-                                             a stage failure or a validation error
-  lifecycle record <stage> --file <yaml>     Record the content of a graph-marking stage
+  lifecycle status [--intent <id>] [--json]  Report the current action, completed
+                                             responsibilities and shape steps, gates,
+                                             validation problems and the current lineage
+  lifecycle next   [--intent <id>] [--json]  Report the next permitted lifecycle action
+  lifecycle run    [--intent <id>] [--json]  Run automatic actions until a gate, completion,
+                                             a block, an execution failure or a validation error
+  lifecycle record <command> --file <yaml>   Record the content of a graph-marking command
                                              (capture-intent, approve-contract, write-brief,
                                              prepare-evidence) after the runtime checks the
                                              transition
@@ -123,14 +124,22 @@ function formatStatus(entry: LineageStatus): string {
   const lines: string[] = [];
   lines.push(entry.intent === undefined ? "No active lineage" : `Intent: ${entry.intent}`);
   lines.push(`  state: ${entry.state}`);
+  const current =
+    entry.current === undefined
+      ? "none (Delivery lifecycle complete or terminal)"
+      : `${entry.current.name} (${entry.current.kind})`;
+  lines.push(`  current: ${current}`);
   lines.push(
-    `  current stage: ${entry.currentStage ?? "none (core Delivery lifecycle complete or terminal)"}`,
+    `  completed responsibilities: ${entry.completedResponsibilities.length === 0 ? "none" : entry.completedResponsibilities.join(", ")}`,
   );
-  lines.push(
-    `  completed stages: ${entry.completed.length === 0 ? "none" : entry.completed.join(", ")}`,
-  );
-  if (entry.blockedStage !== undefined) {
-    lines.push(`  blocked stage: ${entry.blockedStage} (required actor: ${entry.requiredActor})`);
+  if (entry.shape !== undefined) {
+    lines.push(`  shape: ${entry.shape} (${entry.executionStatus ?? "running"})`);
+    lines.push(
+      `  completed steps: ${entry.completedSteps.length === 0 ? "none" : entry.completedSteps.join(", ")}`,
+    );
+  }
+  if (entry.blocked !== undefined) {
+    lines.push(`  blocked: ${entry.blocked} (required actor: ${entry.requiredActor})`);
   }
   if (entry.lineage !== undefined) {
     const { decision, contract, brief, evidence } = entry.lineage;
@@ -142,13 +151,18 @@ function formatStatus(entry: LineageStatus): string {
   return `${lines.join("\n")}\n`;
 }
 
+function formatStatusProblems(problems: readonly Problem[]): string {
+  if (problems.length === 0) return "Validation problems: none\n";
+  return `Validation problems:\n${problems.map((problem) => `  - ${formatProblem(problem)}\n`).join("")}`;
+}
+
 function formatNext(action: NextAction): string {
   const who = action.intent === undefined ? "No active lineage" : `Intent: ${action.intent}`;
-  const stage =
-    action.stage === undefined
-      ? "next stage: none"
-      : `next stage: ${action.stage} (${action.execution}${action.actor ? `, actor ${action.actor}` : ""}${action.gate ? ", human gate" : ""})`;
-  return `${who}\n  ${stage}\n  ${action.reason}\n`;
+  const next =
+    action.action === undefined
+      ? "next: none"
+      : `next: ${action.action.name} (${action.action.kind}, ${action.action.execution}${action.action.actor ? `, actor ${action.action.actor}` : ""}${action.gate ? ", human gate" : ""})`;
+  return `${who}\n  ${next}\n  ${action.reason}\n`;
 }
 
 function formatRun(result: RunResult): string {
@@ -157,15 +171,18 @@ function formatRun(result: RunResult): string {
   lines.push(`  executed: ${result.executed.length === 0 ? "none" : result.executed.join(", ")}`);
   switch (result.stop) {
     case "completed":
-      lines.push("  stopped: lifecycle complete or no automatic stage to run");
+      lines.push("  stopped: lifecycle complete or no automatic action to run");
       break;
     case "human-gate":
       lines.push(
-        `  stopped: human gate at ${result.stage} (required actor: ${result.requiredActor})`,
+        `  stopped: human gate at ${result.action} (required actor: ${result.requiredActor})`,
       );
       break;
     case "stage-failed":
-      lines.push(`  stopped: stage ${result.stage} failed: ${result.message}`);
+      lines.push(`  stopped: ${result.action} failed: ${result.message}`);
+      break;
+    case "blocked":
+      lines.push(`  stopped: blocked at ${result.action}: ${result.message}`);
       break;
     case "validation-error":
       lines.push(`  stopped: validation error: ${result.message}`);
@@ -194,7 +211,7 @@ function record(args: readonly string[]): number {
   }
   try {
     const root = findProjectRoot();
-    const result = recordStage(root, options.positional[0] as StageName, options.file);
+    const result = recordStage(root, options.positional[0]!, options.file);
     if (options.json) {
       const created = result.created.map((node) => ({ id: node.id, type: node.type }));
       out(`${JSON.stringify({ stage: result.stage, created }, null, 2)}\n`);
@@ -248,7 +265,7 @@ async function lifecycle(sub: string | undefined, args: readonly string[]): Prom
       out(
         options.json
           ? `${JSON.stringify(status, null, 2)}\n`
-          : `${status.lineages.map(formatStatus).join("")}Validation problems: none\n`,
+          : `${status.lineages.map(formatStatus).join("")}${formatStatusProblems(status.problems)}`,
       );
     } else {
       const actions = lifecycleNext(project, options.intent);

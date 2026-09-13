@@ -1,4 +1,20 @@
-import { CORE_STAGES, type StageName } from "../config/lifecycle.js";
+/**
+ * The seven canonical Claude Code adapter commands (Spec 01 §§47–53). These
+ * are the runtime's command surface, NOT lifecycle topology: their
+ * decomposition does not define the fulfilment shape, and four of them sit
+ * upstream of the Brief entirely. The lifecycle shape lives in
+ * `src/lifecycle/shape.ts`.
+ */
+export const COMMAND_NAMES = [
+  "capture-intent",
+  "propose-contracts",
+  "approve-contract",
+  "write-brief",
+  "deliver-brief",
+  "review",
+  "prepare-evidence",
+] as const;
+export type CommandName = (typeof COMMAND_NAMES)[number];
 
 /**
  * One generated adapter command (Delivery Graph §19). The body only says
@@ -8,7 +24,7 @@ import { CORE_STAGES, type StageName } from "../config/lifecycle.js";
  * to; absent when the command needs no agent.
  */
 export interface CommandTemplate {
-  readonly stage: StageName;
+  readonly name: CommandName;
   readonly description: string;
   readonly argumentHint: string;
   readonly capability?: string;
@@ -16,7 +32,7 @@ export interface CommandTemplate {
   readonly body: (agent: string | undefined) => string;
 }
 
-const RECORD = (stage: StageName, fields: string): string =>
+const RECORD = (command: CommandName, fields: string): string =>
   [
     `## 3. Hand the result to the runtime`,
     ``,
@@ -26,7 +42,7 @@ const RECORD = (stage: StageName, fields: string): string =>
     fields,
     "```",
     ``,
-    `Then run \`pnpm pactwright lifecycle record ${stage} --file <path>\`.`,
+    `Then run \`pnpm pactwright lifecycle record ${command} --file <path>\`.`,
     `The runtime checks the transition, validates the complete graph and writes`,
     `the record. Do not create or edit anything under \`specs/\` yourself.`,
   ].join("\n");
@@ -52,7 +68,7 @@ const delegate = (agent: string | undefined, task: string): string =>
 
 export const COMMAND_TEMPLATES: readonly CommandTemplate[] = [
   {
-    stage: "capture-intent",
+    name: "capture-intent",
     description: "Capture a new Delivery intent from text",
     argumentHint: "<text>",
     body: () =>
@@ -70,7 +86,7 @@ export const COMMAND_TEMPLATES: readonly CommandTemplate[] = [
       ].join("\n"),
   },
   {
-    stage: "propose-contracts",
+    name: "propose-contracts",
     description: "Generate transient contract alternatives for an intent",
     argumentHint: "<intent-id>",
     capability: "delivery-specification",
@@ -90,7 +106,7 @@ export const COMMAND_TEMPLATES: readonly CommandTemplate[] = [
       ].join("\n"),
   },
   {
-    stage: "approve-contract",
+    name: "approve-contract",
     description: "Record the human decision on an intent and its canonical contract",
     argumentHint: "<intent-id> <alternative> [notes]",
     capability: "delivery-specification",
@@ -127,7 +143,7 @@ export const COMMAND_TEMPLATES: readonly CommandTemplate[] = [
       ].join("\n"),
   },
   {
-    stage: "write-brief",
+    name: "write-brief",
     description: "Write the delivery brief for an approved contract",
     argumentHint: "<contract-id>",
     capability: "delivery-specification",
@@ -146,7 +162,7 @@ export const COMMAND_TEMPLATES: readonly CommandTemplate[] = [
       ].join("\n"),
   },
   {
-    stage: "deliver-brief",
+    name: "deliver-brief",
     description: "Execute a brief against the repository",
     argumentHint: "<brief-id>",
     capability: "delivery-execution",
@@ -166,7 +182,7 @@ export const COMMAND_TEMPLATES: readonly CommandTemplate[] = [
       ].join("\n"),
   },
   {
-    stage: "review",
+    name: "review",
     description: "Review delivered changes against the contract and brief",
     argumentHint: "<brief-id>",
     capability: "delivery-review",
@@ -186,7 +202,7 @@ export const COMMAND_TEMPLATES: readonly CommandTemplate[] = [
       ].join("\n"),
   },
   {
-    stage: "prepare-evidence",
+    name: "prepare-evidence",
     description: "Record final delivery and verification facts for a brief",
     argumentHint: "<brief-id>",
     capability: "delivery-execution",
@@ -209,10 +225,10 @@ export const COMMAND_TEMPLATES: readonly CommandTemplate[] = [
   },
 ];
 
-/** Every core stage has exactly one template, in lifecycle order. */
-export function templateFor(stage: StageName): CommandTemplate {
-  return COMMAND_TEMPLATES.find((template) => template.stage === stage)!;
+/** Every canonical command has exactly one template. */
+export function templateFor(name: CommandName): CommandTemplate {
+  return COMMAND_TEMPLATES.find((template) => template.name === name)!;
 }
 
-// Guard kept next to the data so a stage rename fails typecheck here.
-void (CORE_STAGES satisfies readonly StageName[]);
+// Guard kept next to the data: a missing or renamed command fails typecheck here.
+void (COMMAND_TEMPLATES.map((template) => template.name) satisfies readonly CommandName[]);

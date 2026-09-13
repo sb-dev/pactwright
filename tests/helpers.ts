@@ -60,7 +60,9 @@ export function makeTempProject(
   options: {
     readonly lineage?: string;
     readonly lifecycle?: string;
-    readonly stages?: Readonly<Record<string, { execution: string; actor?: string }>>;
+    readonly responsibilities?: Readonly<Record<string, { execution: string; actor?: string }>>;
+    readonly shapeSteps?: readonly ShapeStepSpec[];
+    readonly transitions?: readonly TransitionSpec[];
     /** A `tests/fixtures/packs/<name>` pack copied to `<dir>/pack` and selected by config. */
     readonly pack?: string;
     /**
@@ -129,13 +131,19 @@ export function makeTempProject(
   if (options.lifecycle !== undefined) {
     copyFileSync(path.join(fixture("lifecycle"), options.lifecycle), lifecyclePath);
   }
-  if (options.stages !== undefined) {
-    const lines = ["version: 1", "", "stages:"];
-    for (const [name, stage] of Object.entries(options.stages)) {
-      lines.push(`  ${name}:`, `    execution: ${stage.execution}`);
-      if (stage.actor !== undefined) lines.push(`    actor: ${stage.actor}`);
-    }
-    writeFileSync(lifecyclePath, `${lines.join("\n")}\n`);
+  if (
+    options.responsibilities !== undefined ||
+    options.shapeSteps !== undefined ||
+    options.transitions !== undefined
+  ) {
+    writeFileSync(
+      lifecyclePath,
+      lifecycleDocument(
+        options.responsibilities ?? defaultResponsibilities(),
+        options.shapeSteps ?? defaultShapeSteps(),
+        options.transitions ?? DEFAULT_TRANSITIONS,
+      ),
+    );
   }
   return dir;
 }
@@ -149,8 +157,21 @@ export function makeEmptyRepo(): string {
   return mkdtempSync(path.join(tmpdir(), "pactwright-init-"));
 }
 
-/** The §17 default lifecycle stages, with overrides. */
-export function defaultStages(
+export interface ShapeStepSpec {
+  readonly name: string;
+  readonly kind: "delivery" | "review" | "evidence";
+  readonly execution: string;
+  readonly actor?: string;
+}
+
+export interface TransitionSpec {
+  readonly from: string;
+  readonly to: string;
+  readonly maxIterations?: number;
+}
+
+/** The default Contract-crafting execution policy, with overrides. */
+export function defaultResponsibilities(
   overrides: Readonly<Record<string, { execution: string; actor?: string }>> = {},
 ): Record<string, { execution: string; actor?: string }> {
   return {
@@ -158,9 +179,62 @@ export function defaultStages(
     "propose-contracts": { execution: "automatic" },
     "approve-contract": { execution: "manual", actor: "human" },
     "write-brief": { execution: "automatic" },
-    "deliver-brief": { execution: "automatic" },
-    review: { execution: "automatic" },
-    "prepare-evidence": { execution: "automatic" },
     ...overrides,
   };
+}
+
+/** The built-in direct shape's steps: Brief → Delivery → Review → Evidence. */
+export function defaultShapeSteps(
+  overrides: Readonly<Record<string, { execution: string; actor?: string }>> = {},
+): ShapeStepSpec[] {
+  const base: ShapeStepSpec[] = [
+    { name: "delivery", kind: "delivery", execution: "automatic" },
+    { name: "review", kind: "review", execution: "automatic" },
+    { name: "evidence", kind: "evidence", execution: "automatic" },
+  ];
+  return base.map((step) => {
+    const override = overrides[step.name];
+    if (override === undefined) return step;
+    return override.actor === undefined
+      ? { ...step, execution: override.execution }
+      : { ...step, execution: override.execution, actor: override.actor };
+  });
+}
+
+export const DEFAULT_TRANSITIONS: readonly TransitionSpec[] = [
+  { from: "review", to: "delivery", maxIterations: 3 },
+];
+
+/** Renders a version 2 lifecycle document. */
+export function lifecycleDocument(
+  responsibilities: Readonly<Record<string, { execution: string; actor?: string }>>,
+  steps: readonly ShapeStepSpec[],
+  transitions: readonly TransitionSpec[],
+): string {
+  const lines = ["version: 2", "", "responsibilities:"];
+  for (const [name, policy] of Object.entries(responsibilities)) {
+    lines.push(`  ${name}:`, `    execution: ${policy.execution}`);
+    if (policy.actor !== undefined) lines.push(`    actor: ${policy.actor}`);
+  }
+  lines.push("", "shape:", "  id: direct", "  steps:");
+  for (const step of steps) {
+    lines.push(
+      `    - name: ${step.name}`,
+      `      kind: ${step.kind}`,
+      `      execution: ${step.execution}`,
+    );
+    if (step.actor !== undefined) lines.push(`      actor: ${step.actor}`);
+  }
+  if (transitions.length === 0) {
+    lines.push("  transitions: []");
+  } else {
+    lines.push("  transitions:");
+    for (const transition of transitions) {
+      lines.push(`    - from: ${transition.from}`, `      to: ${transition.to}`);
+      if (transition.maxIterations !== undefined) {
+        lines.push(`      max_iterations: ${transition.maxIterations}`);
+      }
+    }
+  }
+  return `${lines.join("\n")}\n`;
 }

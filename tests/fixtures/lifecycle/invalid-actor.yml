@@ -1,6 +1,6 @@
-version: 1
+version: 2
 
-stages:
+responsibilities:
   capture-intent:
     execution: manual
 
@@ -14,11 +14,19 @@ stages:
   write-brief:
     execution: automatic
 
-  deliver-brief:
-    execution: automatic
-
-  review:
-    execution: automatic
-
-  prepare-evidence:
-    execution: automatic
+shape:
+  id: direct
+  steps:
+    - name: delivery
+      kind: delivery
+      execution: automatic
+    - name: review
+      kind: review
+      execution: automatic
+    - name: evidence
+      kind: evidence
+      execution: automatic
+  transitions:
+    - from: review
+      to: delivery
+      max_iterations: 3

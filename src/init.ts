@@ -39,9 +39,11 @@ github:
 `;
 
 /** Default `.pactwright/lifecycle.yml`: the human-gated core Delivery lifecycle (Delivery Graph §17). */
-export const LIFECYCLE_TEMPLATE = `version: 1
+export const LIFECYCLE_TEMPLATE = `version: 2
 
-stages:
+# Execution policy for the Contract-crafting responsibilities. These are not
+# lifecycle-shape steps: they sit upstream of the Brief (Spec 01 §27).
+responsibilities:
   capture-intent:
     execution: manual
   propose-contracts:
@@ -51,12 +53,25 @@ stages:
     actor: human
   write-brief:
     execution: automatic
-  deliver-brief:
-    execution: automatic
-  review:
-    execution: automatic
-  prepare-evidence:
-    execution: automatic
+
+# The fulfilment shape governing Brief -> Evidence.
+shape:
+  id: direct
+  steps:
+    - name: delivery
+      kind: delivery
+      execution: automatic
+    - name: review
+      kind: review
+      execution: automatic
+    - name: evidence
+      kind: evidence
+      execution: automatic
+  transitions:
+    # A Review may route back to Delivery, bounded by policy (Spec 01 §34).
+    - from: review
+      to: delivery
+      max_iterations: 3
 `;
 
 /** Keeps `specs/nodes/` tracked by git; `loadNodes` reads only `*.md` and never sees it. */

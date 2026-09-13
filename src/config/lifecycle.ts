@@ -1,16 +1,75 @@
 import type { ParseResult } from "./config.js";
 import {
+  ACTORS,
+  EXECUTION_MODES,
+  type Actor,
+  type ExecutionMode,
+  type StepPolicy,
+} from "./lifecycle-policy.js";
+import { DIRECT_SHAPE, parseShape, type LifecycleShape } from "../lifecycle/shape.js";
+import {
   Checker,
   expectEnum,
+  expectInteger,
   expectRecord,
-  expectVersion,
+  isRecord,
   rejectUnknownKeys,
   requireKeys,
 } from "../validation.js";
 import { readYamlFile } from "../yaml.js";
 
-/** The seven core Delivery lifecycle stages, in lifecycle order (Delivery Graph §17). */
-export const CORE_STAGES = [
+export { ACTORS, EXECUTION_MODES };
+export type { Actor, ExecutionMode, StepPolicy };
+
+/**
+ * The Contract-crafting responsibilities (Spec 01 §22–§23). These sit
+ * *upstream* of the Brief and carry execution policy, but they are
+ * deliberately not lifecycle-shape steps: the shape governs the
+ * Brief-to-Evidence portion only (§27). Adapter command decomposition must
+ * never become lifecycle topology.
+ */
+export const RESPONSIBILITIES = [
+  "capture-intent",
+  "propose-contracts",
+  "approve-contract",
+  "write-brief",
+] as const;
+export type ResponsibilityName = (typeof RESPONSIBILITIES)[number];
+
+/** The responsibility whose configured actor authorises Decisions (§8). */
+export const DECISION_RESPONSIBILITY = "approve-contract" as const;
+
+/**
+ * Responsibilities that leave a durable Delivery Graph record. Contract
+ * alternatives stay transient until one is selected (§7), so
+ * propose-contracts is deliberately absent: the graph cannot show that it
+ * ran, and the runtime must not demand that it did.
+ */
+export const RECORDING_RESPONSIBILITIES = [
+  "capture-intent",
+  "approve-contract",
+  "write-brief",
+] as const satisfies readonly ResponsibilityName[];
+
+export function isRecordingResponsibility(name: string): boolean {
+  return (RECORDING_RESPONSIBILITIES as readonly string[]).includes(name);
+}
+
+/**
+ * `.pactwright/lifecycle.yml` — how the repository operates the lifecycle.
+ * It holds execution policy and the selected shape; it holds no graph truth
+ * and no fine-grained progression (§28).
+ */
+export interface LifecycleConfig {
+  readonly version: 2;
+  readonly responsibilities: Readonly<Record<ResponsibilityName, StepPolicy>>;
+  readonly shape: LifecycleShape;
+}
+
+export const LIFECYCLE_VERSION = 2;
+
+/** The seven-stage v1 document this runtime migrates from. */
+const V1_STAGES = [
   "capture-intent",
   "propose-contracts",
   "approve-contract",
@@ -19,76 +78,111 @@ export const CORE_STAGES = [
   "review",
   "prepare-evidence",
 ] as const;
-export type StageName = (typeof CORE_STAGES)[number];
 
-export const EXECUTION_MODES = ["manual", "automatic"] as const;
-export type ExecutionMode = (typeof EXECUTION_MODES)[number];
+/** v1 stage → the v2 shape step it became. */
+const V1_SHAPE_STAGES: Readonly<Record<string, string>> = {
+  "deliver-brief": "delivery",
+  review: "review",
+  "prepare-evidence": "evidence",
+};
 
-export const ACTORS = ["human", "agent"] as const;
-export type Actor = (typeof ACTORS)[number];
-
-export interface StageConfig {
-  readonly execution: ExecutionMode;
-  readonly actor?: Actor;
+function checkPolicy(c: Checker, raw: unknown, label: string): StepPolicy | undefined {
+  const record = expectRecord(c, raw, label);
+  if (record === undefined) return undefined;
+  requireKeys(c, record, label, ["execution"]);
+  rejectUnknownKeys(c, record, label, ["execution", "actor"]);
+  const execution = expectEnum(c, record["execution"], `${label}.execution`, EXECUTION_MODES);
+  const actor =
+    record["actor"] === undefined
+      ? undefined
+      : expectEnum(c, record["actor"], `${label}.actor`, ACTORS);
+  if (execution === undefined) return undefined;
+  return actor === undefined ? { execution } : { execution, actor };
 }
 
-/** `.pactwright/lifecycle.yml` — how the repository operates the lifecycle. */
-export interface LifecycleConfig {
-  readonly version: 1;
-  readonly stages: Readonly<Record<StageName, StageConfig>>;
+/**
+ * Recognises a v1 seven-stage document so the runtime can say "migrate"
+ * rather than emitting seven confusing unknown-key problems.
+ */
+function looksLikeV1(root: Record<string, unknown>): boolean {
+  if (root["version"] !== 1) return false;
+  const stages = root["stages"];
+  return typeof stages === "object" && stages !== null;
 }
-
-export const LIFECYCLE_VERSION = 1;
-
-/** The stage whose configured actor authorises Decisions (Delivery Graph §8). */
-export const DECISION_STAGE = "approve-contract" as const;
 
 export function parseLifecycle(raw: unknown, path: string): ParseResult<LifecycleConfig> {
   const c = new Checker(path);
   const root = expectRecord(c, raw, "lifecycle");
   if (root === undefined) return { value: undefined, problems: c.problems };
 
-  requireKeys(c, root, "lifecycle", ["version", "stages"]);
-  rejectUnknownKeys(c, root, "lifecycle", ["version", "stages"]);
-  expectVersion(c, root["version"], "lifecycle.version", LIFECYCLE_VERSION);
+  if (looksLikeV1(root)) {
+    c.fail(
+      "lifecycle-needs-migration",
+      `lifecycle.yml is version 1, which encoded the seven adapter commands as lifecycle stages; version ${LIFECYCLE_VERSION} separates Contract-crafting responsibilities from the Brief-to-Evidence shape. Run "pactwright upgrade" to migrate it.`,
+    );
+    return { value: undefined, problems: c.problems };
+  }
 
-  const stages: Partial<Record<StageName, StageConfig>> = {};
-  const rawStages = expectRecord(c, root["stages"], "lifecycle.stages");
-  if (rawStages !== undefined) {
-    requireKeys(c, rawStages, "lifecycle.stages", CORE_STAGES);
-    for (const key of Object.keys(rawStages)) {
-      if (!(CORE_STAGES as readonly string[]).includes(key)) {
+  requireKeys(c, root, "lifecycle", ["version", "responsibilities", "shape"]);
+  rejectUnknownKeys(c, root, "lifecycle", ["version", "responsibilities", "shape"]);
+  const version = expectInteger(c, root["version"], "lifecycle.version");
+  if (version !== undefined && version !== LIFECYCLE_VERSION) {
+    c.fail(
+      "unsupported-version",
+      `lifecycle.version must be ${LIFECYCLE_VERSION}, found ${version}`,
+    );
+  }
+
+  const responsibilities: Partial<Record<ResponsibilityName, StepPolicy>> = {};
+  const rawResponsibilities = expectRecord(
+    c,
+    root["responsibilities"],
+    "lifecycle.responsibilities",
+  );
+  if (rawResponsibilities !== undefined) {
+    requireKeys(c, rawResponsibilities, "lifecycle.responsibilities", RESPONSIBILITIES);
+    for (const key of Object.keys(rawResponsibilities)) {
+      if (!(RESPONSIBILITIES as readonly string[]).includes(key)) {
+        const wasShapeStage = V1_SHAPE_STAGES[key];
         c.fail(
-          "unknown-stage",
-          `lifecycle.stages has unknown stage "${key}"; only core Delivery stages are configurable here`,
+          "unknown-responsibility",
+          wasShapeStage === undefined
+            ? `lifecycle.responsibilities has unknown responsibility "${key}"`
+            : `lifecycle.responsibilities has unknown responsibility "${key}"; it is a shape step named "${wasShapeStage}" and belongs under lifecycle.shape.steps`,
         );
       }
     }
-    for (const name of CORE_STAGES) {
-      const label = `lifecycle.stages.${name}`;
-      const stage = expectRecord(c, rawStages[name], label);
-      if (stage === undefined) continue;
-      requireKeys(c, stage, label, ["execution"]);
-      rejectUnknownKeys(c, stage, label, ["execution", "actor"]);
-      const execution = expectEnum(c, stage["execution"], `${label}.execution`, EXECUTION_MODES);
-      const actor =
-        stage["actor"] === undefined
-          ? undefined
-          : expectEnum(c, stage["actor"], `${label}.actor`, ACTORS);
-      if (name === DECISION_STAGE && stage["actor"] === undefined) {
+    for (const name of RESPONSIBILITIES) {
+      const raw = rawResponsibilities[name];
+      // The *declared* key decides whether the actor is missing: an actor that
+      // failed its enum check is invalid, not absent, and must not also be
+      // reported as missing.
+      const declaresActor = isRecord(raw) && "actor" in raw;
+      if (name === DECISION_RESPONSIBILITY && raw !== undefined && !declaresActor) {
         c.fail(
           "missing-actor",
-          `${label} must declare "actor"; Decisions must be authorised by lifecycle.yml (Delivery Graph §8)`,
+          `lifecycle.responsibilities.${name} must declare "actor"; Decisions must be authorised by lifecycle.yml (Spec 01 §8)`,
         );
+        continue;
       }
-      if (execution !== undefined) {
-        stages[name] = actor === undefined ? { execution } : { execution, actor };
-      }
+      const policy = checkPolicy(c, raw, `lifecycle.responsibilities.${name}`);
+      if (policy === undefined) continue;
+      responsibilities[name] = policy;
     }
   }
 
-  if (!c.ok) return { value: undefined, problems: c.problems };
-  return { value: { version: 1, stages: stages as Record<StageName, StageConfig> }, problems: [] };
+  const shape = parseShape(root["shape"], path);
+  c.problems.push(...shape.problems);
+
+  if (!c.ok || shape.value === undefined) return { value: undefined, problems: c.problems };
+  return {
+    value: {
+      version: LIFECYCLE_VERSION,
+      responsibilities: responsibilities as Record<ResponsibilityName, StepPolicy>,
+      shape: shape.value,
+    },
+    problems: [],
+  };
 }
 
 export function loadLifecycle(path: string): ParseResult<LifecycleConfig> {
@@ -99,21 +193,68 @@ export function loadLifecycle(path: string): ParseResult<LifecycleConfig> {
 
 /** The actor authorised to make Decisions: `approve-contract`'s configured actor. */
 export function decisionActor(lifecycle: LifecycleConfig): Actor {
-  return lifecycle.stages[DECISION_STAGE].actor!;
+  return lifecycle.responsibilities[DECISION_RESPONSIBILITY].actor!;
 }
 
 /**
- * A human gate is a stage that cannot proceed without a human: manual
- * execution or a human actor. `lifecycle run` stops here and never skips one
- * (Delivery Graph §20). In the §17 default example the gates are
- * capture-intent and approve-contract; in the automated example only
- * capture-intent remains.
+ * A responsibility that cannot proceed without a human: manual execution or a
+ * human actor. `lifecycle run` stops here and never skips one (§20).
  */
-export function isHumanGate(stage: StageConfig): boolean {
-  return stage.execution === "manual" || stage.actor === "human";
+export function isHumanGate(policy: StepPolicy): boolean {
+  return policy.execution === "manual" || policy.actor === "human";
 }
 
-/** The human gates of a lifecycle, in stage order. */
-export function humanGates(lifecycle: LifecycleConfig): readonly StageName[] {
-  return CORE_STAGES.filter((name) => isHumanGate(lifecycle.stages[name]));
+/** The human-gated Contract-crafting responsibilities, in order. */
+export function gatedResponsibilities(lifecycle: LifecycleConfig): readonly ResponsibilityName[] {
+  return RESPONSIBILITIES.filter((name) => isHumanGate(lifecycle.responsibilities[name]));
+}
+
+/**
+ * Migrates a parsed v1 seven-stage document to the v2 shape. The four
+ * Contract-crafting stages keep their policy as responsibilities; the three
+ * Brief-to-Evidence stages become the direct shape's steps, so an existing
+ * project keeps exactly the operating policy it had.
+ */
+export function migrateLifecycleV1(raw: unknown, path: string): ParseResult<LifecycleConfig> {
+  const c = new Checker(path);
+  const root = expectRecord(c, raw, "lifecycle");
+  if (root === undefined || !looksLikeV1(root)) {
+    c.fail("not-migratable", `${path} is not a version 1 lifecycle document`);
+    return { value: undefined, problems: c.problems };
+  }
+  const stages = expectRecord(c, root["stages"], "lifecycle.stages");
+  if (stages === undefined) return { value: undefined, problems: c.problems };
+
+  const responsibilities: Partial<Record<ResponsibilityName, StepPolicy>> = {};
+  const stepPolicies = new Map<string, StepPolicy>();
+  for (const stage of V1_STAGES) {
+    const policy = checkPolicy(c, stages[stage], `lifecycle.stages.${stage}`);
+    if (policy === undefined) continue;
+    const shapeStep = V1_SHAPE_STAGES[stage];
+    if (shapeStep === undefined) {
+      responsibilities[stage as ResponsibilityName] = policy;
+    } else {
+      stepPolicies.set(shapeStep, policy);
+    }
+  }
+  if (!c.ok) return { value: undefined, problems: c.problems };
+
+  const shape: LifecycleShape = {
+    ...DIRECT_SHAPE,
+    steps: DIRECT_SHAPE.steps.map((step) => {
+      const policy = stepPolicies.get(step.name);
+      if (policy === undefined) return step;
+      return policy.actor === undefined
+        ? { ...step, execution: policy.execution }
+        : { ...step, execution: policy.execution, actor: policy.actor };
+    }),
+  };
+  return {
+    value: {
+      version: LIFECYCLE_VERSION,
+      responsibilities: responsibilities as Record<ResponsibilityName, StepPolicy>,
+      shape,
+    },
+    problems: [],
+  };
 }
