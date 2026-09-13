@@ -194,14 +194,26 @@ export function serialiseConfig(config: PactwrightConfig): string {
   return lines.join("\n");
 }
 
-/** The line range of the top-level `extensions:` key, or `undefined`. */
-function extensionsRegion(lines: readonly string[]): { start: number; end: number } | undefined {
-  const start = lines.findIndex((line) => /^extensions:/.test(line));
+/** The canonical `agent_pack:` block for a configuration. */
+function agentPackBlock(config: PactwrightConfig): readonly string[] {
+  const lines = ["agent_pack:", `  source: ${scalar(config.agentPack.source)}`];
+  if (config.agentPack.version !== undefined) {
+    lines.push(`  version: ${scalar(config.agentPack.version)}`);
+  }
+  return lines;
+}
+
+/** The line range of one top-level key's block, or `undefined`. */
+function topLevelRegion(
+  lines: readonly string[],
+  key: string,
+): { start: number; end: number } | undefined {
+  const start = lines.findIndex((line) => line.startsWith(`${key}:`));
   if (start === -1) return undefined;
   if (lines.some((line) => line.includes("\t"))) return undefined;
   // A flow mapping (`extensions: {}`) is the whole region. Anything else on
   // the key line is a shape this editor does not claim to understand.
-  const inline = lines[start]!.slice("extensions:".length).trim();
+  const inline = lines[start]!.slice(`${key}:`.length).trim();
   if (inline !== "") return inline === "{}" ? { start, end: start } : undefined;
   let end = start;
   for (let i = start + 1; i < lines.length; i += 1) {
@@ -230,9 +242,22 @@ function extensionsRegion(lines: readonly string[]): { start: number; end: numbe
 export function rewriteConfig(previous: string, config: PactwrightConfig): string {
   const canonical = serialiseConfig(config);
   const newline = previous.includes("\r\n") ? "\r\n" : "\n";
-  const lines = previous.split(/\r?\n/);
+  let lines = previous.split(/\r?\n/);
+
+  // The agent_pack block is spliced first: `agent-pack use` changes it and
+  // nothing else, so a project's comments and key order survive a pack
+  // switch exactly as they survive an extension change.
+  const packRegion = topLevelRegion(lines, "agent_pack");
+  if (packRegion !== undefined) {
+    lines = [
+      ...lines.slice(0, packRegion.start),
+      ...agentPackBlock(config),
+      ...lines.slice(packRegion.end + 1),
+    ];
+  }
+
   const block = [...extensionsBlock(config)];
-  const region = extensionsRegion(lines);
+  const region = topLevelRegion(lines, "extensions");
 
   let spliced: string;
   if (region !== undefined) {

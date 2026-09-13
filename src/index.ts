@@ -207,6 +207,15 @@ export {
 } from "./lifecycle/run.js";
 export { canonicalJson, HASH_PATTERN } from "./canonical.js";
 export {
+  DOCTOR_STATUSES,
+  doctor,
+  formatDoctor,
+  type DoctorCheck,
+  type DoctorReport,
+  type DoctorStatus,
+} from "./doctor.js";
+export { parseSpec, upgradeAgentPack, useAgentPack, type PackChangeReport } from "./pack/select.js";
+export {
   PROVENANCE_KINDS,
   isProvenanceKind,
   recordDelivery,

@@ -19,10 +19,12 @@ import {
   upgradeExtension,
   type ExtensionChangeReport,
 } from "./extension/manage.js";
+import { doctor, formatDoctor } from "./doctor.js";
 import { initProject } from "./init.js";
 import { syncProject } from "./sync.js";
 import { loadProject } from "./loader.js";
 import { resolvePack } from "./pack/resolve.js";
+import { upgradeAgentPack, useAgentPack, type PackChangeReport } from "./pack/select.js";
 import { validateProject } from "./validate.js";
 import { findProjectRoot, projectPaths } from "./project.js";
 import { runtimeVersion } from "./version.js";
@@ -38,6 +40,10 @@ Commands:
                                              surface from config + lock (deterministic; only
                                              files carrying the Pactwright banner are written
                                              or removed, so user-authored files are kept)
+  doctor [--json]                            Read-only diagnostics of the distribution and
+                                             execution environment; reports healthy, warning
+                                             or action required and names the deterministic
+                                             remediation, never running it
   validate [--json]                          Validate the Delivery Graph and typed-edge store
   context <node-id> [--history] [--json]     Print the current core Delivery lineage of a node
   lifecycle status [--intent <id>] [--json]  Report the current action, completed
@@ -51,6 +57,11 @@ Commands:
                                              prepare-evidence) after the runtime checks the
                                              transition, or the result of an execution step
                                              (delivery, review) as execution provenance
+  agent-pack use <source> [--json]           Select an agent pack explicitly: resolve it,
+                                             validate every required capability, then update
+                                             config, lock and the generated environment
+  agent-pack upgrade [--json]                Re-resolve the selected pack within its configured
+                                             constraint, without changing pack identity
   extension add <id|package> [--json]        Enable an extension (and its dependencies),
                                              validate the capability union and update
                                              config and lock
@@ -397,6 +408,87 @@ function extensionCommand(sub: string | undefined, args: readonly string[]): num
   return report.ok ? 0 : 1;
 }
 
+function formatPackReport(report: PackChangeReport): string {
+  const lines: string[] = [];
+  if (report.selected !== undefined) {
+    lines.push(
+      report.unchanged
+        ? `unchanged: ${report.selected.name}@${report.selected.version} is already selected\n`
+        : `selected ${report.selected.name}@${report.selected.version}\n`,
+    );
+    if (report.previous !== undefined) {
+      lines.push(`  was ${report.previous.name}@${report.previous.version}\n`);
+    }
+    if (report.constraintChanged === true) {
+      lines.push(`  configured constraint updated\n`);
+    }
+  }
+  for (const file of report.synced) lines.push(`  wrote ${file}\n`);
+  for (const note of report.reconciliation) lines.push(`  reconcile: ${note}\n`);
+  return lines.join("");
+}
+
+function agentPackCommand(sub: string | undefined, args: readonly string[]): number {
+  if (sub !== "use" && sub !== "upgrade") {
+    err(`pactwright: unknown agent-pack command "${sub ?? ""}"\n\n${HELP}`);
+    return 1;
+  }
+  const options = parseOptions(args);
+  const expected = sub === "use" ? 1 : 0;
+  if (typeof options === "string" || options.positional.length !== expected) {
+    const why =
+      typeof options === "string"
+        ? options
+        : sub === "use" && options.positional.length === 0
+          ? "agent-pack use needs a pack source"
+          : `unexpected argument "${options.positional[expected]}"`;
+    err(`pactwright: ${why}\n\n${HELP}`);
+    return 1;
+  }
+  let root: string;
+  try {
+    root = findProjectRoot();
+  } catch (error) {
+    if (!(error instanceof PactwrightError)) throw error;
+    printProblems(error, options.json);
+    return 1;
+  }
+  const report =
+    sub === "use" ? useAgentPack(root, options.positional[0]!) : upgradeAgentPack(root);
+  if (options.json) {
+    out(`${JSON.stringify(report, null, 2)}\n`);
+  } else {
+    out(formatPackReport(report));
+    if (report.problems.length > 0) {
+      out("Validation problems:\n");
+      for (const problem of report.problems) out(`  - ${formatProblem(problem)}\n`);
+    }
+  }
+  return report.ok ? 0 : 1;
+}
+
+function doctorCommand(args: readonly string[]): number {
+  const options = parseOptions(args);
+  if (typeof options === "string" || options.positional.length > 0) {
+    const why =
+      typeof options === "string" ? options : `unexpected argument "${options.positional[0]}"`;
+    err(`pactwright: ${why}\n\n${HELP}`);
+    return 1;
+  }
+  let root: string;
+  try {
+    root = findProjectRoot();
+  } catch (error) {
+    if (!(error instanceof PactwrightError)) throw error;
+    printProblems(error, options.json);
+    return 1;
+  }
+  const report = doctor(root);
+  out(options.json ? `${JSON.stringify(report, null, 2)}\n` : formatDoctor(report));
+  // A warning is information, not a failure; only action-required exits 1.
+  return report.status === "action-required" ? 1 : 0;
+}
+
 function syncCommand(args: readonly string[]): number {
   const options = parseOptions(args);
   if (typeof options === "string" || options.positional.length > 0) {
@@ -612,6 +704,8 @@ export async function main(argv: readonly string[]): Promise<number> {
   }
   if (first === "init") return initCommand(rest);
   if (first === "sync") return syncCommand(rest);
+  if (first === "agent-pack") return agentPackCommand(rest[0], rest.slice(1));
+  if (first === "doctor") return doctorCommand(rest);
   if (first === "extension") return extensionCommand(rest[0], rest.slice(1));
   if (first === "lifecycle") return lifecycle(rest[0], rest.slice(1));
   if (first === "validate") return validate(rest);
