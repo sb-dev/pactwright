@@ -34,7 +34,7 @@ import {
   recordReview,
   type ProvenanceKind,
 } from "./provenance.js";
-import { REVIEW_OUTCOMES, type ReviewOutcome } from "./state.js";
+import { REVIEW_OUTCOMES, clearExecutionState, type ReviewOutcome } from "./state.js";
 
 /**
  * The canonical commands that leave a durable Delivery Graph record
@@ -286,17 +286,19 @@ export function recordStage(root: string, stage: string, inputPath: string): Rec
           }),
         ],
       };
-    case "prepare-evidence":
+    case "prepare-evidence": {
       assertPermitted(project, stage, fields.brief!);
-      return {
-        stage,
-        created: [
-          createEvidence(root, {
-            briefId: fields.brief!,
-            title: fields.title!,
-            body: fields.body!,
-          }),
-        ],
-      };
+      const evidence = createEvidence(root, {
+        briefId: fields.brief!,
+        title: fields.title!,
+        body: fields.body!,
+      });
+      // Evidence closes the run, so its progression state has nothing left to
+      // govern. `lifecycle run` clears it on closure; recording it through the
+      // adapter must leave the project in the same state, not carry a stale
+      // run forward.
+      clearExecutionState(root, fields.brief!);
+      return { stage, created: [evidence] };
+    }
   }
 }

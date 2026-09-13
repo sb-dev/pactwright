@@ -12,6 +12,7 @@ import {
 import { deriveLineage } from "../src/graph/lineage.js";
 import { graphRevision } from "../src/graph/revision.js";
 import { recordDelivery, recordReview } from "../src/lifecycle/provenance.js";
+import { recordStage } from "../src/lifecycle/record.js";
 import { loadExecutionState, routeKey } from "../src/lifecycle/state.js";
 import { loadProject } from "../src/loader.js";
 import { validateProject } from "../src/validate.js";
@@ -147,5 +148,21 @@ test("provenance: delivery defaults to the current repository revision", () => {
   assert.ok(
     state.deliveredRevision?.startsWith("git:") || state.deliveredRevision === "none",
     `unexpected revision: ${state.deliveredRevision ?? "<none>"}`,
+  );
+});
+
+test("provenance: closing through the adapter clears the run, as lifecycle run does", () => {
+  const { root, brief } = delivering();
+  recordDelivery(root, { anchor: brief, revision: "delivered-1" });
+  recordReview(root, { anchor: brief, outcome: "pass" });
+
+  const input = path.join(root, "evidence.yml");
+  fs.writeFileSync(input, `brief: ${brief}\ntitle: Delivered\nbody: |\n  Verified.\n`);
+  const result = recordStage(root, "prepare-evidence", input);
+  assert.equal(result.created[0]?.type, "evidence");
+  assert.equal(
+    fs.existsSync(path.join(root, ".pactwright", "execution", `${brief}.yml`)),
+    false,
+    "a closed run leaves no progression state behind",
   );
 });
