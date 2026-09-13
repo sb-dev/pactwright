@@ -8,7 +8,9 @@ import {
 } from "../config/config.js";
 import { EXTENSION_ID_PATTERN, loadLock } from "../config/lock.js";
 import type { Problem } from "../errors.js";
+import { detectPackageManager } from "../config/package-manager.js";
 import { locatePackage } from "../pack/locate.js";
+import { packageManagerInstaller, type PackageInstaller } from "../upgrade.js";
 import { resolveDesiredState, serialiseLock } from "../pack/resolve.js";
 import { projectPaths } from "../project.js";
 import { validateProject } from "../validate.js";
@@ -25,6 +27,8 @@ export interface ExtensionChange {
 
 /** Result of `pactwright extension add|remove|upgrade`. */
 export interface ExtensionChangeReport {
+  /** Packages this operation installed through the project package manager. */
+  readonly installed?: readonly string[];
   readonly ok: boolean;
   readonly root: string;
   readonly changes: readonly ExtensionChange[];
@@ -143,7 +147,26 @@ function writeDesiredState(
  * problem rather than `unchanged`. The write would have failed on it anyway;
  * saying so up front is the more truthful answer.
  */
-export function addExtension(root: string, spec: string): ExtensionChangeReport {
+export interface AddExtensionOptions {
+  /**
+   * Replaces a package the project does not have. Installation is delegated
+   * to the project package manager (Distribution §10); Pactwright never
+   * becomes a second installer. Injected so tests drive the whole flow
+   * without the network.
+   */
+  readonly install?: PackageInstaller;
+  /**
+   * When false, a package that is not installed is reported rather than
+   * installed. `extension add` installs; a plain `sync` must not.
+   */
+  readonly allowInstall?: boolean;
+}
+
+export function addExtension(
+  root: string,
+  spec: string,
+  options: AddExtensionOptions = {},
+): ExtensionChangeReport {
   const paths = projectPaths(root);
   const parsed = parseSpec(spec);
   if ("code" in parsed) return failure(paths.root, [parsed]);
@@ -168,12 +191,26 @@ export function addExtension(root: string, spec: string): ExtensionChangeReport 
   // cycle stays with `resolveDesiredState` below.
   const queue: Array<{ id: string; source: string }> = [parsed];
   const visited = new Set<string>();
+  /** Packages this operation installed, so a failure can report them. */
+  const installedPackages: string[] = [];
   while (queue.length > 0) {
     const { id, source } = queue.shift()!;
     if (visited.has(id)) continue;
     visited.add(id);
     const existing = Object.hasOwn(proposed, id) ? proposed[id] : undefined;
-    const located = locatePackage(paths.root, existing?.source ?? source, "extension");
+    let located = locatePackage(paths.root, existing?.source ?? source, "extension");
+    if (typeof located !== "string" && located.code !== "pack-not-exported") {
+      // Dependency-first installation: the walk reaches a dependency before
+      // the dependant that needs it, so installing here installs in the order
+      // §10 requires, through the project's own package manager.
+      const installed = installPackage(paths.root, existing?.source ?? source, options);
+      if (installed.length > 0) {
+        problems.push(...installed);
+        continue;
+      }
+      installedPackages.push(existing?.source ?? source);
+      located = locatePackage(paths.root, existing?.source ?? source, "extension");
+    }
     if (typeof located !== "string") {
       problems.push({
         ...located,
@@ -236,6 +273,7 @@ export function addExtension(root: string, spec: string): ExtensionChangeReport 
   return {
     ok: true,
     root: paths.root,
+    ...(installedPackages.length === 0 ? {} : { installed: installedPackages.sort() }),
     changes: added.sort().map((id) => ({
       id,
       action: "added",
@@ -248,6 +286,34 @@ export function addExtension(root: string, spec: string): ExtensionChangeReport 
     preserved: [],
     problems: [],
   };
+}
+
+/**
+ * Installs one extension package through the project package manager.
+ *
+ * Only a package source ever reaches here: `locatePackage` resolves a path
+ * source to a path without checking it exists, so a missing path-sourced
+ * extension fails later on its absent manifest — which is right, because a
+ * path source lives in the repository and is not something to fetch.
+ */
+function installPackage(
+  root: string,
+  source: string,
+  options: AddExtensionOptions,
+): readonly Problem[] {
+  if (options.allowInstall === false) {
+    return [
+      {
+        code: "extension-not-installed",
+        message: `extension package "${source}" is not installed; run "pactwright extension add ${source}"`,
+        path: root,
+      },
+    ];
+  }
+  const detected = detectPackageManager(root);
+  if (detected.value === undefined) return detected.problems;
+  const install = options.install ?? packageManagerInstaller;
+  return install({ root, manager: detected.value.name, spec: source });
 }
 
 /**

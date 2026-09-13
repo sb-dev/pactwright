@@ -10,7 +10,8 @@ import { loadProject } from "../src/loader.js";
 import { requiredCapabilities } from "../src/pack/capabilities.js";
 import { resolveDesiredState, serialiseLock } from "../src/pack/resolve.js";
 import { validateProject } from "../src/validate.js";
-import { makeTempProject } from "./helpers.js";
+import type { PackageInstaller } from "../src/upgrade.js";
+import { fixture, makeTempProject } from "./helpers.js";
 
 const dirs: string[] = [];
 after(() => {
@@ -24,6 +25,10 @@ function temp(options: Parameters<typeof makeTempProject>[0] = {}): string {
 
 function config(root: string) {
   return loadConfig(path.join(root, ".pactwright", "config.yml")).value!;
+}
+
+function lock(root: string) {
+  return loadLock(path.join(root, ".pactwright", "lock.yml")).value!;
 }
 
 function writeNode(root: string, id: string, type: string, title: string): string {
@@ -271,12 +276,15 @@ test("extension add: the explicit package form and re-add work", () => {
   assert.deepEqual(again.changes, [{ id: "fixture-base", action: "unchanged" }]);
 });
 
-test("extension add: fails without writing when the package is missing or the pack is incomplete", () => {
+test("extension add: fails without writing when the package cannot be had or the pack is incomplete", () => {
   const root = temp();
   const before = fs.readFileSync(path.join(root, ".pactwright", "config.yml"), "utf8");
-  const missing = addExtension(root, "fixture-base");
+  // Installation is refused (`allowInstall: false`), so the absent package is
+  // reported rather than fetched.
+  const missing = addExtension(root, "fixture-base", { allowInstall: false });
   assert.equal(missing.ok, false);
-  assert.ok(missing.problems.some((p) => p.code === "extension-not-found"));
+  assert.ok(missing.problems.some((p) => p.code === "extension-not-installed"));
+  assert.equal(fs.readFileSync(path.join(root, ".pactwright", "config.yml"), "utf8"), before);
 
   const incomplete = temp({ extensions: [{ id: "fixture-analysis", configure: false }] });
   const blocked = addExtension(incomplete, "fixture-analysis");
@@ -517,4 +525,110 @@ test("extension upgrade: a successful upgrade leaves config.yml untouched", () =
   );
   assert.equal(upgradeExtension(root, "fixture-base").ok, true);
   assert.equal(fs.readFileSync(configPath, "utf8"), annotated);
+});
+
+// ---- package installation (Step 16) ----------------------------------------
+
+/**
+ * A fixture installer: copies the fixture package into node_modules the way
+ * a package manager would, so the real resolution path runs afterwards.
+ */
+function fixtureInstaller(): { install: PackageInstaller; calls: string[] } {
+  const calls: string[] = [];
+  const install: PackageInstaller = ({ root, manager, spec }) => {
+    calls.push(`${manager} ${spec}`);
+    const id = spec.replace("@pactwright/", "");
+    const source = path.join(fixture("extensions"), id);
+    if (!fs.existsSync(source)) {
+      return [{ code: "package-manager-failed", message: `no such package ${spec}`, path: root }];
+    }
+    fs.cpSync(source, path.join(root, "node_modules", "@pactwright", id), { recursive: true });
+    return [];
+  };
+  return { install, calls };
+}
+
+/** A temp project that declares a package manager, as a real consumer does. */
+function consumer(options: Parameters<typeof makeTempProject>[0] = {}): string {
+  const root = temp(options);
+  fs.writeFileSync(
+    path.join(root, "package.json"),
+    `${JSON.stringify({ name: "consumer", private: true, packageManager: "pnpm@11.7.0" }, null, 2)}\n`,
+  );
+  return root;
+}
+
+test("extension add: delegates installation to the project package manager", () => {
+  const root = consumer();
+  const { install, calls } = fixtureInstaller();
+  const report = addExtension(root, "fixture-base", { install });
+  assert.equal(report.ok, true, report.problems.map((p) => p.message).join("\n"));
+  assert.deepEqual(calls, ["pnpm @pactwright/fixture-base"]);
+  assert.deepEqual(report.installed, ["@pactwright/fixture-base"]);
+  assert.equal(config(root).extensions["fixture-base"]?.enabled, true);
+});
+
+test("extension add: installs dependencies before the extension that needs them", () => {
+  const root = consumer();
+  const { install, calls } = fixtureInstaller();
+  // fixture-reporting depends on fixture-base; neither is installed.
+  const report = addExtension(root, "fixture-reporting", { install });
+  assert.equal(report.ok, true, report.problems.map((p) => p.message).join("\n"));
+  assert.deepEqual(calls, ["pnpm @pactwright/fixture-reporting", "pnpm @pactwright/fixture-base"]);
+  const enabled = config(root).extensions;
+  assert.equal(enabled["fixture-base"]?.enabled, true, "the dependency is enabled too");
+  assert.equal(enabled["fixture-reporting"]?.enabled, true);
+  const locked = lock(root).extensions;
+  assert.ok(locked["fixture-base"], "the dependency is recorded in the lock");
+  assert.ok(locked["fixture-reporting"]);
+});
+
+test("extension add: a failed install writes nothing", () => {
+  const root = consumer();
+  const before = fs.readFileSync(path.join(root, ".pactwright", "config.yml"), "utf8");
+  const report = addExtension(root, "fixture-base", {
+    install: ({ root: where }) => [
+      { code: "package-manager-failed", message: "registry unreachable", path: where },
+    ],
+  });
+  assert.equal(report.ok, false);
+  assert.ok(report.problems.some((p) => p.code === "package-manager-failed"));
+  assert.equal(fs.readFileSync(path.join(root, ".pactwright", "config.yml"), "utf8"), before);
+  assert.equal(config(root).extensions["fixture-base"], undefined);
+});
+
+test("extension add: a configured path source is never installed", () => {
+  const root = consumer();
+  // A path-sourced extension lives in the repository, so a missing one is a
+  // broken path, not something to fetch from a registry.
+  const configPath = path.join(root, ".pactwright", "config.yml");
+  fs.writeFileSync(
+    configPath,
+    fs
+      .readFileSync(configPath, "utf8")
+      .replace(
+        "extensions: {}",
+        [
+          "extensions:",
+          "  fixture-base:",
+          "    enabled: false",
+          '    source: "./vendor/base"',
+        ].join("\n"),
+      ),
+  );
+  const { install, calls } = fixtureInstaller();
+  const report = addExtension(root, "fixture-base", { install });
+  assert.equal(report.ok, false);
+  assert.deepEqual(calls, [], "no install is attempted for a path source");
+  assert.ok(
+    report.problems.some((p) => p.code === "extension-not-found"),
+    report.problems.map((p) => `${p.code}: ${p.message}`).join("\n"),
+  );
+});
+
+test("extension add: a project with no package manager reports that, not a bad guess", () => {
+  const root = temp();
+  const report = addExtension(root, "fixture-base", { install: fixtureInstaller().install });
+  assert.equal(report.ok, false);
+  assert.ok(report.problems.some((p) => p.code === "no-package-manager"));
 });
