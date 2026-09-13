@@ -119,6 +119,17 @@ export function doctor(root: string = process.cwd()): DoctorReport {
     return { root: paths.root, status: worst(checks), runtime, checks };
   }
 
+  // --- pack selection ---------------------------------------------------
+  if (project.config.agentPack === undefined) {
+    checks.push({
+      name: "agent-pack",
+      status: "action-required",
+      detail: "no agent pack is selected; this is a scaffold, not an activated environment",
+      remediation: "pactwright agent-pack use <source>",
+    });
+    return { root: paths.root, status: worst(checks), runtime, checks };
+  }
+
   // --- runtime vs lock -------------------------------------------------
   checks.push({
     name: "runtime",

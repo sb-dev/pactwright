@@ -2,11 +2,8 @@ import { existsSync, mkdirSync, renameSync, writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { MANAGED_DIRS } from "./adapter/claude-code.js";
 import { tempSibling } from "./atomic.js";
-import { loadConfig } from "./config/config.js";
 import type { Problem } from "./errors.js";
 import { serialiseEdges } from "./graph/mutations.js";
-import { resolveDesiredState, writeLock } from "./pack/resolve.js";
-import { runtimeVersion } from "./version.js";
 import {
   CONFIG_FILE,
   EDGES_FILE,
@@ -15,19 +12,26 @@ import {
   NODES_DIR,
   projectPaths,
 } from "./project.js";
+import { loadConfig } from "./config/config.js";
 import { validateProject } from "./validate.js";
+import { addExtension } from "./extension/manage.js";
+import { useAgentPack } from "./pack/select.js";
+import { syncProject } from "./sync.js";
 
 /**
- * Default `.pactwright/config.yml` (Distribution §3): the `@pactwright/standard`
- * pack with Claude Code defaults. `github.enabled` stays `false` until GitHub
+ * Default `.pactwright/config.yml` (Distribution §3).
+ *
+ * It deliberately names **no** Agent Pack. A plain `init` creates a scaffold,
+ * not an activated execution environment: Pactwright never selects a pack
+ * silently, so the project stays inert until `agent-pack use` names one
+ * (Checkpoint 1 Step 14). `github.enabled` stays `false` until GitHub
  * provisioning exists (Distribution §§9–14); `init` creates no `.github/`
  * content.
  */
 export const CONFIG_TEMPLATE = `version: 1
 
-agent_pack:
-  source: "@pactwright/standard"
-  version: "^${runtimeVersion()}"
+# No agent pack is selected yet. Choose one explicitly:
+#   pactwright agent-pack use @pactwright/standard
 
 adapter:
   type: claude-code
@@ -114,6 +118,11 @@ export interface InitReport {
   /** Every path considered, in order; empty `problems` when `ok`. */
   readonly entries: readonly InitEntry[];
   readonly problems: readonly Problem[];
+  /**
+   * True when this is a scaffold with no Agent Pack selected. It is a valid
+   * starting point, not a complete activated execution environment.
+   */
+  readonly scaffold?: true;
 }
 
 /**
@@ -124,7 +133,22 @@ export interface InitReport {
  * an initialised repository changes nothing. Finishes by validating the
  * resulting project state; never throws for expected failures.
  */
-export function initProject(root: string = process.cwd()): InitReport {
+export interface InitOptions {
+  /**
+   * The Agent Pack to select, as `agent-pack use` takes it. Required to
+   * activate anything: with no supplied choice `init` leaves a scaffold and
+   * activates no dependent feature (Checkpoint 1 Step 14).
+   */
+  readonly agentPack?: string;
+  /**
+   * Extensions to install as part of one-shot setup. Each needs an explicit
+   * `agentPack`; composing without a chosen pack is refused rather than
+   * defaulted.
+   */
+  readonly withExtensions?: readonly string[];
+}
+
+export function initProject(root: string = process.cwd(), options: InitOptions = {}): InitReport {
   const paths = projectPaths(root);
   const entries: InitEntry[] = [];
   const problems: Problem[] = [];
@@ -153,27 +177,62 @@ export function initProject(root: string = process.cwd()): InitReport {
     }
   }
 
-  // The lock records exact resolved state (Distribution §3), so a fresh one
-  // is derived from whatever configuration is on disk — which after the step
-  // above is either the template or pre-existing user content. An existing
-  // lock is trusted as-is; `resolveDesiredState` is used rather than
-  // `resolveAndLock` because the latter loads the full project, which
-  // requires the lock to already exist.
-  if (existsSync(paths.lock)) {
-    entries.push({ path: LOCK_FILE, kind: "file", action: "skipped" });
-  } else {
-    const config = loadConfig(paths.config);
-    if (config.value === undefined) {
-      problems.push(...config.problems);
+  const wanted = options.withExtensions ?? [];
+  // A pack the project already selected is its choice, and re-running init
+  // must neither re-select it nor treat the project as an inert scaffold.
+  const alreadySelected = loadConfig(paths.config).value?.agentPack !== undefined;
+
+  if (options.agentPack === undefined) {
+    if (alreadySelected && wanted.length === 0) {
+      problems.push(...validateProject({ root: paths.root }).problems);
+      return { ok: problems.length === 0, root: paths.root, entries, problems };
+    }
+    if (wanted.length > 0) {
+      // Composing needs a pack, and defaulting to one would be exactly the
+      // silent selection Step 14 forbids.
+      problems.push({
+        code: "no-agent-pack-selected",
+        message: `installing ${wanted.join(", ")} needs an explicit agent pack; supply one so the environment is activated deliberately`,
+        path: paths.config,
+      });
       return failed();
     }
-    const resolved = resolveDesiredState({ root: paths.root, config: config.value });
-    if (resolved.value === undefined) {
-      problems.push(...resolved.problems);
+    // A scaffold, honestly reported as one: no lock, because nothing is
+    // resolved, and no claim that this is a complete execution environment.
+    return {
+      ok: problems.length === 0,
+      root: paths.root,
+      entries,
+      problems,
+      scaffold: true,
+    };
+  }
+
+  // One-shot setup composes the *same* operations as explicit setup: pack
+  // selection, then extension installation, then sync. It reuses
+  // `useAgentPack` rather than resolving a second time, so the two paths
+  // cannot drift apart.
+  const selected = useAgentPack(paths.root, options.agentPack);
+  if (!selected.ok) {
+    problems.push(...selected.problems);
+    return failed();
+  }
+  entries.push({ path: LOCK_FILE, kind: "file", action: "created" });
+
+  for (const id of wanted) {
+    const added = addExtension(paths.root, id);
+    if (!added.ok) {
+      problems.push(...added.problems);
       return failed();
     }
-    writeLock(paths.lock, resolved.value.lock);
-    entries.push({ path: LOCK_FILE, kind: "file", action: "created" });
+  }
+
+  if (wanted.length > 0) {
+    const synced = syncProject(paths.root);
+    if (!synced.ok) {
+      problems.push(...synced.problems);
+      return failed();
+    }
   }
 
   problems.push(...validateProject({ root: paths.root }).problems);

@@ -84,7 +84,8 @@ function checkPackageAgreement(project: Project, lock: LockFile): readonly Probl
     readonly version: string;
     readonly what: string;
   }> = [];
-  if (!isPathSource(project.config.agentPack.source)) {
+  const selected = project.config.agentPack;
+  if (selected !== undefined && !isPathSource(selected.source)) {
     expectations.push({
       name: lock.agentPack.name,
       version: lock.agentPack.version,

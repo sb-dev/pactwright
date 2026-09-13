@@ -56,7 +56,23 @@ export function loadProject(options: LoadProjectOptions = {}): Project {
   const lifecycle = loadLifecycle(paths.lifecycle);
   problems.push(...lifecycle.problems);
   const lock = loadLock(paths.lock);
-  problems.push(...lock.problems);
+  // A scaffold has no lock because it has no pack. Reporting the missing file
+  // would name the symptom; naming the unselected pack names the cause and
+  // the fix (Checkpoint 1 Step 14).
+  const scaffold =
+    config.value !== undefined &&
+    config.value.agentPack === undefined &&
+    lock.problems.some((problem) => problem.code === "missing-file");
+  if (scaffold) {
+    problems.push({
+      code: "no-agent-pack-selected",
+      message:
+        'no agent pack is selected; run "pactwright agent-pack use <source>" to choose one explicitly',
+      path: paths.config,
+    });
+  } else {
+    problems.push(...lock.problems);
+  }
 
   let extensions: readonly ResolvedExtension[] = [];
   let nodeRegistry = CORE_NODE_SCHEMAS;

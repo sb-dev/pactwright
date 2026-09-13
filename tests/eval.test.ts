@@ -144,7 +144,7 @@ test("runEval: cases run in throw-away sandboxes that are removed afterwards", a
       assert.ok(existsSync(path.join(task.root, ".pactwright", "config.yml")));
       // The sandbox is a loadable Pactwright project selecting the pack under evaluation.
       const project = loadProject({ root: task.root });
-      assert.equal(project.config.agentPack.source, standardPack.dir);
+      assert.equal(project.config.agentPack!.source, standardPack.dir);
       assert.equal(
         task.agent.prompt,
         path.join(standardPack.dir, "agents", `${task.agent.key}.md`),

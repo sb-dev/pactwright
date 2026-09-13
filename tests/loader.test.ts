@@ -9,7 +9,7 @@ import { fixture, notAProject } from "./helpers.js";
 test("loader: loads a valid project through the canonical path", () => {
   const project = loadProject({ root: fixture("valid-project") });
   assert.equal(project.paths.root, fixture("valid-project"));
-  assert.equal(project.config.agentPack.source, "@pactwright/standard");
+  assert.equal(project.config.agentPack!.source, "@pactwright/standard");
   assert.equal(project.lifecycle.responsibilities["approve-contract"].actor, "human");
   assert.equal(project.lock.runtime.version, "0.0.0");
   assert.deepEqual(

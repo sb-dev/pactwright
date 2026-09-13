@@ -32,10 +32,13 @@ import { runtimeVersion } from "./version.js";
 const HELP = `Usage: pactwright <command> [options]
 
 Commands:
-  init [--json]                              Create the Pactwright-owned core structure
-                                             (.pactwright, specs, .claude directories) in the
-                                             current directory and resolve the lock; existing
-                                             paths are left untouched
+  init [--agent-pack <source>] [--with <id>] Create the Pactwright-owned core structure
+       [--json]                              (.pactwright, specs, .claude directories) in the
+                                             current directory; existing paths are left
+                                             untouched. Without --agent-pack this is a scaffold
+                                             and no pack is selected. With it, one-shot setup
+                                             composes pack selection, any --with extensions and
+                                             sync -- the same operations as doing them apart
   sync [--json]                              Render the Pactwright-managed .claude/ adapter
                                              surface from config + lock (deterministic; only
                                              files carrying the Pactwright banner are written
@@ -83,16 +86,28 @@ interface CommonOptions {
   readonly json: boolean;
   readonly history: boolean;
   readonly file?: string;
+  /** Explicit Agent Pack source for one-shot `init`. */
+  readonly agentPack?: string;
+  /** Extension ids to install as part of one-shot `init`. */
+  readonly withExtensions?: readonly string[];
   /** Positional arguments, in order. */
   readonly positional: readonly string[];
 }
 
 function parseOptions(
   args: readonly string[],
-  allow: { intent?: boolean; history?: boolean; file?: boolean } = {},
+  allow: {
+    intent?: boolean;
+    history?: boolean;
+    file?: boolean;
+    agentPack?: boolean;
+    with?: boolean;
+  } = {},
 ): CommonOptions | string {
   let intent: string | undefined;
   let file: string | undefined;
+  let agentPack: string | undefined;
+  const withExtensions: string[] = [];
   let json = false;
   let history = false;
   const positional: string[] = [];
@@ -108,6 +123,17 @@ function parseOptions(
       file = args[i + 1];
       if (file === undefined || file.startsWith("--")) return "--file needs a path";
       i += 1;
+    } else if (arg === "--agent-pack" && allow.agentPack === true) {
+      agentPack = args[i + 1];
+      if (agentPack === undefined || agentPack.startsWith("--")) {
+        return "--agent-pack needs a pack source";
+      }
+      i += 1;
+    } else if (arg === "--with" && allow.with === true) {
+      const id = args[i + 1];
+      if (id === undefined || id.startsWith("--")) return "--with needs an extension id";
+      withExtensions.push(id);
+      i += 1;
     } else if (arg.startsWith("--")) return `unknown option "${arg}"`;
     else positional.push(arg);
   }
@@ -117,6 +143,8 @@ function parseOptions(
     positional,
     ...(intent === undefined ? {} : { intent }),
     ...(file === undefined ? {} : { file }),
+    ...(agentPack === undefined ? {} : { agentPack }),
+    ...(withExtensions.length === 0 ? {} : { withExtensions }),
   };
 }
 
@@ -302,7 +330,7 @@ async function lifecycle(sub: string | undefined, args: readonly string[]): Prom
 }
 
 function initCommand(args: readonly string[]): number {
-  const options = parseOptions(args);
+  const options = parseOptions(args, { agentPack: true, with: true });
   if (typeof options === "string" || options.positional.length > 0) {
     const why =
       typeof options === "string" ? options : `unexpected argument "${options.positional[0]}"`;
@@ -311,13 +339,22 @@ function initCommand(args: readonly string[]): number {
   }
   // Init is the one command that must not search for an enclosing project:
   // it creates the project in the current directory.
-  const report = initProject();
+  const report = initProject(process.cwd(), {
+    ...(options.agentPack === undefined ? {} : { agentPack: options.agentPack }),
+    ...(options.withExtensions === undefined ? {} : { withExtensions: options.withExtensions }),
+  });
   if (options.json) {
     out(`${JSON.stringify(report, null, 2)}\n`);
   } else {
     for (const entry of report.entries) {
       out(
         entry.action === "created" ? `created ${entry.path}\n` : `skipped ${entry.path} (exists)\n`,
+      );
+    }
+    if (report.scaffold === true) {
+      out(
+        "\nScaffold created. No agent pack is selected, so this is not yet a complete\n" +
+          "execution environment. Choose one: pactwright agent-pack use <source>\n",
       );
     }
     if (report.problems.length > 0) {

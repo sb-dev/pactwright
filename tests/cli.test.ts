@@ -378,17 +378,25 @@ test("cli: lifecycle record rejects transient stages, bad input and missing opti
 // ---- init -------------------------------------------------------------------
 
 test("cli: help lists init", () => {
-  assert.match(run("--help").stdout, /init \[--json\]/);
+  assert.match(run("--help").stdout, /init \[--agent-pack <source>\] \[--with <id>\]/);
 });
 
 test("cli: init then validate and lifecycle status pass in a clean repository", () => {
   const dir = makeEmptyRepo();
   tempDirs.push(dir);
-  const result = runIn(dir, "init");
+  // A plain init is a scaffold and says so; it selects no pack and writes
+  // no lock, because nothing has been resolved yet (Checkpoint 1 Step 14).
+  const scaffold = runIn(dir, "init");
+  assert.equal(scaffold.status, 0, scaffold.stdout + scaffold.stderr);
+  assert.match(scaffold.stdout, /created \.pactwright\/config\.yml/);
+  assert.match(scaffold.stdout, /Scaffold created\. No agent pack is selected/);
+  assert.equal(fs.existsSync(path.join(dir, ".pactwright", "lock.yml")), false);
+
+  const result = runIn(dir, "init", "--agent-pack", "@pactwright/standard");
   assert.equal(result.status, 0, result.stdout + result.stderr);
-  assert.match(result.stdout, /created \.pactwright\/config\.yml/);
-  assert.match(result.stdout, /created \.pactwright\/lock\.yml/);
-  assert.doesNotMatch(result.stdout, /skipped/);
+  // The scaffold's files already exist, so only the pack selection is new.
+  assert.match(result.stdout, /skipped \.pactwright\/config\.yml/);
+  assert.ok(fs.existsSync(path.join(dir, ".pactwright", "lock.yml")));
   assert.equal(fs.existsSync(path.join(dir, ".github")), false);
 
   const valid = runIn(dir, "validate");
@@ -434,13 +442,22 @@ test("cli: help lists sync", () => {
 test("cli: init, sync, validate and lifecycle status compose in a clean repository", () => {
   const dir = makeEmptyRepo();
   tempDirs.push(dir);
+  // A scaffold has nothing to render: sync refuses until a pack is selected.
   assert.equal(runIn(dir, "init").status, 0);
+  const unselected = runIn(dir, "sync");
+  assert.equal(unselected.status, 1);
+  assert.match(unselected.stdout, /no-agent-pack-selected/);
 
+  // One-shot setup selects the pack and renders in the same operation.
+  const setup = runIn(dir, "init", "--agent-pack", "@pactwright/standard");
+  assert.equal(setup.status, 0, setup.stdout + setup.stderr);
+  assert.ok(fs.existsSync(path.join(dir, ".claude", "agents", "spec.md")));
+  assert.ok(fs.existsSync(path.join(dir, ".claude", "commands", "capture-intent.md")));
+
+  // The follow-up sync converges: nothing left to write.
   const first = runIn(dir, "sync");
   assert.equal(first.status, 0, first.stdout + first.stderr);
-  assert.match(first.stdout, /wrote \.claude\/agents\/spec\.md/);
-  assert.match(first.stdout, /wrote \.claude\/commands\/capture-intent\.md/);
-  assert.doesNotMatch(first.stdout, /unchanged/);
+  assert.doesNotMatch(first.stdout, /^wrote/m);
   const bytes = (): Map<string, string> => {
     const map = new Map<string, string>();
     for (const sub of ["agents", "commands"]) {

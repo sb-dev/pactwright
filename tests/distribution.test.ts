@@ -39,7 +39,7 @@ test("agent-pack: selecting the standard pack resolves, locks and syncs", () => 
   const report = useAgentPack(root, "@pactwright/standard");
   assert.equal(report.ok, true, report.problems.map((p) => p.message).join("\n"));
   assert.equal(report.selected?.name, "@pactwright/standard");
-  assert.equal(configOf(root).agentPack.source, "@pactwright/standard");
+  assert.equal(configOf(root).agentPack!.source, "@pactwright/standard");
   assert.equal(lockOf(root).agentPack.name, "@pactwright/standard");
   assert.ok(report.synced.length > 0, "selection runs sync");
   assert.ok(fs.existsSync(path.join(root, ".claude", "agents", "spec.md")));
@@ -50,7 +50,7 @@ test("agent-pack: switching to a compatible fixture pack updates config and lock
   const before = lockOf(root).agentPack.hash;
   const report = useAgentPack(root, "./pack");
   assert.equal(report.ok, true, report.problems.map((p) => p.message).join("\n"));
-  assert.equal(configOf(root).agentPack.source, "./pack");
+  assert.equal(configOf(root).agentPack!.source, "./pack");
   assert.equal(lockOf(root).agentPack.hash, before);
 });
 
@@ -89,14 +89,14 @@ test("agent-pack: an exact configured target stays selected", () => {
   const root = temp();
   const report = useAgentPack(root, "@pactwright/standard@0.0.1");
   assert.equal(report.ok, true, report.problems.map((p) => p.message).join("\n"));
-  assert.equal(configOf(root).agentPack.version, "0.0.1");
+  assert.equal(configOf(root).agentPack!.version, "0.0.1");
   // A desired constraint does not authorise changing pack identity, so an
   // upgrade under an exact pin resolves to the same version.
   const upgraded = upgradeAgentPack(root);
   assert.equal(upgraded.ok, true, upgraded.problems.map((p) => p.message).join("\n"));
   assert.equal(upgraded.selected?.version, "0.0.1");
   assert.equal(upgraded.unchanged, true);
-  assert.equal(configOf(root).agentPack.version, "0.0.1", "upgrade never rewrites desired state");
+  assert.equal(configOf(root).agentPack!.version, "0.0.1", "upgrade never rewrites desired state");
 });
 
 test("agent-pack: an incompatible exact target is rejected", () => {
@@ -232,4 +232,21 @@ test("doctor: an inferred package manager is a warning, not a failure", () => {
   assert.equal(entry.status, "healthy");
   assert.match(entry.detail, /inferred from pnpm-lock\.yaml/);
   assert.equal(check(root, "package-manager-declaration").status, "warning");
+});
+
+test("doctor: a scaffold is action required, not healthy", () => {
+  const root = temp();
+  fs.rmSync(path.join(root, ".pactwright", "lock.yml"), { force: true });
+  fs.writeFileSync(
+    path.join(root, ".pactwright", "config.yml"),
+    "version: 1\n\nadapter:\n  type: claude-code\n\nextensions: {}\n\ngithub:\n  enabled: false\n",
+  );
+  const report = doctor(root);
+  assert.equal(report.status, "action-required");
+  const entry = report.checks.find((c) => c.name === "configuration")!;
+  assert.equal(entry.status, "action-required");
+  assert.ok(
+    entry.problems?.some((p) => p.code === "no-agent-pack-selected"),
+    "the cause is the unselected pack, not a missing file",
+  );
 });

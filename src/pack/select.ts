@@ -1,4 +1,4 @@
-import { readFileSync, renameSync, writeFileSync } from "node:fs";
+import { existsSync, readFileSync, renameSync, rmSync, writeFileSync } from "node:fs";
 import { tempSibling } from "../atomic.js";
 import { loadConfig, rewriteConfig, type PactwrightConfig } from "../config/config.js";
 import type { Problem } from "../errors.js";
@@ -36,30 +36,35 @@ function failure(root: string, problems: readonly Problem[]): PackChangeReport {
   return { ok: false, root, unchanged: true, synced: [], reconciliation: [], problems };
 }
 
-/** Snapshots config and lock so a failed change restores the previous valid state. */
-function begin(root: string): { restore: () => void; config: string; lock: string } | Problem {
+/**
+ * Snapshots config and lock so a failed change restores the previous valid
+ * state. A scaffold has no lock yet: that absence is itself the state to
+ * restore to, so a rejected first selection leaves no half-locked project.
+ */
+function begin(root: string): { restore: () => void; config: string } | Problem {
   const paths = projectPaths(root);
+  let config: string;
   try {
-    const config = readFileSync(paths.config, "utf8");
-    const lock = readFileSync(paths.lock, "utf8");
-    return {
-      config,
-      lock,
-      restore: () => {
-        for (const [target, content] of [
-          [paths.config, config],
-          [paths.lock, lock],
-        ] as const) {
-          const temp = tempSibling(target);
-          writeFileSync(temp, content, "utf8");
-          renameSync(temp, target);
-        }
-      },
-    };
-  } catch (error) {
-    const path = (error as NodeJS.ErrnoException).path ?? paths.lock;
-    return { code: "missing-file", message: "file not found", path };
+    config = readFileSync(paths.config, "utf8");
+  } catch {
+    return { code: "missing-file", message: "file not found", path: paths.config };
   }
+  const lock = existsSync(paths.lock) ? readFileSync(paths.lock, "utf8") : undefined;
+  return {
+    config,
+    restore: () => {
+      const temp = tempSibling(paths.config);
+      writeFileSync(temp, config, "utf8");
+      renameSync(temp, paths.config);
+      if (lock === undefined) {
+        rmSync(paths.lock, { force: true });
+      } else {
+        const lockTemp = tempSibling(paths.lock);
+        writeFileSync(lockTemp, lock, "utf8");
+        renameSync(lockTemp, paths.lock);
+      }
+    },
+  };
 }
 
 /**
