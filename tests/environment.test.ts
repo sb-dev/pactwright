@@ -11,7 +11,7 @@ import { repositoryRevision, NO_REPOSITORY_REVISION } from "../src/graph/reposit
 import { loadProject } from "../src/loader.js";
 import { runtimeVersion } from "../src/version.js";
 import { syncProject } from "../src/sync.js";
-import { makeTempProject, repoRoot } from "./helpers.js";
+import { makeEmptyRepo, makeTempProject, repoRoot } from "./helpers.js";
 
 const dirs: string[] = [];
 after(() => {
@@ -143,6 +143,51 @@ test("environment: a project with no package manager is reported, not assumed", 
 test("environment: installed versions come from the package the manager resolved", () => {
   assert.equal(installedVersion(repoRoot, "@pactwright/standard"), runtimeVersion());
   assert.equal(installedVersion(repoRoot, "not-a-real-package-xyz"), undefined);
+});
+
+test("environment: an installed version is read even when exports hide the manifest", () => {
+  // A package may publish an `exports` map that does not expose
+  // `./package.json`. It is still installed and still has a version, so the
+  // installed truth the lock agrees with must not depend on whether the
+  // module resolver would let the project import that path.
+  const root = makeEmptyRepo();
+  try {
+    const dir = path.join(root, "node_modules", "@scope", "hidden");
+    fs.mkdirSync(dir, { recursive: true });
+    fs.writeFileSync(
+      path.join(dir, "package.json"),
+      `${JSON.stringify(
+        { name: "@scope/hidden", version: "3.1.4", exports: { "./sub": "./sub.js" } },
+        null,
+        2,
+      )}\n`,
+    );
+    fs.writeFileSync(path.join(dir, "sub.js"), "module.exports = {};\n");
+    assert.equal(installedVersion(root, "@scope/hidden"), "3.1.4");
+  } finally {
+    fs.rmSync(root, { recursive: true, force: true });
+  }
+});
+
+test("environment: a package installed after an earlier lookup is still found", () => {
+  // `upgrade` resolves components, delegates installation to the package
+  // manager, then reads back what landed — all in one process. The read must
+  // reflect the filesystem as it is at that moment, not a module scope
+  // resolved before the install.
+  const root = makeEmptyRepo();
+  try {
+    assert.equal(installedVersion(root, "late-arrival"), undefined, "absent before install");
+    const dir = path.join(root, "node_modules", "late-arrival");
+    fs.mkdirSync(dir, { recursive: true });
+    fs.writeFileSync(
+      path.join(dir, "package.json"),
+      `${JSON.stringify({ name: "late-arrival", version: "0.0.2", main: "index.js" }, null, 2)}\n`,
+    );
+    fs.writeFileSync(path.join(dir, "index.js"), "module.exports = {};\n");
+    assert.equal(installedVersion(root, "late-arrival"), "0.0.2", "present after install");
+  } finally {
+    fs.rmSync(root, { recursive: true, force: true });
+  }
 });
 
 /* ---- repository revision (Step 5) ---- */

@@ -1,6 +1,5 @@
-import { createRequire } from "node:module";
 import { existsSync, readFileSync } from "node:fs";
-import { join } from "node:path";
+import { basename, dirname, join, resolve } from "node:path";
 import type { Problem } from "../errors.js";
 
 /**
@@ -123,31 +122,34 @@ export function detectPackageManager(root: string): PackageManagerDetection {
  * The version the package manager actually installed for `name`, read from
  * the installed package's own manifest. This is the installed truth the
  * Pactwright lock must agree with.
+ *
+ * The `node_modules` chain is walked directly rather than asked of the CJS
+ * resolver. Resolution answers "what can this project import", which is a
+ * narrower question: a package whose `exports` map does not publish
+ * `./package.json` is still installed and still has a version, so resolving
+ * would report a real installation as missing. Reading the manifest also
+ * keeps the answer tied to the filesystem as it is now, rather than to
+ * whatever module scope the resolver cached earlier in the process.
  */
 export function installedVersion(root: string, name: string): string | undefined {
-  const require = createRequire(join(root, "package.json"));
-  for (const specifier of [`${name}/package.json`, name]) {
-    try {
-      const resolved = require.resolve(specifier);
-      const manifestPath = specifier.endsWith("package.json")
-        ? resolved
-        : findManifest(resolved, name);
-      if (manifestPath === undefined) continue;
-      const parsed: unknown = JSON.parse(readFileSync(manifestPath, "utf8"));
-      const version = (parsed as { version?: unknown }).version;
-      if (typeof version === "string") return version;
-    } catch {
-      continue;
+  const segments = name.split("/");
+  let dir = resolve(root);
+  for (;;) {
+    if (basename(dir) !== "node_modules") {
+      const manifest = join(dir, "node_modules", ...segments, "package.json");
+      if (existsSync(manifest)) {
+        try {
+          const parsed: unknown = JSON.parse(readFileSync(manifest, "utf8"));
+          const version = (parsed as { version?: unknown }).version;
+          if (typeof version === "string") return version;
+        } catch {
+          // An unreadable or malformed manifest is not an installation this
+          // function can report a version for; keep walking outward.
+        }
+      }
     }
+    const parent = dirname(dir);
+    if (parent === dir) return undefined;
+    dir = parent;
   }
-  return undefined;
-}
-
-/** Walks up from a resolved entry point to the owning `package.json`. */
-function findManifest(entry: string, name: string): string | undefined {
-  const marker = `node_modules/${name.replace(/\\/g, "/")}/`;
-  const normalised = entry.replace(/\\/g, "/");
-  const index = normalised.lastIndexOf(marker);
-  if (index < 0) return undefined;
-  return join(normalised.slice(0, index + marker.length), "package.json");
 }
