@@ -1,13 +1,15 @@
 # Pactwright — Checkpoint 4 — Graph Review
 
-**Version:** 12  
+**Version:** 13  
 **Entry condition:** Checkpoint 3 is accepted.  
 **Release:** `0.0.4`  
-**Exit capability:** Pactwright and Kakeido can run reproducible specialist Graph Reviews over registered Project Graph state, retain immutable Review Execution provenance, route every successful Finding through Project Intelligence, and turn accepted Project Intelligence consequences motivated by Findings into normal governed Delivery.
+**Exit capability:** Pactwright and Kakeibo can run reproducible specialist Graph Reviews over registered Project Graph state, retain immutable Review Execution provenance, route every successful Finding through Project Intelligence, and turn accepted Project Intelligence consequences motivated by Findings into normal governed Delivery.
 
 ## 1. Goal
 
 Implement Graph Review as a small independent Pactwright Extension:
+
+The Kakeibo proof must review the complete seven-owner system plus its authority index. It must detect contradictions across owner boundaries without allowing Review itself to become a competing source of project truth.
 
 ```text
 review request
@@ -40,10 +42,34 @@ Canonical Pactwright semantics come from:
 - [08 — Open-Source Project Organisation](../specs/08-open-source-project-organisation.md)
 - [Implementation Principles](./00-implementation-principles.md)
 - [Implementation Guide](./00-implementation-guide.md)
+- [Kakeibo System-Level Acceptance Profile](./00-kakeibo-acceptance-profile.md)
 
 Research logs are rationale only.
 
-Kakeido acceptance uses the current canonical Kakeido specifications from the Kakeido repository.
+### Kakeibo
+
+At execution time use the complete current Kakeibo authority set:
+
+```text
+docs/specs/README.md
+
+docs/specs/01-product-and-ux-spec.md
+docs/specs/02-financial-domain-model-spec.md
+docs/specs/03-kei-assistant-spec.md
+docs/specs/04-mobile-design-system-spec.md
+docs/specs/05-system-architecture-and-data-spec.md
+docs/specs/06-engineering-delivery-and-operations-spec.md
+docs/specs/07-open-source-project-organisation-spec.md
+```
+
+`docs/specs/README.md` owns authority/conflict resolution. Review must preserve the ownership of all seven numbered specs rather than flattening them into one system narrative.
+
+`00-kakeibo-acceptance-profile.md` §8 is the shared System-Level Acceptance cross-check for this checkpoint.
+
+Retained August Kakeido Financial/Product/Mobile/Assistant/Tech Stack snapshots are not implementation authority.
+
+
+Kakeibo acceptance uses the current canonical Kakeibo specifications from the Kakeibo repository.
 
 This runbook defines implementation order, not new Pactwright semantics.
 
@@ -59,7 +85,9 @@ Step
 → Verify before continuing
 ```
 
-Default execution location is the Pactwright repository root unless a step names Kakeido or a fixture.
+Default execution location is the Pactwright repository root unless a step names Kakeibo or a fixture.
+
+**Default execution location:** the Pactwright repository root unless the step explicitly names Kakeibo or a fixture.
 
 For repository/code changes:
 
@@ -101,7 +129,7 @@ graph-review Pactwright evaluation cases
 pactwright-graph-review.yml
 Graph Review GitHub profile/automation/projections through the shared integration
 real Pactwright Graph Reviews
-real Kakeido Graph Reviews
+real Kakeibo Graph Reviews
 review-driven corrective Delivery
 Graph Review public learning path under existing PI readiness gates
 exact real 0.0.3 → 0.0.4 ownership-specific upgrade/install path
@@ -854,15 +882,15 @@ pnpm view @pactwright/graph-review@0.0.4 version
 
 Every command returns `0.0.4`; the complete transition fixtures pass before real consumer upgrade.
 
-## Stage 9 — Prove Graph Review on Kakeido
+## Stage 9 — Prove Graph Review on Kakeibo
 
-### Step 19 — Upgrade Kakeido from accepted `0.0.3` through exact ownership-specific targets
+### Step 19 — Upgrade Kakeibo from accepted `0.0.3` through exact ownership-specific targets
 
-**References:** Spec 02 upgrades/Extension dependencies; current Kakeido canonical specs; Checkpoint 2 exact-version upgrade acceptance.
+**References:** Spec 02 upgrades/Extension dependencies; current Kakeibo canonical specs; Checkpoint 2 exact-version upgrade acceptance.
 
 **Run**
 
-Record the accepted Checkpoint 3 Kakeido `0.0.3` installed/configuration/lock state and use the fixture-proven compatible sequence. Do not preinstall `0.0.4` packages or edit either lock manually.
+Record the accepted Checkpoint 3 Kakeibo `0.0.3` installed/configuration/lock state and use the fixture-proven compatible sequence. Do not preinstall `0.0.4` packages or edit either lock manually.
 
 ```bash
 pnpm pactwright upgrade --to 0.0.4
@@ -906,11 +934,13 @@ Each owning command must finish in a valid environment before the next begins. R
 
 **Expected result**
 
-Kakeido moves from the real published `0.0.3` environment to the exact compatible `0.0.4` family through the respective component owners.
+Kakeibo moves from the real published `0.0.3` environment to the exact compatible `0.0.4` family through the respective component owners.
 
 **Verify before continuing**
 
 Verify package-manager state and `.pactwright/lock.yml` identify:
+
+Choose one supported, accepted cross-owner finding from Step 23. The Delivery must update the owning specification(s) and, when required, dependent integration wording without creating a second source of truth.
 
 ```text
 pactwright@0.0.4
@@ -921,34 +951,84 @@ pactwright@0.0.4
 
 Also require compatibility/lock agreement after every operation, preserved identities and historical provenance, new-runtime migration/validation, PI as the recorded Graph Review dependency, the existing shared Project, a converged final dry-run and unchanged user-owned workflows/remote state.
 
-### Step 20 — Run cross-spec Kakeido Graph Reviews
+### Step 20 — Run cross-spec Kakeibo Graph Reviews
 
-**References:** current canonical Kakeido specification corpus.
+**References:** current canonical Kakeibo specification corpus.
 
 **Run**
 
-Resolve the current Kakeido canonical specification set and run bounded review requests covering at least:
+Resolve the current Kakeibo canonical specification set and run bounded review requests covering at least:
+
+The combined review must cover at least this cross-owner matrix:
 
 ```text
-financial/domain semantics ↔ product/review UX
-product/review UX ↔ mobile interaction design
-assistant authority/uncertainty ↔ deterministic financial rules
-technical architecture ↔ product/security/privacy requirements
+02 Financial Domain ↔ 01 Product & UX
+01 Product & UX ↔ 04 Mobile Design
+03 Kei behaviour ↔ 02 Financial truth
+03 Kei behaviour ↔ 05 Kei runtime architecture
+03 Kei behaviour ↔ 06 Kei release/evaluation/operations
+05 System Architecture ↔ 06 Engineering/Operations
+05 System Architecture ↔ 07 Open-source/public-private boundary
+06 Kei release/evaluation ↔ 07 public evaluation/transparency
+01 Product/commercial semantics ↔ 07 public surfaces
+```
+
+The index must also be checked against all seven owners for stale ownership/conflict-resolution claims.
+
+Reviewer attention must explicitly include these failure classes:
+
+```text
+financial / review truth:
+  spending-only assumptions leaking back into FinancialEntry
+  preparation states treated as reviewed truth
+  rules/history/Kei suggestions creating reviewed truth
+  transfer/card/business/goal semantics double-counting
+  provider/source lifecycle treated as review state
+
+Kei authority / runtime:
+  Kei recalculating or redefining canonical financial values
+  model-selected tasks bypassing app-selected task contracts
+  optional skills/tools/subagents expanding authority
+  ad-hoc prompts bypassing versioned policy/persona/task/output contracts
+  model-route changes treated as behavioural-release changes or vice versa
+  dashboard configuration becoming hidden production behaviour
+
+security / prompt injection:
+  merchant descriptions, CSV fields, provider labels or bank references treated as trusted instructions
+  untrusted source text reaching system/tool authority without containment
+
+architecture / privacy:
+  mobile/private clients accessing Neon directly
+  financial domain state, audit history, product/marketing analytics and operational telemetry being conflated
+  raw financial prompts/responses/traces becoming public or retained merely for observability
+  Meta receiving mobile/product financial behaviour rather than allowlisted consented marketing conversions
+
+maturity / over-engineering:
+  planned Salt Edge represented as current implementation
+  persistent memory, autonomous tools, dynamic skills, subagents or general-purpose Ask Kei pulled into the initial runtime without evidence
+  product-specific Kei artefacts promoted into Pactwright graph semantics
 ```
 
 Use request perspectives/objectives, not persistent reviewer ids.
 
 **Expected result**
 
-Graph Review identifies supported cross-domain issues without flattening Kakeido into generic Pactwright semantics.
+Graph Review tests the seven-owner system as a coherent design while preserving each owner's authority, produces supported findings for real contradictions, omissions or unsafe boundary crossings, and does not flatten Kakeibo into generic Pactwright semantics.
 
 **Verify before continuing**
 
-Triage every resulting PI Source; no Finding itself becomes canonical Kakeido truth and severity does not determine triage consequence.
+Triage every resulting PI Source. No Finding itself becomes canonical Kakeibo truth and severity does not determine triage consequence. Also verify:
 
-### Step 21 — Deliver one Kakeido correction motivated by a governed Finding consequence
+- every accepted correction candidate traces to a supported Review finding and PI Source;
+- Review did not directly rewrite any Kakeibo spec, Knowledge Card, Delivery node or application state;
+- owner attribution for every finding points to the relevant current specs rather than obsolete August documents;
+- disagreements caused only by one spec owning a different concern are not misclassified as contradictions;
+- findings distinguish actual current defects from planned/future/open design choices;
+- no reviewer recommendation weakens explicit financial truth, privacy, advice or user-confirmation boundaries.
 
-**References:** Specs 01, 03, 04; current Kakeido owner specs.
+### Step 21 — Deliver one Kakeibo correction motivated by a governed Finding consequence
+
+**References:** Specs 01, 03, 04; current Kakeibo owner specs.
 
 **Run**
 
@@ -956,22 +1036,28 @@ Select one supported Finding whose governed PI consequence justifies Delivery, t
 
 **Expected result**
 
-One real Kakeido cross-spec correction proves the complete Graph Review governance path.
-
-**Verify before continuing**
-
-Trace:
+One real seven-owner coherence finding completes the full governed correction path:
 
 ```text
 Review Execution
 → Finding
-→ PI Source
-→ accepted PI consequence/candidate
-→ Intent
-→ Evidence
+→ PI internal Source
+→ triage / accepted meaning
+→ roadmap candidate
+→ explicit Intent
+→ normal Delivery
+→ corrected owner/dependent specs
+→ current-state Review
 ```
 
-Run the Kakeido repository-defined tests required by the owning specifications.
+**Verify before continuing**
+
+Trace the finding provenance end to end, run the Kakeibo repository-defined tests required by the owning specifications, and verify:
+
+- the correction was made in the semantic owner rather than duplicated elsewhere;
+- dependent specs integrate the corrected meaning without taking ownership;
+- the Kakeibo authority index remains consistent with the resulting authority map;
+- the current-state rerun no longer reports the corrected contradiction, or reports it as explicitly unresolved with evidence rather than silently treating it as fixed.
 
 ## Stage 10 — Capture Checkpoint 4 feedback
 
@@ -983,7 +1069,7 @@ Run the Kakeido repository-defined tests required by the owning specifications.
 
 Capture defects, friction, replay problems, bad scope selection, unsupported Finding patterns, report failures, installation problems and public-documentation gaps observed while implementing and using Graph Review.
 
-Ingest each material Pactwright finding through PI, distinguishing Kakeido-specific choices from repeatable Pactwright responsibility failures. Convert repeatable failures into evaluation/product candidates where justified; do not automatically create Intents.
+Ingest each material Pactwright finding through PI, distinguishing Kakeibo-specific choices from repeatable Pactwright responsibility failures. Convert repeatable failures into evaluation/product candidates where justified; do not automatically create Intents.
 
 A blocking failure must be corrected and its acceptance rerun inside this checkpoint. Merely recording a blocker as a governed future candidate does not resolve it. Only non-blocking findings/design gaps may cross the checkpoint under the Implementation Guide conditions.
 
@@ -1022,14 +1108,15 @@ Checkpoint 4 closes only when:
 - the GitHub profile composes through the existing integration/Project and implements Spec 07 automation/projection without semantic YAML duplication;
 - remote hand-off retry, pinned-replay failure and report-failure isolation preserve local semantics;
 - disabling/removing Graph Review removes only its managed contribution while preserving PI/Core state and historical execution provenance;
-- Pactwright and Kakeido each complete one Finding → PI → explicit Delivery correction path;
+- Pactwright and Kakeibo each complete one Finding → PI → explicit Delivery correction path;
+- the Kakeibo review covers the authority index plus specs `01`–`07` through the required cross-owner matrix, and keeps financial/review truth, Kei authority, prompt-injection, privacy and maturity failure classes in explicit reviewer attention;
 - the public learning path satisfies existing PI readiness and matches shipped behaviour;
 - the `0.0.4` family including `@pactwright/graph-review` is registry verified;
-- Kakeido proves the exact published `0.0.3 → 0.0.4` transition with explicit desired component constraints and compatible verified intermediate environments;
+- Kakeibo proves the exact published `0.0.3 → 0.0.4` transition with explicit desired component constraints and compatible verified intermediate environments;
 - historical-package/external-evidence retention mechanisms remain explicit open implementation concerns, not invented infrastructure;
 - every blocking failure has a correction and passing re-verification; only non-blocking findings may remain future candidates;
 - no known blocking failure is carried into Checkpoint 5.
 
 ---
 
-**Pactwright — Checkpoint 4 — Graph Review v12**
+**Pactwright — Checkpoint 4 — Graph Review v13**

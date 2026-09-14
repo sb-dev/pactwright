@@ -1,15 +1,17 @@
 # Pactwright — Checkpoint 2 — Remote Delivery
 
-**Version:** 15  
+**Version:** 16  
 **Entry condition:** Checkpoint 1 is accepted and Pactwright can self-host core Delivery.  
 **Release:** `0.0.2`  
-**Exit capability:** Pactwright and Kakeido can initialise, execute, evaluate and project Contract-driven Delivery through GitHub using one deterministic profile-composition/reconciliation model while repository canonical state remains authoritative.
+**Exit capability:** Pactwright and Kakeibo can initialise, execute, evaluate and project Contract-driven Delivery through GitHub using one deterministic profile-composition/reconciliation model while repository canonical state remains authoritative.
 
 ## 1. Goal
 
-Implement the generic GitHub composition, provisioning, execution and projection foundation; expose the Core Delivery profile through the first managed workflow/checks/Project surface; prove one-shot GitHub initialisation and real published-version upgrade; then use the result for real Pactwright and Kakeido Remote Delivery.
+Implement the generic GitHub composition, provisioning, execution and projection foundation; expose the Core Delivery profile through the first managed workflow/checks/Project surface; prove one-shot GitHub initialisation and real published-version upgrade; then use the result for real Pactwright and Kakeibo Remote Delivery.
 
 Checkpoint 2 establishes the reusable GitHub machinery later Extensions contribute to. Later checkpoints add their own profiles, workflows, checks and views; they do not introduce a second profile-composition or remote-reconciliation engine.
+
+The Kakeibo proof extends the deterministic `packages/domain` foundation from Checkpoint 1 through the first real source-neutral ingestion/application slice. CSV is the initial source adapter; it must not become the meaning of the financial model.
 
 ## 2. Canonical baseline
 
@@ -19,12 +21,51 @@ Checkpoint 2 establishes the reusable GitHub machinery later Extensions contribu
 - [08 — Open-Source Project Organisation](../specs/08-open-source-project-organisation.md)
 - [Implementation Principles](./00-implementation-principles.md)
 - [Implementation Guide](./00-implementation-guide.md)
+- [Kakeibo System-Level Acceptance Profile](./00-kakeibo-acceptance-profile.md)
 
-Kakeido acceptance uses the current canonical Kakeido specifications from the Kakeido repository.
+Kakeibo acceptance uses the current canonical Kakeibo specifications from the Kakeibo repository.
 
 Research logs are rationale only.
 
+### Kakeibo
+
+At execution time use the current canonical Kakeibo repository authorities:
+
+```text
+docs/specs/README.md
+
+docs/specs/01-product-and-ux-spec.md
+docs/specs/02-financial-domain-model-spec.md
+docs/specs/05-system-architecture-and-data-spec.md
+docs/specs/06-engineering-delivery-and-operations-spec.md
+```
+
+For this checkpoint:
+
+```text
+01 → import/review preparation UX
+02 → source / FinancialEntry / duplicate / review semantics
+05 → ingestion, API, persistence and infrastructure architecture
+06 → adapter, API, persistence and integration-test expectations
+```
+
+`00-kakeibo-acceptance-profile.md` §6 is the shared System-Level Acceptance cross-check for the Kakeibo slice.
+
+The retained August Kakeido Product/Financial/Tech Stack research snapshots are not implementation authority.
+
+
 This runbook defines execution order, not new GitHub or lifecycle semantics.
+
+### Explicit Kakeibo deferrals
+
+Do not pull later Kakeibo capabilities into this ingestion slice:
+
+- connected banking/provider adapters;
+- mobile UI implementation beyond the API boundary required by this slice;
+- bounded Kei runtime/release/evaluation;
+- product/marketing analytics implementation beyond preserving its separate schema/boundary;
+- operational telemetry ingestion into Pactwright Operations;
+- controlled production Experiments.
 
 ## 3. Execution contract
 
@@ -38,9 +79,11 @@ Step
 → Verify before continuing
 ```
 
-Default location is the Pactwright repository unless a step names Kakeido or a fixture.
+Default location is the Pactwright repository unless a step names Kakeibo or a fixture.
 
 For repository/code changes:
+
+**Default execution location:** the Pactwright repository root unless the step explicitly names Kakeibo or a fixture.
 
 ```bash
 pnpm verify
@@ -599,15 +642,15 @@ pactwright@0.0.2
 
 Both registry versions resolve, the trusted release workflow succeeds and the upgrade compatibility/targeting fixtures pass.
 
-## Stage 7 — Prove published upgrade and Remote Delivery in Kakeido
+## Stage 7 — Prove published upgrade and Remote Delivery in Kakeibo
 
-### Step 17 — Upgrade Kakeido from `0.0.1` to exact `0.0.2` through ownership-specific commands
+### Step 17 — Upgrade Kakeibo from `0.0.1` to exact `0.0.2` through ownership-specific commands
 
 **References:** Spec 02 upgrade model; Checkpoint 1 upgrade capability; section 3 exact-version upgrade acceptance.
 
 **Run**
 
-Begin with Kakeido running the exact published Checkpoint 1 family:
+Begin with Kakeibo running the exact published Checkpoint 1 family:
 
 ```text
 pactwright@0.0.1
@@ -650,70 +693,163 @@ pnpm pactwright github sync --dry-run
 
 **Expected result**
 
-Kakeido proves a real, exact published `0.0.1 → 0.0.2` runtime/Agent Pack upgrade and gains GitHub integration without losing user-authored local or remote state.
+Kakeibo proves a real, exact published `0.0.1 → 0.0.2` runtime/Agent Pack upgrade and gains GitHub integration without losing user-authored local or remote state.
 
 **Verify before continuing**
 
 Record compatibility and package/lock agreement after each upgrade. Final manifest/package-manager lock/`.pactwright/lock.yml` identify the expected `0.0.2` runtime and Agent Pack. Second GitHub dry-run converges. Pre-existing user workflow hashes and unmanaged remote resources remain unchanged.
 
-### Step 18 — Resolve current Kakeido ingestion prerequisites
+### Step 18 — Establish the minimum Kakeibo ingestion/application infrastructure
 
-**References:** current Kakeido canonical engineering/product specifications.
+**References:** Kakeibo Acceptance Profile §6; current Kakeibo `05-system-architecture-and-data-spec.md`; current Kakeibo `06-engineering-delivery-and-operations-spec.md`
+
+**Run**
+
+Use normal Pactwright Delivery to establish only the repository/application infrastructure required by the first CSV ingestion slice:
+
+```text
+pnpm + Turborepo workspace structure
+apps/api with Hono
+packages/application
+packages/database
+packages/financial-ingestion
+packages/api-contracts where required by the API boundary
+Neon application schema / database boundary
+Hyperdrive where required by the deployed environment
+R2 bucket/binding for uploaded source bytes
+Cloudflare Workflow path for resumable multi-step import work
+repository environment/configuration and infrastructure-as-code required by this slice
+```
+
+Preserve the existing Checkpoint 1 `packages/domain` as the financial authority. Do not move financial semantics into the API, database or adapter packages.
+
+Establish the application/analytics separation in schema/configuration so later analytics work cannot accidentally share financial-domain ownership:
+
+```text
+Neon application schema
+≠ Neon analytics schema
+```
+
+The analytics event model itself is not implemented by this step.
+
+Store credentials only in local secret stores or repository/organisation secrets. Account-level Cloudflare/Neon/R2 provisioning is execution prerequisite/provenance, not Pactwright graph state.
+
+**Expected result**
+
+The Kakeibo repository has the smallest production-shaped application/infrastructure skeleton needed to implement and test the CSV ingestion vertical slice without building unrelated future capabilities.
+
+**Verify before continuing**
+
+- the Turborepo/workspace build succeeds;
+- `packages/domain` remains free of Hono/Neon/Cloudflare/provider dependencies;
+- the Hono/API boundary is the route to private application state; no mobile/private client path connects directly to Neon;
+- R2 bindings exist for raw uploads but R2 is not treated as canonical parsed state;
+- Neon application persistence is distinct from the reserved/separate analytics boundary;
+- Workflow infrastructure is limited to durable/resumable ingestion work rather than normal CRUD;
+- no credential appears in canonical graph files, source code, generated Pactwright content or committed config.
+
+### Step 19 — Deliver the source-neutral CSV ingestion foundation
+
+**References:** Kakeibo Acceptance Profile §§3–6; current Kakeibo `01-product-and-ux-spec.md`; current Kakeibo `02-financial-domain-model-spec.md`; current Kakeibo `05-system-architecture-and-data-spec.md`; current Kakeibo `06-engineering-delivery-and-operations-spec.md`; Delivery Graph §19
+
+**Run**
+
+From the Kakeibo repository root:
+
+```text
+/capture-intent "Implement Kakeibo's first source-neutral CSV ingestion vertical slice behind the existing financial domain. Represent the uploaded file as a file-backed FinancialSource; create SourceAccount, IngestionRun and SourceRecord provenance; implement a CSV IngestionAdapter that converts source-specific rows into NormalisedSourceRecord; then map accepted normalised records into FinancialEntry persistence through the existing domain/application boundary. Store raw uploaded bytes in R2 and canonical parsed/application state in Neon. Make source identity and exact re-import idempotent. Keep invalid rows explicit and prepare possible financial duplicates for later user resolution rather than silently merging them. Keep deterministic rules/history preparation separate from reviewed truth. Source-specific sign conventions, CSV columns and source metadata must terminate at the ingestion boundary and must not redefine FinancialEntry semantics. Do not describe the output as canonical spendings."
+/propose-contracts <intent-id>
+/approve-contract <contract-id> "<selection notes>"
+/write-brief <contract-id>
+/deliver-brief <brief-id>
+/review <brief-id>
+/prepare-evidence <brief-id>
+```
+
+The canonical flow proven by this Delivery is:
+
+```text
+CSV bytes
+↓
+file FinancialSource
+↓
+SourceAccount
+↓
+IngestionRun
+↓
+SourceRecord
+↓
+CSV IngestionAdapter
+↓
+NormalisedSourceRecord
+↓
+FinancialEntry
+```
+
+The product may present ordinary outflows as spendings later. The canonical persisted financial concept remains `FinancialEntry`.
+
+**Expected result**
+
+CSV ingestion respects the API/R2/Workflow/Neon/domain boundaries and produces source-independent `FinancialEntry` meaning. Invalid rows and possible duplicates remain explicit preparation concerns rather than silently changing financial truth.
+
+**Verify before continuing**
+
+Run Pactwright validation/status and the Kakeibo repository-defined domain, adapter, API and persistence tests. Prove at minimum:
+
+```text
+same source record re-import
+→ no second canonical FinancialEntry
+
+source re-import identity
+≠ user-resolved financial duplicate
+
+raw CSV bytes
+→ R2
+
+canonical parsed/application state
+→ Neon
+
+CSV/source-specific sign/category/metadata
+→ terminated or normalised at adapter boundary
+
+possible duplicate
+→ preparation state only
+
+rules/history preparation
+→ does not create reviewed truth
+```
+
+Also verify:
+
+- no private/mobile client accesses Neon directly;
+- a failed/retried Workflow cannot partially duplicate canonical entries;
+- invalid rows are addressable without corrupting accepted rows;
+- no connected-banking/provider concept was introduced into the financial domain;
+- the resulting Delivery graph contains a valid Intent → Evidence lineage and the approved Contract retains the source/financial/review invariants.
+
+### Step 20 — Prove ownership boundaries hold across repository, GitHub and ingestion state
+
+**References:** Provisioning/reconciliation §§8–9, 14; GitHub boundary/profile/workflow §2; Kakeibo Acceptance Profile §§3–6
 
 **Run**
 
 ```text
-Inspect current Kakeido canonical specs and establish only the prerequisites required by the selected first Remote Delivery acceptance target.
-Do not use stale embedded copies as authority.
-Account/service provisioning remains execution prerequisite/provenance rather than Pactwright graph truth unless the owning project semantics require a Decision.
+First, local generated ownership: in a safe fixture or Kakeibo branch, hash repository/user-owned workflows outside Pactwright ownership—including ci.yml/release.yml where present—run pactwright sync and verify every hash is unchanged.
+
+Second, provisioned remote structure: mutate one Pactwright-owned remote object that github sync provisions (for example a semantic label or a Project view definition) and prove github sync --dry-run detects the drift and github sync restores the owned desired state.
+
+Third, Actions-owned projections: modify one derived projection value (for example a Project field value or a PR summary) and prove canonical graph files are unchanged and the next projection run regenerates the value. github sync is not expected to own derived values; restoring them is the projection's responsibility.
+
+Fourth, application-data ownership: prove raw uploaded bytes remain in R2, canonical parsed/application state remains in Neon, Pactwright graph state contains Delivery/project meaning rather than CSV rows, and no GitHub projection or Pactwright command becomes an alternative financial-data store.
 ```
 
 **Expected result**
 
-The real Kakeido acceptance target can be built/tested through its current architecture.
-
-### Step 19 — Deliver a bounded Kakeido ingestion outcome through GitHub
-
-**Run**
-
-Use normal Pactwright Delivery for a current, bounded ingestion-related outcome selected from the Kakeido canonical specs.
-
-The work must preserve the project's current financial and architectural boundaries.
-
-**Expected result**
-
-Kakeido completes a real GitHub-operated Delivery using the published `0.0.2` family.
+Ownership boundaries hold separately for Pactwright local generation, provisioned GitHub structure, GitHub projections and Kakeibo ingestion/application state.
 
 **Verify before continuing**
 
-Run Pactwright validation and the Kakeido repository-defined tests required by the current specifications. Confirm local lifecycle state, PR/Issue/Project projections and Core checks agree.
-
-### Step 20 — Prove all three GitHub ownership surfaces
-
-**References:** Specs 02 and 07.
-
-**Run**
-
-Prove separately:
-
-```text
-local generated ownership
-→ sync changes only Pactwright-managed local files/regions
-
-remote structural ownership
-→ github sync detects/restores drift only for Pactwright-owned remote settings/labels/rules/checks/Project schema
-
-Actions projection ownership
-→ derived summaries/Issue values/Project items and fields regenerate from canonical repository state
-```
-
-**Expected result**
-
-No local or remote GitHub mutation can silently become canonical Pactwright state.
-
-**Verify before continuing**
-
-Record before/after hashes/state, mutate one safe derived projection and one clearly owned remote structural value, reconcile each through its correct owner, preserve unrelated state, then run `pactwright validate`.
+Record before/after hashes, run `pnpm pactwright validate`, and run the Kakeibo ingestion/domain verification gate. No mutation on the GitHub/Pactwright side may alter canonical financial application state.
 
 ## Stage 8 — Capture Checkpoint 2 feedback
 
@@ -721,7 +857,7 @@ Record before/after hashes/state, mutate one safe derived projection and one cle
 
 Before Project Intelligence exists, capture material Pactwright responsibility failures as explicit open Intents through normal Delivery authority.
 
-Do not generalise Kakeido-specific preferences.
+Do not generalise Kakeibo-specific preferences.
 
 Blocking failures must be fixed inside this checkpoint.
 
@@ -733,7 +869,7 @@ Checkpoint 2 closes only when:
 - repository overrides compose through the same desired-state model;
 - `pactwright init --github` is equivalent to explicit setup with the same explicitly chosen compatible Agent Pack;
 - both setup paths preserve workflow-before-required-checks activation, report unmet prerequisites and converge through normal reconciliation after workflow landing;
-- Pactwright and Kakeido explicitly enable GitHub configuration before expecting generated workflows;
+- Pactwright and Kakeibo explicitly enable GitHub configuration before expecting generated workflows;
 - deterministic `github sync --dry-run` and apply reconciliation share one planner;
 - the applicable configured/supported Core remote surface covers managed settings/labels/rulesets/required checks plus one shared Project schema;
 - `.github/workflows/pactwright.yml` is generated from the exact locked Pactwright environment and local/Actions `environment_lock_hash` agrees;
@@ -749,13 +885,30 @@ Checkpoint 2 closes only when:
 - public Remote Delivery guidance matches the implemented surface;
 - `pactwright@0.0.2` and `@pactwright/standard@0.0.2` are registry verified;
 - exact-version targeting and compatible intermediate upgrade states are fixture-proven before consumer mutation;
-- Kakeido proves the exact published `0.0.1 → 0.0.2` runtime/Agent Pack upgrade through explicit desired constraints and owning commands, without preinstalling targets or silently selecting later versions;
-- Kakeido completes one real Remote Delivery from its current canonical specs;
+- Kakeibo proves the exact published `0.0.1 → 0.0.2` runtime/Agent Pack upgrade through explicit desired constraints and owning commands, without preinstalling targets or silently selecting later versions;
+- Kakeibo completes one real Remote Delivery from its current canonical specs;
 - unmanaged local/remote GitHub state is preserved;
-- local generated ownership, remote structural ownership and Actions projection ownership are proven separately;
+- local generated ownership, remote structural ownership, Actions projection ownership and Kakeibo application-data ownership are proven separately;
+- Kakeibo has the minimum production-shaped ingestion/application skeleton and keeps `packages/domain` free of Hono/Neon/Cloudflare/provider dependencies;
+- Kakeibo's source-neutral CSV ingestion slice keeps raw bytes in R2 and canonical parsed state in Neon, makes source re-import idempotent, and keeps invalid rows and possible duplicates as preparation state rather than reviewed financial truth;
 - unresolved managed-resource identity/concurrency/check-mapping/non-Delivery-PR policy is not silently canonised;
 - no known blocking failure is carried into Checkpoint 3.
 
+The Kakeibo acceptance additionally requires:
+
+- the CP1 deterministic `packages/domain` remains the financial authority;
+- the first application slice uses Hono as the private API boundary and does not allow direct private/mobile access to Neon;
+- raw uploaded CSV bytes live in R2 while canonical parsed/application state lives in Neon;
+- durable multi-step ingestion uses Cloudflare Workflow semantics without turning normal CRUD into Workflow state;
+- CSV enters through `FinancialSource → SourceAccount → IngestionRun → SourceRecord → IngestionAdapter → NormalisedSourceRecord → FinancialEntry`;
+- CSV/source-specific conventions do not leak into `FinancialEntry` semantics;
+- exact source re-import is idempotent while financial duplicate resolution remains a separate explicit concern;
+- invalid rows and duplicate candidates remain preparation concerns and cannot create reviewed truth;
+- the output is not modelled as "canonical spendings";
+- the application/analytics data boundary is established without implementing unrelated later analytics capabilities;
+- no connected-banking, Kei, Experiment or other later capability is pulled into this checkpoint;
+- the real Kakeibo ingestion change lands through the same GitHub-operated Pactwright Delivery surface proven on Pactwright.
+
 ---
 
-**Pactwright — Checkpoint 2 — Remote Delivery v15**
+**Pactwright — Checkpoint 2 — Remote Delivery v16**

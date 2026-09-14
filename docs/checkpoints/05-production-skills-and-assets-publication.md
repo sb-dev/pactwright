@@ -3,7 +3,7 @@
 **Version:** 12  
 **Entry condition:** Checkpoint 4 is accepted.  
 **Release:** `0.0.5`  
-**Exit capability:** Pactwright and Kakeido can resolve exact external Production Skills and Production Extension Packs through the selected Agent Pack during normal Delivery, then turn successful Delivery Evidence into exact human-approved Assets and real Publications without introducing a second production lifecycle.
+**Exit capability:** Pactwright and Kakeibo can resolve exact external Production Skills and Production Extension Packs through the selected Agent Pack during normal Delivery, then turn successful Delivery Evidence into exact human-approved Assets and real Publications without introducing a second production lifecycle.
 
 ## 1. Goal
 
@@ -46,12 +46,46 @@ Canonical Pactwright semantics come from:
 - [08 — Open-Source Project Organisation](../specs/08-open-source-project-organisation.md)
 - [Implementation Principles](./00-implementation-principles.md)
 - [Implementation Guide](./00-implementation-guide.md)
+- [Kakeibo System-Level Acceptance Profile](./00-kakeibo-acceptance-profile.md)
 
 Production-domain behaviour comes from the selected external Production Skills repositories and their own canonical skills/workflows/benchmarks.
 
-Kakeido acceptance uses the current canonical Kakeido specifications in its existing repository. Kakeido denotes the same longitudinal acceptance project as Checkpoints 1–4 and the Implementation Guide; this checkpoint does not rename the project or change its repository identity.
+Kakeibo acceptance uses the current canonical Kakeibo specifications in its existing repository. Kakeibo denotes the same longitudinal acceptance project as Checkpoints 1–4 and the Implementation Guide; this checkpoint does not rename the project or change its repository identity.
 
 Research logs are rationale only.
+
+### Kakeibo
+
+At execution time use the current canonical Kakeibo authorities relevant to this checkpoint:
+
+```text
+docs/specs/README.md
+
+docs/specs/03-kei-assistant-spec.md
+docs/specs/05-system-architecture-and-data-spec.md
+docs/specs/06-engineering-delivery-and-operations-spec.md
+docs/specs/07-open-source-project-organisation-spec.md
+```
+
+Supporting public-product/visual context may additionally come from:
+
+```text
+docs/specs/01-product-and-ux-spec.md
+docs/specs/04-mobile-design-system-spec.md
+```
+
+For Kei behaviour and public claims, preserve this ownership split:
+
+```text
+03 → Kei behaviour, authority, task contracts
+05 → runtime, grounding, release/model-route architecture
+06 → testing, benchmark, release and operational engineering
+07 → public/private boundary and open-source transparency
+```
+
+`00-kakeibo-acceptance-profile.md` §9 is the shared System-Level Acceptance cross-check for the Kakeibo proof.
+
+Retained August Kakeido Financial/Product/Mobile/Assistant/Tech Stack snapshots are not implementation authority.
 
 This runbook defines implementation order, not new Pactwright semantics.
 
@@ -67,7 +101,7 @@ Step
 → Verify before continuing
 ```
 
-Default execution location is Pactwright unless a step names Kakeido, a Production Skills repository or a fixture.
+Default execution location is Pactwright unless a step names Kakeibo, a Production Skills repository or a fixture.
 
 For repository/code changes:
 
@@ -118,8 +152,8 @@ acceptance for each supported optional authority/release automation path
 first grounded approved Pactwright public Asset + Publication
 real Pactwright Production Skills use
 real Pactwright Asset + Publication
-real Kakeido Production Skills use
-real Kakeido Asset + Publication where appropriate
+real Kakeibo Production Skills use
+real Kakeibo Asset + Publication where appropriate
 exact real 0.0.4 → 0.0.5 ownership-specific upgrade/install path
 ```
 
@@ -1020,11 +1054,11 @@ pnpm view @pactwright/assets-publication@0.0.5 version
 
 Every command returns `0.0.5`. Require exact-target fixtures, Step 16 environment/replay conformance and all blocking acceptance fixes before real consumer upgrade.
 
-## Stage 9 — Prove specialised production and publication in Kakeido
+## Stage 9 — Prove specialised production and publication in Kakeibo
 
-### Step 23 — Upgrade Kakeido from accepted `0.0.4` through exact ownership-specific paths
+### Step 23 — Upgrade Kakeibo from accepted `0.0.4` through exact ownership-specific paths
 
-**References:** Spec 02 upgrades; current Kakeido specs; Checkpoint 2 exact-version upgrade acceptance.
+**References:** Spec 02 upgrades; current Kakeibo specs; Checkpoint 2 exact-version upgrade acceptance.
 
 **Run**
 
@@ -1080,15 +1114,15 @@ After each owning command, record actual installed versions, both locks and comp
 
 **Expected result**
 
-Kakeido moves from the real `0.0.4` environment to the exact `0.0.5` family without bypassing installation/upgrade ownership.
+Kakeibo moves from the real `0.0.4` environment to the exact `0.0.5` family without bypassing installation/upgrade ownership.
 
 **Verify before continuing**
 
 Verify intermediate and final package/lock agreement, exact `0.0.5` runtime/standard/PI/Graph Review/Assets packages, recorded external identities, unchanged pack identity, new-runtime migration/validation, preserved historical replay provenance and unrelated user state, and converged remote integration.
 
-### Step 24 — Resolve skills for one real Kakeido outcome through the selected Agent Pack
+### Step 24 — Resolve skills for one real Kakeibo outcome through the selected Agent Pack
 
-**References:** current Kakeido owner specs; Spec 02 Production Skills.
+**References:** current Kakeibo owner specs; Spec 02 Production Skills.
 
 **Run**
 
@@ -1100,21 +1134,21 @@ research + product content
 narrative/content + UI/UX
 ```
 
-Choose only families required by the owning Kakeido specs. Use imports/bindings already provided by the published selected pack, or explicitly select another compatible pack with `pactwright agent-pack use <source>` when genuinely needed. Such a later deliberate selection is distinct from the identity-preserving upgrade already verified in Step 23.
+Choose only families required by the owning Kakeibo specs. Use imports/bindings already provided by the published selected pack, or explicitly select another compatible pack with `pactwright agent-pack use <source>` when genuinely needed. Such a later deliberate selection is distinct from the identity-preserving upgrade already verified in Step 23.
 
 Do not introduce a peer-level project Production Skills setting. Resolve/sync/lock exact external revisions and any selected packs through the chosen Agent Pack. Preserve external repositories.
 
 **Expected result**
 
-Kakeido uses the same Agent Pack → Production Skills model for a materially different product/domain.
+Kakeibo uses the same Agent Pack → Production Skills model for a materially different product/domain.
 
 **Verify before continuing**
 
 Run doctor/validation, inspect exact locks and compare the runtime-supplied local/Actions environment identity for this consumer. Any deliberately changed pack remains compatible with all enabled capabilities; project configuration still selects an Agent Pack rather than independently composing Production Skills.
 
-### Step 25 — Deliver the Kakeido outcome through normal Delivery
+### Step 25 — Deliver the Kakeibo outcome through normal Delivery
 
-**References:** current Kakeido canonical specs; Specs 01–03.
+**References:** current Kakeibo canonical specs; Specs 01–03.
 
 **Run**
 
@@ -1124,15 +1158,15 @@ For public/outbound work, apply the existing readiness gate and current Source-t
 
 **Expected result**
 
-A real Kakeido cross-domain Delivery completes at canonical Evidence without new domain-specific Pactwright semantics.
+A real Kakeibo cross-domain Delivery completes at canonical Evidence without new domain-specific Pactwright semantics.
 
 **Verify before continuing**
 
 Run repository-defined tests, relevant independently owned domain evaluations and Pactwright validation. Verify Evidence is canonical before any separate Asset approval.
 
-### Step 26 — Create a Kakeido Asset/Publication where durable identity is useful
+### Step 26 — Create a Kakeibo Asset/Publication where durable identity is useful
 
-**References:** Spec 05; current Kakeido product/public-surface specs.
+**References:** Spec 05; current Kakeibo product/public-surface specs.
 
 **Run**
 
@@ -1153,7 +1187,7 @@ If the selected software Delivery does not warrant an Asset, select a separate b
 
 **Expected result**
 
-Kakeido proves the abstraction on a semantically useful durable output, not mechanically on every Delivery.
+Kakeibo proves the abstraction on a semantically useful durable output, not mechanically on every Delivery.
 
 **Verify before continuing**
 
@@ -1218,7 +1252,7 @@ Checkpoint 5 closes only when:
 - disabling the Extension removes only owned generated integration and preserves canonical records and other profiles;
 - public readiness is enforced and Pactwright produces its first grounded approved public Asset and real Publication;
 - Pactwright completes real specialised cross-domain Delivery with external skills;
-- Kakeido performs the exact 0.0.4 → 0.0.5 transition using explicit desired constraints and owning commands, with compatible intermediate states, then proves production/publication on a materially different outcome;
+- Kakeibo performs the exact 0.0.4 → 0.0.5 transition using explicit desired constraints and owning commands, with compatible intermediate states, then proves production/publication on a materially different outcome;
 - no Creative Delivery, provider registry, Generation Guidance, creative Agent Pack, DAM/CMS or Extension-owned report subsystem has been recreated;
 - the exact 0.0.5 first-party family is registry verified;
 - every blocking failure has a correction and passing re-verification; only non-blocking findings remain future candidates;

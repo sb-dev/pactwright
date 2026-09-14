@@ -1,9 +1,9 @@
 # Pactwright — Checkpoint 8 — Full Project Operating Surface
 
-**Version:** 11  
-**Entry condition:** Checkpoint 7 is accepted and all first-party semantic Extensions exist.  
+**Version:** 12  
+**Entry condition:** Checkpoint 7 is accepted and all first-party graph semantics, including Operations Experiment, exist.  
 **Release:** `0.0.8`  
-**Exit capability:** Pactwright and Kakeido prove the complete configured operating surface through the existing five workflows and one shared Project, with deterministic generation, ownership-safe reconciliation, exact runtime provenance and no transfer of canonical authority to GitHub.
+**Exit capability:** Pactwright and Kakeibo prove the complete configured operating surface, including the controlled Experiment lineage, through the existing five workflows and one shared Project, with deterministic generation, ownership-safe reconciliation, exact runtime provenance and no transfer of canonical authority to GitHub.
 
 ## 1. Goal
 
@@ -38,7 +38,31 @@ Canonical semantics come from:
 - [Implementation Principles](./00-implementation-principles.md)
 - [Implementation Guide](./00-implementation-guide.md)
 
-Research logs are rationale only. Kakeido acceptance uses the current canonical specifications in the Kakeido repository, not stale embedded copies.
+- [Kakeibo System-Level Acceptance Profile](./00-kakeibo-acceptance-profile.md)
+- [Pactwright — Operations Experiment Semantics](../research-logs/2026-09-02-pactwright-operations-experiment-semantics.md)
+
+Research logs are rationale only. Kakeibo acceptance uses the current canonical specifications in the Kakeibo repository, not stale embedded copies.
+
+### Kakeibo
+
+At execution time treat the current Kakeibo authority set as the consumer-system baseline:
+
+```text
+docs/specs/README.md
+docs/specs/01-product-and-ux-spec.md
+docs/specs/02-financial-domain-model-spec.md
+docs/specs/03-kei-assistant-spec.md
+docs/specs/04-mobile-design-system-spec.md
+docs/specs/05-system-architecture-and-data-spec.md
+docs/specs/06-engineering-delivery-and-operations-spec.md
+docs/specs/07-open-source-project-organisation-spec.md
+```
+
+`00-kakeibo-acceptance-profile.md` §12 is the shared System-Level Acceptance cross-check for the Kakeibo projection proof.
+
+Kakeibo-specific concepts such as `KeiRelease`, Kei task, policy, persona, model route and benchmark case remain Kakeibo-owned repository/application artefacts. GitHub may project bounded provenance already represented through Pactwright graph relationships, but it must not turn those project-specific artefacts into new Pactwright/GitHub lifecycle types.
+
+Retained August Kakeido snapshots are not implementation authority.
 
 This runbook defines implementation progression and acceptance, not new Pactwright semantics.
 
@@ -54,9 +78,11 @@ Step
 → Verify before continuing
 ```
 
-Default execution location is the Pactwright repository root unless a step names Kakeido or an isolated fixture. Print or resolve every dynamic record, execution, Source, candidate, environment and remote-resource identity before a later action consumes it. Keep fixture evidence outside real project truth.
+Default execution location is the Pactwright repository root unless a step names Kakeibo or an isolated fixture. Print or resolve every dynamic record, execution, Source, candidate, environment and remote-resource identity before a later action consumes it. Keep fixture evidence outside real project truth.
 
 For repository/code changes:
+
+**Default execution location:** the Pactwright repository root unless the step explicitly names Kakeibo or a fixture.
 
 ```bash
 pnpm verify
@@ -105,6 +131,8 @@ Pactwright / Publication
 Pactwright / Operations
 Pactwright / Operations Views
 ```
+
+The Operations profile additionally contributes the configured `Experiments` view introduced by the adopted Experiment amendment, alongside Operations, Deployments, Production Findings and Corrective Roadmap. An Experiment record is never required merely because the view exists; empty is a valid derived view state.
 
 Exercise all eleven meanings across applicable acceptance scenarios. This is not a requirement that every check run on every PR or that every repository enable every optional check, view, summary, schedule or authority mapping. Disabled components do not contribute active integration. Preserve Projects-disabled and GitHub-disabled operation.
 
@@ -347,9 +375,27 @@ GitHub shows durable operational facts and governed corrective work without beco
 
 Compare fields and cross-Extension Publication → Observation → Source/Knowledge/candidate links with the owners. Test canonical invalidity, external authentication/analysis failure, successful no-Observation and stale views as distinct outcomes. Change PI candidates while retaining/copying revision stamps and require stale content detection. Significance/confidence must not accept Knowledge or reprioritise work. Failed hand-off retries the existing Observation; failed optional Project/summary/report updates leave valid canonical and immutable execution state unchanged.
 
+### Step 9 — Complete Experiment path triggers and projection validation
+
+**References:** Experiment GitHub projection; GitHub operating/profile/workflow §§3–4
+
+**Run**
+
+```text
+Complete managed-path and validation composition for docs/operations/experiments/** in the Operations GitHub profile. Experiment file changes trigger the appropriate deterministic Operations validation/projection refresh. GitHub may validate/project/trigger analysis, but a Project field edit alone cannot create a valid Experiment and there is no GitHub promotion action.
+```
+
+**Expected result**
+
+Experiment state participates in the same generated GitHub operating surface as other durable Operations state.
+
+**Verify before continuing**
+
+Run a dry-run/profile fixture for an Experiment contract change and confirm Operations validation/projection requirements are composed. Attempt to represent a new Experiment only via Project fields and require no canonical Experiment creation.
+
 ## Stage 5 — Prove exact workflow and validation composition
 
-### Step 9 — Activate the workspace environment and verify deterministic workflow routing
+### Step 10 — Activate the workspace environment and verify deterministic workflow routing
 
 **References:** Specs 02 resolution/sync and 07 §§5–7, 11–13, 18–27; Checkpoints 2–7.
 
@@ -387,7 +433,7 @@ The active workspace resolves the intended complete environment and generates th
 
 Compare both sync outputs, the exact five-file reference set and the expected subsets for disabled configurations. Verify runtime invocations/results for each routing class. Preserve `ci.yml`, `release.yml`, unrelated user workflows/source and external Production Skills repositories by before/after hashes. Missing or drifting locked dependencies must be diagnosed rather than silently replaced. No extra per-command workflow, CI-only agent or Publication-monitoring policy may appear.
 
-### Step 10 — Land changed workflows and reconcile the complete remote structure
+### Step 11 — Land changed workflows and reconcile the complete remote structure
 
 **References:** Spec 07 §§3–4, 33–34; Checkpoint 2 activation/convergence contract.
 
@@ -419,7 +465,7 @@ Managed remote structure converges through the same planner and safe activation 
 
 Require no unresolved managed drift or unmet prerequisite needed for acceptance. Report preserved unmanaged ambiguity separately; it may remain only when it does not prevent the required surface and meets the non-blocking gap rules. Test actual configured check execution after activation. Verify stable shared Project identity and preserved unrelated resources; a clean structural dry-run does not certify current summaries/items/values.
 
-### Step 11 — Run cumulative semantic, GitHub, security and failure conformance
+### Step 12 — Run cumulative semantic, GitHub, security and failure conformance
 
 **References:** Specs 01–06 owning validators/evaluation; Spec 07 §§35–40; Spec 02 §§21–24; Implementation Guide verification.
 
@@ -487,7 +533,7 @@ The combined system passes its actual integration contract, detects deliberate r
 
 Retain a case-to-requirement result map, not just a single green score. Inject known misrouting, wrong Grounding state, stale-content/fresh-stamp, forbidden-mutation and permission regressions and require the responsible cases to fail. Negative tests must assert expected failure in isolated fixtures, not leave real canonical state broken. Restore valid fixtures and rerun the full suite plus `pnpm verify`. Keep execution failure, canonical invalidity, stale derived state and incomplete activation distinguishable without inventing a universal GitHub conclusion mapping.
 
-### Step 12 — Prove shared execution identity and actual pinned remote replay
+### Step 13 — Prove shared execution identity and actual pinned remote replay
 
 **References:** Specs 01 revision identity, 02 locking/replay, 04 Graph Review replay and 07 §§6, 18, 31, 35.
 
@@ -526,7 +572,7 @@ Compare identities and actual resolved inputs for all five workflows. Retain suc
 
 ## Stage 6 — Reconciliation and disablement tests
 
-### Step 13 — Prove all three reconciliation owners and the live Pactwright surface
+### Step 14 — Prove all three reconciliation owners and the live Pactwright surface
 
 **References:** Spec 07 §§3, 9–10, 29, 31–35; Spec 08 dogfooding; Checkpoints 2–7.
 
@@ -552,7 +598,7 @@ Structural convergence and runtime projection freshness are independently demons
 
 Compare before/after managed and unmanaged state at every layer. Repeat local sync and remote dry-run after repair; separately inspect restored summaries/items/values. Require canonical and immutable historical state to remain unchanged by projection edits, failed repair or optional projection failure. Retain the live record-to-projection trace and new event result with normal authority provenance. Synthetic failure fixtures must not be described as real operational outcomes.
 
-### Step 14 — Prove populated-history disablement, re-enablement and optional configuration
+### Step 15 — Prove populated-history disablement, re-enablement and optional configuration
 
 **References:** Spec 02 removal/dependencies and Spec 07 §§4–6, 32–34; Checkpoint 7 populated exposure history.
 
@@ -589,7 +635,7 @@ Run enabled owning validators and core validation at each transition, recording 
 
 ## Stage 7 — Publish the full operating path
 
-### Step 15 — Deliver and execute the governed end-to-end learning path
+### Step 16 — Deliver and execute the governed end-to-end learning path
 
 **References:** Spec 01 Delivery closure, Spec 03 readiness, Spec 04 Graph Review boundary and Spec 08 §§8, 14–21, 24, 26.
 
@@ -663,9 +709,9 @@ Users can discover, understand and execute the full configured operating path wi
 
 Run the example in a clean supported consumer and in CI where practical, using the same runtime commands and locked environment. Verify all included lineage, approval, actual-release/deployment and PI boundaries; simulated fixture events must not be presented as live exposure. Validate guide commands, catalogue metadata/links, README capability claims and applicable readiness. Separately run architecture/coherence and public-product Graph Reviews, triage every Finding through PI and resolve blockers through normal Delivery. Prose review does not replace example execution. Retain accepted Evidence and applicable Asset/Publication provenance for the public work.
 
-## Stage 8 — Release and Kakeido proof
+## Stage 8 — Release and Kakeibo proof
 
-### Step 16 — Publish exact `0.0.8` after cumulative and upgrade acceptance
+### Step 17 — Publish exact `0.0.8` after cumulative and upgrade acceptance
 
 **References:** Implementation Guide release model; Spec 02 upgrades; Checkpoint 2 exact-version upgrade acceptance.
 
@@ -694,13 +740,13 @@ pnpm view @pactwright/operations@0.0.8 version
 
 All return `0.0.8`. Verify tagged-source/release-workflow provenance, registry results and exact-target/intermediate-compatibility fixtures. Package existence alone does not prove upgrade or operating-surface acceptance.
 
-### Step 17 — Upgrade Kakeido exactly and prove its live complete surface
+### Step 18 — Upgrade Kakeibo exactly and prove its live complete surface
 
-**References:** Spec 02 upgrade ownership; Specs 01–08; Checkpoint 2 exact-version upgrade acceptance; current Kakeido canonical specs.
+**References:** Spec 02 upgrade ownership; Specs 01–08; Checkpoint 2 exact-version upgrade acceptance; current Kakeibo canonical specs.
 
 **Run**
 
-Start from Kakeido's real accepted published `0.0.7` environment. Record package/configuration/both-lock state, selected external dependencies, enabled profiles and historical canonical/execution identities. Use Step 16's proven compatible sequence. Do not preinstall targets, reinitialise the project, change selected pack identity or re-create prior records.
+Start from Kakeibo's real accepted published `0.0.7` environment. Record package/configuration/both-lock state, selected external dependencies, enabled profiles and historical canonical/execution identities. Use Step 16's proven compatible sequence. Do not preinstall targets, reinitialise the project, change selected pack identity or re-create prior records.
 
 Upgrade the runtime and verify the still-compatible environment and new-runtime migration/validation provenance:
 
@@ -736,7 +782,7 @@ pnpm pactwright doctor
 pnpm pactwright github sync --dry-run
 ```
 
-Land changed workflows through normal Kakeido repository authority before relying on new remote behaviour. Then:
+Land changed workflows through normal Kakeibo repository authority before relying on new remote behaviour. Then:
 
 ```bash
 pnpm pactwright github sync
@@ -749,25 +795,77 @@ pnpm pactwright operations validate
 pnpm pactwright eval
 ```
 
-Run the current Kakeido repository-defined tests for any real change. Reuse genuine histories from earlier checkpoints to trace all applicable profile surfaces as in Step 13. Perform one bounded governed change or safe configured runtime event and verify actual resulting checks/summaries/items/values. Inspect the five reference workflows and same shared Project, but do not count their mere presence as complete acceptance.
+Run the current Kakeibo repository-defined tests for any real change. Reuse genuine histories from earlier checkpoints to trace all applicable profile surfaces as in Step 13. Perform one bounded governed change or safe configured runtime event and verify actual resulting checks/summaries/items/values. Inspect the five reference workflows and same shared Project, but do not count their mere presence as complete acceptance.
 
 **Expected result**
 
-Kakeido runs exact `0.0.8` through the same upgrade and projection model, with real cross-profile navigation and event processing and no Kakeido-specific GitHub semantics.
+Kakeibo runs exact `0.0.8` through the same upgrade and projection model, with real cross-profile navigation and event processing and no Kakeibo-specific GitHub semantics.
 
 **Verify before continuing**
 
 Record exact versions and compatible package/Pactwright lock agreement after every operation; verify the six-package reference family, unchanged selected identities and preserved historical records/approved content. Explicit migrations, if required, retain their versioned provenance and must not silently reinterpret truth. Require healthy doctor, owner validation, cumulative integration cases, actual configured check execution and live record-to-projection/event evidence. Verify the final structural dry-run, current runtime projections and second local sync separately. Preserve unrelated workflows/resources and external repositories. Use isolated fixtures for destructive/failure tests, never invented live findings.
 
+### Step 19 — Project the real Kakeibo Experiment lineage from Checkpoint 6
+
+**References:** Kakeibo Acceptance Profile §12; Experiment GitHub projection; Experiment PI lineage
+
+**Run**
+
+Resolve the real controlled Kei Experiment created in Checkpoint 6 and its exact related records. Do not create another Experiment for this checkpoint.
+
+Trace/project the existing lineage where present:
+
+```text
+Delivery Evidence
+→ active/candidate Deployment
+→ Experiment
+→ latest outcome Observation
+→ internal PI Source
+→ Knowledge / intent candidate where accepted
+→ later Delivery where justified and already governed
+```
+
+Inspect the shared GitHub Project's Experiments, Deployments, Production Findings, PI and Delivery projections.
+
+For the Experiment row/view confirm the projected values come from canonical/derived Pactwright state:
+
+```text
+mode
+hypothesis
+control exposure
+candidate exposure
+primary metric
+guardrails
+window
+current derived state
+latest outcome Observation
+resulting PI / later Delivery provenance
+```
+
+Kakeibo `KeiRelease` and model-route details remain Kakeibo-owned. Only bounded exact exposure/provenance already represented by Pactwright is projected.
+
+**Expected result**
+
+GitHub exposes the real Kakeibo controlled-evaluation lineage without becoming its source of truth.
+
+**Verify before continuing**
+
+- each projected link resolves to the corresponding repository graph/provenance record;
+- control/candidate identities match the exact Checkpoint 6 Deployment hashes;
+- no raw financial prompt/response/grounding/experiment sample appears;
+- favourable evidence does not render as automatic promotion unless PI/Delivery actually accepted it;
+- if the outcome was neutral/insufficient/no-change, GitHub preserves that state rather than fabricating later Delivery;
+- no Kakeibo-specific Kei graph type exists solely for the UI.
+
 ## Stage 9 — Capture feedback
 
-### Step 18 — Govern failures and close only after blocker re-verification
+### Step 20 — Govern failures and close only after blocker re-verification
 
 **References:** Spec 03 governance; Spec 07 open gaps; Implementation Guide transition conditions.
 
 **Run**
 
-Capture material ownership, composition, routing, permission, check, projection, replay, upgrade, example and disablement failures from Pactwright and Kakeido through normal PI Source/triage/promotion governance. Distinguish repeatable Pactwright responsibility failures from project-specific choices. Reuse or add the smallest responsible regression case; do not automatically create Intents.
+Capture material ownership, composition, routing, permission, check, projection, replay, upgrade, example and disablement failures from Pactwright and Kakeibo through normal PI Source/triage/promotion governance. Distinguish repeatable Pactwright responsibility failures from project-specific choices. Reuse or add the smallest responsible regression case; do not automatically create Intents.
 
 Correct every blocking failure through normal Delivery and rerun the affected acceptance plus cumulative checks. Recording a blocker as a future candidate is not resolution. Only explicitly non-blocking findings/design gaps may remain under the Implementation Guide transition conditions.
 
@@ -779,7 +877,7 @@ The complete operating surface has evidence-backed acceptance and governed non-b
 
 **Verify before continuing**
 
-Trace each blocker to its correction and passing re-verification. Review the full result map, live Pactwright/Kakeido traces, example/public-readiness evidence and exact release/upgrade proof. Require no known blocking failure before Checkpoint 9; retain explicit owner, evidence and non-blocking disposition for every open gap carried forward.
+Trace each blocker to its correction and passing re-verification. Review the full result map, live Pactwright/Kakeibo traces, example/public-readiness evidence and exact release/upgrade proof. Require no known blocking failure before Checkpoint 9; retain explicit owner, evidence and non-blocking disposition for every open gap carried forward.
 
 ## Exit gate
 
@@ -805,11 +903,18 @@ Checkpoint 8 closes only when:
 - the public learning path passes applicable Covered-domain readiness and retains accepted, in-horizon, Source-traceable grounding;
 - the end-to-end example actually executes, explicitly includes Delivery Review, separates Graph Review and preserves real approval/exposure and PI governance boundaries;
 - the lightweight catalogue distinguishes Agent Packs, Extensions and genuinely supported Production Skills using validated reusable repository metadata;
-- Pactwright and Kakeido each retain a live cross-profile record-to-projection trace and a verified new governed event without manufactured operational findings;
+- Pactwright and Kakeibo each retain a live cross-profile record-to-projection trace and a verified new governed event without manufactured operational findings;
 - the complete six-package `0.0.8` family is registry/provenance verified and the real `0.0.7 → 0.0.8` consumer transition uses exact desired constraints and owning commands with compatible intermediate states;
+- the configured Experiments view projects mode, hypothesis, exact control/candidate exposure, primary metric, guardrails, window, derived state, latest Observation and resulting PI or later-Delivery provenance, without raw telemetry, experiment samples, private prompts or grounding;
+- an empty configured Experiments view is valid and does not manufacture Experiment state, and a Project field edit alone cannot create or mutate a canonical Experiment;
+- Deployment or rollout without an Experiment remains representable, and favourable Experiment evidence is never rendered as promotion unless normal PI/Delivery governance actually accepted it;
+- disabling Operations removes its Experiment surface while preserving Graph Review, Assets / Publication and PI truth;
+- the public operating guide, examples, Academy and catalogue explain ordinary feedback loops and controlled Experiment loops without implying every rollout needs experimentation;
+- Kakeibo's real Checkpoint 6 controlled Kei Experiment is projected from exact existing Deployment, Experiment, Observation and PI records without adding Kei-specific Pactwright graph types or exposing private production trace data;
+- where a real Kakeibo feedback-driven Delivery originates from that Experiment lineage, the Project exposes `Delivery Evidence → Deployment → Experiment → Observation → PI → later Delivery`, and otherwise displays the actual lineage without fabricating Experiment state;
 - every blocker has a correction and passing re-verification; only explicitly non-blocking gaps remain governed future work;
 - no known blocking failure enters Checkpoint 9.
 
 ---
 
-**Pactwright — Checkpoint 8 — Full Project Operating Surface v11**
+**Pactwright — Checkpoint 8 — Full Project Operating Surface v12**

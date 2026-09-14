@@ -45,8 +45,41 @@ Canonical semantics come from:
 - [08 — Open-Source Project Organisation](../specs/08-open-source-project-organisation.md)
 - [Implementation Principles](./00-implementation-principles.md)
 - [Implementation Guide](./00-implementation-guide.md)
+- [Kakeibo System-Level Acceptance Profile](./00-kakeibo-acceptance-profile.md)
+- [Pactwright — Operations Experiment Semantics](../research-logs/2026-09-02-pactwright-operations-experiment-semantics.md)
 
-Research logs are rationale only. Kakeido acceptance uses the current canonical specifications from the Kakeido repository, not stale embedded copies.
+Research logs are rationale only. Kakeibo acceptance uses the current canonical specifications from the Kakeibo repository, not stale embedded copies.
+
+### Kakeibo
+
+At execution time use the current canonical Kakeibo authorities relevant to public claims, analytics and production evidence:
+
+```text
+docs/specs/README.md
+
+docs/specs/01-product-and-ux-spec.md
+docs/specs/03-kei-assistant-spec.md
+docs/specs/05-system-architecture-and-data-spec.md
+docs/specs/06-engineering-delivery-and-operations-spec.md
+docs/specs/07-open-source-project-organisation-spec.md
+```
+
+When a Publication makes financial-domain claims, include current `02-financial-domain-model-spec.md` as supporting authority.
+
+Preserve this Kakeibo ownership split:
+
+```text
+01 → product/commercial/public UX semantics
+02 → financial truth where the publication makes financial claims
+03 → Kei behaviour / authority / task meaning
+05 → runtime/data/analytics/privacy architecture
+06 → evaluation/release/production evidence practice
+07 → public/private and open-source transparency
+```
+
+`00-kakeibo-acceptance-profile.md` §11 is the shared System-Level Acceptance cross-check for the Kakeibo proof.
+
+Retained August Kakeido snapshots are not implementation authority.
 
 This runbook defines implementation order and acceptance, not new Pactwright semantics.
 
@@ -62,7 +95,7 @@ Step
 → Verify before continuing
 ```
 
-Default execution location is the Pactwright repository root unless a step names Kakeido or an isolated fixture. Label fixture evidence and keep it outside real project truth. Print or resolve every source, execution, Publication, Asset, Observation, Knowledge, candidate and Delivery identifier before a later action consumes it.
+Default execution location is the Pactwright repository root unless a step names Kakeibo or an isolated fixture. Label fixture evidence and keep it outside real project truth. Print or resolve every source, execution, Publication, Asset, Observation, Knowledge, candidate and Delivery identifier before a later action consumes it.
 
 For repository/code changes:
 
@@ -115,7 +148,7 @@ bounded live Publication evidence and governed PI consequences
 one real Pactwright corrective Delivery, revised Asset and actual new Publication
 governed feedback guide and traceable real case material
 exact published 0.0.6 → 0.0.7 upgrade
-real Kakeido Publication feedback acceptance with honest outcome reporting
+real Kakeibo Publication feedback acceptance with honest outcome reporting
 ```
 
 Do not add new first-party packages, capabilities, schemas, performance fields on Publications, lifecycle stages, Publication withdrawal or Publication-to-Publication supersession. Do not create a Publication Feedback validator, separate workflow, provider layer, production model, second roadmap or automatic Publication-selection policy.
@@ -572,7 +605,7 @@ Trace every factual case claim to the recorded live chain. Execute any supplied 
 
 Run Graph Review over the material, triage every Finding through PI and resolve blocking inconsistencies through normal Delivery. Graph Review does not replace example execution or case verification. Assert applicable Covered domains, accepted/in-horizon claim provenance and re-grounding where Knowledge changed before approval.
 
-## Stage 6 — Release and Kakeido proof
+## Stage 6 — Release and Kakeibo proof
 
 ### Step 13 — Publish `0.0.7` after exact-upgrade conformance
 
@@ -601,9 +634,9 @@ pnpm view @pactwright/operations@0.0.7 version
 
 All return `0.0.7`. Verify trusted-release/provenance results and passing exact-target/intermediate-compatibility fixtures. Existing Publications must resolve as exposures without being re-recorded, and unchanged historical records must retain their identities/hashes. Registry lookups alone do not prove this transition.
 
-### Step 14 — Upgrade Kakeido exactly and exercise a real Publication
+### Step 14 — Upgrade Kakeibo exactly and exercise a real Publication
 
-**References:** Spec 02 upgrades; Specs 03, 05–07 feedback boundaries; current Kakeido owner specs; Checkpoint 2 exact-version upgrade acceptance.
+**References:** Spec 02 upgrades; Specs 03, 05–07 feedback boundaries; current Kakeibo owner specs; Checkpoint 2 exact-version upgrade acceptance.
 
 **Run**
 
@@ -645,7 +678,7 @@ pnpm pactwright github sync
 pnpm pactwright github sync --dry-run
 ```
 
-Select a real existing Kakeido Publication from current canonical work. Resolve its exact exposure identity and approved Asset; do not re-record an existing release merely to enable monitoring. Configure one explicitly selected bounded source and run:
+Select a real existing Kakeibo Publication from current canonical work. Resolve its exact exposure identity and approved Asset; do not re-record an existing release merely to enable monitoring. Configure one explicitly selected bounded source and run:
 
 ```bash
 pnpm pactwright operations ingest <source-id>
@@ -655,19 +688,19 @@ pnpm pactwright assets validate
 pnpm pactwright validate
 ```
 
-For every canonical Observation, verify the Source hand-off and run normal triage; promote only where justified and authorised. Regenerate the PI/Operations candidate views where appropriate using Step 8's existing commands. Current Kakeido specs govern any resulting corrective work.
+For every canonical Observation, verify the Source hand-off and run normal triage; promote only where justified and authorised. Regenerate the PI/Operations candidate views where appropriate using Step 8's existing commands. Current Kakeibo specs govern any resulting corrective work.
 
-A successful live no-Observation run is a valid collection/analysis proof, but must not be reported as a live Observation → PI hand-off. Report whether an Observation was created, matched or not warranted, or execution failed. Use the isolated Publication conformance suite for missing positive test coverage; never count synthetic evidence as real Kakeido output. A second live corrective revision in Kakeido is not required.
+A successful live no-Observation run is a valid collection/analysis proof, but must not be reported as a live Observation → PI hand-off. Report whether an Observation was created, matched or not warranted, or execution failed. Use the isolated Publication conformance suite for missing positive test coverage; never count synthetic evidence as real Kakeibo output. A second live corrective revision in Kakeibo is not required.
 
 **Expected result**
 
-Kakeido completes the exact safe published upgrade and exercises Publication feedback on a real surface, with its actual outcome and any governed consequence reported accurately.
+Kakeibo completes the exact safe published upgrade and exercises Publication feedback on a real surface, with its actual outcome and any governed consequence reported accurately.
 
 **Verify before continuing**
 
 Verify installed runtime and enabled first-party Extension versions are exactly `0.0.7`, the selected pack's explicit target/identity is honoured, and package-manager/Pactwright locks agree after each operation. Preserve earlier record hashes and replay information; activation of exposure metadata must not rewrite or duplicate historical releases.
 
-Require converged local/remote state, the same shared Project, preserved unrelated workflows and passing owning/Kakeido repository checks. Retain actual Publication/source/window/collection/analysis evidence. Every created/matched Observation must retain exact release provenance and a valid Source or a resolved hand-off retry before live hand-off is claimed. A live no-finding result must be labelled as such and is not a substitute for Pactwright's mandatory Step 11 revision.
+Require converged local/remote state, the same shared Project, preserved unrelated workflows and passing owning/Kakeibo repository checks. Retain actual Publication/source/window/collection/analysis evidence. Every created/matched Observation must retain exact release provenance and a valid Source or a resolved hand-off retry before live hand-off is claimed. A live no-finding result must be labelled as such and is not a substitute for Pactwright's mandatory Step 11 revision.
 
 Use isolated populated fixtures for disablement checks rather than deleting or disabling production history to satisfy a test. Confirm Assets/Publications remain independently valid without Operations and native Deployment Operations remains usable without Publication registration.
 
@@ -691,7 +724,7 @@ Learning reaches the correct owner and declared open gaps remain honest without 
 
 **Verify before continuing**
 
-Trace each blocker to a correction and passing re-verification. Verify retained non-blocking findings have Source/triage provenance and disposition. Require the full real Pactwright revision, exact release/Kakeido acceptance and all mapped integration tests to pass before Checkpoint 8.
+Trace each blocker to a correction and passing re-verification. Verify retained non-blocking findings have Source/triage provenance and disposition. Require the full real Pactwright revision, exact release/Kakeibo acceptance and all mapped integration tests to pass before Checkpoint 8.
 
 ## Exit gate
 
@@ -717,8 +750,8 @@ Checkpoint 7 closes only when:
 - fixtures and live no-finding outcomes are not substituted for the required real Pactwright revision, and later performance improvement is not claimed without evidence;
 - public guide/case claims are traceable to live provenance and any executable example is run rather than only prose-reviewed;
 - all six `0.0.7` first-party package versions and trusted-release provenance are verified;
-- Kakeido upgrades from accepted `0.0.6` through exact desired constraints and owning commands with compatible intermediate environments and preserved historical identities;
-- one real Kakeido Publication exercises live feedback with accurate created/matched/no-Observation reporting and governed hand-off for every actual Observation;
+- Kakeibo upgrades from accepted `0.0.6` through exact desired constraints and owning commands with compatible intermediate environments and preserved historical identities;
+- one real Kakeibo Publication exercises live feedback with accurate created/matched/no-Observation reporting and governed hand-off for every actual Observation;
 - no new Publication Feedback validator/workflow/package, independent roadmap, creative lifecycle, provider layer, automatic selection policy or archive/scheduler platform has been introduced;
 - declared identity, evidence durability and CLI gaps remain explicit without blocking any claimed acceptance;
 - every blocking failure has a correction and passing re-verification; no known blocker enters Checkpoint 8.
