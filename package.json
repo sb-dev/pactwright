@@ -52,7 +52,7 @@
   },
   "dependencies": {
     "@pactwright/standard": "workspace:*",
-    "js-yaml": "^4.1.0"
+    "js-yaml": "^5.4.1"
   },
   "devDependencies": {
     "@eslint/js": "^9.0.0",
