@@ -148,8 +148,14 @@ test("resolve: runtime and requested-version compatibility are checked", () => {
     resolvePack({ root: ok, config: config("./pack", "^0.1.0") }).problems.map((p) => p.code),
     ["incompatible-pack-version"],
   );
+  // The fixture pack declares the current runtime, so resolving against that
+  // runtime and the pack's own version is clean.
   assert.deepEqual(
-    resolvePack({ root: ok, config: config("./pack", "0.0.0"), runtimeVersion: "0.0.1" }).problems,
+    resolvePack({
+      root: ok,
+      config: config("./pack", "0.0.0"),
+      runtimeVersion: runtimeVersion(),
+    }).problems,
     [],
   );
 });
@@ -203,7 +209,8 @@ function noTemps(root: string): void {
 }
 
 test("lock: a complete pack resolves and writes a lock that round-trips, byte-identical on rerun", () => {
-  const root = temp({ pack: "complete" });
+  // Starts from the fixture's placeholder lock, so the write is observable.
+  const root = temp({ pack: "complete", resolveLock: false });
   const before = lockBytes(root);
   const { pack, lock } = resolveAndLock(root);
   const written = lockBytes(root);

@@ -225,12 +225,23 @@ test("config: rewriteConfig falls back to a full rewrite rather than corrupt a f
   }
 });
 
-test("config: serialiseConfig reproduces the exact bytes init writes", () => {
-  // The doc comment promises these are the same document; if the template
-  // and the serialiser drift, `extension add` silently reformats config.yml.
+test("config: editing the init template preserves its bytes and its guidance", () => {
+  // The template carries a comment telling the user to select a pack. What
+  // matters is that an edit — `extension add`, `agent-pack use` — splices in
+  // place rather than silently reformatting config.yml and dropping it.
   const parsed = parseConfig(loadYaml(CONFIG_TEMPLATE), "config.yml");
   assert.deepEqual(parsed.problems, []);
-  assert.equal(serialiseConfig(parsed.value!), CONFIG_TEMPLATE);
+  assert.equal(parsed.value!.agentPack, undefined, "the template selects no pack");
+  assert.equal(rewriteConfig(CONFIG_TEMPLATE, parsed.value!), CONFIG_TEMPLATE);
+  assert.match(CONFIG_TEMPLATE, /pactwright agent-pack use/);
+
+  // Serialising a *selected* configuration is still exact, which is what the
+  // canonical-rewrite fallback depends on.
+  const selected = { ...parsed.value!, agentPack: { source: "@pactwright/standard" } };
+  assert.equal(
+    serialiseConfig(selected),
+    'version: 1\n\nagent_pack:\n  source: "@pactwright/standard"\n\nadapter:\n  type: claude-code\n\nextensions: {}\n\ngithub:\n  enabled: false\n',
+  );
 });
 
 test("config: non-mapping document is rejected", () => {

@@ -2,6 +2,7 @@ import { existsSync, readFileSync, symlinkSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { isRecord } from "../validation.js";
 import type { AssertionResult, EvalCase, EvalSuite, Observation } from "./case.js";
+import { CLOSURE_CASES } from "./closure-cases.js";
 import { seedEdges, seedFile, seedNode } from "./sandbox.js";
 
 /**
@@ -495,7 +496,13 @@ const reviewDefectDetection: EvalCase = {
   ],
 };
 
-/** The initial core Delivery suite: plain data the runner consumes. */
+/**
+ * The core Delivery suite: plain data the runner consumes. It covers every
+ * dimension Checkpoint 1 Step 13 requires — Contract fidelity, scope
+ * discipline, Brief quality, Review quality and defect detection, Evidence
+ * accuracy and lifecycle compliance — plus the graph/output structure and
+ * forbidden-mutation boundaries.
+ */
 export const CORE_DELIVERY_SUITE: EvalSuite = {
   name: "core-delivery",
   cases: [
@@ -504,5 +511,6 @@ export const CORE_DELIVERY_SUITE: EvalSuite = {
     graphOutputStructure,
     forbiddenMutation,
     reviewDefectDetection,
+    ...CLOSURE_CASES,
   ],
 };

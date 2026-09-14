@@ -23,7 +23,12 @@ export interface ConfigExtension {
 /** `.pactwright/config.yml` — desired installation state (Distribution §3). */
 export interface PactwrightConfig {
   readonly version: 1;
-  readonly agentPack: {
+  /**
+   * The selected Agent Pack. Absent in a freshly initialised scaffold:
+   * Pactwright never selects one silently, so a project stays inert until
+   * `agent-pack use` names one explicitly (Distribution §5).
+   */
+  readonly agentPack?: {
     readonly source: string;
     readonly version?: string;
   };
@@ -50,7 +55,7 @@ export function parseConfig(raw: unknown, path: string): ParseResult<PactwrightC
   const root = expectRecord(c, raw, "config");
   if (root === undefined) return { value: undefined, problems: c.problems };
 
-  requireKeys(c, root, "config", ["version", "agent_pack", "adapter", "github"]);
+  requireKeys(c, root, "config", ["version", "adapter", "github"]);
   rejectUnknownKeys(c, root, "config", [
     "version",
     "agent_pack",
@@ -115,13 +120,18 @@ export function parseConfig(raw: unknown, path: string): ParseResult<PactwrightC
     enabled = expectBoolean(c, github["enabled"], "config.github.enabled");
   }
 
-  if (!c.ok || source === undefined || adapterType === undefined || enabled === undefined) {
+  // `source` is deliberately not required: a scaffold has no pack yet.
+  if (!c.ok || adapterType === undefined || enabled === undefined) {
     return { value: undefined, problems: c.problems };
   }
   return {
     value: {
       version: 1,
-      agentPack: packVersion === undefined ? { source } : { source, version: packVersion },
+      ...(source === undefined
+        ? {}
+        : {
+            agentPack: packVersion === undefined ? { source } : { source, version: packVersion },
+          }),
       adapter: { type: adapterType },
       // Copied to a plain object; callers guard dynamic id lookups with
       // `Object.hasOwn` so an id like "constructor" cannot resolve to an
@@ -176,14 +186,12 @@ function extensionsBlock(config: PactwrightConfig): readonly string[] {
  * carried over. `rewriteConfig` is what the commands normally use.
  */
 export function serialiseConfig(config: PactwrightConfig): string {
-  const lines: string[] = [
-    "version: 1",
-    "",
-    "agent_pack:",
-    `  source: ${scalar(config.agentPack.source)}`,
-  ];
-  if (config.agentPack.version !== undefined) {
-    lines.push(`  version: ${scalar(config.agentPack.version)}`);
+  const lines: string[] = ["version: 1"];
+  if (config.agentPack !== undefined) {
+    lines.push("", "agent_pack:", `  source: ${scalar(config.agentPack.source)}`);
+    if (config.agentPack.version !== undefined) {
+      lines.push(`  version: ${scalar(config.agentPack.version)}`);
+    }
   }
   // `adapter.type` is a validated enum and extension ids are validated
   // kebab-case, so both are safe bare; quoting them would also change the
@@ -194,14 +202,27 @@ export function serialiseConfig(config: PactwrightConfig): string {
   return lines.join("\n");
 }
 
-/** The line range of the top-level `extensions:` key, or `undefined`. */
-function extensionsRegion(lines: readonly string[]): { start: number; end: number } | undefined {
-  const start = lines.findIndex((line) => /^extensions:/.test(line));
+/** The canonical `agent_pack:` block for a configuration. */
+function agentPackBlock(config: PactwrightConfig): readonly string[] {
+  if (config.agentPack === undefined) return [];
+  const lines = ["agent_pack:", `  source: ${scalar(config.agentPack.source)}`];
+  if (config.agentPack.version !== undefined) {
+    lines.push(`  version: ${scalar(config.agentPack.version)}`);
+  }
+  return lines;
+}
+
+/** The line range of one top-level key's block, or `undefined`. */
+function topLevelRegion(
+  lines: readonly string[],
+  key: string,
+): { start: number; end: number } | undefined {
+  const start = lines.findIndex((line) => line.startsWith(`${key}:`));
   if (start === -1) return undefined;
   if (lines.some((line) => line.includes("\t"))) return undefined;
   // A flow mapping (`extensions: {}`) is the whole region. Anything else on
   // the key line is a shape this editor does not claim to understand.
-  const inline = lines[start]!.slice("extensions:".length).trim();
+  const inline = lines[start]!.slice(`${key}:`.length).trim();
   if (inline !== "") return inline === "{}" ? { start, end: start } : undefined;
   let end = start;
   for (let i = start + 1; i < lines.length; i += 1) {
@@ -230,9 +251,22 @@ function extensionsRegion(lines: readonly string[]): { start: number; end: numbe
 export function rewriteConfig(previous: string, config: PactwrightConfig): string {
   const canonical = serialiseConfig(config);
   const newline = previous.includes("\r\n") ? "\r\n" : "\n";
-  const lines = previous.split(/\r?\n/);
+  let lines = previous.split(/\r?\n/);
+
+  // The agent_pack block is spliced first: `agent-pack use` changes it and
+  // nothing else, so a project's comments and key order survive a pack
+  // switch exactly as they survive an extension change.
+  const packRegion = topLevelRegion(lines, "agent_pack");
+  if (packRegion !== undefined) {
+    lines = [
+      ...lines.slice(0, packRegion.start),
+      ...agentPackBlock(config),
+      ...lines.slice(packRegion.end + 1),
+    ];
+  }
+
   const block = [...extensionsBlock(config)];
-  const region = extensionsRegion(lines);
+  const region = topLevelRegion(lines, "extensions");
 
   let spliced: string;
   if (region !== undefined) {

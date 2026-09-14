@@ -9,8 +9,8 @@ import { fixture, notAProject } from "./helpers.js";
 test("loader: loads a valid project through the canonical path", () => {
   const project = loadProject({ root: fixture("valid-project") });
   assert.equal(project.paths.root, fixture("valid-project"));
-  assert.equal(project.config.agentPack.source, "@pactwright/standard");
-  assert.equal(project.lifecycle.stages["approve-contract"].actor, "human");
+  assert.equal(project.config.agentPack!.source, "@pactwright/standard");
+  assert.equal(project.lifecycle.responsibilities["approve-contract"].actor, "human");
   assert.equal(project.lock.runtime.version, "0.0.0");
   assert.deepEqual(
     project.graph.nodes.map((n) => n.id),
@@ -38,7 +38,7 @@ test("loader: no project → project-not-found", () => {
 const failures: Array<[string, string, RegExp]> = [
   ["invalid-config-missing-field", "missing-field", /config\.yml/],
   ["invalid-config-extensions", "missing-field", /config\.yml/],
-  ["invalid-lifecycle-unknown-stage", "unknown-stage", /lifecycle\.yml/],
+  ["invalid-lifecycle-unknown-stage", "unknown-responsibility", /lifecycle\.yml/],
   ["invalid-lifecycle-bad-actor", "invalid-value", /lifecycle\.yml/],
   ["invalid-lock-bad-hash", "invalid-hash", /lock\.yml/],
   ["invalid-missing-lock", "missing-file", /lock\.yml/],

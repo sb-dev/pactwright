@@ -7,6 +7,9 @@ import { CORE_EDGE_SCHEMAS, validateEdges } from "../src/graph/edge-schema.js";
 import { loadEdges, type Edge } from "../src/graph/edges.js";
 import { loadNodes, type GraphNode } from "../src/graph/nodes.js";
 import { CORE_NODE_SCHEMAS, validateNodes } from "../src/graph/schema.js";
+import { loadConfig } from "../src/config/config.js";
+import { resolveDesiredState, writeLock } from "../src/pack/resolve.js";
+import { writeExecutionState, type ExecutionState } from "../src/lifecycle/state.js";
 
 export const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 export const fixtures = path.join(repoRoot, "tests", "fixtures");
@@ -60,7 +63,9 @@ export function makeTempProject(
   options: {
     readonly lineage?: string;
     readonly lifecycle?: string;
-    readonly stages?: Readonly<Record<string, { execution: string; actor?: string }>>;
+    readonly responsibilities?: Readonly<Record<string, { execution: string; actor?: string }>>;
+    readonly shapeSteps?: readonly ShapeStepSpec[];
+    readonly transitions?: readonly TransitionSpec[];
     /** A `tests/fixtures/packs/<name>` pack copied to `<dir>/pack` and selected by config. */
     readonly pack?: string;
     /**
@@ -72,6 +77,8 @@ export function makeTempProject(
     readonly extensions?: ReadonlyArray<
       string | { readonly id: string; readonly enabled?: boolean; readonly configure?: boolean }
     >;
+    /** Keep the fixture's placeholder lock, for lock-drift tests. */
+    readonly resolveLock?: boolean;
   } = {},
 ): string {
   const dir = mkdtempSync(path.join(repoRoot, ".tmp-pactwright-test-"));
@@ -129,13 +136,30 @@ export function makeTempProject(
   if (options.lifecycle !== undefined) {
     copyFileSync(path.join(fixture("lifecycle"), options.lifecycle), lifecyclePath);
   }
-  if (options.stages !== undefined) {
-    const lines = ["version: 1", "", "stages:"];
-    for (const [name, stage] of Object.entries(options.stages)) {
-      lines.push(`  ${name}:`, `    execution: ${stage.execution}`);
-      if (stage.actor !== undefined) lines.push(`    actor: ${stage.actor}`);
+  if (
+    options.responsibilities !== undefined ||
+    options.shapeSteps !== undefined ||
+    options.transitions !== undefined
+  ) {
+    writeFileSync(
+      lifecyclePath,
+      lifecycleDocument(
+        options.responsibilities ?? defaultResponsibilities(),
+        options.shapeSteps ?? defaultShapeSteps(),
+        options.transitions ?? DEFAULT_TRANSITIONS,
+      ),
+    );
+  }
+  // A real project's lock describes the environment it actually resolves to,
+  // and sync now refuses to render from one that does not. Resolve the lock
+  // from the finished configuration, exactly as `init` does.
+  if (options.resolveLock !== false) {
+    const config = loadConfig(path.join(dir, ".pactwright", "config.yml"));
+    if (config.value !== undefined) {
+      const desired = resolveDesiredState({ root: dir, config: config.value });
+      if (desired.value !== undefined)
+        writeLock(path.join(dir, ".pactwright", "lock.yml"), desired.value.lock);
     }
-    writeFileSync(lifecyclePath, `${lines.join("\n")}\n`);
   }
   return dir;
 }
@@ -149,8 +173,21 @@ export function makeEmptyRepo(): string {
   return mkdtempSync(path.join(tmpdir(), "pactwright-init-"));
 }
 
-/** The §17 default lifecycle stages, with overrides. */
-export function defaultStages(
+export interface ShapeStepSpec {
+  readonly name: string;
+  readonly kind: "delivery" | "review" | "evidence";
+  readonly execution: string;
+  readonly actor?: string;
+}
+
+export interface TransitionSpec {
+  readonly from: string;
+  readonly to: string;
+  readonly maxIterations?: number;
+}
+
+/** The default Contract-crafting execution policy, with overrides. */
+export function defaultResponsibilities(
   overrides: Readonly<Record<string, { execution: string; actor?: string }>> = {},
 ): Record<string, { execution: string; actor?: string }> {
   return {
@@ -158,9 +195,91 @@ export function defaultStages(
     "propose-contracts": { execution: "automatic" },
     "approve-contract": { execution: "manual", actor: "human" },
     "write-brief": { execution: "automatic" },
-    "deliver-brief": { execution: "automatic" },
-    review: { execution: "automatic" },
-    "prepare-evidence": { execution: "automatic" },
     ...overrides,
   };
+}
+
+/** The built-in direct shape's steps: Brief → Delivery → Review → Evidence. */
+export function defaultShapeSteps(
+  overrides: Readonly<Record<string, { execution: string; actor?: string }>> = {},
+): ShapeStepSpec[] {
+  const base: ShapeStepSpec[] = [
+    { name: "delivery", kind: "delivery", execution: "automatic" },
+    { name: "review", kind: "review", execution: "automatic" },
+    { name: "evidence", kind: "evidence", execution: "automatic" },
+  ];
+  return base.map((step) => {
+    const override = overrides[step.name];
+    if (override === undefined) return step;
+    return override.actor === undefined
+      ? { ...step, execution: override.execution }
+      : { ...step, execution: override.execution, actor: override.actor };
+  });
+}
+
+export const DEFAULT_TRANSITIONS: readonly TransitionSpec[] = [
+  { from: "review", to: "delivery", maxIterations: 3 },
+];
+
+/** Renders a version 2 lifecycle document. */
+export function lifecycleDocument(
+  responsibilities: Readonly<Record<string, { execution: string; actor?: string }>>,
+  steps: readonly ShapeStepSpec[],
+  transitions: readonly TransitionSpec[],
+): string {
+  const lines = ["version: 2", "", "responsibilities:"];
+  for (const [name, policy] of Object.entries(responsibilities)) {
+    lines.push(`  ${name}:`, `    execution: ${policy.execution}`);
+    if (policy.actor !== undefined) lines.push(`    actor: ${policy.actor}`);
+  }
+  lines.push("", "shape:", "  id: direct", "  steps:");
+  for (const step of steps) {
+    lines.push(
+      `    - name: ${step.name}`,
+      `      kind: ${step.kind}`,
+      `      execution: ${step.execution}`,
+    );
+    if (step.actor !== undefined) lines.push(`      actor: ${step.actor}`);
+  }
+  if (transitions.length === 0) {
+    lines.push("  transitions: []");
+  } else {
+    lines.push("  transitions:");
+    for (const transition of transitions) {
+      lines.push(`    - from: ${transition.from}`, `      to: ${transition.to}`);
+      if (transition.maxIterations !== undefined) {
+        lines.push(`      max_iterations: ${transition.maxIterations}`);
+      }
+    }
+  }
+  return `${lines.join("\n")}\n`;
+}
+
+/**
+ * Advances a Brief's run to its Evidence closure step with a passing Review
+ * of the latest delivered state — the state a real run reaches after
+ * Delivery and Review. Tests that legitimately close a lineage use this;
+ * tests that must be refused deliberately skip it or vary one field.
+ */
+export function reachEvidenceClosure(
+  root: string,
+  briefId: string,
+  overrides: Partial<ExecutionState> = {},
+): ExecutionState {
+  const delivered = overrides.deliveredRevision ?? "delivered-1";
+  const state: ExecutionState = {
+    version: 1,
+    brief: briefId,
+    shape: "direct",
+    status: "running",
+    currentStep: "evidence",
+    completedSteps: ["delivery", "review"],
+    gates: {},
+    iterations: {},
+    deliveredRevision: delivered,
+    review: { step: "review", outcome: "pass", revision: delivered },
+    ...overrides,
+  };
+  writeExecutionState(root, state);
+  return state;
 }

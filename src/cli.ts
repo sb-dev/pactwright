@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-import { formatProblem, PactwrightError } from "./errors.js";
+import { formatProblem, PactwrightError, type Problem } from "./errors.js";
 import {
   lifecycleNext,
   lifecycleStatus,
@@ -8,11 +8,11 @@ import {
 } from "./lifecycle/engine.js";
 import { noExecutor, runLifecycle, type RunResult } from "./lifecycle/run.js";
 import { recordStage } from "./lifecycle/record.js";
-import type { StageName } from "./config/lifecycle.js";
 import { loadContext, type DeliveryContext, type HistoryRecord } from "./context.js";
 import { loadConfig, type PactwrightConfig } from "./config/config.js";
 import { CORE_DELIVERY_SUITE } from "./eval/core-suite.js";
 import { evalPassed, runEval, type EvalCaseResult, type EvalReport } from "./eval/runner.js";
+import { compareEvalReports, formatComparison } from "./eval/compare.js";
 import type { GraphNode } from "./graph/nodes.js";
 import {
   addExtension,
@@ -20,10 +20,13 @@ import {
   upgradeExtension,
   type ExtensionChangeReport,
 } from "./extension/manage.js";
+import { doctor, formatDoctor } from "./doctor.js";
+import { finishUpgrade, upgradeRuntime } from "./upgrade.js";
 import { initProject } from "./init.js";
 import { syncProject } from "./sync.js";
 import { loadProject } from "./loader.js";
-import { resolvePack } from "./pack/resolve.js";
+import { resolvePack, type ResolvedPack } from "./pack/resolve.js";
+import { parseSpec, upgradeAgentPack, useAgentPack, type PackChangeReport } from "./pack/select.js";
 import { validateProject } from "./validate.js";
 import { findProjectRoot, projectPaths } from "./project.js";
 import { runtimeVersion } from "./version.js";
@@ -31,24 +34,44 @@ import { runtimeVersion } from "./version.js";
 const HELP = `Usage: pactwright <command> [options]
 
 Commands:
-  init [--json]                              Create the Pactwright-owned core structure
-                                             (.pactwright, specs, .claude directories) in the
-                                             current directory and resolve the lock; existing
-                                             paths are left untouched
+  init [--agent-pack <source>] [--with <id>] Create the Pactwright-owned core structure
+       [--json]                              (.pactwright, specs, .claude directories) in the
+                                             current directory; existing paths are left
+                                             untouched. Without --agent-pack this is a scaffold
+                                             and no pack is selected. With it, one-shot setup
+                                             composes pack selection, any --with extensions and
+                                             sync -- the same operations as doing them apart
   sync [--json]                              Render the Pactwright-managed .claude/ adapter
                                              surface from config + lock (deterministic; only
                                              files carrying the Pactwright banner are written
                                              or removed, so user-authored files are kept)
+  upgrade [--to <version>] [--json]          Upgrade the Pactwright runtime: detect the project
+                                             package manager, delegate package replacement to it,
+                                             then re-enter through the new runtime to migrate,
+                                             re-lock, sync and validate. --to takes an exact
+                                             release for a forward upgrade or a rollback
+  doctor [--json]                            Read-only diagnostics of the distribution and
+                                             execution environment; reports healthy, warning
+                                             or action required and names the deterministic
+                                             remediation, never running it
   validate [--json]                          Validate the Delivery Graph and typed-edge store
   context <node-id> [--history] [--json]     Print the current core Delivery lineage of a node
-  lifecycle status [--intent <id>] [--json]  Report stage, completed stages, gates and lineage
-  lifecycle next   [--intent <id>] [--json]  Report the next permitted core Delivery action
-  lifecycle run    [--intent <id>] [--json]  Run automatic stages until a gate, completion,
-                                             a stage failure or a validation error
-  lifecycle record <stage> --file <yaml>     Record the content of a graph-marking stage
+  lifecycle status [--intent <id>] [--json]  Report the current action, completed
+                                             responsibilities and shape steps, gates,
+                                             validation problems and the current lineage
+  lifecycle next   [--intent <id>] [--json]  Report the next permitted lifecycle action
+  lifecycle run    [--intent <id>] [--json]  Run automatic actions until a gate, completion,
+                                             a block, an execution failure or a validation error
+  lifecycle record <command> --file <yaml>   Record the content of a graph-marking command
                                              (capture-intent, approve-contract, write-brief,
                                              prepare-evidence) after the runtime checks the
-                                             transition
+                                             transition, or the result of an execution step
+                                             (delivery, review) as execution provenance
+  agent-pack use <source> [--json]           Select an agent pack explicitly: resolve it,
+                                             validate every required capability, then update
+                                             config, lock and the generated environment
+  agent-pack upgrade [--json]                Re-resolve the selected pack within its configured
+                                             constraint, without changing pack identity
   extension add <id|package> [--json]        Enable an extension (and its dependencies),
                                              validate the capability union and update
                                              config and lock
@@ -59,6 +82,9 @@ Commands:
   eval [--json]                              Run the core Delivery evaluation suite against
                                              the selected agent pack (deterministic assertions
                                              and semantic dimensions reported separately)
+  eval --baseline <pack> --candidate <pack>  Compare a candidate against a released baseline and
+       [--json]                              report regressions per capability, agent and case;
+                                             no aggregate score is computed
 
 Options:
   -h, --help     Show this help
@@ -70,16 +96,44 @@ interface CommonOptions {
   readonly json: boolean;
   readonly history: boolean;
   readonly file?: string;
+  /** Explicit Agent Pack source for one-shot `init`. */
+  readonly agentPack?: string;
+  /** Extension ids to install as part of one-shot `init`. */
+  readonly withExtensions?: readonly string[];
+  /** Explicit `upgrade --to` target. */
+  readonly to?: string;
+  /** `eval --baseline`: the released pack or baseline to compare against. */
+  readonly baseline?: string;
+  /** `eval --candidate`: the pack or environment under evaluation. */
+  readonly candidate?: string;
+  /** `upgrade --finish`: the half the newly installed runtime runs. */
+  readonly finish: boolean;
   /** Positional arguments, in order. */
   readonly positional: readonly string[];
 }
 
 function parseOptions(
   args: readonly string[],
-  allow: { intent?: boolean; history?: boolean; file?: boolean } = {},
+  allow: {
+    intent?: boolean;
+    history?: boolean;
+    file?: boolean;
+    agentPack?: boolean;
+    with?: boolean;
+    to?: boolean;
+    finish?: boolean;
+    baseline?: boolean;
+    candidate?: boolean;
+  } = {},
 ): CommonOptions | string {
   let intent: string | undefined;
   let file: string | undefined;
+  let agentPack: string | undefined;
+  let to: string | undefined;
+  let baseline: string | undefined;
+  let candidate: string | undefined;
+  let finish = false;
+  const withExtensions: string[] = [];
   let json = false;
   let history = false;
   const positional: string[] = [];
@@ -95,6 +149,35 @@ function parseOptions(
       file = args[i + 1];
       if (file === undefined || file.startsWith("--")) return "--file needs a path";
       i += 1;
+    } else if (arg === "--baseline" && allow.baseline === true) {
+      baseline = args[i + 1];
+      if (baseline === undefined || baseline.startsWith("--")) {
+        return "--baseline needs a released pack or baseline";
+      }
+      i += 1;
+    } else if (arg === "--candidate" && allow.candidate === true) {
+      candidate = args[i + 1];
+      if (candidate === undefined || candidate.startsWith("--")) {
+        return "--candidate needs a pack or environment";
+      }
+      i += 1;
+    } else if (arg === "--to" && allow.to === true) {
+      to = args[i + 1];
+      if (to === undefined || to.startsWith("--")) return "--to needs a version";
+      i += 1;
+    } else if (arg === "--finish" && allow.finish === true) {
+      finish = true;
+    } else if (arg === "--agent-pack" && allow.agentPack === true) {
+      agentPack = args[i + 1];
+      if (agentPack === undefined || agentPack.startsWith("--")) {
+        return "--agent-pack needs a pack source";
+      }
+      i += 1;
+    } else if (arg === "--with" && allow.with === true) {
+      const id = args[i + 1];
+      if (id === undefined || id.startsWith("--")) return "--with needs an extension id";
+      withExtensions.push(id);
+      i += 1;
     } else if (arg.startsWith("--")) return `unknown option "${arg}"`;
     else positional.push(arg);
   }
@@ -104,6 +187,12 @@ function parseOptions(
     positional,
     ...(intent === undefined ? {} : { intent }),
     ...(file === undefined ? {} : { file }),
+    ...(agentPack === undefined ? {} : { agentPack }),
+    ...(withExtensions.length === 0 ? {} : { withExtensions }),
+    ...(to === undefined ? {} : { to }),
+    ...(baseline === undefined ? {} : { baseline }),
+    ...(candidate === undefined ? {} : { candidate }),
+    finish,
   };
 }
 
@@ -123,14 +212,22 @@ function formatStatus(entry: LineageStatus): string {
   const lines: string[] = [];
   lines.push(entry.intent === undefined ? "No active lineage" : `Intent: ${entry.intent}`);
   lines.push(`  state: ${entry.state}`);
+  const current =
+    entry.current === undefined
+      ? "none (Delivery lifecycle complete or terminal)"
+      : `${entry.current.name} (${entry.current.kind})`;
+  lines.push(`  current: ${current}`);
   lines.push(
-    `  current stage: ${entry.currentStage ?? "none (core Delivery lifecycle complete or terminal)"}`,
+    `  completed responsibilities: ${entry.completedResponsibilities.length === 0 ? "none" : entry.completedResponsibilities.join(", ")}`,
   );
-  lines.push(
-    `  completed stages: ${entry.completed.length === 0 ? "none" : entry.completed.join(", ")}`,
-  );
-  if (entry.blockedStage !== undefined) {
-    lines.push(`  blocked stage: ${entry.blockedStage} (required actor: ${entry.requiredActor})`);
+  if (entry.shape !== undefined) {
+    lines.push(`  shape: ${entry.shape} (${entry.executionStatus ?? "running"})`);
+    lines.push(
+      `  completed steps: ${entry.completedSteps.length === 0 ? "none" : entry.completedSteps.join(", ")}`,
+    );
+  }
+  if (entry.blocked !== undefined) {
+    lines.push(`  blocked: ${entry.blocked} (required actor: ${entry.requiredActor})`);
   }
   if (entry.lineage !== undefined) {
     const { decision, contract, brief, evidence } = entry.lineage;
@@ -142,13 +239,18 @@ function formatStatus(entry: LineageStatus): string {
   return `${lines.join("\n")}\n`;
 }
 
+function formatStatusProblems(problems: readonly Problem[]): string {
+  if (problems.length === 0) return "Validation problems: none\n";
+  return `Validation problems:\n${problems.map((problem) => `  - ${formatProblem(problem)}\n`).join("")}`;
+}
+
 function formatNext(action: NextAction): string {
   const who = action.intent === undefined ? "No active lineage" : `Intent: ${action.intent}`;
-  const stage =
-    action.stage === undefined
-      ? "next stage: none"
-      : `next stage: ${action.stage} (${action.execution}${action.actor ? `, actor ${action.actor}` : ""}${action.gate ? ", human gate" : ""})`;
-  return `${who}\n  ${stage}\n  ${action.reason}\n`;
+  const next =
+    action.action === undefined
+      ? "next: none"
+      : `next: ${action.action.name} (${action.action.kind}, ${action.action.execution}${action.action.actor ? `, actor ${action.action.actor}` : ""}${action.gate ? ", human gate" : ""})`;
+  return `${who}\n  ${next}\n  ${action.reason}\n`;
 }
 
 function formatRun(result: RunResult): string {
@@ -157,15 +259,18 @@ function formatRun(result: RunResult): string {
   lines.push(`  executed: ${result.executed.length === 0 ? "none" : result.executed.join(", ")}`);
   switch (result.stop) {
     case "completed":
-      lines.push("  stopped: lifecycle complete or no automatic stage to run");
+      lines.push("  stopped: lifecycle complete or no automatic action to run");
       break;
     case "human-gate":
       lines.push(
-        `  stopped: human gate at ${result.stage} (required actor: ${result.requiredActor})`,
+        `  stopped: human gate at ${result.action} (required actor: ${result.requiredActor})`,
       );
       break;
     case "stage-failed":
-      lines.push(`  stopped: stage ${result.stage} failed: ${result.message}`);
+      lines.push(`  stopped: ${result.action} failed: ${result.message}`);
+      break;
+    case "blocked":
+      lines.push(`  stopped: blocked at ${result.action}: ${result.message}`);
       break;
     case "validation-error":
       lines.push(`  stopped: validation error: ${result.message}`);
@@ -194,12 +299,20 @@ function record(args: readonly string[]): number {
   }
   try {
     const root = findProjectRoot();
-    const result = recordStage(root, options.positional[0] as StageName, options.file);
+    const result = recordStage(root, options.positional[0]!, options.file);
     if (options.json) {
       const created = result.created.map((node) => ({ id: node.id, type: node.type }));
-      out(`${JSON.stringify({ stage: result.stage, created }, null, 2)}\n`);
+      out(
+        `${JSON.stringify({ stage: result.stage, created, ...(result.advanced === undefined ? {} : { advanced: result.advanced }) }, null, 2)}\n`,
+      );
     } else {
       out(result.created.map((node) => `created ${node.type} ${node.id}\n`).join(""));
+      if (result.advanced !== undefined) {
+        const { brief, status, nextStep } = result.advanced;
+        out(
+          `recorded ${result.stage} for brief ${brief}; run is ${status}${nextStep === undefined ? "" : ` at ${nextStep}`}\n`,
+        );
+      }
     }
     return 0;
   } catch (error) {
@@ -248,7 +361,7 @@ async function lifecycle(sub: string | undefined, args: readonly string[]): Prom
       out(
         options.json
           ? `${JSON.stringify(status, null, 2)}\n`
-          : `${status.lineages.map(formatStatus).join("")}Validation problems: none\n`,
+          : `${status.lineages.map(formatStatus).join("")}${formatStatusProblems(status.problems)}`,
       );
     } else {
       const actions = lifecycleNext(project, options.intent);
@@ -265,7 +378,7 @@ async function lifecycle(sub: string | undefined, args: readonly string[]): Prom
 }
 
 function initCommand(args: readonly string[]): number {
-  const options = parseOptions(args);
+  const options = parseOptions(args, { agentPack: true, with: true });
   if (typeof options === "string" || options.positional.length > 0) {
     const why =
       typeof options === "string" ? options : `unexpected argument "${options.positional[0]}"`;
@@ -274,13 +387,22 @@ function initCommand(args: readonly string[]): number {
   }
   // Init is the one command that must not search for an enclosing project:
   // it creates the project in the current directory.
-  const report = initProject();
+  const report = initProject(process.cwd(), {
+    ...(options.agentPack === undefined ? {} : { agentPack: options.agentPack }),
+    ...(options.withExtensions === undefined ? {} : { withExtensions: options.withExtensions }),
+  });
   if (options.json) {
     out(`${JSON.stringify(report, null, 2)}\n`);
   } else {
     for (const entry of report.entries) {
       out(
         entry.action === "created" ? `created ${entry.path}\n` : `skipped ${entry.path} (exists)\n`,
+      );
+    }
+    if (report.scaffold === true) {
+      out(
+        "\nScaffold created. No agent pack is selected, so this is not yet a complete\n" +
+          "execution environment. Choose one: pactwright agent-pack use <source>\n",
       );
     }
     if (report.problems.length > 0) {
@@ -371,6 +493,130 @@ function extensionCommand(sub: string | undefined, args: readonly string[]): num
   return report.ok ? 0 : 1;
 }
 
+function formatPackReport(report: PackChangeReport): string {
+  const lines: string[] = [];
+  if (report.selected !== undefined) {
+    lines.push(
+      report.unchanged
+        ? `unchanged: ${report.selected.name}@${report.selected.version} is already selected\n`
+        : `selected ${report.selected.name}@${report.selected.version}\n`,
+    );
+    if (report.previous !== undefined) {
+      lines.push(`  was ${report.previous.name}@${report.previous.version}\n`);
+    }
+    if (report.constraintChanged === true) {
+      lines.push(`  configured constraint updated\n`);
+    }
+  }
+  for (const file of report.synced) lines.push(`  wrote ${file}\n`);
+  for (const note of report.reconciliation) lines.push(`  reconcile: ${note}\n`);
+  return lines.join("");
+}
+
+function agentPackCommand(sub: string | undefined, args: readonly string[]): number {
+  if (sub !== "use" && sub !== "upgrade") {
+    err(`pactwright: unknown agent-pack command "${sub ?? ""}"\n\n${HELP}`);
+    return 1;
+  }
+  const options = parseOptions(args);
+  const expected = sub === "use" ? 1 : 0;
+  if (typeof options === "string" || options.positional.length !== expected) {
+    const why =
+      typeof options === "string"
+        ? options
+        : sub === "use" && options.positional.length === 0
+          ? "agent-pack use needs a pack source"
+          : `unexpected argument "${options.positional[expected]}"`;
+    err(`pactwright: ${why}\n\n${HELP}`);
+    return 1;
+  }
+  let root: string;
+  try {
+    root = findProjectRoot();
+  } catch (error) {
+    if (!(error instanceof PactwrightError)) throw error;
+    printProblems(error, options.json);
+    return 1;
+  }
+  const report =
+    sub === "use" ? useAgentPack(root, options.positional[0]!) : upgradeAgentPack(root);
+  if (options.json) {
+    out(`${JSON.stringify(report, null, 2)}\n`);
+  } else {
+    out(formatPackReport(report));
+    if (report.problems.length > 0) {
+      out("Validation problems:\n");
+      for (const problem of report.problems) out(`  - ${formatProblem(problem)}\n`);
+    }
+  }
+  return report.ok ? 0 : 1;
+}
+
+function upgradeCommand(args: readonly string[]): number {
+  const options = parseOptions(args, { to: true, finish: true });
+  if (typeof options === "string" || options.positional.length > 0) {
+    const why =
+      typeof options === "string" ? options : `unexpected argument "${options.positional[0]}"`;
+    err(`pactwright: ${why}\n\n${HELP}`);
+    return 1;
+  }
+  let root: string;
+  try {
+    root = findProjectRoot();
+  } catch (error) {
+    if (!(error instanceof PactwrightError)) throw error;
+    printProblems(error, options.json);
+    return 1;
+  }
+  // `--finish` is the half the *newly installed* runtime runs; it is not a
+  // user-facing operation, which is why the help does not advertise it.
+  const report = options.finish
+    ? finishUpgrade(root)
+    : upgradeRuntime(root, options.to === undefined ? {} : { to: options.to });
+  if (options.json) {
+    out(`${JSON.stringify(report, null, 2)}\n`);
+  } else {
+    if (report.ok) {
+      out(
+        report.unchanged
+          ? `unchanged: runtime ${report.from} is already the target\n`
+          : `upgraded runtime ${report.from} -> ${report.to}${report.manager === undefined ? "" : ` via ${report.manager}`}\n`,
+      );
+      for (const migration of report.migrations) out(`  migrated ${migration}\n`);
+      for (const file of report.synced) out(`  wrote ${file}\n`);
+    } else {
+      if (report.restored === true) {
+        out("upgrade failed; the previous environment was restored\n");
+      }
+      out("Problems:\n");
+      for (const problem of report.problems) out(`  - ${formatProblem(problem)}\n`);
+    }
+  }
+  return report.ok ? 0 : 1;
+}
+
+function doctorCommand(args: readonly string[]): number {
+  const options = parseOptions(args);
+  if (typeof options === "string" || options.positional.length > 0) {
+    const why =
+      typeof options === "string" ? options : `unexpected argument "${options.positional[0]}"`;
+    err(`pactwright: ${why}\n\n${HELP}`);
+    return 1;
+  }
+  let root: string;
+  try {
+    root = findProjectRoot();
+  } catch (error) {
+    if (!(error instanceof PactwrightError)) throw error;
+    printProblems(error, options.json);
+    return 1;
+  }
+  const report = doctor(root);
+  out(options.json ? `${JSON.stringify(report, null, 2)}\n` : formatDoctor(report));
+  // A warning is information, not a failure; only action-required exits 1.
+  return report.status === "action-required" ? 1 : 0;
+}
+
 function syncCommand(args: readonly string[]): number {
   const options = parseOptions(args);
   if (typeof options === "string" || options.positional.length > 0) {
@@ -418,7 +664,12 @@ function validate(args: readonly string[]): number {
   } else if (report.ok) {
     const s = report.summary!;
     out(
-      `Valid: ${s.nodes} nodes, ${s.edges} edges, ${s.lineages} lineages (revision ${s.revision})\n`,
+      [
+        `Valid: ${s.nodes} nodes, ${s.edges} edges, ${s.lineages} lineages\n`,
+        `  repository_revision:   ${s.repositoryRevision}\n`,
+        `  project_graph_revision: ${s.revision}\n`,
+        `  environment_lock_hash: ${s.environmentLockHash}\n`,
+      ].join(""),
     );
   } else {
     out("Validation problems:\n");
@@ -505,8 +756,74 @@ function formatEvalReport(report: EvalReport): string {
  * `@pactwright/standard` pack, since evaluation is independent from any
  * project's Delivery (Distribution §16).
  */
+/** Resolves one side of a comparison from a pack source. */
+function resolveSide(root: string, source: string): ResolvedPack | PactwrightError {
+  const config: PactwrightConfig = {
+    version: 1,
+    agentPack: packSpecToConfig(source),
+    adapter: { type: "claude-code" },
+    extensions: {},
+    github: { enabled: false },
+  };
+  const resolved = resolvePack({ root, config });
+  if (resolved.value === undefined) {
+    return PactwrightError.fromProblems("pack-unresolved", resolved.problems);
+  }
+  return resolved.value;
+}
+
+function packSpecToConfig(source: string): { source: string; version?: string } {
+  const parsed = parseSpec(source);
+  if ("code" in parsed) return { source };
+  return parsed.version === undefined
+    ? { source: parsed.source }
+    : { source: parsed.source, version: parsed.version };
+}
+
+async function evalCompare(
+  root: string,
+  baselineSource: string,
+  candidateSource: string,
+  json: boolean,
+): Promise<number> {
+  const sides: Array<[string, string]> = [
+    ["baseline", baselineSource],
+    ["candidate", candidateSource],
+  ];
+  const packs: ResolvedPack[] = [];
+  for (const [which, source] of sides) {
+    const resolved = resolveSide(root, source);
+    if (resolved instanceof PactwrightError) {
+      err(`pactwright: could not resolve the ${which} "${source}"\n`);
+      printProblems(resolved, json);
+      return 1;
+    }
+    packs.push(resolved);
+  }
+  const [baselinePack, candidatePack] = packs as [ResolvedPack, ResolvedPack];
+  const baseline = await runEval({ pack: baselinePack, suite: CORE_DELIVERY_SUITE });
+  const candidate = await runEval({ pack: candidatePack, suite: CORE_DELIVERY_SUITE });
+  const comparison = compareEvalReports({
+    baseline,
+    candidate,
+    baselineEnvironment: { agents: baselinePack.hashes.agents, skills: baselinePack.hashes.skills },
+    candidateEnvironment: {
+      agents: candidatePack.hashes.agents,
+      skills: candidatePack.hashes.skills,
+    },
+  });
+  out(
+    json
+      ? `${JSON.stringify({ baseline, candidate, comparison }, null, 2)}\n`
+      : formatComparison(comparison),
+  );
+  // A comparison reports; it does not gate on the candidate's own pass/fail,
+  // which `pactwright eval` already does. A regression is the failure here.
+  return comparison.hasRegressions ? 1 : 0;
+}
+
 async function evalCommand(args: readonly string[]): Promise<number> {
-  const options = parseOptions(args);
+  const options = parseOptions(args, { baseline: true, candidate: true });
   if (typeof options === "string" || options.positional.length > 0) {
     const why =
       typeof options === "string" ? options : `unexpected argument "${options.positional[0]}"`;
@@ -533,6 +850,13 @@ async function evalCommand(args: readonly string[]): Promise<number> {
       extensions: {},
       github: { enabled: false },
     };
+  }
+  if ((options.baseline === undefined) !== (options.candidate === undefined)) {
+    err("pactwright: --baseline and --candidate are used together\n\n" + HELP);
+    return 1;
+  }
+  if (options.baseline !== undefined && options.candidate !== undefined) {
+    return evalCompare(root, options.baseline, options.candidate, options.json);
   }
   const resolved = resolvePack({ root, config });
   if (resolved.value === undefined) {
@@ -581,6 +905,9 @@ export async function main(argv: readonly string[]): Promise<number> {
   }
   if (first === "init") return initCommand(rest);
   if (first === "sync") return syncCommand(rest);
+  if (first === "agent-pack") return agentPackCommand(rest[0], rest.slice(1));
+  if (first === "doctor") return doctorCommand(rest);
+  if (first === "upgrade") return upgradeCommand(rest);
   if (first === "extension") return extensionCommand(rest[0], rest.slice(1));
   if (first === "lifecycle") return lifecycle(rest[0], rest.slice(1));
   if (first === "validate") return validate(rest);

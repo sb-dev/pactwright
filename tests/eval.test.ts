@@ -40,7 +40,7 @@ const one = (evalCase: EvalCase) => ({ name: "one-case", cases: [evalCase] });
 
 // ---- suite shape ------------------------------------------------------------
 
-test("suite: covers exactly the five Step 12 concerns against core capabilities", () => {
+test("suite: covers every Step 13 evaluation dimension against core capabilities", () => {
   assert.equal(CORE_DELIVERY_SUITE.name, "core-delivery");
   assert.deepEqual(
     CORE_DELIVERY_SUITE.cases.map((c) => c.id),
@@ -50,6 +50,9 @@ test("suite: covers exactly the five Step 12 concerns against core capabilities"
       "graph-output-structure",
       "forbidden-mutation",
       "review-defect-detection",
+      "brief-quality",
+      "evidence-accuracy",
+      "lifecycle-compliance",
     ],
   );
   for (const evalCase of CORE_DELIVERY_SUITE.cases) {
@@ -97,7 +100,7 @@ test("runEval: the reference candidates pass every deterministic assertion", asy
   assert.equal(report.runtime, runtimeVersion());
   assert.equal(report.pack.name, "@pactwright/standard");
   assert.equal(report.pack.hash, standardPack.hashes.pack);
-  assert.equal(report.cases.length, 5);
+  assert.equal(report.cases.length, 8);
   assert.equal(evalPassed(report), true);
   const agents = Object.fromEntries(report.cases.map((c) => [c.capability, c.agent]));
   assert.deepEqual(agents, {
@@ -144,7 +147,7 @@ test("runEval: cases run in throw-away sandboxes that are removed afterwards", a
       assert.ok(existsSync(path.join(task.root, ".pactwright", "config.yml")));
       // The sandbox is a loadable Pactwright project selecting the pack under evaluation.
       const project = loadProject({ root: task.root });
-      assert.equal(project.config.agentPack.source, standardPack.dir);
+      assert.equal(project.config.agentPack!.source, standardPack.dir);
       assert.equal(
         task.agent.prompt,
         path.join(standardPack.dir, "agents", `${task.agent.key}.md`),
@@ -152,8 +155,8 @@ test("runEval: cases run in throw-away sandboxes that are removed afterwards", a
       return undefined;
     },
   });
-  assert.equal(roots.length, 5);
-  assert.equal(new Set(roots).size, 5);
+  assert.equal(roots.length, CORE_DELIVERY_SUITE.cases.length);
+  assert.equal(new Set(roots).size, CORE_DELIVERY_SUITE.cases.length);
   for (const root of roots) assert.ok(!existsSync(root), `${root} removed`);
 });
 

@@ -26,7 +26,7 @@ import {
 } from "../src/graph/mutations.js";
 import { parseNodeFile, type GraphNode } from "../src/graph/nodes.js";
 import { loadProject, type Project } from "../src/loader.js";
-import { fixture, makeTempProject, repoRoot } from "./helpers.js";
+import { fixture, makeTempProject, reachEvidenceClosure, repoRoot } from "./helpers.js";
 
 const tempDirs: string[] = [];
 after(() => {
@@ -250,6 +250,9 @@ test("mutations: intent → proceed → brief → evidence completes the lifecyc
     title: "Banner brief",
     body: "Add the banner to main.",
   });
+  // Evidence closes the shape, so the run must stand at its closing step
+  // with a passing Review of the latest delivered state (Spec 01 §53).
+  reachEvidenceClosure(root, brief.id);
   const evidence = createEvidence(root, {
     briefId: brief.id,
     title: "Banner evidence",
@@ -311,7 +314,11 @@ test("mutations: new brief and new evidence supersede the previous current ones"
   });
   const brief1 = createBrief(root, { contractId: contract!.id, title: "Brief one", body: "v1" });
   const brief2 = createBrief(root, { contractId: contract!.id, title: "Brief two", body: "v2" });
+  reachEvidenceClosure(root, brief2.id);
   const evidence1 = createEvidence(root, { briefId: brief2.id, title: "Evidence one", body: "e1" });
+  // Correcting Evidence re-closes the same run, so its state still stands at
+  // the closing step (§15, evidence correction).
+  reachEvidenceClosure(root, brief2.id);
   const evidence2 = createEvidence(root, { briefId: brief2.id, title: "Evidence two", body: "e2" });
   const project = load(root);
   const lineage = deriveLineage(INTENT, project.graph.nodes, project.graph.edges);

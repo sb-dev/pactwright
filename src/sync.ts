@@ -7,6 +7,7 @@ import {
   type RenderedFiles,
 } from "./adapter/claude-code.js";
 import { PactwrightError, type Problem } from "./errors.js";
+import { checkEnvironmentAgreement } from "./config/agreement.js";
 import { loadProject, type Project } from "./loader.js";
 import { assertPackComplete, type ResolvedPack } from "./pack/resolve.js";
 import { projectPaths } from "./project.js";
@@ -88,6 +89,12 @@ export function syncProject(root: string = process.cwd()): SyncReport {
     if (!(error instanceof PactwrightError)) throw error;
     return failure(error.problems);
   }
+
+  // Lock agreement is checked before anything is rendered (Checkpoint 1
+  // Step 17): a lock that disagrees with the installed environment must not
+  // replace the previous generated integration.
+  const agreement = checkEnvironmentAgreement(project);
+  if (!agreement.ok) return failure(agreement.problems);
 
   const files = new Map([
     ...renderClaudeCodeAdapter(pack),

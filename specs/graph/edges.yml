@@ -23,3 +23,15 @@ edges:
   - source: evidence-learning-path-delivered-and-fixture-verified-63e97869
     type: evidences
     target: brief-write-the-guide-the-example-and-the-readme-links-fb50e5dd
+  - source: decision-proceed-with-realigning-the-public-learning-path-b56d3831
+    type: resolves
+    target: intent-realign-the-public-learning-path-with-the-corrected-runtime-3a73fcc6
+  - source: decision-proceed-with-realigning-the-public-learning-path-b56d3831
+    type: selects
+    target: contract-public-learning-path-matches-the-shipped-capability-1d64f595
+  - source: brief-rewrite-the-quick-start-guide-and-example-against-proven-behaviour-37102900
+    type: decomposes
+    target: contract-public-learning-path-matches-the-shipped-capability-1d64f595
+  - source: evidence-learning-path-realigned-and-checked-against-packed-artefacts-ee25a0b4
+    type: evidences
+    target: brief-rewrite-the-quick-start-guide-and-example-against-proven-behaviour-37102900

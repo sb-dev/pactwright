@@ -12,24 +12,63 @@ export {
 } from "./config/config.js";
 export {
   ACTORS,
-  CORE_STAGES,
-  DECISION_STAGE,
+  DECISION_RESPONSIBILITY,
   EXECUTION_MODES,
   LIFECYCLE_VERSION,
+  RECORDING_RESPONSIBILITIES,
+  RESPONSIBILITIES,
   decisionActor,
-  humanGates,
+  isRecordingResponsibility,
+  gatedResponsibilities,
   isHumanGate,
   loadLifecycle,
+  migrateLifecycleV1,
   parseLifecycle,
   type Actor,
   type ExecutionMode,
   type LifecycleConfig,
-  type StageConfig,
-  type StageName,
+  type ResponsibilityName,
+  type StepPolicy,
 } from "./config/lifecycle.js";
 export {
+  DIRECT_SHAPE,
+  DIRECT_SHAPE_ID,
+  SHAPE_STEP_KINDS,
+  STEP_CAPABILITY,
+  forwardStep,
+  isGate,
+  isPermittedTransition,
+  parseShape,
+  stepNamed,
+  transitionsFrom,
+  type LifecycleShape,
+  type ShapeStep,
+  type ShapeStepKind,
+  type ShapeTransition,
+} from "./lifecycle/shape.js";
+export {
+  EXECUTION_DIR,
+  EXECUTION_STATUSES,
+  REVIEW_OUTCOMES,
+  beginExecution,
+  clearExecutionState,
+  executionPath,
+  loadAllExecutionState,
+  loadExecutionState,
+  parseExecutionState,
+  routeKey,
+  serialiseExecutionState,
+  writeExecutionState,
+  type ExecutionState,
+  type ExecutionStatus,
+  type GateRecord,
+  type ReviewOutcome,
+  type ReviewRecord,
+} from "./lifecycle/state.js";
+export {
+  ENVIRONMENT_LOCK_VERSION,
   EXTENSION_ID_PATTERN,
-  HASH_PATTERN,
+  environmentLockHash,
   loadLock,
   parseLock,
   type LockExtension,
@@ -112,7 +151,6 @@ export {
   REVISION_PATTERN,
   REVISION_VERSION,
   canonicalGraphPayload,
-  canonicalJson,
   graphRevision,
   type CanonicalRecord,
   type RevisionInput,
@@ -139,19 +177,23 @@ export {
 } from "./init.js";
 export { runtimeVersion } from "./version.js";
 export {
-  GRAPH_MARKING_STAGES,
-  TRANSIENT_STAGES,
-  completedStages,
+  completedResponsibilities,
+  currentStep,
+  executionFor,
+  inShapePhase,
+  isActionGate,
   isActive,
-  isTransientStage,
   lifecycleNext,
   lifecycleStatus,
   nextActionFor,
-  pendingStages,
+  pendingResponsibilities,
+  routeAfter,
   selectLineages,
+  type LifecycleAction,
   type LifecycleStatus,
   type LineageStatus,
   type NextAction,
+  type Routing,
 } from "./lifecycle/engine.js";
 export {
   noExecutor,
@@ -159,10 +201,64 @@ export {
   type RunOptions,
   type RunResult,
   type RunStop,
-  type StageExecutor,
-  type StageOutcome,
-  type StageRequest,
+  type ActionExecutor,
+  type ActionOutcome,
+  type ActionRequest,
 } from "./lifecycle/run.js";
+export { canonicalJson, HASH_PATTERN } from "./canonical.js";
+export {
+  RUNTIME_PACKAGE,
+  cliReentry,
+  finishUpgrade,
+  packageManagerInstaller,
+  upgradeRuntime,
+  type PackageInstaller,
+  type Reentry,
+  type UpgradeOptions,
+  type UpgradeReport,
+} from "./upgrade.js";
+export {
+  DOCTOR_STATUSES,
+  doctor,
+  formatDoctor,
+  type DoctorCheck,
+  type DoctorReport,
+  type DoctorStatus,
+} from "./doctor.js";
+export { parseSpec, upgradeAgentPack, useAgentPack, type PackChangeReport } from "./pack/select.js";
+export {
+  PROVENANCE_KINDS,
+  isProvenanceKind,
+  recordDelivery,
+  recordReview,
+  type ProvenanceKind,
+  type ProvenanceResult,
+  type RecordDeliveryInput,
+  type RecordReviewInput,
+} from "./lifecycle/provenance.js";
+export {
+  EVIDENCE_PRECONDITIONS,
+  assertEvidenceClosure,
+  checkEvidenceClosure,
+  type ClosureCheck,
+  type EvidencePrecondition,
+} from "./graph/closure.js";
+export { checkEnvironmentAgreement, type EnvironmentAgreement } from "./config/agreement.js";
+export {
+  PACKAGE_MANAGERS,
+  detectPackageManager,
+  installedVersion,
+  type DetectedPackageManager,
+  type PackageManager,
+  type PackageManagerDetection,
+} from "./config/package-manager.js";
+export {
+  NO_REPOSITORY_REVISION,
+  formatReplayBase,
+  repositoryRevision,
+  type ReplayBase,
+  type RepositoryRevision,
+} from "./graph/repository.js";
 export { validateProject, type ValidationReport } from "./validate.js";
 export { renderGitHubWorkflows, syncProject, type SyncReport } from "./sync.js";
 export {
@@ -268,3 +364,14 @@ export {
   type SemanticResult,
 } from "./eval/runner.js";
 export { CORE_DELIVERY_SUITE } from "./eval/core-suite.js";
+export { CLOSURE_CASES } from "./eval/closure-cases.js";
+export {
+  compareEvalReports,
+  formatComparison,
+  type AssertionDelta,
+  type AssertionMovement,
+  type CaseComparison,
+  type ComparisonEnvironment,
+  type ComparisonReport,
+  type EnvironmentDelta,
+} from "./eval/compare.js";

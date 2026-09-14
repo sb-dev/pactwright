@@ -1,4 +1,20 @@
-import { CORE_STAGES, type StageName } from "../config/lifecycle.js";
+/**
+ * The seven canonical Claude Code adapter commands (Spec 01 §§47–53). These
+ * are the runtime's command surface, NOT lifecycle topology: their
+ * decomposition does not define the fulfilment shape, and four of them sit
+ * upstream of the Brief entirely. The lifecycle shape lives in
+ * `src/lifecycle/shape.ts`.
+ */
+export const COMMAND_NAMES = [
+  "capture-intent",
+  "propose-contracts",
+  "approve-contract",
+  "write-brief",
+  "deliver-brief",
+  "review",
+  "prepare-evidence",
+] as const;
+export type CommandName = (typeof COMMAND_NAMES)[number];
 
 /**
  * One generated adapter command (Delivery Graph §19). The body only says
@@ -8,7 +24,7 @@ import { CORE_STAGES, type StageName } from "../config/lifecycle.js";
  * to; absent when the command needs no agent.
  */
 export interface CommandTemplate {
-  readonly stage: StageName;
+  readonly name: CommandName;
   readonly description: string;
   readonly argumentHint: string;
   readonly capability?: string;
@@ -16,7 +32,7 @@ export interface CommandTemplate {
   readonly body: (agent: string | undefined) => string;
 }
 
-const RECORD = (stage: StageName, fields: string): string =>
+const RECORD = (command: CommandName, fields: string): string =>
   [
     `## 3. Hand the result to the runtime`,
     ``,
@@ -26,7 +42,7 @@ const RECORD = (stage: StageName, fields: string): string =>
     fields,
     "```",
     ``,
-    `Then run \`pnpm pactwright lifecycle record ${stage} --file <path>\`.`,
+    `Then run \`pnpm pactwright lifecycle record ${command} --file <path>\`.`,
     `The runtime checks the transition, validates the complete graph and writes`,
     `the record. Do not create or edit anything under \`specs/\` yourself.`,
   ].join("\n");
@@ -34,9 +50,31 @@ const RECORD = (stage: StageName, fields: string): string =>
 const TRANSIENT = [
   `## 3. Report, do not record`,
   ``,
-  `This stage leaves no graph record. Present the result to the user. Do not`,
+  `This command leaves no graph record. Present the result to the user. Do not`,
   `create or edit anything under \`specs/\`.`,
 ].join("\n");
+
+/**
+ * Delivery and Review leave no *graph* record, but their result is execution
+ * provenance the runtime needs: it is what the Evidence closure guards read
+ * (Spec 01 §53). The command reports what it did; the runtime decides the
+ * transition, so the command never selects one.
+ */
+const PROVENANCE = (kind: "delivery" | "review", fields: string): string =>
+  [
+    `## 3. Hand the result to the runtime`,
+    ``,
+    `This leaves no graph record, but the runtime tracks the run. Write a YAML`,
+    `file in a temporary location outside the repository with:`,
+    ``,
+    "```yaml",
+    fields,
+    "```",
+    ``,
+    `Then run \`pnpm pactwright lifecycle record ${kind} --file <path>\`.`,
+    `The runtime decides what happens next. Do not choose the next step`,
+    `yourself, and do not create or edit anything under \`specs/\`.`,
+  ].join("\n");
 
 const STOP = [
   `## 4. Stop`,
@@ -52,7 +90,7 @@ const delegate = (agent: string | undefined, task: string): string =>
 
 export const COMMAND_TEMPLATES: readonly CommandTemplate[] = [
   {
-    stage: "capture-intent",
+    name: "capture-intent",
     description: "Capture a new Delivery intent from text",
     argumentHint: "<text>",
     body: () =>
@@ -70,7 +108,7 @@ export const COMMAND_TEMPLATES: readonly CommandTemplate[] = [
       ].join("\n"),
   },
   {
-    stage: "propose-contracts",
+    name: "propose-contracts",
     description: "Generate transient contract alternatives for an intent",
     argumentHint: "<intent-id>",
     capability: "delivery-specification",
@@ -90,7 +128,7 @@ export const COMMAND_TEMPLATES: readonly CommandTemplate[] = [
       ].join("\n"),
   },
   {
-    stage: "approve-contract",
+    name: "approve-contract",
     description: "Record the human decision on an intent and its canonical contract",
     argumentHint: "<intent-id> <alternative> [notes]",
     capability: "delivery-specification",
@@ -127,7 +165,7 @@ export const COMMAND_TEMPLATES: readonly CommandTemplate[] = [
       ].join("\n"),
   },
   {
-    stage: "write-brief",
+    name: "write-brief",
     description: "Write the delivery brief for an approved contract",
     argumentHint: "<contract-id>",
     capability: "delivery-specification",
@@ -146,7 +184,7 @@ export const COMMAND_TEMPLATES: readonly CommandTemplate[] = [
       ].join("\n"),
   },
   {
-    stage: "deliver-brief",
+    name: "deliver-brief",
     description: "Execute a brief against the repository",
     argumentHint: "<brief-id>",
     capability: "delivery-execution",
@@ -159,14 +197,14 @@ export const COMMAND_TEMPLATES: readonly CommandTemplate[] = [
           `Execute the brief within the contract's scope, run the verification it names and report what changed, file by file, with the real verification result.`,
         ),
         ``,
-        TRANSIENT,
+        PROVENANCE("delivery", `intent: <brief-id or intent-id>`),
         `Repository changes stay in the working tree for the user to review.`,
         ``,
         STOP,
       ].join("\n"),
   },
   {
-    stage: "review",
+    name: "review",
     description: "Review delivered changes against the contract and brief",
     argumentHint: "<brief-id>",
     capability: "delivery-review",
@@ -179,14 +217,15 @@ export const COMMAND_TEMPLATES: readonly CommandTemplate[] = [
           `Review the contract, the brief, the delivered changes and the required verification. Report findings with file references.`,
         ),
         ``,
-        TRANSIENT,
-        `Review reasoning is not graph state.`,
+        PROVENANCE("review", `intent: <brief-id or intent-id>\noutcome: pass | revise | blocked`),
+        `Review reasoning is not graph state; only the verdict is recorded, and`,
+        `a Review never creates Evidence.`,
         ``,
         STOP,
       ].join("\n"),
   },
   {
-    stage: "prepare-evidence",
+    name: "prepare-evidence",
     description: "Record final delivery and verification facts for a brief",
     argumentHint: "<brief-id>",
     capability: "delivery-execution",
@@ -209,10 +248,10 @@ export const COMMAND_TEMPLATES: readonly CommandTemplate[] = [
   },
 ];
 
-/** Every core stage has exactly one template, in lifecycle order. */
-export function templateFor(stage: StageName): CommandTemplate {
-  return COMMAND_TEMPLATES.find((template) => template.stage === stage)!;
+/** Every canonical command has exactly one template. */
+export function templateFor(name: CommandName): CommandTemplate {
+  return COMMAND_TEMPLATES.find((template) => template.name === name)!;
 }
 
-// Guard kept next to the data so a stage rename fails typecheck here.
-void (CORE_STAGES satisfies readonly StageName[]);
+// Guard kept next to the data: a missing or renamed command fails typecheck here.
+void (COMMAND_TEMPLATES.map((template) => template.name) satisfies readonly CommandName[]);

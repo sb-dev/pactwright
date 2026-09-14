@@ -1,4 +1,6 @@
+import { createHash } from "node:crypto";
 import type { ParseResult } from "./config.js";
+import { HASH_PATTERN, canonicalJson } from "../canonical.js";
 import {
   Checker,
   expectRecord,
@@ -46,7 +48,7 @@ export interface LockFile {
   readonly extensions: Readonly<Record<string, LockExtension>>;
 }
 
-export const HASH_PATTERN = /^sha256:[0-9a-f]{64}$/;
+export { HASH_PATTERN };
 
 /** Extension ids are kebab-case identifiers, like `project-intelligence`. */
 export const EXTENSION_ID_PATTERN = /^[a-z][a-z0-9]*(-[a-z0-9]+)*$/;
@@ -195,3 +197,51 @@ export function loadLock(path: string): ParseResult<LockFile> {
   if (read.problems.length > 0) return { value: undefined, problems: read.problems };
   return parseLock(read.value, path);
 }
+
+/**
+ * The deterministic `environment_lock_hash` (Distribution §12): sha256 over
+ * the exact resolved environment the lock records. The same locked
+ * environment always produces the same hash, and changing any single
+ * resolved identity — runtime version, pack version or hash, an agent or
+ * skill hash, an extension pin — changes it.
+ *
+ * It identifies the environment; it does not replace the lock contents or
+ * the package/source locations needed to reconstruct it.
+ */
+export function environmentLockHash(lock: LockFile): string {
+  const payload = canonicalJson({
+    version: ENVIRONMENT_LOCK_VERSION,
+    runtime: lock.runtime.version,
+    agent_pack: {
+      name: lock.agentPack.name,
+      version: lock.agentPack.version,
+      hash: lock.agentPack.hash,
+    },
+    agents: lock.agents,
+    skills: lock.skills,
+    extensions: Object.fromEntries(
+      Object.keys(lock.extensions)
+        .sort()
+        .map((id) => {
+          const entry = lock.extensions[id]!;
+          return [
+            id,
+            {
+              package: entry.package,
+              version: entry.version,
+              hash: entry.hash,
+              dependencies: entry.dependencies ?? {},
+            },
+          ];
+        }),
+    ),
+  });
+  return `sha256:${createHash("sha256").update(payload, "utf8").digest("hex")}`;
+}
+
+/**
+ * Bumped only when the hashed payload's shape changes, so an environment
+ * hash recorded by an older runtime is never silently compared against a
+ * differently-shaped one.
+ */
+export const ENVIRONMENT_LOCK_VERSION = 1;

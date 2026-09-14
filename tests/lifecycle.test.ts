@@ -2,96 +2,191 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 import * as path from "node:path";
 import {
-  CORE_STAGES,
+  RESPONSIBILITIES,
   decisionActor,
-  humanGates,
+  gatedResponsibilities,
   isHumanGate,
   loadLifecycle,
+  migrateLifecycleV1,
   parseLifecycle,
 } from "../src/config/lifecycle.js";
 import { fixture } from "./helpers.js";
 
 const lifecycleFile = (name: string) => path.join(fixture("lifecycle"), name);
 
-function stages(overrides: Record<string, unknown> = {}): Record<string, unknown> {
+function responsibilities(overrides: Record<string, unknown> = {}): Record<string, unknown> {
   const base: Record<string, unknown> = {};
-  for (const name of CORE_STAGES) base[name] = { execution: "automatic" };
+  for (const name of RESPONSIBILITIES) base[name] = { execution: "automatic" };
   base["capture-intent"] = { execution: "manual" };
   base["approve-contract"] = { execution: "manual", actor: "human" };
   return { ...base, ...overrides };
 }
 
-test("lifecycle: parses the Delivery Graph §17 default example", () => {
-  const result = parseLifecycle({ version: 1, stages: stages() }, "lifecycle.yml");
+/** The built-in direct shape: Brief → Delivery → Review → Evidence. */
+function shape(overrides: Record<string, unknown> = {}): Record<string, unknown> {
+  return {
+    id: "direct",
+    steps: [
+      { name: "delivery", kind: "delivery", execution: "automatic" },
+      { name: "review", kind: "review", execution: "automatic" },
+      { name: "evidence", kind: "evidence", execution: "automatic" },
+    ],
+    transitions: [{ from: "review", to: "delivery", max_iterations: 3 }],
+    ...overrides,
+  };
+}
+
+const document = (overrides: Record<string, unknown> = {}): Record<string, unknown> => ({
+  version: 2,
+  responsibilities: responsibilities(),
+  shape: shape(),
+  ...overrides,
+});
+
+test("lifecycle: the four Contract-crafting responsibilities are not shape steps", () => {
+  const result = parseLifecycle(document(), "lifecycle.yml");
   assert.deepEqual(result.problems, []);
-  assert.deepEqual(result.value?.stages["approve-contract"], {
-    execution: "manual",
-    actor: "human",
-  });
-  assert.deepEqual(result.value?.stages["review"], { execution: "automatic" });
-  assert.deepEqual(Object.keys(result.value!.stages).sort(), [...CORE_STAGES].sort());
+  assert.deepEqual(
+    Object.keys(result.value!.responsibilities).sort(),
+    [...RESPONSIBILITIES].sort(),
+  );
+  // Spec 01 Step 6: capture-intent, propose-contracts, approve-contract and
+  // write-brief must never appear as lifecycle-shape steps.
+  assert.deepEqual(
+    result.value!.shape.steps.map((step) => step.name),
+    ["delivery", "review", "evidence"],
+  );
+  for (const name of RESPONSIBILITIES) {
+    assert.equal(
+      result.value!.shape.steps.some((step) => step.name === name),
+      false,
+      `${name} must not be a shape step`,
+    );
+  }
 });
 
 test("lifecycle: agent actor on approve-contract is accepted", () => {
   const result = parseLifecycle(
-    {
-      version: 1,
-      stages: stages({ "approve-contract": { execution: "automatic", actor: "agent" } }),
-    },
+    document({
+      responsibilities: responsibilities({
+        "approve-contract": { execution: "automatic", actor: "agent" },
+      }),
+    }),
     "lifecycle.yml",
   );
   assert.deepEqual(result.problems, []);
 });
 
-test("lifecycle: every core stage is required", () => {
-  const partial = stages();
-  delete partial["review"];
-  const result = parseLifecycle({ version: 1, stages: partial }, "lifecycle.yml");
+test("lifecycle: every responsibility is required", () => {
+  const partial = responsibilities();
+  delete partial["write-brief"];
+  const result = parseLifecycle(document({ responsibilities: partial }), "lifecycle.yml");
   assert.deepEqual(
     result.problems.map((p) => p.code),
     ["missing-field"],
   );
-  assert.match(result.problems[0]!.message, /"review"/);
+  assert.match(result.problems[0]!.message, /"write-brief"/);
 });
 
-test("lifecycle: unknown stages, execution modes and actors are rejected", () => {
+test("lifecycle: a shape step named as a responsibility is rejected with guidance", () => {
   const result = parseLifecycle(
-    {
-      version: 1,
-      stages: stages({
+    document({
+      responsibilities: responsibilities({ "deliver-brief": { execution: "automatic" } }),
+    }),
+    "lifecycle.yml",
+  );
+  assert.deepEqual(
+    result.problems.map((p) => p.code),
+    ["unknown-responsibility"],
+  );
+  assert.match(result.problems[0]!.message, /shape step named "delivery"/);
+});
+
+test("lifecycle: unknown responsibilities, execution modes and actors are rejected", () => {
+  const result = parseLifecycle(
+    document({
+      responsibilities: responsibilities({
         publish: { execution: "automatic" },
-        review: { execution: "sometimes", actor: "robot" },
+        "write-brief": { execution: "sometimes", actor: "robot" },
       }),
-    },
+    }),
     "lifecycle.yml",
   );
   assert.deepEqual(result.problems.map((p) => p.code).sort(), [
     "invalid-value",
     "invalid-value",
-    "unknown-stage",
+    "unknown-responsibility",
   ]);
 });
 
+test("lifecycle: a version 1 seven-stage document is reported as needing migration", () => {
+  const result = parseLifecycle(
+    {
+      version: 1,
+      stages: {
+        "capture-intent": { execution: "manual" },
+        "propose-contracts": { execution: "automatic" },
+        "approve-contract": { execution: "manual", actor: "human" },
+        "write-brief": { execution: "automatic" },
+        "deliver-brief": { execution: "automatic" },
+        review: { execution: "automatic" },
+        "prepare-evidence": { execution: "automatic" },
+      },
+    },
+    "lifecycle.yml",
+  );
+  assert.deepEqual(
+    result.problems.map((p) => p.code),
+    ["lifecycle-needs-migration"],
+  );
+});
+
+test("lifecycle: migrating v1 preserves policy and yields the direct shape", () => {
+  const v1 = {
+    version: 1,
+    stages: {
+      "capture-intent": { execution: "manual" },
+      "propose-contracts": { execution: "automatic" },
+      "approve-contract": { execution: "manual", actor: "human" },
+      "write-brief": { execution: "automatic" },
+      "deliver-brief": { execution: "automatic" },
+      review: { execution: "manual", actor: "human" },
+      "prepare-evidence": { execution: "automatic" },
+    },
+  };
+  const result = migrateLifecycleV1(v1, "lifecycle.yml");
+  assert.deepEqual(result.problems, []);
+  assert.equal(decisionActor(result.value!), "human");
+  // The v1 review stage was a human gate; it stays one as a shape step.
+  const review = result.value!.shape.steps.find((step) => step.name === "review");
+  assert.deepEqual(review, {
+    name: "review",
+    kind: "review",
+    execution: "manual",
+    actor: "human",
+  });
+});
+
 test("lifecycle: wrong version is rejected", () => {
-  const result = parseLifecycle({ version: 2, stages: stages() }, "lifecycle.yml");
+  const result = parseLifecycle(document({ version: 7 }), "lifecycle.yml");
   assert.deepEqual(
     result.problems.map((p) => p.code),
     ["unsupported-version"],
   );
 });
 
-test("lifecycle: the exact §17 default example parses; human gates derived", () => {
+test("lifecycle: the default example parses; human gates derived", () => {
   const result = loadLifecycle(lifecycleFile("default.yml"));
   assert.deepEqual(result.problems, []);
   assert.equal(decisionActor(result.value!), "human");
-  assert.deepEqual(humanGates(result.value!), ["capture-intent", "approve-contract"]);
+  assert.deepEqual(gatedResponsibilities(result.value!), ["capture-intent", "approve-contract"]);
 });
 
-test("lifecycle: the exact §17 automated example parses; only capture-intent gates", () => {
+test("lifecycle: the automated example parses; only capture-intent gates", () => {
   const result = loadLifecycle(lifecycleFile("automated.yml"));
   assert.deepEqual(result.problems, []);
   assert.equal(decisionActor(result.value!), "agent");
-  assert.deepEqual(humanGates(result.value!), ["capture-intent"]);
+  assert.deepEqual(gatedResponsibilities(result.value!), ["capture-intent"]);
 });
 
 test("lifecycle: an unknown decision actor is rejected", () => {
@@ -109,7 +204,7 @@ test("lifecycle: approve-contract must declare the authorised Decision actor", (
     result.problems.map((p) => p.code),
     ["missing-actor"],
   );
-  assert.match(result.problems[0]!.message, /Delivery Graph §8/);
+  assert.match(result.problems[0]!.message, /Spec 01 §8/);
 });
 
 test("lifecycle: isHumanGate follows execution and actor", () => {

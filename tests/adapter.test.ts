@@ -10,9 +10,8 @@ import {
   renderClaudeCodeAdapter,
   writeAdapter,
 } from "../src/adapter/claude-code.js";
-import { COMMAND_TEMPLATES } from "../src/adapter/commands.js";
-import { CORE_STAGES } from "../src/config/lifecycle.js";
-import { GRAPH_MARKING_STAGES, TRANSIENT_STAGES } from "../src/lifecycle/engine.js";
+import { COMMAND_NAMES, COMMAND_TEMPLATES } from "../src/adapter/commands.js";
+import { RECORDING_COMMANDS } from "../src/lifecycle/record.js";
 import { PactwrightError } from "../src/errors.js";
 import { resolvePack, type ResolvedPack } from "../src/pack/resolve.js";
 import { loadConfig } from "../src/config/config.js";
@@ -24,7 +23,7 @@ import { fixture, makeTempProject, repoRoot } from "./helpers.js";
  * value: bump it on purpose, in the same commit, after reading the diff.
  */
 const COMPLETE_RENDER_HASH =
-  "sha256:653f9df1028183b889315ca16efd427d4919a2b387a5bafc8f687a0d7b5e85d7";
+  "sha256:45a872208787a3b11b21fbc55a634bba44f0c02b78c744ff78843ac54437cc50";
 
 /**
  * A file shaped as a stale render: frontmatter, then the banner in the
@@ -97,13 +96,13 @@ test("adapter: the file set is one agent per pack agent plus the seven commands,
       ".claude/agents/implementer.md",
       ".claude/agents/reviewer.md",
       ".claude/agents/spec.md",
-      ...CORE_STAGES.map((stage) => `.claude/commands/${stage}.md`).sort(),
+      ...COMMAND_NAMES.map((name) => `.claude/commands/${name}.md`).sort(),
     ],
   );
-  assert.equal(COMMAND_TEMPLATES.length, CORE_STAGES.length);
+  assert.equal(COMMAND_TEMPLATES.length, COMMAND_NAMES.length);
   assert.deepEqual(
-    COMMAND_TEMPLATES.map((t) => t.stage),
-    [...CORE_STAGES],
+    COMMAND_TEMPLATES.map((t) => t.name),
+    [...COMMAND_NAMES],
   );
 });
 
@@ -128,18 +127,30 @@ test("adapter: agent files carry Claude Code frontmatter, the prompt and inlined
 test("adapter: commands invoke the runtime and own no transition rules", () => {
   for (const pack of [completePack(), standardPack()]) {
     const files = renderClaudeCodeAdapter(pack);
-    for (const stage of CORE_STAGES) {
+    for (const stage of COMMAND_NAMES) {
       const text = files.get(`.claude/commands/${stage}.md`)!;
       assert.match(text, /^---\ndescription: .+\nargument-hint: .+\n---\n\n/, stage);
       assert.match(text, /pnpm pactwright (context|validate)/, `${stage} asks the runtime`);
       assert.doesNotMatch(text, FORBIDDEN, `${stage} must not state transition rules`);
       assert.doesNotMatch(text, /\$\{/, `${stage} has no unrendered placeholders`);
-      if ((GRAPH_MARKING_STAGES as readonly string[]).includes(stage)) {
+      // Three distinct mutation boundaries (Spec 01 §§47–53):
+      if ((RECORDING_COMMANDS as readonly string[]).includes(stage)) {
+        // graph-marking: hands content to the runtime, which writes the record
         assert.match(text, new RegExp(`pnpm pactwright lifecycle record ${stage} --file`), stage);
+      } else if (stage === "deliver-brief" || stage === "review") {
+        // execution steps: provenance only, never a graph record
+        const kind = stage === "review" ? "review" : "delivery";
+        assert.match(text, new RegExp(`pnpm pactwright lifecycle record ${kind} --file`), stage);
+        assert.match(text, /leaves no graph record/, stage);
+        assert.match(text, /runtime decides what happens next/, stage);
       } else {
-        assert.ok((TRANSIENT_STAGES as readonly string[]).includes(stage));
+        // graph-read-only: alternatives stay transient, nothing is recorded
+        assert.equal(stage, "propose-contracts");
         assert.doesNotMatch(text, /lifecycle record/, `${stage} records nothing`);
         assert.match(text, /leaves no graph record/, stage);
+      }
+      if (stage === "review") {
+        assert.match(text, /never creates Evidence/, "review must not create Evidence");
       }
     }
     for (const [stage, agent] of [

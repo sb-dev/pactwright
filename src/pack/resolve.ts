@@ -60,7 +60,24 @@ export function resolvePack(options: ResolvePackOptions): {
   value: ResolvedPack | undefined;
   problems: readonly Problem[];
 } {
-  const source = options.config.agentPack.source;
+  const selected = options.config.agentPack;
+  if (selected === undefined) {
+    // A scaffold has no pack yet. This is not a broken configuration — it is
+    // an environment that has not been activated, and saying so is what stops
+    // the runtime from quietly choosing one (Checkpoint 1 Step 14).
+    return {
+      value: undefined,
+      problems: [
+        {
+          code: "no-agent-pack-selected",
+          message:
+            'no agent pack is selected; run "pactwright agent-pack use <source>" to choose one explicitly',
+          path: join(options.root, ".pactwright", "config.yml"),
+        },
+      ],
+    };
+  }
+  const source = selected.source;
   const located = locatePack(options.root, source);
   if (typeof located !== "string") return { value: undefined, problems: [located] };
   const dir = located;
@@ -85,7 +102,7 @@ export function resolvePack(options: ResolvePackOptions): {
       path,
     });
   }
-  const wanted = options.config.agentPack.version;
+  const wanted = selected.version;
   if (wanted !== undefined && !isValidRange(wanted)) {
     // A range the runtime cannot parse is its own problem, not a mismatch.
     problems.push({

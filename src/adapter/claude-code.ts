@@ -14,10 +14,10 @@ import { basename, dirname, join, relative, resolve, sep } from "node:path";
 import { dump } from "js-yaml";
 import { tempSibling } from "../atomic.js";
 import { PactwrightError } from "../errors.js";
-import { CORE_STAGES } from "../config/lifecycle.js";
+
 import { SKILLS_DIR, readPackFile } from "../pack/manifest.js";
 import { agentFor, type ResolvedPack } from "../pack/resolve.js";
-import { COMMAND_TEMPLATES } from "./commands.js";
+import { COMMAND_NAMES, templateFor, type CommandName } from "./commands.js";
 
 /**
  * The directories the Claude Code adapter may write in (Distribution §8).
@@ -131,8 +131,8 @@ function renderAgent(pack: ResolvedPack, key: string): string {
   return parts.join("");
 }
 
-function renderCommand(pack: ResolvedPack, stage: (typeof CORE_STAGES)[number]): string {
-  const template = COMMAND_TEMPLATES.find((candidate) => candidate.stage === stage)!;
+function renderCommand(pack: ResolvedPack, command: CommandName): string {
+  const template = templateFor(command);
   const agent =
     template.capability === undefined ? undefined : agentFor(pack, template.capability)?.key;
   const id = template.argumentHint.startsWith("<text>")
@@ -143,13 +143,13 @@ function renderCommand(pack: ResolvedPack, stage: (typeof CORE_STAGES)[number]):
     ``,
     id === undefined
       ? `Run \`pnpm pactwright validate\`. The runtime owns the lifecycle: it decides what is permitted, who may decide and how records are linked. Never reason about that yourself.`
-      : `Run \`pnpm pactwright context ${id}\` for the current lineage and \`pnpm pactwright lifecycle status --intent <intent-id>\` for the completed stages. The runtime owns the lifecycle: it decides what is permitted, who may decide and how records are linked. Never reason about that yourself.`,
-    `If the runtime reports a validation problem, or lists \`${stage}\` as already completed, show its output and stop. The runtime refuses any record that is out of order.`,
+      : `Run \`pnpm pactwright context ${id}\` for the current lineage and \`pnpm pactwright lifecycle status --intent <intent-id>\` for what is completed. The runtime owns the lifecycle: it decides what is permitted, who may decide and how records are linked. Never reason about that yourself.`,
+    `If the runtime reports a validation problem, or lists \`${command}\` as already completed, show its output and stop. The runtime refuses any record that is out of order.`,
   ].join("\n");
   return [
     frontmatter({ description: template.description, "argument-hint": template.argumentHint }),
     banner(pack, "pactwright runtime"),
-    `# /${stage} ${template.argumentHint}\n\n`,
+    `# /${command} ${template.argumentHint}\n\n`,
     askRuntime,
     "\n\n",
     template.body(agent),
@@ -159,7 +159,7 @@ function renderCommand(pack: ResolvedPack, stage: (typeof CORE_STAGES)[number]):
 
 /**
  * Renders the Claude Code adapter for a resolved pack: one agent file per
- * pack agent (skills inlined) and one command file per core stage. Pure and
+ * pack agent (skills inlined) and one command file per canonical command. Pure and
  * deterministic: same pack bytes → same output bytes. Reads pack files the
  * way the lock hashes them (LF-normalised).
  */
@@ -168,8 +168,8 @@ export function renderClaudeCodeAdapter(pack: ResolvedPack): RenderedFiles {
   for (const key of Object.keys(pack.manifest.agents).sort()) {
     files.set(`.claude/agents/${key}.md`, renderAgent(pack, key));
   }
-  for (const stage of CORE_STAGES) {
-    files.set(`.claude/commands/${stage}.md`, renderCommand(pack, stage));
+  for (const command of COMMAND_NAMES) {
+    files.set(`.claude/commands/${command}.md`, renderCommand(pack, command));
   }
   return new Map([...files.entries()].sort(([a], [b]) => (a < b ? -1 : a > b ? 1 : 0)));
 }

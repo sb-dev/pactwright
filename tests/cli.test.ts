@@ -5,7 +5,7 @@ import * as fs from "node:fs";
 import { rmSync } from "node:fs";
 import * as path from "node:path";
 import {
-  defaultStages,
+  defaultResponsibilities,
   fixture,
   makeEmptyRepo,
   makeTempProject,
@@ -94,10 +94,10 @@ test("cli: lifecycle status reports the contracted fixture", () => {
   assert.equal(result.status, 0, result.stderr);
   assert.match(result.stdout, /Intent: intent-hello-world-a1b2/);
   assert.match(result.stdout, /state: contracted/);
-  assert.match(result.stdout, /current stage: write-brief/);
+  assert.match(result.stdout, /current: write-brief \(responsibility\)/);
   assert.match(
     result.stdout,
-    /completed stages: capture-intent, propose-contracts, approve-contract/,
+    /completed responsibilities: capture-intent, propose-contracts, approve-contract/,
   );
   assert.match(
     result.stdout,
@@ -109,22 +109,25 @@ test("cli: lifecycle status reports the contracted fixture", () => {
 test("cli: lifecycle status --json emits the structure", () => {
   const result = runIn(fixture("valid-project"), "lifecycle", "status", "--json");
   assert.equal(result.status, 0, result.stderr);
-  const parsed = JSON.parse(result.stdout) as { lineages: Array<{ currentStage: string }> };
-  assert.equal(parsed.lineages[0]?.currentStage, "write-brief");
+  const parsed = JSON.parse(result.stdout) as {
+    lineages: Array<{ current: { name: string; kind: string } }>;
+  };
+  assert.equal(parsed.lineages[0]?.current.name, "write-brief");
+  assert.equal(parsed.lineages[0]?.current.kind, "responsibility");
 });
 
 test("cli: lifecycle next reports write-brief for the contracted fixture", () => {
   const result = runIn(fixture("valid-project"), "lifecycle", "next");
   assert.equal(result.status, 0, result.stderr);
-  assert.match(result.stdout, /next stage: write-brief \(automatic\)/);
+  assert.match(result.stdout, /next: write-brief \(responsibility, automatic\)/);
 });
 
-test("cli: lifecycle next reports no next stage after current Evidence", () => {
+test("cli: lifecycle next reports no next action after current Evidence", () => {
   const root = project({ lineage: "done" });
   const result = runIn(root, "lifecycle", "next", "--intent", "intent-quick-start-a1b2");
   assert.equal(result.status, 0, result.stderr);
-  assert.match(result.stdout, /next stage: none/);
-  assert.match(result.stdout, /no next stage/);
+  assert.match(result.stdout, /next: none/);
+  assert.match(result.stdout, /no next action/);
 });
 
 test("cli: lifecycle status/next print validation problems and exit 1", () => {
@@ -140,7 +143,7 @@ test("cli: lifecycle status/next print validation problems and exit 1", () => {
 test("cli: lifecycle run stops at a manual gate (exit 0)", () => {
   const root = project({
     lineage: "open",
-    stages: defaultStages({ "propose-contracts": { execution: "manual" } }),
+    responsibilities: defaultResponsibilities({ "propose-contracts": { execution: "manual" } }),
   });
   const result = runIn(root, "lifecycle", "run");
   assert.equal(result.status, 0, result.stderr);
@@ -151,7 +154,7 @@ test("cli: lifecycle run stops with a stage failure when no executor exists (exi
   const root = project({ lineage: "contracted" });
   const result = runIn(root, "lifecycle", "run");
   assert.equal(result.status, 1);
-  assert.match(result.stdout, /stopped: stage write-brief failed: no executor/);
+  assert.match(result.stdout, /stopped: write-brief failed: no executor/);
 });
 
 test("cli: lifecycle run stops on a validation error (exit 1)", () => {
@@ -184,10 +187,11 @@ test("cli: help lists validate and context", () => {
 test("cli: validate reports a valid project (exit 0)", () => {
   const result = runIn(fixture("valid-project"), "validate");
   assert.equal(result.status, 0, result.stderr);
-  assert.match(
-    result.stdout,
-    /^Valid: 3 nodes, 2 edges, 1 lineages \(revision sha256:[0-9a-f]{64}\)\n$/,
-  );
+  assert.match(result.stdout, /^Valid: 3 nodes, 2 edges, 1 lineages\n/);
+  // The three replay identities are reported together (Spec 01 §56).
+  assert.match(result.stdout, /repository_revision: {3}\S+\n/);
+  assert.match(result.stdout, /project_graph_revision: sha256:[0-9a-f]{64}\n/);
+  assert.match(result.stdout, /environment_lock_hash: sha256:[0-9a-f]{64}\n/);
   const json = runIn(fixture("valid-project"), "validate", "--json");
   assert.equal(json.status, 0);
   assert.equal((JSON.parse(json.stdout) as { ok: boolean }).ok, true);
@@ -252,11 +256,11 @@ test("cli: context argument and option errors", () => {
 });
 
 test("cli: help lists lifecycle record", () => {
-  assert.match(run("--help").stdout, /lifecycle record <stage> --file <yaml>/);
+  assert.match(run("--help").stdout, /lifecycle record <command> --file <yaml>/);
 });
 
 test("cli: lifecycle record capture-intent creates an intent from a YAML file", () => {
-  const root = project({ stages: defaultStages() });
+  const root = project({ responsibilities: defaultResponsibilities() });
   const input = path.join(root, "intent.yml");
   fs.writeFileSync(input, "title: Hello world\nbody: |\n  Make hello world print.\n");
   const result = runIn(root, "lifecycle", "record", "capture-intent", "--file", input, "--json");
@@ -270,11 +274,11 @@ test("cli: lifecycle record capture-intent creates an intent from a YAML file", 
   assert.match(parsed.created[0]!.id, /^intent-hello-world-/);
   assert.ok(fs.existsSync(path.join(root, "specs", "nodes", `${parsed.created[0]!.id}.md`)));
   const next = runIn(root, "lifecycle", "next", "--intent", parsed.created[0]!.id);
-  assert.match(next.stdout, /next stage: propose-contracts/);
+  assert.match(next.stdout, /next: propose-contracts/);
 });
 
 test("cli: lifecycle record walks a lineage from contract to evidence through the runtime", () => {
-  const root = project({ lineage: "contracted", stages: defaultStages() });
+  const root = project({ lineage: "contracted", responsibilities: defaultResponsibilities() });
   const brief = path.join(root, "brief.yml");
   fs.writeFileSync(brief, "contract: contract-quick-start-c3d4\ntitle: Do it\nbody: |\n  Steps.\n");
   const wrote = runIn(root, "lifecycle", "record", "write-brief", "--file", brief);
@@ -284,17 +288,24 @@ test("cli: lifecycle record walks a lineage from contract to evidence through th
   const again = runIn(root, "lifecycle", "record", "write-brief", "--file", brief);
   assert.equal(again.status, 1);
   assert.match(again.stdout, /stage-not-permitted/);
-  assert.match(again.stdout, /deliver-brief/);
+  // With a Brief in place the shape governs, and its first step is Delivery.
+  assert.match(again.stdout, /delivery/);
 
+  // Evidence cannot be minted straight off a Brief: the run has delivered
+  // nothing and reviewed nothing, so the closing step has not been reached
+  // (Spec 01 §53, Checkpoint 1 Step 7).
   const evidence = path.join(root, "evidence.yml");
   fs.writeFileSync(evidence, `brief: ${briefId}\ntitle: Done\nbody: |\n  Verified.\n`);
-  const done = runIn(root, "lifecycle", "record", "prepare-evidence", "--file", evidence);
-  assert.equal(done.status, 0, done.stdout + done.stderr);
-  assert.match(runIn(root, "lifecycle", "status").stdout, /state: done/);
+  const premature = runIn(root, "lifecycle", "record", "prepare-evidence", "--file", evidence);
+  assert.equal(premature.status, 1, premature.stdout);
+  assert.match(premature.stdout, /stage-not-permitted/);
+  const after = runIn(root, "lifecycle", "status");
+  assert.match(after.stdout, /state: delivering/);
+  assert.doesNotMatch(after.stdout, /state: done/);
 });
 
 test("cli: lifecycle record approve-contract checks the actor through the Step 7 mutation", () => {
-  const root = project({ lineage: "open", stages: defaultStages() });
+  const root = project({ lineage: "open", responsibilities: defaultResponsibilities() });
   const decision = path.join(root, "decision.yml");
   fs.writeFileSync(
     decision,
@@ -320,7 +331,7 @@ test("cli: lifecycle record approve-contract checks the actor through the Step 7
 });
 
 test("cli: lifecycle record approve-contract resumes a deferred lineage", () => {
-  const root = project({ lineage: "deferred", stages: defaultStages() });
+  const root = project({ lineage: "deferred", responsibilities: defaultResponsibilities() });
   const decision = path.join(root, "decision.yml");
   fs.writeFileSync(
     decision,
@@ -341,12 +352,17 @@ test("cli: lifecycle record approve-contract resumes a deferred lineage", () => 
 });
 
 test("cli: lifecycle record rejects transient stages, bad input and missing options", () => {
-  const root = project({ lineage: "open", stages: defaultStages() });
+  const root = project({ lineage: "open", responsibilities: defaultResponsibilities() });
   const input = path.join(root, "x.yml");
   fs.writeFileSync(input, "title: t\nbody: b\nextra: 1\n");
-  const transient = runIn(root, "lifecycle", "record", "review", "--file", input);
+  // propose-contracts records nothing at all: its alternatives are transient
+  // and it is not an execution step either.
+  const transient = runIn(root, "lifecycle", "record", "propose-contracts", "--file", input);
   assert.equal(transient.status, 1);
   assert.match(transient.stdout, /no-graph-record/);
+  // review is an execution step, but this lineage has no run to record against.
+  const noRun = runIn(root, "lifecycle", "record", "review", "--file", input);
+  assert.equal(noRun.status, 1);
   const unknown = runIn(root, "lifecycle", "record", "capture-intent", "--file", input);
   assert.equal(unknown.status, 1);
   assert.match(unknown.stdout, /unknown-field/);
@@ -362,17 +378,25 @@ test("cli: lifecycle record rejects transient stages, bad input and missing opti
 // ---- init -------------------------------------------------------------------
 
 test("cli: help lists init", () => {
-  assert.match(run("--help").stdout, /init \[--json\]/);
+  assert.match(run("--help").stdout, /init \[--agent-pack <source>\] \[--with <id>\]/);
 });
 
 test("cli: init then validate and lifecycle status pass in a clean repository", () => {
   const dir = makeEmptyRepo();
   tempDirs.push(dir);
-  const result = runIn(dir, "init");
+  // A plain init is a scaffold and says so; it selects no pack and writes
+  // no lock, because nothing has been resolved yet (Checkpoint 1 Step 14).
+  const scaffold = runIn(dir, "init");
+  assert.equal(scaffold.status, 0, scaffold.stdout + scaffold.stderr);
+  assert.match(scaffold.stdout, /created \.pactwright\/config\.yml/);
+  assert.match(scaffold.stdout, /Scaffold created\. No agent pack is selected/);
+  assert.equal(fs.existsSync(path.join(dir, ".pactwright", "lock.yml")), false);
+
+  const result = runIn(dir, "init", "--agent-pack", "@pactwright/standard");
   assert.equal(result.status, 0, result.stdout + result.stderr);
-  assert.match(result.stdout, /created \.pactwright\/config\.yml/);
-  assert.match(result.stdout, /created \.pactwright\/lock\.yml/);
-  assert.doesNotMatch(result.stdout, /skipped/);
+  // The scaffold's files already exist, so only the pack selection is new.
+  assert.match(result.stdout, /skipped \.pactwright\/config\.yml/);
+  assert.ok(fs.existsSync(path.join(dir, ".pactwright", "lock.yml")));
   assert.equal(fs.existsSync(path.join(dir, ".github")), false);
 
   const valid = runIn(dir, "validate");
@@ -418,13 +442,22 @@ test("cli: help lists sync", () => {
 test("cli: init, sync, validate and lifecycle status compose in a clean repository", () => {
   const dir = makeEmptyRepo();
   tempDirs.push(dir);
+  // A scaffold has nothing to render: sync refuses until a pack is selected.
   assert.equal(runIn(dir, "init").status, 0);
+  const unselected = runIn(dir, "sync");
+  assert.equal(unselected.status, 1);
+  assert.match(unselected.stdout, /no-agent-pack-selected/);
 
+  // One-shot setup selects the pack and renders in the same operation.
+  const setup = runIn(dir, "init", "--agent-pack", "@pactwright/standard");
+  assert.equal(setup.status, 0, setup.stdout + setup.stderr);
+  assert.ok(fs.existsSync(path.join(dir, ".claude", "agents", "spec.md")));
+  assert.ok(fs.existsSync(path.join(dir, ".claude", "commands", "capture-intent.md")));
+
+  // The follow-up sync converges: nothing left to write.
   const first = runIn(dir, "sync");
   assert.equal(first.status, 0, first.stdout + first.stderr);
-  assert.match(first.stdout, /wrote \.claude\/agents\/spec\.md/);
-  assert.match(first.stdout, /wrote \.claude\/commands\/capture-intent\.md/);
-  assert.doesNotMatch(first.stdout, /unchanged/);
+  assert.doesNotMatch(first.stdout, /^wrote/m);
   const bytes = (): Map<string, string> => {
     const map = new Map<string, string>();
     for (const sub of ["agents", "commands"]) {
@@ -577,7 +610,7 @@ test("cli: eval --json emits the per-case report", () => {
   };
   assert.equal(report.suite, "core-delivery");
   assert.equal(report.pack.name, "@pactwright/standard");
-  assert.equal(report.cases.length, 5);
+  assert.equal(report.cases.length, 8);
   for (const entry of report.cases) {
     assert.ok(
       entry.deterministic.every((a) => a.passed),
@@ -607,4 +640,37 @@ test("cli: eval fails a pack missing a required capability (exit 1)", () => {
 test("cli: eval rejects unexpected arguments", () => {
   assert.equal(run("eval", "extra").status, 1);
   assert.equal(run("eval", "--nope").status, 1);
+});
+
+test("cli: eval --baseline/--candidate compares and reports no regression for an unchanged pack", () => {
+  const result = run(
+    "eval",
+    "--baseline",
+    "@pactwright/standard",
+    "--candidate",
+    "@pactwright/standard",
+  );
+  assert.equal(result.status, 0, result.stderr);
+  assert.match(result.stdout, /Comparison of suite "core-delivery"/);
+  assert.match(result.stdout, /No differences/);
+  // §24: no opaque aggregate decides whether a candidate is better.
+  assert.doesNotMatch(result.stdout, /score/i);
+});
+
+test("cli: eval rejects --baseline without --candidate", () => {
+  const result = run("eval", "--baseline", "@pactwright/standard");
+  assert.equal(result.status, 1);
+  assert.match(result.stderr, /--baseline and --candidate are used together/);
+});
+
+test("cli: eval reports an unresolvable baseline rather than comparing against nothing", () => {
+  const result = run(
+    "eval",
+    "--baseline",
+    "@pactwright/does-not-exist",
+    "--candidate",
+    "@pactwright/standard",
+  );
+  assert.equal(result.status, 1);
+  assert.match(result.stderr, /could not resolve the baseline/);
 });

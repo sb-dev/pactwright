@@ -1,16 +1,14 @@
 import { after, test } from "node:test";
 import assert from "node:assert/strict";
-import { rmSync } from "node:fs";
+import { existsSync, rmSync } from "node:fs";
 import { PactwrightError } from "../src/errors.js";
-import { CORE_STAGES } from "../src/config/lifecycle.js";
-import {
-  GRAPH_MARKING_STAGES,
-  TRANSIENT_STAGES,
-  lifecycleNext,
-  lifecycleStatus,
-} from "../src/lifecycle/engine.js";
+import { RESPONSIBILITIES } from "../src/config/lifecycle.js";
+import { COMMAND_NAMES } from "../src/adapter/commands.js";
+import { lifecycleNext, lifecycleStatus } from "../src/lifecycle/engine.js";
+import { EXECUTION_DIR } from "../src/lifecycle/state.js";
+import { DIRECT_SHAPE } from "../src/lifecycle/shape.js";
 import { loadProject } from "../src/loader.js";
-import { defaultStages, makeTempProject } from "./helpers.js";
+import { defaultResponsibilities, defaultShapeSteps, makeTempProject } from "./helpers.js";
 
 const dirs: string[] = [];
 after(() => {
@@ -25,57 +23,101 @@ function project(options: Parameters<typeof makeTempProject>[0] = {}) {
 
 const INTENT = "intent-quick-start-a1b2";
 
-test("engine: every core stage is either graph-marking or transient, in lifecycle order", () => {
-  const all = [...GRAPH_MARKING_STAGES, ...TRANSIENT_STAGES].sort();
-  assert.deepEqual(all, [...CORE_STAGES].sort());
-  assert.deepEqual(TRANSIENT_STAGES, ["propose-contracts", "deliver-brief", "review"]);
+test("engine: adapter command decomposition is not lifecycle topology", () => {
+  // Checkpoint 1 Step 6: "Do not encode capture-intent, propose-contracts,
+  // approve-contract or write-brief as shape stages." Those four are
+  // Contract-crafting responsibilities that sit upstream of the Brief.
+  const stepNames = DIRECT_SHAPE.steps.map((step) => step.name);
+  assert.deepEqual(stepNames, ["delivery", "review", "evidence"]);
+  for (const responsibility of RESPONSIBILITIES) {
+    assert.equal(
+      stepNames.includes(responsibility),
+      false,
+      `${responsibility} must not be a shape step`,
+    );
+  }
+  assert.deepEqual(
+    [...RESPONSIBILITIES],
+    ["capture-intent", "propose-contracts", "approve-contract", "write-brief"],
+  );
+  // The shape has three steps; the adapter has seven commands. Neither count
+  // derives from the other.
+  assert.equal(COMMAND_NAMES.length, 7);
+  assert.notEqual(COMMAND_NAMES.length, DIRECT_SHAPE.steps.length);
 });
 
-const table: Array<[string, readonly string[], string | undefined]> = [
-  ["open", ["capture-intent"], "propose-contracts"],
-  ["deferred", ["capture-intent", "propose-contracts", "approve-contract"], undefined],
-  ["rejected", ["capture-intent", "propose-contracts", "approve-contract"], undefined],
-  ["contracted", ["capture-intent", "propose-contracts", "approve-contract"], "write-brief"],
+/** [derived state, completed responsibilities, next action name, next action kind] */
+const table: Array<[string, readonly string[], string | undefined, string | undefined]> = [
+  ["open", ["capture-intent"], "propose-contracts", "responsibility"],
+  ["deferred", ["capture-intent", "propose-contracts", "approve-contract"], undefined, undefined],
+  ["rejected", ["capture-intent", "propose-contracts", "approve-contract"], undefined, undefined],
   [
-    "delivering",
-    ["capture-intent", "propose-contracts", "approve-contract", "write-brief"],
-    "deliver-brief",
+    "contracted",
+    ["capture-intent", "propose-contracts", "approve-contract"],
+    "write-brief",
+    "responsibility",
   ],
-  ["done", [...CORE_STAGES], undefined],
+  // Once a Brief exists the shape governs: the first step is Delivery, not an
+  // adapter command.
+  ["delivering", [...RESPONSIBILITIES], "delivery", "step"],
+  ["done", [...RESPONSIBILITIES], undefined, undefined],
 ];
 
-for (const [state, completed, current] of table) {
+for (const [state, completed, current, kind] of table) {
   test(`engine: status/next of the ${state} lineage (default lifecycle)`, () => {
     const p = project({ lineage: state });
     const status = lifecycleStatus(p);
     const entry = status.lineages.find((l) => l.intent === INTENT);
     assert.ok(entry);
     assert.equal(entry.state, state);
-    assert.deepEqual(entry.completed, completed);
-    assert.equal(entry.currentStage, current);
-    assert.equal(entry.blockedStage, undefined); // none of these first stages is a gate
+    assert.deepEqual(entry.completedResponsibilities, completed);
+    assert.equal(entry.current?.name, current);
+    assert.equal(entry.current?.kind, kind);
+    assert.equal(entry.blocked, undefined); // none of these is a gate
     assert.deepEqual(status.problems, []);
 
     const [next] = lifecycleNext(p, INTENT);
     assert.equal(next?.intent, INTENT);
-    assert.equal(next?.stage, current);
+    assert.equal(next?.action?.name, current);
     if (current === undefined) {
       assert.equal(next?.gate, false);
-      if (state === "done") assert.match(next!.reason, /no next stage/);
+      if (state === "done") assert.match(next!.reason, /no next action/);
       else assert.match(next!.reason, /new Decision/);
     } else {
-      assert.equal(next?.execution, "automatic");
+      assert.equal(next?.action?.execution, "automatic");
       assert.equal(next?.gate, false);
     }
   });
 }
 
-test("engine: after current Evidence, next reports no further core Delivery stage", () => {
+test("engine: a delivering lineage reports the resolved shape it is executing", () => {
+  const p = project({ lineage: "delivering" });
+  const [entry] = lifecycleStatus(p, INTENT).lineages;
+  assert.equal(entry?.shape, "direct");
+  assert.equal(entry?.executionStatus, "running");
+  assert.deepEqual(entry?.completedSteps, []);
+  // The Delivery step delegates to the delivery-execution capability.
+  assert.equal(entry?.current?.capability, "delivery-execution");
+});
+
+test("engine: status is read-only and persists no execution state", () => {
+  const dir = makeTempProject({ lineage: "delivering" });
+  dirs.push(dir);
+  const p = loadProject({ root: dir });
+  lifecycleStatus(p, INTENT);
+  lifecycleNext(p, INTENT);
+  assert.equal(
+    existsSync(`${dir}/${EXECUTION_DIR}`),
+    false,
+    "reading status must not write execution state",
+  );
+});
+
+test("engine: after current Evidence, next reports no further action", () => {
   const p = project({ lineage: "done" });
   const actions = lifecycleNext(p);
-  // The done lineage has no next stage; with no active lineage, capture-intent is the entry point.
   assert.deepEqual(
-    actions.map((a) => [a.intent, a.stage]),
+    actions.map((a) => [a.intent, a.action?.name]),
     [
       [INTENT, undefined],
       [undefined, "capture-intent"],
@@ -90,36 +132,52 @@ test("engine: an empty graph reports capture-intent as a human gate", () => {
   assert.deepEqual(status.lineages, [
     {
       state: "none",
-      completed: [],
-      currentStage: "capture-intent",
-      blockedStage: "capture-intent",
+      completedResponsibilities: [],
+      completedSteps: [],
+      current: { kind: "responsibility", name: "capture-intent", execution: "manual" },
+      blocked: "capture-intent",
       requiredActor: "human",
     },
   ]);
   const [next] = lifecycleNext(p);
-  assert.equal(next?.stage, "capture-intent");
-  assert.equal(next?.execution, "manual");
+  assert.equal(next?.action?.name, "capture-intent");
+  assert.equal(next?.action?.execution, "manual");
   assert.equal(next?.gate, true);
 });
 
-test("engine: a human-actor stage blocks and reports the required actor", () => {
+test("engine: a human-actor responsibility blocks and reports the required actor", () => {
   const p = project({
     lineage: "contracted",
-    stages: defaultStages({ "write-brief": { execution: "automatic", actor: "human" } }),
+    responsibilities: defaultResponsibilities({
+      "write-brief": { execution: "automatic", actor: "human" },
+    }),
   });
   const [entry] = lifecycleStatus(p, INTENT).lineages;
-  assert.equal(entry?.blockedStage, "write-brief");
+  assert.equal(entry?.blocked, "write-brief");
   assert.equal(entry?.requiredActor, "human");
   const [next] = lifecycleNext(p, INTENT);
   assert.equal(next?.gate, true);
-  assert.equal(next?.actor, "human");
+  assert.equal(next?.action?.actor, "human");
+});
+
+test("engine: a Gate on a shape step blocks the run and names its authority", () => {
+  const p = project({
+    lineage: "delivering",
+    shapeSteps: defaultShapeSteps({ delivery: { execution: "manual", actor: "human" } }),
+  });
+  const [entry] = lifecycleStatus(p, INTENT).lineages;
+  assert.equal(entry?.blocked, "delivery");
+  assert.equal(entry?.requiredActor, "human");
+  const [next] = lifecycleNext(p, INTENT);
+  assert.equal(next?.gate, true);
+  assert.match(next!.reason, /shape step "delivery" is a Gate/);
 });
 
 test("engine: the automated lifecycle leaves only capture-intent gated", () => {
   const p = project({ lineage: "open", lifecycle: "automated.yml" });
   const [entry] = lifecycleStatus(p, INTENT).lineages;
-  assert.equal(entry?.blockedStage, undefined);
-  assert.equal(entry?.currentStage, "propose-contracts");
+  assert.equal(entry?.blocked, undefined);
+  assert.equal(entry?.current?.name, "propose-contracts");
 });
 
 test("engine: status carries the current lineage chain", () => {
@@ -129,21 +187,20 @@ test("engine: status carries the current lineage chain", () => {
   assert.equal(entry?.lineage?.evidence, undefined);
 });
 
-test("engine: a superseded lineage has no pending stages and no next action", () => {
+test("engine: a superseded lineage has nothing pending and no next action", () => {
   const p = project({ lineage: "superseded-intent" });
   const status = lifecycleStatus(p, INTENT);
   const [entry] = status.lineages;
   assert.equal(entry?.state, "open");
   assert.equal(entry?.superseded, true);
-  assert.equal(entry?.currentStage, undefined);
-  assert.equal(entry?.blockedStage, undefined);
+  assert.equal(entry?.current, undefined);
+  assert.equal(entry?.blocked, undefined);
   const [next] = lifecycleNext(p, INTENT);
-  assert.equal(next?.stage, undefined);
+  assert.equal(next?.action, undefined);
   assert.equal(next?.gate, false);
   assert.match(next!.reason, /superseded/);
-  // The superseding intent's own lineage is live and unaffected.
   const [successor] = lifecycleNext(p, "intent-quick-start-v2-f6a7");
-  assert.equal(successor?.stage, "propose-contracts");
+  assert.equal(successor?.action?.name, "propose-contracts");
 });
 
 test("engine: an unknown intent id is rejected", () => {

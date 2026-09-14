@@ -1,111 +1,234 @@
 import type { Problem } from "../errors.js";
 import { PactwrightError } from "../errors.js";
 import {
-  CORE_STAGES,
-  isHumanGate,
+  RESPONSIBILITIES,
   type Actor,
   type ExecutionMode,
-  type StageName,
+  type ResponsibilityName,
 } from "../config/lifecycle.js";
 import { deriveLineages, type DeliveryState, type Lineage } from "../graph/lineage.js";
 import type { Project } from "../loader.js";
+import {
+  DIRECT_SHAPE_ID,
+  STEP_CAPABILITY,
+  forwardStep,
+  isGate,
+  stepNamed,
+  transitionsFrom,
+  type LifecycleShape,
+  type ShapeStep,
+} from "./shape.js";
+import {
+  beginExecution,
+  loadExecutionState,
+  routeKey,
+  type ExecutionState,
+  type ReviewOutcome,
+} from "./state.js";
 
 /**
- * Stages that leave a durable record in the Delivery Graph, and the record
- * they leave (Delivery Graph §§6–12): capture-intent → Intent,
- * approve-contract → Decision (+ Contract), write-brief → Brief,
- * prepare-evidence → Evidence.
+ * How many Contract-crafting responsibilities each derived state has
+ * completed (§44). `deferred`/`rejected` completed the decision and are
+ * terminal for this lineage: resuming needs a new Decision (§15), which is
+ * not a responsibility the engine loops back to. `undefined` = no lineage
+ * yet: nothing completed.
+ *
+ * Only the four responsibilities are counted here. Progress through the
+ * Brief-to-Evidence shape is execution state, never derived from the graph
+ * beyond the broad `delivering`/`done` distinction.
  */
-export const GRAPH_MARKING_STAGES = [
-  "capture-intent",
-  "approve-contract",
-  "write-brief",
-  "prepare-evidence",
-] as const satisfies readonly StageName[];
-
-/**
- * Stages whose output is transient (§7 alternatives, §11 delivery execution
- * and review): they never mutate the graph, so completion is only known
- * inside the `lifecycle run` that executed them.
- */
-export const TRANSIENT_STAGES = [
-  "propose-contracts",
-  "deliver-brief",
-  "review",
-] as const satisfies readonly StageName[];
-
-export function isTransientStage(stage: StageName): boolean {
-  return (TRANSIENT_STAGES as readonly StageName[]).includes(stage);
-}
-
-/**
- * How many leading core stages each derived state has completed (§14, §18).
- * `deferred`/`rejected` completed the decision stage and are terminal for the
- * core lifecycle: resuming needs a new Decision (§15), which is not a stage
- * the engine loops back to. `undefined` = no lineage yet: nothing completed.
- */
-const COMPLETED_COUNT: Readonly<Record<DeliveryState, number>> = {
+const COMPLETED_RESPONSIBILITIES: Readonly<Record<DeliveryState, number>> = {
   open: 1, // capture-intent
   deferred: 3, // …propose-contracts, approve-contract
   rejected: 3,
   contracted: 3,
   delivering: 4, // …write-brief
-  done: 7,
+  done: 4,
 };
 
 const TERMINAL_STATES: readonly DeliveryState[] = ["deferred", "rejected", "done"];
 
-/** Stages already completed by a lineage, in lifecycle order. */
-export function completedStages(lineage: Lineage | undefined): readonly StageName[] {
-  return CORE_STAGES.slice(0, lineage === undefined ? 0 : COMPLETED_COUNT[lineage.state]);
+/** One thing the lifecycle can do next: a responsibility or a shape step. */
+export interface LifecycleAction {
+  readonly kind: "responsibility" | "step";
+  readonly name: string;
+  readonly execution: ExecutionMode;
+  readonly actor?: Actor;
+  /** The core capability a shape step delegates to; absent for closure steps. */
+  readonly capability?: string;
 }
 
-/**
- * Stages still to run for a lineage, in order. Empty for terminal lineages.
- * With no lineage, the only pending stage is capture-intent.
- */
-export function pendingStages(lineage: Lineage | undefined): readonly StageName[] {
+/** Responsibilities a lineage has completed, in order. */
+export function completedResponsibilities(
+  lineage: Lineage | undefined,
+): readonly ResponsibilityName[] {
+  return RESPONSIBILITIES.slice(
+    0,
+    lineage === undefined ? 0 : COMPLETED_RESPONSIBILITIES[lineage.state],
+  );
+}
+
+/** Responsibilities still to run, in order. Empty once a Brief exists. */
+export function pendingResponsibilities(
+  lineage: Lineage | undefined,
+): readonly ResponsibilityName[] {
   if (lineage === undefined) return ["capture-intent"];
   if (lineage.superseded) return [];
   if (TERMINAL_STATES.includes(lineage.state)) return [];
-  return CORE_STAGES.slice(COMPLETED_COUNT[lineage.state]);
+  return RESPONSIBILITIES.slice(COMPLETED_RESPONSIBILITIES[lineage.state]);
 }
 
-/** A lineage still progressing through the core lifecycle. */
+/** A lineage still progressing through the lifecycle. */
 export function isActive(lineage: Lineage): boolean {
   return !lineage.superseded && !TERMINAL_STATES.includes(lineage.state);
 }
 
-/** `lifecycle status` for one lineage (Delivery Graph §20). */
+/** True once the lineage has a current Brief, so the shape governs progression. */
+export function inShapePhase(lineage: Lineage | undefined): boolean {
+  return lineage !== undefined && !lineage.superseded && lineage.state === "delivering";
+}
+
+function actionForResponsibility(project: Project, name: ResponsibilityName): LifecycleAction {
+  const policy = project.lifecycle.responsibilities[name];
+  return {
+    kind: "responsibility",
+    name,
+    execution: policy.execution,
+    ...(policy.actor === undefined ? {} : { actor: policy.actor }),
+  };
+}
+
+function actionForStep(step: ShapeStep): LifecycleAction {
+  const capability = STEP_CAPABILITY[step.kind];
+  return {
+    kind: "step",
+    name: step.name,
+    execution: step.execution,
+    ...(step.actor === undefined ? {} : { actor: step.actor }),
+    ...(capability === undefined ? {} : { capability }),
+  };
+}
+
+/** Whether an action waits for a human: manual execution or a human actor. */
+export function isActionGate(action: LifecycleAction): boolean {
+  return action.execution === "manual" || action.actor === "human";
+}
+
+/**
+ * The execution state governing a lineage's shape phase, beginning a fresh
+ * run when none exists yet. Returns `undefined` outside the shape phase.
+ */
+export function executionFor(
+  project: Project,
+  lineage: Lineage | undefined,
+): { readonly state: ExecutionState; readonly problems: readonly Problem[] } | undefined {
+  if (!inShapePhase(lineage) || lineage?.brief === undefined) return undefined;
+  const shape = project.lifecycle.shape;
+  const loaded = loadExecutionState(project.paths.root, lineage.brief.id);
+  if (loaded.value !== undefined) return { state: loaded.value, problems: loaded.problems };
+  if (loaded.problems.length > 0) {
+    return {
+      state: beginExecution(lineage.brief.id, shape.id, shape.steps[0]?.name),
+      problems: loaded.problems,
+    };
+  }
+  return {
+    state: beginExecution(lineage.brief.id, shape.id, shape.steps[0]?.name),
+    problems: [],
+  };
+}
+
+/**
+ * The shape step a run is currently at, or `undefined` when the run has
+ * finished or its recorded step is not in the resolved shape.
+ */
+export function currentStep(shape: LifecycleShape, state: ExecutionState): ShapeStep | undefined {
+  if (state.status === "completed" || state.status === "failed") return undefined;
+  if (state.currentStep === undefined) return undefined;
+  return stepNamed(shape, state.currentStep);
+}
+
+/**
+ * Where a completed step hands off to (§32). A Review routes by outcome: a
+ * pass continues forward, a revise takes a *declared* corrective route, and a
+ * block stops. Everything else moves forward. Returning `undefined` for `to`
+ * means the shape is finished.
+ */
+export interface Routing {
+  readonly to?: string;
+  /** Set when the route is a declared transition rather than the forward step. */
+  readonly route?: string;
+  readonly stop?: "blocked" | "iteration-exhausted" | "no-corrective-route";
+  readonly reason?: string;
+}
+
+export function routeAfter(
+  shape: LifecycleShape,
+  state: ExecutionState,
+  step: ShapeStep,
+  outcome?: ReviewOutcome,
+): Routing {
+  if (step.kind === "review" && outcome !== undefined && outcome !== "pass") {
+    if (outcome === "blocked") {
+      return { stop: "blocked", reason: `review "${step.name}" reported the work blocked` };
+    }
+    // A correction may only take a route the shape declares: AI cannot invent
+    // one (§32), and the route's policy bound caps automatic iteration (§34).
+    const corrective = transitionsFrom(shape, step.name).find(
+      (transition) => transition.maxIterations !== undefined,
+    );
+    if (corrective === undefined) {
+      return {
+        stop: "no-corrective-route",
+        reason: `review "${step.name}" asked for correction but the "${shape.id}" shape declares no corrective route from it`,
+      };
+    }
+    const key = routeKey(corrective.from, corrective.to);
+    const taken = state.iterations[key] ?? 0;
+    if (taken >= corrective.maxIterations!) {
+      return {
+        stop: "iteration-exhausted",
+        reason: `corrective route ${key} has run ${taken} of ${corrective.maxIterations!} permitted iterations; policy requires human intervention now`,
+      };
+    }
+    return { to: corrective.to, route: key };
+  }
+  const next = forwardStep(shape, step.name);
+  return next === undefined ? {} : { to: next.name };
+}
+
 export interface LineageStatus {
   /** Absent for the "no lineage yet" entry. */
   readonly intent?: string;
   readonly state: DeliveryState | "none";
   /** Set when the intent itself is superseded: the lineage is frozen (§15). */
   readonly superseded?: true;
-  readonly completed: readonly StageName[];
-  /** First pending stage; absent when the core lifecycle has no next stage. */
-  readonly currentStage?: StageName;
-  /** Set when `currentStage` is a human gate. */
-  readonly blockedStage?: StageName;
+  readonly completedResponsibilities: readonly ResponsibilityName[];
+  /** Shape steps completed in the current run; empty outside the shape phase. */
+  readonly completedSteps: readonly string[];
+  /** The next action, absent when the lifecycle has nothing further to do. */
+  readonly current?: LifecycleAction;
+  /** Set when `current` waits for a human. */
+  readonly blocked?: string;
   readonly requiredActor?: Actor;
   readonly lineage?: Lineage;
+  /** The resolved shape a shape-phase lineage is executing (§23). */
+  readonly shape?: string;
+  readonly executionStatus?: ExecutionState["status"];
 }
 
 export interface LifecycleStatus {
   readonly lineages: readonly LineageStatus[];
-  /** Current-lineage problems found while deriving (empty for a loaded project). */
+  /** Validation problems found while deriving; empty for a coherent graph. */
   readonly problems: readonly Problem[];
 }
 
 /** `lifecycle next` for one lineage: the next permitted action, not executed. */
 export interface NextAction {
   readonly intent?: string;
-  /** Absent when there is no further core Delivery stage. */
-  readonly stage?: StageName;
-  readonly execution?: ExecutionMode;
-  readonly actor?: Actor;
-  /** True when the stage needs a human: `lifecycle run` stops here. */
+  /** Absent when there is no further lifecycle action. */
+  readonly action?: LifecycleAction;
+  /** True when the action needs a human: `lifecycle run` stops here. */
   readonly gate: boolean;
   readonly reason: string;
 }
@@ -142,67 +265,108 @@ export function selectLineages(
   return lineages;
 }
 
+/**
+ * The next action for a lineage: a Contract-crafting responsibility while the
+ * lineage is upstream of a Brief, then the resolved shape's current step.
+ */
+export function nextActionFor(
+  project: Project,
+  lineage: Lineage | undefined,
+  done: ReadonlySet<string> = new Set(),
+): NextAction {
+  const intent = lineage === undefined ? {} : { intent: lineage.intent.id };
+  const pending = pendingResponsibilities(lineage).find((candidate) => !done.has(candidate));
+  if (pending !== undefined) {
+    const action = actionForResponsibility(project, pending);
+    const gate = isActionGate(action);
+    const who = action.actor === undefined ? "" : ` by ${action.actor}`;
+    return {
+      ...intent,
+      action,
+      gate,
+      reason: gate
+        ? `${pending} is a human gate (${action.execution}${who}); it waits for a human`
+        : `${pending} runs ${action.execution}${who}`,
+    };
+  }
+
+  if (inShapePhase(lineage)) {
+    const execution = executionFor(project, lineage);
+    const shape = project.lifecycle.shape;
+    if (execution !== undefined) {
+      const step = currentStep(shape, execution.state);
+      if (step !== undefined && !done.has(step.name)) {
+        const action = actionForStep(step);
+        const gate = isGate(step);
+        const who = step.actor === undefined ? "" : ` by ${step.actor}`;
+        return {
+          ...intent,
+          action,
+          gate,
+          reason: gate
+            ? `shape step "${step.name}" is a Gate (${step.execution}${who}); it waits for a human`
+            : `shape step "${step.name}" runs ${step.execution}${who}`,
+        };
+      }
+      if (execution.state.status === "blocked") {
+        return {
+          ...intent,
+          gate: true,
+          reason: `the "${execution.state.shape}" run for brief "${execution.state.brief}" is blocked and needs human intervention`,
+        };
+      }
+    }
+  }
+
+  const reason =
+    lineage?.superseded === true
+      ? `intent "${lineage.intent.id}" is superseded; work continues on the superseding intent's lineage (Spec 01 §15)`
+      : lineage?.state === "done"
+        ? "current Evidence exists; the Delivery lifecycle is complete and has no next action"
+        : lineage === undefined
+          ? "nothing to do"
+          : `lineage is ${lineage.state}; record a new Decision with approve-contract to resume (Spec 01 §15)`;
+  return { ...intent, gate: false, reason };
+}
+
 function statusOf(project: Project, lineage: Lineage | undefined): LineageStatus {
-  const currentStage = pendingStages(lineage)[0];
+  const next = nextActionFor(project, lineage);
+  const execution = executionFor(project, lineage);
   const base: LineageStatus = {
     ...(lineage === undefined ? {} : { intent: lineage.intent.id, lineage }),
     state: lineage === undefined ? "none" : lineage.state,
     ...(lineage?.superseded === true ? { superseded: true } : {}),
-    completed: completedStages(lineage),
-    ...(currentStage === undefined ? {} : { currentStage }),
+    completedResponsibilities: completedResponsibilities(lineage),
+    completedSteps: execution?.state.completedSteps ?? [],
+    ...(execution === undefined
+      ? {}
+      : { shape: execution.state.shape, executionStatus: execution.state.status }),
+    ...(next.action === undefined ? {} : { current: next.action }),
   };
-  if (currentStage === undefined) return base;
-  const config = project.lifecycle.stages[currentStage];
-  if (!isHumanGate(config)) return base;
-  return { ...base, blockedStage: currentStage, requiredActor: "human" };
+  if (!next.gate || next.action === undefined) return base;
+  return { ...base, blocked: next.action.name, requiredActor: next.action.actor ?? "human" };
 }
 
 /**
- * Derives lifecycle status from graph state + lifecycle.yml (§18, §20).
- * Validation problems of a project that failed to load are the caller's to
- * report: a `Project` here has already passed the canonical loader.
+ * Derives lifecycle status from graph state, lifecycle policy, the resolved
+ * shape and execution state (§20). Read-only: it never writes, and beginning
+ * a run's state in memory does not persist it.
  */
 export function lifecycleStatus(project: Project, intentId?: string): LifecycleStatus {
   const { problems } = deriveLineages(project.graph.nodes, project.graph.edges);
+  const lineages = selectLineages(project, intentId);
+  const executionProblems = lineages.flatMap(
+    (lineage) => executionFor(project, lineage)?.problems ?? [],
+  );
   return {
-    lineages: selectLineages(project, intentId).map((lineage) => statusOf(project, lineage)),
-    problems,
+    lineages: lineages.map((lineage) => statusOf(project, lineage)),
+    problems: [...problems, ...executionProblems],
   };
 }
 
-/** The next permitted action for one lineage, given optionally which transient stages already ran. */
-export function nextActionFor(
-  project: Project,
-  lineage: Lineage | undefined,
-  done: ReadonlySet<StageName> = new Set(),
-): NextAction {
-  const intent = lineage === undefined ? {} : { intent: lineage.intent.id };
-  const stage = pendingStages(lineage).find((candidate) => !done.has(candidate));
-  if (stage === undefined) {
-    const reason =
-      lineage?.superseded === true
-        ? `intent "${lineage.intent.id}" is superseded; work continues on the superseding intent's lineage (Delivery Graph §15)`
-        : lineage?.state === "done"
-          ? "current Evidence exists; the core Delivery lifecycle is complete and has no next stage"
-          : `lineage is ${lineage?.state}; record a new Decision with approve-contract to resume (Delivery Graph §15)`;
-    return { ...intent, gate: false, reason };
-  }
-  const config = project.lifecycle.stages[stage];
-  const gate = isHumanGate(config);
-  const who = config.actor === undefined ? "" : ` by ${config.actor}`;
-  return {
-    ...intent,
-    stage,
-    execution: config.execution,
-    ...(config.actor === undefined ? {} : { actor: config.actor }),
-    gate,
-    reason: gate
-      ? `${stage} is a human gate (${config.execution}${who}); it waits for a human`
-      : `${stage} runs ${config.execution}${who}`,
-  };
-}
-
-/** `lifecycle next`: the next permitted core Delivery action per lineage (§20). */
+/** `lifecycle next`: the next permitted lifecycle action per lineage (§20). */
 export function lifecycleNext(project: Project, intentId?: string): readonly NextAction[] {
   return selectLineages(project, intentId).map((lineage) => nextActionFor(project, lineage));
 }
+
+export { DIRECT_SHAPE_ID };
