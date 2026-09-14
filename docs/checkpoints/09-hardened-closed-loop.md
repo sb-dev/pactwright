@@ -1,32 +1,34 @@
 # Pactwright — Checkpoint 9 — Hardened Closed Loop
 
-**Version:** 10  
+**Version:** 11  
 **Entry condition:** Checkpoint 8 is accepted.  
-**Exit capability:** The complete first-party system is evaluated, failure-hardened, documented and repeatedly proven in closed loops on Pactwright and Kakeibo, including permanent Experiment regression coverage and a production Kei defect becoming a new immutable evaluated release.
+**Release:** `0.0.9`  
+**Exit capability:** The complete first-party Pactwright system is evaluated, failure-hardened, publicly documented and repeatedly proven in closed loops on Pactwright and Kakeibo, including permanent Experiment regression coverage and a production Kei defect learning loop, without expanding semantics beyond observed need.
 
 ## 1. Goal
 
-Turn observed failures from Checkpoints 1–8 into permanent evaluation/regression coverage, harden only demonstrated weak points, complete the initial public product, prove repeated production-feedback loops, and demonstrate that a confirmed Kakeibo Kei production defect can travel from observation to a sanitised regression case and a safely controlled replacement release.
+Turn evidence from Checkpoints 1–8 into regression coverage and targeted hardening, complete the initial public product, prove repeated feedback loops, and prepare the compatible `0.1.0` release candidate.
 
-Checkpoint 9 does not add speculative product semantics. It converts evidence into durable tests and proves the existing governance/release boundaries under failure.
+Hardening is evidence-driven:
 
-## 2. Specification baseline
+```text
+observed failure
+→ owning responsibility
+→ regression case
+→ smallest fix
+→ validation/evaluation
+→ real closed-loop proof
+```
 
-### Pactwright
+Do not use this checkpoint as a licence to implement speculative future architecture.
 
-- [Pactwright — Delivery Graph and Lifecycle Engineering Spec](../research-logs/2026-08-11-pactwright-delivery-graph-and-lifecycle-engineering-spec.md)
-- [Pactwright — Distribution, Agents and Evaluation](../research-logs/2026-08-11-pactwright-distribution-agents-and-evaluation.md)
-- [Pactwright — GitHub Actions and Views](../research-logs/2026-08-11-pactwright-github-actions-and-views.md)
-- [Pactwright — Project Intelligence Graph Engineering Spec](../research-logs/2026-08-11-pactwright-project-intelligence-graph-engineering-spec.md)
-- [Pactwright — Graph Review & Creative Delivery Engineering Spec](../research-logs/2026-08-11-pactwright-graph-review-and-creative-delivery-engineering-spec.md)
-- [Pactwright — Operations Graph Engineering Spec](../research-logs/2026-08-11-pactwright-operations-graph-engineering-spec.md)
-- [Pactwright — Operations Experiment Semantics](../research-logs/2026-09-02-pactwright-operations-experiment-semantics.md)
-- [Pactwright — System Architecture](../research-logs/2026-08-11-pactwright-system-architecture.md)
-- [Pactwright — Implementation Principles](./00-implementation-principles.md)
-- [Pactwright — Implementation Guide](./00-implementation-guide.md)
-- [Pactwright Open-Source Project Organisation](../research-logs/2026-08-11-pactwright-open-source-project-organisation.md)
-- [Design Specification: Astro + Cloudflare Workers + Meta CAPI](../research-logs/2026-08-11-astro-design-spec.md)
-- [Kakeibo System-Level Acceptance Profile](./00-kakeibo-acceptance-profile.md)
+## 2. Canonical baseline
+
+Use canonical Specs 01–08 plus the Implementation Principles and Implementation Guide. Research logs are rationale only.
+
+Checkpoints 6–9 additionally use the adopted Operations amendment in [Pactwright — Operations Experiment Semantics](../research-logs/2026-09-02-pactwright-operations-experiment-semantics.md), and the [Kakeibo System-Level Acceptance Profile](./00-kakeibo-acceptance-profile.md).
+
+Kakeibo acceptance uses its current canonical specifications.
 
 ### Kakeibo
 
@@ -60,143 +62,171 @@ production outcome meaning
 
 The retained August Kakeido snapshots are not implementation authority.
 
-Only owning specifications define semantics. This runbook defines execution order and acceptance. Release mechanics remain owned by the Implementation Guide.
-
-## 3. Execution contract
-
-Every implementation action is a runnable step with the same shape:
-
-```text
-Step
-→ References
-→ Run (prompt or command)
-→ Expected result
-→ Verify
-→ continue only if verification passes
-```
-
-Use a prompt for repository/code changes. Once Pactwright owns a deterministic operation, use the Pactwright command instead of asking the model to emulate it.
-
 **Default execution location:** the Pactwright repository root unless the step explicitly names Kakeibo or a fixture.
 
-For repository/code changes, finish with `pnpm verify`. Before invoking a newly implemented Pactwright runtime command during implementation, run `pnpm build`.
+## 3. Evaluation ownership
 
-After Checkpoint 2 activates GitHub, land coherent repository changes through pull requests and required checks rather than direct default-branch commits.
+Dynamic ids such as `<source-id>`, `<internal-source-id>`, `<brief-id>`, `<evidence-id>`, `<deployment-id>`, `<experiment-id>` and `<observation-id>` must come from an earlier command or from configuration this runbook explicitly creates.
 
-Dynamic ids such as `<source-id>`, `<internal-source-id>`, `<brief-id>`, `<evidence-id>`, `<deployment-id>`, `<experiment-id>` and `<observation-id>` must come from an earlier command or explicit configuration. Commands creating durable records must print ids required later.
+Pactwright-level evaluation owners are:
 
-Fixture verification means repository test fixtures unless a step explicitly creates a real repository or GitHub resource.
+```text
+Core Delivery
+Project Intelligence
+Graph Review
+Assets / Publication
+Operations
+Distribution / GitHub
+Agent Pack Pactwright responsibilities
+```
 
-## 4. Checkpoint specification map
+Production-domain quality remains in the relevant Production Skills repositories.
 
-- **Shared evaluation** — Distribution, Agents and Evaluation §16
-- **Graph Review / Creative evaluation** — Graph Review & Creative Delivery §17
-- **Operations evaluation** — Operations Graph Engineering §21
-- **Experiment validation/failure/genericity** — Operations Experiment Semantics §§11–15
-- **Definitions of Done / future boundary** — Delivery §§24–26; PI §§17–20; Review & Creative §§21–26; Operations §§22–29; GitHub §§26–28
-- **Kakeibo production Kei lifecycle** — current Kakeibo `03`, `05`, `06`, `07`, cross-checked against `02`
-- **Kakeibo regression review** — all seven current Kakeibo specs; Acceptance Profile §13
-- **Public project** — Pactwright Open-Source Project Organisation §§3–16
-- **Release model** — Implementation Guide (npm release model, trusted release workflow, release failure, test layers)
+Examples:
 
-## Stage 1 — Convert observed failures into permanent evaluation cases
+```text
+Pactwright
+→ did Delivery preserve Contract scope?
+→ did Graph Review produce supported Findings and route them correctly?
+→ did Asset approval enforce exact bytes/grounding?
 
-Ground hardening in evidence from Checkpoints 1–8. Do not manufacture cases merely to make each subsystem look symmetrical.
+Production Skills
+→ is the software implementation technically good?
+→ is the UX/design good?
+→ is the narrative/video/music quality good?
+```
 
-### Step 1 — Inventory repeatable failures by owner
+Do not recreate Creative Delivery evaluation, Generation Guidance evaluation or a universal production benchmark inside Pactwright.
 
-**References:** Implementation Principles §§14–17; owning specs; Kakeibo Acceptance Profile §13
+Kakeibo-owned product or Kei regressions belong in Kakeibo's own permanent tests and evaluations rather than in generic Pactwright semantics. A fix to Experiment handling must remain generic; a fix to Kakeibo Kei behaviour belongs to Kakeibo and must not create new Pactwright Kei node types.
+
+## Stage 1 — Convert observed failures into owned regression cases
+
+### Step 1 — Inventory repeatable failures by semantic owner
 
 **Run**
 
+Review accepted Pactwright Evidence, PI Sources/Knowledge changes, Graph Review Executions/Findings, Assets/Publications, Operations Observations/executions, GitHub reconciliation failures and Kakeibo acceptance failures from Checkpoints 1–8.
+
+Create a bounded inventory grouped by:
+
 ```text
-Review Pactwright Delivery Evidence, Review findings, Operations Observations, Experiment outcomes, validation/test failures, GitHub projection defects and Kakeibo acceptance failures from Checkpoints 1–8.
-
-Produce a bounded evaluation inventory grouped by:
-- Delivery;
-- Project Intelligence;
-- Graph Review;
-- Creative Delivery;
-- Operations / Experiment;
-- Distribution / GitHub;
-- Kakeibo-owned product/Kei regressions that belong in Kakeibo's own permanent tests/evals rather than generic Pactwright semantics.
-
-Every candidate must point to concrete prior evidence or a required failure invariant already activated by an accepted spec. Exclude one-off taste and avoid turning Kakeibo-specific implementation choices into generic Pactwright concepts.
+Delivery
+Project Intelligence
+Graph Review
+Assets / Publication
+Operations
+Distribution / GitHub
+Agent Pack responsibility
+Production Skills owner where the failure is domain quality
 ```
+
+Each candidate must cite concrete prior evidence. Exclude taste and one-off project preference.
 
 **Expected result**
 
-A traceable evaluation backlog exists before new test code.
+Every proposed hardening case has evidence and a clear owner.
 
-**Verify before continuing**
-
-Every case has provenance, a clear owner and an assertion/evaluator type. No case exists solely because it is conceivable.
-
-### Step 2 — Implement Delivery evaluation fixtures
-
-**References:** Shared evaluation; Delivery Definition of Done
+### Step 2 — Implement Delivery and PI regression cases
 
 **Run**
 
+Add accepted Pactwright evaluation cases for:
+
 ```text
-Implement accepted Delivery cases for contract fidelity, scope discipline, required structure, forbidden mutation, lifecycle ownership and Review defect detection. Keep deterministic assertions separate from semantic judgement.
+Delivery
+→ Contract fidelity
+→ scope discipline
+→ Brief quality
+→ forbidden mutation
+→ Review defect detection
+→ Evidence accuracy
+
+Project Intelligence
+→ triage correctness
+→ consequence class
+→ evidence comparison
+→ context selection
+→ human-approval boundary
+→ roadmap provenance
+→ no automatic Intent creation
 ```
 
-**Expected result**
+Prefer deterministic assertions where possible and keep semantic dimensions separate.
 
-Observed core Delivery failures become repeatable tests.
-
-**Verify before continuing**
-
-Run `pnpm pactwright eval` and inspect Delivery cases individually.
-
-### Step 3 — Implement PI evaluation fixtures
-
-**References:** Shared evaluation; PI §§8–13
+### Step 3 — Implement Graph Review regression cases
 
 **Run**
 
+Add cases for:
+
 ```text
-Implement accepted Project Intelligence cases for triage, consequence class, evidence comparison, context selection, roadmap provenance, operational-origin hand-off and no automatic Intent creation. Include a favourable Experiment Observation fixture proving experiment significance or metric direction cannot directly set Knowledge class, priority or Intent state.
+supported issue detection
+unsupported-claim avoidance
+cross-record contradictions
+scope resolution
+PI context use
+Finding provenance
+Finding → PI hand-off
+failed hand-off retry
+pinned replay failure/current rerun separation
+forbidden sibling-owned mutation
 ```
 
-**Expected result**
+Do not add reviewer-roster or Review Definition cases.
 
-Observed Intelligence/governance failures become repeatable tests.
-
-**Verify before continuing**
-
-Run `pnpm pactwright eval` and inspect PI cases individually.
-
-### Step 4 — Implement Review & Creative evaluation fixtures
-
-**References:** Shared evaluation; Review & Creative §§6–17; Checkpoint 7 publication immutability
+### Step 4 — Implement Assets / Publication regression cases
 
 **Run**
 
-```text
-Implement accepted Graph Review and Creative Delivery cases for finding support/routing, Brief adherence, grounding, independent verification, Generation Guidance, human approval boundary, immutable Asset/Publication state and superseding-Asset lineage.
+Add cases for:
 
-Where a Kakeibo fixture is useful, test public-claim grounding and private-trace exclusion rather than encoding Kakeibo-specific voice/product semantics into generic Pactwright evaluators.
+```text
+candidate output cannot become Asset without human approval
+exact content hash validation
+governed grounding required only when applicable
+Asset immutability
+Asset supersession history
+Publication requires approved Asset
+Publication asset_hash equality
+failed Publication leaves Asset unchanged
+Operations absence/failure does not invalidate Publication
 ```
 
-**Expected result**
+Keep production quality outside this Extension's evaluation.
 
-Review/Creative failures are measurable without leaking product-specific meaning into the framework.
-
-**Verify before continuing**
-
-Run eval and inspect Review/Creative cases individually.
-
-### Step 5 — Implement Operations and Experiment evaluation fixtures
-
-**References:** Operations evaluation; Experiment §§11–15; Kakeibo Acceptance Profile §13
+### Step 5 — Implement Operations and Distribution/GitHub regression cases
 
 **Run**
 
-```text
-Implement accepted Operations cases for signal compression, exposure attribution, baseline use, unsupported causality, duplicate handling, positive/neutral/insufficient findings and PI hand-off.
+Add accepted cases covering:
 
+```text
+Operations
+→ exposure attribution
+→ signal compression
+→ baseline interpretation
+→ unsupported causality
+→ duplicate handling
+→ PI routing
+→ no raw telemetry in graph
+
+Distribution / GitHub
+→ capability/dependency resolution
+→ exact lock/replay environment identity
+→ extension disablement
+→ owned remote reconciliation
+→ profile conflict handling
+→ canonical-vs-derived boundaries
+```
+
+Do not invent answers to the declared remote-resource/concurrency/check-mapping gaps merely to make tests pass.
+
+## Stage 2 — Baseline and harden only observed weak points
+
+The generic controlled-evaluation contract must also carry permanent regression coverage.
+
+```text
 Make the following generic Experiment cases permanent:
 - invalid control/candidate exposure id or hash;
 - control/candidate resolving to the same exact exposure;
@@ -211,52 +241,13 @@ Make the following generic Experiment cases permanent:
 - raw experiment assignments/samples copied into Project Graph state;
 - failed experiment execution mutating an exposure or canonical Experiment state;
 - repeated identical outcome evidence creating duplicate Observations.
+```
 
 Use the non-Kakeibo generic Experiment fixture from Checkpoint 6 for framework assertions. Do not create one aggregate Experiment-quality score.
-```
 
-**Expected result**
+Include the Experiment projection failures required by Checkpoint 8: wrong or stale control/candidate links; derived state implying a promotion that did not occur; a missing material guardrail breach in a derived projection; an empty Experiments view fabricating state; raw experiment evidence projected to GitHub; disabling Operations leaving Experiments fields, views or path ownership behind; and a GitHub field edit attempting to author or mutate Experiment truth.
 
-The generic controlled-evaluation contract has permanent regression coverage.
-
-**Verify before continuing**
-
-Run `pnpm pactwright eval` and `pnpm pactwright operations validate` against each Experiment failure case individually. Confirm generic fixtures contain no Kei-specific fields.
-
-### Step 6 — Implement Distribution/GitHub projection regression fixtures
-
-**References:** GitHub §§26–28; Checkpoint 8 Experiment projection
-
-**Run**
-
-```text
-Implement accepted Distribution/GitHub cases for dependency removal, desired-state conflict, stale derived views, owned drift reconciliation, extension-disable cleanup and projection-only semantics.
-
-Include Experiment projection failures observed or required by Checkpoint 8:
-- wrong/stale control or candidate link;
-- derived state implying promotion that did not occur;
-- missing material guardrail breach in derived projection;
-- empty Experiments view fabricating state;
-- raw experiment evidence projected to GitHub;
-- disabling Operations leaving Experiments fields/views/path ownership behind;
-- GitHub field edit attempting to author or mutate Experiment truth.
-```
-
-**Expected result**
-
-The complete GitHub surface has permanent projection/governance regression coverage.
-
-**Verify before continuing**
-
-Run relevant GitHub desired-state fixtures and `pnpm pactwright github sync --dry-run`; canonical files must remain authoritative.
-
-## Stage 2 — Baseline behaviour and harden observed failures
-
-Improve reliability without speculative new semantics.
-
-### Step 7 — Run the complete evaluation suite
-
-**References:** Shared evaluation
+### Step 6 — Run the complete Pactwright evaluation suite
 
 **Run**
 
@@ -266,72 +257,59 @@ pnpm build
 pnpm pactwright eval
 ```
 
-The suite runs against the repository-local workspace build; `0.0.9` does not exist in the registry until Stage 6.
-
 **Expected result**
 
-A per-capability/per-case result set exists, including the permanent Experiment cases.
+Per-capability/per-case results exist across all Pactwright responsibilities.
 
-**Verify before continuing**
-
-Inspect every failing case individually. No aggregate score decides acceptance.
-
-### Step 8 — Compare a real candidate agent pack when one exists
-
-**References:** Shared evaluation
+### Step 7 — Compare a real Agent Pack candidate only when one exists
 
 **Run**
 
-```text
-Inspect accepted hardening work. If no change affects an agent pack or Generation Guidance, record this step as not applicable and do not invent a candidate. If AI behaviour changes, build the candidate pack through the normal package build and report its local package path and pack family.
-```
-
-Only when a real candidate exists:
+If hardening changes `@pactwright/standard` AI behaviour, build the candidate and compare it against the compatible `0.0.8` baseline using:
 
 ```bash
 pnpm pactwright eval \
-  --baseline <baseline-pack>@0.0.8 \
-  --candidate <candidate-pack-path>
+  --baseline @pactwright/standard@0.0.8 \
+  --candidate <candidate-pack-or-environment>
 ```
+
+If no Agent Pack behaviour changed, mark this step not applicable. Do not invent a candidate.
 
 **Expected result**
 
-A real AI-behaviour change is compared with the last published release of its own pack family.
+Real AI responsibility changes are compared against the last released baseline without one aggregate score.
 
-**Verify before continuing**
-
-Review each regression individually; deterministic ownership/safety failures override model-judge preference.
-
-### Step 9 — Implement only observed hardening fixes
-
-**References:** Owning specs; future-improvement sections
+### Step 8 — Implement only evidence-backed fixes
 
 **Run**
 
-```text
-Implement fixes only for concrete failure modes observed in Checkpoints 1–8 or the accepted evaluation inventory. Preserve owner boundaries and do not pull future improvements into the core without observed need. Add or tighten a regression fixture for every fix.
+For every accepted failure:
 
-A fix to Experiment handling must remain generic. A fix to Kakeibo Kei behaviour belongs to Kakeibo and must not create new Pactwright Kei node types.
+```text
+identify owning spec/responsibility
+→ implement smallest fix
+→ add regression case
+→ preserve existing ownership boundaries
 ```
 
-**Expected result**
+Do not:
 
-Known failure paths fail closed without unnecessary semantic expansion.
+- add a generic workflow/BPM engine;
+- add provider/model routing to Pactwright;
+- add Review Definitions/reviewer roster;
+- add a Creative Delivery lifecycle;
+- add new graph semantics for production-domain quality;
+- resolve declared open gaps unless the evidence demonstrates the missing minimal contract and the owning canonical spec is deliberately updated first.
 
-**Verify before continuing**
-
-Run `pnpm verify` and `pnpm pactwright eval`.
-
-### Step 10 — Run the full Pactwright validation matrix
-
-**References:** All Pactwright owning specs
+### Step 9 — Run the complete validation matrix
 
 **Run**
 
 ```bash
 pnpm pactwright validate
 pnpm pactwright intelligence validate
-pnpm pactwright creative validate
+pnpm pactwright graph-review validate
+pnpm pactwright assets validate
 pnpm pactwright operations validate
 pnpm pactwright github sync --dry-run
 pnpm pactwright eval
@@ -339,243 +317,68 @@ pnpm pactwright eval
 
 **Expected result**
 
-Canonical state is valid, projections converge and evaluation regressions are understood.
+All deterministic validations pass and semantic regressions are explicitly reviewed.
 
-**Verify before continuing**
+## Stage 3 — Run failure drills at real subsystem boundaries
 
-All deterministic validation passes; every semantic regression has an explicit accepted disposition.
+### Step 10 — Run Graph Review and replay failure drills
 
-## Stage 3 — Complete the initial Pactwright public product
-
-Make shipped content match implemented capability after the complete checkpoint sequence.
-
-### Step 11 — Audit public surfaces against actual product state
-
-**References:** Public project §§3–16; Implementation Guide — public-product progression
-
-**Run**
+Prove at least:
 
 ```text
-Inspect README, Docs, Academy, Examples, Extensions, Website, Case Studies and Blog against current implemented Pactwright capability. Identify only gaps required for the initial Discover → Understand → Try → Learn → Extend → Contribute journey.
+failed Graph Review execution
+→ provenance exists
+→ no Findings
 
-Ensure public material accurately covers:
-- Delivery / PI / Review & Creative / Operations boundaries;
-- ordinary production feedback without Experiment;
-- controlled Experiment semantics and their optional nature;
-- Publication feedback and immutable superseding Assets;
-- projection-only GitHub behaviour;
-- the contribution guide and launch material named for 0.0.9.
+successful Finding + failed PI hand-off
+→ Finding remains valid
+→ retry hand-off without rerun
 
-Do not document unimplemented future behaviour. Return a bounded backlog ordered by user-blocking impact.
+unavailable pinned replay input
+→ explicit failure
+→ no current-state substitution
 ```
 
-**Expected result**
+### Step 11 — Run Asset/Publication failure drills
 
-A public-product backlog exists based on actual implemented behaviour.
-
-**Verify before continuing**
-
-Remove aspirational items and confirm contribution/launch material plus Experiment boundary documentation are represented where incomplete.
-
-### Step 12 — Deliver each blocking public-surface gap through Pactwright
-
-**References:** Public project §§3–16; Delivery §19; Review & Creative §9
-
-**Run**
+Prove at least:
 
 ```text
-/capture-intent "<highest-priority blocking public-product gap>"
-/propose-contracts <intent-id>
-/approve-contract <contract-id> "<selection notes>"
-/write-brief <contract-id>
-/deliver-brief <brief-id>
-/review <brief-id>
-/prepare-evidence <brief-id>
+fact-bearing Asset + required PI unavailable/ungrounded
+→ approval blocked
+
+external Asset bytes unverifiable
+→ validation cannot claim hash match
+
+failed Publication recording
+→ approved Asset unchanged
 ```
 
-**Expected result**
+Do not invent Publication retry identity if the canonical gap remains unresolved.
 
-The initial public journey is coherent and grounded in implemented capability.
+### Step 12 — Run Operations and GitHub failure drills
 
-**Verify before continuing**
-
-Repeat only for blocking audit gaps; contribution guide and launch material must be delivered before completion.
-
-### Step 13 — Re-check public creative readiness
-
-**References:** Open-Source Project Organisation §1.2; PI §§10, 13
-
-**Run**
-
-```bash
-pnpm pactwright intelligence onboard
-```
-
-Require `identity`, `content`, `product` and `go-to-market` to be Covered before launch/case-study work. Fill gaps through normal Delivery → ingest → triage/promotion.
-
-**Expected result**
-
-Launch and case-study content is grounded in current accepted truth.
-
-**Verify before continuing**
-
-Inspect coverage and selected Knowledge for positioning, audience, voice, product claims and CTA decisions.
-
-### Step 14 — Create and publish the Pactwright-building-Pactwright case study
-
-**References:** Public project §9; Review & Creative §§9–13
-
-**Run**
+Prove at least:
 
 ```text
-Inspect canonical Pactwright graph/Evidence, Review findings, Publications, Deployments, Experiments where actually used, Operations Observations and PI/Delivery outcomes from the programme. Prepare a factual grounding set for the Pactwright-building-Pactwright case study covering bootstrap, self-hosted Delivery, PI, Graph Review, Creative Delivery, production learning and corrective Delivery. Include Experiment only if verified programme evidence supports the claim; do not invent milestones/outcomes.
+source unavailable
+→ failed Operations execution
+→ existing canonical truth remains valid
+
+insufficient evidence
+→ no Observation
+
+failed Observation → PI hand-off
+→ Observation valid/retryable
+
+ambiguous GitHub-owned resource
+→ preserve/report ambiguity
+→ no destructive reconciliation
 ```
 
-Then:
+Experiment failure drills must additionally cover:
 
 ```text
-/capture-intent "Create the Pactwright-building-Pactwright case study from verified implementation evidence."
-/propose-contracts <intent-id>
-/approve-contract <contract-id> "<selection notes>"
-/write-brief <contract-id>
-/deliver-brief <brief-id>
-/review <brief-id>
-/prepare-evidence <brief-id>
-```
-
-After manual approval of the exact output:
-
-```bash
-pnpm pactwright creative approve-asset <evidence-id>
-pnpm pactwright creative record-publication <asset-id> <channel>
-pnpm pactwright creative validate
-```
-
-**Expected result**
-
-The case study is a real grounded Publication produced through the lifecycle it describes.
-
-**Verify before continuing**
-
-Trace factual claims to grounding and Publication to the approved Asset hash; no raw operational/Experiment payload is published.
-
-## Stage 4 — Prove a repeated closed loop on Pactwright
-
-Run this stage from the Pactwright repository root.
-
-### Step 15 — Collect a real Pactwright production finding
-
-**References:** Operations §§8–13
-
-**Run**
-
-```bash
-pnpm pactwright operations refresh
-pnpm pactwright operations validate
-```
-
-**Expected result**
-
-A new or matched real operational finding is available.
-
-**Verify before continuing**
-
-Inspect the execution/Observation. When a durable new meaning exists, confirm PI hand-off printed `<internal-source-id>`. If the refresh legitimately produces no new durable finding, use another already observed real Pactwright finding from the programme; do not manufacture one.
-
-### Step 16 — Route the finding and deliver a correction
-
-**References:** Operations §13; PI §11; Delivery §19
-
-**Run**
-
-```bash
-pnpm pactwright intelligence triage <internal-source-id>
-
-# only when reviewed promotion is required and accepted
-pnpm pactwright intelligence promote <internal-source-id>
-
-pnpm pactwright intelligence derive-intent-roadmap
-pnpm pactwright operations corrective-roadmap
-```
-
-Then:
-
-```text
-/capture-intent "<accepted corrective outcome>"
-/propose-contracts <intent-id>
-/approve-contract <contract-id> "<selection notes>"
-/write-brief <contract-id>
-/deliver-brief <brief-id>
-/review <brief-id>
-/prepare-evidence <brief-id>
-```
-
-**Expected result**
-
-Production meaning becomes Delivery only through PI governance.
-
-**Verify before continuing**
-
-Trace Observation → Source → accepted candidate → Intent → Evidence.
-
-### Step 17 — Expose the correction and observe again
-
-**References:** Operations §§7–16; Review & Creative §§12–13
-
-**Run**
-
-For software:
-
-```bash
-pnpm pactwright operations record-deployment <evidence-id>
-```
-
-For creative work, after human approval and real publication:
-
-```bash
-pnpm pactwright creative approve-asset <evidence-id>
-pnpm pactwright creative record-publication <asset-id> <channel>
-```
-
-Use an Experiment only if the correction independently requires controlled comparison under the CP6 contract; do not make Experiment mandatory for this repeated loop.
-
-Then:
-
-```bash
-pnpm pactwright operations refresh
-```
-
-**Expected result**
-
-Second-round evidence validates the correction, produces new learning or exposes another explicit issue.
-
-**Verify before continuing**
-
-Prior Evidence/Deployment/Experiment/Observation records remain immutable; changed operational truth uses new records/supersession as defined by owners.
-
-## Stage 5 — Run failure drills
-
-Prove known boundaries fail closed before releasing the hardened line. Any drill failure blocks release and returns to Stage 2 with a permanent regression fixture.
-
-### Step 18 — Execute the final generic failure matrix
-
-**References:** All Pactwright owning specs; Experiment §§11–12
-
-**Run**
-
-Run safe real-path/fixture drills for at least:
-
-```text
-invalid extension dependency removal
-invalid Asset hash
-Deployment with invalid Evidence
-Publication mutation attempt from Operations
-duplicate Observation
-stale PI derived report
-GitHub Project drift
-missing agent-pack capability
-failed Operations collection
-failed Review provider call
 invalid Experiment exposure/hash
 post-record Experiment mutation
 missing Experiment primary metric/decision rule
@@ -588,86 +391,147 @@ raw experiment sample copied into graph
 failed experiment execution corrupting compared exposure
 ```
 
-For each, execute the real Pactwright path where practical, record the expected failure boundary and prove unrelated canonical state remains valid.
+At least one actual Experiment failure drill must execute end to end rather than existing only as a schema unit test.
 
-**Expected result**
+## Stage 4 — Complete the initial public product
 
-Known core/extension/Experiment failures fail closed without corrupting sibling/core truth.
+### Step 13 — Audit public surfaces against actual shipped capability
 
-**Verify before continuing**
+Inspect:
 
-Review drill evidence individually and rerun the full validation/evaluation matrix. At least one actual Experiment failure drill must execute end to end rather than existing only as a schema unit test.
+```text
+README
+Docs
+Academy
+Examples
+Website
+Case Studies
+Blog
+Ecosystem registry/catalogue
+Contribution material
+Release/launch material
+```
 
-## Stage 6 — Release `0.0.9`
+Identify only gaps required for:
 
-`0.0.9` releases only after Stages 1–5 are accepted.
+```text
+Discover
+→ Understand
+→ Try
+→ Learn
+→ Extend
+→ Contribute
+```
 
-### Step 19 — Prepare, publish and tag `0.0.9`
+Do not document unimplemented future semantics.
 
-**References:** Implementation Guide — npm release model, trusted release workflow, release failure; Distribution §2
+### Step 14 — Deliver blocking public-product gaps
+
+For each user-blocking gap, run normal Pactwright Delivery using relevant Production Skills where specialised expertise is needed.
+
+Before fact-bearing public Asset approval, satisfy the applicable PI grounding/readiness rules.
+
+Do not require Assets/Publications for every documentation change; use them only when the output has independent durable publication value.
+
+### Step 15 — Publish the Pactwright-building-Pactwright case study
 
 **Run**
 
-Update `CHANGELOG.md` from accepted Checkpoint 9 Evidence only, then create the release PR:
+Use verified implementation evidence from the entire programme to deliver a factual case study covering:
 
-```bash
-VERSION=0.0.9
-DEFAULT_BRANCH="$(gh repo view --json defaultBranchRef -q .defaultBranchRef.name)"
-
-git switch "$DEFAULT_BRANCH"
-git pull --ff-only
-git switch -c "release/$VERSION"
-
-pnpm -r exec npm version "$VERSION" --no-git-tag-version --allow-same-version
-npm version "$VERSION" --no-git-tag-version --allow-same-version
-pnpm install
-pnpm verify
-pnpm publish -r --dry-run --tag next --access public
-
-git add -A
-git commit -m "chore: release $VERSION"
-git push -u origin HEAD
-
-gh pr create \
-  --title "Release $VERSION" \
-  --body "Prepare Pactwright $VERSION."
-
-gh pr checks --watch
-gh pr merge --squash --delete-branch
-
-git switch "$DEFAULT_BRANCH"
-git pull --ff-only
+```text
+bootstrap
+self-hosted Delivery
+Project Intelligence
+Graph Review
+Production Skills integration
+Assets / Publication
+Operations feedback
+corrective Delivery
+GitHub projection
 ```
 
-Tag the accepted merge commit:
+Do not describe Creative Delivery or reviewer rosters.
+
+After successful Evidence and explicit human approval of the exact final output:
 
 ```bash
-git tag -a "v$VERSION" -m "v$VERSION"
-git push origin "v$VERSION"
+pnpm pactwright assets approve-asset <evidence-id>
+pnpm pactwright assets record-publication <asset-id> <channel>
+pnpm pactwright assets validate
 ```
 
 **Expected result**
 
-Trusted `release.yml` verifies the exact merged source and publishes every still-unpublished package in the `0.0.9` family under `next`.
+The flagship case study is itself a governed Asset/Publication produced through the system it describes.
 
-**Verify before continuing**
+## Stage 5 — Prove repeated closed loops on Pactwright
+
+### Step 16 — Collect a real operational finding
+
+**Run**
 
 ```bash
-pnpm view pactwright@0.0.9 version
-pnpm view @pactwright/standard@0.0.9 version
-pnpm view @pactwright/project-intelligence@0.0.9 version
-pnpm view @pactwright/review-creative@0.0.9 version
-pnpm view @pactwright/creative@0.0.9 version
-pnpm view @pactwright/operations@0.0.9 version
+pnpm pactwright operations refresh
+pnpm pactwright operations validate
 ```
 
-Every command returns `0.0.9`; every package shows provenance/trusted-publisher metadata.
+If a canonical Observation exists, capture its PI Source id.
 
-## Stage 7 — Prove Kakeibo regression integrity and production Kei learning
+If no durable Observation is justified, do not manufacture one; use another real bounded operational source/surface with sufficient evidence.
+
+### Step 17 — Route the finding and deliver a correction
+
+**Run**
+
+```bash
+pnpm pactwright intelligence triage <internal-source-id>
+
+# where reviewed promotion is required and accepted
+pnpm pactwright intelligence promote <internal-source-id>
+
+pnpm pactwright intelligence derive-intent-roadmap
+pnpm pactwright operations corrective-roadmap
+```
+
+For one accepted candidate, capture an explicit Intent and complete normal Delivery to Evidence.
+
+**Expected result**
+
+Operational evidence becomes Delivery only through PI governance and explicit authority.
+
+### Step 18 — Expose the correction and observe again
+
+For software:
+
+```bash
+pnpm pactwright operations record-deployment <evidence-id>
+```
+
+For an approved durable public output:
+
+```bash
+pnpm pactwright assets approve-asset <evidence-id>
+pnpm pactwright assets record-publication <asset-id> <channel>
+```
+
+Use an Experiment only if the correction independently requires controlled comparison under the CP6 contract; do not make Experiment mandatory for this repeated loop.
+
+Then:
+
+```bash
+pnpm pactwright operations refresh
+```
+
+**Expected result**
+
+Second-round evidence validates the correction, provides new learning or explicitly shows no durable new Observation.
+
+## Stage 6 — Prove Kakeibo regression integrity and production Kei learning
 
 Run this stage from the Kakeibo repository root unless explicitly stated otherwise.
 
-### Step 20 — Upgrade/reconcile Kakeibo fully
+### Step 19 — Upgrade/reconcile Kakeibo fully
 
 **References:** Distribution §15; Kakeibo Acceptance Profile §13
 
@@ -708,7 +572,7 @@ pnpm pactwright eval
 
 Also run Kakeibo's repository-defined deterministic/application/evaluation test suites required by current `06`.
 
-### Step 21 — Run the seven-owner Kakeibo regression Review
+### Step 20 — Run the seven-owner Kakeibo regression Review
 
 **References:** all current Kakeibo specs; Graph Review; Kakeibo Acceptance Profile §13
 
@@ -749,7 +613,7 @@ The complete current Kakeibo design remains coherent after the Pactwright harden
 
 Every accepted finding identifies the owning Kakeibo spec and routes through Review → PI → governed Delivery where correction is required. Do not fix owner conflicts inside this checkpoint text.
 
-### Step 22 — Select a confirmed Kei production defect and create a minimum reproduction
+### Step 21 — Select a confirmed Kei production defect and create a minimum reproduction
 
 **References:** current Kakeibo `03`, `05`, `06`; Acceptance Profile §13
 
@@ -771,7 +635,7 @@ A confirmed/safely simulated defect has a minimal sanitised reproduction and cle
 
 The reproduction fails the current accepted Kei release in the intended way, contains no unnecessary production personal/financial payload, and does not change Pactwright Experiment semantics.
 
-### Step 23 — Convert the defect into a permanent Kakeibo benchmark/regression case
+### Step 22 — Convert the defect into a permanent Kakeibo benchmark/regression case
 
 **References:** current Kakeibo `06`; Checkpoint 5 offline gates; Acceptance Profile §13
 
@@ -808,7 +672,7 @@ The production defect becomes permanent repository-owned regression knowledge.
 
 The case fails the current defective behaviour, passes deterministic dataset/schema validation and is safe to retain/share according to Kakeibo `07`.
 
-### Step 24 — Deliver the candidate fix as a new immutable KeiRelease
+### Step 23 — Deliver the candidate fix as a new immutable KeiRelease
 
 **References:** current Kakeibo `03`, `05`, `06`; Delivery/Review
 
@@ -842,7 +706,7 @@ A traceable candidate fix exists as a new Kakeibo-owned immutable KeiRelease.
 
 The defect case passes on the candidate; old release identity remains unchanged/addressable; exact bundle and benchmark identities differ where required.
 
-### Step 25 — Run the normal Kei release gates and controlled production evaluation
+### Step 24 — Run the normal Kei release gates and controlled production evaluation
 
 **References:** current Kakeibo `06`; Operations Experiment Semantics; Acceptance Profile §§10, 13
 
@@ -896,7 +760,7 @@ production defect
 
 Confirm hard financial/privacy/user-authority/advice invariants were never used as experimental variables and no automatic promotion occurred.
 
-### Step 26 — Complete one real Kakeibo repeated closed loop
+### Step 25 — Complete one real Kakeibo repeated closed loop
 
 **References:** Operations / PI / Delivery; current Kakeibo `06`
 
@@ -914,188 +778,85 @@ The external product proves the general closed-loop architecture after hardening
 
 Review exact trace ids through the later Observation and run Kakeibo repository tests plus Pactwright validations.
 
-## Stage 8 — Publish the first supported Pactwright release
+## Stage 7 — Prepare and publish the supported `0.1.0`
 
-`0.0.9` has already passed failure drills and Kakeibo acceptance. Promote the same accepted code line through the trusted tag workflow.
+### Step 26 — Define supported-release acceptance from observed maturity
 
-If a defect is found after `0.0.9` publication, do not promote it: published versions are immutable. Fix forward with the next development version and repeat relevant acceptance before returning here.
-
-### Step 27 — Prepare and tag `0.1.0`
-
-**References:** Implementation Guide — npm release model, trusted release workflow, release failure; Distribution §2
-
-**Run**
-
-Update `CHANGELOG.md` with a `0.1.0` summary from accepted programme Evidence and clearly mark the supported CLI/package surface.
-
-```bash
-VERSION=0.1.0
-DEFAULT_BRANCH="$(gh repo view --json defaultBranchRef -q .defaultBranchRef.name)"
-
-git switch "$DEFAULT_BRANCH"
-git pull --ff-only
-git switch -c "release/$VERSION"
-
-pnpm -r exec npm version "$VERSION" --no-git-tag-version --allow-same-version
-npm version "$VERSION" --no-git-tag-version --allow-same-version
-pnpm install
-pnpm verify
-pnpm publish -r --dry-run --tag latest --access public
-
-git add -A
-git commit -m "chore: release $VERSION"
-git push -u origin HEAD
-
-gh pr create \
-  --title "Release $VERSION" \
-  --body "Prepare the first supported Pactwright release."
-
-gh pr checks --watch
-gh pr merge --squash --delete-branch
-
-git switch "$DEFAULT_BRANCH"
-git pull --ff-only
-
-git tag -a "v$VERSION" -m "v$VERSION"
-git push origin "v$VERSION"
-```
-
-**Expected result**
-
-Trusted `release.yml` runs the complete verification/compatibility gate and publishes the accepted package family as `0.1.0` under `latest` with provenance.
-
-**Verify before continuing**
-
-```bash
-pnpm view pactwright@latest version
-pnpm view @pactwright/standard@latest version
-pnpm view @pactwright/project-intelligence@latest version
-pnpm view @pactwright/review-creative@latest version
-pnpm view @pactwright/creative@latest version
-pnpm view @pactwright/operations@latest version
-pnpm view pactwright@next version
-```
-
-The first six return `0.1.0`; `next` remains the accepted development line according to the Implementation Guide (normally `0.0.9` at this checkpoint unless a required fix-forward release occurred).
-
-### Step 28 — Smoke-test the supported release from shipped material
-
-**References:** Implementation Guide — test layers/public-product progression; Public project §3.4; Implementation Principles §13
-
-**Run**
-
-In a clean repository outside Pactwright/Kakeibo:
-
-```bash
-mkdir -p /tmp/pactwright-quickstart && cd /tmp/pactwright-quickstart
-git init .
-pnpm init
-pnpm add -D pactwright@0.1.0
-```
-
-Then follow the published README Quick Start verbatim using only shipped public material. Complete initialisation, validation and the documented minimal Delivery pass. Record every deviation.
-
-**Expected result**
-
-A new user can install and operate the supported release from shipped material alone.
-
-**Verify before continuing**
-
-No undocumented step is required. Any blocking deviation must be fixed through normal Delivery and the smoke test repeated before closure.
-
-### Step 29 — Upgrade Kakeibo to the supported release
-
-**References:** Distribution §§2, 15; Implementation Guide — npm release model
-
-**Run**
-
-From a Kakeibo acceptance branch:
-
-```bash
-pnpm add -D \
-  pactwright@0.1.0 \
-  @pactwright/project-intelligence@0.1.0 \
-  @pactwright/review-creative@0.1.0 \
-  @pactwright/creative@0.1.0 \
-  @pactwright/operations@0.1.0
-
-pnpm pactwright extension upgrade project-intelligence
-pnpm pactwright extension upgrade review-creative
-pnpm pactwright extension upgrade operations
-pnpm pactwright upgrade
-pnpm pactwright sync
-pnpm pactwright github sync --dry-run
-pnpm pactwright github sync
-
-pnpm pactwright validate
-pnpm pactwright intelligence validate
-pnpm pactwright creative validate
-pnpm pactwright operations validate
-pnpm pactwright eval
-```
-
-Commit package/lock/config changes, push, open a PR, wait for required checks and merge.
-
-**Expected result**
-
-Kakeibo consumes the exact supported `0.1.0` family and passes its normal repository/Pactwright checks.
-
-**Verify before continuing**
-
-```bash
-pnpm list pactwright @pactwright/project-intelligence @pactwright/review-creative @pactwright/creative @pactwright/operations
-```
-
-Every direct Pactwright package resolves to `0.1.0`, and the Kakeibo PR is merged with required checks green.
-
-## Stage 9 — Capture checkpoint feedback
-
-Run from the Pactwright repository root.
-
-### Step 30 — Capture blocking feedback as product evidence
-
-**References:** Implementation Principles §§7, 13–14; PI §8; Implementation Guide — transition rule
-
-**Run**
+Before changing dist-tag, confirm:
 
 ```text
-Collect defects, friction and gaps observed during Checkpoint 9 implementation, generic failure drills, Experiment hardening, Kakeibo seven-owner review, production Kei regression lifecycle, both Kakeibo installs and the Quick Start smoke test.
-
-Ingest each material finding as a PI Source and triage it. Record blocking findings as intent candidates only through normal PI governance. Distinguish Kakeibo-specific product/Kei findings from generic Pactwright responsibility failures; do not generalise Kakeibo-specific semantics merely because they produced a useful regression case.
+all Checkpoints 1–9 accepted
+full validation/eval matrix understood
+Pactwright and Kakeibo closed loops proven
+public Discover→Contribute journey complete
+known blocking failures resolved
+remaining open gaps explicitly documented and non-blocking
 ```
 
-**Expected result**
+This is not a new semantic maturity framework; it is the release acceptance evidence for the first supported version.
 
-Blocking feedback is captured as traceable product evidence before Graduation.
+### Step 27 — Publish `0.1.0`
 
-**Verify before continuing**
+Use the Implementation Guide release process and publish the compatible first-party family under `latest`:
 
-Every blocking finding traces to a Source and triage record; no known blocking failure is carried silently into Graduation.
+```text
+pactwright
+@pactwright/standard
+@pactwright/project-intelligence
+@pactwright/graph-review
+@pactwright/assets-publication
+@pactwright/operations
+```
+
+No `@pactwright/creative` or `@pactwright/review-creative` package exists.
+
+Verify registry versions/dist-tags/provenance and install the exact `0.1.0` family into Kakeibo before Graduation.
+
+## Stage 8 — Capture final checkpoint learning
+
+### Step 28 — Govern remaining non-blocking findings
+
+Ingest remaining evidence-backed Pactwright findings through PI, distinguishing:
+
+```text
+known non-blocking open design gap
+repeatable product defect
+future improvement backed by usage
+project-specific preference
+```
+
+Do not convert every remaining idea into an Intent.
 
 ## Exit gate
 
-Checkpoint 9 passes only when all of the following hold:
+Checkpoint 9 closes only when:
 
-1. Repeatable failures from Checkpoints 1–8 have a traceable owner and accepted permanent regression/evaluation coverage; one-off taste has not been converted into framework semantics.
-2. Generic Operations Experiment coverage includes invalid exposure/hash, immutable-contract enforcement, required predeclared success/guardrail/decision semantics, assignment/shadow safety, insufficient evidence, no auto-promotion, no raw sample persistence and failed-execution isolation.
-3. No single aggregate Experiment/agent score decides acceptance; deterministic assertions outrank model judgement where applicable.
-4. Distribution/GitHub regressions prove Experiment projections cannot fabricate promotion, leak raw evidence, survive Operations disablement incorrectly or become canonical through UI edits.
-5. Only observed hardening fixes were implemented and each fix has regression coverage.
-6. The full Pactwright validation/evaluation matrix passes and GitHub desired state converges.
-7. Public surfaces match actual capability, including optional controlled Experiment semantics, contribution guidance and launch material; the grounded Pactwright case study is published.
-8. Pactwright closes a repeated production-feedback loop without making Experiment mandatory.
-9. The final generic failure matrix includes at least one end-to-end Experiment failure drill and all drills preserve unrelated canonical state.
-10. `0.0.9` is published under `next` with verified provenance before Kakeibo hardened acceptance.
-11. Kakeibo runs a regression Review across all seven current canonical owners and explicitly checks financial/review truth, architecture/privacy separation, bounded Kei authority, source prompt injection, release/model-route identity, Git-owned behaviour, safe experiments and private/public trace boundaries.
-12. At least one real or clearly labelled safely simulated confirmed Kei defect completes `failure → minimum reproduction → sanitised/synthetic permanent benchmark case → candidate fix → new immutable KeiRelease → deterministic/offline gates → staging/shadow where required → controlled promotion or rejection`.
-13. The previous KeiRelease remains immutable/addressable; production behaviour changes never silently reuse its release identity and behavioural release identity remains distinct from model route.
-14. Any new controlled comparison for the Kei fix uses a new immutable Operations Experiment rather than rewriting the Checkpoint 6 contract; the result reaches PI through Observation and cannot auto-promote.
-15. Kakeibo also completes one normal repeated production-feedback loop after hardening; Experiment is used only when independently justified.
-16. The accepted family is published as supported `0.1.0` under `latest`, the shipped Quick Start passes in a clean repository and Kakeibo upgrades to the exact supported registry family.
-17. Blocking implementation/installation/Quick Start/Kakeibo findings are captured through PI and no known blocking failure is silently carried into Graduation.
-18. No Kakeibo-specific `KeiRelease`, model-route, task, policy, persona or benchmark node type has been added to Pactwright merely to support the regression lifecycle.
-19. No speculative future semantics were introduced merely for completeness.
+- evaluation ownership matches current subsystem boundaries;
+- Production Skills own domain-specific quality benchmarks;
+- all observed repeatable Pactwright failures have an owner and regression coverage where justified;
+- failure drills prove Graph Review replay/hand-off, Asset/Publication grounding/hash boundaries, Operations failure semantics and conservative GitHub reconciliation;
+- the full validation matrix passes;
+- no Creative Delivery, reviewer roster, provider registry or Generation Guidance subsystem has returned;
+- Pactwright public surfaces match implemented behaviour;
+- the Pactwright-building-Pactwright case study is a real governed Publication;
+- Pactwright and Kakeibo each complete repeated evidence-driven closed loops;
+- the supported package family is exactly the six current first-party packages;
+- `0.1.0` is published under `latest` and installed in Kakeibo;
+- generic Operations Experiment coverage includes invalid exposure/hash, immutable-contract enforcement, required predeclared success/guardrail/decision semantics, assignment/shadow safety, insufficient evidence, no auto-promotion, no raw sample persistence and failed-execution isolation;
+- no single aggregate Experiment or agent score decides acceptance, and deterministic assertions outrank model judgement where applicable;
+- Distribution/GitHub regressions prove Experiment projections cannot fabricate promotion, leak raw evidence, survive Operations disablement incorrectly or become canonical through UI edits;
+- the final generic failure matrix includes at least one end-to-end Experiment failure drill and every drill preserves unrelated canonical state;
+- `0.0.9` is published under `next` with verified provenance before Kakeibo hardened acceptance;
+- Kakeibo runs a regression Review across all seven current canonical owners, explicitly checking financial/review truth, architecture/privacy separation, bounded Kei authority, source prompt injection, release/model-route identity, Git-owned behaviour, safe experiments and private/public trace boundaries;
+- at least one real or clearly labelled safely simulated confirmed Kei defect completes `failure → minimum reproduction → sanitised/synthetic permanent benchmark case → candidate fix → new immutable KeiRelease → deterministic/offline gates → staging/shadow where required → controlled promotion or rejection`;
+- the previous KeiRelease remains immutable and addressable, production behaviour changes never silently reuse its release identity, and behavioural release identity remains distinct from model route;
+- any new controlled comparison for the Kei fix uses a new immutable Operations Experiment rather than rewriting the Checkpoint 6 contract, and its result reaches Project Intelligence through Observation without auto-promotion;
+- Experiment is used only when independently justified, and Pactwright and Kakeibo each also close a normal repeated production-feedback loop without making Experiment mandatory;
+- no Kakeibo-specific `KeiRelease`, model-route, task, policy, persona or benchmark node type has been added to Pactwright merely to support the regression lifecycle;
+- the shipped Quick Start passes in a clean repository and Kakeibo upgrades to the exact supported registry family;
+- remaining open gaps are explicit, evidence-backed and non-blocking;
+- no known blocking failure enters Graduation.
 
 ---
 
-**Pactwright — Checkpoint 9 — Hardened Closed Loop v10**
+**Pactwright — Checkpoint 9 — Hardened Closed Loop v11**

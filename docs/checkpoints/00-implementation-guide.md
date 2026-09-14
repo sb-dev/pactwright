@@ -1,11 +1,13 @@
 # Pactwright — Implementation Guide
 
-**Version:** 15  
+**Version:** 16  
 **Status:** Checkpoint index, engineering standard and release model
 
 ## Purpose
 
-The checkpoint files are executable engineering runbooks. Every step uses:
+The checkpoint files are executable engineering runbooks.
+
+Every step uses:
 
 ```text
 Step
@@ -15,7 +17,26 @@ Step
 → Verify before continuing
 ```
 
-`Run` contains the actual prompt, slash command or shell command. The runbook does not encode which AI coding provider is active.
+`Run` contains the actual prompt, adapter command or shell command. The runbook does not encode which AI coding provider is active.
+
+Checkpoints describe **implementation progression**. They do not define Pactwright semantics.
+
+Canonical authority is:
+
+```text
+docs/specs/01-pactwright-core-system-and-lifecycle.md
+docs/specs/02-distribution-agent-packs-extensions-and-evaluation.md
+docs/specs/03-project-intelligence.md
+docs/specs/04-graph-review.md
+docs/specs/05-assets-and-publication.md
+docs/specs/06-operations.md
+docs/specs/07-github-integration.md
+docs/specs/08-open-source-project-organisation.md
+```
+
+Research logs provide rationale and historical design context only.
+
+If a checkpoint conflicts with a canonical spec, the canonical spec wins and the checkpoint must be corrected before implementation continues.
 
 The runbooks define execution order and acceptance work. They do not replace the owning Pactwright or Kakeibo specifications.
 
@@ -87,7 +108,7 @@ These rules apply to every checkpoint.
 
 ### Verification
 
-Pactwright owns one root verification gate:
+Pactwright owns one root repository verification gate:
 
 ```bash
 pnpm verify
@@ -123,7 +144,9 @@ cross-system behaviour
 → Pactwright or Kakeibo System-Level Acceptance
 ```
 
-Do not replace deterministic tests with LLM judgement. Do not add arbitrary coverage targets.
+Do not replace deterministic tests with LLM judgement.
+
+Do not add arbitrary coverage percentages. Test responsibilities and failure boundaries.
 
 For probabilistic behaviour, deterministic contract/safety assertions remain the strongest gate. Model-based or human evaluation supplements deterministic verification; it does not replace it or collapse acceptance into one aggregate score.
 
@@ -149,7 +172,25 @@ plan
 → validate resulting state
 ```
 
-A failed mutation must not leave a partially updated graph, config, lock file or managed-file set.
+A failed mutation must not leave a partially updated Project Graph, configuration, lock file or managed-file set.
+
+### Replay provenance
+
+Replayable execution uses the shared Pactwright replay base:
+
+```text
+repository_revision
++ project_graph_revision
++ environment_lock_hash
+```
+
+The repository and Project Graph revisions are runtime-provided canonical identities. `environment_lock_hash` identifies the exact resolved Pactwright execution environment.
+
+Pinned replay must never silently substitute newer runtime, Extension, Agent Pack, Production Skills or Production Extension Pack versions.
+
+If the recorded environment or repository state cannot be reconstructed, replay fails explicitly.
+
+The exact long-term retention or reacquisition mechanism for historical packages and external Production Skills revisions remains unresolved. Checkpoints must not invent a hidden package archive or fallback-to-current behaviour merely to make replay pass.
 
 Immutable graph/release records are superseded with new records where their owning semantics require change; they are not rewritten in place.
 
@@ -163,8 +204,10 @@ All Pactwright-owned workflows:
 - install with `pnpm install --frozen-lockfile`;
 - set bounded job timeouts;
 - avoid `pull_request_target` for normal validation;
-- use concurrency cancellation for superseded PR validation runs;
+- use appropriate concurrency controls for superseded validation runs;
 - never place credentials or sensitive payloads in workflow files or logs.
+
+Generated Pactwright workflows remain thin execution/projection surfaces. Lifecycle, Project Graph, Extension and authority semantics stay in the Pactwright runtime and owning specifications.
 
 GitHub Projects, checks, summaries and views are derived projections. Editing projected GitHub fields does not create or mutate canonical Pactwright graph state, including Experiment state.
 
@@ -181,21 +224,99 @@ Every publishable package has:
 
 Do not claim compatibility that CI or package smoke tests do not exercise.
 
+### Canonical gap discipline
+
+A checkpoint may reveal a missing implementation decision. It must not silently convert that gap into new Pactwright semantics.
+
+When a canonical specification explicitly leaves a question open:
+
+```text
+identify the gap
+→ implement only what the existing contract requires
+→ collect real evidence
+→ resolve the design deliberately when required
+→ update the owning canonical spec before relying on new semantics
+```
+
+Examples include:
+
+- lifecycle-shape persistence identity;
+- historical environment retention/reacquisition;
+- Deployment event identity;
+- Observation semantic identity/deduplication;
+- Asset verification when bytes are external;
+- Asset supersession command ergonomics;
+- Publication idempotency;
+- GitHub managed-resource identity and rename/collision handling;
+- automation branch/PR concurrency and rebasing;
+- exact GitHub check-conclusion mapping.
+
+A runbook must not resolve these accidentally inside an implementation prompt.
+
+## Command ownership
+
+Use Pactwright runtime commands only for semantics owned by Pactwright.
+
+Core/distribution examples:
+
+```text
+pactwright init
+pactwright sync
+pactwright validate
+pactwright doctor
+pactwright upgrade
+pactwright upgrade --to <version>
+pactwright lifecycle ...
+pactwright agent-pack use <source>
+pactwright agent-pack upgrade
+pactwright extension add <id-or-package>
+pactwright extension remove <id>
+pactwright extension upgrade <id>
+pactwright github sync
+pactwright eval
+```
+
+First-party Extension namespaces are:
+
+```text
+pactwright intelligence ...
+pactwright graph-review ...
+pactwright assets ...
+pactwright operations ...
+```
+
+Production Skill commands remain owned by their Production Skills repositories and do not automatically become Pactwright CLI commands.
+
+Upgrade ownership is explicit:
+
+```text
+pactwright upgrade
+→ Pactwright runtime
+
+pactwright agent-pack upgrade
+→ currently selected Agent Pack
+
+pactwright extension upgrade <id>
+→ one Pactwright Extension
+```
+
+Do not use `pactwright upgrade` as shorthand for Agent Pack or Extension upgrade.
+
 ## Public-product progression
 
 Pactwright does not wait until the end of implementation to document or explain itself.
 
-Each checkpoint advances the smallest public surface set needed by the new capability:
+Each checkpoint advances the smallest public surface set needed by the newly usable capability:
 
 ```text
 0.0.1  README Quick Start + Getting Started + core Delivery example
 0.0.2  website foundation + GitHub guide + remote Delivery example
-0.0.3  PI docs/onboarding/example/Academy + identity/content readiness
+0.0.3  PI docs/onboarding/example/Academy + public-content knowledge foundation
 0.0.4  Graph Review docs/example/Academy + public-corpus review
-0.0.5  Creative Delivery docs/example/Academy + first grounded Publication
-0.0.6  Operations docs/example/Academy + production learning + controlled Experiment explanation
+0.0.5  Production Skills + Assets / Publication guide/example/Academy + first grounded Asset/Publication
+0.0.6  Operations docs/example/Academy + production-feedback content + controlled Experiment explanation
 0.0.7  Publication-feedback guide + evidence-driven superseding revision of a real Publication
-0.0.8  full operating guide/example + Experiments projection + advanced Academy + extension catalogue
+0.0.8  full operating guide/example + Experiments projection + advanced Academy + ecosystem/Extension catalogue
 0.0.9  permanent regression hardening + case study + contribution/launch material + public-surface completion
 0.1.0  first supported public release of the accepted 0.0.9 capability line
 ```
@@ -204,26 +325,85 @@ Use the strongest Pactwright capability already available.
 
 Public material must distinguish ordinary production feedback from controlled Experiment workflows. Do not imply every Deployment/rollout requires experimentation.
 
-### Project Intelligence before creative work
+Specialised software, research, design, narrative, video, music, game and other production remains:
 
-From Checkpoint 3 onward, public content should use relevant accepted Project Intelligence context.
+```text
+normal Delivery
++ selected Agent Pack
++ relevant Production Skills
+```
 
-Before public creative Delivery:
+There is no separate Creative Delivery lifecycle.
+
+### Public-content authority before Project Intelligence
+
+Before Project Intelligence exists, public work still requires explicit authority for the specific work being delivered:
+
+```text
+Intent
+→ authorised Decision
+→ selected Contract
+→ Brief
+→ Delivery
+```
+
+The Decision and Contract provide bounded bootstrap authority for identity, positioning, product claims and other strategic choices needed by that work.
+
+A model must not invent missing project truth because Project Intelligence is unavailable.
+
+### Public-content readiness with Project Intelligence
+
+Once Project Intelligence is available for the relevant project state, public/outbound work must satisfy the applicable readiness gate before approval.
+
+Use:
 
 ```text
 pactwright intelligence onboard
-→ identity = Covered
-→ content = Covered where applicable
-→ product = Covered for product claims
-→ go-to-market = Covered for acquisition/marketing
-→ subject domains = Covered where claims depend on them
 ```
 
-If required coverage is missing, stop creative execution and create/ingest the missing project knowledge through normal Delivery first.
+and require the domains relevant to the work to be `Covered`:
 
-After content is accepted, feed material changes back through the normal Pactwright path so the graph remains current. Public content is never an untracked side channel.
+```text
+identity
+→ public/outbound work where identity, voice or values matter
 
-Approved Assets/Publications remain immutable. Later analytics, Operations Observations or Experiment evidence may motivate a superseding Asset through PI → Delivery → Creative, but must not rewrite the original approved/published artefact.
+content
+→ editorial, educational or marketing work
+
+product
+→ capability, value, behaviour or limitation claims
+
+go-to-market
+→ acquisition, positioning, CTA or campaign work
+
+delivery/ux
+→ user-facing workflow or UX claims/material
+
+delivery/eng
+→ technical implementation claims
+
+other applicable subject domain
+→ factual claims that depend on it
+```
+
+The specific current claims and constraints relied on must be represented by accepted, in-horizon Knowledge with traceable Sources.
+
+If required coverage is missing:
+
+```text
+pactwright intelligence onboard
+→ identify missing Sources or strategic Decisions
+→ normal Delivery / research obtains or creates the material
+→ pactwright intelligence ingest ...
+→ triage / reviewed promotion where required
+→ re-check coverage
+```
+
+Public content is never an untracked side channel.
+
+If relied-on Knowledge becomes challenged, superseded or retracted before approval, the work must be re-grounded and re-evaluated before it becomes an approved Asset or Publication.
+
+Approved Assets and Publications remain immutable. Later analytics, Operations Observations or Experiment evidence may motivate a superseding Asset through Project Intelligence → normal Delivery → Assets / Publication, but must not rewrite the original approved or published artefact.
 
 ## npm release model
 
@@ -260,7 +440,7 @@ verify
 → all later versions publish from CI with OIDC
 ```
 
-New package introduction points:
+Target first-party package introduction points are:
 
 ```text
 0.0.1
@@ -271,12 +451,16 @@ New package introduction points:
   @pactwright/project-intelligence
 
 0.0.4
-  @pactwright/review-creative
-  @pactwright/creative
+  @pactwright/graph-review
+
+0.0.5
+  @pactwright/assets-publication
 
 0.0.6
   @pactwright/operations
 ```
+
+Production Skills normally remain external repositories and are not part of this first-party package family.
 
 No long-lived npm publish token is stored in GitHub.
 
@@ -379,7 +563,7 @@ Published npm versions are immutable.
 
 - Do not overwrite or routinely unpublish a released version.
 - If the release workflow fails before publication, fix the cause and rerun safely.
-- Recursive pnpm publishing skips workspace versions already present in the registry, so a partial workspace publish can be resumed after the cause is fixed.
+- Recursive publishing may resume only where the package manager/registry behaviour has been verified to skip already published immutable versions safely.
 - If a published release is defective, fix forward with the next version.
 - Do not promote a known-defective `0.0.x` line to `latest`.
 - Moving a dist-tag to a previously published known-good version is an emergency recovery action and must be recorded as a Decision.
@@ -391,23 +575,25 @@ Unless a step says otherwise:
 - Pactwright implementation/release commands run from the Pactwright repository root;
 - Kakeibo acceptance commands run from the Kakeibo repository root;
 - fixture verification uses test fixtures unless the step explicitly creates a real repository/resource;
-- ids consumed later must be printed or resolved by an earlier step.
+- dynamic ids consumed later must be printed or resolved by an earlier step;
+- current Kakeibo canonical specifications govern Kakeibo acceptance, not stale copies embedded in Pactwright checkpoints.
 
 ## Execution order
 
-Read `README.md`, `00-implementation-principles.md` and the relevant owning specifications before running the sequence. Read `00-kakeibo-acceptance-profile.md` before each Kakeibo acceptance stage as the cross-owner acceptance profile.
+Read `README.md`, `00-implementation-principles.md` and the canonical Pactwright specifications before running the sequence. Read `00-kakeibo-acceptance-profile.md` before each Kakeibo acceptance stage as the cross-owner acceptance profile.
 
 ```text
-1.  01-self-hosted-delivery.md
-2.  02-remote-delivery.md
-3.  03-project-intelligence.md
-4.  04-graph-review.md
-5.  05-creative-production.md
-6.  06-operations.md
-7.  07-published-work-feedback.md
-8.  08-github-project-surface.md
-9.  09-hardened-closed-loop.md
-10. 10-graduation-connected-banking.md
+1.  01-self-hosted-delivery.md          Self-Hosted Delivery
+2.  02-remote-delivery.md               Remote Delivery
+3.  03-project-intelligence.md          Project Intelligence
+4.  04-graph-review.md                  Graph Review
+5.  05-production-skills-and-assets-publication.md
+                                        Production Skills + Assets / Publication
+6.  06-operations.md                    Operations
+7.  07-publication-feedback.md          Publication Feedback
+8.  08-github-project-surface.md        Full Project Operating Surface
+9.  09-hardened-closed-loop.md          Hardened Closed Loop
+10. 10-graduation-connected-banking.md  Graduation — Connected Banking
 ```
 
 For Checkpoints 6–9, also apply `2026-09-02-pactwright-operations-experiment-semantics.md` wherever the runbook references controlled Experiment semantics.
@@ -435,6 +621,13 @@ Graduation closes only after connected banking is proven through the existing Ka
 
 Do not carry a known blocking failure into the next checkpoint or Graduation.
 
+A non-blocking open design gap may cross a checkpoint only when:
+
+- the current canonical contract can still be satisfied safely;
+- the gap is recorded explicitly;
+- no implementation relies on an invented answer;
+- the next checkpoint does not silently treat the gap as resolved.
+
 ---
 
-**Pactwright — Implementation Guide v15**
+**Pactwright — Implementation Guide v16**

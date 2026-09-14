@@ -1,6 +1,6 @@
 # Pactwright — Graduation — Connected Banking
 
-**Version:** 1  
+**Version:** 2  
 **Entry condition:** Checkpoint 9 is accepted, Kakeibo runs the exact accepted `0.1.0` registry packages, and an accepted Kakeibo connected-banking integration specification exists.  
 **Current provider target:** Salt Edge Account Information  
 **Exit capability:** A second financial-data source is added behind Kakeibo's canonical ingestion boundary without semantic drift, the integration is observed in production, and graduation findings become governed Pactwright evidence.
@@ -33,20 +33,38 @@ Salt Edge is the current planned first connected-banking implementation. Graduat
 
 ---
 
-## 2. Specification baseline
+## 2. Canonical baseline
 
 ### Pactwright
 
-- [Pactwright — Delivery Graph and Lifecycle Engineering Spec](../research-logs/2026-08-11-pactwright-delivery-graph-and-lifecycle-engineering-spec.md)
-- [Pactwright — Distribution, Agents and Evaluation](../research-logs/2026-08-11-pactwright-distribution-agents-and-evaluation.md)
-- [Pactwright — GitHub Actions and Views](../research-logs/2026-08-11-pactwright-github-actions-and-views.md)
-- [Pactwright — Project Intelligence Graph Engineering Spec](../research-logs/2026-08-11-pactwright-project-intelligence-graph-engineering-spec.md)
-- [Pactwright — Graph Review & Creative Delivery Engineering Spec](../research-logs/2026-08-11-pactwright-graph-review-and-creative-delivery-engineering-spec.md)
-- [Pactwright — Operations Graph Engineering Spec](../research-logs/2026-08-11-pactwright-operations-graph-engineering-spec.md)
+Pactwright behaviour is governed by the canonical specifications:
+
+- [01 — Core System and Lifecycle](../specs/01-pactwright-core-system-and-lifecycle.md)
+- [02 — Distribution, Agent Packs, Extensions and Evaluation](../specs/02-distribution-agent-packs-extensions-and-evaluation.md)
+- [03 — Project Intelligence](../specs/03-project-intelligence.md)
+- [04 — Graph Review](../specs/04-graph-review.md)
+- [05 — Assets and Publication](../specs/05-assets-and-publication.md)
+- [06 — Operations](../specs/06-operations.md)
+- [07 — GitHub Integration](../specs/07-github-integration.md)
+- [08 — Open-Source Project Organisation](../specs/08-open-source-project-organisation.md)
 - [Pactwright — Operations Experiment Semantics](../research-logs/2026-09-02-pactwright-operations-experiment-semantics.md)
 - [Pactwright — Implementation Principles](./00-implementation-principles.md)
 - [Pactwright — Implementation Guide](./00-implementation-guide.md)
 - [Kakeibo System-Level Acceptance Profile](./00-kakeibo-acceptance-profile.md)
+
+Research logs and stale embedded Kakeibo copies in Pactwright are not authoritative.
+
+Once accepted through Stage 1, the dedicated connected-banking specification owns provider-specific semantics such as:
+
+```text
+connect/consent flow
+provider authentication/token handling
+sync/webhook mechanics
+provider-specific errors/retries
+source mapping constraints
+```
+
+This runbook must not invent those semantics.
 
 ### Kakeibo
 
@@ -93,7 +111,31 @@ Do not modify Pactwright core, extensions or agent packs during graduation. A Pa
 
 ---
 
-## 4. Graduation invariants
+## 4. Graduation constraints and invariants
+
+During Graduation:
+
+- do not change Pactwright core, first-party Extensions or `@pactwright/standard` merely to make connected banking work;
+- Pactwright gaps are captured as evidence for future governed Pactwright Delivery;
+- do not create provider-specific Project Graph semantics when existing Kakeibo ingestion and Operations boundaries are sufficient;
+- raw provider payloads, access tokens, refresh tokens, client secrets and unnecessary personal data never become Pactwright canonical state;
+- use Production Skills appropriate to the implementation domain, but keep Kakeibo-specific and domain quality in those skills and Kakeibo specs rather than Pactwright semantics.
+
+The delivery and feedback path remains:
+
+```text
+accepted Kakeibo spec
+→ PI Source / governed Knowledge
+→ explicit Intent
+→ normal Delivery
+→ Evidence
+→ Deployment
+→ Operations evidence
+→ Observation
+→ PI Source
+→ future Delivery where justified
+```
+
 
 Graduation must preserve:
 
@@ -418,6 +460,30 @@ Every blocking Pactwright finding is represented as governed evidence/candidate,
 
 ---
 
+## Step 10 — Assess the six system-level acceptance dimensions
+
+Record evidence for:
+
+```text
+Semantics
+→ Kakeibo financial/review/assistant meaning remained correct.
+
+Execution
+→ Pactwright could govern and deliver the integration.
+
+Boundaries
+→ provider semantics stayed inside the accepted Kakeibo integration boundary; Pactwright ownership did not collapse.
+
+Installation
+→ fixed `0.1.0` packages worked in Kakeibo without mid-graduation Pactwright changes.
+
+Content
+→ shipped Pactwright/Kakeibo guidance was sufficient to execute the work or gaps were captured explicitly.
+
+Feedback
+→ operational/generalisation findings entered normal PI governance.
+```
+
 ## Exit gate
 
 Graduation passes only when:
@@ -439,4 +505,4 @@ Graduation passes only when:
 
 ---
 
-**Pactwright — Graduation — Connected Banking v1**
+**Pactwright — Graduation — Connected Banking v2**

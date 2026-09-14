@@ -1,6 +1,6 @@
-# Pactwright Implementation Runbooks v6
+# Pactwright Implementation Runbooks v7
 
-The checkpoint runbooks are the executable implementation sequence for building Pactwright through progressive self-hosting, proving each released capability on Pactwright itself and on Kakeibo as the persistent external acceptance project.
+Canonical Pactwright semantics live in the Pactwright specifications under `../specs/01–08`. The checkpoint runbooks are the executable implementation sequence used to reach and prove that canonical system through progressive self-hosting, proving each released capability on Pactwright itself and on Kakeibo as the persistent external acceptance project.
 
 ## Runbook sequence
 
@@ -11,9 +11,9 @@ The checkpoint runbooks are the executable implementation sequence for building 
 - `02-remote-delivery.md`
 - `03-project-intelligence.md`
 - `04-graph-review.md`
-- `05-creative-production.md`
+- `05-production-skills-and-assets-publication.md`
 - `06-operations.md`
-- `07-published-work-feedback.md`
+- `07-publication-feedback.md`
 - `08-github-project-surface.md`
 - `09-hardened-closed-loop.md`
 - `10-graduation-connected-banking.md`
@@ -24,7 +24,20 @@ Run Checkpoints 1–9 in order. Graduation follows only after the hardened close
 
 The runbooks define execution order and acceptance work. They do not replace the owning Pactwright or Kakeibo specifications.
 
-For Pactwright semantics, use the owning specification referenced by each checkpoint. For Kakeibo semantics, use the current canonical Kakeibo `docs/specs/` set and its authority map:
+Pactwright semantics are owned by the canonical Pactwright specifications in this repository:
+
+```text
+../specs/01-pactwright-core-system-and-lifecycle.md
+../specs/02-distribution-agent-packs-extensions-and-evaluation.md
+../specs/03-project-intelligence.md
+../specs/04-graph-review.md
+../specs/05-assets-and-publication.md
+../specs/06-operations.md
+../specs/07-github-integration.md
+../specs/08-open-source-project-organisation.md
+```
+
+Kakeibo semantics are owned by the current canonical specification set in the **Kakeibo repository**, addressed at execution time by its own `docs/specs/` paths and authority map:
 
 ```text
 docs/specs/README.md
@@ -37,9 +50,13 @@ docs/specs/06-engineering-delivery-and-operations-spec.md
 docs/specs/07-open-source-project-organisation-spec.md
 ```
 
-`00-kakeibo-acceptance-profile.md` defines the cross-checks that must hold when those owner specifications are exercised through Checkpoints 1–9 and Graduation. It is an acceptance profile, not a replacement product specification.
+Those paths resolve in the Kakeibo repository, not in this one. Where a runbook cites `Spec 01`–`Spec 08` without qualification it means the Pactwright specifications listed above.
 
-The numbered checkpoint runbooks are aligned to this current authority set. Retained August Kakeido research snapshots are historical research inputs only and are not implementation authority.
+`00-kakeibo-acceptance-profile.md` defines the cross-checks that must hold when the Kakeibo owner specifications are exercised through Checkpoints 1–9 and Graduation. It is an acceptance profile, not a replacement product specification.
+
+The numbered checkpoint runbooks are aligned to this current authority set. Research logs are rationale and historical design context only. Retained August Kakeido research snapshots are historical research inputs and are not implementation authority.
+
+If a checkpoint conflicts with a canonical Pactwright specification, the canonical specification wins and the checkpoint must be corrected before implementation continues.
 
 ## Operations Experiment authority
 
@@ -83,12 +100,14 @@ build capability
 → use it on Pactwright
 → update governed project state
 → advance the public product where appropriate
-→ publish the checkpoint release
+→ publish the installable checkpoint release
 → install and prove it on Kakeibo
 → capture implementation/acceptance findings through Project Intelligence
 ```
 
-From Project Intelligence onward, public work is grounded in accepted Knowledge. Public creative work requires the relevant knowledge domains to be sufficiently covered before generation/approval.
+Before Project Intelligence exists, authorised Decisions and Contracts provide bounded authority for project truth required by the work being delivered.
+
+Once Project Intelligence exists, applicable project truth is grounded in accepted Knowledge, and public/outbound work follows the readiness rules owned by the canonical Project Intelligence and Open-Source Project Organisation specifications. Public production work requires the relevant knowledge domains to be sufficiently covered before generation and approval.
 
 ## Kakeibo proving progression
 
