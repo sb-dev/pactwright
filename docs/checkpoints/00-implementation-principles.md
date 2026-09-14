@@ -1,6 +1,6 @@
 # Pactwright — Implementation Principles
 
-**Version:** 1  
+**Version:** 3  
 **Status:** Implementation guidance
 
 ## 1. Purpose
@@ -29,7 +29,7 @@ use it on Pactwright
 ↓
 publish an installable checkpoint
 ↓
-install it on Kakeido
+install it on Kakeibo
 ↓
 run a real acceptance scenario
 ↓
@@ -151,6 +151,7 @@ Creative Delivery exists
 
 Operations exists
 → deployed software is observed through Operations
+→ controlled production comparisons use Operations Experiments when justified
 
 Publication exposure exists
 → selected real Publications are observed through Operations
@@ -186,7 +187,6 @@ intelligence onboard
 ```
 
 Creative generation must not silently invent identity, positioning or other missing project truth.
-
 
 ---
 
@@ -229,27 +229,43 @@ Pactwright must prove it can deliver:
 - creative assets;
 - production improvements.
 
-### Kakeido
+### Kakeibo
 
-Kakeido is the external consumer project.
+Kakeibo is the external consumer project.
 
 It exercises:
 
 ```text
-financial-domain rules
+deterministic financial-domain rules
 CSV financial-data ingestion
 weekly review
 mobile UX
 Cloudflare backend
 Neon persistence
-Kei
+bounded/versioned Kei behaviour
+first-party product and marketing analytics
 marketing site
 mobile/backend releases
-production operations
-later TrueLayer ingestion
+production Operations
+controlled production Experiments where justified
+connected banking through the generic ingestion boundary
 ```
 
-Kakeido exists to catch assumptions that self-hosting can hide:
+The current proving progression is:
+
+```text
+deterministic financial core
+→ CSV ingestion
+→ weekly review
+→ bounded/versioned Kei
+→ production Operations
+→ controlled Experiment where justified
+→ connected banking
+```
+
+Salt Edge Account Information is the current planned first connected-banking provider. It is a Kakeibo implementation choice, not a Pactwright semantic dependency.
+
+Kakeibo exists to catch assumptions that self-hosting can hide:
 
 - installation problems;
 - repository-layout assumptions;
@@ -258,9 +274,11 @@ Kakeido exists to catch assumptions that self-hosting can hide:
 - semantic loss across unrelated domains;
 - generated-file ownership mistakes;
 - GitHub provisioning problems;
-- weak UX or content guidance.
+- weak UX or content guidance;
+- unsafe AI release/evaluation assumptions;
+- application-specific concepts leaking into Pactwright graph semantics.
 
-Do not add another acceptance project unless neither Pactwright nor Kakeido can realistically exercise a required capability class.
+Do not add another acceptance project unless neither Pactwright nor Kakeibo can realistically exercise a required capability class.
 
 ---
 
@@ -284,11 +302,11 @@ At least one real subsequent Pactwright change is delivered through it.
 
 ### Install
 
-The same checkpoint can be installed into Kakeido.
+The same checkpoint can be installed into Kakeibo.
 
 ### Accept
 
-Kakeido completes a meaningful System-Level Acceptance Scenario.
+Kakeibo completes a meaningful System-Level Acceptance Scenario.
 
 ### Learn
 
@@ -304,7 +322,7 @@ Prefer real acceptance work whenever possible.
 
 Use Pactwright work to test Pactwright capabilities.
 
-Use Kakeido work to test external consumption.
+Use Kakeibo work to test external consumption.
 
 Synthetic fixtures still belong in deterministic and semantic evaluation suites, but they are not substitutes for system-level use.
 
@@ -412,7 +430,7 @@ Creative Delivery
 → creative execution plus approved Assets and Publications
 
 Operations
-→ what happened after work reached production
+→ what reached production, what controlled comparison was predeclared, and what was observed afterwards
 
 Distribution
 → installation, composition and reconciliation
@@ -421,10 +439,27 @@ GitHub
 → remote execution and projection
 ```
 
+For controlled production evaluation, preserve the generic boundary:
+
+```text
+Delivery Evidence
+→ exact operational exposures
+→ Experiment
+→ bounded external evidence
+→ Observation
+→ Project Intelligence Source
+→ normal governance / future Delivery
+```
+
+`Experiment` records the immutable comparison contract. It does not own the application-specific candidate being tested, raw assignment/event rows, promotion or rollout policy.
+
 In particular:
 
 - Evidence is not Deployment.
 - Evidence is not Publication.
+- Experiment is not a Delivery lifecycle stage.
+- an Experiment result is not a promotion Decision.
+- project-specific release/configuration artefacts are not automatically Pactwright node types.
 - Review findings are not accepted Knowledge.
 - Observation is not accepted Knowledge.
 - Project Intelligence candidates are not canonical Intents.
@@ -583,9 +618,19 @@ Do not automatically generalise every project preference into Pactwright behavio
 
 Ask:
 
-> Is this a Kakeido-specific choice, or evidence that a Pactwright responsibility failed?
+> Is this a Kakeibo-specific choice, or evidence that a Pactwright responsibility failed?
 
 Only repeatable Pactwright responsibility failures belong in generic evaluation or product semantics.
+
+For controlled Experiments, a favourable metric is still evidence rather than authority:
+
+```text
+Experiment
+→ Observation
+→ Source
+→ Project Intelligence governance
+→ future Delivery where justified
+```
 
 ---
 
@@ -596,7 +641,7 @@ Evaluation should combine:
 - deterministic fixtures;
 - extension-owned semantic cases;
 - failures observed while building Pactwright;
-- failures observed while using Pactwright on Kakeido.
+- failures observed while using Pactwright on Kakeibo.
 
 Useful real-derived evaluation cases include:
 
@@ -606,56 +651,89 @@ Useful real-derived evaluation cases include:
 - Graph Review misses a cross-spec contradiction;
 - creative output violates grounded product voice;
 - Operations makes an unsupported causal claim;
+- an Experiment ignores a predeclared guardrail or reports insufficient evidence as conclusive;
 - installation output omits a required step.
 
 Do not collapse evaluation into one aggregate quality score.
 
 ---
 
-## 16. Kakeido Ingestion Progression
+## 16. Kakeibo Ingestion Progression
 
-Kakeido initially uses CSV ingestion.
+Kakeibo initially uses CSV ingestion.
 
 That is deliberate.
 
-The initial boundary is:
+The canonical ingestion boundary is source-neutral:
+
+```text
+source-specific data
+→ IngestionAdapter
+→ NormalisedSourceRecord
+→ FinancialEntry
+```
+
+The initial source is:
 
 ```text
 CSV
-↓
-normalisation
-↓
-canonical spendings
-↓
-weekly review
+→ file-backed FinancialSource
+→ IngestionAdapter
+→ NormalisedSourceRecord
+→ FinancialEntry
 ```
 
-TrueLayer is a later graduation scenario.
+Connected banking is a later graduation scenario.
 
-When introduced, the intended boundary is:
+The intended progression is:
 
 ```text
-CSV --------┐
-            │
-TrueLayer --┼→ canonical ingestion / normalisation
-            │
-future -----┘
-                 ↓
-              spendings
-                 ↓
-            weekly review
+CSV -----------┐
+               │
+Salt Edge -----┼→ IngestionAdapter
+               │
+future --------┘
+                    ↓
+             NormalisedSourceRecord
+                    ↓
+               FinancialEntry
+                    ↓
+          preparation / review
+                    ↓
+            trusted history
 ```
+
+Salt Edge Account Information is the current planned first connected-banking implementation. Future providers must use the same general boundary.
 
 The new source must not silently redefine:
 
 - financial invariants;
-- spending semantics;
-- classification;
+- `FinancialEntry` semantics;
+- movement / plan treatment / category / tags / goal / scope separation;
 - review state;
+- preparation state;
 - weekly-review UX;
+- duplicate semantics;
+- historical interpretation;
 - Kei's authority.
 
-A dedicated TrueLayer specification must exist before that work begins.
+Keep these concepts separate:
+
+```text
+provider/source lifecycle
+≠ review truth
+
+provider category/enrichment
+≠ reviewed classification
+
+provider cursor/source identity
+≠ FinancialEntry identity
+
+source re-import idempotency
+≠ user-resolved financial duplicate
+```
+
+A provider-specific connected-banking specification must exist before that implementation begins. Provider mechanics remain Kakeibo-owned and must not become Pactwright graph semantics.
 
 ---
 
@@ -674,6 +752,10 @@ existing core capability
 
 before changing stable Delivery semantics.
 
+A new generic graph concept should be introduced only after real use demonstrates that existing semantics cannot represent the durable project truth cleanly.
+
+Kakeibo's controlled production-evaluation need justifies generic Operations `Experiment` semantics. It does **not** justify Kakeibo-specific Pactwright nodes for Kei releases, policies, personas, task contracts, model routes or benchmark cases.
+
 Future improvements remain future improvements until observed usage justifies them.
 
 Implementation should maximise learning rate, not feature count.
@@ -688,7 +770,8 @@ The programme succeeds when Pactwright repeatedly demonstrates:
 understanding
 → Intent
 → Delivery
-→ production
+→ production exposure
+→ Experiment when a controlled comparison is required
 → Observation
 → improved understanding
 → future Delivery
@@ -698,10 +781,19 @@ across both:
 
 ```text
 Pactwright
-Kakeido
+Kakeibo
 ```
 
-and can do so without manual graph-coherence work or hidden subsystem ownership changes.
+An Experiment is optional. Normal production learning remains:
+
+```text
+Delivery
+→ production exposure
+→ Observation
+→ improved understanding
+```
+
+The programme must do this without manual graph-coherence work or hidden subsystem ownership changes.
 
 ---
 
@@ -721,7 +813,7 @@ For self-hosting:
 
 For checkpoints:
 
-> Is this version genuinely installable and useful in Kakeido?
+> Is this version genuinely installable and useful in Kakeibo?
 
 For content:
 
@@ -734,6 +826,10 @@ For feedback:
 For architecture:
 
 > Can the change stay within existing ownership boundaries?
+
+For new graph concepts:
+
+> Is this durable generic project truth that existing graph semantics cannot represent cleanly, or merely application-specific state?
 
 Prefer:
 
@@ -754,8 +850,4 @@ build everything
 
 ---
 
-
-
----
-
-**Pactwright — Implementation Principles v2**
+**Pactwright — Implementation Principles v3**

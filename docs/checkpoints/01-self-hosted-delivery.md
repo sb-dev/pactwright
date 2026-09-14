@@ -1,15 +1,19 @@
 # Pactwright — Checkpoint 1 — Self-Hosted Delivery
 
-**Version:** 12 
-**Entry condition:** No installable Pactwright runtime exists. 
+**Version:** 13  
+**Entry condition:** No installable Pactwright runtime exists.  
 **Release:** `0.0.1`  
-**Exit capability:** Pactwright is installable by consumers, manages its own repository, and completes Intent → Evidence in Pactwright and Kakeido without manual graph-coherence work.
+**Exit capability:** Pactwright is installable by consumers, manages its own repository, and completes Intent → Evidence in Pactwright and Kakeibo without manual graph-coherence work.
 
 ## 1. Goal
 
-Bootstrap the smallest installable Pactwright core, then immediately use it on Pactwright and Kakeido. This is the only checkpoint whose implementation cannot itself be delivered through Pactwright.
+Bootstrap the smallest installable Pactwright core, then immediately use it on Pactwright and Kakeibo. This is the only checkpoint whose implementation cannot itself be delivered through Pactwright.
+
+The Kakeibo proof is deliberately narrow: create the first executable deterministic financial-domain foundation. CSV ingestion, application/API infrastructure, UI, Kei, analytics and provider integration remain later checkpoints.
 
 ## 2. Specification baseline
+
+### Pactwright
 
 - [Pactwright — Delivery Graph and Lifecycle Engineering Spec](../research-logs/2026-08-11-pactwright-delivery-graph-and-lifecycle-engineering-spec.md)
 - [Pactwright — Distribution, Agents and Evaluation](../research-logs/2026-08-11-pactwright-distribution-agents-and-evaluation.md)
@@ -21,13 +25,35 @@ Bootstrap the smallest installable Pactwright core, then immediately use it on P
 - [Pactwright — Implementation Principles](./00-implementation-principles.md)
 - [Pactwright — Implementation Guide](./00-implementation-guide.md)
 - [Pactwright Open-Source Project Organisation](../research-logs/2026-08-11-pactwright-open-source-project-organisation.md)
-- [Kakeido — Financial Model Spec](../research-logs/2026-08-11-kakeido-financial-model-spec.md)
+- [Kakeibo System-Level Acceptance Profile](./00-kakeibo-acceptance-profile.md)
+
+### Kakeibo
+
+At execution time use the current canonical Kakeibo repository authorities:
+
+```text
+docs/specs/README.md
+
+docs/specs/02-financial-domain-model-spec.md
+docs/specs/05-system-architecture-and-data-spec.md
+docs/specs/06-engineering-delivery-and-operations-spec.md
+```
+
+For this checkpoint:
+
+```text
+02 → financial-domain semantics
+05 → package/layer boundary only
+06 → deterministic test expectations only
+```
+
+`00-kakeibo-acceptance-profile.md` §5 is the shared System-Level Acceptance cross-check for this slice.
+
+The retained August Kakeido Financial Model or Tech Stack research snapshots are not implementation authority.
 
 Only the owning specifications listed in each step define semantics. This runbook defines execution order, not new product meaning.
 
 Repository engineering infrastructure and the npm release model (CI workflow rules, trusted publishing, dist-tag policy, versioning, CHANGELOG, release-failure handling) are owned by the Implementation Guide's **Engineering baseline** and **npm release model** sections, not by the Distribution specification. Steps in Stages 5 and 9 cite the Implementation Guide for those semantics.
-
-Other Kakeido specifications (Product & UX, Mobile Design, Assistant, Tech Stack, Astro) become baseline material in later checkpoints; Checkpoint 1 exercises only the Financial Model Spec.
 
 ## 3. Execution contract
 
@@ -46,14 +72,19 @@ Use a prompt for repository/code changes. Once Pactwright owns a deterministic o
 
 Lifecycle adapter commands become available only after Checkpoint 1 generates the active adapter.
 
+**Default execution location:** the Pactwright repository root unless the step explicitly names Kakeibo or a fixture.
+
 ## 4. Checkpoint specification map
 
 - **Delivery Graph** — Pactwright — Delivery Graph and Lifecycle Engineering Spec §§2–24 (§23 is writing guidance for node-authoring agents)
 - **Distribution** — Pactwright — Distribution, Agents and Evaluation §§2–8, §§15–19
 - **Open-Source Project Organisation** — Pactwright Open-Source Project Organisation §§1.3, 2–3, 8, 15–16
-- **Implementation Principles** — §§6–7, 12, 14
+- **Implementation Principles** — §§6–8, 12–15, 17
 - **Implementation Guide** — Engineering baseline; npm release model
-- **First Kakeido semantic acceptance** — Kakeido — Financial Model Spec §§2–18
+- **Kakeibo System-Level Acceptance** — Kakeibo Acceptance Profile §§2–5
+- **Kakeibo financial semantics** — current `02-financial-domain-model-spec.md`
+- **Kakeibo package boundary** — current `05-system-architecture-and-data-spec.md`, package/layer responsibilities only
+- **Kakeibo deterministic tests** — current `06-engineering-delivery-and-operations-spec.md`, deterministic domain-test requirements only
 
 ### Explicitly out of scope for Checkpoint 1
 
@@ -62,6 +93,11 @@ The following capabilities fall inside the cited specification ranges but are de
 - `pactwright agent-pack use` and `pactwright upgrade` (Distribution §§7, 15) — deferred until a second complete first-party pack exists (Checkpoint 5 introduces `@pactwright/creative`). Checkpoint 1 ships one pack selected by default.
 - `pactwright eval --baseline` comparison (Distribution §16) — deferred until a released pack baseline exists. Checkpoint 1 implements the runner and initial core suite only.
 - GitHub provisioning, `pactwright github sync` and all generated GitHub workflow surfaces (Distribution §§9–14 and the workflow-rendering part of §8) — deferred to Checkpoint 2. In Checkpoint 1, `init` sets `github.enabled: false`, creates no `.github/` content, and `sync` renders no GitHub workflow files.
+- Kakeibo CSV ingestion, Hono API, Neon persistence, Hyperdrive, R2 and Cloudflare Workflows — Checkpoint 2.
+- Kakeibo mobile/web UI and weekly-review implementation — later product slices.
+- Kakeibo Kei runtime/release/evaluation — Checkpoint 5 onward.
+- Kakeibo analytics, operational telemetry and controlled Experiments — later checkpoints.
+- connected banking — Graduation.
 
 ## Stage 1 — Build the repository-native Project Graph substrate
 
@@ -195,7 +231,7 @@ Make lifecycle progression deterministic and graph-backed before adding AI execu
 **Run**
 
 ```text
-Implement .pactwright/lifecycle.yml parsing/validation for the stable stages capture-intent, propose-contracts, approve-contract, write-brief, deliver-brief, review and prepare-evidence. Support manual/automatic execution, authorised Decision actor and human gates. Do not add Deployment, Asset, Publication or Observation as stages.
+Implement .pactwright/lifecycle.yml parsing/validation for the stable stages capture-intent, propose-contracts, approve-contract, write-brief, deliver-brief, review and prepare-evidence. Support manual/automatic execution, authorised Decision actor and human gates. Do not add Deployment, Asset, Publication, Experiment or Observation as stages.
 ```
 
 **Expected result**
@@ -784,19 +820,39 @@ If the `trust` subcommand is unavailable, confirm the trusted-publisher configur
 
 Confirm the tag-triggered release workflow also completes successfully; because `0.0.1` already exists in the registry, the Step 18 skip-already-published behaviour must leave it unaltered and the run must still finish green, including its registry-verification stage.
 
-## Stage 10 — Prove the published release on Kakeido
+## Stage 10 — Prove the published release on Kakeibo
 
 Use the final Checkpoint 1 package on the persistent external proving project.
 
-### Step 26 — Install the published Checkpoint 1 release in Kakeido
+Kakeibo may still be a documentation-first/pre-implementation repository at this point. The only pre-Pactwright bootstrap permitted here is the minimum pnpm package/workspace root required to install a development dependency. Full Turborepo/application infrastructure belongs to Checkpoint 2.
 
-**References:** Distribution §§2–3
+### Step 26 — Establish the minimum Kakeibo consumer root and install `0.0.1`
+
+**References:** Distribution §§2–3; Kakeibo Acceptance Profile §5; current Kakeibo 05 package/layer boundary
 
 **Run**
 
-From the Kakeido repository root:
+From the Kakeibo repository root:
 
 ```bash
+if [ ! -f package.json ]; then
+  cat > package.json <<'JSON'
+{
+  "name": "kakeibo",
+  "version": "0.0.0",
+  "private": true
+}
+JSON
+fi
+
+if [ ! -f pnpm-workspace.yaml ]; then
+  cat > pnpm-workspace.yaml <<'YAML'
+packages:
+  - "apps/*"
+  - "packages/*"
+YAML
+fi
+
 pnpm add -D pactwright@0.0.1
 pnpm pactwright init
 pnpm pactwright sync
@@ -804,24 +860,31 @@ pnpm pactwright validate
 pnpm pactwright lifecycle status
 ```
 
+If the repository already has `package.json` or `pnpm-workspace.yaml`, preserve the existing files and use their adopted package/workspace configuration rather than replacing them.
+
+This step must not create application packages, Hono services, database code, R2/Workflow infrastructure or a Turborepo pipeline merely to install Pactwright.
+
 **Expected result**
 
-Kakeido is running the final Checkpoint 1 package with core Delivery only; no optional extension is enabled.
+Kakeibo has the minimum consumer package root required by its future pnpm/Turborepo architecture and is running the final Checkpoint 1 package with core Delivery only; no optional extension is enabled.
 
 **Verify before continuing**
 
-`validate` and `lifecycle status` complete successfully using the installed Checkpoint 1 package.
+- existing Kakeibo specs and repository-authored files are unchanged except for the intentional minimal package/workspace/bootstrap files and Pactwright-owned files;
+- `pnpm pactwright validate` passes;
+- `pnpm pactwright lifecycle status` passes;
+- no CP2 application/infrastructure concern has been implemented early.
 
-### Step 27 — Deliver Kakeido financial-domain invariants
+### Step 27 — Deliver the deterministic Kakeibo financial-domain foundation
 
-**References:** First Kakeido semantic acceptance — Kakeido — Financial Model Spec §§2–18; Delivery Graph §19
+**References:** Kakeibo Acceptance Profile §§3–5; current Kakeibo `02-financial-domain-model-spec.md`; current Kakeibo `05-system-architecture-and-data-spec.md` package/layer boundary; current Kakeibo `06-engineering-delivery-and-operations-spec.md` deterministic test expectations; Delivery Graph §19
 
 **Run**
 
-From the Kakeido repository root:
+From the Kakeibo repository root:
 
 ```text
-/capture-intent "Implement Kakeido's shared financial-domain model and deterministic invariant tests from Kakeido — Financial Model Spec v1.0 §§2–17, accepted against §18."
+/capture-intent "Create Kakeibo's first executable deterministic financial-domain foundation in packages/domain from the current canonical Kakeibo specs. Cover FinancialEntry movement semantics; planning income; fixed commitments; Needs, Wants, Culture and Unexpected plan treatment; plan-funded versus tracking-only goals; goal allocation versus reviewed contribution; transfers, credit-card settlement and other non-spending movements; personal versus business scope; reviewed versus unreviewed truth; preparation-state independence; deterministic rule priority and first-match behaviour; split conservation; source identity and re-import idempotency; financial duplicate-candidate versus confirmed-duplicate semantics; and preservation of historical interpretation across plan, goal and rule changes. Add deterministic invariant tests with explicit numeric assertions where applicable. Keep the domain package free of Hono, Neon, Cloudflare, UI, analytics and provider dependencies. Do not introduce research-derived financial targets or recommendations."
 /propose-contracts <intent-id>
 /approve-contract <contract-id> "<selection notes>"
 /write-brief <contract-id>
@@ -837,15 +900,38 @@ pnpm pactwright validate
 pnpm pactwright lifecycle status
 ```
 
-Run the Kakeido repository-defined financial-domain tests as part of the same acceptance step.
+Run the Kakeibo repository-defined deterministic domain tests as part of the same acceptance step.
 
 **Expected result**
 
-Implementation preserves fixed/flexible separation, envelope reconciliation, split/duplicate determinism, reviewed-only totals, user-confirmed classification and immutable historical spendings across plan changes.
+The first Kakeibo executable slice represents `FinancialEntry` as the general financial concept rather than treating every entry as spending, and preserves at least these observable invariants:
+
+```text
+fixed commitments do not consume flexible envelopes
+plan-funded goal allocations do not also consume a flexible envelope
+transfers do not become spending because cash moved
+credit-card settlement does not double-count tracked purchases
+business activity does not consume personal envelopes
+reviewed totals include only reviewed entries
+preparation state does not create reviewed truth
+rules/suggestions do not create reviewed truth
+sum(split parts) = original amount
+confirmed split parts replace the source amount in aggregates
+source re-import idempotency ≠ financial duplicate resolution
+goal allocation ≠ reviewed goal contribution
+plan/goal/rule changes do not rewrite historical financial truth
+```
+
+The package remains deterministic and independent of application/API/storage/UI/provider concerns.
 
 **Verify before continuing**
 
-Pactwright validation/status and the Kakeido financial-domain tests all pass, and the delivered behaviour satisfies the acceptance criteria in Kakeido — Financial Model Spec §18. The Kakeido graph contains a valid Intent → Evidence lineage for the delivered work.
+- `pnpm pactwright validate` and `pnpm pactwright lifecycle status` pass;
+- the Kakeibo deterministic financial-domain tests pass with explicit numeric assertions where applicable;
+- domain code has no Hono/Neon/Cloudflare/UI/analytics/provider dependency;
+- no research-derived financial target is encoded as a default or recommendation;
+- the approved Contract retains all applicable financial invariants through Brief, Delivery, Review and Evidence;
+- the Kakeibo graph contains one valid Intent → Decision → Contract → Brief → Evidence lineage for the delivered financial-domain foundation.
 
 ## Stage 11 — Capture checkpoint feedback
 
@@ -857,7 +943,7 @@ Close the checkpoint's learning loop before declaring it complete.
 
 **Run**
 
-Review the execution of Stages 1–10, including bootstrap-fixture friction, self-hosting friction, Kakeido installation and onboarding problems, content gaps and any deviation between specification and implementation.
+Review the execution of Stages 1–10, including bootstrap-fixture friction, self-hosting friction, Kakeibo installation/workspace bootstrap and onboarding problems, financial-invariant preservation, content gaps and any deviation between specification and implementation.
 
 From the Pactwright repository root, for each finding worth acting on:
 
@@ -868,6 +954,8 @@ From the Pactwright repository root, for each finding worth acting on:
 Project Intelligence does not exist yet, so findings are captured directly as Intents through normal Delivery (Implementation Principles §14). Leave the captured Intents open; they are future work, not part of this checkpoint's Delivery.
 
 Blocking failures must instead be fixed within this checkpoint: repeat the affected stage's steps until its verification passes.
+
+Do not generalise a Kakeibo-specific domain/product choice into Pactwright semantics unless it exposes a repeatable Pactwright responsibility failure.
 
 **Expected result**
 
@@ -887,12 +975,15 @@ The checkpoint is complete only when:
 - the bootstrap tarballs install and complete a full lifecycle in a clean external fixture;
 - Pactwright manages its own repository and completes a real self-hosted Delivery;
 - the `0.0.1` public content set (README Quick Start, Getting Started guide, core Delivery example) is delivered through Pactwright and included in the tagged release source;
-- `0.0.1` is published to npm and installs into Kakeido;
-- Kakeido completes a real Intent → Evidence Delivery using that final package;
+- `0.0.1` is published to npm and installs into Kakeibo;
+- a documentation-first Kakeibo repository can establish the minimum consumer package/workspace root without prematurely building CP2 infrastructure;
+- Kakeibo completes a real Intent → Evidence Delivery implementing the deterministic `packages/domain` financial foundation;
+- the delivered financial foundation preserves the current `FinancialEntry`, review, movement, goal, split, duplicate, idempotency and history invariants required by the acceptance profile;
+- Kakeibo domain code remains independent of Hono/Neon/Cloudflare/UI/analytics/provider concerns;
 - repeated `sync` operations converge;
 - no lifecycle or graph coherence requires hand-maintained relationships;
 - checkpoint findings are captured as open Intents and no known blocking failure is carried into Checkpoint 2.
 
 ---
 
-**Pactwright — Checkpoint 1 — Self-Hosted Delivery v12**
+**Pactwright — Checkpoint 1 — Self-Hosted Delivery v13**

@@ -1,15 +1,19 @@
 # Pactwright — Checkpoint 3 — Project Intelligence
 
-**Version:** 9 
-**Entry condition:** Checkpoint 2 is accepted. 
-**Release:** `0.0.3` 
+**Version:** 10  
+**Entry condition:** Checkpoint 2 is accepted.  
+**Release:** `0.0.3`  
 **Exit capability:** Project Intelligence can cold-start both projects, govern knowledge, supply bounded Delivery context and derive one intent roadmap.
 
 ## 1. Goal
 
-Implement Project Intelligence as a complete optional extension, adopt it in Pactwright, ingest the Pactwright corpus, then prove cold-start onboarding/context/roadmap behaviour in Kakeido.
+Implement Project Intelligence as a complete optional extension, adopt it in Pactwright, ingest the Pactwright corpus, then prove cold-start onboarding/context/roadmap behaviour in Kakeibo.
+
+The Kakeibo proof must demonstrate that PI can understand a multi-owner system without flattening its specifications into one generic summary. It must preserve authority, maturity and non-goal distinctions while selecting only the context required by a specific Delivery.
 
 ## 2. Specification baseline
+
+### Pactwright
 
 - [Pactwright — Delivery Graph and Lifecycle Engineering Spec](../research-logs/2026-08-11-pactwright-delivery-graph-and-lifecycle-engineering-spec.md)
 - [Pactwright — Distribution, Agents and Evaluation](../research-logs/2026-08-11-pactwright-distribution-agents-and-evaluation.md)
@@ -22,11 +26,29 @@ Implement Project Intelligence as a complete optional extension, adopt it in Pac
 - [Pactwright — Implementation Guide](./00-implementation-guide.md)
 - [Pactwright Open-Source Project Organisation](../research-logs/2026-08-11-pactwright-open-source-project-organisation.md)
 - [Design Specification: Astro + Cloudflare Workers + Meta CAPI](../research-logs/2026-08-11-astro-design-spec.md)
-- [Kakeido — Financial Model Spec](../research-logs/2026-08-11-kakeido-financial-model-spec.md)
-- [Kakeido — Product & UX Spec](../research-logs/2026-08-11-kakeido-product-and-ux-spec.md)
-- [Kakeido — Mobile Design Spec](../research-logs/2026-08-11-kakeido-mobile-design-spec.md)
-- [Kei — Assistant Spec](../research-logs/2026-08-11-kakeido-assistant-spec.md)
-- [Kakeido — Tech Stack Engineering Spec](../research-logs/2026-08-11-kakeido-tech-stack-engineering-spec.md)
+- [Kakeibo System-Level Acceptance Profile](./00-kakeibo-acceptance-profile.md)
+
+### Kakeibo
+
+At execution time use the complete current Kakeibo authority set as separate Sources:
+
+```text
+docs/specs/README.md
+
+docs/specs/01-product-and-ux-spec.md
+docs/specs/02-financial-domain-model-spec.md
+docs/specs/03-kei-assistant-spec.md
+docs/specs/04-mobile-design-system-spec.md
+docs/specs/05-system-architecture-and-data-spec.md
+docs/specs/06-engineering-delivery-and-operations-spec.md
+docs/specs/07-open-source-project-organisation-spec.md
+```
+
+`docs/specs/README.md` owns Kakeibo authority/conflict resolution. The seven numbered specifications remain distinct semantic owners; the index does not replace them.
+
+`00-kakeibo-acceptance-profile.md` §7 is the shared System-Level Acceptance cross-check for the Kakeibo cold-start proof.
+
+The retained August Kakeido Financial/Product/Mobile/Assistant/Tech Stack snapshots are not implementation authority.
 
 Only the owning specifications listed in each step define semantics. This runbook defines execution order, not new product meaning.
 
@@ -47,7 +69,7 @@ Use a prompt for repository/code changes. Once Pactwright owns a deterministic o
 
 Lifecycle adapter commands become available only after Checkpoint 1 generates the active adapter.
 
-**Default execution location:** the Pactwright repository root unless the step explicitly names Kakeido or a fixture
+**Default execution location:** the Pactwright repository root unless the step explicitly names Kakeibo or a fixture.
 
 For repository/code changes, finish with `pnpm verify`. Before invoking a newly implemented Pactwright runtime command during implementation, run `pnpm build` so the repository-local CLI is not using stale distribution output.
 
@@ -67,7 +89,15 @@ Fixture verification means repository test fixtures unless a step explicitly cre
 - **Delivery lifecycle & context** — Pactwright — Delivery Graph and Lifecycle Engineering Spec §§19, 22
 - **Release execution** — Pactwright — Implementation Guide (npm release model; GitHub Actions baseline)
 - **Public product** — Pactwright Open-Source Project Organisation §§1.2–1.3; Pactwright — Implementation Principles §§5A, 7, 13–14
-- **Kakeido semantics** — Kakeido Financial Model, Product & UX, Mobile Design, Kei Assistant and Tech Stack specs
+- **Kakeibo authority/conflict map** — current `docs/specs/README.md`
+- **Kakeibo product/UX** — current `01-product-and-ux-spec.md`
+- **Kakeibo financial truth** — current `02-financial-domain-model-spec.md`
+- **Kakeibo Kei behaviour/authority** — current `03-kei-assistant-spec.md`
+- **Kakeibo mobile design** — current `04-mobile-design-system-spec.md`
+- **Kakeibo runtime/data architecture** — current `05-system-architecture-and-data-spec.md`
+- **Kakeibo engineering/evaluation/release/operations** — current `06-engineering-delivery-and-operations-spec.md`
+- **Kakeibo public/open-source boundary** — current `07-open-source-project-organisation-spec.md`
+- **Kakeibo System-Level Acceptance** — Kakeibo Acceptance Profile §§2–7
 
 ## 5. Out of scope for Checkpoint 3
 
@@ -79,6 +109,8 @@ The following are intentionally deferred and must not be implemented or emulated
 - **`go-to-market` at Covered.** Full go-to-market coverage is required only for acquisition/positioning/campaign work and is deferred to the creative checkpoints. Checkpoint 3 requires `go-to-market` at least Seeded so `content` can be covered without violating the core dependency chain.
 - **GTM-driven launch sequencing.** `launch_tranche` and go-to-market influence on discretionary roadmap ordering are exercised only through fixtures in this checkpoint; real GTM sequencing waits for accepted go-to-market strategy.
 - **Automatic research and ingestion adapters.** Listed as future improvements in the Project Intelligence spec §19; not implemented here.
+- **Kakeibo future/planned capabilities becoming current through ingestion.** PI records source-declared maturity; it must not turn Salt Edge, optional agentic Kei capabilities, open implementation choices or non-goals into current product truth merely because they are mentioned in an authoritative Source.
+- **Kakeibo-specific PI graph types.** Product-specific concepts such as Kei releases, tasks, policies, model routes or benchmark cases remain Kakeibo-owned unless a separate generic Pactwright need is demonstrated.
 
 ## Stage 1 — Package and register Project Intelligence
 
@@ -380,7 +412,7 @@ Run from the Pactwright repository root.
 
 **References:** Extensions & packaging §4; PI GitHub surface §6
 
-The published `0.0.3` family does not exist yet; it is released in Stage 8 and installed from the registry in Kakeido (Stage 9). Pactwright adopts its own workspace build, consistent with the repository-local CLI discipline in the execution contract.
+The published `0.0.3` family does not exist yet; it is released in Stage 8 and installed from the registry in Kakeibo (Stage 9). Pactwright adopts its own workspace build, consistent with the repository-local CLI discipline in the execution contract.
 
 **Run**
 
@@ -709,15 +741,15 @@ npx -y npm@^11.15 trust list @pactwright/project-intelligence
 
 Existing package-family members must show npm provenance/trusted-publisher metadata; the newly bootstrapped package(s) must now trust `release.yml` for the next release. If the CLI is unavailable, verify the trusted publisher in the npm web UI.
 
-## Stage 9 — Cold-start Kakeido
+## Stage 9 — Cold-start Kakeibo
 
-Run this stage from the Kakeido repository root unless a step explicitly says otherwise.
+Run this stage from the Kakeibo repository root unless a step explicitly says otherwise.
 
-Prove PI can understand a different multi-domain project from its real specs.
+Prove PI can understand a different multi-owner project from its complete real authority set, preserve each owner's responsibility and select bounded context for real work.
 
-### Step 22 — Install PI in Kakeido
+### Step 22 — Install PI in Kakeibo
 
-**References:** Extensions & packaging §4
+**References:** Extensions & packaging §4; Kakeibo Acceptance Profile §7
 
 **Run**
 
@@ -736,31 +768,30 @@ pnpm pactwright github sync
 
 **Expected result**
 
-Kakeido has the same published `0.0.3` PI/runtime family.
+Kakeibo has the same published `0.0.3` PI/runtime family.
 
 **Verify before continuing**
 
 Run `pnpm pactwright validate`.
 
-### Step 23 — Ingest all five Kakeido specifications
+### Step 23 — Ingest the complete Kakeibo authority set and preserve maturity/ownership
 
-**References:** Triage/freshness/onboarding/roadmap §§8, 10–11; Kakeido semantics
+**References:** Triage/freshness/onboarding/roadmap §§8, 10–11; Kakeibo Acceptance Profile §§2–7; current Kakeibo `docs/specs/README.md` and specs `01`–`07`
 
 **Run**
 
 ```bash
-pnpm pactwright intelligence ingest "<Financial-Model-path>"
-pnpm pactwright intelligence ingest "<Product-UX-path>"
-pnpm pactwright intelligence ingest "<Mobile-Design-path>"
-pnpm pactwright intelligence ingest "<Kei-Spec-path>"
-pnpm pactwright intelligence ingest "<Tech-Stack-path>"
+pnpm pactwright intelligence ingest "docs/specs/README.md"
+pnpm pactwright intelligence ingest "docs/specs/01-product-and-ux-spec.md"
+pnpm pactwright intelligence ingest "docs/specs/02-financial-domain-model-spec.md"
+pnpm pactwright intelligence ingest "docs/specs/03-kei-assistant-spec.md"
+pnpm pactwright intelligence ingest "docs/specs/04-mobile-design-system-spec.md"
+pnpm pactwright intelligence ingest "docs/specs/05-system-architecture-and-data-spec.md"
+pnpm pactwright intelligence ingest "docs/specs/06-engineering-delivery-and-operations-spec.md"
+pnpm pactwright intelligence ingest "docs/specs/07-open-source-project-organisation-spec.md"
 ```
 
-**Expected result**
-
-Kakeido knowledge is distributed into appropriate PI domains rather than flattened into one generic summary.
-
-**Run**
+Treat every file above as a separate Source. Do not merge them into one synthetic Kakeibo Source and do not treat the index as a replacement for an owning specification.
 
 For each Source id printed above:
 
@@ -773,6 +804,53 @@ pnpm pactwright intelligence promote <source-id>
 
 Class 2/3 promotions land through their promotion pull requests and required checks.
 
+PI must preserve at least the following ownership map:
+
+```text
+README → authority/conflict map
+01     → product/UX/commercial semantics
+02     → financial-domain truth
+03     → Kei behaviour, authority and task semantics
+04     → mobile design system and interaction presentation
+05     → system/runtime/data architecture
+06     → engineering, evaluation, release and operational practice
+07     → open-source/public/private boundary
+```
+
+PI must also preserve source-declared maturity rather than treating every mentioned capability as current. The onboarding/Knowledge representation must distinguish, where supported by the current specs:
+
+```text
+current accepted product/runtime design:
+  weekly review
+  CSV ingestion
+  bounded explicit Kei tasks
+  first-party Neon analytics boundary
+
+planned extension:
+  Salt Edge Account Information
+
+future optional:
+  Ask Kei
+  persistent memory / persistent agent runtime
+  dynamic skills
+  autonomous or write-capable agent tools
+  subagents / agent-selected workflows
+
+open decisions:
+  authentication implementation
+  billing implementation
+  model/provider choices inside the model-routing boundary
+  retention/recovery details that remain explicitly open
+
+non-goals / prohibited authority:
+  personalised investment/product selection
+  autonomous weakening of financial truth or user confirmation
+  payment initiation in the planned connected-banking slice
+  general-purpose Kei chat as an initial requirement
+```
+
+Do not infer implementation completion from a design Source alone. Where repository/Delivery Evidence shows that a current accepted design has not yet been implemented, PI must preserve both facts rather than rewriting either one.
+
 Then:
 
 ```bash
@@ -782,30 +860,63 @@ pnpm pactwright intelligence validate
 pnpm pactwright validate
 ```
 
+**Expected result**
+
+Kakeibo knowledge remains distributed across its owning Sources and PI domains, with current/planned/future/open/non-goal distinctions preserved. The roadmap derives work from accepted meaning without converting planned or optional features into canonical Intents.
+
 **Verify before continuing**
 
-Onboarding and roadmap output reflect Kakeido's distinct domains and no roadmap candidate has become a canonical Intent automatically.
+Inspect accepted Knowledge, `domain-map.md`, onboarding and the roadmap and prove:
 
-### Step 24 — Deliver a cross-domain Kakeido candidate
+- all eight authority files are individually traceable as Sources;
+- no owning spec has been flattened into another owner;
+- planned Salt Edge work is not presented as current CSV implementation;
+- optional/agentic Kei capabilities are not treated as initial requirements;
+- open choices remain open rather than being silently selected;
+- non-goals/advice boundaries are not converted into recommendations;
+- no roadmap candidate became a canonical Intent automatically;
+- Kei-related Knowledge preserves the four-way responsibility split:
 
-**References:** Kakeido semantics — Financial Model §§2–17; Product & UX §§2–10; Tech Stack §§3–10
+```text
+03 → behaviour / authority / task contract meaning
+05 → runtime / grounding / model-route architecture
+06 → evaluation / release / operational lifecycle
+07 → public/private traceability and open-source transparency
+```
+
+### Step 24 — Deliver one real bounded cross-owner Kakeibo slice
+
+**References:** Kakeibo Acceptance Profile §§3–7; current Kakeibo `01`, `02`, `05`, `06`; Delivery lifecycle & context §§19, 22
+
+Use a real cross-owner outcome that is executable from the CP1–CP2 Kakeibo foundation and does not pull a planned/future capability forward. The acceptance slice is the deterministic weekly-review preparation read model/API.
 
 **Run**
 
 ```text
-/capture-intent "<ready Kakeido outcome requiring Financial Model + Product/UX + Tech Stack context>"
+/capture-intent "Implement Kakeibo's first deterministic weekly-review preparation read model and Hono API contract from persisted FinancialEntry state. Produce the product preparation groups needed for the weekly review, including needs decision, worth checking and looks safe, while preserving that all three are preparation only and never reviewed truth. Use current financial-domain rules and history, expose private state only through the application/API boundary, and keep Kei generation, mobile UI implementation, analytics and connected banking out of scope."
 /propose-contracts <intent-id>
 /approve-contract <contract-id> "<selection notes>"
 /write-brief <contract-id>
 ```
 
-**Run**
+Inspect PI's bounded contribution before execution:
 
 ```bash
 pnpm pactwright context <brief-id>
 ```
 
-**Run**
+The context should select the owners required by this slice, principally:
+
+```text
+01 → weekly-review/product preparation semantics
+02 → FinancialEntry, rule, duplicate and review truth
+05 → application/API/data boundary
+06 → deterministic/integration test expectations
+```
+
+It must not load `03`, `04` or `07` merely because they are Kakeibo authorities. If a specific accepted dependency makes one of those Sources relevant, the context must make that reason explicit.
+
+Then:
 
 ```text
 /deliver-brief <brief-id>
@@ -815,11 +926,36 @@ pnpm pactwright context <brief-id>
 
 **Expected result**
 
-Delivery context is relevant/bounded and preserves financial/product/engineering constraints.
+PI supplies a bounded multi-owner context rather than the complete Kakeibo corpus, and the resulting Delivery connects the CP2 ingestion/application foundation to weekly-review preparation without changing financial truth.
 
 **Verify before continuing**
 
-Review for no fixed/flexible double counting, correct Review IA, mobile→API→Neon boundary, and Kei remaining non-authoritative for deterministic finance.
+Run `pnpm pactwright validate`, PI validation and the Kakeibo repository-defined domain/API/application tests. Prove at minimum:
+
+```text
+needs decision / worth checking / looks safe
+≠ reviewed
+
+rules/history preparation
+≠ reviewed truth
+
+FinancialEntry
+→ preparation read model
+→ Hono API
+
+private/mobile client
+→ API
+→ application/database
+→ Neon
+```
+
+Also verify:
+
+- no direct private/mobile → Neon path was introduced;
+- no financial invariant from `02` was duplicated/redefined in the API layer;
+- no Kei model call or generated explanation is required to compute deterministic preparation groups;
+- unrelated Kakeibo Sources were not included in Delivery context without a stated relevance reason;
+- the final Intent → Evidence lineage remains traceable to the PI Knowledge/Sources that grounded it.
 
 ## Stage 10 — Capture Checkpoint 3 feedback through Project Intelligence
 
@@ -833,7 +969,7 @@ Run from the Pactwright repository root.
 
 **Run**
 
-Collect the material findings from implementing Checkpoint 3 and from installing/using it on Kakeido: defects, friction, missing guidance, installation problems and public-content corrections. For each material finding, write a short finding document, then:
+Collect the material findings from implementing Checkpoint 3 and from installing/using it on Kakeibo: defects, friction, missing guidance, installation problems, context-selection errors, ownership/maturity flattening and public-content corrections. For each material finding, write a short finding document, then:
 
 ```bash
 pnpm pactwright intelligence ingest <finding-path>
@@ -850,7 +986,7 @@ pnpm pactwright intelligence derive-intent-roadmap
 pnpm pactwright intelligence validate
 ```
 
-For each finding, apply the Implementation Principles §14 question — is this a Kakeido-specific choice, or evidence that a Pactwright responsibility failed? — and only promote repeatable Pactwright responsibility failures toward product-affecting Knowledge or evaluation cases.
+For each finding, apply the Implementation Principles §14 question — is this a Kakeibo-specific choice, or evidence that a Pactwright responsibility failed? — and only promote repeatable Pactwright responsibility failures toward product-affecting Knowledge or evaluation cases.
 
 **Expected result**
 
@@ -858,7 +994,7 @@ Checkpoint findings are durable, traceable Sources; justified findings become ac
 
 **Verify before continuing**
 
-Each ingested finding is traceable as a Source with provenance; promoted findings appear as Knowledge with correct kind/status; justified candidates appear on the intent roadmap without any automatically created Intent; Kakeido-specific preferences were not generalised into Pactwright semantics.
+Each ingested finding is traceable as a Source with provenance; promoted findings appear as Knowledge with correct kind/status; justified candidates appear on the intent roadmap without any automatically created Intent; Kakeibo-specific preferences were not generalised into Pactwright semantics.
 
 ## Exit gate
 
@@ -873,9 +1009,10 @@ Checkpoint 3 is complete only when all of the following hold:
 7. Pactwright has PI enabled from its workspace build, its authoritative and public corpus is ingested through the normal Source path, and one real roadmap candidate entered Delivery only through explicit Intent capture (Stage 6).
 8. `identity`, `product` and `content` are Covered and `discovery`/`go-to-market` at least Seeded, in dependency order, and the Project Intelligence learning path is published from accepted Knowledge (Stage 7).
 9. `0.0.3` is published and registry-verified for the whole family, and `@pactwright/project-intelligence` has a bootstrapped trusted publisher (Stage 8).
-10. Kakeido is installed from the published `0.0.3`, onboarded through the normal Source path from its five specifications, and delivered one cross-domain candidate with bounded, semantically correct context (Stage 9).
-11. Checkpoint findings are captured through Project Intelligence itself as traceable Sources, Knowledge and roadmap candidates, with no automatic Intents (Stage 10).
+10. Kakeibo is installed from the published `0.0.3`; `docs/specs/README.md` plus all seven numbered canonical specs are ingested as separate Sources; their owner boundaries and current/planned/future/open/non-goal distinctions remain intact; Kei Knowledge preserves the `03/05/06/07` responsibility split; and no roadmap candidate is automatically promoted to an Intent (Stage 9).
+11. Kakeibo delivers the deterministic weekly-review preparation read model/API with bounded PI context principally from `01/02/05/06`, preserving preparation ≠ reviewed truth and the private-client → API → application/database → Neon boundary without pulling Kei/mobile/analytics/connected-banking work forward (Stage 9).
+12. Checkpoint findings are captured through Project Intelligence itself as traceable Sources, Knowledge and roadmap candidates, with no automatic Intents (Stage 10).
 
 ---
 
-**Pactwright — Checkpoint 3 — Project Intelligence v9**
+**Pactwright — Checkpoint 3 — Project Intelligence v10**
