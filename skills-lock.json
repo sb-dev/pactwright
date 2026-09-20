@@ -7,11 +7,23 @@
       "skillPath": "skills/acquire-codebase-knowledge/SKILL.md",
       "computedHash": "06b7a3d0bb44b70b470247aacc2ffffe37c8ce64cc3f9178be6f392c81cb6d22"
     },
+    "agentic-actions-auditor": {
+      "source": "trailofbits/skills",
+      "sourceType": "github",
+      "skillPath": "plugins/agentic-actions-auditor/skills/agentic-actions-auditor/SKILL.md",
+      "computedHash": "475ce6ea0ee0929b60e76468678ffea02765245f0ad8f9d5d8d77b11096f38b9"
+    },
     "ai-qa-review": {
       "source": "petrkindlmann/qa-skills",
       "sourceType": "github",
       "skillPath": "skills/ai-qa-review/SKILL.md",
       "computedHash": "36ca3a5f30c90429b7cf3befe1665ace1c4b3a8a00fc8e32a35e38f4ff7759e7"
+    },
+    "architecture-patterns": {
+      "source": "wshobson/agents",
+      "sourceType": "github",
+      "skillPath": "plugins/backend-development/skills/architecture-patterns/SKILL.md",
+      "computedHash": "a66aaa5aa49b75bec12b6270dcde8794b1f0cc75fbb9ecb999e43f8b723b461f"
     },
     "ci-cd-and-automation": {
       "source": "addyosmani/agent-skills",
@@ -67,11 +79,35 @@
       "skillPath": "skills/incremental-implementation/SKILL.md",
       "computedHash": "bd40e91eac68b83ba0204dd57b4bd35511cb900f937a7127b79f2396b2bb305d"
     },
+    "mutation-testing": {
+      "source": "trailofbits/skills",
+      "sourceType": "github",
+      "skillPath": "plugins/mutation-testing/skills/mutation-testing/SKILL.md",
+      "computedHash": "1d96eca66128acdc042480f81b1fe1654307f0007d3b49fb51660fbf9607c1c6"
+    },
+    "neo4j-modeling-skill": {
+      "source": "neo4j-contrib/neo4j-skills",
+      "sourceType": "github",
+      "skillPath": "neo4j-modeling-skill/SKILL.md",
+      "computedHash": "5b0e8d32c98e335591c48870c6b7eb9358daa516f0a345990b049b26fc850223"
+    },
     "node": {
       "source": "mcollina/skills",
       "sourceType": "github",
       "skillPath": "skills/node/SKILL.md",
       "computedHash": "aba2163ddb3fcf3e6a9d101ac370fabc94055b3e628b125dd084969f1a945993"
+    },
+    "post-patch-validation": {
+      "source": "trailofbits/skills",
+      "sourceType": "github",
+      "skillPath": "plugins/post-patch-validation/skills/post-patch-validation/SKILL.md",
+      "computedHash": "2345c4b2255c11626e3e12be548a9e27db93af8f21cbfaa403eff6f47fa626a8"
+    },
+    "property-based-testing": {
+      "source": "trailofbits/skills",
+      "sourceType": "github",
+      "skillPath": "plugins/property-based-testing/skills/property-based-testing/SKILL.md",
+      "computedHash": "c754807c7113dfb2e8c2de64e19a6612f87282b621da8b1e50e2a7137d8bbe8c"
     },
     "release-readiness": {
       "source": "petrkindlmann/qa-skills",
@@ -89,7 +125,7 @@
       "source": "addyosmani/agent-skills",
       "sourceType": "github",
       "skillPath": "skills/security-and-hardening/SKILL.md",
-      "computedHash": "47d027526d7e0be784a19a034f18cba328009b3c8fe483f16e4b12530cf82183"
+      "computedHash": "23cf7d689a1d844844bba6c2de53acb4749eb6f3bd209762ccc77a75c2ec5f54"
     },
     "skill-creator": {
       "source": "openai/skills",
@@ -107,7 +143,7 @@
       "source": "obra/superpowers",
       "sourceType": "github",
       "skillPath": "skills/systematic-debugging/SKILL.md",
-      "computedHash": "a2750dfbaed1690da73b120254892c4f926b4576cb82eb16fc877783941fe39b"
+      "computedHash": "3589907ee34dc8b1b7223a33fac98ab841a9e42f9960ab4433a832f0c6f00be0"
     },
     "test-strategy": {
       "source": "petrkindlmann/qa-skills",
@@ -137,7 +173,7 @@
       "source": "obra/superpowers",
       "sourceType": "github",
       "skillPath": "skills/writing-skills/SKILL.md",
-      "computedHash": "e5dfc1a942f56dc757421b0d87ae1f38ab693ebc71138e65268fd408bb5c93d3"
+      "computedHash": "f06bbb471439736c838e89a57a2a371bcc687931ba878901d97373194e212ea9"
     }
   }
 }
