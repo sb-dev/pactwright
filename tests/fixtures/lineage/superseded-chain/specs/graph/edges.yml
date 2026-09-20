@@ -2,6 +2,9 @@ edges:
   - source: decision-quick-start-0000
     type: resolves
     target: intent-quick-start-a1b2
+  - source: decision-quick-start-0000
+    type: selects
+    target: contract-quick-start-2222
   - source: decision-quick-start-1111
     type: resolves
     target: intent-quick-start-a1b2
@@ -10,16 +13,13 @@ edges:
     target: decision-quick-start-0000
   - source: decision-quick-start-1111
     type: selects
-    target: contract-quick-start-2222
+    target: contract-quick-start-3333
   - source: decision-quick-start-8888
     type: resolves
     target: intent-quick-start-a1b2
   - source: decision-quick-start-8888
     type: supersedes
     target: decision-quick-start-1111
-  - source: decision-quick-start-8888
-    type: selects
-    target: contract-quick-start-3333
   - source: decision-quick-start-8888
     type: selects
     target: contract-quick-start-9999

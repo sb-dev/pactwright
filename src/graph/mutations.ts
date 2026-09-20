@@ -3,24 +3,23 @@ import { join } from "node:path";
 import { dump } from "js-yaml";
 import { tempSibling } from "../atomic.js";
 import { PactwrightError, type Problem } from "../errors.js";
-import { decisionActor, type Actor } from "../config/lifecycle.js";
+import { decisionActor } from "../config/lifecycle.js";
+import { actorPermitted, authorisedKinds } from "./authority.js";
 import { assertEvidenceClosure } from "./closure.js";
 import { loadProject, type Project } from "../loader.js";
 import { assertPackComplete } from "../pack/resolve.js";
-import { composedRegistries } from "../extension/resolve.js";
-import { validateEdges } from "./edge-schema.js";
 import { edgeKey, type Edge } from "./edges.js";
 import { mintNodeId, slugify } from "./ids.js";
-import { validateLineages } from "./lineage.js";
 import { graphRevision } from "./revision.js";
 import { withRepositoryLock } from "./writer-lock.js";
 import { checkNodeIdImmutability, parseNodeFile, type GraphNode } from "./nodes.js";
+import { parseDecidedBy, type DecisionOutcome } from "./schema.js";
 import {
-  parseDecidedBy,
-  validateNodes,
-  type DecidedByKind,
-  type DecisionOutcome,
-} from "./schema.js";
+  proposedSnapshot,
+  snapshotOf,
+  validateSnapshot,
+  type ValidationScope,
+} from "../validate/kernel.js";
 
 /**
  * New canonical records to commit in one atomic mutation.
@@ -159,11 +158,16 @@ function commitLocked(project: Project, change: GraphChange, options: CommitOpti
     edges.push(edge);
   }
 
-  const registries = composedRegistries(project.extensions);
+  // The complete proposed state, judged by the one kernel before any write
+  // (Core §57, Checkpoint 1 Step 9). The mutation gate used to run only the
+  // structural checks — Decision authority lived inside `recordDecision` and
+  // closure inside `createEvidence` — so it could admit a graph that
+  // `validate` rejects.
   problems.push(
-    ...validateNodes(nodes, registries.nodes),
-    ...validateEdges(edges, nodes, registries.edges, project.paths.edges),
-    ...validateLineages(nodes, edges),
+    ...validateSnapshot(
+      proposedSnapshot(snapshotOf(project), change),
+      new Set<ValidationScope>(["structural", "authority", "execution"]),
+    ),
     ...checkNodeIdImmutability(project.graph.nodes, nodes),
   );
   if (problems.length > 0) throw PactwrightError.fromProblems("mutation-invalid", problems);
@@ -329,12 +333,6 @@ export interface RecordedDecision {
   readonly contract?: GraphNode;
 }
 
-/** Which `decided_by` kinds the configured lifecycle actor authorises (§8, §17). */
-const AUTHORISED_KINDS: Readonly<Record<Actor, readonly DecidedByKind[]>> = {
-  human: ["human"],
-  agent: ["agent", "automation"],
-};
-
 const DECISION_TITLES: Readonly<Record<DecisionOutcome, string>> = {
   proceed: "Proceed with",
   reject: "Reject",
@@ -360,10 +358,10 @@ function recordDecisionLocked(root: string, input: RecordDecisionInput): Recorde
     fail("invalid-actor", `decided_by "${input.decidedBy}" must be "<kind>:<name>"`);
   }
   const configured = decisionActor(project.lifecycle);
-  if (!AUTHORISED_KINDS[configured].includes(actor.kind)) {
+  if (!actorPermitted(configured, input.decidedBy)) {
     fail(
       "unauthorised-actor",
-      `actor "${input.decidedBy}" is not authorised for approve-contract; lifecycle.yml authorises ${configured} (${AUTHORISED_KINDS[configured].join("/")}) actors`,
+      `actor "${input.decidedBy}" is not authorised for approve-contract; lifecycle.yml authorises ${configured} (${authorisedKinds(configured).join("/")}) actors`,
     );
   }
   if ((input.outcome === "proceed") !== (input.contract !== undefined)) {

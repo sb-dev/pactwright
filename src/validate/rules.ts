@@ -1,15 +1,7 @@
 import type { Problem } from "../errors.js";
-import { RECORDING_RESPONSIBILITIES, decisionActor } from "../config/lifecycle.js";
-import { checkEvidenceClosure } from "../graph/closure.js";
-import { deriveLineages, type Lineage } from "../graph/lineage.js";
-import { graphRevision } from "../graph/revision.js";
-import { repositoryRevision } from "../graph/repository.js";
-import { parseDecidedBy, type DecidedBy } from "../graph/schema.js";
-import { executionFor, inShapePhase } from "../lifecycle/engine.js";
-import { isGate, isPermittedTransition, stepNamed } from "../lifecycle/shape.js";
-import { gateActor, gateSatisfied } from "../lifecycle/transition.js";
-import { loadAllExecutionState } from "../lifecycle/state.js";
+import { RECORDING_RESPONSIBILITIES } from "../config/lifecycle.js";
 import type { Project } from "../loader.js";
+import { snapshotOf, validateSnapshot, type ValidationScope } from "./kernel.js";
 
 /**
  * The Spec 01 §57 minimum detection contract, numbered as the specification
@@ -118,6 +110,23 @@ const LOADER_CODES: Readonly<Record<string, ValidationRuleId>> = {
   "duplicate-namespace": "extension-redefines-core",
 };
 
+/**
+ * The §57 rule a declared-relationship failure belongs to, by node type. The
+ * Brief and Evidence rules name their own lineage; everything else is
+ * "missing required lineage".
+ *
+ * One mapping, used by the kernel and by the loader-error path, so the same
+ * orphan record is reported under the same rule whichever gate found it.
+ */
+const RELATIONSHIP_RULES: Readonly<Record<string, ValidationRuleId>> = {
+  brief: "invalid-brief-lineage",
+  evidence: "invalid-evidence-lineage",
+};
+
+export function ruleForRelationship(nodeType: string): ValidationRuleId {
+  return RELATIONSHIP_RULES[nodeType] ?? "missing-required-lineage";
+}
+
 /** The rule a loader problem satisfies, when it maps to one. */
 export function ruleForCode(code: string): ValidationRuleId | undefined {
   return LOADER_CODES[code];
@@ -149,9 +158,12 @@ export interface RuleCheckOptions {
 }
 
 /**
- * The §57 rules that need a *loaded* project: the loader cannot see them
- * because they are about recorded authority, execution state and replay
- * provenance rather than file shape.
+ * The §57 rules that need a *loaded* project, run through the one kernel.
+ *
+ * The logic that used to live here moved to `./kernel.js` so the standalone
+ * validator, the mutation gate and the lifecycle paths cannot check different
+ * subsets. This module keeps the rule table, the ids, the messages' rule
+ * mapping and `RuleProblem`.
  *
  * Read-only, and never repairs graph state as a side effect.
  */
@@ -159,176 +171,9 @@ export function checkSemanticRules(
   project: Project,
   options: RuleCheckOptions = {},
 ): readonly RuleProblem[] {
-  const problems: RuleProblem[] = [];
-  const at = (path: string) => path;
-  const add = (rule: ValidationRuleId, code: string, message: string, path: string): void => {
-    problems.push(asRuleProblem({ code, message, path }, rule));
-  };
-
-  const { lineages } = deriveLineages(project.graph.nodes, project.graph.edges);
-
-  // Rule 13 — unauthorised Decision. recordDecision refuses one at mutation
-  // time, but a hand-edited or imported record has never passed that guard.
-  const authorised = decisionActor(project.lifecycle);
-  const allowedKinds: readonly string[] =
-    authorised === "human" ? ["human"] : ["agent", "automation"];
-  for (const node of project.graph.nodes) {
-    if (node.type !== "decision") continue;
-    const raw = node.frontmatter["decided_by"];
-    if (typeof raw !== "string") continue;
-    const actor: DecidedBy | undefined = parseDecidedBy(raw);
-    if (actor === undefined) continue;
-    if (!allowedKinds.includes(actor.kind)) {
-      add(
-        "unauthorised-decision",
-        "unauthorised-actor",
-        `decision "${node.id}" was decided by "${raw}" but lifecycle.yml authorises ${authorised} (${allowedKinds.join("/")}) actors`,
-        at(node.path),
-      );
-    }
-  }
-
-  // Rules 11 and 14 — execution state must describe a run the shape permits.
-  const shape = project.lifecycle.shape;
-  const { states, problems: stateProblems } = loadAllExecutionState(project.paths.root);
-  for (const problem of stateProblems) {
-    problems.push(asRuleProblem(problem, "unresolved-shape-identity"));
-  }
-  for (const state of states) {
-    const path = `${project.paths.root}/.pactwright/execution/${state.brief}.yml`;
-
-    // Rule 10 — the run must name the shape it is executing.
-    if (state.shape !== shape.id) {
-      add(
-        "unresolved-shape-identity",
-        "shape-identity-mismatch",
-        `the run for brief "${state.brief}" is executing shape "${state.shape}" but the project's resolved shape is "${shape.id}"`,
-        path,
-      );
-      continue;
-    }
-    // Rule 11 — every recorded step, and every route between consecutive
-    // recorded steps, must exist in the shape.
-    const walked = [...state.visited, ...(state.currentStep ? [state.currentStep] : [])];
-    for (const name of walked) {
-      if (stepNamed(shape, name) === undefined) {
-        add(
-          "impossible-shape-transition",
-          "unknown-step",
-          `the run for brief "${state.brief}" records step "${name}", which the "${shape.id}" shape does not declare`,
-          path,
-        );
-      }
-    }
-    for (let i = 0; i + 1 < walked.length; i += 1) {
-      const from = walked[i]!;
-      const to = walked[i + 1]!;
-      if (stepNamed(shape, from) === undefined || stepNamed(shape, to) === undefined) continue;
-      if (!isPermittedTransition(shape, from, to)) {
-        add(
-          "impossible-shape-transition",
-          "undeclared-transition",
-          `the run for brief "${state.brief}" moved from "${from}" to "${to}", which the "${shape.id}" shape does not declare`,
-          path,
-        );
-      }
-    }
-    // Rule 14 — a Gate the run has moved past must record an *authorised*
-    // resolution. Testing only that a record exists let
-    // `resolved_by: agent:unauthorised` satisfy a human Gate, so the rule
-    // detected a missing record but not an unauthorised progression — which
-    // is what it is named for. `gateSatisfied` is the same predicate the
-    // reducer applies before it permits the step.
-    for (const name of new Set(state.visited)) {
-      const step = stepNamed(shape, name);
-      if (step === undefined || !isGate(step)) continue;
-      if (gateSatisfied(step, state.gates)) continue;
-      const recorded = state.gates[name];
-      const required = gateActor(step);
-      add(
-        "unauthorised-gate",
-        "unauthorised-gate-progression",
-        recorded === undefined
-          ? `the run for brief "${state.brief}" progressed past Gate "${name}" without recording the ${required} authority that permitted it`
-          : `the run for brief "${state.brief}" progressed past Gate "${name}" on the authority of "${recorded.resolvedBy}", which is not ${required} authority`,
-        path,
-      );
-    }
-    // Rule 15 — a recorded iteration count must stay within its bound.
-    for (const [route, taken] of Object.entries(state.iterations)) {
-      const [from, to] = route.split("->", 2) as [string, string | undefined];
-      const declared = shape.transitions.find(
-        (transition) => transition.from === from && transition.to === to,
-      );
-      if (declared === undefined) {
-        add(
-          "impossible-shape-transition",
-          "undeclared-route",
-          `the run for brief "${state.brief}" counts iterations of route "${route}", which the "${shape.id}" shape does not declare`,
-          path,
-        );
-        continue;
-      }
-      if (declared.maxIterations !== undefined && taken > declared.maxIterations) {
-        add(
-          "unbounded-corrective-loop",
-          "iteration-bound-exceeded",
-          `route "${route}" has run ${taken} times but policy permits ${declared.maxIterations}`,
-          path,
-        );
-      }
-    }
-  }
-
-  // Rule 12 — Evidence attempted before a successful closing Review. Checked
-  // against recorded state: a lineage that reached `done` must have closure
-  // its execution state still supports, where that state survives.
-  for (const lineage of lineages) {
-    problems.push(...checkEvidenceRule(project, lineage));
-  }
-
-  // Rule 17 — replay provenance, only when replay validation is requested.
-  if (options.replay !== undefined) {
-    const derived = graphRevision({ nodes: project.graph.nodes, edges: project.graph.edges });
-    const actual = repositoryRevision(project.paths.root).id;
-    if (actual !== options.replay.repositoryRevision) {
-      add(
-        "replay-provenance-mismatch",
-        "repository-revision-mismatch",
-        `replay requires repository revision "${options.replay.repositoryRevision}" but the repository is at "${actual}"`,
-        project.paths.root,
-      );
-    }
-    if (derived !== options.replay.projectGraphRevision) {
-      add(
-        "replay-provenance-mismatch",
-        "graph-revision-mismatch",
-        `the recorded repository state derives project graph revision "${derived}", not the recorded "${options.replay.projectGraphRevision}"`,
-        project.paths.root,
-      );
-    }
-  }
-
-  return problems;
-}
-
-/**
- * Rule 12 for one lineage. A lineage still in its shape phase must not be
- * closable by a run that has not passed the §53 preconditions — which is the
- * same check the mutation guard runs, reused rather than reimplemented.
- */
-function checkEvidenceRule(project: Project, lineage: Lineage): readonly RuleProblem[] {
-  if (!inShapePhase(lineage) || lineage.brief === undefined) return [];
-  const execution = executionFor(project, lineage);
-  if (execution === undefined) return [];
-  const state = execution.state;
-  // Only a run standing at its closing step is claiming Evidence is due.
-  if (state.currentStep === undefined) return [];
-  const step = stepNamed(project.lifecycle.shape, state.currentStep);
-  if (step?.kind !== "evidence") return [];
-  const check = checkEvidenceClosure(project, lineage.brief.id);
-  if (check.ok) return [];
-  return check.problems.map((problem) => asRuleProblem(problem, "evidence-before-review"));
+  const scopes = new Set<ValidationScope>(["authority", "execution"]);
+  if (options.replay !== undefined) scopes.add("replay");
+  return validateSnapshot(snapshotOf(project), scopes, options.replay);
 }
 
 /** Every rule the given problems were detected under, in specification order. */

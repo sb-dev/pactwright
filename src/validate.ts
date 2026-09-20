@@ -9,6 +9,7 @@ import {
   asRuleProblem,
   checkSemanticRules,
   ruleForCode,
+  ruleForRelationship,
   rulesTriggered,
   type RuleCheckOptions,
   type RuleProblem,
@@ -63,6 +64,10 @@ export function validateProject(options: ValidateOptions = {}): ValidationReport
   } catch (error) {
     if (!(error instanceof PactwrightError)) throw error;
     const problems = error.problems.map((problem) => {
+      // A declared-relationship failure carries the node type whose rule it
+      // broke, so it maps to the same §57 rule the kernel would give it.
+      const nodeType = (problem as { readonly nodeType?: string }).nodeType;
+      if (nodeType !== undefined) return asRuleProblem(problem, ruleForRelationship(nodeType));
       const rule = ruleForCode(problem.code);
       return rule === undefined ? problem : asRuleProblem(problem, rule);
     });

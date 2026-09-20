@@ -28,13 +28,40 @@ export function parseDecidedBy(value: string): DecidedBy | undefined {
 }
 
 /**
+ * A required relationship of a node type: how many edges of `type` a record
+ * of that type must have in `direction` (Core §15).
+ *
+ * Cardinality used to live only inside the lineage walk, which starts at an
+ * Intent and works outwards. An orphan Decision, Contract, Brief or Evidence
+ * was therefore never visited, and a Decision resolving two Intents passed
+ * because each Intent's own walk saw exactly one Decision. Declaring the
+ * requirement on the schema makes it checkable for every record, reachable
+ * or not.
+ */
+export interface RelationshipRule {
+  /** Edge type, e.g. `resolves`. */
+  readonly type: string;
+  /** `out` counts edges leaving the node; `in` counts edges arriving at it. */
+  readonly direction: "out" | "in";
+  readonly min: number;
+  /** Absent means unbounded. */
+  readonly max?: number;
+  /** Conditional rules, e.g. `selects` only for a `proceed` Decision. */
+  readonly when?: (node: GraphNode) => boolean;
+  /** Named in the message when the rule does not hold, e.g. "a proceed decision". */
+  readonly subject?: string;
+}
+
+/**
  * A node type schema: the type-specific frontmatter fields required beyond
- * the common ones, plus an optional deeper check run only when those fields
- * are present.
+ * the common ones, the relationships a record of this type must have, plus
+ * an optional deeper check run only when those fields are present.
  */
 export interface NodeSchema {
   readonly type: string;
   readonly requiredFields: readonly string[];
+  /** Required relationships; empty when the type constrains none. */
+  readonly relationships?: readonly RelationshipRule[];
   readonly validate?: (node: GraphNode, c: Checker) => void;
 }
 
@@ -92,12 +119,55 @@ function validateDecision(node: GraphNode, c: Checker): void {
  * Contract alternatives (§7), Delivery execution and Review (§11) are
  * transient and deliberately absent.
  */
+const proceeds = (node: GraphNode): boolean => node.frontmatter["outcome"] === "proceed";
+
 export const CORE_NODE_SCHEMAS: NodeSchemaRegistry = createNodeSchemaRegistry([
-  { type: "intent", requiredFields: [] },
-  { type: "decision", requiredFields: ["decided_by", "outcome"], validate: validateDecision },
-  { type: "contract", requiredFields: [] },
-  { type: "brief", requiredFields: [] },
-  { type: "evidence", requiredFields: [] },
+  // An Intent is the root of its lineage: nothing is required of it, which is
+  // what keeps a valid incomplete Intent valid.
+  { type: "intent", requiredFields: [], relationships: [] },
+  {
+    type: "decision",
+    requiredFields: ["decided_by", "outcome"],
+    // Core §15: "a proceed Decision resolves one Intent and selects one
+    // canonical Contract; a reject or defer Decision resolves the Intent
+    // without selecting a Contract."
+    relationships: [
+      { type: "resolves", direction: "out", min: 1, max: 1 },
+      {
+        type: "selects",
+        direction: "out",
+        min: 1,
+        max: 1,
+        when: proceeds,
+        subject: "a proceed decision",
+      },
+      {
+        type: "selects",
+        direction: "out",
+        min: 0,
+        max: 0,
+        when: (node) => !proceeds(node),
+        subject: "a reject or defer decision",
+      },
+    ],
+    validate: validateDecision,
+  },
+  // A canonical Contract exists because a Decision selected it.
+  {
+    type: "contract",
+    requiredFields: [],
+    relationships: [{ type: "selects", direction: "in", min: 1 }],
+  },
+  {
+    type: "brief",
+    requiredFields: [],
+    relationships: [{ type: "decomposes", direction: "out", min: 1, max: 1 }],
+  },
+  {
+    type: "evidence",
+    requiredFields: [],
+    relationships: [{ type: "evidences", direction: "out", min: 1, max: 1 }],
+  },
 ]);
 
 /** Validates one parsed node against the registry (Delivery Graph §21, Nodes). */
