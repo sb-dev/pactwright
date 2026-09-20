@@ -135,7 +135,21 @@ test("closure: refused when a required Gate the run reached is unresolved", () =
   const { root, brief } = delivering({
     shapeSteps: defaultShapeSteps({ review: { execution: "manual", actor: "human" } }),
   });
-  reachEvidenceClosure(root, brief);
+  // A state edited past the Gate by hand: the reducer would refuse to
+  // complete a Gate step without an authorised resolution, so this is the
+  // tampered case the closure guard has to catch on its own.
+  reachEvidenceClosure(root, brief, {}, { resolveGates: false });
+  refused(root, brief, "gates-resolved");
+});
+
+test("closure: refused when a Gate was resolved by an unauthorised actor", () => {
+  const { root, brief } = delivering({
+    shapeSteps: defaultShapeSteps({ review: { execution: "manual", actor: "human" } }),
+  });
+  const state = reachEvidenceClosure(root, brief);
+  writeExecutionState(root, { ...state, gates: { review: { resolvedBy: "agent:unauthorised" } } });
+  // Presence used to be the whole test, so `agent:unauthorised` on a human
+  // Gate satisfied closure.
   refused(root, brief, "gates-resolved");
 });
 
@@ -169,7 +183,7 @@ test("closure: refused when the Brief is no longer the lineage's current Brief",
 
 test("closure: refused when the run is not at its Evidence closure step", () => {
   const { root, brief } = delivering();
-  reachEvidenceClosure(root, brief, { currentStep: "delivery", completedSteps: [] });
+  reachEvidenceClosure(root, brief, { currentStep: "delivery", visited: [] });
   const error = refused(root, brief, "latest-delivery-reviewed");
   assert.match(error.problems.map((p) => p.message).join("\n"), /not its Evidence closure step/);
 });

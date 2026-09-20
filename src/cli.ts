@@ -65,8 +65,9 @@ Commands:
   lifecycle record <command> --file <yaml>   Record the content of a graph-marking command
                                              (capture-intent, approve-contract, write-brief,
                                              prepare-evidence) after the runtime checks the
-                                             transition, or the result of an execution step
-                                             (delivery, review) as execution provenance
+                                             transition, the result of an execution step
+                                             (delivery, review) as execution provenance, or
+                                             an authorised gate resolution (gate)
   agent-pack use <source> [--json]           Select an agent pack explicitly: resolve it,
                                              validate every required capability, then update
                                              config, lock and the generated environment
@@ -223,7 +224,7 @@ function formatStatus(entry: LineageStatus): string {
   if (entry.shape !== undefined) {
     lines.push(`  shape: ${entry.shape} (${entry.executionStatus ?? "running"})`);
     lines.push(
-      `  completed steps: ${entry.completedSteps.length === 0 ? "none" : entry.completedSteps.join(", ")}`,
+      `  steps visited: ${entry.visited.length === 0 ? "none" : entry.visited.join(", ")}`,
     );
   }
   if (entry.blocked !== undefined) {

@@ -8,10 +8,9 @@ import {
   isActive,
   nextActionFor,
   selectLineages,
-  routeAfter,
   type LifecycleAction,
 } from "./engine.js";
-import { stepNamed } from "./shape.js";
+import { transition } from "./transition.js";
 import {
   clearExecutionState,
   routeKey,
@@ -109,10 +108,10 @@ function validationStop(
 }
 
 /**
- * Applies a completed shape step to the run's state: records the step,
- * carries the Delivery revision or the Review verdict, then takes the route
- * the shape permits. A corrective route increments its bounded iteration
- * counter, so policy — not the agent — decides when to stop looping.
+ * Applies a completed shape step through the shared reducer and maps its
+ * outcome onto a run stop. The routing, the Gate guard and the bounded
+ * iteration counter all live in `transition`; this is the only thing left
+ * that is specific to the automatic loop.
  */
 function advance(
   project: Project,
@@ -120,65 +119,35 @@ function advance(
   stepName: string,
   outcome: Extract<ActionOutcome, { status: "completed" }>,
 ): { readonly state: ExecutionState; readonly stop?: RunStop; readonly message?: string } {
-  const shape = project.lifecycle.shape;
-  const step = stepNamed(shape, stepName);
-  if (step === undefined) {
-    return {
-      state: { ...state, status: "failed" },
-      stop: "stage-failed",
-      message: `step "${stepName}" is not part of the "${shape.id}" shape`,
-    };
-  }
-
-  const completedSteps = state.completedSteps.includes(stepName)
-    ? state.completedSteps
-    : [...state.completedSteps, stepName];
-  let carried: ExecutionState = { ...state, completedSteps };
-  if (step.kind === "delivery" && outcome.revision !== undefined) {
-    // The identity of what was delivered, so a later change invalidates the
-    // Review taken against it (§53 precondition 2).
-    carried = { ...carried, deliveredRevision: outcome.revision };
-  }
-  if (step.kind === "review") {
-    if (outcome.review === undefined) {
+  const result = transition(project.lifecycle.shape, project.lifecycle, state, {
+    kind: "step-completed",
+    step: stepName,
+    ...(outcome.review === undefined ? {} : { review: outcome.review }),
+    ...(outcome.revision === undefined ? {} : { revision: outcome.revision }),
+  });
+  switch (result.outcome) {
+    case "refused":
+    case "failed":
+      // A refusal returns the state unchanged, so nothing is written for it;
+      // either way the run reports why and stops.
       return {
-        state: { ...carried, status: "failed" },
+        state: result.state,
         stop: "stage-failed",
-        message: `review step "${stepName}" completed without reporting an outcome; the runtime cannot choose a transition without one`,
+        ...(result.reason === undefined ? {} : { message: result.reason }),
       };
-    }
-    carried = {
-      ...carried,
-      review: {
-        step: stepName,
-        outcome: outcome.review,
-        // A Review is taken against the delivered state currently recorded.
-        revision: carried.deliveredRevision ?? "",
-      },
-    };
+    case "blocked":
+      return {
+        state: result.state,
+        stop: "blocked",
+        message: result.reason ?? `the run is blocked at "${stepName}"`,
+      };
+    default:
+      // `advanced`, `completed`, and `waiting-gate` — the step completed and
+      // the run moved onto a Gate. The state records `waiting-gate`; the
+      // loop's own Gate check then reports *which* Gate and whose authority
+      // it needs, which a stop here could not name.
+      return { state: result.state };
   }
-
-  const routing = routeAfter(shape, carried, step, outcome.review);
-  if (routing.stop !== undefined) {
-    return {
-      state: { ...carried, status: "blocked", currentStep: stepName },
-      stop: "blocked",
-      message: routing.reason ?? `the run is blocked at "${stepName}"`,
-    };
-  }
-  if (routing.to === undefined) {
-    // A completed run has no current step: the shape is finished.
-    const rest = { ...carried };
-    delete (rest as { currentStep?: string }).currentStep;
-    return { state: { ...rest, status: "completed" } };
-  }
-  let iterations = carried.iterations;
-  if (routing.route !== undefined) {
-    iterations = { ...iterations, [routing.route]: (iterations[routing.route] ?? 0) + 1 };
-  }
-  return {
-    state: { ...carried, status: "running", currentStep: routing.to, iterations },
-  };
 }
 
 /** Runs one lineage (or the capture-intent entry point) until it stops. */
@@ -210,10 +179,36 @@ async function runLineage(
       previousState = lineage.state;
     }
 
-    const execution = executionFor(project, lineage);
+    let execution = executionFor(project, lineage);
+
+    // A failed run is resumed, not walked past. Treating "no next action" as
+    // completion is what made a second `lifecycle run` report `stop:
+    // completed` with an empty `executed` list while the lineage was still
+    // delivering and had no Evidence.
+    if (execution?.state.status === "failed") {
+      const resumed = transition(project.lifecycle.shape, project.lifecycle, execution.state, {
+        kind: "resume",
+      });
+      if (resumed.outcome === "refused") {
+        return {
+          ...tag,
+          stop: "stage-failed",
+          executed,
+          ...(resumed.reason === undefined ? {} : { message: resumed.reason }),
+        };
+      }
+      writeExecutionState(options.root, resumed.state);
+      execution = { state: resumed.state, problems: execution.problems };
+    }
+
     const next = nextActionFor(project, lineage, done);
     if (next.action === undefined) {
       if (execution?.state.status === "blocked") {
+        return { ...tag, stop: "blocked", executed, message: next.reason };
+      }
+      if (execution !== undefined && lineage !== undefined && lineage.state === "delivering") {
+        // The run has no action but the lineage is not closed: that is a
+        // stop to explain, never a completion to claim.
         return { ...tag, stop: "blocked", executed, message: next.reason };
       }
       return { ...tag, stop: "completed", executed };
@@ -245,8 +240,13 @@ async function runLineage(
       };
     }
     if (outcome.status === "failed") {
-      if (execution !== undefined) {
-        writeExecutionState(options.root, { ...execution.state, status: "failed" });
+      if (execution !== undefined && next.action.kind === "step") {
+        const failed = transition(project.lifecycle.shape, project.lifecycle, execution.state, {
+          kind: "step-failed",
+          step: next.action.name,
+          message: outcome.message,
+        });
+        if (failed.outcome !== "refused") writeExecutionState(options.root, failed.state);
       }
       return {
         ...tag,
@@ -283,7 +283,8 @@ async function runLineage(
         clearExecutionState(options.root, execution.state.brief);
         return { ...tag, stop: "completed", executed };
       }
-      writeExecutionState(options.root, advanced.state);
+      // A refusal returns the state unchanged; there is nothing to write.
+      if (advanced.state !== execution.state) writeExecutionState(options.root, advanced.state);
       if (advanced.stop !== undefined) {
         return {
           ...tag,

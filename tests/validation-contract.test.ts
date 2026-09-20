@@ -175,7 +175,7 @@ test('contract: rule "impossible-shape-transition" fires on a route the shape do
   const { root, brief } = delivering();
   // evidence → delivery is not the forward step and is not declared.
   reachEvidenceClosure(root, brief, {
-    completedSteps: ["delivery", "review", "evidence"],
+    visited: ["delivery", "review", "evidence"],
     currentStep: "delivery",
   });
   triggers(root, "impossible-shape-transition");
@@ -183,7 +183,7 @@ test('contract: rule "impossible-shape-transition" fires on a route the shape do
 
 test('contract: rule "impossible-shape-transition" fires on a step the shape does not declare', () => {
   const { root, brief } = delivering();
-  reachEvidenceClosure(root, brief, { completedSteps: ["delivery", "publish"] });
+  reachEvidenceClosure(root, brief, { visited: ["delivery", "publish"] });
   triggers(root, "impossible-shape-transition");
 });
 
@@ -211,12 +211,12 @@ test('contract: rule "unbounded-corrective-loop" fires when a run exceeds its bo
 test('contract: rule "evidence-before-review" fires when a run stands at closure unreviewed', () => {
   const { root, brief } = delivering();
   writeExecutionState(root, {
-    version: 1,
+    version: 2,
     brief,
     shape: "direct",
     status: "running",
     currentStep: "evidence",
-    completedSteps: ["delivery", "review"],
+    visited: ["delivery", "review"],
     gates: {},
     iterations: {},
     deliveredRevision: "delivered-2",
@@ -272,7 +272,22 @@ test('contract: rule "unauthorised-gate" fires when a run passed a Gate unrecord
   const { root, brief } = delivering({
     shapeSteps: defaultShapeSteps({ review: { execution: "manual", actor: "human" } }),
   });
-  reachEvidenceClosure(root, brief);
+  // Hand-edited past the Gate: the reducer refuses to complete a Gate step
+  // without an authorised resolution, so this state can only arrive by
+  // tampering — which is what the rule is for.
+  reachEvidenceClosure(root, brief, {}, { resolveGates: false });
+  triggers(root, "unauthorised-gate");
+});
+
+test('contract: rule "unauthorised-gate" fires on a Gate resolved by the wrong authority', () => {
+  const { root, brief } = delivering({
+    shapeSteps: defaultShapeSteps({ review: { execution: "manual", actor: "human" } }),
+  });
+  const state = reachEvidenceClosure(root, brief);
+  // The rule used to test only that a record existed, so adding
+  // `resolved_by: agent:unauthorised` to a human Gate made validation pass —
+  // it detected a missing record but never an unauthorised progression.
+  writeExecutionState(root, { ...state, gates: { review: { resolvedBy: "agent:unauthorised" } } });
   triggers(root, "unauthorised-gate");
 });
 

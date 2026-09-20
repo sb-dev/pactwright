@@ -48,7 +48,10 @@ export {
 } from "./lifecycle/shape.js";
 export {
   EXECUTION_DIR,
+  EXECUTION_STATE_VERSION,
+  EXECUTION_STATE_VERSIONS,
   EXECUTION_STATUSES,
+  completedSet,
   REVIEW_OUTCOMES,
   beginExecution,
   clearExecutionState,
@@ -240,12 +243,23 @@ export {
   PROVENANCE_KINDS,
   isProvenanceKind,
   recordDelivery,
+  recordGate,
   recordReview,
   type ProvenanceKind,
   type ProvenanceResult,
   type RecordDeliveryInput,
+  type RecordGateInput,
   type RecordReviewInput,
 } from "./lifecycle/provenance.js";
+export {
+  gateActor,
+  gateSatisfied,
+  transition,
+  type LifecycleEvent,
+  type TransitionOutcome,
+  type TransitionResult,
+} from "./lifecycle/transition.js";
+export { AUTHORISED_KINDS, actorPermitted, authorisedKinds } from "./graph/authority.js";
 export {
   EVIDENCE_PRECONDITIONS,
   assertEvidenceClosure,
@@ -312,8 +326,11 @@ export {
   type ResolvedPack,
 } from "./pack/resolve.js";
 export {
+  GATE_STAGE,
+  isGateStage,
   isRecordingStage,
   recordStage,
+  type GateStage,
   type RecordResult,
   type RecordingStage,
 } from "./lifecycle/record.js";

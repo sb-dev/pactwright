@@ -7,6 +7,7 @@ import { repositoryRevision } from "../graph/repository.js";
 import { parseDecidedBy, type DecidedBy } from "../graph/schema.js";
 import { executionFor, inShapePhase } from "../lifecycle/engine.js";
 import { isGate, isPermittedTransition, stepNamed } from "../lifecycle/shape.js";
+import { gateActor, gateSatisfied } from "../lifecycle/transition.js";
 import { loadAllExecutionState } from "../lifecycle/state.js";
 import type { Project } from "../loader.js";
 
@@ -208,7 +209,7 @@ export function checkSemanticRules(
     }
     // Rule 11 — every recorded step, and every route between consecutive
     // recorded steps, must exist in the shape.
-    const walked = [...state.completedSteps, ...(state.currentStep ? [state.currentStep] : [])];
+    const walked = [...state.visited, ...(state.currentStep ? [state.currentStep] : [])];
     for (const name of walked) {
       if (stepNamed(shape, name) === undefined) {
         add(
@@ -232,18 +233,26 @@ export function checkSemanticRules(
         );
       }
     }
-    // Rule 14 — a Gate the run has moved past must record who authorised it.
-    for (const name of state.completedSteps) {
+    // Rule 14 — a Gate the run has moved past must record an *authorised*
+    // resolution. Testing only that a record exists let
+    // `resolved_by: agent:unauthorised` satisfy a human Gate, so the rule
+    // detected a missing record but not an unauthorised progression — which
+    // is what it is named for. `gateSatisfied` is the same predicate the
+    // reducer applies before it permits the step.
+    for (const name of new Set(state.visited)) {
       const step = stepNamed(shape, name);
       if (step === undefined || !isGate(step)) continue;
-      if (state.gates[name] === undefined) {
-        add(
-          "unauthorised-gate",
-          "unauthorised-gate-progression",
-          `the run for brief "${state.brief}" progressed past Gate "${name}" without recording the ${step.actor ?? "human"} authority that permitted it`,
-          path,
-        );
-      }
+      if (gateSatisfied(step, state.gates)) continue;
+      const recorded = state.gates[name];
+      const required = gateActor(step);
+      add(
+        "unauthorised-gate",
+        "unauthorised-gate-progression",
+        recorded === undefined
+          ? `the run for brief "${state.brief}" progressed past Gate "${name}" without recording the ${required} authority that permitted it`
+          : `the run for brief "${state.brief}" progressed past Gate "${name}" on the authority of "${recorded.resolvedBy}", which is not ${required} authority`,
+        path,
+      );
     }
     // Rule 15 — a recorded iteration count must stay within its bound.
     for (const [route, taken] of Object.entries(state.iterations)) {
