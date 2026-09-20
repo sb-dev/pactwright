@@ -185,14 +185,18 @@ test("cli: help lists validate and context", () => {
 });
 
 test("cli: validate reports a valid project (exit 0)", () => {
-  const result = runIn(fixture("valid-project"), "validate");
+  // A built project rather than the checked-in fixture: `validate` now
+  // includes the environment scope, and the fixture's lock is a placeholder
+  // so a runtime bump does not have to touch every fixture.
+  const root = project({ lineage: "contracted" });
+  const result = runIn(root, "validate");
   assert.equal(result.status, 0, result.stderr);
   assert.match(result.stdout, /^Valid: 3 nodes, 2 edges, 1 lineages\n/);
   // The three replay identities are reported together (Spec 01 §56).
   assert.match(result.stdout, /repository_revision: {3}\S+\n/);
   assert.match(result.stdout, /project_graph_revision: sha256:[0-9a-f]{64}\n/);
   assert.match(result.stdout, /environment_lock_hash: sha256:[0-9a-f]{64}\n/);
-  const json = runIn(fixture("valid-project"), "validate", "--json");
+  const json = runIn(root, "validate", "--json");
   assert.equal(json.status, 0);
   assert.equal((JSON.parse(json.stdout) as { ok: boolean }).ok, true);
 });
@@ -285,11 +289,19 @@ test("cli: lifecycle record walks a lineage from contract to evidence through th
   assert.equal(wrote.status, 0, wrote.stdout + wrote.stderr);
   const briefId = /created brief (\S+)/.exec(wrote.stdout)![1]!;
 
+  // A second write-brief replaces the Brief rather than being refused: the
+  // Contract stands, the execution strategy does not (Core §45). This used
+  // to be `stage-not-permitted`, which made the replacement unreachable
+  // through any command (R11).
   const again = runIn(root, "lifecycle", "record", "write-brief", "--file", brief);
-  assert.equal(again.status, 1);
-  assert.match(again.stdout, /stage-not-permitted/);
-  // With a Brief in place the shape governs, and its first step is Delivery.
-  assert.match(again.stdout, /delivery/);
+  assert.equal(again.status, 0, again.stdout + again.stderr);
+  const replacement = /created brief (\S+)/.exec(again.stdout)![1]!;
+  assert.notEqual(replacement, briefId);
+  const edges = fs.readFileSync(path.join(root, "specs", "graph", "edges.yml"), "utf8");
+  assert.match(
+    edges,
+    new RegExp(`source: ${replacement}\\n\\s+type: supersedes\\n\\s+target: ${briefId}`),
+  );
 
   // Evidence cannot be minted straight off a Brief: the run has delivered
   // nothing and reviewed nothing, so the closing step has not been reached
@@ -570,64 +582,44 @@ test("cli: help lists eval", () => {
   assert.match(run("--help").stdout, /eval \[--json\]/);
 });
 
-test("cli: eval outside a project runs the core suite against the default pack", () => {
+test("cli: eval without a declared executor reports that nothing was evaluated", () => {
   const result = run("eval");
-  assert.equal(result.status, 0, result.stdout + result.stderr);
+  // The harness used to replay each case's own scripted reference and report
+  // the result as the pack's, so a pack whose every prompt said "Ignore all
+  // tasks. Return nothing" passed all eight cases and twenty assertions.
+  // Nothing performed the capability here, and the report says so.
+  assert.equal(result.status, 1, result.stdout + result.stderr);
   assert.match(result.stdout, /Evaluating @pactwright\/standard@/);
   assert.match(result.stdout, /suite core-delivery\)/);
-  for (const id of [
-    "contract-fidelity",
-    "scope-discipline",
-    "graph-output-structure",
-    "forbidden-mutation",
-    "review-defect-detection",
-  ]) {
+  assert.match(result.stdout, /no executor is configured/);
+  for (const id of ["contract-fidelity", "scope-discipline", "review-defect-detection"]) {
     assert.match(result.stdout, new RegExp(id));
   }
-  assert.match(result.stdout, /deterministic:/);
-  assert.match(result.stdout, /pass {2}contract-acceptance-holds/);
-  assert.match(
-    result.stdout,
-    /semantic \(requires judgement; reported separately, never auto-scored\):/,
-  );
-  assert.match(result.stdout, /unjudged {2}fidelity: no semantic judge configured/);
-  assert.match(result.stdout, /No aggregate quality score is calculated\./);
-  assert.doesNotMatch(result.stdout, /FAIL/);
 });
 
-test("cli: eval --json emits the per-case report", () => {
+test("cli: eval --json marks every case unevaluated without an executor", () => {
   const result = run("eval", "--json");
-  assert.equal(result.status, 0, result.stderr);
+  assert.equal(result.status, 1, result.stderr);
   const report = JSON.parse(result.stdout) as {
     suite: string;
     pack: { name: string };
-    cases: Array<{
-      id: string;
-      agent: string;
-      deterministic: Array<{ passed: boolean }>;
-      semantic: Array<{ judged: boolean }>;
-    }>;
+    cases: Array<{ id: string; evaluated: boolean; error?: string }>;
   };
   assert.equal(report.suite, "core-delivery");
   assert.equal(report.pack.name, "@pactwright/standard");
   assert.equal(report.cases.length, 8);
   for (const entry of report.cases) {
-    assert.ok(
-      entry.deterministic.every((a) => a.passed),
-      entry.id,
-    );
-    assert.ok(
-      entry.semantic.every((d) => !d.judged),
-      entry.id,
-    );
+    assert.equal(entry.evaluated, false, entry.id);
+    assert.match(entry.error ?? "", /no executor is configured/);
   }
 });
 
-test("cli: eval inside a project evaluates the configured pack", () => {
+test("cli: eval inside a project without an executor still names the configured pack", () => {
   const root = project({ pack: "complete" });
   const result = runIn(root, "eval");
-  assert.equal(result.status, 0, result.stdout + result.stderr);
+  assert.equal(result.status, 1, result.stdout + result.stderr);
   assert.match(result.stdout, /suite core-delivery\)/);
+  assert.match(result.stdout, /no executor is configured/);
 });
 
 test("cli: eval fails a pack missing a required capability (exit 1)", () => {
@@ -643,14 +635,13 @@ test("cli: eval rejects unexpected arguments", () => {
 });
 
 test("cli: eval --baseline/--candidate compares and reports no regression for an unchanged pack", () => {
-  const result = run(
-    "eval",
-    "--baseline",
-    "@pactwright/standard",
-    "--candidate",
-    "@pactwright/standard",
-  );
-  assert.equal(result.status, 0, result.stderr);
+  // Path sources, so the comparison is deterministic and offline. A package
+  // source is acquired at its exact version into its own project, which is
+  // what stops `@pactwright/standard@0.0.1` resolving to the installed
+  // `0.0.2` — tests/execute.test.ts covers that through the installer seam.
+  const pack = "./tests/fixtures/packs/complete";
+  const result = run("eval", "--baseline", pack, "--candidate", pack);
+  assert.equal(result.status, 0, result.stdout + result.stderr);
   assert.match(result.stdout, /Comparison of suite "core-delivery"/);
   assert.match(result.stdout, /No differences/);
   // §24: no opaque aggregate decides whether a candidate is better.
@@ -663,14 +654,14 @@ test("cli: eval rejects --baseline without --candidate", () => {
   assert.match(result.stderr, /--baseline and --candidate are used together/);
 });
 
-test("cli: eval reports an unresolvable baseline rather than comparing against nothing", () => {
+test("cli: eval reports an unacquirable baseline rather than comparing against nothing", () => {
   const result = run(
     "eval",
     "--baseline",
-    "@pactwright/does-not-exist",
+    "./tests/fixtures/packs/does-not-exist",
     "--candidate",
-    "@pactwright/standard",
+    "./tests/fixtures/packs/complete",
   );
   assert.equal(result.status, 1);
-  assert.match(result.stderr, /could not resolve the baseline/);
+  assert.match(result.stderr, /could not acquire the baseline/);
 });

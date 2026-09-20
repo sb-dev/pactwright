@@ -3,14 +3,18 @@ import assert from "node:assert/strict";
 import * as fs from "node:fs";
 import * as path from "node:path";
 import { tmpdir } from "node:os";
+import { createHash } from "node:crypto";
 import { execFileSync } from "node:child_process";
 import { checkEnvironmentAgreement } from "../src/config/agreement.js";
 import { environmentLockHash, loadLock } from "../src/config/lock.js";
 import { detectPackageManager, installedVersion } from "../src/config/package-manager.js";
+import { PactwrightError } from "../src/errors.js";
+import { createIntent } from "../src/graph/mutations.js";
 import { repositoryRevision, NO_REPOSITORY_REVISION } from "../src/graph/repository.js";
 import { loadProject } from "../src/loader.js";
 import { runtimeVersion } from "../src/version.js";
 import { syncProject } from "../src/sync.js";
+import { validateProject } from "../src/validate.js";
 import { makeEmptyRepo, makeTempProject, repoRoot } from "./helpers.js";
 
 const dirs: string[] = [];
@@ -106,6 +110,102 @@ test("environment: a tampered lock is rejected and never replaces generated inte
   assert.equal(fs.readFileSync(generated, "utf8"), before, "generated files must survive intact");
 });
 
+/* ---- the environment scope is enforced, not only reported (design §4) ---- */
+
+/** Drifts the lock so it no longer describes the resolved environment. */
+function driftLock(root: string): void {
+  const lockPath = path.join(root, ".pactwright", "lock.yml");
+  fs.writeFileSync(
+    lockPath,
+    fs
+      .readFileSync(lockPath, "utf8")
+      .replace(/(\n {2}hash: )sha256:[0-9a-f]{64}/, `$1sha256:${"0".repeat(64)}`),
+  );
+}
+
+/** Sorted (path, sha256) pairs under a directory, for no-write assertions. */
+function digest(dir: string): readonly string[] {
+  if (!fs.existsSync(dir)) return [];
+  const out: string[] = [];
+  const walk = (at: string): void => {
+    for (const entry of fs.readdirSync(at, { withFileTypes: true }).sort()) {
+      const full = path.join(at, entry.name);
+      if (entry.isDirectory()) walk(full);
+      else
+        out.push(
+          `${path.relative(dir, full)} ${createHash("sha256").update(fs.readFileSync(full)).digest("hex")}`,
+        );
+    }
+  };
+  walk(dir);
+  return out;
+}
+
+test("environment: validate reports lock drift, not only doctor and sync", () => {
+  // R08: agreement was enforced by `sync` and reported by `doctor`, and
+  // `validate` reported the environment lock hash without ever checking it.
+  const root = temp({ pack: "complete" });
+  assert.equal(validateProject({ root }).ok, true);
+
+  driftLock(root);
+  const report = validateProject({ root });
+  assert.equal(report.ok, false);
+  assert.ok(report.problems.some((p) => p.code === "lock-drift"));
+  // An environment problem is not one of the seventeen §57 graph rules, so
+  // it carries a scope and no rule number.
+  const drift = report.problems.find((p) => p.code === "lock-drift")!;
+  assert.equal((drift as { scope?: string }).scope, "environment");
+  assert.equal("rule" in drift, false);
+  assert.deepEqual(report.rules, []);
+});
+
+test("environment: a drifted lock refuses a canonical mutation before any write", () => {
+  // A record written against a drifted environment would carry an
+  // environment_lock_hash in its replay base naming an environment that was
+  // never the one used, so the mutation gate refuses it.
+  const root = temp({ pack: "complete", lineage: "open" });
+  const before = digest(path.join(root, "specs"));
+
+  driftLock(root);
+  assert.throws(
+    () => createIntent(root, { title: "Written against a drifted lock", body: "No." }),
+    (error: unknown) =>
+      error instanceof PactwrightError &&
+      error.code === "mutation-invalid" &&
+      error.problems.some((p) => p.code === "lock-drift"),
+  );
+  assert.deepEqual(digest(path.join(root, "specs")), before, "nothing may be written");
+});
+
+test("environment: an installed version the lock does not record is a disagreement", () => {
+  const root = temp({ extensions: ["fixture-base"] });
+  assert.equal(validateProject({ root }).ok, true);
+
+  // Only `package.json` moves: the package manager reports one version while
+  // the Pactwright lock records another, which is exactly the disagreement
+  // Distribution §12 forbids.
+  const manifest = path.join(root, "node_modules", "@pactwright", "fixture-base", "package.json");
+  fs.writeFileSync(
+    manifest,
+    fs.readFileSync(manifest, "utf8").replace('"version": "0.1.0"', '"version": "0.1.1"'),
+  );
+  const problems = validateProject({ root }).problems;
+  const disagreement = problems.find((p) => p.code === "lock-disagreement");
+  assert.ok(disagreement, problems.map((p) => p.code).join(", "));
+  assert.match(disagreement.message, /records 0\.1\.0 but the package manager installed 0\.1\.1/);
+});
+
+test("environment: a pack resolved from the runtime's own dependencies is not a disagreement", () => {
+  // `@pactwright/standard` is a dependency of `pactwright`, so it resolves
+  // without ever being installed under the project root (`pack/locate.ts`).
+  // Treating "absent from this project's node_modules" as a disagreement
+  // would reject every project that installed only the runtime.
+  const root = temp();
+  assert.equal(installedVersion(root, "@pactwright/standard"), runtimeVersion());
+  const agreement = checkEnvironmentAgreement(loadProject({ root }));
+  assert.equal(agreement.ok, true, agreement.problems.map((p) => p.message).join("\n"));
+});
+
 /* ---- package manager detection (Step 19) ---- */
 
 test("environment: the package manager is detected from an explicit declaration", () => {
@@ -198,8 +298,11 @@ test("environment: repository revision resolves this repository's commit", () =>
     encoding: "utf8",
   }).trim();
   assert.equal(revision.commit, head);
-  assert.match(revision.id, /^git:[0-9a-f]{40}(\+dirty)?$/);
-  assert.equal(revision.id, `git:${head}${revision.dirty ? "+dirty" : ""}`);
+  assert.match(revision.id, /^git:[0-9a-f]{40}(\+sha256:[0-9a-f]{64})?$/);
+  assert.equal(
+    revision.id,
+    `git:${head}${revision.workingTree === undefined ? "" : `+${revision.workingTree}`}`,
+  );
 });
 
 test("environment: a directory outside a repository resolves to no revision", () => {

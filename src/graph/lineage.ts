@@ -1,5 +1,6 @@
-import type { Problem } from "../errors.js";
+import { PactwrightError, type Problem } from "../errors.js";
 import type { Edge } from "./edges.js";
+import { GraphIndex, intentOf } from "./graph-index.js";
 import type { GraphNode } from "./nodes.js";
 import { decisionFields, type DecisionOutcome } from "./schema.js";
 
@@ -40,77 +41,6 @@ export interface LineageResult {
   readonly problems: readonly Problem[];
 }
 
-/**
- * A record is current when nothing supersedes it (Delivery Graph §15).
- * `isCurrent` for an id nothing points at is `true`; unknown ids are the
- * caller's concern.
- */
-export function isCurrent(id: string, edges: readonly Edge[]): boolean {
-  return !edges.some((edge) => edge.type === "supersedes" && edge.target === id);
-}
-
-/** Index of one graph, built once per derivation. */
-class GraphIndex {
-  private readonly byId: Map<string, GraphNode>;
-  private readonly superseded: Set<string>;
-  private readonly bySource = new Map<string, Edge[]>();
-  private readonly byTarget = new Map<string, Edge[]>();
-
-  constructor(nodes: readonly GraphNode[], edges: readonly Edge[]) {
-    this.byId = new Map(nodes.map((node) => [node.id, node]));
-    this.superseded = new Set(
-      edges.filter((edge) => edge.type === "supersedes").map((edge) => edge.target),
-    );
-    for (const edge of edges) {
-      push(this.bySource, edge.source, edge);
-      push(this.byTarget, edge.target, edge);
-    }
-  }
-
-  isCurrent(id: string): boolean {
-    return !this.superseded.has(id);
-  }
-
-  /**
-   * Existing nodes of `type` that have an edge of `edgeType` pointing at
-   * `target`, sorted by id. Edges with a missing or wrongly typed source are
-   * ignored: `validateEdges` reports those.
-   */
-  sourcesOf(target: string, edgeType: string, type: string): GraphNode[] {
-    return this.endpoints(this.byTarget.get(target), edgeType, (edge) => edge.source, type);
-  }
-
-  /** As `sourcesOf`, following edges the other way. */
-  targetsOf(source: string, edgeType: string, type: string): GraphNode[] {
-    return this.endpoints(this.bySource.get(source), edgeType, (edge) => edge.target, type);
-  }
-
-  private endpoints(
-    edges: readonly Edge[] | undefined,
-    edgeType: string,
-    pick: (edge: Edge) => string,
-    type: string,
-  ): GraphNode[] {
-    const found: GraphNode[] = [];
-    for (const edge of edges ?? []) {
-      if (edge.type !== edgeType) continue;
-      const node = this.byId.get(pick(edge));
-      if (node !== undefined && node.type === type) found.push(node);
-    }
-    return found.sort(byId);
-  }
-}
-
-function push(map: Map<string, Edge[]>, key: string, edge: Edge): void {
-  const list = map.get(key);
-  if (list === undefined) map.set(key, [edge]);
-  else list.push(edge);
-}
-
-function byId(a: GraphNode, b: GraphNode): number {
-  return a.id < b.id ? -1 : a.id > b.id ? 1 : 0;
-}
-
 function ids(nodes: readonly GraphNode[]): string {
   return nodes.map((node) => node.id).join(", ");
 }
@@ -127,10 +57,10 @@ interface GlobalCardinality {
  * evidences each Brief — checked for every contract and brief in the graph,
  * independently of any intent path and of the record's own currency.
  */
-function checkGlobalCardinality(nodes: readonly GraphNode[], graph: GraphIndex): GlobalCardinality {
+function checkGlobalCardinality(graph: GraphIndex): GlobalCardinality {
   const problems: Problem[] = [];
   const ambiguous = new Set<string>();
-  const of = (type: string): GraphNode[] => nodes.filter((n) => n.type === type).sort(byId);
+  const of = (type: string): readonly GraphNode[] => graph.nodes(type);
   for (const contract of of("contract")) {
     const briefs = graph
       .sourcesOf(contract.id, "decomposes", "brief")
@@ -271,12 +201,20 @@ function derive(
  * unambiguous. Edges with missing or wrongly typed endpoints are ignored,
  * so this is safe to run on a graph `validateEdges` has already rejected.
  */
-export function deriveLineages(nodes: readonly GraphNode[], edges: readonly Edge[]): LineageResult {
-  const graph = new GraphIndex(nodes, edges);
-  const global = checkGlobalCardinality(nodes, graph);
+export function deriveLineages(
+  nodes: readonly GraphNode[],
+  edges: readonly Edge[],
+  index?: GraphIndex,
+): LineageResult {
+  return lineagesOf(index ?? GraphIndex.build(nodes, edges));
+}
+
+/** Every lineage in an already-indexed graph. */
+export function lineagesOf(graph: GraphIndex): LineageResult {
+  const global = checkGlobalCardinality(graph);
   const lineages: Lineage[] = [];
   const problems: Problem[] = [...global.problems];
-  for (const intent of [...nodes].filter((node) => node.type === "intent").sort(byId)) {
+  for (const intent of graph.nodes("intent")) {
     const result = derive(intent, graph, global.ambiguous);
     problems.push(...result.problems);
     if (result.lineage !== undefined) lineages.push(result.lineage);
@@ -289,17 +227,54 @@ export function deriveLineage(
   intentId: string,
   nodes: readonly GraphNode[],
   edges: readonly Edge[],
+  index?: GraphIndex,
 ): Lineage | undefined {
-  const intent = nodes.find((node) => node.id === intentId && node.type === "intent");
+  return lineageOfIntent(index ?? GraphIndex.build(nodes, edges), intentId);
+}
+
+/** The lineage of one intent in an already-indexed graph. */
+export function lineageOfIntent(graph: GraphIndex, intentId: string): Lineage | undefined {
+  const intent = graph.node(intentId);
+  if (intent === undefined || intent.type !== "intent") return undefined;
+  return derive(intent, graph, checkGlobalCardinality(graph).ambiguous).lineage;
+}
+
+/** An Intent and the current lineage hanging off it, resolved from any record in it. */
+export interface Resolved {
+  readonly intent: GraphNode;
+  readonly lineage: Lineage;
+}
+
+/**
+ * The Intent and current lineage that `nodeId` belongs to, resolved through
+ * the shared index (§8). Throws `ambiguous-parent` when a hop towards the
+ * Intent has more than one structural parent, and `ambiguous-lineage` when
+ * the Intent is reachable but its lineage is not derivable.
+ *
+ * Every former parent-walking entry point — `findIntentOf`, closure's
+ * `lineageOf`, provenance's `runFor` — resolves here, so they can no longer
+ * disagree about which Intent a record belongs to.
+ */
+export function lineageFor(index: GraphIndex, nodeId: string): Resolved | undefined {
+  const intent = intentOf(index, nodeId);
   if (intent === undefined) return undefined;
-  const graph = new GraphIndex(nodes, edges);
-  return derive(intent, graph, checkGlobalCardinality(nodes, graph).ambiguous).lineage;
+  const lineage = lineageOfIntent(index, intent.id);
+  if (lineage === undefined) {
+    throw new PactwrightError(
+      "ambiguous-lineage",
+      `intent "${intent.id}" has no unambiguous lineage; fix validation problems first`,
+    );
+  }
+  return { intent, lineage };
 }
 
 /** Current-lineage ambiguity validation (Delivery Graph §21). */
 export function validateLineages(
   nodes: readonly GraphNode[],
   edges: readonly Edge[],
+  index?: GraphIndex,
 ): readonly Problem[] {
-  return deriveLineages(nodes, edges).problems;
+  return deriveLineages(nodes, edges, index).problems;
 }
+
+export { GraphIndex };

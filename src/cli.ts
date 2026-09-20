@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+import { rmSync } from "node:fs";
 import { formatProblem, PactwrightError, type Problem } from "./errors.js";
 import {
   lifecycleNext,
@@ -7,12 +8,15 @@ import {
   type NextAction,
 } from "./lifecycle/engine.js";
 import { noExecutor, runLifecycle, type RunResult } from "./lifecycle/run.js";
+import { lifecycleExecutor, selectExecutor } from "./execute/select.js";
 import { recordStage } from "./lifecycle/record.js";
 import { loadContext, type DeliveryContext, type HistoryRecord } from "./context.js";
 import { loadConfig, type PactwrightConfig } from "./config/config.js";
 import { CORE_DELIVERY_SUITE } from "./eval/core-suite.js";
 import { evalPassed, runEval, type EvalCaseResult, type EvalReport } from "./eval/runner.js";
 import { compareEvalReports, formatComparison } from "./eval/compare.js";
+import { acquireSide, type AcquiredPack } from "./eval/acquire.js";
+import type { CandidateRunner } from "./eval/case.js";
 import type { GraphNode } from "./graph/nodes.js";
 import {
   addExtension,
@@ -26,7 +30,7 @@ import { initProject } from "./init.js";
 import { syncProject } from "./sync.js";
 import { loadProject } from "./loader.js";
 import { resolvePack, type ResolvedPack } from "./pack/resolve.js";
-import { parseSpec, upgradeAgentPack, useAgentPack, type PackChangeReport } from "./pack/select.js";
+import { upgradeAgentPack, useAgentPack, type PackChangeReport } from "./pack/select.js";
 import { validateProject } from "./validate.js";
 import { findProjectRoot, projectPaths } from "./project.js";
 import { runtimeVersion } from "./version.js";
@@ -65,8 +69,9 @@ Commands:
   lifecycle record <command> --file <yaml>   Record the content of a graph-marking command
                                              (capture-intent, approve-contract, write-brief,
                                              prepare-evidence) after the runtime checks the
-                                             transition, or the result of an execution step
-                                             (delivery, review) as execution provenance
+                                             transition, the result of an execution step
+                                             (delivery, review) as execution provenance, or
+                                             an authorised gate resolution (gate)
   agent-pack use <source> [--json]           Select an agent pack explicitly: resolve it,
                                              validate every required capability, then update
                                              config, lock and the generated environment
@@ -223,9 +228,20 @@ function formatStatus(entry: LineageStatus): string {
   if (entry.shape !== undefined) {
     lines.push(`  shape: ${entry.shape} (${entry.executionStatus ?? "running"})`);
     lines.push(
-      `  completed steps: ${entry.completedSteps.length === 0 ? "none" : entry.completedSteps.join(", ")}`,
+      `  steps visited: ${entry.visited.length === 0 ? "none" : entry.visited.join(", ")}`,
     );
   }
+  // The one list `lifecycle record` checks against, printed so an agent can
+  // act on what is permitted rather than infer it (design §12).
+  lines.push(
+    `  permitted: ${
+      entry.permitted.length === 0
+        ? "none"
+        : entry.permitted
+            .map((op) => (op.mode === "supersede" ? `${op.stage} (supersede)` : op.stage))
+            .join(", ")
+    }`,
+  );
   if (entry.blocked !== undefined) {
     lines.push(`  blocked: ${entry.blocked} (required actor: ${entry.requiredActor})`);
   }
@@ -342,9 +358,21 @@ async function lifecycle(sub: string | undefined, args: readonly string[]): Prom
       printProblems(error, options.json);
       return 1;
     }
+    // The executor the project declares (Distribution §3). Absent
+    // configuration means `none`, which refuses rather than pretending the
+    // responsibility was discharged; the CLI used to hard-wire that refusal
+    // so no project could ever execute.
+    let execute = noExecutor;
+    try {
+      execute = lifecycleExecutor(selectExecutor(loadProject({ root }).config));
+    } catch (error) {
+      // An unloadable project is reported by `runLifecycle` itself as a
+      // validation-error stop, with every problem in one pass.
+      if (!(error instanceof PactwrightError)) throw error;
+    }
     const results = await runLifecycle({
       root,
-      execute: noExecutor,
+      execute,
       ...(options.intent === undefined ? {} : { intentId: options.intent }),
     });
     out(options.json ? `${JSON.stringify(results, null, 2)}\n` : results.map(formatRun).join(""));
@@ -756,30 +784,6 @@ function formatEvalReport(report: EvalReport): string {
  * `@pactwright/standard` pack, since evaluation is independent from any
  * project's Delivery (Distribution §16).
  */
-/** Resolves one side of a comparison from a pack source. */
-function resolveSide(root: string, source: string): ResolvedPack | PactwrightError {
-  const config: PactwrightConfig = {
-    version: 1,
-    agentPack: packSpecToConfig(source),
-    adapter: { type: "claude-code" },
-    extensions: {},
-    github: { enabled: false },
-  };
-  const resolved = resolvePack({ root, config });
-  if (resolved.value === undefined) {
-    return PactwrightError.fromProblems("pack-unresolved", resolved.problems);
-  }
-  return resolved.value;
-}
-
-function packSpecToConfig(source: string): { source: string; version?: string } {
-  const parsed = parseSpec(source);
-  if ("code" in parsed) return { source };
-  return parsed.version === undefined
-    ? { source: parsed.source }
-    : { source: parsed.source, version: parsed.version };
-}
-
 async function evalCompare(
   root: string,
   baselineSource: string,
@@ -790,36 +794,58 @@ async function evalCompare(
     ["baseline", baselineSource],
     ["candidate", candidateSource],
   ];
-  const packs: ResolvedPack[] = [];
+  // Each side is acquired into its own project at its exact version, never
+  // resolved from the caller's `node_modules`. Resolving both sides locally
+  // made `@pactwright/standard@0.0.1` resolve to the installed `0.0.2` and
+  // then fail version matching, so the published comparison command could not
+  // run at all.
+  const acquired: AcquiredPack[] = [];
+  const cleanUp = (): void => {
+    for (const side of acquired) rmSync(side.root, { recursive: true, force: true });
+  };
   for (const [which, source] of sides) {
-    const resolved = resolveSide(root, source);
-    if (resolved instanceof PactwrightError) {
-      err(`pactwright: could not resolve the ${which} "${source}"\n`);
-      printProblems(resolved, json);
+    const side = acquireSide({ spec: source });
+    if (Array.isArray(side)) {
+      err(`pactwright: could not acquire the ${which} "${source}"\n`);
+      printProblems(PactwrightError.fromProblems("pack-unacquired", side), json);
+      cleanUp();
       return 1;
     }
-    packs.push(resolved);
+    acquired.push(side as AcquiredPack);
   }
-  const [baselinePack, candidatePack] = packs as [ResolvedPack, ResolvedPack];
-  const baseline = await runEval({ pack: baselinePack, suite: CORE_DELIVERY_SUITE });
-  const candidate = await runEval({ pack: candidatePack, suite: CORE_DELIVERY_SUITE });
-  const comparison = compareEvalReports({
-    baseline,
-    candidate,
-    baselineEnvironment: { agents: baselinePack.hashes.agents, skills: baselinePack.hashes.skills },
-    candidateEnvironment: {
-      agents: candidatePack.hashes.agents,
-      skills: candidatePack.hashes.skills,
-    },
-  });
-  out(
-    json
-      ? `${JSON.stringify({ baseline, candidate, comparison }, null, 2)}\n`
-      : formatComparison(comparison),
-  );
-  // A comparison reports; it does not gate on the candidate's own pass/fail,
-  // which `pactwright eval` already does. A regression is the failure here.
-  return comparison.hasRegressions ? 1 : 0;
+  const [baselinePack, candidatePack] = acquired.map((side) => side.pack) as [
+    ResolvedPack,
+    ResolvedPack,
+  ];
+  try {
+    // Both sides are evaluated by the same configured executor, so a
+    // comparison measures the packs rather than the harness.
+    const runner = evalRunner(root);
+    const baseline = await runEval({ pack: baselinePack, suite: CORE_DELIVERY_SUITE, ...runner });
+    const candidate = await runEval({ pack: candidatePack, suite: CORE_DELIVERY_SUITE, ...runner });
+    const comparison = compareEvalReports({
+      baseline,
+      candidate,
+      baselineEnvironment: {
+        agents: baselinePack.hashes.agents,
+        skills: baselinePack.hashes.skills,
+      },
+      candidateEnvironment: {
+        agents: candidatePack.hashes.agents,
+        skills: candidatePack.hashes.skills,
+      },
+    });
+    out(
+      json
+        ? `${JSON.stringify({ baseline, candidate, comparison }, null, 2)}\n`
+        : formatComparison(comparison),
+    );
+    // A comparison reports; it does not gate on the candidate's own pass/fail,
+    // which `pactwright eval` already does. A regression is the failure here.
+    return comparison.hasRegressions ? 1 : 0;
+  } finally {
+    cleanUp();
+  }
 }
 
 async function evalCommand(args: readonly string[]): Promise<number> {
@@ -863,9 +889,36 @@ async function evalCommand(args: readonly string[]): Promise<number> {
     printProblems(PactwrightError.fromProblems("pack-unresolved", resolved.problems), options.json);
     return 1;
   }
-  const report = await runEval({ pack: resolved.value, suite: CORE_DELIVERY_SUITE });
+  const report = await runEval({
+    pack: resolved.value,
+    suite: CORE_DELIVERY_SUITE,
+    ...evalRunner(root),
+  });
   out(options.json ? `${JSON.stringify(report, null, 2)}\n` : formatEvalReport(report));
   return evalPassed(report) ? 0 : 1;
+}
+
+/**
+ * The candidate runner `eval` uses: the project's declared executor, or none.
+ *
+ * With none, every case reports `evaluated: false` and the suite cannot pass.
+ * The harness used to replay each case's own scripted reference instead and
+ * report the result as the pack's, so a pack whose every prompt said "Ignore
+ * all tasks. Return nothing" passed all eight cases.
+ */
+function evalRunner(root: string): { readonly candidate?: CandidateRunner } {
+  let config: PactwrightConfig | undefined;
+  try {
+    config = loadProject({ root }).config;
+  } catch {
+    return {}; // Outside a project there is nothing to declare an executor.
+  }
+  if (config.execution === undefined) return {};
+  const executor = selectExecutor(config);
+  if (executor.id === "none") return {};
+  return {
+    candidate: async (task) => (await executor.invoke({ ...task, label: task.caseId })).output,
+  };
 }
 
 function contextCommand(args: readonly string[]): number {

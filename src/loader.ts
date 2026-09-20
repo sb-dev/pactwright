@@ -9,7 +9,9 @@ import {
 } from "./extension/resolve.js";
 import { CORE_EDGE_SCHEMAS, validateEdges } from "./graph/edge-schema.js";
 import { loadEdges, type Edge } from "./graph/edges.js";
+import { GraphIndex } from "./graph/graph-index.js";
 import { validateLineages } from "./graph/lineage.js";
+import { validateRelationships } from "./graph/relationships.js";
 import { loadNodes, type GraphNode } from "./graph/nodes.js";
 import { CORE_NODE_SCHEMAS, validateNodes } from "./graph/schema.js";
 import { findProjectRoot, projectPaths, type ProjectPaths } from "./project.js";
@@ -25,6 +27,11 @@ export interface Project {
   readonly graph: {
     readonly nodes: readonly GraphNode[];
     readonly edges: readonly Edge[];
+    /**
+     * Built once here and shared by every consumer (§8). Before this, parent
+     * discovery was rebuilt — and written differently — in four places.
+     */
+    readonly index: GraphIndex;
   };
 }
 
@@ -93,7 +100,13 @@ export function loadProject(options: LoadProjectOptions = {}): Project {
   const edges = loadEdges(paths.edges);
   problems.push(...edges.problems);
   problems.push(...validateEdges(edges.edges, nodes.nodes, edgeRegistry, paths.edges));
-  problems.push(...validateLineages(nodes.nodes, edges.edges));
+  const index = GraphIndex.build(nodes.nodes, edges.edges);
+  // Declared relationship cardinality, for every record — reachable from an
+  // Intent or not. The lineage walk below only ever visits records it can
+  // reach, so an orphan Decision, Contract, Brief or Evidence used to load
+  // cleanly (Core §15).
+  problems.push(...validateRelationships(nodes.nodes, index, nodeRegistry));
+  problems.push(...validateLineages(nodes.nodes, edges.edges, index));
 
   if (problems.length > 0 || !config.value || !lifecycle.value || !lock.value) {
     throw PactwrightError.fromProblems("project-load-failed", problems);
@@ -104,6 +117,6 @@ export function loadProject(options: LoadProjectOptions = {}): Project {
     lifecycle: lifecycle.value,
     lock: lock.value,
     extensions,
-    graph: { nodes: nodes.nodes, edges: edges.edges },
+    graph: { nodes: nodes.nodes, edges: edges.edges, index },
   };
 }

@@ -56,6 +56,31 @@ export function isRecordingResponsibility(name: string): boolean {
 }
 
 /**
+ * Commands whose output becomes a canonical record.
+ *
+ * A property of the *commands*, not of lifecycle topology: capture-intent,
+ * approve-contract and write-brief sit upstream of the Brief and are not
+ * shape steps at all, and prepare-evidence closes the shape.
+ *
+ * It lives here rather than beside `recordStage` because the validation
+ * kernel names these stages too — `permittedOperations` lists what a
+ * lineage admits — and the recorder is built on the kernel.
+ */
+export const RECORDING_COMMANDS = [
+  "capture-intent",
+  "approve-contract",
+  "write-brief",
+  "prepare-evidence",
+] as const;
+
+/** A command that leaves a durable record. */
+export type RecordingStage = (typeof RECORDING_COMMANDS)[number];
+
+export function isRecordingStage(stage: string): stage is RecordingStage {
+  return (RECORDING_COMMANDS as readonly string[]).includes(stage);
+}
+
+/**
  * `.pactwright/lifecycle.yml` — how the repository operates the lifecycle.
  * It holds execution policy and the selected shape; it holds no graph truth
  * and no fine-grained progression (§28).

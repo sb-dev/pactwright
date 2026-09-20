@@ -1,9 +1,9 @@
 import { PactwrightError } from "../errors.js";
-import { findIntentOf } from "../context.js";
-import { deriveLineage, type Lineage } from "../graph/lineage.js";
+import { lineageFor, type Lineage } from "../graph/lineage.js";
 import { repositoryRevision } from "../graph/repository.js";
 import { loadProject, type Project } from "../loader.js";
-import { currentStep, executionFor, routeAfter } from "./engine.js";
+import { currentStep, executionFor } from "./engine.js";
+import { transition, type LifecycleEvent, type TransitionResult } from "./transition.js";
 import { writeExecutionState, type ExecutionState, type ReviewOutcome } from "./state.js";
 
 /**
@@ -31,24 +31,16 @@ function runFor(
   project: Project,
   anchor: string,
 ): { readonly lineage: Lineage; readonly state: ExecutionState } {
-  const intent =
-    project.graph.nodes.find((node) => node.id === anchor && node.type === "intent") ??
-    findIntentOf(anchor, project.graph.nodes, project.graph.edges);
-  if (intent === undefined) {
+  const resolved = lineageFor(project.graph.index, anchor);
+  if (resolved === undefined) {
     throw new PactwrightError("unknown-node", `"${anchor}" is not part of any Delivery lineage`);
   }
-  const lineage = deriveLineage(intent.id, project.graph.nodes, project.graph.edges);
-  if (lineage === undefined) {
-    throw new PactwrightError(
-      "ambiguous-lineage",
-      `intent "${intent.id}" has no unambiguous lineage; fix validation problems first`,
-    );
-  }
+  const lineage = resolved.lineage;
   const execution = executionFor(project, lineage);
   if (execution === undefined) {
     throw new PactwrightError(
       "not-delivering",
-      `intent "${intent.id}" is not in its Brief-to-Evidence phase; there is no run to record against`,
+      `intent "${resolved.intent.id}" is not in its Brief-to-Evidence phase; there is no run to record against`,
     );
   }
   return { lineage, state: execution.state };
@@ -87,9 +79,8 @@ export function recordDelivery(root: string, input: RecordDeliveryInput): Proven
   const { state } = runFor(project, input.anchor);
   const step = stepOfKind(project, state, "delivery");
   const revision = input.revision ?? repositoryRevision(root).id;
-  const advanced = advance(project, { ...state, deliveredRevision: revision }, step);
-  writeExecutionState(root, advanced);
-  return { step, brief: state.brief, state: advanced };
+  const result = apply(project, state, { kind: "step-completed", step, revision });
+  return { step, brief: state.brief, state: writeResult(root, result) };
 }
 
 export interface RecordReviewInput {
@@ -106,44 +97,67 @@ export function recordReview(root: string, input: RecordReviewInput): Provenance
   const project = loadProject({ root });
   const { state } = runFor(project, input.anchor);
   const step = stepOfKind(project, state, "review");
+  // A Review with no delivered state on record was taken against the
+  // repository as it stands; the reducer folds the verdict in either way.
   const carried: ExecutionState = {
     ...state,
-    review: {
-      step,
-      outcome: input.outcome,
-      revision: state.deliveredRevision ?? repositoryRevision(root).id,
-    },
+    deliveredRevision: state.deliveredRevision ?? repositoryRevision(root).id,
   };
-  const advanced = advance(project, carried, step, input.outcome);
-  writeExecutionState(root, advanced);
-  return { step, brief: state.brief, state: advanced };
+  const result = apply(project, carried, {
+    kind: "step-completed",
+    step,
+    review: input.outcome,
+  });
+  return { step, brief: state.brief, state: writeResult(root, result) };
 }
 
-/** Applies a completed step and takes the route the shape permits. */
-function advance(
-  project: Project,
-  state: ExecutionState,
-  stepName: string,
-  outcome?: ReviewOutcome,
-): ExecutionState {
-  const shape = project.lifecycle.shape;
-  const step = shape.steps.find((candidate) => candidate.name === stepName)!;
-  const completedSteps = state.completedSteps.includes(stepName)
-    ? state.completedSteps
-    : [...state.completedSteps, stepName];
-  const carried: ExecutionState = { ...state, completedSteps };
-  const routing = routeAfter(shape, carried, step, outcome);
-  if (routing.stop !== undefined) {
-    return { ...carried, status: "blocked", currentStep: stepName };
+export interface RecordGateInput {
+  readonly anchor: string;
+  /** The Gate step being resolved. */
+  readonly step: string;
+  /** The acting actor, `<kind>:<name>` — checked against the Gate's authority. */
+  readonly resolvedBy: string;
+}
+
+/**
+ * Records an authorised Gate resolution (Core §46).
+ *
+ * This is the write side of `ExecutionState.gates`, which had readers —
+ * closure, validation rule 14 — and no producer outside two tests. Without
+ * it a configured human Gate could only be passed by editing execution state
+ * by hand, and `recordDelivery` advanced past one without noticing.
+ */
+export function recordGate(root: string, input: RecordGateInput): ProvenanceResult {
+  const project = loadProject({ root });
+  const { state } = runFor(project, input.anchor);
+  const result = apply(project, state, {
+    kind: "gate-resolved",
+    step: input.step,
+    resolvedBy: input.resolvedBy,
+  });
+  return { step: input.step, brief: state.brief, state: writeResult(root, result) };
+}
+
+/** Runs the shared reducer over this project's shape and policy. */
+function apply(project: Project, state: ExecutionState, event: LifecycleEvent): TransitionResult {
+  return transition(project.lifecycle.shape, project.lifecycle, state, event);
+}
+
+/**
+ * Writes the reducer's state, unless it refused.
+ *
+ * A refusal returns the input state unchanged, so throwing *before* the write
+ * is what leaves the state file byte-identical after an unauthorised attempt
+ * — which is the whole point of routing the adapter path through the same
+ * reducer the automatic loop uses.
+ */
+function writeResult(root: string, result: TransitionResult): ExecutionState {
+  if (result.outcome === "refused") {
+    throw new PactwrightError(
+      "transition-refused",
+      result.reason ?? "the runtime refused this transition",
+    );
   }
-  if (routing.to === undefined) {
-    const rest = { ...carried };
-    delete (rest as { currentStep?: string }).currentStep;
-    return { ...rest, status: "completed" };
-  }
-  const iterations =
-    routing.route === undefined
-      ? carried.iterations
-      : { ...carried.iterations, [routing.route]: (carried.iterations[routing.route] ?? 0) + 1 };
-  return { ...carried, status: "running", currentStep: routing.to, iterations };
+  writeExecutionState(root, result.state);
+  return result.state;
 }

@@ -4,6 +4,7 @@ import * as fs from "node:fs";
 import * as path from "node:path";
 import { loadConfig } from "../src/config/config.js";
 import { loadLock } from "../src/config/lock.js";
+import { doctor } from "../src/doctor.js";
 import { addExtension, removeExtension, upgradeExtension } from "../src/extension/manage.js";
 import { resolveExtensions } from "../src/extension/resolve.js";
 import { loadProject } from "../src/loader.js";
@@ -11,6 +12,7 @@ import { requiredCapabilities } from "../src/pack/capabilities.js";
 import { resolveDesiredState, serialiseLock } from "../src/pack/resolve.js";
 import { validateProject } from "../src/validate.js";
 import type { PackageInstaller } from "../src/upgrade.js";
+import type { PackageView } from "../src/environment/select-target.js";
 import { runtimeVersion } from "../src/version.js";
 import { fixture, makeTempProject } from "./helpers.js";
 
@@ -43,6 +45,69 @@ function writeNode(root: string, id: string, type: string, title: string): strin
 
 function installedManifest(root: string, id: string): string {
   return path.join(root, "node_modules", "@pactwright", id, "extension.yml");
+}
+
+/**
+ * A project with a declared package manager.
+ *
+ * Anything that installs needs one, and since R09 that includes
+ * `extension upgrade`: it acquires a compatible published version before it
+ * re-locks, rather than re-resolving whatever happened to be on disk.
+ */
+function consumer(options: Parameters<typeof makeTempProject>[0] = {}): string {
+  const root = temp(options);
+  fs.writeFileSync(
+    path.join(root, "package.json"),
+    `${JSON.stringify({ name: "consumer", private: true, packageManager: "pnpm@11.7.0" }, null, 2)}\n`,
+  );
+  return root;
+}
+
+/**
+ * A registry double: the versions a package is published at.
+ *
+ * `extension upgrade` now acquires before it re-locks (R09), so every test
+ * that drives it has to say what is available. Nothing here reaches a real
+ * registry — `packageManagerView` would run `pnpm view`.
+ */
+function fixtureView(versions: readonly string[]): PackageView {
+  return () => versions;
+}
+
+/**
+ * Re-locks without moving: the registry offers only what is installed, so
+ * the selected target is the version already present.
+ *
+ * Several tests need the lock brought up to date as *setup*, which was what
+ * `upgradeExtension` did before it acquired anything.
+ */
+function relock(root: string, id: string, version = "0.1.0") {
+  return upgradeExtension(root, id, {
+    view: fixtureView([version]),
+    install: () => [],
+  });
+}
+
+/**
+ * Stands in for the package manager having installed a newer version.
+ *
+ * Both halves of the installed package move: `extension.yml` is what
+ * Pactwright resolves and locks, `package.json` is what the package manager
+ * reports as installed, and environment agreement compares the two. Editing
+ * only the manifest produces a package that claims two different versions,
+ * which is a disagreement rather than an upgrade.
+ */
+function installVersion(root: string, id: string, from: string, to: string): void {
+  const dir = path.join(root, "node_modules", "@pactwright", id);
+  for (const [file, find] of [
+    ["extension.yml", `version: ${from}`],
+    ["package.json", `"version": "${from}"`],
+  ] as const) {
+    const target = path.join(dir, file);
+    const before = fs.readFileSync(target, "utf8");
+    assert.ok(before.includes(find), `${file} should declare ${from}`);
+    fs.writeFileSync(target, before.replace(find, find.replace(from, to)));
+  }
 }
 
 // ---- resolution -------------------------------------------------------------
@@ -341,11 +406,12 @@ test("extension remove: runs when the extension being removed is what is broken"
 });
 
 test("extension remove: runs when the extension's package is gone, and says what it cannot list", () => {
-  const root = temp({ extensions: ["fixture-base"] });
+  const root = consumer({ extensions: ["fixture-base"] });
   writeNode(root, "note-kept-1a2b", "note", "Kept note");
   // The configured lock predates the extension; record it before the package
-  // disappears, so the fallback has something exact to report.
-  assert.equal(upgradeExtension(root, "fixture-base").ok, true);
+  // disappears, so the fallback has something exact to report. The view
+  // reports only the installed version, so this re-locks rather than moving.
+  assert.equal(relock(root, "fixture-base").ok, true);
   fs.rmSync(path.join(root, "node_modules", "@pactwright", "fixture-base"), {
     recursive: true,
     force: true,
@@ -430,8 +496,11 @@ test("extension remove: runs when other extensions are broken too", () => {
   // A runtime bump breaks every installed extension at once, so removing one
   // of them can never leave a set that resolves. Refusing on that basis would
   // make the repair impossible through the CLI.
-  const root = temp({ extensions: ["fixture-base", "fixture-analysis"], pack: "extra-capability" });
-  assert.equal(upgradeExtension(root, "fixture-base").ok, true);
+  const root = consumer({
+    extensions: ["fixture-base", "fixture-analysis"],
+    pack: "extra-capability",
+  });
+  assert.equal(relock(root, "fixture-base").ok, true);
   for (const id of ["fixture-base", "fixture-analysis"]) {
     const manifest = installedManifest(root, id);
     fs.writeFileSync(
@@ -471,19 +540,24 @@ test("extension remove: an unconfigured extension is reported", () => {
 // ---- upgrade ----------------------------------------------------------------
 
 test("extension upgrade: re-resolves and updates the lock", () => {
-  const root = temp({ extensions: ["fixture-base"] });
+  const root = consumer({ extensions: ["fixture-base"] });
   assert.equal(addExtension(root, "fixture-base").changes[0]?.action, "unchanged");
   const lockPath = path.join(root, ".pactwright", "lock.yml");
   // The configured lock predates the extension; upgrade records it first.
-  assert.equal(upgradeExtension(root, "fixture-base").ok, true);
+  assert.equal(relock(root, "fixture-base").ok, true);
   assert.equal(loadLock(lockPath).value!.extensions["fixture-base"]?.version, "0.1.0");
 
-  const manifest = installedManifest(root, "fixture-base");
-  fs.writeFileSync(
-    manifest,
-    fs.readFileSync(manifest, "utf8").replace("version: 0.1.0", "version: 0.1.1"),
-  );
-  const report = upgradeExtension(root, "fixture-base");
+  // 0.1.1 is published; the installer stands in for the package manager
+  // fetching it. Before R09 there was no installer call at all, so an
+  // "upgrade" could only reach a version already on disk.
+  const report = upgradeExtension(root, "fixture-base", {
+    view: fixtureView(["0.1.0", "0.1.1"]),
+    install: ({ spec }) => {
+      if (spec === "@pactwright/fixture-base@0.1.1")
+        installVersion(root, "fixture-base", "0.1.0", "0.1.1");
+      return [];
+    },
+  });
   assert.equal(report.ok, true, JSON.stringify(report.problems));
   assert.deepEqual(report.changes, [
     { id: "fixture-base", action: "upgraded", version: "0.1.1", previousVersion: "0.1.0" },
@@ -492,8 +566,8 @@ test("extension upgrade: re-resolves and updates the lock", () => {
 });
 
 test("extension upgrade: a failed upgrade leaves config and lock byte-identical", () => {
-  const root = temp({ extensions: ["fixture-base"] });
-  assert.equal(upgradeExtension(root, "fixture-base").ok, true);
+  const root = consumer({ extensions: ["fixture-base"] });
+  assert.equal(relock(root, "fixture-base").ok, true);
   const configPath = path.join(root, ".pactwright", "config.yml");
   const lockPath = path.join(root, ".pactwright", "lock.yml");
   const beforeConfig = fs.readFileSync(configPath, "utf8");
@@ -502,13 +576,15 @@ test("extension upgrade: a failed upgrade leaves config and lock byte-identical"
   // A record whose type the graph no longer recognises makes the post-write
   // validation fail, standing in for any unrelated project problem.
   writeNode(root, "ghost-stray-1a2b", "ghost", "Stray record");
-  const manifest = installedManifest(root, "fixture-base");
-  fs.writeFileSync(
-    manifest,
-    fs.readFileSync(manifest, "utf8").replace("version: 0.1.0", "version: 0.1.1"),
-  );
 
-  const report = upgradeExtension(root, "fixture-base");
+  const report = upgradeExtension(root, "fixture-base", {
+    view: fixtureView(["0.1.0", "0.1.1"]),
+    install: ({ spec }) => {
+      if (spec === "@pactwright/fixture-base@0.1.1")
+        installVersion(root, "fixture-base", "0.1.0", "0.1.1");
+      return [];
+    },
+  });
   assert.equal(report.ok, false);
   assert.deepEqual(report.changes, []);
   assert.equal(fs.readFileSync(configPath, "utf8"), beforeConfig);
@@ -517,21 +593,75 @@ test("extension upgrade: a failed upgrade leaves config and lock byte-identical"
 });
 
 test("extension upgrade: a successful upgrade leaves config.yml untouched", () => {
-  const root = temp({ extensions: ["fixture-base"] });
+  const root = consumer({ extensions: ["fixture-base"] });
   const configPath = path.join(root, ".pactwright", "config.yml");
-  assert.equal(upgradeExtension(root, "fixture-base").ok, true);
+  assert.equal(relock(root, "fixture-base").ok, true);
   // Desired state cannot change on an upgrade, so a hand-formatted config —
   // comments and all — must survive it.
   const annotated = `# pinned on purpose\n${fs.readFileSync(configPath, "utf8")}`;
   fs.writeFileSync(configPath, annotated);
 
-  const manifest = installedManifest(root, "fixture-base");
-  fs.writeFileSync(
-    manifest,
-    fs.readFileSync(manifest, "utf8").replace("version: 0.1.0", "version: 0.1.1"),
-  );
-  assert.equal(upgradeExtension(root, "fixture-base").ok, true);
+  const upgraded = upgradeExtension(root, "fixture-base", {
+    view: fixtureView(["0.1.0", "0.1.1"]),
+    install: ({ spec }) => {
+      if (spec === "@pactwright/fixture-base@0.1.1")
+        installVersion(root, "fixture-base", "0.1.0", "0.1.1");
+      return [];
+    },
+  });
+  assert.equal(upgraded.ok, true, JSON.stringify(upgraded.problems));
   assert.equal(fs.readFileSync(configPath, "utf8"), annotated);
+});
+
+test("extension upgrade: acquires the newest compatible version, not merely the newest", () => {
+  const root = consumer({ extensions: ["fixture-base"] });
+  assert.equal(relock(root, "fixture-base").ok, true);
+
+  // 0.9.0 is newer but declares a runtime this project does not run, so §15
+  // requires the operation to fail clearly rather than substitute it. The
+  // selection happens *before* the install: nothing is fetched and then
+  // rejected.
+  const specs: string[] = [];
+  const report = upgradeExtension(root, "fixture-base", {
+    view: fixtureView(["0.1.0", "0.1.1", "0.9.0"]),
+    install: ({ spec }) => {
+      if (spec !== undefined) specs.push(spec);
+      if (spec === "@pactwright/fixture-base@0.1.1")
+        installVersion(root, "fixture-base", "0.1.0", "0.1.1");
+      return [];
+    },
+    // What each published version declares it needs, which is the fact a
+    // registry can answer without the package being installed.
+    declaredRuntimeRange: (version) => (version === "0.9.0" ? "^9.9.0" : runtimeVersion()),
+  });
+
+  assert.equal(report.ok, true, JSON.stringify(report.problems));
+  assert.deepEqual(specs, ["@pactwright/fixture-base@0.1.1"], "0.9.0 must never be fetched");
+  assert.equal(lock(root).extensions["fixture-base"]?.version, "0.1.1");
+});
+
+test("extension upgrade: refuses when no published version supports this runtime", () => {
+  const root = consumer({ extensions: ["fixture-base"] });
+  assert.equal(relock(root, "fixture-base").ok, true);
+  const before = fs.readFileSync(path.join(root, ".pactwright", "lock.yml"), "utf8");
+
+  let installed = false;
+  const report = upgradeExtension(root, "fixture-base", {
+    view: fixtureView(["0.9.0", "1.0.0"]),
+    install: () => {
+      installed = true;
+      return [];
+    },
+    declaredRuntimeRange: () => "^9.9.0",
+  });
+
+  assert.equal(report.ok, false);
+  assert.ok(
+    report.problems.some((p) => p.code === "incompatible-target"),
+    JSON.stringify(report.problems),
+  );
+  assert.equal(installed, false, "nothing may be installed when no target is compatible");
+  assert.equal(fs.readFileSync(path.join(root, ".pactwright", "lock.yml"), "utf8"), before);
 });
 
 // ---- package installation (Step 16) ----------------------------------------
@@ -542,7 +672,22 @@ test("extension upgrade: a successful upgrade leaves config.yml untouched", () =
  */
 function fixtureInstaller(): { install: PackageInstaller; calls: string[] } {
   const calls: string[] = [];
+  const added: string[] = [];
   const install: PackageInstaller = ({ root, manager, spec }) => {
+    // No spec is a frozen install: bring node_modules back in line with the
+    // manifest and lock as they now stand. The transaction uses this to undo
+    // an install once it has restored both files, so the double has to undo
+    // what it added rather than record the call and do nothing.
+    if (spec === undefined) {
+      calls.push(`${manager} install`);
+      for (const id of added.splice(0)) {
+        fs.rmSync(path.join(root, "node_modules", "@pactwright", id), {
+          recursive: true,
+          force: true,
+        });
+      }
+      return [];
+    }
     calls.push(`${manager} ${spec}`);
     const id = spec.replace("@pactwright/", "");
     const source = path.join(fixture("extensions"), id);
@@ -550,21 +695,13 @@ function fixtureInstaller(): { install: PackageInstaller; calls: string[] } {
       return [{ code: "package-manager-failed", message: `no such package ${spec}`, path: root }];
     }
     fs.cpSync(source, path.join(root, "node_modules", "@pactwright", id), { recursive: true });
+    added.push(id);
     return [];
   };
   return { install, calls };
 }
 
 /** A temp project that declares a package manager, as a real consumer does. */
-function consumer(options: Parameters<typeof makeTempProject>[0] = {}): string {
-  const root = temp(options);
-  fs.writeFileSync(
-    path.join(root, "package.json"),
-    `${JSON.stringify({ name: "consumer", private: true, packageManager: "pnpm@11.7.0" }, null, 2)}\n`,
-  );
-  return root;
-}
-
 test("extension add: delegates installation to the project package manager", () => {
   const root = consumer();
   const { install, calls } = fixtureInstaller();
@@ -575,13 +712,23 @@ test("extension add: delegates installation to the project package manager", () 
   assert.equal(config(root).extensions["fixture-base"]?.enabled, true);
 });
 
-test("extension add: installs dependencies before the extension that needs them", () => {
+test("extension add: enables a dependency before the extension that needs it", () => {
   const root = consumer();
   const { install, calls } = fixtureInstaller();
   // fixture-reporting depends on fixture-base; neither is installed.
   const report = addExtension(root, "fixture-reporting", { install });
   assert.equal(report.ok, true, report.problems.map((p) => p.message).join("\n"));
+
+  // Installation is discovery order, and cannot be anything else: an
+  // extension's dependencies live in its manifest, and the manifest cannot
+  // be read until the package is installed. This test used to be named for
+  // the order below while asserting the order here.
   assert.deepEqual(calls, ["pnpm @pactwright/fixture-reporting", "pnpm @pactwright/fixture-base"]);
+  // Enabling is dependency-first, which is what Distribution §10 asks for.
+  assert.deepEqual(
+    report.changes.map((change) => change.id),
+    ["fixture-base", "fixture-reporting"],
+  );
   const enabled = config(root).extensions;
   assert.equal(enabled["fixture-base"]?.enabled, true, "the dependency is enabled too");
   assert.equal(enabled["fixture-reporting"]?.enabled, true);
@@ -638,4 +785,179 @@ test("extension add: a project with no package manager reports that, not a bad g
   const report = addExtension(root, "fixture-base", { install: fixtureInstaller().install });
   assert.equal(report.ok, false);
   assert.ok(report.problems.some((p) => p.code === "no-package-manager"));
+});
+
+// ---- graph schemas and migrations (Step 16, Distribution §11) ---------------
+
+/** Replaces the installed fixture-migrating package with its v2 release. */
+function installV2(root: string): void {
+  fs.rmSync(path.join(root, "node_modules", "@pactwright", "fixture-migrating"), {
+    recursive: true,
+    force: true,
+  });
+  fs.cpSync(
+    fixture(path.join("extensions", "fixture-migrating-v2")),
+    path.join(root, "node_modules", "@pactwright", "fixture-migrating"),
+    { recursive: true },
+  );
+}
+
+function writeDeployment(root: string, id: string, fields: Record<string, string>): string {
+  const file = path.join(root, "specs", "nodes", `${id}.md`);
+  const front = Object.entries(fields)
+    .map(([key, value]) => `${key}: ${value}`)
+    .join("\n");
+  fs.writeFileSync(
+    file,
+    `---\nid: ${id}\ntype: deployment\ntitle: A deployment\ncreated: "2026-09-20"\n${front}\n---\n\nA deployment.\n`,
+  );
+  return file;
+}
+
+test("extensions: a declared node schema is enforced like a core one", () => {
+  const root = temp({ extensions: ["fixture-migrating"] });
+  // `required_fields` and `relationships` used to be dropped: a contributed
+  // type became `requiredFields: []` with permissive endpoints, so an
+  // extension's own records were accepted whatever shape they had.
+  writeDeployment(root, "deployment-missing-1a2b", {});
+  const report = validateProject({ root });
+  assert.equal(report.ok, false);
+  assert.ok(
+    report.problems.some((p) => p.message.includes("exposure_level")),
+    report.problems.map((p) => p.message).join("; "),
+  );
+});
+
+test("extensions: a declared relationship is enforced like a core one", () => {
+  const root = temp({ extensions: ["fixture-typed"] });
+  // The record has its fields but no incoming `deployed-as`, which the
+  // manifest declares as min 1. The §7 cardinality check reads the rule off
+  // the node schema without caring who registered it.
+  writeDeployment(root, "deployment-orphan-1a2b", { exposure: "public" });
+  const report = validateProject({ root });
+  assert.equal(report.ok, false);
+  assert.ok(
+    report.problems.some((p) => p.message.includes("deployed-as")),
+    report.problems.map((p) => p.message).join("; "),
+  );
+});
+
+test("extensions: a declared edge endpoint is enforced, not left open", () => {
+  const root = temp({ extensions: ["fixture-typed", "fixture-base"] });
+  writeDeployment(root, "deployment-one-1a2b", { exposure: "public" });
+  writeNode(root, "note-wrong-1a2b", "note", "Not an evidence record");
+  fs.writeFileSync(
+    path.join(root, "specs", "graph", "edges.yml"),
+    "edges:\n  - source: note-wrong-1a2b\n    type: deployed-as\n    target: deployment-one-1a2b\n",
+  );
+  const report = validateProject({ root });
+  assert.equal(report.ok, false);
+  // `any → any` accepted every endpoint, so an extension edge could connect
+  // anything to anything.
+  assert.ok(
+    report.problems.some((p) => p.code === "invalid-edge-endpoint" || p.message.includes("note")),
+    report.problems.map((p) => `${p.code}: ${p.message}`).join("; "),
+  );
+});
+
+test("extension upgrade: runs the declared migration over the records it owns", () => {
+  const root = consumer({ extensions: ["fixture-migrating"] });
+  assert.equal(relock(root, "fixture-migrating").ok, true);
+  const record = writeDeployment(root, "deployment-live-1a2b", { exposure_level: "public" });
+
+  const report = upgradeExtension(root, "fixture-migrating", {
+    view: fixtureView(["0.1.0", "0.2.0"]),
+    install: ({ spec }) => {
+      if (spec === "@pactwright/fixture-migrating@0.2.0") installV2(root);
+      return [];
+    },
+  });
+
+  assert.equal(report.ok, true, JSON.stringify(report.problems));
+  const migrated = fs.readFileSync(record, "utf8");
+  assert.match(migrated, /^exposure: public$/m, "the field was renamed");
+  assert.equal(/exposure_level/.test(migrated), false, "the old field is gone");
+  assert.match(migrated, /^environment: unknown$/m, "the default was filled in");
+  // The lock records where the records now are, which is what makes a
+  // pending migration detectable at all.
+  assert.equal(lock(root).extensions["fixture-migrating"]?.schemaVersion, 2);
+});
+
+test("extension upgrade: a failed migration leaves the records and lock untouched", () => {
+  const root = consumer({ extensions: ["fixture-migrating"] });
+  assert.equal(relock(root, "fixture-migrating").ok, true);
+  const record = writeDeployment(root, "deployment-live-1a2b", { exposure_level: "public" });
+  const before = fs.readFileSync(record, "utf8");
+  const lockBefore = fs.readFileSync(path.join(root, ".pactwright", "lock.yml"), "utf8");
+
+  // A record already carrying the renamed field makes the rename ambiguous,
+  // so the migration refuses rather than choosing one of the two values.
+  fs.writeFileSync(
+    record,
+    before.replace("exposure_level: public", "exposure_level: public\nexposure: private"),
+  );
+  const poisoned = fs.readFileSync(record, "utf8");
+
+  const report = upgradeExtension(root, "fixture-migrating", {
+    view: fixtureView(["0.1.0", "0.2.0"]),
+    install: ({ spec }) => {
+      if (spec === "@pactwright/fixture-migrating@0.2.0") installV2(root);
+      return [];
+    },
+  });
+
+  assert.equal(report.ok, false);
+  assert.ok(
+    report.problems.some((p) => p.code === "migration-conflict"),
+    JSON.stringify(report.problems),
+  );
+  assert.equal(fs.readFileSync(record, "utf8"), poisoned, "records must be untouched");
+  assert.equal(fs.readFileSync(path.join(root, ".pactwright", "lock.yml"), "utf8"), lockBefore);
+});
+
+test("extension upgrade: a schema change with no declared migration is refused", () => {
+  const root = consumer({ extensions: ["fixture-migrating"] });
+  assert.equal(relock(root, "fixture-migrating").ok, true);
+
+  // v2 with its migrations removed: §15 requires an explicitly defined,
+  // versioned migration, so a bare version bump is not one.
+  const report = upgradeExtension(root, "fixture-migrating", {
+    view: fixtureView(["0.1.0", "0.2.0"]),
+    install: ({ spec }) => {
+      if (spec !== "@pactwright/fixture-migrating@0.2.0") return [];
+      installV2(root);
+      const manifest = installedManifest(root, "fixture-migrating");
+      fs.writeFileSync(
+        manifest,
+        fs.readFileSync(manifest, "utf8").replace(/\n {2}migrations:[\s\S]*?(?=\n\nruntime:)/, ""),
+      );
+      return [];
+    },
+  });
+
+  assert.equal(report.ok, false);
+  assert.ok(
+    report.problems.some((p) => p.code === "extension-migration-missing"),
+    JSON.stringify(report.problems),
+  );
+});
+
+test("doctor: a pending extension migration is action required, not a healthy environment", () => {
+  const root = consumer({ extensions: ["fixture-migrating"] });
+  assert.equal(relock(root, "fixture-migrating").ok, true);
+  assert.equal(
+    doctor(root).checks.some((c) => c.name === "extension-migrations"),
+    false,
+  );
+
+  // The package moves to v2 without the upgrade running, which is what a
+  // half-finished install leaves behind. Distribution §11 calls that an
+  // environment fault rather than a valid environment.
+  installV2(root);
+  const report = doctor(root);
+  const check = report.checks.find((c) => c.name === "extension-migrations");
+  assert.ok(check, report.checks.map((c) => c.name).join(", "));
+  assert.equal(check.status, "action-required");
+  assert.match(check.detail, /schema version 1 but the installed manifest declares 2/);
+  assert.equal(check.remediation, "pactwright extension upgrade fixture-migrating");
 });

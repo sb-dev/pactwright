@@ -18,6 +18,7 @@ function caseResult(
     capability,
     agent,
     ...(error === undefined ? {} : { error }),
+    evaluated: true,
     deterministic: Object.entries(assertions).map(([key, passed]) => ({
       id: key,
       description: key,

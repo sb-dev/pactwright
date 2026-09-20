@@ -303,6 +303,9 @@ function serialisedExtensions(extensions: LockFile["extensions"]): Record<string
             package: extension.package,
             version: extension.version,
             hash: extension.hash,
+            ...(extension.schemaVersion === undefined || extension.schemaVersion === 1
+              ? {}
+              : { schema_version: extension.schemaVersion }),
             ...(extension.dependencies === undefined ||
             Object.keys(extension.dependencies).length === 0
               ? {}

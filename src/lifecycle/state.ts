@@ -3,6 +3,7 @@ import { join } from "node:path";
 import { tempSibling } from "../atomic.js";
 import type { ParseResult } from "../config/config.js";
 import type { Problem } from "../errors.js";
+import { withRepositoryLock } from "../graph/writer-lock.js";
 import {
   Checker,
   expectEnum,
@@ -26,9 +27,21 @@ import { STEP_NAME_PATTERN } from "./shape.js";
  * must not be mistaken for the current one.
  */
 export const EXECUTION_DIR = ".pactwright/execution";
-export const EXECUTION_STATE_VERSION = 1;
+export const EXECUTION_STATE_VERSION = 2;
 
-export const EXECUTION_STATUSES = ["running", "blocked", "completed", "failed"] as const;
+/**
+ * Version 2 renamed `completed_steps` to `visited` and added `waiting-gate`.
+ * Version 1 documents are migrated on read (see `parseExecutionState`).
+ */
+export const EXECUTION_STATE_VERSIONS = [1, 2] as const;
+
+export const EXECUTION_STATUSES = [
+  "running",
+  "waiting-gate",
+  "blocked",
+  "completed",
+  "failed",
+] as const;
 export type ExecutionStatus = (typeof EXECUTION_STATUSES)[number];
 
 /** What a Review concluded about the state it reviewed (§32). */
@@ -52,7 +65,7 @@ export interface GateRecord {
 }
 
 export interface ExecutionState {
-  readonly version: 1;
+  readonly version: 2;
   /** The Brief this run fulfils (§28). */
   readonly brief: string;
   /** Which resolved shape definition the run is executing (§23). */
@@ -60,7 +73,18 @@ export interface ExecutionState {
   readonly status: ExecutionStatus;
   /** Absent once the run has completed or failed. */
   readonly currentStep?: string;
-  readonly completedSteps: readonly string[];
+  /**
+   * Steps the run has completed, in the order it completed them, repeats
+   * included.
+   *
+   * Version 1 called this `completed_steps` and both writers deduplicated it
+   * while the validator read it as chronology, so a permitted corrective loop
+   * — Delivery, Review(revise), Delivery — produced the walk
+   * `delivery, review, review` and a spurious `undeclared-transition` until
+   * the next Review passed. One meaning now: this is history, and the
+   * completed *set* is derived from it with `completedSet`.
+   */
+  readonly visited: readonly string[];
   /** Step name → who authorised progression past that Gate. */
   readonly gates: Readonly<Record<string, GateRecord>>;
   /** `"<from>-><to>"` → how many times that declared route has been taken (§34). */
@@ -110,26 +134,31 @@ export function parseExecutionState(raw: unknown, path: string): ParseResult<Exe
   const root = expectRecord(c, raw, "execution");
   if (root === undefined) return { value: undefined, problems: c.problems };
 
-  requireKeys(c, root, "execution", ["version", "brief", "shape", "status", "completed_steps"]);
+  const version = expectInteger(c, root["version"], "execution.version");
+  if (version !== undefined && !(EXECUTION_STATE_VERSIONS as readonly number[]).includes(version)) {
+    c.fail(
+      "unsupported-version",
+      `execution.version must be ${EXECUTION_STATE_VERSION}, found ${version}`,
+    );
+  }
+  // Version 1 wrote `completed_steps`; version 2 writes `visited`. The name
+  // is migrated on read, so an in-flight run survives the upgrade.
+  const legacy = version === 1;
+  const historyKey = legacy ? "completed_steps" : "visited";
+
+  requireKeys(c, root, "execution", ["version", "brief", "shape", "status", historyKey]);
   rejectUnknownKeys(c, root, "execution", [
     "version",
     "brief",
     "shape",
     "status",
     "current_step",
-    "completed_steps",
+    historyKey,
     "gates",
     "iterations",
     "delivered_revision",
     "review",
   ]);
-  const version = expectInteger(c, root["version"], "execution.version");
-  if (version !== undefined && version !== EXECUTION_STATE_VERSION) {
-    c.fail(
-      "unsupported-version",
-      `execution.version must be ${EXECUTION_STATE_VERSION}, found ${version}`,
-    );
-  }
 
   const brief = expectString(c, root["brief"], "execution.brief");
   const shape = expectString(c, root["shape"], "execution.shape");
@@ -139,22 +168,22 @@ export function parseExecutionState(raw: unknown, path: string): ParseResult<Exe
       ? undefined
       : expectString(c, root["current_step"], "execution.current_step");
 
-  const completedSteps: string[] = [];
-  const rawCompleted = root["completed_steps"];
-  if (rawCompleted !== undefined && !Array.isArray(rawCompleted)) {
-    c.fail("invalid-type", "execution.completed_steps must be a list");
-  } else if (Array.isArray(rawCompleted)) {
-    for (const [position, entry] of rawCompleted.entries()) {
-      const name = expectString(c, entry, `execution.completed_steps[${position}]`);
+  const visited: string[] = [];
+  const rawVisited = root[historyKey];
+  if (rawVisited !== undefined && !Array.isArray(rawVisited)) {
+    c.fail("invalid-type", `execution.${historyKey} must be a list`);
+  } else if (Array.isArray(rawVisited)) {
+    for (const [position, entry] of rawVisited.entries()) {
+      const name = expectString(c, entry, `execution.${historyKey}[${position}]`);
       if (name === undefined) continue;
       if (!STEP_NAME_PATTERN.test(name)) {
         c.fail(
           "invalid-step-name",
-          `execution.completed_steps[${position}] must be a kebab-case step name, found "${name}"`,
+          `execution.${historyKey}[${position}] must be a kebab-case step name, found "${name}"`,
         );
         continue;
       }
-      completedSteps.push(name);
+      visited.push(name);
     }
   }
 
@@ -202,7 +231,7 @@ export function parseExecutionState(raw: unknown, path: string): ParseResult<Exe
       shape,
       status,
       ...(currentStep === undefined ? {} : { currentStep }),
-      completedSteps,
+      visited,
       gates,
       iterations,
       ...(deliveredRevision === undefined ? {} : { deliveredRevision }),
@@ -210,6 +239,14 @@ export function parseExecutionState(raw: unknown, path: string): ParseResult<Exe
     },
     problems: [],
   };
+}
+
+/**
+ * The steps a run has completed, without order or repetition. Derived, never
+ * stored: `visited` is the single stored fact about progression.
+ */
+export function completedSet(state: ExecutionState): ReadonlySet<string> {
+  return new Set(state.visited);
 }
 
 function quote(value: string): string {
@@ -228,11 +265,11 @@ export function serialiseExecutionState(state: ExecutionState): string {
     `status: ${state.status}`,
   ];
   if (state.currentStep !== undefined) lines.push(`current_step: ${quote(state.currentStep)}`);
-  lines.push("completed_steps:");
-  if (state.completedSteps.length === 0) {
-    lines[lines.length - 1] = "completed_steps: []";
+  lines.push("visited:");
+  if (state.visited.length === 0) {
+    lines[lines.length - 1] = "visited: []";
   } else {
-    for (const step of state.completedSteps) lines.push(`  - ${quote(step)}`);
+    for (const step of state.visited) lines.push(`  - ${quote(step)}`);
   }
   const gateNames = Object.keys(state.gates).sort();
   if (gateNames.length === 0) {
@@ -295,18 +332,27 @@ export function loadAllExecutionState(root: string): {
   return { states, problems };
 }
 
-/** Atomically replaces one Brief's execution state. */
+/**
+ * Atomically replaces one Brief's execution state, under the repository
+ * writer lock (§10). The rename makes the single file atomic; the lock is
+ * what stops a concurrent mutation interleaving between a caller's read of
+ * this state and its write back.
+ */
 export function writeExecutionState(root: string, state: ExecutionState): void {
-  const dir = executionDir(root);
-  mkdirSync(dir, { recursive: true });
-  const target = executionPath(root, state.brief);
-  const temp = tempSibling(target);
-  writeFileSync(temp, serialiseExecutionState(state), "utf8");
-  renameSync(temp, target);
+  withRepositoryLock(root, () => {
+    const dir = executionDir(root);
+    mkdirSync(dir, { recursive: true });
+    const target = executionPath(root, state.brief);
+    const temp = tempSibling(target);
+    writeFileSync(temp, serialiseExecutionState(state), "utf8");
+    renameSync(temp, target);
+  });
 }
 
 export function clearExecutionState(root: string, brief: string): void {
-  rmSync(executionPath(root, brief), { force: true });
+  withRepositoryLock(root, () => {
+    rmSync(executionPath(root, brief), { force: true });
+  });
 }
 
 /** A fresh run of `shape` against `brief`, positioned at the first step. */
@@ -317,7 +363,7 @@ export function beginExecution(brief: string, shape: string, firstStep?: string)
     shape,
     status: "running",
     ...(firstStep === undefined ? {} : { currentStep: firstStep }),
-    completedSteps: [],
+    visited: [],
     gates: Object.create(null) as Record<string, GateRecord>,
     iterations: Object.create(null) as Record<string, number>,
   };

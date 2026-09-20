@@ -108,6 +108,7 @@ Agent Pack
 Pactwright Extensions
 Adapter
 Lifecycle configuration
+Execution configuration
 GitHub configuration
 ```
 
@@ -127,11 +128,26 @@ adapter:
 
 extensions: {}
 
+execution:
+  executor: none
+
 github:
   enabled: true
 ```
 
 Configuration records desired Pactwright state.
+
+## Execution configuration
+
+`execution.executor` declares which capability executor performs automatic lifecycle responsibilities on the project's behalf.
+
+The default is `none`: Pactwright performs no automatic responsibility and `lifecycle run` stops at the first automatic step rather than reporting work it did not do. That refusal is the safe state, not a deficiency.
+
+Autonomy is declared, never inferred. Pactwright must not enable an executor because a tool is installed, because a binary is on `PATH`, or because credentials are present. An installed tool is not consent to run an autonomous agent against a repository.
+
+The executor is a delegation boundary, not a provider abstraction. Pactwright hands one capability, one agent prompt and one instruction to a tool that already owns model selection, routing and credentials, and receives a structured result. It does not learn to choose models (§20), and the declared set stays small enough to enumerate rather than becoming a registry (§25).
+
+The executor proposes; the runtime disposes. A result is a proposal: Pactwright performs every canonical mutation and every lifecycle transition itself, through the same guards a human-driven command passes.
 
 The package-manager manifest and lock record installed package state.
 
@@ -556,6 +572,41 @@ github:
 ```
 
 It may additionally register extension-owned graph types.
+
+## Extension graph types
+
+A registered type name is not a schema. An Extension declares the semantics its own records must satisfy, so that Pactwright validates them with the same mechanics it applies to core records rather than accepting anything under a reserved name.
+
+A graph declaration may state, for each contributed node type, its required fields and its required relationships — the edge type, its direction, and how many such edges a record of that type must have — and, for each contributed edge type, the node types permitted at each end.
+
+Conceptually:
+
+```yaml
+graph:
+  node_types:
+    deployment:
+      required_fields: [environment, exposure]
+      relationships:
+        - { type: deployed-as, direction: in, min: 1, max: 1 }
+  edge_types:
+    deployed-as:
+      source_types: [evidence]
+      target_types: [deployment]
+  migrations:
+    - { from: 1, to: 2, script: ... }
+```
+
+Endpoint types are declared, not open. An Extension registering an edge without stating what it may connect leaves its own records unvalidated and cannot describe a meaningful relationship to core Delivery records.
+
+These declarations are owned by the Extension and bounded by it. They constrain the Extension's own contributed types; they cannot add fields to, relax or reinterpret a core Delivery type (§18, §26).
+
+## Extension schema migrations
+
+When a released Extension changes the shape of its canonical records, it declares explicitly defined, versioned migrations from one schema version to the next, as §15 requires of every upgrade path.
+
+A migration is a declared, ordered step between two schema versions. Pactwright runs it as part of the Extension upgrade operation, validates the migrated state before it is written, and leaves canonical Project Graph state either fully migrated or untouched. Silent reinterpretation of existing records is not a migration.
+
+An Extension with a pending or partially applied migration is an environment fault, reported as requiring action rather than treated as a valid environment.
 
 At runtime:
 

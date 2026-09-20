@@ -6,6 +6,7 @@ import { graphRevision } from "../src/graph/revision.js";
 import { repositoryRevision } from "../src/graph/repository.js";
 import { createBrief, createIntent, recordDecision } from "../src/graph/mutations.js";
 import { writeExecutionState } from "../src/lifecycle/state.js";
+import { PactwrightError } from "../src/errors.js";
 import { loadProject } from "../src/loader.js";
 import { VALIDATION_RULES, validateProject, type ValidationRuleId } from "../src/validate.js";
 import {
@@ -175,7 +176,7 @@ test('contract: rule "impossible-shape-transition" fires on a route the shape do
   const { root, brief } = delivering();
   // evidence → delivery is not the forward step and is not declared.
   reachEvidenceClosure(root, brief, {
-    completedSteps: ["delivery", "review", "evidence"],
+    visited: ["delivery", "review", "evidence"],
     currentStep: "delivery",
   });
   triggers(root, "impossible-shape-transition");
@@ -183,7 +184,7 @@ test('contract: rule "impossible-shape-transition" fires on a route the shape do
 
 test('contract: rule "impossible-shape-transition" fires on a step the shape does not declare', () => {
   const { root, brief } = delivering();
-  reachEvidenceClosure(root, brief, { completedSteps: ["delivery", "publish"] });
+  reachEvidenceClosure(root, brief, { visited: ["delivery", "publish"] });
   triggers(root, "impossible-shape-transition");
 });
 
@@ -211,12 +212,12 @@ test('contract: rule "unbounded-corrective-loop" fires when a run exceeds its bo
 test('contract: rule "evidence-before-review" fires when a run stands at closure unreviewed', () => {
   const { root, brief } = delivering();
   writeExecutionState(root, {
-    version: 1,
+    version: 2,
     brief,
     shape: "direct",
     status: "running",
     currentStep: "evidence",
-    completedSteps: ["delivery", "review"],
+    visited: ["delivery", "review"],
     gates: {},
     iterations: {},
     deliveredRevision: "delivered-2",
@@ -272,7 +273,22 @@ test('contract: rule "unauthorised-gate" fires when a run passed a Gate unrecord
   const { root, brief } = delivering({
     shapeSteps: defaultShapeSteps({ review: { execution: "manual", actor: "human" } }),
   });
-  reachEvidenceClosure(root, brief);
+  // Hand-edited past the Gate: the reducer refuses to complete a Gate step
+  // without an authorised resolution, so this state can only arrive by
+  // tampering — which is what the rule is for.
+  reachEvidenceClosure(root, brief, {}, { resolveGates: false });
+  triggers(root, "unauthorised-gate");
+});
+
+test('contract: rule "unauthorised-gate" fires on a Gate resolved by the wrong authority', () => {
+  const { root, brief } = delivering({
+    shapeSteps: defaultShapeSteps({ review: { execution: "manual", actor: "human" } }),
+  });
+  const state = reachEvidenceClosure(root, brief);
+  // The rule used to test only that a record existed, so adding
+  // `resolved_by: agent:unauthorised` to a human Gate made validation pass —
+  // it detected a missing record but never an unauthorised progression.
+  writeExecutionState(root, { ...state, gates: { review: { resolvedBy: "agent:unauthorised" } } });
   triggers(root, "unauthorised-gate");
 });
 
@@ -337,7 +353,7 @@ test('contract: rule "replay-provenance-mismatch" fires on a requested replay ch
   });
 });
 
-test("contract: a replay check against the true identities passes", () => {
+test("contract: a replay check against the true identities reconstructs them", () => {
   const { root } = delivering();
   const project = loadProject({ root });
   const report = validateProject({
@@ -347,7 +363,36 @@ test("contract: a replay check against the true identities passes", () => {
       projectGraphRevision: graphRevision(project.graph),
     },
   });
-  assert.equal(report.ok, true, report.problems.map((p) => p.message).join("\n"));
+  // Both recorded identities are the ones this state derives. Whether the
+  // working tree is also *reconstructible* is a separate, explicit failure
+  // (below), and it depends on the checkout rather than on the graph.
+  for (const code of ["repository-revision-mismatch", "graph-revision-mismatch"]) {
+    assert.ok(
+      !report.problems.some((problem) => problem.code === code),
+      `${code} should not fire: ${report.problems.map((p) => p.message).join("\n")}`,
+    );
+  }
+});
+
+test('contract: rule "replay-provenance-mismatch" fires on an unreconstructible revision', () => {
+  const { root } = delivering();
+  const project = loadProject({ root });
+  // A `+sha256:` identity records working-tree state the commit alone cannot
+  // reconstruct. Core §56 and Principle 18 require pinned replay to fail
+  // explicitly rather than resolve the commit and call it equivalent.
+  const report = validateProject({
+    root,
+    replay: {
+      repositoryRevision: `git:${"a".repeat(40)}+sha256:${"b".repeat(64)}`,
+      projectGraphRevision: graphRevision(project.graph),
+    },
+  });
+  assert.equal(report.ok, false);
+  assert.ok(report.rules.includes("replay-provenance-mismatch"));
+  assert.ok(
+    report.problems.some((p) => p.code === "unreconstructible-repository-revision"),
+    report.problems.map((p) => p.code).join(", "),
+  );
 });
 
 /* ---- coverage: every rule must actually be exercised above ---- */
@@ -362,4 +407,61 @@ test("contract: every one of the seventeen rules has a failing fixture in this f
     [],
     "each §57 rule needs a failing fixture",
   );
+});
+
+/* ---- R03: the three inputs the review's table showed being accepted ---- */
+
+test("contract: an orphan record fails validation and the mutation gate alike", () => {
+  const { root } = delivering();
+  // Row 1: "Orphan Decision, Contract, Brief and Evidence; no edges" gave
+  // `validate.ok = true` and zero lineages, because lineage derivation only
+  // visits records reachable from an Intent.
+  fs.writeFileSync(
+    path.join(root, "specs", "nodes", "evidence-orphan-ffff.md"),
+    "---\nid: evidence-orphan-ffff\ntype: evidence\ntitle: Orphan\ncreated: 2026-09-20\n---\n\nNothing evidences anything.\n",
+  );
+  triggers(root, "invalid-evidence-lineage");
+
+  // The same input through the mutation gate, on the same fixture.
+  assert.throws(
+    () => createIntent(root, { title: "Another intent", body: "Body." }),
+    (error: unknown) =>
+      error instanceof PactwrightError &&
+      error.problems.some((problem) => problem.code === "missing-relationship"),
+  );
+});
+
+test("contract: one Decision resolving two Intents fails validation and the mutation gate", () => {
+  const { root } = delivering();
+  // Row 2: both lineages were accepted, because each Intent's own walk saw
+  // exactly one Decision (Core §15's exactly-one Intent relationship).
+  const second = createIntent(root, { title: "A second direction", body: "Also needed." });
+  const edgesPath = path.join(root, "specs", "graph", "edges.yml");
+  const decision = loadProject({ root }).graph.nodes.find((node) => node.type === "decision")!;
+  fs.writeFileSync(
+    edgesPath,
+    `${fs.readFileSync(edgesPath, "utf8")}  - source: ${decision.id}\n    type: resolves\n    target: ${second.id}\n`,
+  );
+  triggers(root, "missing-required-lineage");
+
+  assert.throws(
+    () => createIntent(root, { title: "A third direction", body: "Body." }),
+    (error: unknown) =>
+      error instanceof PactwrightError &&
+      error.problems.some((problem) => problem.code === "excess-relationship"),
+  );
+});
+
+test("contract: a reject Decision that selects a Contract fails on its own relationship rule", () => {
+  const { root } = delivering();
+  const project = loadProject({ root });
+  const decision = project.graph.nodes.find((node) => node.type === "decision")!;
+  const decisionPath = path.join(root, "specs", "nodes", `${decision.id}.md`);
+  // Core §15: a reject or defer Decision resolves the Intent without
+  // selecting a Contract.
+  fs.writeFileSync(
+    decisionPath,
+    fs.readFileSync(decisionPath, "utf8").replace("outcome: proceed", "outcome: reject"),
+  );
+  triggers(root, "missing-required-lineage");
 });

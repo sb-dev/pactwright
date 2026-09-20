@@ -48,8 +48,17 @@ function consumer(options: Parameters<typeof makeTempProject>[0] = {}): string {
 function fixtureInstaller(version: string): { install: PackageInstaller; calls: string[] } {
   const calls: string[] = [];
   const install: PackageInstaller = ({ root, manager, spec }) => {
-    calls.push(`${manager} ${spec}`);
     const dir = path.join(root, "node_modules", "pactwright");
+    // No spec is a frozen install: put node_modules back in line with the
+    // manifest and lock as they now stand. The environment transaction uses
+    // it to undo an install after restoring both files, and it is the only
+    // thing that makes `restored` mean the runtime really did come back.
+    if (spec === undefined) {
+      calls.push(`${manager} install`);
+      fs.rmSync(dir, { recursive: true, force: true });
+      return [];
+    }
+    calls.push(`${manager} ${spec}`);
     fs.mkdirSync(dir, { recursive: true });
     fs.writeFileSync(
       path.join(dir, "package.json"),
@@ -63,15 +72,22 @@ function fixtureInstaller(version: string): { install: PackageInstaller; calls: 
 
 const noReentry: Reentry = () => [];
 
-test("upgrade: detects the package manager and delegates package replacement", () => {
+test("upgrade: selects an exact release, then delegates the replacement", () => {
   const root = consumer();
   assert.equal(useAgentPack(root, "@pactwright/standard").ok, true);
   const { install, calls } = fixtureInstaller("0.0.2");
-  const report = upgradeRuntime(root, { install, reenter: noReentry });
+  const report = upgradeRuntime(root, {
+    install,
+    reenter: noReentry,
+    view: () => ["0.0.1", "0.0.2"],
+  });
   assert.equal(report.ok, true, report.problems.map((p) => p.message).join("\n"));
   assert.equal(report.manager, "pnpm");
   assert.equal(report.to, "0.0.2");
-  assert.deepEqual(calls, ["pnpm pactwright@latest"], "the package manager does the install");
+  // Not `pactwright@latest`. Handing the registry's own idea of "latest" to
+  // the package manager made the target whatever it happened to publish,
+  // with no say from Pactwright about what it was moving to (R09).
+  assert.deepEqual(calls, ["pnpm pactwright@0.0.2"], "the package manager does the install");
 });
 
 test("upgrade: --to targets an exact release, forward or back", () => {

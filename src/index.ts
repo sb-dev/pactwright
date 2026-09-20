@@ -48,7 +48,10 @@ export {
 } from "./lifecycle/shape.js";
 export {
   EXECUTION_DIR,
+  EXECUTION_STATE_VERSION,
+  EXECUTION_STATE_VERSIONS,
   EXECUTION_STATUSES,
+  completedSet,
   REVIEW_OUTCOMES,
   beginExecution,
   clearExecutionState,
@@ -105,6 +108,7 @@ export {
   type DecisionOutcome,
   type NodeSchema,
   type NodeSchemaRegistry,
+  type RelationshipRule,
 } from "./graph/schema.js";
 export {
   CORE_EDGE_OWNER,
@@ -121,12 +125,22 @@ export {
   DELIVERY_STATES,
   deriveLineage,
   deriveLineages,
-  isCurrent,
+  lineageFor,
+  lineageOfIntent,
+  lineagesOf,
   validateLineages,
   type DeliveryState,
   type Lineage,
   type LineageResult,
+  type Resolved,
 } from "./graph/lineage.js";
+export { GraphIndex, TOWARDS_INTENT, intentOf } from "./graph/graph-index.js";
+export {
+  WRITER_LOCK_FILE,
+  withRepositoryLock,
+  writerLockPath,
+  type WriterLockOptions,
+} from "./graph/writer-lock.js";
 export {
   EDGE_TYPE_PATTERN,
   edgeKey,
@@ -218,6 +232,24 @@ export {
   type UpgradeReport,
 } from "./upgrade.js";
 export {
+  applyEnvironmentPlan,
+  managedSet,
+  planEnvironmentChange,
+  type EnvironmentPlan,
+  type EnvironmentResult,
+  type PackageChange,
+  type TransactionBody,
+  type TransactionSeams,
+} from "./environment/transaction.js";
+export {
+  packageManagerView,
+  selectTarget,
+  type PackageView,
+  type RetainedEnvironment,
+  type SelectedTarget,
+  type TargetComponent,
+} from "./environment/select-target.js";
+export {
   DOCTOR_STATUSES,
   doctor,
   formatDoctor,
@@ -230,12 +262,23 @@ export {
   PROVENANCE_KINDS,
   isProvenanceKind,
   recordDelivery,
+  recordGate,
   recordReview,
   type ProvenanceKind,
   type ProvenanceResult,
   type RecordDeliveryInput,
+  type RecordGateInput,
   type RecordReviewInput,
 } from "./lifecycle/provenance.js";
+export {
+  gateActor,
+  gateSatisfied,
+  transition,
+  type LifecycleEvent,
+  type TransitionOutcome,
+  type TransitionResult,
+} from "./lifecycle/transition.js";
+export { AUTHORISED_KINDS, actorPermitted, authorisedKinds } from "./graph/authority.js";
 export {
   EVIDENCE_PRECONDITIONS,
   assertEvidenceClosure,
@@ -253,13 +296,36 @@ export {
   type PackageManagerDetection,
 } from "./config/package-manager.js";
 export {
+  DELIVERY_DIGEST_EXCLUDED,
   NO_REPOSITORY_REVISION,
   formatReplayBase,
+  isReconstructible,
   repositoryRevision,
   type ReplayBase,
   type RepositoryRevision,
 } from "./graph/repository.js";
+export {
+  CLOSURE_PROVENANCE_FROM,
+  checkClosureBlock,
+  closureFrom,
+  closureFrontmatter,
+  closureOf,
+  predatesClosureProvenance,
+  type EvidenceClosure,
+} from "./graph/evidence-closure.js";
 export { validateProject, type ValidationReport } from "./validate.js";
+export {
+  VALIDATION_SCOPES,
+  permittedOperations,
+  proposedSnapshot,
+  snapshotOf,
+  validateSnapshot,
+  type PermittedOperation,
+  type GraphSnapshot,
+  type ReplayCheck,
+  type ValidationScope,
+} from "./validate/kernel.js";
+export { validateRelationships, type RelationshipProblem } from "./graph/relationships.js";
 export { renderGitHubWorkflows, syncProject, type SyncReport } from "./sync.js";
 export {
   findIntentOf,
@@ -302,8 +368,11 @@ export {
   type ResolvedPack,
 } from "./pack/resolve.js";
 export {
+  GATE_STAGE,
+  isGateStage,
   isRecordingStage,
   recordStage,
+  type GateStage,
   type RecordResult,
   type RecordingStage,
 } from "./lifecycle/record.js";
@@ -311,7 +380,12 @@ export {
   EXTENSION_MANIFEST_FILE,
   loadExtensionManifest,
   parseExtensionManifest,
+  type ExtensionEdgeType,
   type ExtensionManifest,
+  type ExtensionMigration,
+  type ExtensionNodeType,
+  type ExtensionRelationship,
+  type MigrationOperation,
 } from "./extension/manifest.js";
 export {
   RESERVED_NAMESPACES,
@@ -327,9 +401,18 @@ export {
   addExtension,
   removeExtension,
   upgradeExtension,
+  type AddExtensionOptions,
   type ExtensionChange,
   type ExtensionChangeReport,
+  type UpgradeExtensionOptions,
 } from "./extension/manage.js";
+export {
+  applyMigration,
+  planMigration,
+  writeMigration,
+  type MigrationPlan,
+  type MigrationResult,
+} from "./extension/migrate.js";
 export {
   GENERATED_MARKER,
   MANAGED_DIRS,
@@ -363,6 +446,43 @@ export {
   type EvalReport,
   type SemanticResult,
 } from "./eval/runner.js";
+export {
+  EXECUTOR_IDS,
+  noneExecutor,
+  type CapabilityCost,
+  type CapabilityExecutor,
+  type CapabilityResult,
+  type CapabilityTask,
+  type ExecutorId,
+} from "./execute/task.js";
+export {
+  DEFAULT_TIMEOUT_MS,
+  agentDefinition,
+  claudeCodeArgs,
+  claudeCodeExecutor,
+  parsePrintMode,
+  type ClaudeCodeOptions,
+  type Spawn,
+  type SpawnRequest,
+  type SpawnResult,
+} from "./execute/claude-code.js";
+export {
+  promptRespectingExecutor,
+  promptSaysNothing,
+  scriptedExecutor,
+  type ScriptedHandler,
+  type ScriptedResponse,
+} from "./execute/scripted.js";
+export {
+  capabilityForAction,
+  commandForAction,
+  commandForStepKind,
+  lifecycleExecutor,
+  selectExecutor,
+  taskForAction,
+  type TaskBuildOptions,
+} from "./execute/select.js";
+export { acquireSide, type AcquireOptions, type AcquiredPack } from "./eval/acquire.js";
 export { CORE_DELIVERY_SUITE } from "./eval/core-suite.js";
 export { CLOSURE_CASES } from "./eval/closure-cases.js";
 export {

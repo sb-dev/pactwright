@@ -1,6 +1,7 @@
-import { existsSync, readFileSync, renameSync, rmSync, writeFileSync } from "node:fs";
+import { readFileSync, renameSync, writeFileSync } from "node:fs";
 import { tempSibling } from "../atomic.js";
 import { loadConfig, rewriteConfig, type PactwrightConfig } from "../config/config.js";
+import { applyEnvironmentPlan, planEnvironmentChange } from "../environment/transaction.js";
 import type { Problem } from "../errors.js";
 import { projectPaths } from "../project.js";
 import { syncProject } from "../sync.js";
@@ -37,40 +38,14 @@ function failure(root: string, problems: readonly Problem[]): PackChangeReport {
 }
 
 /**
- * Snapshots config and lock so a failed change restores the previous valid
- * state. A scaffold has no lock yet: that absence is itself the state to
- * restore to, so a rejected first selection leaves no half-locked project.
- */
-function begin(root: string): { restore: () => void; config: string } | Problem {
-  const paths = projectPaths(root);
-  let config: string;
-  try {
-    config = readFileSync(paths.config, "utf8");
-  } catch {
-    return { code: "missing-file", message: "file not found", path: paths.config };
-  }
-  const lock = existsSync(paths.lock) ? readFileSync(paths.lock, "utf8") : undefined;
-  return {
-    config,
-    restore: () => {
-      const temp = tempSibling(paths.config);
-      writeFileSync(temp, config, "utf8");
-      renameSync(temp, paths.config);
-      if (lock === undefined) {
-        rmSync(paths.lock, { force: true });
-      } else {
-        const lockTemp = tempSibling(paths.lock);
-        writeFileSync(lockTemp, lock, "utf8");
-        renameSync(lockTemp, paths.lock);
-      }
-    },
-  };
-}
-
-/**
  * Applies a proposed configuration: resolve it completely, write config and
- * lock, sync, then validate. Any failure restores the snapshot, so a rejected
- * pack never costs the project its working environment.
+ * lock, sync, then validate. Any failure restores the transaction's managed
+ * set, so a rejected pack never costs the project its working environment.
+ *
+ * The private snapshot this used to keep covered config and lock only, which
+ * is not what the operation touches: `syncProject` rewrites the generated
+ * `.claude/` surface, and a failure after that point left the new adapter
+ * output beside the old configuration (R07). The managed set owns both.
  */
 function apply(
   root: string,
@@ -81,8 +56,12 @@ function apply(
   const resolved = resolveDesiredState({ root, config: proposed });
   if (resolved.value === undefined) return failure(root, resolved.problems);
 
-  const snapshot = begin(root);
-  if ("code" in snapshot) return failure(root, [snapshot]);
+  let existingConfig: string;
+  try {
+    existingConfig = readFileSync(paths.config, "utf8");
+  } catch {
+    return failure(root, [{ code: "missing-file", message: "file not found", path: paths.config }]);
+  }
 
   const selected = {
     name: resolved.value.lock.agentPack.name,
@@ -90,32 +69,32 @@ function apply(
   };
   // "Unchanged" is about the resolved *identity*: a project may narrow or
   // widen its desired constraint without the pack it runs changing at all.
-  const rewritten = rewriteConfig(snapshot.config, proposed);
+  const rewritten = rewriteConfig(existingConfig, proposed);
   const unchanged =
     previous !== undefined &&
     previous.name === selected.name &&
     previous.version === selected.version;
-  const constraintChanged = rewritten !== snapshot.config;
+  const constraintChanged = rewritten !== existingConfig;
 
-  for (const [target, content] of [
-    [paths.config, rewritten],
-    [paths.lock, serialiseLock(resolved.value.lock)],
-  ] as const) {
-    const temp = tempSibling(target);
-    writeFileSync(temp, content, "utf8");
-    renameSync(temp, target);
-  }
+  const plan = planEnvironmentChange(root);
+  const { value, result } = applyEnvironmentPlan(plan, () => {
+    for (const [target, content] of [
+      [paths.config, rewritten],
+      [paths.lock, serialiseLock(resolved.value!.lock)],
+    ] as const) {
+      const temp = tempSibling(target);
+      writeFileSync(temp, content, "utf8");
+      renameSync(temp, target);
+    }
 
-  const sync = syncProject(root);
-  if (!sync.ok) {
-    snapshot.restore();
-    return failure(root, sync.problems);
-  }
-  const validation = validateProject({ root });
-  if (!validation.ok) {
-    snapshot.restore();
-    return failure(root, validation.problems);
-  }
+    const sync = syncProject(root);
+    if (!sync.ok) return { ok: false, value: undefined, problems: sync.problems };
+    const validation = validateProject({ root });
+    if (!validation.ok) return { ok: false, value: undefined, problems: validation.problems };
+    return { ok: true, value: sync.changed };
+  });
+
+  if (!result.ok) return failure(root, result.problems);
 
   return {
     ok: true,
@@ -124,7 +103,7 @@ function apply(
     ...(previous === undefined || unchanged ? {} : { previous }),
     unchanged,
     ...(constraintChanged ? { constraintChanged: true as const } : {}),
-    synced: sync.changed,
+    synced: value ?? [],
     // Checkpoint 1 keeps GitHub disabled, so there is nothing to reconcile
     // yet; the seam reports it rather than mutating remote state.
     reconciliation: proposed.github.enabled

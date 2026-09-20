@@ -6,16 +6,29 @@ import {
   type ConfigExtension,
   type PactwrightConfig,
 } from "../config/config.js";
-import { EXTENSION_ID_PATTERN, loadLock } from "../config/lock.js";
+import { EXTENSION_ID_PATTERN, loadLock, type LockExtension } from "../config/lock.js";
+import {
+  applyEnvironmentPlan,
+  planEnvironmentChange,
+  type TransactionBody,
+} from "../environment/transaction.js";
 import type { Problem } from "../errors.js";
 import { detectPackageManager } from "../config/package-manager.js";
-import { locatePackage } from "../pack/locate.js";
+import { isPathSource, locatePackage } from "../pack/locate.js";
+import {
+  selectTarget,
+  type PackageView,
+  type SelectedTarget,
+} from "../environment/select-target.js";
+import { runtimeVersion } from "../version.js";
 import { packageManagerInstaller, type PackageInstaller } from "../upgrade.js";
 import { resolveDesiredState, serialiseLock } from "../pack/resolve.js";
 import { projectPaths } from "../project.js";
 import { validateProject } from "../validate.js";
 import { loadExtensionManifest } from "./manifest.js";
-import { resolveExtensionsBestEffort } from "./resolve.js";
+import { applyMigration, planMigration, writeMigration } from "./migrate.js";
+import { resolveExtensionsBestEffort, type ResolvedExtension } from "./resolve.js";
+import { loadNodes } from "../graph/nodes.js";
 
 /** One extension the operation touched. */
 export interface ExtensionChange {
@@ -90,18 +103,24 @@ function withExtensions(
  * `config` is `undefined` when only the lock changes, so desired state is
  * left exactly as the user wrote it. Returns a Problem rather than throwing
  * when either file is absent, keeping the result idiom the callers rely on.
+ *
+ * It no longer carries a restore handle. Restoration belongs to the
+ * environment transaction, whose managed set is larger than these two files
+ * — this was one of the four private snapshot routines that each owned a
+ * different subset (§6).
  */
 function writeDesiredState(
   root: string,
   config: PactwrightConfig | undefined,
   lockText: string,
-): { restore: () => void } | Problem {
+): undefined | Problem {
   const paths = projectPaths(root);
   let previousConfig: string;
-  let previousLock: string;
   try {
     previousConfig = readFileSync(paths.config, "utf8");
-    previousLock = readFileSync(paths.lock, "utf8");
+    // Read to prove it exists: the write below replaces it wholesale, and a
+    // lock that is not there is a broken project rather than a first write.
+    readFileSync(paths.lock, "utf8");
   } catch (error) {
     const path = (error as NodeJS.ErrnoException).path ?? paths.lock;
     return { code: "missing-file", message: "file not found", path };
@@ -115,18 +134,15 @@ function writeDesiredState(
   };
 
   const written: (readonly [string, string])[] = [];
-  const previous: (readonly [string, string])[] = [];
   if (config !== undefined) {
     // Only the `extensions:` block ever changes, so the rest of the file —
     // including whatever the team wrote in comments — is carried across.
     written.push([paths.config, rewriteConfig(previousConfig, config)]);
-    previous.push([paths.config, previousConfig]);
   }
   written.push([paths.lock, lockText]);
-  previous.push([paths.lock, previousLock]);
 
   writeAll(written);
-  return { restore: () => writeAll(previous) };
+  return undefined;
 }
 
 /**
@@ -162,6 +178,36 @@ export interface AddExtensionOptions {
   readonly allowInstall?: boolean;
 }
 
+/**
+ * `ids` in dependency-first order: a dependency before anything that needs
+ * it, ties broken alphabetically so the result is deterministic.
+ *
+ * This is the order Distribution §10 asks for. It is decided here, after
+ * every manifest has been read, rather than during the walk — where the
+ * dependencies are not yet knowable.
+ */
+function dependencyFirst(
+  ids: readonly string[],
+  dependencies: ReadonlyMap<string, readonly string[]>,
+): readonly string[] {
+  const wanted = new Set(ids);
+  const ordered: string[] = [];
+  const placed = new Set<string>();
+  const visiting = new Set<string>();
+  const visit = (id: string): void => {
+    if (placed.has(id) || visiting.has(id)) return;
+    visiting.add(id);
+    for (const dep of [...(dependencies.get(id) ?? [])].sort()) {
+      if (wanted.has(dep)) visit(dep);
+    }
+    visiting.delete(id);
+    placed.add(id);
+    ordered.push(id);
+  };
+  for (const id of [...ids].sort()) visit(id);
+  return ordered;
+}
+
 export function addExtension(
   root: string,
   spec: string,
@@ -174,7 +220,30 @@ export function addExtension(
   const config = loadConfig(paths.config);
   if (config.value === undefined) return failure(paths.root, config.problems);
 
-  const proposed: Record<string, ConfigExtension> = { ...config.value.extensions };
+  // The whole operation, including the install walk, runs inside one
+  // transaction. It used to install packages during the walk and snapshot
+  // only afterwards, so a dependency install that failed part-way left
+  // `package.json` and the package-manager lock carrying packages no
+  // configuration named (R07).
+  const plan = planEnvironmentChange(paths.root);
+  const { value, result } = applyEnvironmentPlan(
+    plan,
+    (about) => addWithin(paths, config.value!, parsed, options, about),
+    { installer: options.install ?? packageManagerInstaller },
+  );
+  if (!result.ok) return failure(paths.root, result.problems);
+  return value;
+}
+
+function addWithin(
+  paths: ReturnType<typeof projectPaths>,
+  configured: PactwrightConfig,
+  parsed: { id: string; source: string },
+  options: AddExtensionOptions,
+  about: TransactionBody,
+): { ok: boolean; value: ExtensionChangeReport; problems?: readonly Problem[] } {
+  const config = { value: configured };
+  const proposed: Record<string, ConfigExtension> = { ...configured.extensions };
   const added: string[] = [];
   const problems: Problem[] = [];
 
@@ -193,6 +262,8 @@ export function addExtension(
   const visited = new Set<string>();
   /** Packages this operation installed, so a failure can report them. */
   const installedPackages: string[] = [];
+  /** id → its manifest dependencies, for the post-order sort. */
+  const dependenciesOf = new Map<string, readonly string[]>();
   while (queue.length > 0) {
     const { id, source } = queue.shift()!;
     if (visited.has(id)) continue;
@@ -200,9 +271,17 @@ export function addExtension(
     const existing = Object.hasOwn(proposed, id) ? proposed[id] : undefined;
     let located = locatePackage(paths.root, existing?.source ?? source, "extension");
     if (typeof located !== "string" && located.code !== "pack-not-exported") {
-      // Dependency-first installation: the walk reaches a dependency before
-      // the dependant that needs it, so installing here installs in the order
-      // §10 requires, through the project's own package manager.
+      // Installed in discovery order, which is breadth-first from the
+      // requested extension and so reaches a dependant before its
+      // dependency. That is not a choice: an extension's dependencies are
+      // declared in its manifest, and the manifest cannot be read until the
+      // package is installed. The comment here used to claim the opposite.
+      //
+      // What Distribution §10 is about — a dependency being enabled and
+      // locked before the dependant that needs it — is decided by `added`
+      // below, which is ordered dependency-first once every manifest has
+      // been read.
+      about.installing(existing?.source ?? source);
       const installed = installPackage(paths.root, existing?.source ?? source, options);
       if (installed.length > 0) {
         problems.push(...installed);
@@ -231,6 +310,7 @@ export function addExtension(
       proposed[id] = { ...existing, enabled: true };
       added.push(id);
     }
+    dependenciesOf.set(id, manifest.value.dependencies);
     // Every dependency is enqueued, enabled or not: stopping at an enabled one
     // would hide whatever sits beneath it, and a disabled dependency two hops
     // down is exactly what needs repairing. `visited` is what bounds the walk.
@@ -239,15 +319,20 @@ export function addExtension(
       queue.push({ id: dep, source: configured?.source ?? `@pactwright/${dep}` });
     }
   }
-  if (problems.length > 0) return failure(paths.root, problems);
+  if (problems.length > 0) {
+    return { ok: false, value: failure(paths.root, problems), problems };
+  }
   if (added.length === 0) {
     return {
       ok: true,
-      root: paths.root,
-      changes: [{ id: parsed.id, action: "unchanged" }],
-      githubProfiles: [],
-      preserved: [],
-      problems: [],
+      value: {
+        ok: true,
+        root: paths.root,
+        changes: [{ id: parsed.id, action: "unchanged" }],
+        githubProfiles: [],
+        preserved: [],
+        problems: [],
+      },
     };
   }
 
@@ -255,37 +340,41 @@ export function addExtension(
     root: paths.root,
     config: withExtensions(config.value, proposed),
   });
-  if (desired.value === undefined) return failure(paths.root, desired.problems);
+  if (desired.value === undefined) {
+    return { ok: false, value: failure(paths.root, desired.problems), problems: desired.problems };
+  }
 
   const written = writeDesiredState(
     paths.root,
     withExtensions(config.value, proposed),
     serialiseLock(desired.value.lock),
   );
-  if ("code" in written) return failure(paths.root, [written]);
+  if (written !== undefined) {
+    return { ok: false, value: failure(paths.root, [written]), problems: [written] };
+  }
   const report = validateProject({ root: paths.root });
   if (!report.ok) {
-    written.restore();
-    return failure(paths.root, report.problems);
+    return { ok: false, value: failure(paths.root, report.problems), problems: report.problems };
   }
 
   const byId = new Map(desired.value.extensions.map((e) => [e.id, e]));
-  return {
+  const success: ExtensionChangeReport = {
     ok: true,
     root: paths.root,
     ...(installedPackages.length === 0 ? {} : { installed: installedPackages.sort() }),
-    changes: added.sort().map((id) => ({
+    changes: dependencyFirst(added, dependenciesOf).map((id) => ({
       id,
       action: "added",
       ...(byId.get(id) === undefined ? {} : { version: byId.get(id)!.manifest.version }),
     })),
-    githubProfiles: added
+    githubProfiles: dependencyFirst(added, dependenciesOf)
       .map((id) => byId.get(id)?.manifest.githubProfile)
       .filter((profile): profile is string => profile !== undefined)
       .sort(),
     preserved: [],
     problems: [],
   };
+  return { ok: true, value: success };
 }
 
 /**
@@ -394,8 +483,23 @@ export function removeExtension(root: string, id: string): ExtensionChangeReport
     return failure(paths.root, desired.problems);
   }
 
-  const written = writeDesiredState(paths.root, withExtensions(config.value, proposed), lockText);
-  if ("code" in written) return failure(paths.root, [written]);
+  // Wrapped, but with the validate step deliberately *advisory*: a removal
+  // is expected to leave records the graph no longer recognises, so gating
+  // the commit on `validate` would break the one command that repairs a
+  // broken extension set. The transaction is here for the write itself —
+  // a throw mid-write still puts the managed set back.
+  const plan = planEnvironmentChange(paths.root);
+  const { result } = applyEnvironmentPlan(plan, () => {
+    const problem = writeDesiredState(
+      paths.root,
+      withExtensions(config.value!, proposed),
+      lockText,
+    );
+    return problem === undefined
+      ? { ok: true, value: undefined }
+      : { ok: false, value: undefined, problems: [problem] };
+  });
+  if (!result.ok) return failure(paths.root, result.problems);
 
   // Preserved user-authored canonical data: records whose types the removed
   // extension registered. `pactwright validate` reports them as unknown
@@ -449,11 +553,105 @@ export function removeExtension(root: string, id: string): ExtensionChangeReport
  * and updates the lock. The configuration is desired state and does not
  * change; canonical Project Graph state is never reinterpreted.
  */
-export function upgradeExtension(root: string, id: string): ExtensionChangeReport {
+export interface UpgradeExtensionOptions {
+  /** Installs the selected version. Injected so tests never reach a registry. */
+  readonly install?: PackageInstaller;
+  /** Lists published versions. Injected for the same reason. */
+  readonly view?: PackageView;
+  /**
+   * The `pactwright` range a published version declares, without installing
+   * it. A registry can answer this from published metadata; where it cannot,
+   * leaving it out defers the check to resolution after the install, which
+   * is what the transaction is there to undo.
+   */
+  readonly declaredRuntimeRange?: (version: string) => string | undefined;
+}
+
+/**
+ * Selects a compatible published version, installs it, then re-resolves and
+ * re-locks (Distribution §15 steps 1, 3 and 5).
+ *
+ * The compatibility check happens *before* the install: a version whose
+ * declared `pactwright` range the running runtime does not satisfy is
+ * refused rather than installed and then rejected, which is what §15 means
+ * by failing clearly instead of substituting.
+ */
+function acquireTarget(
+  root: string,
+  id: string,
+  source: string,
+  options: UpgradeExtensionOptions,
+  about: TransactionBody,
+): readonly Problem[] {
+  const detected = detectPackageManager(root);
+  if (detected.value === undefined) return detected.problems;
+  const manager = detected.value.name;
+
+  const selected = selectTarget(
+    { kind: "extension", name: source },
+    // Extension configuration records a source, not a version range, so an
+    // upgrade is unconstrained: the newest compatible published version.
+    undefined,
+    {
+      runtimeVersion: runtimeVersion(),
+      ...(options.declaredRuntimeRange === undefined
+        ? {}
+        : { declaredRuntimeRange: options.declaredRuntimeRange }),
+    },
+    { manager, ...(options.view === undefined ? {} : { view: options.view }) },
+  );
+  if (Array.isArray(selected)) {
+    return (selected as readonly Problem[]).map((problem) => ({
+      ...problem,
+      message: `extension "${id}": ${problem.message}`,
+    }));
+  }
+
+  const target = (selected as SelectedTarget).version;
+  about.installing(source);
+  const install = options.install ?? packageManagerInstaller;
+  return install({ root, manager, spec: `${source}@${target}` });
+}
+
+/**
+ * Runs the declared migrations that carry `id`'s records from the version the
+ * lock records to the version the installed manifest declares.
+ *
+ * A no-op when they already agree, which is the ordinary case.
+ */
+function runMigration(
+  root: string,
+  id: string,
+  next: ResolvedExtension | undefined,
+  locked: LockExtension | undefined,
+): readonly Problem[] {
+  if (next === undefined) return [];
+  const from = locked?.schemaVersion ?? 1;
+  const plan = planMigration(id, from, next.manifest.schemaVersion, next.manifest.migrations);
+  if (plan.problems.length > 0) return plan.problems;
+  if (plan.steps.length === 0) return [];
+
+  // Read with the plain node loader, not `loadProject`: the canonical path
+  // validates against the *installed* manifest, and these records are by
+  // definition still at the old schema.
+  const loaded = loadNodes(projectPaths(root).nodesDir);
+  if (loaded.problems.length > 0) return loaded.problems;
+  const result = applyMigration(loaded.nodes, plan, new Set(next.manifest.nodeTypes));
+  if (result.problems.length > 0) return result.problems;
+  writeMigration(result);
+  return [];
+}
+
+export function upgradeExtension(
+  root: string,
+  id: string,
+  options: UpgradeExtensionOptions = {},
+): ExtensionChangeReport {
   const paths = projectPaths(root);
   const config = loadConfig(paths.config);
   if (config.value === undefined) return failure(paths.root, config.problems);
-  if (!Object.hasOwn(config.value.extensions, id)) {
+  const configured = config.value.extensions[id];
+  if (configured === undefined) {
     return failure(paths.root, [
       { code: "extension-not-configured", message: `extension "${id}" is not configured` },
     ]);
@@ -461,21 +659,69 @@ export function upgradeExtension(root: string, id: string): ExtensionChangeRepor
 
   const previousLock = loadLock(paths.lock);
   const previousVersion = previousLock.value?.extensions[id]?.version;
-  const desired = resolveDesiredState({ root: paths.root, config: config.value });
-  if (desired.value === undefined) return failure(paths.root, desired.problems);
-  const next = desired.value.extensions.find((e) => e.id === id);
 
-  // The configuration is desired state and cannot change on an upgrade, so
-  // only the lock is written. A lock that does not validate is rolled back:
   // §15 requires an upgrade to satisfy every enabled dependant *before* the
-  // lock file changes, so a failed upgrade must leave no trace.
-  const written = writeDesiredState(paths.root, undefined, serialiseLock(desired.value.lock));
-  if ("code" in written) return failure(paths.root, [written]);
-  const report = validateProject({ root: paths.root });
-  if (!report.ok) {
-    written.restore();
-    return failure(paths.root, report.problems);
-  }
+  // lock file changes, so a failed upgrade must leave no trace. The
+  // transaction's managed set is what makes "no trace" cover more than the
+  // lock: this used to restore two files and nothing else.
+  const plan = planEnvironmentChange(paths.root);
+  const { value, result } = applyEnvironmentPlan(
+    plan,
+    (about) => {
+      // Acquire first (R09). This used to call no installer at all: it
+      // re-resolved whatever was already installed and rewrote the lock, so
+      // "upgrade" could only reach a version somebody had installed by hand.
+      // A path-sourced extension lives in the repository and is not
+      // something to fetch, so it keeps the re-resolve-only behaviour.
+      if (!isPathSource(configured.source)) {
+        const acquired = acquireTarget(paths.root, id, configured.source, options, about);
+        if (acquired.length > 0) return { ok: false, value: undefined, problems: acquired };
+      }
+      const desired = resolveDesiredState({ root: paths.root, config: config.value! });
+      if (desired.value === undefined) {
+        return { ok: false, value: undefined, problems: desired.problems };
+      }
+      const next = desired.value.extensions.find((e) => e.id === id);
+
+      // Migrate the records this extension owns before the lock moves
+      // (Distribution §15 step 4). In memory first, validated through the
+      // loader afterwards, and inside the transaction throughout — so
+      // canonical state ends up fully migrated or untouched.
+      const migrated = runMigration(paths.root, id, next, previousLock.value?.extensions[id]);
+      if (migrated.length > 0) return { ok: false, value: undefined, problems: migrated };
+
+      // The lock records where the *records* now are, which a migration is
+      // the only thing that advances.
+      const locked = desired.value.lock.extensions[id];
+      const extensions =
+        next === undefined || locked === undefined
+          ? desired.value.lock.extensions
+          : {
+              ...desired.value.lock.extensions,
+              [id]: {
+                ...locked,
+                ...(next.manifest.schemaVersion === 1
+                  ? {}
+                  : { schemaVersion: next.manifest.schemaVersion }),
+              },
+            };
+
+      // The configuration is desired state and cannot change on an upgrade, so
+      // only the lock is written.
+      const written = writeDesiredState(
+        paths.root,
+        undefined,
+        serialiseLock({ ...desired.value.lock, extensions }),
+      );
+      if (written !== undefined) return { ok: false, value: undefined, problems: [written] };
+      const report = validateProject({ root: paths.root });
+      if (!report.ok) return { ok: false, value: undefined, problems: report.problems };
+      return { ok: true, value: next?.manifest.version };
+    },
+    { installer: options.install ?? packageManagerInstaller },
+  );
+
+  if (!result.ok) return failure(paths.root, result.problems);
 
   return {
     ok: true,
@@ -484,7 +730,7 @@ export function upgradeExtension(root: string, id: string): ExtensionChangeRepor
       {
         id,
         action: "upgraded",
-        ...(next === undefined ? {} : { version: next.manifest.version }),
+        ...(value === undefined ? {} : { version: value }),
         ...(previousVersion === undefined ? {} : { previousVersion }),
       },
     ],

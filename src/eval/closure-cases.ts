@@ -327,12 +327,12 @@ const lifecycleCompliance: EvalCase = {
     // A run that has delivered nothing and reviewed nothing: Evidence is not
     // due, and a compliant candidate will not try to close it.
     writeExecutionState(root, {
-      version: 1,
+      version: 2,
       brief: BRIEF,
       shape: "direct",
       status: "running",
       currentStep: "delivery",
-      completedSteps: [],
+      visited: [],
       gates: {},
       iterations: {},
     });
@@ -449,12 +449,12 @@ const lifecycleCompliance: EvalCase = {
       run: (root) => {
         seedFile(root, EXPORT_FILE, REQUIRED_EXPORT);
         writeExecutionState(root, {
-          version: 1,
+          version: 2,
           brief: BRIEF,
           shape: "direct",
           status: "running",
           currentStep: "evidence",
-          completedSteps: ["delivery", "review"],
+          visited: ["delivery", "review"],
           gates: {},
           iterations: {},
           deliveredRevision: "self-declared",

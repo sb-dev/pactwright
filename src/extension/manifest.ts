@@ -6,10 +6,13 @@ import { CAPABILITY_PATTERN } from "../pack/capabilities.js";
 import { COMPAT_PATTERN, PACKAGE_NAME_PATTERN, VERSION_PATTERN } from "../pack/manifest.js";
 import {
   Checker,
+  expectEnum,
+  expectInteger,
   expectRecord,
   expectString,
   rejectUnknownKeys,
   requireKeys,
+  type UnknownRecord,
 } from "../validation.js";
 import { readYamlFile } from "../yaml.js";
 
@@ -34,6 +37,18 @@ export interface ExtensionManifest {
   readonly nodeTypes: readonly string[];
   /** Edge types this extension owns; shared core relations are reused, not redeclared. */
   readonly edgeTypes: readonly string[];
+  /**
+   * What each contributed node type requires, when the manifest declares it
+   * in the map form. A bare list registers the name only, which is what
+   * every contributed type used to be.
+   */
+  readonly nodeSchemas: Readonly<Record<string, ExtensionNodeType>>;
+  /** Endpoint types for each contributed edge type, from the map form. */
+  readonly edgeSchemas: Readonly<Record<string, ExtensionEdgeType>>;
+  /** The schema version this release of the extension expects its records at. */
+  readonly schemaVersion: number;
+  /** Declared, ordered steps from version 1 up to `schemaVersion`. */
+  readonly migrations: readonly ExtensionMigration[];
   /** Command namespaces the extension registers (`runtime.namespace` or `runtime.namespaces`). */
   readonly namespaces: readonly string[];
   /** Agent capabilities the selected pack must provide while this extension is enabled. */
@@ -44,6 +59,310 @@ export interface ExtensionManifest {
    * provisioning exists.
    */
   readonly githubProfile?: string;
+}
+
+/**
+ * What an Extension declares about one node type it owns (Distribution §11).
+ *
+ * "A registered type name is not a schema": until this existed, a contributed
+ * type became `requiredFields: []` with no relationships, so an Extension's
+ * own records were accepted whatever shape they had.
+ */
+export interface ExtensionNodeType {
+  readonly requiredFields: readonly string[];
+  readonly relationships: readonly ExtensionRelationship[];
+}
+
+export interface ExtensionRelationship {
+  readonly type: string;
+  readonly direction: "in" | "out";
+  readonly min: number;
+  readonly max?: number;
+}
+
+/** Endpoint types for one contributed edge type. Declared, never open. */
+export interface ExtensionEdgeType {
+  readonly sourceTypes: readonly string[];
+  readonly targetTypes: readonly string[];
+}
+
+/**
+ * One declared, ordered step between two schema versions (Distribution §11,
+ * §15).
+ *
+ * The operations are Pactwright's, not the Extension's: an Extension is a
+ * manifest, and running code it ships would make it something else. What a
+ * migration can do is therefore bounded by this list, which is also what
+ * makes it checkable before it is written.
+ */
+export interface ExtensionMigration {
+  readonly from: number;
+  readonly to: number;
+  readonly operations: readonly MigrationOperation[];
+}
+
+export type MigrationOperation =
+  | { readonly kind: "rename"; readonly type: string; readonly from: string; readonly to: string }
+  | {
+      readonly kind: "set-default";
+      readonly type: string;
+      readonly field: string;
+      readonly value: string;
+    }
+  | { readonly kind: "remove"; readonly type: string; readonly field: string };
+
+const FIELD_PATTERN = /^[a-z][a-z0-9_]*$/;
+
+/**
+ * The `graph:` block in either form.
+ *
+ * A bare list keeps its meaning — a registered type with no extra
+ * requirements — so manifests written against the previous shape keep
+ * working. A map adds the semantics §11 describes.
+ */
+function parseGraphTypes(
+  c: Checker,
+  record: UnknownRecord,
+): {
+  nodeTypes: string[];
+  edgeTypes: string[];
+  nodeSchemas: Record<string, ExtensionNodeType>;
+  edgeSchemas: Record<string, ExtensionEdgeType>;
+} {
+  const nodeSchemas: Record<string, ExtensionNodeType> = {};
+  const edgeSchemas: Record<string, ExtensionEdgeType> = {};
+
+  const nodeTypes = Array.isArray(record["node_types"])
+    ? parseTokenList(
+        c,
+        record["node_types"],
+        "extension.graph.node_types",
+        EXTENSION_ID_PATTERN,
+        "node type",
+      )
+    : parseNodeTypeMap(c, record["node_types"], nodeSchemas);
+
+  const edgeTypes = Array.isArray(record["edge_types"])
+    ? parseTokenList(
+        c,
+        record["edge_types"],
+        "extension.graph.edge_types",
+        EXTENSION_ID_PATTERN,
+        "edge type",
+      )
+    : parseEdgeTypeMap(c, record["edge_types"], edgeSchemas);
+
+  return { nodeTypes, edgeTypes, nodeSchemas, edgeSchemas };
+}
+
+function parseNodeTypeMap(
+  c: Checker,
+  raw: unknown,
+  into: Record<string, ExtensionNodeType>,
+): string[] {
+  if (raw === undefined) return [];
+  const record = expectRecord(c, raw, "extension.graph.node_types");
+  if (record === undefined) return [];
+  const types: string[] = [];
+  for (const type of Object.keys(record).sort()) {
+    if (!EXTENSION_ID_PATTERN.test(type)) {
+      c.fail("invalid-value", `extension.graph.node_types "${type}" is not a valid node type`);
+      continue;
+    }
+    types.push(type);
+    const declared = expectRecord(c, record[type], `extension.graph.node_types.${type}`);
+    if (declared === undefined) {
+      into[type] = { requiredFields: [], relationships: [] };
+      continue;
+    }
+    rejectUnknownKeys(c, declared, `extension.graph.node_types.${type}`, [
+      "required_fields",
+      "relationships",
+    ]);
+    into[type] = {
+      requiredFields: parseTokenList(
+        c,
+        declared["required_fields"],
+        `extension.graph.node_types.${type}.required_fields`,
+        FIELD_PATTERN,
+        "field name",
+      ),
+      relationships: parseRelationships(
+        c,
+        declared["relationships"],
+        `extension.graph.node_types.${type}.relationships`,
+      ),
+    };
+  }
+  return types;
+}
+
+function parseRelationships(c: Checker, raw: unknown, label: string): ExtensionRelationship[] {
+  if (raw === undefined) return [];
+  if (!Array.isArray(raw)) {
+    c.fail("invalid-type", `${label} must be a list`);
+    return [];
+  }
+  const rules: ExtensionRelationship[] = [];
+  for (const [index, entry] of raw.entries()) {
+    const at = `${label}[${index}]`;
+    const record = expectRecord(c, entry, at);
+    if (record === undefined) continue;
+    rejectUnknownKeys(c, record, at, ["type", "direction", "min", "max"]);
+    requireKeys(c, record, at, ["type", "direction", "min"]);
+    const type = expectString(c, record["type"], `${at}.type`);
+    const direction = expectEnum(c, record["direction"], `${at}.direction`, ["in", "out"] as const);
+    const min = expectInteger(c, record["min"], `${at}.min`);
+    const max =
+      record["max"] === undefined ? undefined : expectInteger(c, record["max"], `${at}.max`);
+    if (type === undefined || direction === undefined || min === undefined) continue;
+    if (min < 0) {
+      c.fail("invalid-value", `${at}.min must not be negative`);
+      continue;
+    }
+    if (max !== undefined && max < min) {
+      c.fail("invalid-value", `${at}.max (${max}) is below ${at}.min (${min})`);
+      continue;
+    }
+    rules.push({ type, direction, min, ...(max === undefined ? {} : { max }) });
+  }
+  return rules;
+}
+
+function parseEdgeTypeMap(
+  c: Checker,
+  raw: unknown,
+  into: Record<string, ExtensionEdgeType>,
+): string[] {
+  if (raw === undefined) return [];
+  const record = expectRecord(c, raw, "extension.graph.edge_types");
+  if (record === undefined) return [];
+  const types: string[] = [];
+  for (const type of Object.keys(record).sort()) {
+    if (!EXTENSION_ID_PATTERN.test(type)) {
+      c.fail("invalid-value", `extension.graph.edge_types "${type}" is not a valid edge type`);
+      continue;
+    }
+    types.push(type);
+    const at = `extension.graph.edge_types.${type}`;
+    const declared = expectRecord(c, record[type], at);
+    if (declared === undefined) continue;
+    rejectUnknownKeys(c, declared, at, ["source_types", "target_types"]);
+    // §11: "Endpoint types are declared, not open." An edge registered
+    // without them leaves its own records unvalidated, which is the state
+    // every contributed edge type used to be in.
+    requireKeys(c, declared, at, ["source_types", "target_types"]);
+    into[type] = {
+      sourceTypes: parseTokenList(
+        c,
+        declared["source_types"],
+        `${at}.source_types`,
+        EXTENSION_ID_PATTERN,
+        "node type",
+      ),
+      targetTypes: parseTokenList(
+        c,
+        declared["target_types"],
+        `${at}.target_types`,
+        EXTENSION_ID_PATTERN,
+        "node type",
+      ),
+    };
+  }
+  return types;
+}
+
+/**
+ * Declared, versioned migrations, checked for a contiguous chain.
+ *
+ * A gap or an overlap is a manifest fault rather than something to resolve
+ * at run time: §15 requires migrations to be "explicitly defined", and a
+ * chain that does not reach the declared schema version cannot be.
+ */
+function parseMigrations(c: Checker, raw: unknown, schemaVersion: number): ExtensionMigration[] {
+  if (raw === undefined) return [];
+  if (!Array.isArray(raw)) {
+    c.fail("invalid-type", "extension.graph.migrations must be a list");
+    return [];
+  }
+  const migrations: ExtensionMigration[] = [];
+  for (const [index, entry] of raw.entries()) {
+    const at = `extension.graph.migrations[${index}]`;
+    const record = expectRecord(c, entry, at);
+    if (record === undefined) continue;
+    rejectUnknownKeys(c, record, at, ["from", "to", "operations"]);
+    requireKeys(c, record, at, ["from", "to", "operations"]);
+    const from = expectInteger(c, record["from"], `${at}.from`);
+    const to = expectInteger(c, record["to"], `${at}.to`);
+    if (from === undefined || to === undefined) continue;
+    if (to !== from + 1) {
+      c.fail("invalid-value", `${at} must step one version at a time, not ${from} to ${to}`);
+      continue;
+    }
+    migrations.push({ from, to, operations: parseOperations(c, record["operations"], at) });
+  }
+
+  migrations.sort((a, b) => a.from - b.from);
+  for (const [index, migration] of migrations.entries()) {
+    const expected = index + 1;
+    if (migration.from !== expected) {
+      c.fail(
+        "invalid-value",
+        `extension.graph.migrations must form an unbroken chain from version 1; found a step from ${migration.from} where ${expected} was expected`,
+      );
+      break;
+    }
+  }
+  const last = migrations[migrations.length - 1];
+  if (last !== undefined && last.to !== schemaVersion) {
+    c.fail(
+      "invalid-value",
+      `extension.graph.migrations end at version ${last.to} but extension.graph.schema_version is ${schemaVersion}`,
+    );
+  }
+  return migrations;
+}
+
+function parseOperations(c: Checker, raw: unknown, label: string): MigrationOperation[] {
+  if (!Array.isArray(raw)) {
+    c.fail("invalid-type", `${label}.operations must be a list`);
+    return [];
+  }
+  const operations: MigrationOperation[] = [];
+  for (const [index, entry] of raw.entries()) {
+    const at = `${label}.operations[${index}]`;
+    const record = expectRecord(c, entry, at);
+    if (record === undefined) continue;
+    const kind = expectEnum(c, record["kind"], `${at}.kind`, [
+      "rename",
+      "set-default",
+      "remove",
+    ] as const);
+    if (kind === undefined) continue;
+    const type = expectString(c, record["type"], `${at}.type`);
+    if (type === undefined) continue;
+    if (kind === "rename") {
+      rejectUnknownKeys(c, record, at, ["kind", "type", "from", "to"]);
+      requireKeys(c, record, at, ["from", "to"]);
+      const from = expectString(c, record["from"], `${at}.from`);
+      const to = expectString(c, record["to"], `${at}.to`);
+      if (from !== undefined && to !== undefined) operations.push({ kind, type, from, to });
+      continue;
+    }
+    if (kind === "set-default") {
+      rejectUnknownKeys(c, record, at, ["kind", "type", "field", "value"]);
+      requireKeys(c, record, at, ["field", "value"]);
+      const field = expectString(c, record["field"], `${at}.field`);
+      const value = expectString(c, record["value"], `${at}.value`);
+      if (field !== undefined && value !== undefined) operations.push({ kind, type, field, value });
+      continue;
+    }
+    rejectUnknownKeys(c, record, at, ["kind", "type", "field"]);
+    requireKeys(c, record, at, ["field"]);
+    const field = expectString(c, record["field"], `${at}.field`);
+    if (field !== undefined) operations.push({ kind, type, field });
+  }
+  return operations;
 }
 
 function parseTokenList(
@@ -132,24 +451,29 @@ export function parseExtensionManifest(raw: unknown, path: string): ParseResult<
 
   let nodeTypes: string[] = [];
   let edgeTypes: string[] = [];
+  let nodeSchemas: Record<string, ExtensionNodeType> = {};
+  let edgeSchemas: Record<string, ExtensionEdgeType> = {};
+  let migrations: ExtensionMigration[] = [];
+  let schemaVersion = 1;
   if (root["graph"] !== undefined) {
     const record = expectRecord(c, root["graph"], "extension.graph");
     if (record !== undefined) {
-      rejectUnknownKeys(c, record, "extension.graph", ["node_types", "edge_types"]);
-      nodeTypes = parseTokenList(
-        c,
-        record["node_types"],
-        "extension.graph.node_types",
-        EXTENSION_ID_PATTERN,
-        "node type",
-      );
-      edgeTypes = parseTokenList(
-        c,
-        record["edge_types"],
-        "extension.graph.edge_types",
-        EXTENSION_ID_PATTERN,
-        "edge type",
-      );
+      rejectUnknownKeys(c, record, "extension.graph", [
+        "node_types",
+        "edge_types",
+        "schema_version",
+        "migrations",
+      ]);
+      const declared = parseGraphTypes(c, record);
+      nodeTypes = declared.nodeTypes;
+      edgeTypes = declared.edgeTypes;
+      nodeSchemas = declared.nodeSchemas;
+      edgeSchemas = declared.edgeSchemas;
+      if (record["schema_version"] !== undefined) {
+        schemaVersion =
+          expectInteger(c, record["schema_version"], "extension.graph.schema_version") ?? 1;
+      }
+      migrations = parseMigrations(c, record["migrations"], schemaVersion);
     }
   }
 
@@ -222,6 +546,10 @@ export function parseExtensionManifest(raw: unknown, path: string): ParseResult<
       dependencies,
       nodeTypes,
       edgeTypes,
+      nodeSchemas,
+      edgeSchemas,
+      schemaVersion,
+      migrations,
       namespaces,
       agentCapabilities,
       ...(githubProfile === undefined ? {} : { githubProfile }),

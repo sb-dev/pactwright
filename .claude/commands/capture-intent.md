@@ -10,7 +10,7 @@ argument-hint: <text>
 ## 1. Ask the runtime first
 
 Run `pnpm pactwright validate`. The runtime owns the lifecycle: it decides what is permitted, who may decide and how records are linked. Never reason about that yourself.
-If the runtime reports a validation problem, or lists `capture-intent` as already completed, show its output and stop. The runtime refuses any record that is out of order.
+Act only on an operation `lifecycle status` lists as permitted. A replacement is listed as `(supersede)`: recording one is how a Brief, a Contract direction or an Evidence record is corrected (Spec 01 §45), not a sign that something has gone wrong. If the runtime reports a validation problem, show its output and stop.
 
 ## 2. Shape the intent
 

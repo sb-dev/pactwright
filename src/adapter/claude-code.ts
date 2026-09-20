@@ -143,8 +143,8 @@ function renderCommand(pack: ResolvedPack, command: CommandName): string {
     ``,
     id === undefined
       ? `Run \`pnpm pactwright validate\`. The runtime owns the lifecycle: it decides what is permitted, who may decide and how records are linked. Never reason about that yourself.`
-      : `Run \`pnpm pactwright context ${id}\` for the current lineage and \`pnpm pactwright lifecycle status --intent <intent-id>\` for what is completed. The runtime owns the lifecycle: it decides what is permitted, who may decide and how records are linked. Never reason about that yourself.`,
-    `If the runtime reports a validation problem, or lists \`${command}\` as already completed, show its output and stop. The runtime refuses any record that is out of order.`,
+      : `Run \`pnpm pactwright context ${id}\` for the current lineage and \`pnpm pactwright lifecycle status --intent <intent-id>\` for what is permitted now. The runtime owns the lifecycle: it decides what is permitted, who may decide and how records are linked. Never reason about that yourself.`,
+    `Act only on an operation \`lifecycle status\` lists as permitted. A replacement is listed as \`(supersede)\`: recording one is how a Brief, a Contract direction or an Evidence record is corrected (Spec 01 §45), not a sign that something has gone wrong. If the runtime reports a validation problem, show its output and stop.`,
   ].join("\n");
   return [
     frontmatter({ description: template.description, "argument-hint": template.argumentHint }),

@@ -3,6 +3,7 @@ import type { ParseResult } from "./config.js";
 import { HASH_PATTERN, canonicalJson } from "../canonical.js";
 import {
   Checker,
+  expectInteger,
   expectRecord,
   expectString,
   rejectUnknownKeys,
@@ -27,6 +28,16 @@ export interface LockExtension {
   readonly hash: string;
   /** Extension id → exact version of a required peer extension. Omitted when empty. */
   readonly dependencies?: Readonly<Record<string, string>>;
+  /**
+   * The schema version this extension's canonical records are at.
+   *
+   * Omitted at version 1, which is what an extension that has never changed
+   * its record shape is at — so existing locks keep their bytes and their
+   * `environment_lock_hash`. A recorded version behind the installed
+   * manifest's is a pending migration, which `doctor` reports and
+   * `extension upgrade` runs (Distribution §11).
+   */
+  readonly schemaVersion?: number;
 }
 
 /** `.pactwright/lock.yml` — the exact resolved setup (Distribution §6). */
@@ -77,7 +88,13 @@ function parseExtension(c: Checker, raw: unknown, label: string): LockExtension 
   const record = expectRecord(c, raw, label);
   if (record === undefined) return undefined;
   requireKeys(c, record, label, ["package", "version", "hash"]);
-  rejectUnknownKeys(c, record, label, ["package", "version", "hash", "dependencies"]);
+  rejectUnknownKeys(c, record, label, [
+    "package",
+    "version",
+    "hash",
+    "dependencies",
+    "schema_version",
+  ]);
   const pkg = expectString(c, record["package"], `${label}.package`);
   const version = expectExactVersion(c, record["version"], `${label}.version`);
   const hash = expectHash(c, record["hash"], `${label}.hash`);
@@ -101,6 +118,11 @@ function parseExtension(c: Checker, raw: unknown, label: string): LockExtension 
     }
   }
 
+  const schemaVersion =
+    record["schema_version"] === undefined
+      ? undefined
+      : expectInteger(c, record["schema_version"], `${label}.schema_version`);
+
   if (pkg === undefined || version === undefined || hash === undefined) return undefined;
   return {
     package: pkg,
@@ -109,6 +131,7 @@ function parseExtension(c: Checker, raw: unknown, label: string): LockExtension 
     ...(dependencies === undefined || Object.keys(dependencies).length === 0
       ? {}
       : { dependencies }),
+    ...(schemaVersion === undefined || schemaVersion === 1 ? {} : { schemaVersion }),
   };
 }
 

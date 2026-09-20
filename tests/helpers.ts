@@ -1,4 +1,13 @@
-import { copyFileSync, cpSync, mkdirSync, mkdtempSync, readFileSync, writeFileSync } from "node:fs";
+import {
+  copyFileSync,
+  cpSync,
+  existsSync,
+  mkdirSync,
+  mkdtempSync,
+  readdirSync,
+  readFileSync,
+  writeFileSync,
+} from "node:fs";
 import { tmpdir } from "node:os";
 import * as path from "node:path";
 import { fileURLToPath } from "node:url";
@@ -8,8 +17,16 @@ import { loadEdges, type Edge } from "../src/graph/edges.js";
 import { loadNodes, type GraphNode } from "../src/graph/nodes.js";
 import { CORE_NODE_SCHEMAS, validateNodes } from "../src/graph/schema.js";
 import { loadConfig } from "../src/config/config.js";
+import { decisionActor, loadLifecycle } from "../src/config/lifecycle.js";
 import { resolveDesiredState, writeLock } from "../src/pack/resolve.js";
-import { writeExecutionState, type ExecutionState } from "../src/lifecycle/state.js";
+import {
+  beginExecution,
+  writeExecutionState,
+  type ExecutionState,
+} from "../src/lifecycle/state.js";
+import { transition } from "../src/lifecycle/transition.js";
+import { isGate } from "../src/lifecycle/shape.js";
+import { loadProject } from "../src/loader.js";
 
 export const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 export const fixtures = path.join(repoRoot, "tests", "fixtures");
@@ -150,6 +167,12 @@ export function makeTempProject(
       ),
     );
   }
+  // A seeded lineage and a lifecycle policy have to agree about authority.
+  // The lineage fixtures record `decided_by: human:samir`; pairing one with a
+  // policy that authorises `agent` produces a project rule 13 rejects, which
+  // only went unnoticed while the mutation gate did not check authority.
+  alignDecisionActors(dir);
+
   // A real project's lock describes the environment it actually resolves to,
   // and sync now refuses to render from one that does not. Resolve the lock
   // from the finished configuration, exactly as `init` does.
@@ -162,6 +185,26 @@ export function makeTempProject(
     }
   }
   return dir;
+}
+
+/** Rewrites seeded Decisions to an actor the project's lifecycle authorises. */
+function alignDecisionActors(dir: string): void {
+  const lifecycle = loadLifecycle(path.join(dir, ".pactwright", "lifecycle.yml"));
+  if (lifecycle.value === undefined) return;
+  const required = decisionActor(lifecycle.value);
+  const nodesDir = path.join(dir, "specs", "nodes");
+  if (!existsSync(nodesDir)) return;
+  for (const entry of readdirSync(nodesDir)) {
+    if (!entry.startsWith("decision-") || !entry.endsWith(".md")) continue;
+    const file = path.join(nodesDir, entry);
+    const before = readFileSync(file, "utf8");
+    const match = /^decided_by: (\w+):/m.exec(before);
+    if (match === null) continue;
+    const kind = match[1]!;
+    if (kind === required || (required === "agent" && kind === "automation")) continue;
+    const replacement = required === "human" ? "human:samir" : "agent:spec";
+    writeFileSync(file, before.replace(/^decided_by: .*$/m, `decided_by: ${replacement}`));
+  }
 }
 
 /**
@@ -265,21 +308,64 @@ export function reachEvidenceClosure(
   root: string,
   briefId: string,
   overrides: Partial<ExecutionState> = {},
+  options: {
+    /**
+     * Resolve each Gate on the way with an authorised actor. Default true,
+     * because a run cannot complete a Gate step otherwise.
+     *
+     * Pass `false` only to construct a *tampered* state on purpose — a state
+     * file edited by hand past a Gate the runtime would have refused. That is
+     * what rule 14 and the closure guard exist to catch, so those tests need
+     * to be able to write it; nothing else should.
+     */
+    readonly resolveGates?: boolean;
+  } = {},
 ): ExecutionState {
   const delivered = overrides.deliveredRevision ?? "delivered-1";
-  const state: ExecutionState = {
-    version: 1,
-    brief: briefId,
-    shape: "direct",
-    status: "running",
-    currentStep: "evidence",
-    completedSteps: ["delivery", "review"],
-    gates: {},
-    iterations: {},
-    deliveredRevision: delivered,
-    review: { step: "review", outcome: "pass", revision: delivered },
-    ...overrides,
-  };
-  writeExecutionState(root, state);
-  return state;
+  const project = loadProject({ root });
+  const shape = project.lifecycle.shape;
+  const resolveGates = options.resolveGates !== false;
+
+  // Driven through the reducer from a fresh run, not hand-written. The old
+  // literal — `completedSteps: ["delivery", "review"]` with empty gates — was
+  // a state no runtime path could produce, so every closure and validation
+  // test that reached Evidence started from somewhere unreachable.
+  let state = beginExecution(briefId, shape.id, shape.steps[0]?.name);
+  const gated: string[] = [];
+  for (const step of shape.steps) {
+    if (step.kind === "evidence") break;
+    if (isGate(step)) {
+      // A Gate on the way to closure needs an authorised resolution first.
+      const resolved = transition(shape, project.lifecycle, state, {
+        kind: "gate-resolved",
+        step: step.name,
+        resolvedBy: step.actor === "agent" ? "agent:test" : "human:test",
+      });
+      if (resolved.outcome === "refused") {
+        throw new Error(`reachEvidenceClosure: ${resolved.reason ?? "gate refused"}`);
+      }
+      state = resolved.state;
+      gated.push(step.name);
+    }
+    const result = transition(shape, project.lifecycle, state, {
+      kind: "step-completed",
+      step: step.name,
+      ...(step.kind === "delivery" ? { revision: delivered } : {}),
+      ...(step.kind === "review" ? { review: "pass" as const } : {}),
+    });
+    if (result.outcome === "refused" || result.outcome === "failed") {
+      throw new Error(`reachEvidenceClosure: ${result.reason ?? `step "${step.name}" refused`}`);
+    }
+    state = result.state;
+  }
+
+  if (!resolveGates) {
+    const tampered: Record<string, (typeof state.gates)[string]> = { ...state.gates };
+    for (const name of gated) delete tampered[name];
+    state = { ...state, gates: tampered };
+  }
+
+  const final: ExecutionState = { ...state, ...overrides };
+  writeExecutionState(root, final);
+  return final;
 }

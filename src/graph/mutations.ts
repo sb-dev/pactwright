@@ -3,23 +3,24 @@ import { join } from "node:path";
 import { dump } from "js-yaml";
 import { tempSibling } from "../atomic.js";
 import { PactwrightError, type Problem } from "../errors.js";
-import { decisionActor, type Actor } from "../config/lifecycle.js";
+import { decisionActor } from "../config/lifecycle.js";
+import { actorPermitted, authorisedKinds } from "./authority.js";
 import { assertEvidenceClosure } from "./closure.js";
+import { closureFrom, closureFrontmatter, closureOf } from "./evidence-closure.js";
 import { loadProject, type Project } from "../loader.js";
 import { assertPackComplete } from "../pack/resolve.js";
-import { composedRegistries } from "../extension/resolve.js";
-import { validateEdges } from "./edge-schema.js";
 import { edgeKey, type Edge } from "./edges.js";
 import { mintNodeId, slugify } from "./ids.js";
-import { validateLineages } from "./lineage.js";
 import { graphRevision } from "./revision.js";
+import { withRepositoryLock } from "./writer-lock.js";
 import { checkNodeIdImmutability, parseNodeFile, type GraphNode } from "./nodes.js";
+import { parseDecidedBy, type DecisionOutcome } from "./schema.js";
 import {
-  parseDecidedBy,
-  validateNodes,
-  type DecidedByKind,
-  type DecisionOutcome,
-} from "./schema.js";
+  proposedSnapshot,
+  snapshotOf,
+  validateSnapshot,
+  type ValidationScope,
+} from "../validate/kernel.js";
 
 /**
  * New canonical records to commit in one atomic mutation.
@@ -101,6 +102,11 @@ function checkProposedNode(project: Project, node: GraphNode): readonly Problem[
  * mutation"): plan → validate the complete proposed state against the
  * current graph state → write atomically → validate the resulting state.
  *
+ * The whole sequence runs under the repository writer lock (§10). Each typed
+ * mutation takes the lock *before* it loads, so the snapshot it plans against
+ * cannot go stale underneath it; the lock taken here is the re-entrant inner
+ * take that covers a direct caller.
+ *
  * Before anything else the selected agent pack is resolved and checked
  * against the required capabilities (Distribution §7): an incomplete or
  * unresolvable pack throws here, before any validation or write.
@@ -118,6 +124,12 @@ export function commitGraphChange(
   change: GraphChange,
   options: CommitOptions = {},
 ): void {
+  withRepositoryLock(project.paths.root, () => {
+    commitLocked(project, change, options);
+  });
+}
+
+function commitLocked(project: Project, change: GraphChange, options: CommitOptions): void {
   assertPackComplete(project);
   const problems: Problem[] = [];
   const nodes = [...project.graph.nodes];
@@ -147,18 +159,32 @@ export function commitGraphChange(
     edges.push(edge);
   }
 
-  const registries = composedRegistries(project.extensions);
+  // The complete proposed state, judged by the one kernel before any write
+  // (Core §57, Checkpoint 1 Step 9). The mutation gate used to run only the
+  // structural checks — Decision authority lived inside `recordDecision` and
+  // closure inside `createEvidence` — so it could admit a graph that
+  // `validate` rejects.
+  //
+  // `environment` is here because a canonical record written against a
+  // drifted environment records an `environment_lock_hash` in its replay
+  // base naming an environment that was never the one used. The design's §4
+  // caller table omits it, but its own proof requires `createIntent` to
+  // refuse on lock drift before any write, and the proof is the thing that
+  // states the intent.
   problems.push(
-    ...validateNodes(nodes, registries.nodes),
-    ...validateEdges(edges, nodes, registries.edges, project.paths.edges),
-    ...validateLineages(nodes, edges),
+    ...validateSnapshot(
+      proposedSnapshot(snapshotOf(project), change),
+      new Set<ValidationScope>(["structural", "authority", "execution", "environment"]),
+    ),
     ...checkNodeIdImmutability(project.graph.nodes, nodes),
   );
   if (problems.length > 0) throw PactwrightError.fromProblems("mutation-invalid", problems);
 
-  // Compare-and-swap: the snapshot this change was planned against must
-  // still be the on-disk graph state, or a concurrent writer's records
-  // would be silently overwritten by the wholesale edges.yml rewrite.
+  // Compare-and-swap, now *inside* the writer lock (§10). The lock is what
+  // makes the sequence atomic; this stays as the cheap second check, so a
+  // caller that planned against a stale snapshot — one loaded before another
+  // process released the lock — still gets `concurrent-modification` rather
+  // than overwriting its records in the wholesale edges.yml rewrite.
   const expected = graphRevision({ nodes: project.graph.nodes, edges: project.graph.edges });
   const fresh = loadProject({ root: project.paths.root });
   if (graphRevision({ nodes: fresh.graph.nodes, edges: fresh.graph.edges }) !== expected) {
@@ -222,32 +248,47 @@ export function commitGraphChange(
   }
 }
 
+/**
+ * The closure block of the Evidence a correction supersedes (§45).
+ *
+ * Correcting what Evidence *says* does not reopen Delivery, and the run that
+ * closed it has rightly been cleared, so the facts about that closure are
+ * carried forward rather than reconstructed or dropped.
+ */
+function carriedClosure(project: Project, briefId: string): Record<string, unknown> | undefined {
+  const current = project.graph.index
+    .sourcesOf(briefId, "evidences", "evidence")
+    .find((node) => project.graph.index.isCurrent(node.id));
+  if (current === undefined) return undefined;
+  const closure = closureOf(current);
+  return typeof closure === "object" && closure !== null
+    ? (closure as Record<string, unknown>)
+    : undefined;
+}
+
 /** Today's date in UTC — deliberately timezone-independent, since `created` feeds the id hash. */
 function today(): string {
   return new Date().toISOString().slice(0, 10);
 }
 
 function requireNode(project: Project, id: string, type: string): GraphNode {
-  const node = project.graph.nodes.find((candidate) => candidate.id === id);
+  const node = project.graph.index.node(id);
   if (node === undefined || node.type !== type) {
     fail("unknown-node", `"${id}" is not an existing ${type} node`);
   }
-  if (isSuperseded(project, id)) {
+  if (!project.graph.index.isCurrent(id)) {
     fail("superseded-node", `${type} "${id}" is superseded; only current records take new work`);
   }
   return node;
 }
 
-function isSuperseded(project: Project, id: string): boolean {
-  return project.graph.edges.some((edge) => edge.type === "supersedes" && edge.target === id);
-}
-
 /** Current (unsuperseded) sources of `edgeType` edges into `target`. */
 function currentSources(project: Project, target: string, edgeType: string): readonly string[] {
-  return project.graph.edges
-    .filter((edge) => edge.type === edgeType && edge.target === target)
+  const index = project.graph.index;
+  return index
+    .edgesTo(target, edgeType)
     .map((edge) => edge.source)
-    .filter((id) => !isSuperseded(project, id));
+    .filter((id) => index.isCurrent(id));
 }
 
 interface NewNodeInput {
@@ -255,7 +296,8 @@ interface NewNodeInput {
   readonly title: string;
   readonly body: string;
   readonly created?: string | undefined;
-  readonly extraFront?: Readonly<Record<string, string>>;
+  /** Type-specific frontmatter; nested values round-trip through js-yaml. */
+  readonly extraFront?: Readonly<Record<string, unknown>>;
   readonly taken?: ReadonlySet<string>;
 }
 
@@ -293,10 +335,12 @@ export interface CreateIntentInput {
  * resulting states — a caller-held snapshot never reaches the filesystem.
  */
 export function createIntent(root: string, input: CreateIntentInput): GraphNode {
-  const project = loadProject({ root });
-  const intent = buildNode(project, { type: "intent", ...input });
-  commitGraphChange(project, { addNodes: [intent], addEdges: [] });
-  return intent;
+  return withRepositoryLock(root, () => {
+    const project = loadProject({ root });
+    const intent = buildNode(project, { type: "intent", ...input });
+    commitGraphChange(project, { addNodes: [intent], addEdges: [] });
+    return intent;
+  });
 }
 
 export interface RecordDecisionInput {
@@ -316,12 +360,6 @@ export interface RecordedDecision {
   readonly contract?: GraphNode;
 }
 
-/** Which `decided_by` kinds the configured lifecycle actor authorises (§8, §17). */
-const AUTHORISED_KINDS: Readonly<Record<Actor, readonly DecidedByKind[]>> = {
-  human: ["human"],
-  agent: ["agent", "automation"],
-};
-
 const DECISION_TITLES: Readonly<Record<DecisionOutcome, string>> = {
   proceed: "Proceed with",
   reject: "Reject",
@@ -337,16 +375,20 @@ const DECISION_TITLES: Readonly<Record<DecisionOutcome, string>> = {
  * Current graph state is loaded at commit time; see `createIntent`.
  */
 export function recordDecision(root: string, input: RecordDecisionInput): RecordedDecision {
+  return withRepositoryLock(root, () => recordDecisionLocked(root, input));
+}
+
+function recordDecisionLocked(root: string, input: RecordDecisionInput): RecordedDecision {
   const project = loadProject({ root });
   const actor = parseDecidedBy(input.decidedBy);
   if (actor === undefined) {
     fail("invalid-actor", `decided_by "${input.decidedBy}" must be "<kind>:<name>"`);
   }
   const configured = decisionActor(project.lifecycle);
-  if (!AUTHORISED_KINDS[configured].includes(actor.kind)) {
+  if (!actorPermitted(configured, input.decidedBy)) {
     fail(
       "unauthorised-actor",
-      `actor "${input.decidedBy}" is not authorised for approve-contract; lifecycle.yml authorises ${configured} (${AUTHORISED_KINDS[configured].join("/")}) actors`,
+      `actor "${input.decidedBy}" is not authorised for approve-contract; lifecycle.yml authorises ${configured} (${authorisedKinds(configured).join("/")}) actors`,
     );
   }
   if ((input.outcome === "proceed") !== (input.contract !== undefined)) {
@@ -385,10 +427,10 @@ export function recordDecision(root: string, input: RecordDecisionInput): Record
   // Supersede the previous current records explicitly (§15).
   for (const previous of currentSources(project, intent.id, "resolves")) {
     addEdges.push({ source: decision.id, type: "supersedes", target: previous });
-    const selected = project.graph.edges
-      .filter((edge) => edge.source === previous && edge.type === "selects")
+    const selected = project.graph.index
+      .edgesFrom(previous, "selects")
       .map((edge) => edge.target)
-      .filter((id) => !isSuperseded(project, id));
+      .filter((id) => project.graph.index.isCurrent(id));
     for (const oldContract of selected) {
       if (contract !== undefined) {
         addEdges.push({ source: contract.id, type: "supersedes", target: oldContract });
@@ -418,20 +460,22 @@ export interface CreateBriefInput {
  * state is loaded at commit time; see `createIntent`.
  */
 export function createBrief(root: string, input: CreateBriefInput): GraphNode {
-  const project = loadProject({ root });
-  const contract = requireNode(project, input.contractId, "contract");
-  const brief = buildNode(project, {
-    type: "brief",
-    title: input.title,
-    body: input.body,
-    created: input.created,
+  return withRepositoryLock(root, () => {
+    const project = loadProject({ root });
+    const contract = requireNode(project, input.contractId, "contract");
+    const brief = buildNode(project, {
+      type: "brief",
+      title: input.title,
+      body: input.body,
+      created: input.created,
+    });
+    const addEdges: Edge[] = [{ source: brief.id, type: "decomposes", target: contract.id }];
+    for (const previous of currentSources(project, contract.id, "decomposes")) {
+      addEdges.push({ source: brief.id, type: "supersedes", target: previous });
+    }
+    commitGraphChange(project, { addNodes: [brief], addEdges });
+    return brief;
   });
-  const addEdges: Edge[] = [{ source: brief.id, type: "decomposes", target: contract.id }];
-  for (const previous of currentSources(project, contract.id, "decomposes")) {
-    addEdges.push({ source: brief.id, type: "supersedes", target: previous });
-  }
-  commitGraphChange(project, { addNodes: [brief], addEdges });
-  return brief;
 }
 
 export interface CreateEvidenceInput {
@@ -452,19 +496,31 @@ export interface CreateEvidenceInput {
  * Evidence node and no partial `evidences` edge.
  */
 export function createEvidence(root: string, input: CreateEvidenceInput): GraphNode {
-  const project = loadProject({ root });
-  assertEvidenceClosure(project, input.briefId);
-  const brief = requireNode(project, input.briefId, "brief");
-  const evidence = buildNode(project, {
-    type: "evidence",
-    title: input.title,
-    body: input.body,
-    created: input.created,
+  return withRepositoryLock(root, () => {
+    const project = loadProject({ root });
+    const check = assertEvidenceClosure(project, input.briefId);
+    const brief = requireNode(project, input.briefId, "brief");
+    // Written from the check that has just passed, never supplied by the
+    // caller: verifying the §53 preconditions and recording them are one
+    // operation (Core §§14, 53). Correcting Evidence after closure carries
+    // the superseded record's block forward, because the run it describes is
+    // the one that actually closed the Delivery.
+    const built =
+      check.state === undefined ? undefined : closureFrom(project.lifecycle.shape, check.state);
+    const closure =
+      built === undefined ? carriedClosure(project, input.briefId) : closureFrontmatter(built);
+    const evidence = buildNode(project, {
+      type: "evidence",
+      title: input.title,
+      body: input.body,
+      created: input.created,
+      ...(closure === undefined ? {} : { extraFront: { closure } }),
+    });
+    const addEdges: Edge[] = [{ source: evidence.id, type: "evidences", target: brief.id }];
+    for (const previous of currentSources(project, brief.id, "evidences")) {
+      addEdges.push({ source: evidence.id, type: "supersedes", target: previous });
+    }
+    commitGraphChange(project, { addNodes: [evidence], addEdges });
+    return evidence;
   });
-  const addEdges: Edge[] = [{ source: evidence.id, type: "evidences", target: brief.id }];
-  for (const previous of currentSources(project, brief.id, "evidences")) {
-    addEdges.push({ source: evidence.id, type: "supersedes", target: previous });
-  }
-  commitGraphChange(project, { addNodes: [evidence], addEdges });
-  return evidence;
 }

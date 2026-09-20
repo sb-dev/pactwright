@@ -8,23 +8,16 @@ import {
 } from "../config/lifecycle.js";
 import { deriveLineages, type DeliveryState, type Lineage } from "../graph/lineage.js";
 import type { Project } from "../loader.js";
+import { permittedOperations, snapshotOf, type PermittedOperation } from "../validate/kernel.js";
 import {
   DIRECT_SHAPE_ID,
   STEP_CAPABILITY,
-  forwardStep,
   isGate,
   stepNamed,
-  transitionsFrom,
   type LifecycleShape,
   type ShapeStep,
 } from "./shape.js";
-import {
-  beginExecution,
-  loadExecutionState,
-  routeKey,
-  type ExecutionState,
-  type ReviewOutcome,
-} from "./state.js";
+import { beginExecution, loadExecutionState, type ExecutionState } from "./state.js";
 
 /**
  * How many Contract-crafting responsibilities each derived state has
@@ -149,53 +142,11 @@ export function currentStep(shape: LifecycleShape, state: ExecutionState): Shape
 }
 
 /**
- * Where a completed step hands off to (§32). A Review routes by outcome: a
- * pass continues forward, a revise takes a *declared* corrective route, and a
- * block stops. Everything else moves forward. Returning `undefined` for `to`
- * means the shape is finished.
+ * Routing moved into the reducer (`./transition.js`), which is now the only
+ * thing that applies it. Re-exported here so `routeAfter` keeps the import
+ * path its callers already use.
  */
-export interface Routing {
-  readonly to?: string;
-  /** Set when the route is a declared transition rather than the forward step. */
-  readonly route?: string;
-  readonly stop?: "blocked" | "iteration-exhausted" | "no-corrective-route";
-  readonly reason?: string;
-}
-
-export function routeAfter(
-  shape: LifecycleShape,
-  state: ExecutionState,
-  step: ShapeStep,
-  outcome?: ReviewOutcome,
-): Routing {
-  if (step.kind === "review" && outcome !== undefined && outcome !== "pass") {
-    if (outcome === "blocked") {
-      return { stop: "blocked", reason: `review "${step.name}" reported the work blocked` };
-    }
-    // A correction may only take a route the shape declares: AI cannot invent
-    // one (§32), and the route's policy bound caps automatic iteration (§34).
-    const corrective = transitionsFrom(shape, step.name).find(
-      (transition) => transition.maxIterations !== undefined,
-    );
-    if (corrective === undefined) {
-      return {
-        stop: "no-corrective-route",
-        reason: `review "${step.name}" asked for correction but the "${shape.id}" shape declares no corrective route from it`,
-      };
-    }
-    const key = routeKey(corrective.from, corrective.to);
-    const taken = state.iterations[key] ?? 0;
-    if (taken >= corrective.maxIterations!) {
-      return {
-        stop: "iteration-exhausted",
-        reason: `corrective route ${key} has run ${taken} of ${corrective.maxIterations!} permitted iterations; policy requires human intervention now`,
-      };
-    }
-    return { to: corrective.to, route: key };
-  }
-  const next = forwardStep(shape, step.name);
-  return next === undefined ? {} : { to: next.name };
-}
+export { routeAfter, type Routing } from "./transition.js";
 
 export interface LineageStatus {
   /** Absent for the "no lineage yet" entry. */
@@ -204,8 +155,8 @@ export interface LineageStatus {
   /** Set when the intent itself is superseded: the lineage is frozen (§15). */
   readonly superseded?: true;
   readonly completedResponsibilities: readonly ResponsibilityName[];
-  /** Shape steps completed in the current run; empty outside the shape phase. */
-  readonly completedSteps: readonly string[];
+  /** Shape steps the current run has completed, in order, repeats included. */
+  readonly visited: readonly string[];
   /** The next action, absent when the lifecycle has nothing further to do. */
   readonly current?: LifecycleAction;
   /** Set when `current` waits for a human. */
@@ -215,6 +166,13 @@ export interface LineageStatus {
   /** The resolved shape a shape-phase lineage is executing (§23). */
   readonly shape?: string;
   readonly executionStatus?: ExecutionState["status"];
+  /**
+   * Every recording operation this lineage admits now, replacements
+   * included — the same list `lifecycle record` checks against, so a CLI
+   * command and an adapter command cannot disagree about what is legal
+   * (consolidation design §12).
+   */
+  readonly permitted: readonly PermittedOperation[];
 }
 
 export interface LifecycleStatus {
@@ -337,11 +295,12 @@ function statusOf(project: Project, lineage: Lineage | undefined): LineageStatus
     state: lineage === undefined ? "none" : lineage.state,
     ...(lineage?.superseded === true ? { superseded: true } : {}),
     completedResponsibilities: completedResponsibilities(lineage),
-    completedSteps: execution?.state.completedSteps ?? [],
+    visited: execution?.state.visited ?? [],
     ...(execution === undefined
       ? {}
       : { shape: execution.state.shape, executionStatus: execution.state.status }),
     ...(next.action === undefined ? {} : { current: next.action }),
+    permitted: permittedOperations(snapshotOf(project), lineage),
   };
   if (!next.gate || next.action === undefined) return base;
   return { ...base, blocked: next.action.name, requiredActor: next.action.actor ?? "human" };
