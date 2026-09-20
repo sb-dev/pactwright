@@ -1,0 +1,19 @@
+id: fixture-migrating
+package: "@pactwright/fixture-migrating"
+version: 0.2.0
+pactwright: 0.0.2
+
+graph:
+  schema_version: 2
+  node_types:
+    deployment:
+      required_fields: [exposure, environment]
+  migrations:
+    - from: 1
+      to: 2
+      operations:
+        - { kind: rename, type: deployment, from: exposure_level, to: exposure }
+        - { kind: set-default, type: deployment, field: environment, value: unknown }
+
+runtime:
+  namespace: deployments

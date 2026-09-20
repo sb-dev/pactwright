@@ -6,7 +6,7 @@ import {
   type ConfigExtension,
   type PactwrightConfig,
 } from "../config/config.js";
-import { EXTENSION_ID_PATTERN, loadLock } from "../config/lock.js";
+import { EXTENSION_ID_PATTERN, loadLock, type LockExtension } from "../config/lock.js";
 import {
   applyEnvironmentPlan,
   planEnvironmentChange,
@@ -26,7 +26,9 @@ import { resolveDesiredState, serialiseLock } from "../pack/resolve.js";
 import { projectPaths } from "../project.js";
 import { validateProject } from "../validate.js";
 import { loadExtensionManifest } from "./manifest.js";
-import { resolveExtensionsBestEffort } from "./resolve.js";
+import { applyMigration, planMigration, writeMigration } from "./migrate.js";
+import { resolveExtensionsBestEffort, type ResolvedExtension } from "./resolve.js";
+import { loadNodes } from "../graph/nodes.js";
 
 /** One extension the operation touched. */
 export interface ExtensionChange {
@@ -176,6 +178,36 @@ export interface AddExtensionOptions {
   readonly allowInstall?: boolean;
 }
 
+/**
+ * `ids` in dependency-first order: a dependency before anything that needs
+ * it, ties broken alphabetically so the result is deterministic.
+ *
+ * This is the order Distribution §10 asks for. It is decided here, after
+ * every manifest has been read, rather than during the walk — where the
+ * dependencies are not yet knowable.
+ */
+function dependencyFirst(
+  ids: readonly string[],
+  dependencies: ReadonlyMap<string, readonly string[]>,
+): readonly string[] {
+  const wanted = new Set(ids);
+  const ordered: string[] = [];
+  const placed = new Set<string>();
+  const visiting = new Set<string>();
+  const visit = (id: string): void => {
+    if (placed.has(id) || visiting.has(id)) return;
+    visiting.add(id);
+    for (const dep of [...(dependencies.get(id) ?? [])].sort()) {
+      if (wanted.has(dep)) visit(dep);
+    }
+    visiting.delete(id);
+    placed.add(id);
+    ordered.push(id);
+  };
+  for (const id of [...ids].sort()) visit(id);
+  return ordered;
+}
+
 export function addExtension(
   root: string,
   spec: string,
@@ -230,6 +262,8 @@ function addWithin(
   const visited = new Set<string>();
   /** Packages this operation installed, so a failure can report them. */
   const installedPackages: string[] = [];
+  /** id → its manifest dependencies, for the post-order sort. */
+  const dependenciesOf = new Map<string, readonly string[]>();
   while (queue.length > 0) {
     const { id, source } = queue.shift()!;
     if (visited.has(id)) continue;
@@ -237,12 +271,16 @@ function addWithin(
     const existing = Object.hasOwn(proposed, id) ? proposed[id] : undefined;
     let located = locatePackage(paths.root, existing?.source ?? source, "extension");
     if (typeof located !== "string" && located.code !== "pack-not-exported") {
-      // Dependency-first installation: the walk reaches a dependency before
-      // the dependant that needs it, so installing here installs in the order
-      // §10 requires, through the project's own package manager.
-      // Told to the transaction *before* installing: what an undo has to
-      // reach is the version this project had at this moment, and the walk
-      // cannot know its dependencies at plan time.
+      // Installed in discovery order, which is breadth-first from the
+      // requested extension and so reaches a dependant before its
+      // dependency. That is not a choice: an extension's dependencies are
+      // declared in its manifest, and the manifest cannot be read until the
+      // package is installed. The comment here used to claim the opposite.
+      //
+      // What Distribution §10 is about — a dependency being enabled and
+      // locked before the dependant that needs it — is decided by `added`
+      // below, which is ordered dependency-first once every manifest has
+      // been read.
       about.installing(existing?.source ?? source);
       const installed = installPackage(paths.root, existing?.source ?? source, options);
       if (installed.length > 0) {
@@ -272,6 +310,7 @@ function addWithin(
       proposed[id] = { ...existing, enabled: true };
       added.push(id);
     }
+    dependenciesOf.set(id, manifest.value.dependencies);
     // Every dependency is enqueued, enabled or not: stopping at an enabled one
     // would hide whatever sits beneath it, and a disabled dependency two hops
     // down is exactly what needs repairing. `visited` is what bounds the walk.
@@ -323,12 +362,12 @@ function addWithin(
     ok: true,
     root: paths.root,
     ...(installedPackages.length === 0 ? {} : { installed: installedPackages.sort() }),
-    changes: added.sort().map((id) => ({
+    changes: dependencyFirst(added, dependenciesOf).map((id) => ({
       id,
       action: "added",
       ...(byId.get(id) === undefined ? {} : { version: byId.get(id)!.manifest.version }),
     })),
-    githubProfiles: added
+    githubProfiles: dependencyFirst(added, dependenciesOf)
       .map((id) => byId.get(id)?.manifest.githubProfile)
       .filter((profile): profile is string => profile !== undefined)
       .sort(),
@@ -574,6 +613,35 @@ function acquireTarget(
   return install({ root, manager, spec: `${source}@${target}` });
 }
 
+/**
+ * Runs the declared migrations that carry `id`'s records from the version the
+ * lock records to the version the installed manifest declares.
+ *
+ * A no-op when they already agree, which is the ordinary case.
+ */
+function runMigration(
+  root: string,
+  id: string,
+  next: ResolvedExtension | undefined,
+  locked: LockExtension | undefined,
+): readonly Problem[] {
+  if (next === undefined) return [];
+  const from = locked?.schemaVersion ?? 1;
+  const plan = planMigration(id, from, next.manifest.schemaVersion, next.manifest.migrations);
+  if (plan.problems.length > 0) return plan.problems;
+  if (plan.steps.length === 0) return [];
+
+  // Read with the plain node loader, not `loadProject`: the canonical path
+  // validates against the *installed* manifest, and these records are by
+  // definition still at the old schema.
+  const loaded = loadNodes(projectPaths(root).nodesDir);
+  if (loaded.problems.length > 0) return loaded.problems;
+  const result = applyMigration(loaded.nodes, plan, new Set(next.manifest.nodeTypes));
+  if (result.problems.length > 0) return result.problems;
+  writeMigration(result);
+  return [];
+}
+
 export function upgradeExtension(
   root: string,
   id: string,
@@ -615,9 +683,36 @@ export function upgradeExtension(
       }
       const next = desired.value.extensions.find((e) => e.id === id);
 
+      // Migrate the records this extension owns before the lock moves
+      // (Distribution §15 step 4). In memory first, validated through the
+      // loader afterwards, and inside the transaction throughout — so
+      // canonical state ends up fully migrated or untouched.
+      const migrated = runMigration(paths.root, id, next, previousLock.value?.extensions[id]);
+      if (migrated.length > 0) return { ok: false, value: undefined, problems: migrated };
+
+      // The lock records where the *records* now are, which a migration is
+      // the only thing that advances.
+      const locked = desired.value.lock.extensions[id];
+      const extensions =
+        next === undefined || locked === undefined
+          ? desired.value.lock.extensions
+          : {
+              ...desired.value.lock.extensions,
+              [id]: {
+                ...locked,
+                ...(next.manifest.schemaVersion === 1
+                  ? {}
+                  : { schemaVersion: next.manifest.schemaVersion }),
+              },
+            };
+
       // The configuration is desired state and cannot change on an upgrade, so
       // only the lock is written.
-      const written = writeDesiredState(paths.root, undefined, serialiseLock(desired.value.lock));
+      const written = writeDesiredState(
+        paths.root,
+        undefined,
+        serialiseLock({ ...desired.value.lock, extensions }),
+      );
       if (written !== undefined) return { ok: false, value: undefined, problems: [written] };
       const report = validateProject({ root: paths.root });
       if (!report.ok) return { ok: false, value: undefined, problems: report.problems };

@@ -68,6 +68,14 @@ function manifestHash(manifest: ExtensionManifest): string {
       dependencies: manifest.dependencies,
       node_types: manifest.nodeTypes,
       edge_types: manifest.edgeTypes,
+      // §11: the hash "pins what the extension declares". A changed schema
+      // declaration is a changed declaration, so it has to move the hash —
+      // otherwise an extension could tighten or relax its own types without
+      // the lock noticing.
+      node_schemas: manifest.nodeSchemas,
+      edge_schemas: manifest.edgeSchemas,
+      schema_version: manifest.schemaVersion,
+      migrations: manifest.migrations,
       namespaces: manifest.namespaces,
       agent_capabilities: manifest.agentCapabilities,
       github_profile: manifest.githubProfile,
@@ -271,6 +279,16 @@ export function enabledManifests(
 /** The lock entries recording exactly this resolved extension set (Distribution §6). */
 export function extensionLockEntries(
   extensions: readonly ResolvedExtension[],
+  /**
+   * The schema versions already recorded, carried forward.
+   *
+   * The lock records where an extension's canonical *records* are, not what
+   * its manifest declares: taking the manifest's version would mean a
+   * pending migration never existed to be found. An extension the previous
+   * lock does not name is newly added and has no records to migrate, so it
+   * starts at whatever its manifest declares.
+   */
+  recorded: Readonly<Record<string, number | undefined>> = {},
 ): LockFile["extensions"] {
   const versions = new Map(extensions.map((e) => [e.id, e.manifest.version]));
   return Object.fromEntries(
@@ -290,17 +308,38 @@ export function extensionLockEntries(
             version: extension.manifest.version,
             hash: extension.hash,
             ...(Object.keys(dependencies).length === 0 ? {} : { dependencies }),
+            ...schemaVersionEntry(extension, recorded),
           },
         ];
       }),
   );
 }
 
+function schemaVersionEntry(
+  extension: ResolvedExtension,
+  recorded: Readonly<Record<string, number | undefined>>,
+): { schemaVersion?: number } {
+  const carried = Object.hasOwn(recorded, extension.id) ? recorded[extension.id] : undefined;
+  const at =
+    carried ?? (Object.hasOwn(recorded, extension.id) ? 1 : extension.manifest.schemaVersion);
+  return at === 1 ? {} : { schemaVersion: at };
+}
+
 /**
  * Graph schemas contributed by the resolved extensions (enabled or not, so
- * records owned by a disabled extension keep their meaning). The manifest
- * registers type names only; contributed schemas are structural — permissive
- * endpoints, no extra required fields — and owned by the extension id.
+ * records owned by a disabled extension keep their meaning).
+ *
+ * A registered type name is not a schema (Distribution §11). A manifest that
+ * declares required fields, relationships and endpoint types gets the same
+ * `NodeSchema` and `EdgeSchema` treatment the core types get, so an
+ * Extension's own records are validated by the same mechanics — including
+ * the §7 relationship cardinality, which reads `relationships` off the node
+ * schema without caring who registered it.
+ *
+ * A manifest using the bare-list form keeps its previous meaning: the type
+ * is registered, nothing more is required of it. That is what every
+ * contributed type used to be, and saying so is more honest than inventing
+ * requirements an Extension never declared.
  */
 export function extensionSchemas(extensions: readonly ResolvedExtension[]): {
   readonly nodes: readonly NodeSchema[];
@@ -309,11 +348,32 @@ export function extensionSchemas(extensions: readonly ResolvedExtension[]): {
   const nodes: NodeSchema[] = [];
   const edges: EdgeSchema[] = [];
   for (const extension of [...extensions].sort((a, b) => a.id.localeCompare(b.id))) {
+    const { nodeSchemas, edgeSchemas } = extension.manifest;
     for (const type of extension.manifest.nodeTypes) {
-      nodes.push({ type, requiredFields: [] });
+      const declared = nodeSchemas[type];
+      nodes.push({
+        type,
+        requiredFields: declared?.requiredFields ?? [],
+        ...(declared === undefined || declared.relationships.length === 0
+          ? {}
+          : {
+              relationships: declared.relationships.map((rule) => ({
+                type: rule.type,
+                direction: rule.direction,
+                min: rule.min,
+                ...(rule.max === undefined ? {} : { max: rule.max }),
+              })),
+            }),
+      });
     }
     for (const type of extension.manifest.edgeTypes) {
-      edges.push({ type, owner: extension.id, sourceTypes: "any", targetTypes: "any" });
+      const declared = edgeSchemas[type];
+      edges.push({
+        type,
+        owner: extension.id,
+        sourceTypes: declared?.sourceTypes ?? "any",
+        targetTypes: declared?.targetTypes ?? "any",
+      });
     }
   }
   return { nodes, edges };
