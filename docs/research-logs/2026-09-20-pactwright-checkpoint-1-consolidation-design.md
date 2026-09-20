@@ -8,6 +8,8 @@ What follows is that paragraph expanded to the level of interfaces, file ownersh
 
 Everything here is a consolidation of responsibilities the runtime already has. Nothing adds a graph node type, a database, an orchestration language, or provider knowledge to Pactwright (Core §59, Distribution §25, redesign log §11).
 
+Delivery against this design is tracked in §16. Sections 1 to 15 are left as they were written.
+
 ---
 
 ## 1. Triage of the review's findings
@@ -744,3 +746,67 @@ The review's order holds. Two cheap foundations move ahead because everything af
 7. **Release and acceptance.** Clean-consumer replay of the corrected Step 29, the corrective release, the Kakeibo domain Delivery. Unchanged from the review.
 
 Each step's proof list is its acceptance; the review's per-finding acceptance lines map onto them one to one. When steps 1 to 6 are green, the exit-gate lines the review found open (self-hosting, closure preconditions, Gate authority, lock agreement, upgrade safety, Extension migration, evaluation of pack behaviour) are closed by construction rather than by a test per rule number.
+
+---
+
+## 16. Delivery status
+
+Added after the first tranche of work landed. Sections 1 to 15 stay as they were written on 20 September; this section is the only live part of the log. Commits are on `claude/pactwright-checkpoint-1-consolidation-2bsnud`.
+
+### Findings
+
+- [x] **R01** stale self-hosted lock — `a8252a6`
+- [x] **R02** Evidence closes after the reviewed code changes — `0a2beb6`
+- [x] **R03** validator accepts invalid graphs — `8c4bf92`
+- [x] **R04** Gate enforcement differs by path — `a9366bc`
+- [x] **R05** `run` cannot execute; retry reports completion — `a9366bc` (the false completion), `7d0c15a` (execution)
+- [x] **R06** evaluation does not evaluate the pack — `7d0c15a`, `4ca6711`, `0f1c7d0`
+- [ ] **R07** failed environment operations leave mixed state — step 4
+- [ ] **R08** lock agreement is partial and not enforced — step 4
+- [ ] **R09** upgrades do not acquire — step 4
+- [ ] **R10** Extension framework short of Step 16 — step 4
+- [ ] **R11** supersession unreachable from commands — step 6
+- [x] **R12** corrective iteration reported as impossible — `a9366bc`
+- [x] **R13** Kakeibo runbook omits pack selection — `39c9dae`
+
+### Design sections
+
+- [x] §3 one lifecycle transition reducer — `a9366bc`
+- [ ] §4 one validation kernel — **partial**. The structural, authority, execution and replay scopes landed in `8c4bf92`; the `environment` scope is part of step 4 and is not built.
+- [x] §5 one capability executor — `7d0c15a`, with isolated acquisition in `4ca6711` and the regression demonstration in `0f1c7d0`. All three executors exist: `none`, `claude-code`, and the harness's own `scripted` double, which configuration never selects.
+- [ ] §6 one environment transaction — step 4
+- [x] §7 explicit relationship cardinality and ownership — `8c4bf92`
+- [x] §8 shared indexed lineage resolution — `99e9dab`
+- [x] §9 verifiable Evidence closure and delivered-state identity — `0a2beb6`
+- [x] §10 protection against concurrent writers — `99e9dab`
+- [ ] §11 Extension registration with enforceable semantics — step 4. Its specification amendment has already landed; the runtime has not caught up.
+- [ ] §12 thin command handlers and permitted supersession — step 6
+
+### Specification amendments (§14)
+
+All five landed together in `fdee1be`, ahead of the code that relies on them.
+
+- [x] **Core §14** — the closure block, plus the rule for Evidence that predates it: such a record is recognised as predating verifiable closure and must not be retrofitted with reconstructed identities.
+- [x] **Core §53** — verifying the preconditions and writing the block are one operation.
+- [x] **Distribution §3** — `execution.executor`, default `none`.
+- [x] **Core §46** — `pactwright lifecycle record <stage>` and its Gate stage, so a configured Gate is resolvable through a runtime operation instead of by editing execution state. Beyond §14's list; a Gate the runtime enforces but cannot resolve is unusable.
+- [x] **Distribution §11** — Extension graph types and versioned schema migrations. Adopted ahead of the §11 implementation, which is what canonical gap discipline asks for.
+
+### Order of work (§15)
+
+- [x] 1. Self-hosted lock — `a8252a6`
+- [x] 2. Writer lock and shared index — `99e9dab`
+- [x] 3. Reducer, kernel, cardinality, closure — `a9366bc`, `8c4bf92`, `0a2beb6`
+- [ ] 4. Transaction, environment scope, Extensions — deferred to a follow-up branch
+- [x] 5. Executor — `7d0c15a`, `4ca6711`, `0f1c7d0`
+- [ ] 6. Thin handlers — deferred to a follow-up branch
+- [ ] 7. Release and acceptance — not design work; unchanged from the review
+
+### Notes from delivery
+
+Four things the work established that this design did not anticipate.
+
+- **Closure provenance needed a dated boundary.** §9 does not say what happens to Evidence written before the block existed. It cannot be given one honestly, because the execution state it would derive from is gone, so Core §14 now recognises such a record as predating verifiable closure and the runtime carries a single dated constant (`CLOSURE_PROVENANCE_FROM`) rather than fabricating identities or failing every existing record.
+- **Two fixtures were invalid, not merely untested.** `superseded-chain` had one proceed Decision selecting a Contract *and* its predecessor, which Core §15 forbids and `recordDecision` never produces; the lineage fixtures were paired with a policy that made them fail rule 13. The unchecked mutation gate (§1) was the only reason either loaded.
+- **The writer lock's first draft had a race.** An absent or unreadable lock read back as reclaimable, so a waiter could delete a lock a third process had just acquired. The fix is to retry when the file is gone and to verify the holder's contents before reclaiming — §10's "stale after a timeout" rule is not enough on its own.
+- **Wiring the executor exposed a latent loop.** A Delivery step that reported no revision made the reducer write `revision: ""`, which does not parse, and `executionFor` replaces unparseable state with a pristine run — so the shape restarted forever. §3's reducer now refuses a Review with no delivered state, the interpreter records the repository revision, and `runLineage` stops on execution problems instead of advancing past them.
