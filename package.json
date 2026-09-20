@@ -48,7 +48,8 @@
     "lint": "eslint .",
     "typecheck": "tsc --noEmit",
     "test": "node --test --import tsx tests/*.test.ts",
-    "verify": "pnpm format:check && pnpm lint && pnpm typecheck && pnpm test && pnpm build"
+    "verify:self": "node dist/cli.js doctor && node dist/cli.js validate && node dist/cli.js sync && node dist/cli.js sync && git diff --exit-code -- .claude .pactwright",
+    "verify": "pnpm format:check && pnpm lint && pnpm typecheck && pnpm test && pnpm build && pnpm verify:self"
   },
   "dependencies": {
     "@pactwright/standard": "workspace:*",
