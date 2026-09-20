@@ -751,7 +751,9 @@ Each step's proof list is its acceptance; the review's per-finding acceptance li
 
 ## 16. Delivery status
 
-Added after the first tranche of work landed. Sections 1 to 15 stay as they were written on 20 September; this section is the only live part of the log. Commits are on `claude/pactwright-checkpoint-1-consolidation-2bsnud`.
+Sections 1 to 15 stay as they were written on 20 September; this section is the only live part of the log. Commits are on `claude/pactwright-checkpoint-1-consolidation-2bsnud`.
+
+Every finding the review reproduced is closed. What remains is step 7 — release and external acceptance — which §15 already records as not design work.
 
 ### Findings
 
@@ -761,26 +763,26 @@ Added after the first tranche of work landed. Sections 1 to 15 stay as they were
 - [x] **R04** Gate enforcement differs by path — `a9366bc`
 - [x] **R05** `run` cannot execute; retry reports completion — `a9366bc` (the false completion), `7d0c15a` (execution)
 - [x] **R06** evaluation does not evaluate the pack — `7d0c15a`, `4ca6711`, `0f1c7d0`
-- [ ] **R07** failed environment operations leave mixed state — step 4
-- [ ] **R08** lock agreement is partial and not enforced — step 4
-- [ ] **R09** upgrades do not acquire — step 4
-- [ ] **R10** Extension framework short of Step 16 — step 4
-- [ ] **R11** supersession unreachable from commands — step 6
+- [x] **R07** failed environment operations leave mixed state — `d672cc2`
+- [x] **R08** lock agreement is partial and not enforced — `f0f6818`
+- [x] **R09** upgrades do not acquire — `e412f6c`
+- [x] **R10** Extension framework short of Step 16 — `d2d6669`
+- [x] **R11** supersession unreachable from commands — `15b6ba1`
 - [x] **R12** corrective iteration reported as impossible — `a9366bc`
 - [x] **R13** Kakeibo runbook omits pack selection — `39c9dae`
 
 ### Design sections
 
 - [x] §3 one lifecycle transition reducer — `a9366bc`
-- [ ] §4 one validation kernel — **partial**. The structural, authority, execution and replay scopes landed in `8c4bf92`; the `environment` scope is part of step 4 and is not built.
+- [x] §4 one validation kernel — `8c4bf92` (structural, authority, execution, replay) and `f0f6818` (`environment`). All five scopes.
 - [x] §5 one capability executor — `7d0c15a`, with isolated acquisition in `4ca6711` and the regression demonstration in `0f1c7d0`. All three executors exist: `none`, `claude-code`, and the harness's own `scripted` double, which configuration never selects.
-- [ ] §6 one environment transaction — step 4
+- [x] §6 one environment transaction — `d672cc2`
 - [x] §7 explicit relationship cardinality and ownership — `8c4bf92`
 - [x] §8 shared indexed lineage resolution — `99e9dab`
 - [x] §9 verifiable Evidence closure and delivered-state identity — `0a2beb6`
 - [x] §10 protection against concurrent writers — `99e9dab`
-- [ ] §11 Extension registration with enforceable semantics — step 4. Its specification amendment has already landed; the runtime has not caught up.
-- [ ] §12 thin command handlers and permitted supersession — step 6
+- [x] §11 Extension registration with enforceable semantics — `d2d6669`. Closes the open Intent `intent-give-extensions-versioned-schema-migrations-2bebaf56`, which stays open in the graph: this was built as a plain engineering change, not driven through the lifecycle.
+- [x] §12 thin command handlers and permitted supersession — `15b6ba1`
 
 ### Specification amendments (§14)
 
@@ -797,16 +799,76 @@ All five landed together in `fdee1be`, ahead of the code that relies on them.
 - [x] 1. Self-hosted lock — `a8252a6`
 - [x] 2. Writer lock and shared index — `99e9dab`
 - [x] 3. Reducer, kernel, cardinality, closure — `a9366bc`, `8c4bf92`, `0a2beb6`
-- [ ] 4. Transaction, environment scope, Extensions — deferred to a follow-up branch
+- [x] 4. Transaction, environment scope, Extensions — `f0f6818`, `d672cc2`, `e412f6c`, `d2d6669`
 - [x] 5. Executor — `7d0c15a`, `4ca6711`, `0f1c7d0`
-- [ ] 6. Thin handlers — deferred to a follow-up branch
+- [x] 6. Thin handlers — `15b6ba1`
 - [ ] 7. Release and acceptance — not design work; unchanged from the review
 
 ### Notes from delivery
 
-Four things the work established that this design did not anticipate.
+What the work established that this design did not anticipate. Sections 1 to 15 are left as written, so the corrections live here.
 
 - **Closure provenance needed a dated boundary.** §9 does not say what happens to Evidence written before the block existed. It cannot be given one honestly, because the execution state it would derive from is gone, so Core §14 now recognises such a record as predating verifiable closure and the runtime carries a single dated constant (`CLOSURE_PROVENANCE_FROM`) rather than fabricating identities or failing every existing record.
 - **Two fixtures were invalid, not merely untested.** `superseded-chain` had one proceed Decision selecting a Contract *and* its predecessor, which Core §15 forbids and `recordDecision` never produces; the lineage fixtures were paired with a policy that made them fail rule 13. The unchecked mutation gate (§1) was the only reason either loaded.
 - **The writer lock's first draft had a race.** An absent or unreadable lock read back as reclaimable, so a waiter could delete a lock a third process had just acquired. The fix is to retry when the file is gone and to verify the holder's contents before reclaiming — §10's "stale after a timeout" rule is not enough on its own.
 - **Wiring the executor exposed a latent loop.** A Delivery step that reported no revision made the reducer write `revision: ""`, which does not parse, and `executionFor` replaces unparseable state with a pristine run — so the shape restarted forever. §3's reducer now refuses a Review with no delivered state, the interpreter records the repository revision, and `runLineage` stops on execution problems instead of advancing past them.
+
+#### From steps 4 and 6
+
+- **§6's operation order deadlocks the runtime upgrade.** It ends "commit —
+  release the writer lock", with installs inside. But `cliReentry` runs the
+  new runtime as a *child process* and the lock's re-entrancy set is
+  per-process, so a transaction spanning the spawn blocks the child for its
+  full 30-second wait and then fails it with `repository-locked`. The
+  upgrade is two transactions: the first holds no lock while it spawns, the
+  second takes it inside the child. An in-process test double cannot catch
+  this — it takes the lock re-entrantly and passes — so the regression test
+  spawns a real child.
+- **A plan cannot be total.** §6's `EnvironmentPlan` carries `desired`,
+  `writes` and `migrations`, none of which is computable before installation:
+  desired state resolves through installed package manifests, and a
+  migration list comes from the *new* manifest. The plan carries the managed
+  set, the installs and the pre-install refusals; the rest is a fact of the
+  apply.
+- **`restored` cannot mean "every managed file re-hashes".** `node_modules`
+  is not a managed file, so that predicate holds while a newly installed
+  package is still in place — today's false `restored: true`. It now also
+  requires the previous installed version to read back, and `recovery` names
+  what a human must run when it cannot.
+- **Two callers do not fit the plan shape.** `removeExtension` deliberately
+  succeeds while validation fails — removing an Extension is *expected* to
+  leave records the graph no longer recognises — so its validate step is
+  advisory. `initProject` composes three operations, so it is an ordered list
+  of plans rather than one.
+- **A collision is not a partial write.** §6 lists `writeAdapter` skipping a
+  colliding file beside its unrecoverable mid-rename throw, but only the
+  second is a fault. Writing every non-colliding file and failing with the
+  conflict reported is a complete outcome the user can act on
+  (Distribution §14), and the transaction undoes the throw, not the conflict.
+- **§4's caller table contradicts §4's proof.** The table gives
+  `commitGraphChange` three scopes; the proof requires lock drift to refuse
+  `createIntent` before any write. The proof won: a record written against a
+  drifted environment carries an `environment_lock_hash` naming an
+  environment that was never used.
+- **"A package-backed component missing from `node_modules` is a
+  disagreement" is wrong.** §4 says it of the *package-manager lock*; applied
+  to the installed tree it rejects every project that installed only the
+  runtime, because a package source resolves like a dependency of the project
+  and *then* of the runtime. That is how `@pactwright/standard` is found
+  after one `pnpm add -D pactwright`.
+- **A migration cannot load the project it is migrating.** `loadProject`
+  validates against the installed manifest, and the records are by definition
+  still at the old schema, so the canonical path fails on the very records
+  the migration exists to fix. It reads through the plain node loader.
+- **Installation cannot be dependency-first.** An Extension's dependencies
+  are declared in its manifest, and the manifest cannot be read until the
+  package is installed. What §10 is actually about — a dependency enabled and
+  locked before its dependant — is decided after every manifest has been
+  read, and now is.
+- **Three more tests pinned a defect rather than a behaviour**, beyond the two
+  fixtures found in step 3: `extension add: installs dependencies before the
+  extension that needs them` asserted the dependant first; the extension
+  upgrade tests simulated a new version by editing the installed manifest,
+  because no acquisition step existed to stub; and the CLI walk asserted that
+  a second `write-brief` exits 1, which is the §45 Brief replacement R11 is
+  about.
