@@ -1,0 +1,18 @@
+id: fixture-typed
+package: "@pactwright/fixture-typed"
+version: 0.1.0
+pactwright: 0.0.2
+
+graph:
+  node_types:
+    deployment:
+      required_fields: [exposure]
+      relationships:
+        - { type: deployed-as, direction: in, min: 1, max: 1 }
+  edge_types:
+    deployed-as:
+      source_types: [evidence]
+      target_types: [deployment]
+
+runtime:
+  namespace: deployments

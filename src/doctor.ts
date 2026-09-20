@@ -190,6 +190,32 @@ export function doctor(root: string = process.cwd()): DoctorReport {
         : `${enabled.length} enabled: ${enabled.map((e) => `${e.manifest.id}@${e.manifest.version}`).join(", ")}`,
   });
 
+  // --- pending extension migrations -------------------------------------
+  // Distribution §11: "An Extension with a pending or partially applied
+  // migration is an environment fault, reported as requiring action rather
+  // than treated as a valid environment." §16 lists it among what `doctor`
+  // must report.
+  const pending = project.extensions
+    .map((extension) => ({
+      id: extension.id,
+      at: project.lock.extensions[extension.id]?.schemaVersion ?? 1,
+      declares: extension.manifest.schemaVersion,
+    }))
+    .filter((entry) => entry.at !== entry.declares);
+  if (pending.length > 0) {
+    checks.push({
+      name: "extension-migrations",
+      status: "action-required",
+      detail: pending
+        .map(
+          (entry) =>
+            `extension "${entry.id}" records are at schema version ${entry.at} but the installed manifest declares ${entry.declares}`,
+        )
+        .join("; "),
+      remediation: `pactwright extension upgrade ${pending[0]!.id}`,
+    });
+  }
+
   // --- generated drift --------------------------------------------------
   checks.push(generatedDrift(project));
 

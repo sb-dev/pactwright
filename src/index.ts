@@ -378,7 +378,12 @@ export {
   EXTENSION_MANIFEST_FILE,
   loadExtensionManifest,
   parseExtensionManifest,
+  type ExtensionEdgeType,
   type ExtensionManifest,
+  type ExtensionMigration,
+  type ExtensionNodeType,
+  type ExtensionRelationship,
+  type MigrationOperation,
 } from "./extension/manifest.js";
 export {
   RESERVED_NAMESPACES,
@@ -399,6 +404,13 @@ export {
   type ExtensionChangeReport,
   type UpgradeExtensionOptions,
 } from "./extension/manage.js";
+export {
+  applyMigration,
+  planMigration,
+  writeMigration,
+  type MigrationPlan,
+  type MigrationResult,
+} from "./extension/migrate.js";
 export {
   GENERATED_MARKER,
   MANAGED_DIRS,

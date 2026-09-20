@@ -29,6 +29,13 @@ test("extension manifest: parses the Distribution §5 example shape", () => {
     dependencies: ["project-intelligence"],
     nodeTypes: ["asset", "publication"],
     edgeTypes: ["produces", "grounded-in", "publishes"],
+    // The bare-list form registers names and declares nothing further, which
+    // is what it has always meant. Schema version 1 with no migrations is
+    // the state of an extension that has never changed its record shape.
+    nodeSchemas: {},
+    edgeSchemas: {},
+    schemaVersion: 1,
+    migrations: [],
     namespaces: ["review", "creative"],
     agentCapabilities: ["graph-review", "creative-delivery"],
     githubProfile: "review-creative",

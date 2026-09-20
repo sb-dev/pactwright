@@ -1,0 +1,13 @@
+id: fixture-migrating
+package: "@pactwright/fixture-migrating"
+version: 0.1.0
+pactwright: 0.0.2
+
+graph:
+  schema_version: 1
+  node_types:
+    deployment:
+      required_fields: [exposure_level]
+
+runtime:
+  namespace: deployments
