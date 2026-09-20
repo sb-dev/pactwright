@@ -1,4 +1,12 @@
-import { closeSync, mkdirSync, openSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import {
+  closeSync,
+  existsSync,
+  mkdirSync,
+  openSync,
+  readFileSync,
+  rmSync,
+  writeFileSync,
+} from "node:fs";
 import { hostname } from "node:os";
 import { join } from "node:path";
 import { PactwrightError, type Problem } from "../errors.js";
@@ -110,6 +118,37 @@ function acquire(path: string, now: () => number): boolean {
   return true;
 }
 
+/**
+ * Removes a lock believed to be stale, after confirming it is still the same
+ * one. Re-reading immediately before the delete closes the window in which
+ * the holder released and a third process acquired: we would otherwise
+ * delete a lock that is legitimately held.
+ */
+function reclaim(path: string, expected: LockHolder | undefined, options: WriterLockOptions): void {
+  const current = readHolder(path);
+  if (expected !== undefined) {
+    if (
+      current === undefined ||
+      current.pid !== expected.pid ||
+      current.host !== expected.host ||
+      current.startedAt !== expected.startedAt
+    ) {
+      return; // Someone else owns it now; go round again.
+    }
+  } else if (current !== undefined) {
+    return; // It became readable; it is a real holder after all.
+  }
+  options.onProblem?.({
+    code: "stale-writer-lock",
+    message:
+      expected === undefined
+        ? "reclaimed an unreadable writer lock"
+        : `reclaimed a writer lock held by ${expected.host}:${expected.pid} since ${new Date(expected.startedAt).toISOString()}`,
+    path,
+  });
+  rmSync(path, { force: true });
+}
+
 function sleep(ms: number): void {
   // Synchronous on purpose: every caller is a synchronous mutation, and an
   // await here would let a second mutation interleave inside one process.
@@ -148,19 +187,26 @@ export function withRepositoryLock<T>(
     if (acquire(path, now)) break;
 
     const holder = readHolder(path);
-    const age = holder === undefined ? undefined : now() - holder.startedAt;
-    const reclaimable =
-      holder === undefined || !isLive(holder) || (age !== undefined && age >= staleAfterMs);
-    if (reclaimable) {
-      options.onProblem?.({
-        code: "stale-writer-lock",
-        message:
-          holder === undefined
-            ? "reclaimed an unreadable writer lock"
-            : `reclaimed a writer lock held by ${holder.host}:${holder.pid} since ${new Date(holder.startedAt).toISOString()}`,
-        path,
-      });
-      rmSync(path, { force: true });
+    if (holder === undefined) {
+      // Either the holder released between our failed create and this read,
+      // or the file is unreadable. Removing it on this basis alone is a race:
+      // in that window the lock may already belong to a process that acquired
+      // it, and deleting theirs would put two writers in the critical section
+      // at once. Retry instead, and only reclaim an unreadable lock once the
+      // bounded wait has elapsed.
+      if (!existsSync(path)) continue;
+      if (now() >= deadline) {
+        reclaim(path, undefined, options);
+        continue;
+      }
+      sleep(backoff);
+      backoff = Math.min(backoff * 2, POLL_CEILING_MS);
+      continue;
+    }
+
+    const age = now() - holder.startedAt;
+    if (!isLive(holder) || age >= staleAfterMs) {
+      reclaim(path, holder, options);
       continue;
     }
 

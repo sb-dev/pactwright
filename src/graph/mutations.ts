@@ -6,6 +6,7 @@ import { PactwrightError, type Problem } from "../errors.js";
 import { decisionActor } from "../config/lifecycle.js";
 import { actorPermitted, authorisedKinds } from "./authority.js";
 import { assertEvidenceClosure } from "./closure.js";
+import { closureFrom, closureFrontmatter, closureOf } from "./evidence-closure.js";
 import { loadProject, type Project } from "../loader.js";
 import { assertPackComplete } from "../pack/resolve.js";
 import { edgeKey, type Edge } from "./edges.js";
@@ -240,6 +241,24 @@ function commitLocked(project: Project, change: GraphChange, options: CommitOpti
   }
 }
 
+/**
+ * The closure block of the Evidence a correction supersedes (§45).
+ *
+ * Correcting what Evidence *says* does not reopen Delivery, and the run that
+ * closed it has rightly been cleared, so the facts about that closure are
+ * carried forward rather than reconstructed or dropped.
+ */
+function carriedClosure(project: Project, briefId: string): Record<string, unknown> | undefined {
+  const current = project.graph.index
+    .sourcesOf(briefId, "evidences", "evidence")
+    .find((node) => project.graph.index.isCurrent(node.id));
+  if (current === undefined) return undefined;
+  const closure = closureOf(current);
+  return typeof closure === "object" && closure !== null
+    ? (closure as Record<string, unknown>)
+    : undefined;
+}
+
 /** Today's date in UTC — deliberately timezone-independent, since `created` feeds the id hash. */
 function today(): string {
   return new Date().toISOString().slice(0, 10);
@@ -270,7 +289,8 @@ interface NewNodeInput {
   readonly title: string;
   readonly body: string;
   readonly created?: string | undefined;
-  readonly extraFront?: Readonly<Record<string, string>>;
+  /** Type-specific frontmatter; nested values round-trip through js-yaml. */
+  readonly extraFront?: Readonly<Record<string, unknown>>;
   readonly taken?: ReadonlySet<string>;
 }
 
@@ -471,13 +491,23 @@ export interface CreateEvidenceInput {
 export function createEvidence(root: string, input: CreateEvidenceInput): GraphNode {
   return withRepositoryLock(root, () => {
     const project = loadProject({ root });
-    assertEvidenceClosure(project, input.briefId);
+    const check = assertEvidenceClosure(project, input.briefId);
     const brief = requireNode(project, input.briefId, "brief");
+    // Written from the check that has just passed, never supplied by the
+    // caller: verifying the §53 preconditions and recording them are one
+    // operation (Core §§14, 53). Correcting Evidence after closure carries
+    // the superseded record's block forward, because the run it describes is
+    // the one that actually closed the Delivery.
+    const built =
+      check.state === undefined ? undefined : closureFrom(project.lifecycle.shape, check.state);
+    const closure =
+      built === undefined ? carriedClosure(project, input.briefId) : closureFrontmatter(built);
     const evidence = buildNode(project, {
       type: "evidence",
       title: input.title,
       body: input.body,
       created: input.created,
+      ...(closure === undefined ? {} : { extraFront: { closure } }),
     });
     const addEdges: Edge[] = [{ source: evidence.id, type: "evidences", target: brief.id }];
     for (const previous of currentSources(project, brief.id, "evidences")) {

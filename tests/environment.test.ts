@@ -198,8 +198,11 @@ test("environment: repository revision resolves this repository's commit", () =>
     encoding: "utf8",
   }).trim();
   assert.equal(revision.commit, head);
-  assert.match(revision.id, /^git:[0-9a-f]{40}(\+dirty)?$/);
-  assert.equal(revision.id, `git:${head}${revision.dirty ? "+dirty" : ""}`);
+  assert.match(revision.id, /^git:[0-9a-f]{40}(\+sha256:[0-9a-f]{64})?$/);
+  assert.equal(
+    revision.id,
+    `git:${head}${revision.workingTree === undefined ? "" : `+${revision.workingTree}`}`,
+  );
 });
 
 test("environment: a directory outside a repository resolves to no revision", () => {
