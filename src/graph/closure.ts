@@ -3,7 +3,7 @@ import { currentStep, executionFor, selectLineages } from "../lifecycle/engine.j
 import { isGate } from "../lifecycle/shape.js";
 import type { ExecutionState } from "../lifecycle/state.js";
 import type { Project } from "../loader.js";
-import { deriveLineage, type Lineage } from "./lineage.js";
+import { lineageFor, type Lineage, type Resolved } from "./lineage.js";
 import { repositoryRevision } from "./repository.js";
 
 /**
@@ -81,15 +81,13 @@ export function checkEvidenceClosure(project: Project, briefId: string): Closure
   };
 
   // 1. The Brief is current.
-  const brief = project.graph.nodes.find((node) => node.id === briefId && node.type === "brief");
-  if (brief === undefined) {
+  const index = project.graph.index;
+  const brief = index.node(briefId);
+  if (brief === undefined || brief.type !== "brief") {
     record("brief-current", `"${briefId}" is not an existing brief node`);
     return { ok: false, problems, failed };
   }
-  const superseded = project.graph.edges.some(
-    (edge) => edge.type === "supersedes" && edge.target === briefId,
-  );
-  if (superseded) {
+  if (!index.isCurrent(briefId)) {
     record(
       "brief-current",
       `brief "${briefId}" is superseded; Evidence closes the current Brief, not a replaced one`,
@@ -114,12 +112,7 @@ export function checkEvidenceClosure(project: Project, briefId: string): Closure
   const correcting =
     lineage.state === "done" &&
     lineage.evidence !== undefined &&
-    project.graph.edges.some(
-      (edge) =>
-        edge.type === "evidences" &&
-        edge.source === lineage.evidence!.id &&
-        edge.target === briefId,
-    );
+    index.edgesTo(briefId, "evidences").some((edge) => edge.source === lineage.evidence?.id);
   if (correcting) return { ok: problems.length === 0, problems, failed };
 
   const execution = executionFor(project, lineage);
@@ -176,23 +169,19 @@ export function checkEvidenceClosure(project: Project, briefId: string): Closure
 }
 
 function lineageOf(project: Project, briefId: string): Lineage | undefined {
-  const intentId = project.graph.edges
-    .filter((edge) => edge.type === "decomposes" && edge.source === briefId)
-    .flatMap((edge) =>
-      project.graph.edges
-        .filter((selects) => selects.type === "selects" && selects.target === edge.target)
-        .flatMap((selects) =>
-          project.graph.edges
-            .filter(
-              (resolves) => resolves.type === "resolves" && resolves.source === selects.source,
-            )
-            .map((resolves) => resolves.target),
-        ),
-    )[0];
-  if (intentId === undefined) return undefined;
-  const lineage = deriveLineage(intentId, project.graph.nodes, project.graph.edges);
-  if (lineage?.brief?.id !== briefId) return undefined;
-  return lineage;
+  // Resolved through the shared index (§8): three nested full scans taking
+  // `[0]` used to answer this, so a Brief with two parents resolved to
+  // whichever the edge order happened to put first.
+  let resolved: Resolved | undefined;
+  try {
+    resolved = lineageFor(project.graph.index, briefId);
+  } catch {
+    // `ambiguous-parent` and `ambiguous-lineage` both mean the same thing
+    // here: there is no unambiguous lineage to close.
+    return undefined;
+  }
+  if (resolved?.lineage.brief?.id !== briefId) return undefined;
+  return resolved.lineage;
 }
 
 /**

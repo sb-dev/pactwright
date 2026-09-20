@@ -13,6 +13,7 @@ import { edgeKey, type Edge } from "./edges.js";
 import { mintNodeId, slugify } from "./ids.js";
 import { validateLineages } from "./lineage.js";
 import { graphRevision } from "./revision.js";
+import { withRepositoryLock } from "./writer-lock.js";
 import { checkNodeIdImmutability, parseNodeFile, type GraphNode } from "./nodes.js";
 import {
   parseDecidedBy,
@@ -101,6 +102,11 @@ function checkProposedNode(project: Project, node: GraphNode): readonly Problem[
  * mutation"): plan → validate the complete proposed state against the
  * current graph state → write atomically → validate the resulting state.
  *
+ * The whole sequence runs under the repository writer lock (§10). Each typed
+ * mutation takes the lock *before* it loads, so the snapshot it plans against
+ * cannot go stale underneath it; the lock taken here is the re-entrant inner
+ * take that covers a direct caller.
+ *
  * Before anything else the selected agent pack is resolved and checked
  * against the required capabilities (Distribution §7): an incomplete or
  * unresolvable pack throws here, before any validation or write.
@@ -118,6 +124,12 @@ export function commitGraphChange(
   change: GraphChange,
   options: CommitOptions = {},
 ): void {
+  withRepositoryLock(project.paths.root, () => {
+    commitLocked(project, change, options);
+  });
+}
+
+function commitLocked(project: Project, change: GraphChange, options: CommitOptions): void {
   assertPackComplete(project);
   const problems: Problem[] = [];
   const nodes = [...project.graph.nodes];
@@ -156,9 +168,11 @@ export function commitGraphChange(
   );
   if (problems.length > 0) throw PactwrightError.fromProblems("mutation-invalid", problems);
 
-  // Compare-and-swap: the snapshot this change was planned against must
-  // still be the on-disk graph state, or a concurrent writer's records
-  // would be silently overwritten by the wholesale edges.yml rewrite.
+  // Compare-and-swap, now *inside* the writer lock (§10). The lock is what
+  // makes the sequence atomic; this stays as the cheap second check, so a
+  // caller that planned against a stale snapshot — one loaded before another
+  // process released the lock — still gets `concurrent-modification` rather
+  // than overwriting its records in the wholesale edges.yml rewrite.
   const expected = graphRevision({ nodes: project.graph.nodes, edges: project.graph.edges });
   const fresh = loadProject({ root: project.paths.root });
   if (graphRevision({ nodes: fresh.graph.nodes, edges: fresh.graph.edges }) !== expected) {
@@ -228,26 +242,23 @@ function today(): string {
 }
 
 function requireNode(project: Project, id: string, type: string): GraphNode {
-  const node = project.graph.nodes.find((candidate) => candidate.id === id);
+  const node = project.graph.index.node(id);
   if (node === undefined || node.type !== type) {
     fail("unknown-node", `"${id}" is not an existing ${type} node`);
   }
-  if (isSuperseded(project, id)) {
+  if (!project.graph.index.isCurrent(id)) {
     fail("superseded-node", `${type} "${id}" is superseded; only current records take new work`);
   }
   return node;
 }
 
-function isSuperseded(project: Project, id: string): boolean {
-  return project.graph.edges.some((edge) => edge.type === "supersedes" && edge.target === id);
-}
-
 /** Current (unsuperseded) sources of `edgeType` edges into `target`. */
 function currentSources(project: Project, target: string, edgeType: string): readonly string[] {
-  return project.graph.edges
-    .filter((edge) => edge.type === edgeType && edge.target === target)
+  const index = project.graph.index;
+  return index
+    .edgesTo(target, edgeType)
     .map((edge) => edge.source)
-    .filter((id) => !isSuperseded(project, id));
+    .filter((id) => index.isCurrent(id));
 }
 
 interface NewNodeInput {
@@ -293,10 +304,12 @@ export interface CreateIntentInput {
  * resulting states — a caller-held snapshot never reaches the filesystem.
  */
 export function createIntent(root: string, input: CreateIntentInput): GraphNode {
-  const project = loadProject({ root });
-  const intent = buildNode(project, { type: "intent", ...input });
-  commitGraphChange(project, { addNodes: [intent], addEdges: [] });
-  return intent;
+  return withRepositoryLock(root, () => {
+    const project = loadProject({ root });
+    const intent = buildNode(project, { type: "intent", ...input });
+    commitGraphChange(project, { addNodes: [intent], addEdges: [] });
+    return intent;
+  });
 }
 
 export interface RecordDecisionInput {
@@ -337,6 +350,10 @@ const DECISION_TITLES: Readonly<Record<DecisionOutcome, string>> = {
  * Current graph state is loaded at commit time; see `createIntent`.
  */
 export function recordDecision(root: string, input: RecordDecisionInput): RecordedDecision {
+  return withRepositoryLock(root, () => recordDecisionLocked(root, input));
+}
+
+function recordDecisionLocked(root: string, input: RecordDecisionInput): RecordedDecision {
   const project = loadProject({ root });
   const actor = parseDecidedBy(input.decidedBy);
   if (actor === undefined) {
@@ -385,10 +402,10 @@ export function recordDecision(root: string, input: RecordDecisionInput): Record
   // Supersede the previous current records explicitly (§15).
   for (const previous of currentSources(project, intent.id, "resolves")) {
     addEdges.push({ source: decision.id, type: "supersedes", target: previous });
-    const selected = project.graph.edges
-      .filter((edge) => edge.source === previous && edge.type === "selects")
+    const selected = project.graph.index
+      .edgesFrom(previous, "selects")
       .map((edge) => edge.target)
-      .filter((id) => !isSuperseded(project, id));
+      .filter((id) => project.graph.index.isCurrent(id));
     for (const oldContract of selected) {
       if (contract !== undefined) {
         addEdges.push({ source: contract.id, type: "supersedes", target: oldContract });
@@ -418,20 +435,22 @@ export interface CreateBriefInput {
  * state is loaded at commit time; see `createIntent`.
  */
 export function createBrief(root: string, input: CreateBriefInput): GraphNode {
-  const project = loadProject({ root });
-  const contract = requireNode(project, input.contractId, "contract");
-  const brief = buildNode(project, {
-    type: "brief",
-    title: input.title,
-    body: input.body,
-    created: input.created,
+  return withRepositoryLock(root, () => {
+    const project = loadProject({ root });
+    const contract = requireNode(project, input.contractId, "contract");
+    const brief = buildNode(project, {
+      type: "brief",
+      title: input.title,
+      body: input.body,
+      created: input.created,
+    });
+    const addEdges: Edge[] = [{ source: brief.id, type: "decomposes", target: contract.id }];
+    for (const previous of currentSources(project, contract.id, "decomposes")) {
+      addEdges.push({ source: brief.id, type: "supersedes", target: previous });
+    }
+    commitGraphChange(project, { addNodes: [brief], addEdges });
+    return brief;
   });
-  const addEdges: Edge[] = [{ source: brief.id, type: "decomposes", target: contract.id }];
-  for (const previous of currentSources(project, contract.id, "decomposes")) {
-    addEdges.push({ source: brief.id, type: "supersedes", target: previous });
-  }
-  commitGraphChange(project, { addNodes: [brief], addEdges });
-  return brief;
 }
 
 export interface CreateEvidenceInput {
@@ -452,19 +471,21 @@ export interface CreateEvidenceInput {
  * Evidence node and no partial `evidences` edge.
  */
 export function createEvidence(root: string, input: CreateEvidenceInput): GraphNode {
-  const project = loadProject({ root });
-  assertEvidenceClosure(project, input.briefId);
-  const brief = requireNode(project, input.briefId, "brief");
-  const evidence = buildNode(project, {
-    type: "evidence",
-    title: input.title,
-    body: input.body,
-    created: input.created,
+  return withRepositoryLock(root, () => {
+    const project = loadProject({ root });
+    assertEvidenceClosure(project, input.briefId);
+    const brief = requireNode(project, input.briefId, "brief");
+    const evidence = buildNode(project, {
+      type: "evidence",
+      title: input.title,
+      body: input.body,
+      created: input.created,
+    });
+    const addEdges: Edge[] = [{ source: evidence.id, type: "evidences", target: brief.id }];
+    for (const previous of currentSources(project, brief.id, "evidences")) {
+      addEdges.push({ source: evidence.id, type: "supersedes", target: previous });
+    }
+    commitGraphChange(project, { addNodes: [evidence], addEdges });
+    return evidence;
   });
-  const addEdges: Edge[] = [{ source: evidence.id, type: "evidences", target: brief.id }];
-  for (const previous of currentSources(project, brief.id, "evidences")) {
-    addEdges.push({ source: evidence.id, type: "supersedes", target: previous });
-  }
-  commitGraphChange(project, { addNodes: [evidence], addEdges });
-  return evidence;
 }
