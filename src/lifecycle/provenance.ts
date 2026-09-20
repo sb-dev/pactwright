@@ -1,6 +1,5 @@
 import { PactwrightError } from "../errors.js";
-import { findIntentOf } from "../context.js";
-import { deriveLineage, type Lineage } from "../graph/lineage.js";
+import { lineageFor, type Lineage } from "../graph/lineage.js";
 import { repositoryRevision } from "../graph/repository.js";
 import { loadProject, type Project } from "../loader.js";
 import { currentStep, executionFor, routeAfter } from "./engine.js";
@@ -31,24 +30,16 @@ function runFor(
   project: Project,
   anchor: string,
 ): { readonly lineage: Lineage; readonly state: ExecutionState } {
-  const intent =
-    project.graph.nodes.find((node) => node.id === anchor && node.type === "intent") ??
-    findIntentOf(anchor, project.graph.nodes, project.graph.edges);
-  if (intent === undefined) {
+  const resolved = lineageFor(project.graph.index, anchor);
+  if (resolved === undefined) {
     throw new PactwrightError("unknown-node", `"${anchor}" is not part of any Delivery lineage`);
   }
-  const lineage = deriveLineage(intent.id, project.graph.nodes, project.graph.edges);
-  if (lineage === undefined) {
-    throw new PactwrightError(
-      "ambiguous-lineage",
-      `intent "${intent.id}" has no unambiguous lineage; fix validation problems first`,
-    );
-  }
+  const lineage = resolved.lineage;
   const execution = executionFor(project, lineage);
   if (execution === undefined) {
     throw new PactwrightError(
       "not-delivering",
-      `intent "${intent.id}" is not in its Brief-to-Evidence phase; there is no run to record against`,
+      `intent "${resolved.intent.id}" is not in its Brief-to-Evidence phase; there is no run to record against`,
     );
   }
   return { lineage, state: execution.state };

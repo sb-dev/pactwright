@@ -1,6 +1,7 @@
 import { PactwrightError } from "./errors.js";
 import type { Edge } from "./graph/edges.js";
-import { deriveLineage, type DeliveryState, type Lineage } from "./graph/lineage.js";
+import { GraphIndex, intentOf } from "./graph/graph-index.js";
+import { lineageOfIntent, type DeliveryState, type Lineage } from "./graph/lineage.js";
 import type { GraphNode } from "./graph/nodes.js";
 import type { Project } from "./loader.js";
 
@@ -50,67 +51,34 @@ export interface ContextOptions {
   readonly contributors?: readonly ContextContributor[];
 }
 
-/** Structural edge from a core node towards its intent, regardless of currency. */
-const TOWARDS_INTENT: Readonly<Record<string, { type: string; direction: "out" | "in" }>> = {
-  evidence: { type: "evidences", direction: "out" }, // evidence --evidences--> brief
-  brief: { type: "decomposes", direction: "out" }, // brief --decomposes--> contract
-  contract: { type: "selects", direction: "in" }, // decision --selects--> contract
-  decision: { type: "resolves", direction: "out" }, // decision --resolves--> intent
-};
-
 /**
- * The intent a core Delivery node belongs to, found by walking structural
- * edges (superseded records included). `undefined` when the node is not
- * linked to any intent.
+ * The intent a core Delivery node belongs to, resolved through the shared
+ * index (§8). `undefined` when the node is not linked to any intent; throws
+ * `ambiguous-parent` when a hop has more than one structural parent, rather
+ * than silently taking the first matching edge as it used to.
  */
 export function findIntentOf(
   nodeId: string,
   nodes: readonly GraphNode[],
   edges: readonly Edge[],
+  index?: GraphIndex,
 ): GraphNode | undefined {
-  const byId = new Map(nodes.map((node) => [node.id, node]));
-  const seen = new Set<string>();
-  let current = byId.get(nodeId);
-  while (current !== undefined && !seen.has(current.id)) {
-    if (current.type === "intent") return current;
-    seen.add(current.id);
-    const step = TOWARDS_INTENT[current.type];
-    if (step === undefined) return undefined;
-    const id = current.id;
-    const link = edges.find((edge) =>
-      step.direction === "out"
-        ? edge.type === step.type && edge.source === id
-        : edge.type === step.type && edge.target === id,
-    );
-    current =
-      link === undefined
-        ? undefined
-        : byId.get(step.direction === "out" ? link.target : link.source);
-  }
-  return undefined;
+  return intentOf(index ?? GraphIndex.build(nodes, edges), nodeId);
 }
 
 /** Every core node in the intent's tree, current or not, sorted by id. */
-function lineageTree(
-  intent: GraphNode,
-  nodes: readonly GraphNode[],
-  edges: readonly Edge[],
-): GraphNode[] {
-  const byId = new Map(nodes.map((node) => [node.id, node]));
+function lineageTree(intent: GraphNode, index: GraphIndex): GraphNode[] {
   const collect = (
-    targets: readonly string[],
+    anchors: readonly string[],
     type: string,
     direction: "sources" | "targets",
     nodeType: string,
-  ) =>
-    edges
-      .filter(
-        (edge) =>
-          edge.type === type &&
-          targets.includes(direction === "sources" ? edge.target : edge.source),
-      )
-      .map((edge) => byId.get(direction === "sources" ? edge.source : edge.target))
-      .filter((node): node is GraphNode => node !== undefined && node.type === nodeType);
+  ): readonly GraphNode[] =>
+    anchors.flatMap((anchor) =>
+      direction === "sources"
+        ? index.sourcesOf(anchor, type, nodeType)
+        : index.targetsOf(anchor, type, nodeType),
+    );
   const decisions = collect([intent.id], "resolves", "sources", "decision");
   const contracts = collect(
     decisions.map((d) => d.id),
@@ -147,19 +115,19 @@ export function loadContext(
   nodeId: string,
   options: ContextOptions = {},
 ): DeliveryContext {
-  const { nodes, edges } = project.graph;
-  const node = nodes.find((candidate) => candidate.id === nodeId);
+  const index = project.graph.index;
+  const node = index.node(nodeId);
   if (node === undefined) {
     throw new PactwrightError("unknown-node", `"${nodeId}" is not a node in this project`);
   }
-  const intent = findIntentOf(nodeId, nodes, edges);
+  const intent = intentOf(index, nodeId);
   if (intent === undefined) {
     throw new PactwrightError(
       "unlinked-node",
       `${node.type} "${nodeId}" is not linked to any intent; it has no Delivery lineage`,
     );
   }
-  const lineage = deriveLineage(intent.id, nodes, edges);
+  const lineage = lineageOfIntent(index, intent.id);
   if (lineage === undefined) {
     // The loader rejects ambiguous lineages, so this cannot happen for a loaded project.
     throw new PactwrightError(
@@ -198,12 +166,12 @@ export function loadContext(
     extensions,
   };
   if (options.history !== true) return base;
-  const history = lineageTree(intent, nodes, edges)
+  const history = lineageTree(intent, index)
     .filter((record) => !currentIds.has(record.id))
     .map((record) => ({
       node: record,
-      supersededBy: edges
-        .filter((edge) => edge.type === "supersedes" && edge.target === record.id)
+      supersededBy: index
+        .edgesTo(record.id, "supersedes")
         .map((edge) => edge.source)
         .sort(),
     }));

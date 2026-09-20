@@ -38,6 +38,9 @@ venv/
 # Test scratch dirs
 .tmp-pactwright-test-*/
 
+# Pactwright repository writer lock (process-local, never committed)
+.pactwright/.lock
+
 # Environment
 .env
 .env.local

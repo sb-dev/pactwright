@@ -5,7 +5,7 @@ import {
   DELIVERY_STATES,
   deriveLineage,
   deriveLineages,
-  isCurrent,
+  GraphIndex,
   validateLineages,
   type DeliveryState,
 } from "../src/graph/lineage.js";
@@ -178,14 +178,15 @@ for (const [name, code, pathPattern, state] of offpath) {
   });
 }
 
-test("lineage: isCurrent follows supersedes edges only", () => {
+test("lineage: the index treats only supersedes edges as supersession", () => {
   const edges = [
     { source: "brief-x-2222", type: "supersedes", target: "brief-x-1111" },
     { source: "brief-x-2222", type: "decomposes", target: "contract-x-3333" },
   ];
-  assert.equal(isCurrent("brief-x-1111", edges), false);
-  assert.equal(isCurrent("brief-x-2222", edges), true);
-  assert.equal(isCurrent("contract-x-3333", edges), true);
+  const index = GraphIndex.build([], edges);
+  assert.equal(index.isCurrent("brief-x-1111"), false);
+  assert.equal(index.isCurrent("brief-x-2222"), true);
+  assert.equal(index.isCurrent("contract-x-3333"), true);
 });
 
 test("lineage: unknown or non-intent ids have no lineage", () => {

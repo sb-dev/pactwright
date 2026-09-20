@@ -3,6 +3,7 @@ import { join } from "node:path";
 import { tempSibling } from "../atomic.js";
 import type { ParseResult } from "../config/config.js";
 import type { Problem } from "../errors.js";
+import { withRepositoryLock } from "../graph/writer-lock.js";
 import {
   Checker,
   expectEnum,
@@ -295,18 +296,27 @@ export function loadAllExecutionState(root: string): {
   return { states, problems };
 }
 
-/** Atomically replaces one Brief's execution state. */
+/**
+ * Atomically replaces one Brief's execution state, under the repository
+ * writer lock (§10). The rename makes the single file atomic; the lock is
+ * what stops a concurrent mutation interleaving between a caller's read of
+ * this state and its write back.
+ */
 export function writeExecutionState(root: string, state: ExecutionState): void {
-  const dir = executionDir(root);
-  mkdirSync(dir, { recursive: true });
-  const target = executionPath(root, state.brief);
-  const temp = tempSibling(target);
-  writeFileSync(temp, serialiseExecutionState(state), "utf8");
-  renameSync(temp, target);
+  withRepositoryLock(root, () => {
+    const dir = executionDir(root);
+    mkdirSync(dir, { recursive: true });
+    const target = executionPath(root, state.brief);
+    const temp = tempSibling(target);
+    writeFileSync(temp, serialiseExecutionState(state), "utf8");
+    renameSync(temp, target);
+  });
 }
 
 export function clearExecutionState(root: string, brief: string): void {
-  rmSync(executionPath(root, brief), { force: true });
+  withRepositoryLock(root, () => {
+    rmSync(executionPath(root, brief), { force: true });
+  });
 }
 
 /** A fresh run of `shape` against `brief`, positioned at the first step. */

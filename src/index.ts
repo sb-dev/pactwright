@@ -121,12 +121,22 @@ export {
   DELIVERY_STATES,
   deriveLineage,
   deriveLineages,
-  isCurrent,
+  lineageFor,
+  lineageOfIntent,
+  lineagesOf,
   validateLineages,
   type DeliveryState,
   type Lineage,
   type LineageResult,
+  type Resolved,
 } from "./graph/lineage.js";
+export { GraphIndex, TOWARDS_INTENT, intentOf } from "./graph/graph-index.js";
+export {
+  WRITER_LOCK_FILE,
+  withRepositoryLock,
+  writerLockPath,
+  type WriterLockOptions,
+} from "./graph/writer-lock.js";
 export {
   EDGE_TYPE_PATTERN,
   edgeKey,
