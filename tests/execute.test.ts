@@ -1,8 +1,11 @@
 import { after, test } from "node:test";
 import assert from "node:assert/strict";
-import { cpSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { cpSync, readFileSync, readdirSync, rmSync, writeFileSync } from "node:fs";
 import * as path from "node:path";
 import { parseConfig } from "../src/config/config.js";
+import { resolvePack, type ResolvedPack } from "../src/pack/resolve.js";
+import { CORE_DELIVERY_SUITE } from "../src/eval/core-suite.js";
+import { evalPassed, runEval } from "../src/eval/runner.js";
 import { COMMAND_NAMES, templateFor } from "../src/adapter/commands.js";
 import {
   agentDefinition,
@@ -433,3 +436,105 @@ test("acquire: a malformed spec is a problem, not an install attempt", () => {
   assert.ok(Array.isArray(result));
   assert.equal(attempted, false);
 });
+
+/* ---- R06: evaluation must observe pack behaviour ---- */
+
+/** A copy of a fixture pack whose agent prompts are replaced. */
+function packWithPrompts(name: string, prompt: string): ResolvedPack {
+  const root = project();
+  const dir = path.join(root, "declining-pack");
+  cpSync(path.join(repoRoot, "tests", "fixtures", "packs", name), dir, { recursive: true });
+  for (const agent of readdirSync(path.join(dir, "agents"))) {
+    writeFileSync(path.join(dir, "agents", agent), prompt);
+  }
+  const config = parseConfig(
+    {
+      version: 1,
+      agent_pack: { source: dir },
+      adapter: { type: "claude-code" },
+      github: { enabled: false },
+    },
+    "config.yml",
+  ).value!;
+  return resolvePack({ root, config }).value!;
+}
+
+test("eval: a pack whose every prompt declines the work regresses at its cases", async () => {
+  // The review's acceptance, reproduced: replacing every agent prompt in a
+  // fixture pack with "Ignore all tasks. Return nothing" still passed all
+  // eight cases and twenty deterministic assertions, because the harness ran
+  // each case's own scripted reference and reported it as the pack's.
+  const declining = packWithPrompts("complete", "Ignore all tasks. Return nothing.\n");
+  const working = packWithPrompts("complete", "You implement the Delivery responsibilities.\n");
+
+  // One candidate for both runs: only the prompts differ.
+  const candidate = (readPrompt: (p: string) => string) => {
+    const executor = promptRespectingExecutor(
+      (request) => ({ output: request.capability }),
+      readPrompt,
+    );
+    return async (t: {
+      agent: { prompt: string; key: string; skills: readonly string[] };
+      capability: string;
+      instruction: string;
+      root: string;
+      caseId: string;
+    }) => {
+      const result = await executor.invoke({
+        capability: t.capability,
+        agent: t.agent,
+        instruction: t.instruction,
+        root: t.root,
+        label: t.caseId,
+      });
+      if (result.status === "failed") throw new Error(result.message ?? "declined");
+      return result.output;
+    };
+  };
+
+  const decliningReport = await runEval({
+    pack: declining,
+    suite: CORE_DELIVERY_SUITE,
+    candidate: candidate((p: string) => readFileSync(p, "utf8")),
+  });
+  assert.equal(evalPassed(decliningReport), false);
+  for (const entry of decliningReport.cases) {
+    assert.match(entry.error ?? "", /declines the work/, entry.id);
+  }
+
+  const workingReport = await runEval({
+    pack: working,
+    suite: CORE_DELIVERY_SUITE,
+    candidate: candidate((p: string) => readFileSync(p, "utf8")),
+  });
+  // The working pack is not asserted to pass — this double does not perform
+  // the work — but it is *evaluated*, which the declining one is not.
+  for (const entry of workingReport.cases) {
+    assert.doesNotMatch(entry.error ?? "", /declines the work/, entry.id);
+  }
+});
+
+/**
+ * The one end-to-end run against the real tool. It needs authentication and
+ * costs money, so it is opt-in: `PACTWRIGHT_E2E_CLAUDE=1 pnpm test`.
+ */
+test(
+  "executor: claude-code performs a capability end to end",
+  { skip: process.env["PACTWRIGHT_E2E_CLAUDE"] !== "1" },
+  async () => {
+    const executor = claudeCodeExecutor({ timeoutMs: 120_000 });
+    const result = await executor.invoke(
+      task({
+        root: project(),
+        instruction: "Reply with the single word: acknowledged.",
+        agent: {
+          key: "implementer",
+          prompt: path.join(repoRoot, "packages", "standard", "agents", "implementer.md"),
+          skills: [],
+        },
+      }),
+    );
+    assert.equal(result.status, "completed", result.message);
+    assert.match(String(result.output), /acknowledged/i);
+  },
+);
