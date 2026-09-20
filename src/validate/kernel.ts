@@ -3,13 +3,14 @@ import { decisionActor } from "../config/lifecycle.js";
 import { composedRegistries } from "../extension/resolve.js";
 import { actorPermitted, authorisedKinds } from "../graph/authority.js";
 import { checkEvidenceClosure } from "../graph/closure.js";
+import { checkClosureBlock } from "../graph/evidence-closure.js";
 import { validateEdges } from "../graph/edge-schema.js";
 import type { Edge } from "../graph/edges.js";
 import { GraphIndex } from "../graph/graph-index.js";
 import { lineagesOf, type Lineage } from "../graph/lineage.js";
 import { validateRelationships } from "../graph/relationships.js";
 import type { GraphNode } from "../graph/nodes.js";
-import { repositoryRevision } from "../graph/repository.js";
+import { isReconstructible, repositoryRevision } from "../graph/repository.js";
 import { graphRevision } from "../graph/revision.js";
 import { parseDecidedBy, validateNodes } from "../graph/schema.js";
 import { executionFor, inShapePhase } from "../lifecycle/engine.js";
@@ -269,6 +270,18 @@ function execution(snapshot: GraphSnapshot): readonly RuleProblem[] {
   }
 
   // Rule 12 — Evidence before a successful closing Review.
+  //
+  // Checked for every Evidence record, on `done` lineages as well as
+  // delivering ones. `checkEvidenceRule` used to exit on its first line
+  // unless the lineage was still delivering, so inserting an Evidence node
+  // and edge into an unreviewed lineage made that lineage `done` and removed
+  // it from the check — the third row of the review's R03 table.
+  for (const evidence of snapshot.graph.nodes) {
+    if (evidence.type !== "evidence") continue;
+    for (const problem of checkClosureBlock(evidence, shape)) {
+      problems.push(asRuleProblem(problem, "evidence-before-review"));
+    }
+  }
   for (const lineage of lineagesOf(snapshot.graph.index).lineages) {
     problems.push(...evidenceRule(snapshot, lineage));
   }
@@ -300,6 +313,17 @@ function replayProvenance(snapshot: GraphSnapshot, replay: ReplayCheck): readonl
       asRuleProblem({ code, message, path: snapshot.paths.root }, "replay-provenance-mismatch"),
     );
   };
+  // A `+sha256:` identity records what was delivered but is not
+  // reconstructible from the commit alone. Pinned replay fails explicitly
+  // rather than resolving the commit and calling it equivalent (Core §56,
+  // Principle 18); ordinary closure does not need reconstruction, so it is
+  // unaffected.
+  if (!isReconstructible(replay.repositoryRevision)) {
+    add(
+      "unreconstructible-repository-revision",
+      `replay requires repository revision "${replay.repositoryRevision}", which records working-tree state the commit alone cannot reconstruct`,
+    );
+  }
   const actual = repositoryRevision(snapshot.paths.root).id;
   if (actual !== replay.repositoryRevision) {
     add(

@@ -353,7 +353,7 @@ test('contract: rule "replay-provenance-mismatch" fires on a requested replay ch
   });
 });
 
-test("contract: a replay check against the true identities passes", () => {
+test("contract: a replay check against the true identities reconstructs them", () => {
   const { root } = delivering();
   const project = loadProject({ root });
   const report = validateProject({
@@ -363,7 +363,36 @@ test("contract: a replay check against the true identities passes", () => {
       projectGraphRevision: graphRevision(project.graph),
     },
   });
-  assert.equal(report.ok, true, report.problems.map((p) => p.message).join("\n"));
+  // Both recorded identities are the ones this state derives. Whether the
+  // working tree is also *reconstructible* is a separate, explicit failure
+  // (below), and it depends on the checkout rather than on the graph.
+  for (const code of ["repository-revision-mismatch", "graph-revision-mismatch"]) {
+    assert.ok(
+      !report.problems.some((problem) => problem.code === code),
+      `${code} should not fire: ${report.problems.map((p) => p.message).join("\n")}`,
+    );
+  }
+});
+
+test('contract: rule "replay-provenance-mismatch" fires on an unreconstructible revision', () => {
+  const { root } = delivering();
+  const project = loadProject({ root });
+  // A `+sha256:` identity records working-tree state the commit alone cannot
+  // reconstruct. Core §56 and Principle 18 require pinned replay to fail
+  // explicitly rather than resolve the commit and call it equivalent.
+  const report = validateProject({
+    root,
+    replay: {
+      repositoryRevision: `git:${"a".repeat(40)}+sha256:${"b".repeat(64)}`,
+      projectGraphRevision: graphRevision(project.graph),
+    },
+  });
+  assert.equal(report.ok, false);
+  assert.ok(report.rules.includes("replay-provenance-mismatch"));
+  assert.ok(
+    report.problems.some((p) => p.code === "unreconstructible-repository-revision"),
+    report.problems.map((p) => p.code).join(", "),
+  );
 });
 
 /* ---- coverage: every rule must actually be exercised above ---- */

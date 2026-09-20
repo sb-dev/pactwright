@@ -27,6 +27,13 @@ export interface ClosureCheck {
   readonly problems: readonly Problem[];
   /** Preconditions that failed, in declaration order. */
   readonly failed: readonly EvidencePrecondition[];
+  /**
+   * The run state that satisfied the preconditions, which is what the
+   * Evidence closure block is written from (§14). Absent when the lineage is
+   * already closed and this is an Evidence correction (§45): the run that
+   * closed it is long cleared, and its block is carried forward instead.
+   */
+  readonly state?: ExecutionState;
 }
 
 function problem(precondition: EvidencePrecondition, message: string, path: string): Problem {
@@ -169,7 +176,7 @@ export function checkEvidenceClosure(project: Project, briefId: string): Closure
     );
   }
 
-  return { ok: problems.length === 0, problems, failed };
+  return { ok: problems.length === 0, problems, failed, state };
 }
 
 function lineageOf(project: Project, briefId: string): Lineage | undefined {
@@ -192,9 +199,9 @@ function lineageOf(project: Project, briefId: string): Lineage | undefined {
  * The Step 7 guard: throws before any mutation is planned when closure is not
  * permitted, listing every precondition that failed in one pass.
  */
-export function assertEvidenceClosure(project: Project, briefId: string): void {
+export function assertEvidenceClosure(project: Project, briefId: string): ClosureCheck {
   const check = checkEvidenceClosure(project, briefId);
-  if (check.ok) return;
+  if (check.ok) return check;
   throw new PactwrightError(
     "evidence-closure-refused",
     `Evidence cannot be created for brief "${briefId}": ${check.failed.length} closure precondition${check.failed.length === 1 ? "" : "s"} not met (${check.failed.join(", ")})`,

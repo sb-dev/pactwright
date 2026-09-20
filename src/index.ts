@@ -278,12 +278,23 @@ export {
   type PackageManagerDetection,
 } from "./config/package-manager.js";
 export {
+  DELIVERY_DIGEST_EXCLUDED,
   NO_REPOSITORY_REVISION,
   formatReplayBase,
+  isReconstructible,
   repositoryRevision,
   type ReplayBase,
   type RepositoryRevision,
 } from "./graph/repository.js";
+export {
+  CLOSURE_PROVENANCE_FROM,
+  checkClosureBlock,
+  closureFrom,
+  closureFrontmatter,
+  closureOf,
+  predatesClosureProvenance,
+  type EvidenceClosure,
+} from "./graph/evidence-closure.js";
 export { validateProject, type ValidationReport } from "./validate.js";
 export {
   VALIDATION_SCOPES,
