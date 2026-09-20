@@ -29,6 +29,15 @@ export interface EvalCaseResult {
   readonly agent?: string;
   /** The case could not be evaluated (missing capability, candidate error). */
   readonly error?: string;
+  /**
+   * False when no executor performed the capability, so nothing about the
+   * pack's behaviour was observed. A case that was not evaluated can never
+   * pass: the harness used to fall back to the case's own scripted reference
+   * and report the result as the pack's, which is why a fixture pack with
+   * every prompt replaced by "Ignore all tasks. Return nothing" passed all
+   * eight cases and twenty assertions.
+   */
+  readonly evaluated: boolean;
   readonly deterministic: readonly DeterministicResult[];
   /** Reported separately from the deterministic results, never merged or scored. */
   readonly semantic: readonly SemanticResult[];
@@ -54,8 +63,18 @@ export interface EvalOptions {
   /** The agent pack supplying the implementation being evaluated. */
   readonly pack: ResolvedPack;
   readonly suite: EvalSuite;
-  /** Overrides each case's scripted reference candidate (model-backed runs plug in here). */
+  /**
+   * Performs each case's capability with the implementation under
+   * evaluation. Absent means nothing is evaluated: every case reports
+   * `evaluated: false` with a reason and the suite cannot pass.
+   */
   readonly candidate?: CandidateRunner;
+  /**
+   * Replays each case's own scripted reference instead of an executor. This
+   * is a test of the harness, never of an Agent Pack, so it is named rather
+   * than reached by default.
+   */
+  readonly useReference?: boolean;
   /** Judges semantic dimensions; absent means they are reported unjudged. */
   readonly judge?: SemanticJudge;
   /** Directory sandboxes are created under; defaults to the OS temp directory. */
@@ -100,6 +119,7 @@ async function runCase(options: EvalOptions, evalCase: EvalCase): Promise<EvalCa
     return {
       ...base,
       error: `pack "${options.pack.manifest.name}@${options.pack.manifest.version}" does not provide capability "${evalCase.capability}"; the case was not evaluated`,
+      evaluated: false,
       deterministic: [],
       semantic: [],
     };
@@ -112,6 +132,16 @@ async function runCase(options: EvalOptions, evalCase: EvalCase): Promise<EvalCa
     const filesBefore = snapshotFiles(root);
     const revisionBefore = sandboxRevision(root);
 
+    if (options.candidate === undefined && options.useReference !== true) {
+      return {
+        ...withAgent,
+        error:
+          "no executor is configured, so the pack's behaviour was not evaluated; declare one with execution.executor, or run the harness's own reference explicitly",
+        evaluated: false,
+        deterministic: [],
+        semantic: [],
+      };
+    }
     let output: unknown;
     try {
       const run: CandidateRunner =
@@ -133,6 +163,7 @@ async function runCase(options: EvalOptions, evalCase: EvalCase): Promise<EvalCa
       return {
         ...withAgent,
         error: `candidate failed: ${message(error)}`,
+        evaluated: true,
         deterministic: [],
         semantic: [],
       };
@@ -194,13 +225,14 @@ async function runCase(options: EvalOptions, evalCase: EvalCase): Promise<EvalCa
       }
     }
 
-    return { ...withAgent, deterministic, semantic };
+    return { ...withAgent, evaluated: true, deterministic, semantic };
   } catch (error) {
     // Sandbox creation, case setup or observation building failed: the
     // failure is data in the report, never a thrown run (Distribution §16).
     return {
       ...withAgent,
       error: `case failed: ${message(error)}`,
+      evaluated: true,
       deterministic: [],
       semantic: [],
     };
@@ -234,9 +266,12 @@ export async function runEval(options: EvalOptions): Promise<EvalReport> {
  * dimensions never enter it, and no aggregate is calculated anywhere.
  */
 export function evalPassed(report: EvalReport): boolean {
-  // An empty run proves nothing; the gate must not pass vacuously.
+  // An empty run proves nothing; the gate must not pass vacuously. Neither
+  // does a run in which nothing performed the capability: a case that was not
+  // evaluated is not a case that passed.
   if (report.cases.length === 0) return false;
   return report.cases.every(
-    (entry) => entry.error === undefined && entry.deterministic.every((a) => a.passed),
+    (entry) =>
+      entry.evaluated && entry.error === undefined && entry.deterministic.every((a) => a.passed),
   );
 }

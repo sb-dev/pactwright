@@ -570,64 +570,44 @@ test("cli: help lists eval", () => {
   assert.match(run("--help").stdout, /eval \[--json\]/);
 });
 
-test("cli: eval outside a project runs the core suite against the default pack", () => {
+test("cli: eval without a declared executor reports that nothing was evaluated", () => {
   const result = run("eval");
-  assert.equal(result.status, 0, result.stdout + result.stderr);
+  // The harness used to replay each case's own scripted reference and report
+  // the result as the pack's, so a pack whose every prompt said "Ignore all
+  // tasks. Return nothing" passed all eight cases and twenty assertions.
+  // Nothing performed the capability here, and the report says so.
+  assert.equal(result.status, 1, result.stdout + result.stderr);
   assert.match(result.stdout, /Evaluating @pactwright\/standard@/);
   assert.match(result.stdout, /suite core-delivery\)/);
-  for (const id of [
-    "contract-fidelity",
-    "scope-discipline",
-    "graph-output-structure",
-    "forbidden-mutation",
-    "review-defect-detection",
-  ]) {
+  assert.match(result.stdout, /no executor is configured/);
+  for (const id of ["contract-fidelity", "scope-discipline", "review-defect-detection"]) {
     assert.match(result.stdout, new RegExp(id));
   }
-  assert.match(result.stdout, /deterministic:/);
-  assert.match(result.stdout, /pass {2}contract-acceptance-holds/);
-  assert.match(
-    result.stdout,
-    /semantic \(requires judgement; reported separately, never auto-scored\):/,
-  );
-  assert.match(result.stdout, /unjudged {2}fidelity: no semantic judge configured/);
-  assert.match(result.stdout, /No aggregate quality score is calculated\./);
-  assert.doesNotMatch(result.stdout, /FAIL/);
 });
 
-test("cli: eval --json emits the per-case report", () => {
+test("cli: eval --json marks every case unevaluated without an executor", () => {
   const result = run("eval", "--json");
-  assert.equal(result.status, 0, result.stderr);
+  assert.equal(result.status, 1, result.stderr);
   const report = JSON.parse(result.stdout) as {
     suite: string;
     pack: { name: string };
-    cases: Array<{
-      id: string;
-      agent: string;
-      deterministic: Array<{ passed: boolean }>;
-      semantic: Array<{ judged: boolean }>;
-    }>;
+    cases: Array<{ id: string; evaluated: boolean; error?: string }>;
   };
   assert.equal(report.suite, "core-delivery");
   assert.equal(report.pack.name, "@pactwright/standard");
   assert.equal(report.cases.length, 8);
   for (const entry of report.cases) {
-    assert.ok(
-      entry.deterministic.every((a) => a.passed),
-      entry.id,
-    );
-    assert.ok(
-      entry.semantic.every((d) => !d.judged),
-      entry.id,
-    );
+    assert.equal(entry.evaluated, false, entry.id);
+    assert.match(entry.error ?? "", /no executor is configured/);
   }
 });
 
-test("cli: eval inside a project evaluates the configured pack", () => {
+test("cli: eval inside a project without an executor still names the configured pack", () => {
   const root = project({ pack: "complete" });
   const result = runIn(root, "eval");
-  assert.equal(result.status, 0, result.stdout + result.stderr);
+  assert.equal(result.status, 1, result.stdout + result.stderr);
   assert.match(result.stdout, /suite core-delivery\)/);
+  assert.match(result.stdout, /no executor is configured/);
 });
 
 test("cli: eval fails a pack missing a required capability (exit 1)", () => {
