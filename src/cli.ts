@@ -231,6 +231,17 @@ function formatStatus(entry: LineageStatus): string {
       `  steps visited: ${entry.visited.length === 0 ? "none" : entry.visited.join(", ")}`,
     );
   }
+  // The one list `lifecycle record` checks against, printed so an agent can
+  // act on what is permitted rather than infer it (design §12).
+  lines.push(
+    `  permitted: ${
+      entry.permitted.length === 0
+        ? "none"
+        : entry.permitted
+            .map((op) => (op.mode === "supersede" ? `${op.stage} (supersede)` : op.stage))
+            .join(", ")
+    }`,
+  );
   if (entry.blocked !== undefined) {
     lines.push(`  blocked: ${entry.blocked} (required actor: ${entry.requiredActor})`);
   }

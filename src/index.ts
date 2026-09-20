@@ -316,9 +316,11 @@ export {
 export { validateProject, type ValidationReport } from "./validate.js";
 export {
   VALIDATION_SCOPES,
+  permittedOperations,
   proposedSnapshot,
   snapshotOf,
   validateSnapshot,
+  type PermittedOperation,
   type GraphSnapshot,
   type ReplayCheck,
   type ValidationScope,

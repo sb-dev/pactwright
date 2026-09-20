@@ -289,11 +289,19 @@ test("cli: lifecycle record walks a lineage from contract to evidence through th
   assert.equal(wrote.status, 0, wrote.stdout + wrote.stderr);
   const briefId = /created brief (\S+)/.exec(wrote.stdout)![1]!;
 
+  // A second write-brief replaces the Brief rather than being refused: the
+  // Contract stands, the execution strategy does not (Core §45). This used
+  // to be `stage-not-permitted`, which made the replacement unreachable
+  // through any command (R11).
   const again = runIn(root, "lifecycle", "record", "write-brief", "--file", brief);
-  assert.equal(again.status, 1);
-  assert.match(again.stdout, /stage-not-permitted/);
-  // With a Brief in place the shape governs, and its first step is Delivery.
-  assert.match(again.stdout, /delivery/);
+  assert.equal(again.status, 0, again.stdout + again.stderr);
+  const replacement = /created brief (\S+)/.exec(again.stdout)![1]!;
+  assert.notEqual(replacement, briefId);
+  const edges = fs.readFileSync(path.join(root, "specs", "graph", "edges.yml"), "utf8");
+  assert.match(
+    edges,
+    new RegExp(`source: ${replacement}\\n\\s+type: supersedes\\n\\s+target: ${briefId}`),
+  );
 
   // Evidence cannot be minted straight off a Brief: the run has delivered
   // nothing and reviewed nothing, so the closing step has not been reached

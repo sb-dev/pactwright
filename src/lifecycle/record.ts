@@ -1,3 +1,4 @@
+import { RECORDING_COMMANDS, isRecordingStage, type RecordingStage } from "../config/lifecycle.js";
 import { PactwrightError } from "../errors.js";
 import { findIntentOf } from "../context.js";
 import {
@@ -10,6 +11,7 @@ import {
 import type { GraphNode } from "../graph/nodes.js";
 import { DECISION_OUTCOMES } from "../graph/schema.js";
 import { loadProject, type Project } from "../loader.js";
+import { permittedOperations, snapshotOf } from "../validate/kernel.js";
 import {
   Checker,
   expectEnum,
@@ -20,13 +22,7 @@ import {
   requireKeys,
 } from "../validation.js";
 import { readYamlFile } from "../yaml.js";
-import {
-  currentStep,
-  executionFor,
-  nextActionFor,
-  pendingResponsibilities,
-  selectLineages,
-} from "./engine.js";
+import { nextActionFor, selectLineages } from "./engine.js";
 import {
   PROVENANCE_KINDS,
   isProvenanceKind,
@@ -47,19 +43,7 @@ import { REVIEW_OUTCOMES, clearExecutionState, type ReviewOutcome } from "./stat
  * capture-intent, approve-contract and write-brief sit upstream of the Brief
  * and are not shape steps at all.
  */
-export const RECORDING_COMMANDS = [
-  "capture-intent",
-  "approve-contract",
-  "write-brief",
-  "prepare-evidence",
-] as const;
-
-/** A command that leaves a durable record. */
-export type RecordingStage = (typeof RECORDING_COMMANDS)[number];
-
-export function isRecordingStage(stage: string): stage is RecordingStage {
-  return (RECORDING_COMMANDS as readonly string[]).includes(stage);
-}
+export { RECORDING_COMMANDS, isRecordingStage, type RecordingStage };
 
 /**
  * Resolving a Gate is neither a graph-marking command nor Delivery/Review
@@ -230,12 +214,13 @@ function readFields(stage: RecordingStage, path: string): Fields {
 }
 
 /**
- * The runtime's transition check (Spec 01 §18). A Contract-crafting
- * responsibility must be pending for the lineage the input refers to;
- * prepare-evidence must additionally be the resolved shape's current step,
- * which it only becomes once Delivery and Review have completed. That is
- * what stops Evidence being minted on a `delivering` lineage where nothing
- * was delivered and nothing was reviewed.
+ * The runtime's transition check (Spec 01 §18), read from the one list.
+ *
+ * It used to decide for itself, and decided only that a Contract-crafting
+ * responsibility must be *pending* — so Core §45's three replacements were
+ * unreachable through any command (R11). `permittedOperations` is now the
+ * single answer to "what is legal now", and `lifecycle status` prints the
+ * same list, so a CLI command and an adapter command cannot disagree.
  *
  * capture-intent starts a new lineage and is always permitted.
  */
@@ -249,39 +234,14 @@ function assertPermitted(project: Project, stage: RecordingStage, anchor: string
     throw new PactwrightError("unknown-node", `"${anchor}" is not part of any Delivery lineage`);
   }
   const [lineage] = selectLineages(project, intent.id);
-  // §15: deferred and rejected lineages resume by recording a new Decision,
-  // which is exactly what approve-contract does. Frozen (superseded)
-  // lineages stay refused.
-  if (
-    stage === "approve-contract" &&
-    lineage !== undefined &&
-    !lineage.superseded &&
-    (lineage.state === "deferred" || lineage.state === "rejected")
-  ) {
-    return;
-  }
-  const refuse = (): never => {
-    const action = nextActionFor(project, lineage);
-    throw new PactwrightError(
-      "stage-not-permitted",
-      `${stage} is not a permitted action for intent "${intent.id}" now: ${action.reason}`,
-    );
-  };
+  const permitted = permittedOperations(snapshotOf(project), lineage);
+  if (permitted.some((operation) => operation.stage === stage)) return;
 
-  if (stage === "prepare-evidence") {
-    // Evidence closes the shape, so the run must have reached its closing
-    // step. Reaching it means every earlier step — Delivery, then Review —
-    // completed and routed forward.
-    const execution = executionFor(project, lineage);
-    if (execution === undefined) refuse();
-    const step = currentStep(project.lifecycle.shape, execution!.state);
-    if (step === undefined || step.kind !== "evidence") refuse();
-    return;
-  }
-
-  // The remaining recording commands are Contract-crafting responsibilities.
-  const pending = pendingResponsibilities(lineage);
-  if (!pending.includes(stage)) refuse();
+  const action = nextActionFor(project, lineage);
+  throw new PactwrightError(
+    "stage-not-permitted",
+    `${stage} is not a permitted action for intent "${intent.id}" now: ${action.reason}`,
+  );
 }
 
 /**

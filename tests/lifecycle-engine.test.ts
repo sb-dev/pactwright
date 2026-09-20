@@ -135,6 +135,10 @@ test("engine: an empty graph reports capture-intent as a human gate", () => {
       completedResponsibilities: [],
       visited: [],
       current: { kind: "responsibility", name: "capture-intent", execution: "manual" },
+      // With no lineage the only operation on offer is starting one. The
+      // status carries the same list `lifecycle record` checks against
+      // (design §12), so the two cannot drift apart.
+      permitted: [{ stage: "capture-intent", mode: "initial" }],
       blocked: "capture-intent",
       requiredActor: "human",
     },
