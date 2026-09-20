@@ -1,14 +1,6 @@
 import { after, test } from "node:test";
 import assert from "node:assert/strict";
-import {
-  cpSync,
-  existsSync,
-  mkdtempSync,
-  readdirSync,
-  readFileSync,
-  rmSync,
-  writeFileSync,
-} from "node:fs";
+import { existsSync, readdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { createHash } from "node:crypto";
 import * as path from "node:path";
 import * as api from "../src/index.js";
@@ -26,23 +18,24 @@ import {
 } from "../src/graph/mutations.js";
 import { parseNodeFile, type GraphNode } from "../src/graph/nodes.js";
 import { loadProject, type Project } from "../src/loader.js";
-import { fixture, makeTempProject, reachEvidenceClosure, repoRoot } from "./helpers.js";
+import { makeTempProject, reachEvidenceClosure } from "./helpers.js";
 
 const tempDirs: string[] = [];
 after(() => {
   for (const dir of tempDirs) rmSync(dir, { recursive: true, force: true });
 });
 
-/** A writable copy of the lineage `open` fixture plus valid-project config. */
+/**
+ * A writable copy of the lineage `open` fixture plus valid-project config.
+ *
+ * Built through the shared helper so the lock describes the environment the
+ * project actually resolves to. A hand-copied fixture keeps the placeholder
+ * lock, which the mutation gate's `environment` scope now refuses — the same
+ * refusal a real project would get from a stale lock.
+ */
 function tempProject(options: { agentDecides?: boolean } = {}): string {
-  const dir = mkdtempSync(path.join(repoRoot, ".tmp-pactwright-test-"));
+  const dir = makeTempProject({ lineage: "open" });
   tempDirs.push(dir);
-  cpSync(path.join(fixture("valid-project"), ".pactwright"), path.join(dir, ".pactwright"), {
-    recursive: true,
-  });
-  cpSync(path.join(fixture("lineage"), "open", "specs"), path.join(dir, "specs"), {
-    recursive: true,
-  });
   if (options.agentDecides === true) {
     const lifecycle = path.join(dir, ".pactwright", "lifecycle.yml");
     writeFileSync(

@@ -45,6 +45,28 @@ function installedManifest(root: string, id: string): string {
   return path.join(root, "node_modules", "@pactwright", id, "extension.yml");
 }
 
+/**
+ * Stands in for the package manager having installed a newer version.
+ *
+ * Both halves of the installed package move: `extension.yml` is what
+ * Pactwright resolves and locks, `package.json` is what the package manager
+ * reports as installed, and environment agreement compares the two. Editing
+ * only the manifest produces a package that claims two different versions,
+ * which is a disagreement rather than an upgrade.
+ */
+function installVersion(root: string, id: string, from: string, to: string): void {
+  const dir = path.join(root, "node_modules", "@pactwright", id);
+  for (const [file, find] of [
+    ["extension.yml", `version: ${from}`],
+    ["package.json", `"version": "${from}"`],
+  ] as const) {
+    const target = path.join(dir, file);
+    const before = fs.readFileSync(target, "utf8");
+    assert.ok(before.includes(find), `${file} should declare ${from}`);
+    fs.writeFileSync(target, before.replace(find, find.replace(from, to)));
+  }
+}
+
 // ---- resolution -------------------------------------------------------------
 
 test("extensions: configured extensions resolve with dependencies, namespaces and hashes", () => {
@@ -478,11 +500,7 @@ test("extension upgrade: re-resolves and updates the lock", () => {
   assert.equal(upgradeExtension(root, "fixture-base").ok, true);
   assert.equal(loadLock(lockPath).value!.extensions["fixture-base"]?.version, "0.1.0");
 
-  const manifest = installedManifest(root, "fixture-base");
-  fs.writeFileSync(
-    manifest,
-    fs.readFileSync(manifest, "utf8").replace("version: 0.1.0", "version: 0.1.1"),
-  );
+  installVersion(root, "fixture-base", "0.1.0", "0.1.1");
   const report = upgradeExtension(root, "fixture-base");
   assert.equal(report.ok, true, JSON.stringify(report.problems));
   assert.deepEqual(report.changes, [
@@ -502,11 +520,7 @@ test("extension upgrade: a failed upgrade leaves config and lock byte-identical"
   // A record whose type the graph no longer recognises makes the post-write
   // validation fail, standing in for any unrelated project problem.
   writeNode(root, "ghost-stray-1a2b", "ghost", "Stray record");
-  const manifest = installedManifest(root, "fixture-base");
-  fs.writeFileSync(
-    manifest,
-    fs.readFileSync(manifest, "utf8").replace("version: 0.1.0", "version: 0.1.1"),
-  );
+  installVersion(root, "fixture-base", "0.1.0", "0.1.1");
 
   const report = upgradeExtension(root, "fixture-base");
   assert.equal(report.ok, false);
@@ -525,11 +539,7 @@ test("extension upgrade: a successful upgrade leaves config.yml untouched", () =
   const annotated = `# pinned on purpose\n${fs.readFileSync(configPath, "utf8")}`;
   fs.writeFileSync(configPath, annotated);
 
-  const manifest = installedManifest(root, "fixture-base");
-  fs.writeFileSync(
-    manifest,
-    fs.readFileSync(manifest, "utf8").replace("version: 0.1.0", "version: 0.1.1"),
-  );
+  installVersion(root, "fixture-base", "0.1.0", "0.1.1");
   assert.equal(upgradeExtension(root, "fixture-base").ok, true);
   assert.equal(fs.readFileSync(configPath, "utf8"), annotated);
 });

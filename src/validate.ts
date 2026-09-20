@@ -4,15 +4,15 @@ import { graphRevision } from "./graph/revision.js";
 import { repositoryRevision } from "./graph/repository.js";
 import { environmentLockHash } from "./config/lock.js";
 import { loadProject, type LoadProjectOptions } from "./loader.js";
+import { snapshotOf, validateSnapshot, type ValidationScope } from "./validate/kernel.js";
 import {
   VALIDATION_RULES,
   asRuleProblem,
-  checkSemanticRules,
   ruleForCode,
   ruleForRelationship,
+  ruleProblems,
   rulesTriggered,
   type RuleCheckOptions,
-  type RuleProblem,
   type ValidationRuleId,
 } from "./validate/rules.js";
 
@@ -74,9 +74,14 @@ export function validateProject(options: ValidateOptions = {}): ValidationReport
     return { ok: false, problems, rules: rulesTriggered(ruleProblems(problems)) };
   }
 
-  const semantic = checkSemanticRules(project, replay === undefined ? {} : { replay });
+  // `validate` is the one caller that asks for everything: the graph rules,
+  // the environment agreement Distribution §13 requires, and replay
+  // provenance when a base was supplied.
+  const scopes = new Set<ValidationScope>(["authority", "execution", "environment"]);
+  if (replay !== undefined) scopes.add("replay");
+  const semantic = validateSnapshot(snapshotOf(project), scopes, replay);
   if (semantic.length > 0) {
-    return { ok: false, problems: semantic, rules: rulesTriggered(semantic) };
+    return { ok: false, problems: semantic, rules: rulesTriggered(ruleProblems(semantic)) };
   }
 
   const { nodes, edges } = project.graph;
@@ -93,10 +98,6 @@ export function validateProject(options: ValidateOptions = {}): ValidationReport
       environmentLockHash: environmentLockHash(project.lock),
     },
   };
-}
-
-function ruleProblems(problems: readonly Problem[]): readonly RuleProblem[] {
-  return problems.filter((problem): problem is RuleProblem => "rule" in problem);
 }
 
 /** Every §57 rule, for tooling that enumerates the contract. */
