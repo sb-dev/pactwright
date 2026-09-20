@@ -86,11 +86,54 @@ into its own project.
 **A repository writer lock.** `.pactwright/.lock` makes a graph mutation's
 load → validate → write → reload atomic against other processes.
 
+**One environment transaction.** `planEnvironmentChange` and
+`applyEnvironmentPlan` own one managed file set — configuration, lifecycle,
+both locks, `package.json` and every generated file — and every
+environment-changing operation runs inside it. Four private snapshot
+routines owning four different subsets are gone, and the render, which had
+none, is covered. `restored` is the result of re-reading that set and the
+installed versions, not a flag a caller sets.
+
+**Acquisition before activation.** `pactwright upgrade` selects an exact
+release instead of handing `pactwright@latest` to the package manager, and
+`pactwright extension upgrade` installs the version it selects instead of
+re-locking whatever was already on disk. A version whose declared
+`pactwright` range this runtime does not satisfy is refused before it is
+fetched.
+
+**Extensions declare enforceable semantics.** An Extension manifest may
+state, per node type, its required fields and required relationships, and
+per edge type the node types permitted at each end; these are validated by
+the same mechanics core records are. Schema changes are carried by declared,
+versioned migrations that Pactwright applies itself — nothing an Extension
+ships is executed — run inside the transaction, with `doctor` reporting a
+pending one as action-required. The bare-list `graph:` form keeps its
+meaning.
+
+**Environment agreement is enforced, not just reported.** It is the
+validation kernel's fifth scope, so `validate`, the mutation gate,
+`lifecycle run` and `lifecycle record` all refuse a lock that no longer
+describes the installed environment — not only `sync` and `doctor`.
+
+**Permitted supersession.** `permittedOperations()` lists what a lineage
+admits now, replacements included, and `lifecycle record` and `lifecycle
+status` read the same list. Core §45's Brief change, Contract change and
+Evidence correction are reachable from the commands; the generated command
+text no longer tells an agent to stop when a command is "already completed".
+
 Breaking changes to the package's public API: `isCurrent(id, edges)` is
 replaced by `GraphIndex.isCurrent`; `RepositoryRevision.dirty` becomes
 `workingTree`; `ExecutionState.completedSteps` becomes `visited` and
 execution state moves to version 2, migrating version 1 documents on read;
-`ExecutionStatus` gains `waiting-gate`; `EvalCaseResult` gains `evaluated`.
+`ExecutionStatus` gains `waiting-gate`; `EvalCaseResult` gains `evaluated`;
+`PackageInstaller` moves to `environment/transaction` and its `spec` becomes
+optional, meaning a frozen install; `UpgradeReport.restored` becomes a
+computed boolean and gains `recovery`; `validateSnapshot` returns
+`ScopedProblem[]`, every problem carrying the scope that found it and only
+§57 rules carrying a rule id; `ExtensionManifest` gains `nodeSchemas`,
+`edgeSchemas`, `schemaVersion` and `migrations`; `LockExtension` gains an
+optional `schemaVersion`, omitted at version 1 so existing locks and their
+`environment_lock_hash` are unchanged; `LineageStatus` gains `permitted`.
 
 ## 0.0.1 — 2026-09-01
 
