@@ -6,6 +6,7 @@ import { graphRevision } from "../src/graph/revision.js";
 import { repositoryRevision } from "../src/graph/repository.js";
 import { createBrief, createIntent, recordDecision } from "../src/graph/mutations.js";
 import { writeExecutionState } from "../src/lifecycle/state.js";
+import { PactwrightError } from "../src/errors.js";
 import { loadProject } from "../src/loader.js";
 import { VALIDATION_RULES, validateProject, type ValidationRuleId } from "../src/validate.js";
 import {
@@ -377,4 +378,61 @@ test("contract: every one of the seventeen rules has a failing fixture in this f
     [],
     "each §57 rule needs a failing fixture",
   );
+});
+
+/* ---- R03: the three inputs the review's table showed being accepted ---- */
+
+test("contract: an orphan record fails validation and the mutation gate alike", () => {
+  const { root } = delivering();
+  // Row 1: "Orphan Decision, Contract, Brief and Evidence; no edges" gave
+  // `validate.ok = true` and zero lineages, because lineage derivation only
+  // visits records reachable from an Intent.
+  fs.writeFileSync(
+    path.join(root, "specs", "nodes", "evidence-orphan-ffff.md"),
+    "---\nid: evidence-orphan-ffff\ntype: evidence\ntitle: Orphan\ncreated: 2026-09-20\n---\n\nNothing evidences anything.\n",
+  );
+  triggers(root, "invalid-evidence-lineage");
+
+  // The same input through the mutation gate, on the same fixture.
+  assert.throws(
+    () => createIntent(root, { title: "Another intent", body: "Body." }),
+    (error: unknown) =>
+      error instanceof PactwrightError &&
+      error.problems.some((problem) => problem.code === "missing-relationship"),
+  );
+});
+
+test("contract: one Decision resolving two Intents fails validation and the mutation gate", () => {
+  const { root } = delivering();
+  // Row 2: both lineages were accepted, because each Intent's own walk saw
+  // exactly one Decision (Core §15's exactly-one Intent relationship).
+  const second = createIntent(root, { title: "A second direction", body: "Also needed." });
+  const edgesPath = path.join(root, "specs", "graph", "edges.yml");
+  const decision = loadProject({ root }).graph.nodes.find((node) => node.type === "decision")!;
+  fs.writeFileSync(
+    edgesPath,
+    `${fs.readFileSync(edgesPath, "utf8")}  - source: ${decision.id}\n    type: resolves\n    target: ${second.id}\n`,
+  );
+  triggers(root, "missing-required-lineage");
+
+  assert.throws(
+    () => createIntent(root, { title: "A third direction", body: "Body." }),
+    (error: unknown) =>
+      error instanceof PactwrightError &&
+      error.problems.some((problem) => problem.code === "excess-relationship"),
+  );
+});
+
+test("contract: a reject Decision that selects a Contract fails on its own relationship rule", () => {
+  const { root } = delivering();
+  const project = loadProject({ root });
+  const decision = project.graph.nodes.find((node) => node.type === "decision")!;
+  const decisionPath = path.join(root, "specs", "nodes", `${decision.id}.md`);
+  // Core §15: a reject or defer Decision resolves the Intent without
+  // selecting a Contract.
+  fs.writeFileSync(
+    decisionPath,
+    fs.readFileSync(decisionPath, "utf8").replace("outcome: proceed", "outcome: reject"),
+  );
+  triggers(root, "missing-required-lineage");
 });

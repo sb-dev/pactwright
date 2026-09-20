@@ -4,6 +4,7 @@ import { rmSync, writeFileSync } from "node:fs";
 import * as path from "node:path";
 import { PactwrightError } from "../src/errors.js";
 import { findIntentOf, loadContext, type ContextContributor } from "../src/context.js";
+import { GraphIndex } from "../src/graph/graph-index.js";
 import { loadProject } from "../src/loader.js";
 import { makeTempProject } from "./helpers.js";
 
@@ -110,23 +111,50 @@ test("context: --history on a lineage without history is empty", () => {
   assert.deepEqual(loadContext(p, INTENT, { history: true }).history, []);
 });
 
-test("context: unknown and unlinked nodes are rejected", () => {
-  const { root, project: p } = project("open");
+test("context: an unknown node id is rejected", () => {
+  const { project: p } = project("open");
   assert.throws(
     () => loadContext(p, "intent-nope-0000"),
     (e: unknown) => e instanceof PactwrightError && e.code === "unknown-node",
   );
+});
+
+test("context: an orphan record no longer loads at all", () => {
+  const { root } = project("open");
   writeFileSync(
     path.join(root, "specs", "nodes", "contract-loose-ffff.md"),
     "---\nid: contract-loose-ffff\ntype: contract\ntitle: Loose\ncreated: 2026-08-19\n---\n\nNo decision selects me.\n",
   );
-  const reloaded = loadProject({ root });
-  assert.equal(
-    findIntentOf("contract-loose-ffff", reloaded.graph.nodes, reloaded.graph.edges),
-    undefined,
-  );
+  // The 19 September review's first R03 row: an orphan Decision, Contract,
+  // Brief or Evidence gave `validate.ok = true` and zero lineages, because
+  // lineage derivation only ever visits records it can reach from an Intent.
   assert.throws(
-    () => loadContext(reloaded, "contract-loose-ffff"),
+    () => loadProject({ root }),
+    (error: unknown) =>
+      error instanceof PactwrightError &&
+      error.problems.some((problem) => problem.code === "missing-relationship"),
+  );
+});
+
+test("context: the unlinked-node guard still refuses a record with no intent", () => {
+  // A loaded project can no longer contain one, so the guard is exercised
+  // against a snapshot assembled in memory. It stays as defence for callers
+  // that build a Project themselves.
+  const { project: p } = project("open");
+  const loose = {
+    id: "contract-loose-ffff",
+    type: "contract",
+    title: "Loose",
+    created: "2026-08-19",
+    frontmatter: {},
+    body: "No decision selects me.",
+    path: path.join(p.paths.nodesDir, "contract-loose-ffff.md"),
+  };
+  const nodes = [...p.graph.nodes, loose];
+  const detached = { ...p, graph: { ...p.graph, nodes, index: GraphIndex.build(nodes, []) } };
+  assert.equal(findIntentOf("contract-loose-ffff", nodes, []), undefined);
+  assert.throws(
+    () => loadContext(detached, "contract-loose-ffff"),
     (e: unknown) => e instanceof PactwrightError && e.code === "unlinked-node",
   );
 });

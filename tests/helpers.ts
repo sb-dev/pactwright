@@ -1,4 +1,13 @@
-import { copyFileSync, cpSync, mkdirSync, mkdtempSync, readFileSync, writeFileSync } from "node:fs";
+import {
+  copyFileSync,
+  cpSync,
+  existsSync,
+  mkdirSync,
+  mkdtempSync,
+  readdirSync,
+  readFileSync,
+  writeFileSync,
+} from "node:fs";
 import { tmpdir } from "node:os";
 import * as path from "node:path";
 import { fileURLToPath } from "node:url";
@@ -8,6 +17,7 @@ import { loadEdges, type Edge } from "../src/graph/edges.js";
 import { loadNodes, type GraphNode } from "../src/graph/nodes.js";
 import { CORE_NODE_SCHEMAS, validateNodes } from "../src/graph/schema.js";
 import { loadConfig } from "../src/config/config.js";
+import { decisionActor, loadLifecycle } from "../src/config/lifecycle.js";
 import { resolveDesiredState, writeLock } from "../src/pack/resolve.js";
 import {
   beginExecution,
@@ -157,6 +167,12 @@ export function makeTempProject(
       ),
     );
   }
+  // A seeded lineage and a lifecycle policy have to agree about authority.
+  // The lineage fixtures record `decided_by: human:samir`; pairing one with a
+  // policy that authorises `agent` produces a project rule 13 rejects, which
+  // only went unnoticed while the mutation gate did not check authority.
+  alignDecisionActors(dir);
+
   // A real project's lock describes the environment it actually resolves to,
   // and sync now refuses to render from one that does not. Resolve the lock
   // from the finished configuration, exactly as `init` does.
@@ -169,6 +185,26 @@ export function makeTempProject(
     }
   }
   return dir;
+}
+
+/** Rewrites seeded Decisions to an actor the project's lifecycle authorises. */
+function alignDecisionActors(dir: string): void {
+  const lifecycle = loadLifecycle(path.join(dir, ".pactwright", "lifecycle.yml"));
+  if (lifecycle.value === undefined) return;
+  const required = decisionActor(lifecycle.value);
+  const nodesDir = path.join(dir, "specs", "nodes");
+  if (!existsSync(nodesDir)) return;
+  for (const entry of readdirSync(nodesDir)) {
+    if (!entry.startsWith("decision-") || !entry.endsWith(".md")) continue;
+    const file = path.join(nodesDir, entry);
+    const before = readFileSync(file, "utf8");
+    const match = /^decided_by: (\w+):/m.exec(before);
+    if (match === null) continue;
+    const kind = match[1]!;
+    if (kind === required || (required === "agent" && kind === "automation")) continue;
+    const replacement = required === "human" ? "human:samir" : "agent:spec";
+    writeFileSync(file, before.replace(/^decided_by: .*$/m, `decided_by: ${replacement}`));
+  }
 }
 
 /**

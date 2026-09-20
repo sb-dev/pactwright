@@ -11,6 +11,7 @@ import { CORE_EDGE_SCHEMAS, validateEdges } from "./graph/edge-schema.js";
 import { loadEdges, type Edge } from "./graph/edges.js";
 import { GraphIndex } from "./graph/graph-index.js";
 import { validateLineages } from "./graph/lineage.js";
+import { validateRelationships } from "./graph/relationships.js";
 import { loadNodes, type GraphNode } from "./graph/nodes.js";
 import { CORE_NODE_SCHEMAS, validateNodes } from "./graph/schema.js";
 import { findProjectRoot, projectPaths, type ProjectPaths } from "./project.js";
@@ -100,6 +101,11 @@ export function loadProject(options: LoadProjectOptions = {}): Project {
   problems.push(...edges.problems);
   problems.push(...validateEdges(edges.edges, nodes.nodes, edgeRegistry, paths.edges));
   const index = GraphIndex.build(nodes.nodes, edges.edges);
+  // Declared relationship cardinality, for every record — reachable from an
+  // Intent or not. The lineage walk below only ever visits records it can
+  // reach, so an orphan Decision, Contract, Brief or Evidence used to load
+  // cleanly (Core §15).
+  problems.push(...validateRelationships(nodes.nodes, index, nodeRegistry));
   problems.push(...validateLineages(nodes.nodes, edges.edges, index));
 
   if (problems.length > 0 || !config.value || !lifecycle.value || !lock.value) {

@@ -108,6 +108,7 @@ export {
   type DecisionOutcome,
   type NodeSchema,
   type NodeSchemaRegistry,
+  type RelationshipRule,
 } from "./graph/schema.js";
 export {
   CORE_EDGE_OWNER,
@@ -284,6 +285,16 @@ export {
   type RepositoryRevision,
 } from "./graph/repository.js";
 export { validateProject, type ValidationReport } from "./validate.js";
+export {
+  VALIDATION_SCOPES,
+  proposedSnapshot,
+  snapshotOf,
+  validateSnapshot,
+  type GraphSnapshot,
+  type ReplayCheck,
+  type ValidationScope,
+} from "./validate/kernel.js";
+export { validateRelationships, type RelationshipProblem } from "./graph/relationships.js";
 export { renderGitHubWorkflows, syncProject, type SyncReport } from "./sync.js";
 export {
   findIntentOf,
