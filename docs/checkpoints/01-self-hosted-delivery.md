@@ -921,11 +921,13 @@ YAML
 fi
 
 pnpm add -D pactwright@0.0.2
-pnpm pactwright init
+pnpm pactwright init --agent-pack @pactwright/standard
 pnpm pactwright sync
 pnpm pactwright validate
 pnpm pactwright lifecycle status
 ```
+
+Plain `init` is deliberately an inert scaffold: it selects no Agent Pack and writes no environment lock, and installing the standard pack as a dependency does not select it. The Agent Pack is named explicitly here, using the Step 14 selection input — the same composition Steps 23 and 25 reach through `init` followed by `agent-pack use`.
 
 If the repository already has `package.json` or `pnpm-workspace.yaml`, preserve the existing files and use their adopted package/workspace configuration rather than replacing them.
 
