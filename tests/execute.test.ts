@@ -378,10 +378,12 @@ function installFixturePack(root: string, name: string): void {
 }
 
 test("acquire: a side is installed into its own project, not resolved from node_modules", () => {
-  const requests: Array<{ root: string; spec: string }> = [];
+  const requests: Array<{ root: string; spec: string | undefined }> = [];
   const side = acquireSide({
     spec: "@pactwright/standard@0.0.0",
     installer: ({ root, spec }) => {
+      // Acquisition always names an exact version, so a frozen install (no
+      // spec) would be the bug this test exists to catch.
       requests.push({ root, spec });
       installFixturePack(root, "complete");
       return [];

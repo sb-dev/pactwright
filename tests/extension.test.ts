@@ -552,7 +552,22 @@ test("extension upgrade: a successful upgrade leaves config.yml untouched", () =
  */
 function fixtureInstaller(): { install: PackageInstaller; calls: string[] } {
   const calls: string[] = [];
+  const added: string[] = [];
   const install: PackageInstaller = ({ root, manager, spec }) => {
+    // No spec is a frozen install: bring node_modules back in line with the
+    // manifest and lock as they now stand. The transaction uses this to undo
+    // an install once it has restored both files, so the double has to undo
+    // what it added rather than record the call and do nothing.
+    if (spec === undefined) {
+      calls.push(`${manager} install`);
+      for (const id of added.splice(0)) {
+        fs.rmSync(path.join(root, "node_modules", "@pactwright", id), {
+          recursive: true,
+          force: true,
+        });
+      }
+      return [];
+    }
     calls.push(`${manager} ${spec}`);
     const id = spec.replace("@pactwright/", "");
     const source = path.join(fixture("extensions"), id);
@@ -560,6 +575,7 @@ function fixtureInstaller(): { install: PackageInstaller; calls: string[] } {
       return [{ code: "package-manager-failed", message: `no such package ${spec}`, path: root }];
     }
     fs.cpSync(source, path.join(root, "node_modules", "@pactwright", id), { recursive: true });
+    added.push(id);
     return [];
   };
   return { install, calls };

@@ -232,6 +232,16 @@ export {
   type UpgradeReport,
 } from "./upgrade.js";
 export {
+  applyEnvironmentPlan,
+  managedSet,
+  planEnvironmentChange,
+  type EnvironmentPlan,
+  type EnvironmentResult,
+  type PackageChange,
+  type TransactionBody,
+  type TransactionSeams,
+} from "./environment/transaction.js";
+export {
   DOCTOR_STATUSES,
   doctor,
   formatDoctor,
