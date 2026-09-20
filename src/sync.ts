@@ -8,6 +8,7 @@ import {
 } from "./adapter/claude-code.js";
 import { PactwrightError, type Problem } from "./errors.js";
 import { checkEnvironmentAgreement } from "./config/agreement.js";
+import { applyEnvironmentPlan, planEnvironmentChange } from "./environment/transaction.js";
 import { loadProject, type Project } from "./loader.js";
 import { assertPackComplete, type ResolvedPack } from "./pack/resolve.js";
 import { projectPaths } from "./project.js";
@@ -115,13 +116,25 @@ export function syncProject(root: string = process.cwd()): SyncReport {
     }
   }
 
-  const written = writeAdapter(paths.root, files);
-  const conflicted = new Set(written.conflicts);
+  // A plan with no installs, covering the render — which was the one
+  // environment operation with no snapshot at all. What it protects against
+  // is a *throw* part-way through `writeAdapter`'s renames, which used to
+  // leave the already-renamed files in place with no way back (R07).
+  //
+  // A collision is a different thing and keeps its behaviour: the colliding
+  // file is left exactly as the user wrote it, every other rendered file
+  // still lands, and `sync` fails reporting it. That is a complete, stable
+  // outcome the user can act on — the surface converges as far as it safely
+  // can — not a half-applied write, so the transaction does not undo it
+  // (Distribution §14: leave ambiguous state intact and report it).
+  const plan = planEnvironmentChange(paths.root);
+  const { value } = applyEnvironmentPlan(plan, () => ({
+    ok: true,
+    value: writeAdapter(paths.root, files),
+  }));
 
-  // A collision with an unmarked file is reported, never resolved by
-  // overwriting: `sync` fails so the state is visible to the user and to CI
-  // (Distribution §14 — leave ambiguous state intact and report it).
-  const problems: Problem[] = written.conflicts.map((path) => ({
+  const conflicted = new Set(value.conflicts);
+  const problems: Problem[] = value.conflicts.map((path) => ({
     code: "unmanaged-conflict",
     message: `"${path}" is not a Pactwright-generated file, so it was not overwritten: delete it, or restore its "${GENERATED_MARKER}" banner, then run \`pactwright sync\` again`,
     path,
@@ -132,9 +145,9 @@ export function syncProject(root: string = process.cwd()): SyncReport {
     root: paths.root,
     changed: changed.filter((path) => !conflicted.has(path)).sort(),
     unchanged: unchanged.filter((path) => !conflicted.has(path)).sort(),
-    removed: written.removed,
-    kept: written.kept,
-    conflicts: written.conflicts,
+    removed: value.removed,
+    kept: value.kept,
+    conflicts: value.conflicts,
     problems,
   };
 }

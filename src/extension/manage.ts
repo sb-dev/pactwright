@@ -7,6 +7,11 @@ import {
   type PactwrightConfig,
 } from "../config/config.js";
 import { EXTENSION_ID_PATTERN, loadLock } from "../config/lock.js";
+import {
+  applyEnvironmentPlan,
+  planEnvironmentChange,
+  type TransactionBody,
+} from "../environment/transaction.js";
 import type { Problem } from "../errors.js";
 import { detectPackageManager } from "../config/package-manager.js";
 import { locatePackage } from "../pack/locate.js";
@@ -90,18 +95,24 @@ function withExtensions(
  * `config` is `undefined` when only the lock changes, so desired state is
  * left exactly as the user wrote it. Returns a Problem rather than throwing
  * when either file is absent, keeping the result idiom the callers rely on.
+ *
+ * It no longer carries a restore handle. Restoration belongs to the
+ * environment transaction, whose managed set is larger than these two files
+ * — this was one of the four private snapshot routines that each owned a
+ * different subset (§6).
  */
 function writeDesiredState(
   root: string,
   config: PactwrightConfig | undefined,
   lockText: string,
-): { restore: () => void } | Problem {
+): undefined | Problem {
   const paths = projectPaths(root);
   let previousConfig: string;
-  let previousLock: string;
   try {
     previousConfig = readFileSync(paths.config, "utf8");
-    previousLock = readFileSync(paths.lock, "utf8");
+    // Read to prove it exists: the write below replaces it wholesale, and a
+    // lock that is not there is a broken project rather than a first write.
+    readFileSync(paths.lock, "utf8");
   } catch (error) {
     const path = (error as NodeJS.ErrnoException).path ?? paths.lock;
     return { code: "missing-file", message: "file not found", path };
@@ -115,18 +126,15 @@ function writeDesiredState(
   };
 
   const written: (readonly [string, string])[] = [];
-  const previous: (readonly [string, string])[] = [];
   if (config !== undefined) {
     // Only the `extensions:` block ever changes, so the rest of the file —
     // including whatever the team wrote in comments — is carried across.
     written.push([paths.config, rewriteConfig(previousConfig, config)]);
-    previous.push([paths.config, previousConfig]);
   }
   written.push([paths.lock, lockText]);
-  previous.push([paths.lock, previousLock]);
 
   writeAll(written);
-  return { restore: () => writeAll(previous) };
+  return undefined;
 }
 
 /**
@@ -174,7 +182,30 @@ export function addExtension(
   const config = loadConfig(paths.config);
   if (config.value === undefined) return failure(paths.root, config.problems);
 
-  const proposed: Record<string, ConfigExtension> = { ...config.value.extensions };
+  // The whole operation, including the install walk, runs inside one
+  // transaction. It used to install packages during the walk and snapshot
+  // only afterwards, so a dependency install that failed part-way left
+  // `package.json` and the package-manager lock carrying packages no
+  // configuration named (R07).
+  const plan = planEnvironmentChange(paths.root);
+  const { value, result } = applyEnvironmentPlan(
+    plan,
+    (about) => addWithin(paths, config.value!, parsed, options, about),
+    { installer: options.install ?? packageManagerInstaller },
+  );
+  if (!result.ok) return failure(paths.root, result.problems);
+  return value;
+}
+
+function addWithin(
+  paths: ReturnType<typeof projectPaths>,
+  configured: PactwrightConfig,
+  parsed: { id: string; source: string },
+  options: AddExtensionOptions,
+  about: TransactionBody,
+): { ok: boolean; value: ExtensionChangeReport; problems?: readonly Problem[] } {
+  const config = { value: configured };
+  const proposed: Record<string, ConfigExtension> = { ...configured.extensions };
   const added: string[] = [];
   const problems: Problem[] = [];
 
@@ -203,6 +234,10 @@ export function addExtension(
       // Dependency-first installation: the walk reaches a dependency before
       // the dependant that needs it, so installing here installs in the order
       // §10 requires, through the project's own package manager.
+      // Told to the transaction *before* installing: what an undo has to
+      // reach is the version this project had at this moment, and the walk
+      // cannot know its dependencies at plan time.
+      about.installing(existing?.source ?? source);
       const installed = installPackage(paths.root, existing?.source ?? source, options);
       if (installed.length > 0) {
         problems.push(...installed);
@@ -239,15 +274,20 @@ export function addExtension(
       queue.push({ id: dep, source: configured?.source ?? `@pactwright/${dep}` });
     }
   }
-  if (problems.length > 0) return failure(paths.root, problems);
+  if (problems.length > 0) {
+    return { ok: false, value: failure(paths.root, problems), problems };
+  }
   if (added.length === 0) {
     return {
       ok: true,
-      root: paths.root,
-      changes: [{ id: parsed.id, action: "unchanged" }],
-      githubProfiles: [],
-      preserved: [],
-      problems: [],
+      value: {
+        ok: true,
+        root: paths.root,
+        changes: [{ id: parsed.id, action: "unchanged" }],
+        githubProfiles: [],
+        preserved: [],
+        problems: [],
+      },
     };
   }
 
@@ -255,22 +295,25 @@ export function addExtension(
     root: paths.root,
     config: withExtensions(config.value, proposed),
   });
-  if (desired.value === undefined) return failure(paths.root, desired.problems);
+  if (desired.value === undefined) {
+    return { ok: false, value: failure(paths.root, desired.problems), problems: desired.problems };
+  }
 
   const written = writeDesiredState(
     paths.root,
     withExtensions(config.value, proposed),
     serialiseLock(desired.value.lock),
   );
-  if ("code" in written) return failure(paths.root, [written]);
+  if (written !== undefined) {
+    return { ok: false, value: failure(paths.root, [written]), problems: [written] };
+  }
   const report = validateProject({ root: paths.root });
   if (!report.ok) {
-    written.restore();
-    return failure(paths.root, report.problems);
+    return { ok: false, value: failure(paths.root, report.problems), problems: report.problems };
   }
 
   const byId = new Map(desired.value.extensions.map((e) => [e.id, e]));
-  return {
+  const success: ExtensionChangeReport = {
     ok: true,
     root: paths.root,
     ...(installedPackages.length === 0 ? {} : { installed: installedPackages.sort() }),
@@ -286,6 +329,7 @@ export function addExtension(
     preserved: [],
     problems: [],
   };
+  return { ok: true, value: success };
 }
 
 /**
@@ -394,8 +438,23 @@ export function removeExtension(root: string, id: string): ExtensionChangeReport
     return failure(paths.root, desired.problems);
   }
 
-  const written = writeDesiredState(paths.root, withExtensions(config.value, proposed), lockText);
-  if ("code" in written) return failure(paths.root, [written]);
+  // Wrapped, but with the validate step deliberately *advisory*: a removal
+  // is expected to leave records the graph no longer recognises, so gating
+  // the commit on `validate` would break the one command that repairs a
+  // broken extension set. The transaction is here for the write itself —
+  // a throw mid-write still puts the managed set back.
+  const plan = planEnvironmentChange(paths.root);
+  const { result } = applyEnvironmentPlan(plan, () => {
+    const problem = writeDesiredState(
+      paths.root,
+      withExtensions(config.value!, proposed),
+      lockText,
+    );
+    return problem === undefined
+      ? { ok: true, value: undefined }
+      : { ok: false, value: undefined, problems: [problem] };
+  });
+  if (!result.ok) return failure(paths.root, result.problems);
 
   // Preserved user-authored canonical data: records whose types the removed
   // extension registered. `pactwright validate` reports them as unknown
@@ -461,21 +520,29 @@ export function upgradeExtension(root: string, id: string): ExtensionChangeRepor
 
   const previousLock = loadLock(paths.lock);
   const previousVersion = previousLock.value?.extensions[id]?.version;
-  const desired = resolveDesiredState({ root: paths.root, config: config.value });
-  if (desired.value === undefined) return failure(paths.root, desired.problems);
-  const next = desired.value.extensions.find((e) => e.id === id);
 
-  // The configuration is desired state and cannot change on an upgrade, so
-  // only the lock is written. A lock that does not validate is rolled back:
   // §15 requires an upgrade to satisfy every enabled dependant *before* the
-  // lock file changes, so a failed upgrade must leave no trace.
-  const written = writeDesiredState(paths.root, undefined, serialiseLock(desired.value.lock));
-  if ("code" in written) return failure(paths.root, [written]);
-  const report = validateProject({ root: paths.root });
-  if (!report.ok) {
-    written.restore();
-    return failure(paths.root, report.problems);
-  }
+  // lock file changes, so a failed upgrade must leave no trace. The
+  // transaction's managed set is what makes "no trace" cover more than the
+  // lock: this used to restore two files and nothing else.
+  const plan = planEnvironmentChange(paths.root);
+  const { value, result } = applyEnvironmentPlan(plan, () => {
+    const desired = resolveDesiredState({ root: paths.root, config: config.value! });
+    if (desired.value === undefined) {
+      return { ok: false, value: undefined, problems: desired.problems };
+    }
+    const next = desired.value.extensions.find((e) => e.id === id);
+
+    // The configuration is desired state and cannot change on an upgrade, so
+    // only the lock is written.
+    const written = writeDesiredState(paths.root, undefined, serialiseLock(desired.value.lock));
+    if (written !== undefined) return { ok: false, value: undefined, problems: [written] };
+    const report = validateProject({ root: paths.root });
+    if (!report.ok) return { ok: false, value: undefined, problems: report.problems };
+    return { ok: true, value: next?.manifest.version };
+  });
+
+  if (!result.ok) return failure(paths.root, result.problems);
 
   return {
     ok: true,
@@ -484,7 +551,7 @@ export function upgradeExtension(root: string, id: string): ExtensionChangeRepor
       {
         id,
         action: "upgraded",
-        ...(next === undefined ? {} : { version: next.manifest.version }),
+        ...(value === undefined ? {} : { version: value }),
         ...(previousVersion === undefined ? {} : { previousVersion }),
       },
     ],

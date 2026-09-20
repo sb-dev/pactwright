@@ -1,5 +1,5 @@
 import { spawnSync } from "node:child_process";
-import { existsSync, readFileSync, renameSync, rmSync, writeFileSync } from "node:fs";
+import { existsSync, renameSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { tempSibling } from "./atomic.js";
 import { loadConfig } from "./config/config.js";
@@ -10,6 +10,12 @@ import {
   type PackageManager,
 } from "./config/package-manager.js";
 import type { Problem } from "./errors.js";
+import {
+  applyEnvironmentPlan,
+  planEnvironmentChange,
+  type PackageInstaller,
+} from "./environment/transaction.js";
+import { withRepositoryLock } from "./graph/writer-lock.js";
 import { projectPaths } from "./project.js";
 import { resolveDesiredState, serialiseLock } from "./pack/resolve.js";
 import { syncProject } from "./sync.js";
@@ -35,12 +41,7 @@ export interface UpgradeOptions {
   readonly reenter?: Reentry;
 }
 
-/** Replaces the runtime package. Returns problems rather than throwing. */
-export type PackageInstaller = (request: {
-  readonly root: string;
-  readonly manager: PackageManager;
-  readonly spec: string;
-}) => readonly Problem[];
+export type { PackageInstaller };
 
 /** Runs `pactwright upgrade --finish` through the newly installed runtime. */
 export type Reentry = (request: {
@@ -59,8 +60,16 @@ export interface UpgradeReport {
   /** Migrations the new runtime ran, in order. */
   readonly migrations: readonly string[];
   readonly synced: readonly string[];
-  /** Set when the previous environment had to be restored. */
-  readonly restored?: true;
+  /**
+   * Whether the previous environment was put back, *verified* rather than
+   * asserted (§6). This used to be a literal the code set when it believed it
+   * had restored: it reported `true` after restoring four files while the
+   * installer's changes to the package-manager lock, and the newly installed
+   * runtime itself, remained in place.
+   */
+  readonly restored?: boolean;
+  /** What a human must do when restoration could not be completed. */
+  readonly recovery?: readonly string[];
   readonly problems: readonly Problem[];
 }
 
@@ -82,14 +91,25 @@ function failure(
   };
 }
 
-/** The default installer: delegates package replacement to the package manager. */
+/**
+ * The default installer: delegates package replacement to the package
+ * manager.
+ *
+ * Without a `spec` it runs a plain install, which brings `node_modules` back
+ * in line with whatever `package.json` and the manager's own lock now say.
+ * That is how the environment transaction undoes an install once it has put
+ * both files back — still the package manager doing the work, so Pactwright
+ * never becomes a second one (Distribution §15, §25).
+ */
 export const packageManagerInstaller: PackageInstaller = ({ root, manager, spec }) => {
   const args =
-    manager === "npm"
-      ? ["install", "--save-dev", spec]
-      : manager === "yarn"
-        ? ["add", "--dev", spec]
-        : ["add", "-D", spec];
+    spec === undefined
+      ? ["install"]
+      : manager === "npm"
+        ? ["install", "--save-dev", spec]
+        : manager === "yarn"
+          ? ["add", "--dev", spec]
+          : ["add", "-D", spec];
   const result = spawnSync(manager, args, { cwd: root, encoding: "utf8", timeout: 300_000 });
   if (result.error !== undefined) {
     return [
@@ -143,28 +163,6 @@ export const cliReentry: Reentry = ({ root }) => {
   ];
 };
 
-/** Snapshots the files an upgrade may change, so a failure can restore them. */
-function snapshot(root: string): { restore: () => void } {
-  const paths = projectPaths(root);
-  const files = [paths.config, paths.lifecycle, paths.lock, join(root, "package.json")];
-  const before = files.map(
-    (file) => [file, existsSync(file) ? readFileSync(file, "utf8") : undefined] as const,
-  );
-  return {
-    restore: () => {
-      for (const [file, content] of before) {
-        if (content === undefined) {
-          rmSync(file, { force: true });
-          continue;
-        }
-        const temp = tempSibling(file);
-        writeFileSync(temp, content, "utf8");
-        renameSync(temp, file);
-      }
-    },
-  };
-}
-
 /**
  * `pactwright upgrade` / `pactwright upgrade --to <version>` (Distribution
  * §15). Pactwright never becomes a second package manager: it detects the
@@ -198,46 +196,67 @@ export function upgradeRuntime(
   }
   const spec = target === undefined ? `${RUNTIME_PACKAGE}@latest` : `${RUNTIME_PACKAGE}@${target}`;
 
-  const taken = snapshot(paths.root);
+  // The first of the upgrade's two transactions. The second runs inside
+  // `finishUpgrade`, in the *newly installed* runtime, because Distribution
+  // §15 requires migration, locking, sync and validation to happen there —
+  // and a transaction cannot span a process boundary. This one therefore
+  // owns the package replacement and nothing else, and holds no writer lock
+  // while it spawns the child, which would otherwise block the child for its
+  // full wait and then fail it.
   const install = options.install ?? packageManagerInstaller;
-  const installProblems = install({ root: paths.root, manager, spec });
-  if (installProblems.length > 0) {
-    taken.restore();
-    return failure(paths.root, from, installProblems, true);
-  }
+  const plan = planEnvironmentChange(paths.root, {
+    installs: [{ name: RUNTIME_PACKAGE, spec }],
+  });
 
-  const installed = installedVersion(paths.root, RUNTIME_PACKAGE);
-  if (installed === undefined) {
-    taken.restore();
-    return failure(
-      paths.root,
-      from,
-      [
-        {
-          code: "runtime-not-installed",
-          message: `${manager} reported success but ${RUNTIME_PACKAGE} is not installed`,
-          path: paths.root,
-        },
-      ],
-      true,
-    );
-  }
+  let installed: string | undefined;
+  const { result } = applyEnvironmentPlan(
+    plan,
+    () => {
+      const installProblems = install({ root: paths.root, manager, spec });
+      if (installProblems.length > 0)
+        return { ok: false, value: undefined, problems: installProblems };
 
-  const reenter = options.reenter ?? cliReentry;
-  const reentryProblems = reenter({ root: paths.root, version: installed });
-  if (reentryProblems.length > 0) {
-    // The canonical graph is never touched by the upgrade itself, and the
-    // previous package/config/lock state is restored, so the project can run
-    // on — or explicitly target — the runtime it had.
-    taken.restore();
-    return failure(paths.root, from, reentryProblems, true);
+      installed = installedVersion(paths.root, RUNTIME_PACKAGE);
+      if (installed === undefined) {
+        return {
+          ok: false,
+          value: undefined,
+          problems: [
+            {
+              code: "runtime-not-installed",
+              message: `${manager} reported success but ${RUNTIME_PACKAGE} is not installed`,
+              path: paths.root,
+            },
+          ],
+        };
+      }
+
+      // The new runtime does the rest, under its own transaction and its own
+      // writer lock. A failure there has already restored the child's managed
+      // set, so this one only has to undo the package replacement.
+      const reenter = options.reenter ?? cliReentry;
+      const reentryProblems = reenter({ root: paths.root, version: installed });
+      if (reentryProblems.length > 0) {
+        return { ok: false, value: undefined, problems: reentryProblems };
+      }
+      return { ok: true, value: undefined };
+    },
+    { installer: install },
+  );
+
+  if (!result.ok) {
+    return {
+      ...failure(paths.root, from, result.problems),
+      restored: result.restored,
+      ...(result.recovery === undefined ? {} : { recovery: result.recovery }),
+    };
   }
 
   return {
     ok: true,
     root: paths.root,
     from,
-    to: installed,
+    to: installed!,
     manager,
     unchanged: installed === from,
     migrations: [],
@@ -255,51 +274,50 @@ export function upgradeRuntime(
 export function finishUpgrade(root: string = process.cwd()): UpgradeReport {
   const paths = projectPaths(root);
   const from = runtimeVersion();
-  const taken = snapshot(paths.root);
   const migrations: string[] = [];
+  const plan = planEnvironmentChange(paths.root);
 
-  const migrated = migrateLifecycle(paths.lifecycle);
-  if (migrated.problems.length > 0) {
-    taken.restore();
-    return failure(paths.root, from, migrated.problems, true);
-  }
-  if (migrated.applied) migrations.push(`lifecycle.yml -> version ${LIFECYCLE_VERSION}`);
+  // The upgrade's second transaction, and the one that touches canonical
+  // configuration — so it takes the writer lock. The first transaction, in
+  // the old runtime, deliberately holds no lock while it spawns this
+  // process; taking it here rather than there is what keeps the two from
+  // deadlocking across that boundary.
+  const { value, result } = applyEnvironmentPlan(plan, () =>
+    withRepositoryLock(paths.root, () => {
+      const migrated = migrateLifecycle(paths.lifecycle);
+      if (migrated.problems.length > 0) {
+        return { ok: false, value: undefined, problems: migrated.problems };
+      }
+      if (migrated.applied) migrations.push(`lifecycle.yml -> version ${LIFECYCLE_VERSION}`);
 
-  const config = loadConfig(paths.config);
-  if (config.value === undefined) {
-    taken.restore();
-    return failure(paths.root, from, config.problems, true);
-  }
-  // A scaffold has no pack to re-lock; the runtime upgrade still stands.
-  if (config.value.agentPack !== undefined) {
-    const resolved = resolveDesiredState({ root: paths.root, config: config.value });
-    if (resolved.value === undefined) {
-      taken.restore();
-      return failure(paths.root, from, resolved.problems, true);
-    }
-    const temp = tempSibling(paths.lock);
-    writeFileSync(temp, serialiseLock(resolved.value.lock), "utf8");
-    renameSync(temp, paths.lock);
+      const config = loadConfig(paths.config);
+      if (config.value === undefined) {
+        return { ok: false, value: undefined, problems: config.problems };
+      }
+      // A scaffold has no pack to re-lock; the runtime upgrade still stands.
+      if (config.value.agentPack === undefined) return { ok: true, value: [] as string[] };
 
-    const synced = syncProject(paths.root);
-    if (!synced.ok) {
-      taken.restore();
-      return failure(paths.root, from, synced.problems, true);
-    }
-    const validation = validateProject({ root: paths.root });
-    if (!validation.ok) {
-      taken.restore();
-      return failure(paths.root, from, validation.problems, true);
-    }
+      const resolved = resolveDesiredState({ root: paths.root, config: config.value });
+      if (resolved.value === undefined) {
+        return { ok: false, value: undefined, problems: resolved.problems };
+      }
+      const temp = tempSibling(paths.lock);
+      writeFileSync(temp, serialiseLock(resolved.value.lock), "utf8");
+      renameSync(temp, paths.lock);
+
+      const synced = syncProject(paths.root);
+      if (!synced.ok) return { ok: false, value: undefined, problems: synced.problems };
+      const validation = validateProject({ root: paths.root });
+      if (!validation.ok) return { ok: false, value: undefined, problems: validation.problems };
+      return { ok: true, value: synced.changed };
+    }),
+  );
+
+  if (!result.ok) {
     return {
-      ok: true,
-      root: paths.root,
-      from,
-      to: from,
-      unchanged: false,
-      migrations,
-      synced: synced.changed,
-      problems: [],
+      ...failure(paths.root, from, result.problems),
+      restored: result.restored,
+      ...(result.recovery === undefined ? {} : { recovery: result.recovery }),
     };
   }
 
@@ -310,7 +328,7 @@ export function finishUpgrade(root: string = process.cwd()): UpgradeReport {
     to: from,
     unchanged: false,
     migrations,
-    synced: [],
+    synced: value ?? [],
     problems: [],
   };
 }

@@ -48,8 +48,17 @@ function consumer(options: Parameters<typeof makeTempProject>[0] = {}): string {
 function fixtureInstaller(version: string): { install: PackageInstaller; calls: string[] } {
   const calls: string[] = [];
   const install: PackageInstaller = ({ root, manager, spec }) => {
-    calls.push(`${manager} ${spec}`);
     const dir = path.join(root, "node_modules", "pactwright");
+    // No spec is a frozen install: put node_modules back in line with the
+    // manifest and lock as they now stand. The environment transaction uses
+    // it to undo an install after restoring both files, and it is the only
+    // thing that makes `restored` mean the runtime really did come back.
+    if (spec === undefined) {
+      calls.push(`${manager} install`);
+      fs.rmSync(dir, { recursive: true, force: true });
+      return [];
+    }
+    calls.push(`${manager} ${spec}`);
     fs.mkdirSync(dir, { recursive: true });
     fs.writeFileSync(
       path.join(dir, "package.json"),
