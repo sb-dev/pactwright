@@ -33,7 +33,13 @@ export interface WriterLockOptions {
 /** Lock paths this process currently holds, for the re-entrancy check below. */
 const held = new Set<string>();
 
-const DEFAULT_WAIT_MS = 5_000;
+/**
+ * A holder runs a complete load → validate → write → reload of the graph, so
+ * the wait has to exceed that on a slow machine with a large graph. Waiting
+ * is cheap; giving up on a writer that was about to finish is a confusing
+ * failure in ordinary use.
+ */
+const DEFAULT_WAIT_MS = 30_000;
 const DEFAULT_STALE_AFTER_MS = 120_000;
 const POLL_FLOOR_MS = 10;
 const POLL_CEILING_MS = 200;

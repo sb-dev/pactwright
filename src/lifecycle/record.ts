@@ -31,6 +31,7 @@ import {
   PROVENANCE_KINDS,
   isProvenanceKind,
   recordDelivery,
+  recordGate,
   recordReview,
   type ProvenanceKind,
 } from "./provenance.js";
@@ -61,12 +62,27 @@ export function isRecordingStage(stage: string): stage is RecordingStage {
 }
 
 /**
+ * Resolving a Gate is neither a graph-marking command nor Delivery/Review
+ * provenance: it records who authorised progression past a configured Gate
+ * (Core §§31, 46). It is the write side of `ExecutionState.gates`, which had
+ * readers and no producer, so a human Gate could only be passed by editing
+ * execution state by hand.
+ */
+export const GATE_STAGE = "gate";
+export type GateStage = typeof GATE_STAGE;
+
+export function isGateStage(stage: string): stage is GateStage {
+  return stage === GATE_STAGE;
+}
+
+/**
  * What one `lifecycle record` did. A graph-marking command creates nodes; an
- * execution step creates none and advances the run instead, which is the
- * boundary Spec 01 §11 draws between canonical records and provenance.
+ * execution step and a Gate resolution create none and change the run
+ * instead, which is the boundary Spec 01 §11 draws between canonical records
+ * and provenance.
  */
 export interface RecordResult {
-  readonly stage: RecordingStage | ProvenanceKind;
+  readonly stage: RecordingStage | ProvenanceKind | GateStage;
   readonly created: readonly GraphNode[];
   /** Set for an execution step: the step recorded and where the run went next. */
   readonly advanced?: {
@@ -113,6 +129,40 @@ function recordProvenance(root: string, kind: ProvenanceKind, inputPath: string)
       : recordReview(root, { anchor: anchor!, outcome: outcome as ReviewOutcome });
   return {
     stage: kind,
+    created: [],
+    advanced: {
+      brief: result.brief,
+      status: result.state.status,
+      ...(result.state.currentStep === undefined ? {} : { nextStep: result.state.currentStep }),
+    },
+  };
+}
+
+/**
+ * Records an authorised Gate resolution. The runtime checks the actor
+ * against the Gate's declared authority before anything is written, so an
+ * unauthorised attempt leaves execution state unchanged (Core §46).
+ */
+function recordGateStage(root: string, inputPath: string): RecordResult {
+  const file = readYamlFile(inputPath);
+  if (file.problems.length > 0)
+    throw PactwrightError.fromProblems("invalid-record-input", file.problems);
+  const c = new Checker(inputPath);
+  if (!isRecord(file.value)) {
+    c.fail("invalid-type", "record input must be a mapping");
+    throw PactwrightError.fromProblems("invalid-record-input", c.problems);
+  }
+  const record = file.value;
+  requireKeys(c, record, "record input", ["intent", "step", "resolved_by"]);
+  rejectUnknownKeys(c, record, "record input", ["intent", "step", "resolved_by"]);
+  const anchor = expectString(c, record["intent"], "intent");
+  const step = expectString(c, record["step"], "step");
+  const resolvedBy = expectString(c, record["resolved_by"], "resolved_by");
+  if (!c.ok) throw PactwrightError.fromProblems("invalid-record-input", c.problems);
+
+  const result = recordGate(root, { anchor: anchor!, step: step!, resolvedBy: resolvedBy! });
+  return {
+    stage: GATE_STAGE,
     created: [],
     advanced: {
       brief: result.brief,
@@ -244,10 +294,13 @@ export function recordStage(root: string, stage: string, inputPath: string): Rec
   if (isProvenanceKind(stage)) {
     return recordProvenance(root, stage, inputPath);
   }
+  if (isGateStage(stage)) {
+    return recordGateStage(root, inputPath);
+  }
   if (!isRecordingStage(stage)) {
     throw new PactwrightError(
       "no-graph-record",
-      `"${stage}" is neither a graph-marking command (${RECORDING_COMMANDS.join(", ")}) nor an execution step (${PROVENANCE_KINDS.join(", ")})`,
+      `"${stage}" is neither a graph-marking command (${RECORDING_COMMANDS.join(", ")}), an execution step (${PROVENANCE_KINDS.join(", ")}) nor "${GATE_STAGE}"`,
     );
   }
   const fields = readFields(stage, inputPath);

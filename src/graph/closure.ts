@@ -1,6 +1,7 @@
 import { PactwrightError, type Problem } from "../errors.js";
 import { currentStep, executionFor, selectLineages } from "../lifecycle/engine.js";
 import { isGate } from "../lifecycle/shape.js";
+import { gateSatisfied } from "../lifecycle/transition.js";
 import type { ExecutionState } from "../lifecycle/state.js";
 import type { Project } from "../loader.js";
 import { lineageFor, type Lineage, type Resolved } from "./lineage.js";
@@ -144,12 +145,15 @@ export function checkEvidenceClosure(project: Project, briefId: string): Closure
     if (!isGate(step)) continue;
     // Only Gates the run has actually reached can block closure; a Gate on a
     // step the shape never got to is not "unresolved", it is not yet due.
-    const reached = state.completedSteps.includes(step.name) || state.currentStep === step.name;
+    const reached = state.visited.includes(step.name) || state.currentStep === step.name;
     if (!reached) continue;
-    if (state.gates[step.name] === undefined) {
+    // Resolved *and* by an admitted actor: the same predicate the reducer
+    // and rule 14 use, so `resolved_by: agent:anyone` on a human Gate can no
+    // longer satisfy closure.
+    if (!gateSatisfied(step, state.gates)) {
       record(
         "gates-resolved",
-        `Gate "${step.name}" has not been resolved; it requires ${step.actor ?? "human"} authority before closure`,
+        `Gate "${step.name}" has not been resolved by ${step.actor ?? "human"} authority`,
       );
     }
   }

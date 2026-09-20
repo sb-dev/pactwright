@@ -11,12 +11,12 @@ import {
 } from "../src/graph/mutations.js";
 import { deriveLineage } from "../src/graph/lineage.js";
 import { graphRevision } from "../src/graph/revision.js";
-import { recordDelivery, recordReview } from "../src/lifecycle/provenance.js";
+import { recordDelivery, recordGate, recordReview } from "../src/lifecycle/provenance.js";
 import { recordStage } from "../src/lifecycle/record.js";
 import { loadExecutionState, routeKey } from "../src/lifecycle/state.js";
 import { loadProject } from "../src/loader.js";
 import { validateProject } from "../src/validate.js";
-import { makeTempProject } from "./helpers.js";
+import { defaultShapeSteps, makeTempProject } from "./helpers.js";
 
 const dirs: string[] = [];
 after(() => {
@@ -59,7 +59,7 @@ test("provenance: the adapter's own sequence drives a complete Delivery to Evide
   const delivered = recordDelivery(root, { anchor: brief, revision: "delivered-1" });
   assert.equal(delivered.step, "delivery");
   assert.equal(delivered.state.currentStep, "review");
-  assert.deepEqual(delivered.state.completedSteps, ["delivery"]);
+  assert.deepEqual(delivered.state.visited, ["delivery"]);
 
   // /review reports its verdict; the runtime routes forward on a pass.
   const reviewed = recordReview(root, { anchor: brief, outcome: "pass" });
@@ -165,4 +165,100 @@ test("provenance: closing through the adapter clears the run, as lifecycle run d
     false,
     "a closed run leaves no progression state behind",
   );
+});
+
+/* ---- R04: Gate enforcement no longer differs by path ---- */
+
+test("provenance: recordDelivery refuses an unresolved Gate and leaves the state file byte-identical", () => {
+  const { root, brief } = delivering({
+    shapeSteps: defaultShapeSteps({ delivery: { execution: "manual", actor: "human" } }),
+  });
+  // Begin the run so there is a state file to compare against.
+  recordGate(root, { anchor: brief, step: "delivery", resolvedBy: "human:samir" });
+  const statePath = path.join(root, ".pactwright", "execution", `${brief}.yml`);
+  fs.writeFileSync(
+    statePath,
+    fs.readFileSync(statePath, "utf8").replace(/gates:\n.*\n.*\n/, "gates: {}\n"),
+  );
+  const before = fs.readFileSync(statePath, "utf8");
+
+  // The review reproduced this: a manual Delivery step with `actor: human` is
+  // correctly reported as a Gate by `lifecycle next`, but `recordDelivery`
+  // advanced to Review with no actor or Gate resolution at all.
+  assert.throws(
+    () => recordDelivery(root, { anchor: brief, revision: "delivered-1" }),
+    (error: unknown) => error instanceof PactwrightError && error.code === "transition-refused",
+  );
+  assert.equal(fs.readFileSync(statePath, "utf8"), before, "the state file is unchanged");
+});
+
+test("provenance: recordGate refuses an unauthorised actor and records an authorised one", () => {
+  const { root, brief } = delivering({
+    shapeSteps: defaultShapeSteps({ delivery: { execution: "manual", actor: "human" } }),
+  });
+  assert.throws(
+    () => recordGate(root, { anchor: brief, step: "delivery", resolvedBy: "agent:implementer" }),
+    (error: unknown) => error instanceof PactwrightError && error.code === "transition-refused",
+  );
+  assert.equal(loadExecutionState(root, brief).value, undefined, "nothing was written");
+
+  const result = recordGate(root, { anchor: brief, step: "delivery", resolvedBy: "human:samir" });
+  assert.deepEqual({ ...result.state.gates }, { delivery: { resolvedBy: "human:samir" } });
+
+  // With the Gate resolved, the Delivery step may complete.
+  const delivered = recordDelivery(root, { anchor: brief, revision: "delivered-1" });
+  assert.equal(delivered.state.currentStep, "review");
+});
+
+test("provenance: lifecycle record gate is reachable through the normal record verb", () => {
+  const { root, brief, intent } = delivering({
+    shapeSteps: defaultShapeSteps({ delivery: { execution: "manual", actor: "human" } }),
+  });
+  const file = path.join(root, "gate.yml");
+  fs.writeFileSync(file, `intent: ${intent}\nstep: delivery\nresolved_by: human:samir\n`);
+  const result = recordStage(root, "gate", file);
+  assert.equal(result.stage, "gate");
+  assert.deepEqual(result.created, []);
+  // A normal human Gate is resolvable without editing YAML by hand, which is
+  // what the review found missing.
+  assert.deepEqual(
+    { ...loadExecutionState(root, brief).value?.gates },
+    {
+      delivery: { resolvedBy: "human:samir" },
+    },
+  );
+});
+
+/* ---- R12: a permitted corrective iteration validates at every step ---- */
+
+test("provenance: every intermediate state of a bounded correction validates", () => {
+  const { root, brief } = delivering({
+    transitions: [{ from: "review", to: "delivery", maxIterations: 2 }],
+  });
+  const healthy = (where: string): void => {
+    const report = validateProject({ root });
+    assert.equal(report.ok, true, `${where}: ${report.problems.map((p) => p.message).join("\n")}`);
+  };
+
+  healthy("before delivery");
+  recordDelivery(root, { anchor: brief, revision: "delivered-1" });
+  healthy("after the first delivery");
+
+  // Delivery → Review(revise) → Delivery used to leave the walk
+  // `delivery, review, review` — deduplicated by both writers, read as
+  // chronology by rule 11 — and validation reported a `review → review`
+  // transition the shape does not declare until the next Review passed.
+  recordReview(root, { anchor: brief, outcome: "revise" });
+  healthy("after the revise");
+
+  recordDelivery(root, { anchor: brief, revision: "delivered-2" });
+  healthy("after the corrective delivery");
+
+  const state = loadExecutionState(root, brief).value;
+  assert.deepEqual(state?.visited, ["delivery", "review", "delivery"]);
+  assert.equal(state?.iterations[routeKey("review", "delivery")], 1);
+
+  recordReview(root, { anchor: brief, outcome: "pass" });
+  healthy("after the passing review");
+  assert.equal(loadExecutionState(root, brief).value?.currentStep, "evidence");
 });
