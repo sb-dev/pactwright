@@ -242,6 +242,14 @@ export {
   type TransactionSeams,
 } from "./environment/transaction.js";
 export {
+  packageManagerView,
+  selectTarget,
+  type PackageView,
+  type RetainedEnvironment,
+  type SelectedTarget,
+  type TargetComponent,
+} from "./environment/select-target.js";
+export {
   DOCTOR_STATUSES,
   doctor,
   formatDoctor,
@@ -386,8 +394,10 @@ export {
   addExtension,
   removeExtension,
   upgradeExtension,
+  type AddExtensionOptions,
   type ExtensionChange,
   type ExtensionChangeReport,
+  type UpgradeExtensionOptions,
 } from "./extension/manage.js";
 export {
   GENERATED_MARKER,

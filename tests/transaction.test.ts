@@ -10,6 +10,7 @@ import {
   planEnvironmentChange,
   type PackageInstaller,
 } from "../src/environment/transaction.js";
+import { selectTarget } from "../src/environment/select-target.js";
 import { useAgentPack } from "../src/pack/select.js";
 import { syncProject } from "../src/sync.js";
 import { upgradeRuntime, type Reentry } from "../src/upgrade.js";
@@ -239,4 +240,78 @@ test("transaction: a pack switch that fails leaves the generated surface untouch
   const report = useAgentPack(root, "@pactwright/does-not-exist");
   assert.equal(report.ok, false);
   assert.deepEqual(managedDigest(root), before);
+});
+
+/* ---- target selection (R09) ---- */
+
+test("selectTarget: picks the newest version inside the configured range", () => {
+  const selected = selectTarget(
+    { kind: "agent-pack", name: "@pactwright/standard" },
+    "^0.1.0",
+    { runtimeVersion: "0.0.2" },
+    { manager: "pnpm", view: () => ["0.1.0", "0.1.7", "0.2.0", "1.0.0"] },
+  );
+  assert.ok(!Array.isArray(selected), JSON.stringify(selected));
+  // `^0.1.z` fixes the minor under npm semantics, so 0.2.0 is out of range
+  // even though it is newer.
+  assert.equal((selected as { version: string }).version, "0.1.7");
+});
+
+test("selectTarget: an absent constraint means newest compatible, not `^0.0.0`", () => {
+  // There is no range spelling for "any": `^0.0.0` is exact under npm caret
+  // semantics, so it would select 0.0.0 and nothing else.
+  const selected = selectTarget(
+    { kind: "extension", name: "@pactwright/fixture-base" },
+    undefined,
+    { runtimeVersion: "0.0.2" },
+    { manager: "pnpm", view: () => ["0.0.0", "0.1.0", "0.2.3"] },
+  );
+  assert.ok(!Array.isArray(selected));
+  assert.equal((selected as { version: string }).version, "0.2.3");
+});
+
+test("selectTarget: skips versions the running runtime cannot satisfy", () => {
+  const selected = selectTarget(
+    { kind: "extension", name: "@pactwright/fixture-base" },
+    undefined,
+    {
+      runtimeVersion: "0.0.2",
+      declaredRuntimeRange: (version) => (version === "2.0.0" ? "^9.0.0" : "0.0.2"),
+    },
+    { manager: "pnpm", view: () => ["1.0.0", "2.0.0"] },
+  );
+  assert.ok(!Array.isArray(selected));
+  assert.equal((selected as { version: string }).version, "1.0.0");
+  assert.deepEqual((selected as { rejected: readonly string[] }).rejected, ["2.0.0"]);
+});
+
+test("selectTarget: reports rather than guesses when nothing fits", () => {
+  const none = selectTarget(
+    { kind: "runtime", name: "pactwright" },
+    "^3.0.0",
+    { runtimeVersion: "0.0.2" },
+    { manager: "pnpm", view: () => ["0.0.1", "0.0.2"] },
+  );
+  assert.ok(Array.isArray(none));
+  assert.equal((none as readonly { code: string }[])[0]?.code, "no-version-in-range");
+
+  const incompatible = selectTarget(
+    { kind: "extension", name: "@pactwright/fixture-base" },
+    undefined,
+    { runtimeVersion: "0.0.2", declaredRuntimeRange: () => "^9.0.0" },
+    { manager: "pnpm", view: () => ["1.0.0"] },
+  );
+  assert.ok(Array.isArray(incompatible));
+  assert.equal((incompatible as readonly { code: string }[])[0]?.code, "incompatible-target");
+});
+
+test("selectTarget: a view that fails is reported, not treated as an empty registry", () => {
+  const result = selectTarget(
+    { kind: "runtime", name: "pactwright" },
+    undefined,
+    { runtimeVersion: "0.0.2" },
+    { manager: "pnpm", view: () => [{ code: "package-view-failed", message: "offline" }] },
+  );
+  assert.ok(Array.isArray(result));
+  assert.equal((result as readonly { code: string }[])[0]?.code, "package-view-failed");
 });

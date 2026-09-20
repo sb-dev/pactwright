@@ -15,6 +15,11 @@ import {
   planEnvironmentChange,
   type PackageInstaller,
 } from "./environment/transaction.js";
+import {
+  selectTarget,
+  type PackageView,
+  type SelectedTarget,
+} from "./environment/select-target.js";
 import { withRepositoryLock } from "./graph/writer-lock.js";
 import { projectPaths } from "./project.js";
 import { resolveDesiredState, serialiseLock } from "./pack/resolve.js";
@@ -39,6 +44,11 @@ export interface UpgradeOptions {
    * runtime, not the old one that started the upgrade.
    */
   readonly reenter?: Reentry;
+  /**
+   * Lists the runtime versions the registry publishes. Injected so tests
+   * never reach one; the default asks the project's package manager.
+   */
+  readonly view?: PackageView;
 }
 
 export type { PackageInstaller };
@@ -194,7 +204,23 @@ export function upgradeRuntime(
       },
     ]);
   }
-  const spec = target === undefined ? `${RUNTIME_PACKAGE}@latest` : `${RUNTIME_PACKAGE}@${target}`;
+  // Select before installing (Distribution §15 step 1, R09). `@latest` used
+  // to be handed straight to the package manager, so the target was
+  // whatever the registry happened to publish and compatibility was
+  // discovered — if at all — after the replacement.
+  let spec: string;
+  if (target !== undefined) {
+    spec = `${RUNTIME_PACKAGE}@${target}`;
+  } else {
+    const selected = selectTarget(
+      { kind: "runtime", name: RUNTIME_PACKAGE },
+      undefined,
+      { runtimeVersion: from },
+      { manager, ...(options.view === undefined ? {} : { view: options.view }) },
+    );
+    if (Array.isArray(selected)) return failure(paths.root, from, selected as readonly Problem[]);
+    spec = `${RUNTIME_PACKAGE}@${(selected as SelectedTarget).version}`;
+  }
 
   // The first of the upgrade's two transactions. The second runs inside
   // `finishUpgrade`, in the *newly installed* runtime, because Distribution

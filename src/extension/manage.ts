@@ -14,7 +14,13 @@ import {
 } from "../environment/transaction.js";
 import type { Problem } from "../errors.js";
 import { detectPackageManager } from "../config/package-manager.js";
-import { locatePackage } from "../pack/locate.js";
+import { isPathSource, locatePackage } from "../pack/locate.js";
+import {
+  selectTarget,
+  type PackageView,
+  type SelectedTarget,
+} from "../environment/select-target.js";
+import { runtimeVersion } from "../version.js";
 import { packageManagerInstaller, type PackageInstaller } from "../upgrade.js";
 import { resolveDesiredState, serialiseLock } from "../pack/resolve.js";
 import { projectPaths } from "../project.js";
@@ -508,11 +514,76 @@ export function removeExtension(root: string, id: string): ExtensionChangeReport
  * and updates the lock. The configuration is desired state and does not
  * change; canonical Project Graph state is never reinterpreted.
  */
-export function upgradeExtension(root: string, id: string): ExtensionChangeReport {
+export interface UpgradeExtensionOptions {
+  /** Installs the selected version. Injected so tests never reach a registry. */
+  readonly install?: PackageInstaller;
+  /** Lists published versions. Injected for the same reason. */
+  readonly view?: PackageView;
+  /**
+   * The `pactwright` range a published version declares, without installing
+   * it. A registry can answer this from published metadata; where it cannot,
+   * leaving it out defers the check to resolution after the install, which
+   * is what the transaction is there to undo.
+   */
+  readonly declaredRuntimeRange?: (version: string) => string | undefined;
+}
+
+/**
+ * Selects a compatible published version, installs it, then re-resolves and
+ * re-locks (Distribution §15 steps 1, 3 and 5).
+ *
+ * The compatibility check happens *before* the install: a version whose
+ * declared `pactwright` range the running runtime does not satisfy is
+ * refused rather than installed and then rejected, which is what §15 means
+ * by failing clearly instead of substituting.
+ */
+function acquireTarget(
+  root: string,
+  id: string,
+  source: string,
+  options: UpgradeExtensionOptions,
+  about: TransactionBody,
+): readonly Problem[] {
+  const detected = detectPackageManager(root);
+  if (detected.value === undefined) return detected.problems;
+  const manager = detected.value.name;
+
+  const selected = selectTarget(
+    { kind: "extension", name: source },
+    // Extension configuration records a source, not a version range, so an
+    // upgrade is unconstrained: the newest compatible published version.
+    undefined,
+    {
+      runtimeVersion: runtimeVersion(),
+      ...(options.declaredRuntimeRange === undefined
+        ? {}
+        : { declaredRuntimeRange: options.declaredRuntimeRange }),
+    },
+    { manager, ...(options.view === undefined ? {} : { view: options.view }) },
+  );
+  if (Array.isArray(selected)) {
+    return (selected as readonly Problem[]).map((problem) => ({
+      ...problem,
+      message: `extension "${id}": ${problem.message}`,
+    }));
+  }
+
+  const target = (selected as SelectedTarget).version;
+  about.installing(source);
+  const install = options.install ?? packageManagerInstaller;
+  return install({ root, manager, spec: `${source}@${target}` });
+}
+
+export function upgradeExtension(
+  root: string,
+  id: string,
+  options: UpgradeExtensionOptions = {},
+): ExtensionChangeReport {
   const paths = projectPaths(root);
   const config = loadConfig(paths.config);
   if (config.value === undefined) return failure(paths.root, config.problems);
-  if (!Object.hasOwn(config.value.extensions, id)) {
+  const configured = config.value.extensions[id];
+  if (configured === undefined) {
     return failure(paths.root, [
       { code: "extension-not-configured", message: `extension "${id}" is not configured` },
     ]);
@@ -526,21 +597,34 @@ export function upgradeExtension(root: string, id: string): ExtensionChangeRepor
   // transaction's managed set is what makes "no trace" cover more than the
   // lock: this used to restore two files and nothing else.
   const plan = planEnvironmentChange(paths.root);
-  const { value, result } = applyEnvironmentPlan(plan, () => {
-    const desired = resolveDesiredState({ root: paths.root, config: config.value! });
-    if (desired.value === undefined) {
-      return { ok: false, value: undefined, problems: desired.problems };
-    }
-    const next = desired.value.extensions.find((e) => e.id === id);
+  const { value, result } = applyEnvironmentPlan(
+    plan,
+    (about) => {
+      // Acquire first (R09). This used to call no installer at all: it
+      // re-resolved whatever was already installed and rewrote the lock, so
+      // "upgrade" could only reach a version somebody had installed by hand.
+      // A path-sourced extension lives in the repository and is not
+      // something to fetch, so it keeps the re-resolve-only behaviour.
+      if (!isPathSource(configured.source)) {
+        const acquired = acquireTarget(paths.root, id, configured.source, options, about);
+        if (acquired.length > 0) return { ok: false, value: undefined, problems: acquired };
+      }
+      const desired = resolveDesiredState({ root: paths.root, config: config.value! });
+      if (desired.value === undefined) {
+        return { ok: false, value: undefined, problems: desired.problems };
+      }
+      const next = desired.value.extensions.find((e) => e.id === id);
 
-    // The configuration is desired state and cannot change on an upgrade, so
-    // only the lock is written.
-    const written = writeDesiredState(paths.root, undefined, serialiseLock(desired.value.lock));
-    if (written !== undefined) return { ok: false, value: undefined, problems: [written] };
-    const report = validateProject({ root: paths.root });
-    if (!report.ok) return { ok: false, value: undefined, problems: report.problems };
-    return { ok: true, value: next?.manifest.version };
-  });
+      // The configuration is desired state and cannot change on an upgrade, so
+      // only the lock is written.
+      const written = writeDesiredState(paths.root, undefined, serialiseLock(desired.value.lock));
+      if (written !== undefined) return { ok: false, value: undefined, problems: [written] };
+      const report = validateProject({ root: paths.root });
+      if (!report.ok) return { ok: false, value: undefined, problems: report.problems };
+      return { ok: true, value: next?.manifest.version };
+    },
+    { installer: options.install ?? packageManagerInstaller },
+  );
 
   if (!result.ok) return failure(paths.root, result.problems);
 
