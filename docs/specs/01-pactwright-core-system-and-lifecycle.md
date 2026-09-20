@@ -490,6 +490,28 @@ It must not reproduce:
 - implementation reasoning;
 - production-workflow history.
 
+## Closure provenance
+
+Evidence additionally carries one compact closure block recording the facts that permitted closure:
+
+```text
+resolved shape identity
+delivered state identity
+reviewed state identity
+closing Review step
+gate resolutions
+```
+
+The runtime writes this block at `/prepare-evidence` from the §53 preconditions it has just verified. No caller, command or agent supplies it.
+
+Its purpose is durability. Fine-grained lifecycle progression is execution state (§28) and is cleared once a run closes; without the closure block a completed lineage retains no evidence that closure was ever earned, and a valid Evidence record becomes indistinguishable from a fabricated one. Validation therefore re-checks the block for every Evidence record, on completed lineages as well as delivering ones.
+
+The block is these facts and nothing more. It does not reproduce the Contract, the Brief or any review text, it carries no implementation reasoning or transcript, and it does not introduce a Review or Delivery node: Delivery and Review remain processes (§13).
+
+A closure block records what the runtime verified. It is not proof against a hand-edited repository; a forged block is a question for Git history and Graph Review, not for validation.
+
+Evidence created before a runtime that wrote closure provenance has no block and cannot be given one honestly, because the execution state it would have been derived from is gone. Such a record predates the requirement. It remains valid Evidence and is recognised as predating verifiable closure; it must not be treated as verified closure, and it must not be retrofitted with reconstructed identities.
+
 Evidence means:
 
 > This Delivery was completed and verified against its governing requirements.
@@ -1426,6 +1448,7 @@ Pactwright also preserves the runtime lifecycle interface already present in the
 pactwright lifecycle status
 pactwright lifecycle next
 pactwright lifecycle run
+pactwright lifecycle record <stage>
 ```
 
 `lifecycle status` reports current stage, completed stages, blocking stage, required actor, validation problems and current lineage.
@@ -1433,6 +1456,12 @@ pactwright lifecycle run
 `lifecycle next` determines the next permitted core Delivery lifecycle action without executing it.
 
 `lifecycle run` executes automatic stages until a configured gate is reached, the lifecycle completes, a stage fails or validation fails. It must not skip a configured gate.
+
+`lifecycle record` hands the result of a completed adapter command to the runtime, which checks the transition and writes the canonical record or the execution provenance. The command reports what it did; it never selects the next stage.
+
+One `lifecycle record` stage records an authorised Gate resolution, so a configured Gate is resolvable through a normal runtime operation rather than by editing execution state by hand. The runtime checks the resolving actor against the Gate's required authority before any state changes, and an unauthorised attempt leaves execution state unchanged.
+
+This is a runtime operation, not an adapter command. No `/gate` command is defined (§29): a Gate controls progression authority and creates no canonical record.
 
 ---
 
@@ -1575,6 +1604,10 @@ Canonical mutation:
 Evidence
 evidence --evidences--> brief
 ```
+
+The runtime records the facts these preconditions established in the Evidence closure block (§14). Verifying the preconditions and recording them are one operation: the block is written from the check that has just passed, never assembled separately or supplied by the caller.
+
+The preconditions are read from execution state, which is cleared when the run closes. The closure block is what keeps a completed Delivery verifiable afterwards.
 
 Evidence closes core Delivery.
 
