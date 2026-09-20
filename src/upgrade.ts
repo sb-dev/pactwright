@@ -14,11 +14,10 @@ import { projectPaths } from "./project.js";
 import { resolveDesiredState, serialiseLock } from "./pack/resolve.js";
 import { syncProject } from "./sync.js";
 import { validateProject } from "./validate.js";
-import { runtimeVersion } from "./version.js";
+import { RUNTIME_PACKAGE, runtimeVersion } from "./version.js";
 import { readYamlFile } from "./yaml.js";
 
-/** The npm package name of the Pactwright runtime. */
-export const RUNTIME_PACKAGE = "pactwright";
+export { RUNTIME_PACKAGE };
 
 export interface UpgradeOptions {
   /** An explicit target release, for a forward upgrade or a rollback. */

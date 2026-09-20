@@ -164,10 +164,17 @@ function commitLocked(project: Project, change: GraphChange, options: CommitOpti
   // structural checks — Decision authority lived inside `recordDecision` and
   // closure inside `createEvidence` — so it could admit a graph that
   // `validate` rejects.
+  //
+  // `environment` is here because a canonical record written against a
+  // drifted environment records an `environment_lock_hash` in its replay
+  // base naming an environment that was never the one used. The design's §4
+  // caller table omits it, but its own proof requires `createIntent` to
+  // refuse on lock drift before any write, and the proof is the thing that
+  // states the intent.
   problems.push(
     ...validateSnapshot(
       proposedSnapshot(snapshotOf(project), change),
-      new Set<ValidationScope>(["structural", "authority", "execution"]),
+      new Set<ValidationScope>(["structural", "authority", "execution", "environment"]),
     ),
     ...checkNodeIdImmutability(project.graph.nodes, nodes),
   );

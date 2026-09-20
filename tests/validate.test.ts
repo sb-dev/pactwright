@@ -12,7 +12,12 @@ after(() => {
 });
 
 test("validate: a valid project reports ok with counts and the graph revision", () => {
-  const root = fixture("valid-project");
+  // Built rather than read in place: `validate` now includes the environment
+  // scope, and the checked-in fixture carries a placeholder lock so that a
+  // runtime bump does not have to touch every fixture. A project whose lock
+  // describes its resolved environment is what the scope is about.
+  const root = makeTempProject({ lineage: "contracted" });
+  tempDirs.push(root);
   const report = validateProject({ root });
   assert.equal(report.ok, true);
   assert.deepEqual(report.problems, []);

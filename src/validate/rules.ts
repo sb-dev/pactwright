@@ -132,8 +132,21 @@ export function ruleForCode(code: string): ValidationRuleId | undefined {
   return LOADER_CODES[code];
 }
 
+/**
+ * A problem carrying the scope that detected it.
+ *
+ * Not every validation problem is one of the seventeen rules. Core §57 owns
+ * the graph contract; Distribution §13 owns environment agreement, which is
+ * a separate list with no rule numbers. Giving those a rule id would make
+ * the §57 contract look larger than the specification states, so the scope
+ * is what every problem carries and the rule id is what only graph rules do.
+ */
+export interface ScopedProblem extends Problem {
+  readonly scope: ValidationScope;
+}
+
 /** A problem carrying the §57 rule it was detected under. */
-export interface RuleProblem extends Problem {
+export interface RuleProblem extends ScopedProblem {
   readonly rule: ValidationRuleId;
   readonly ruleNumber: number;
 }
@@ -142,8 +155,44 @@ const RULE_NUMBERS: Readonly<Record<string, number>> = Object.fromEntries(
   VALIDATION_RULES.map((rule) => [rule.id, rule.number]),
 );
 
+const RULE_SCOPES: Readonly<Record<ValidationRuleId, ValidationScope>> = {
+  "malformed-core-nodes": "structural",
+  "invalid-core-relationships": "structural",
+  "missing-required-lineage": "structural",
+  "contradictory-current-records": "structural",
+  "multiple-unsuperseded-records": "structural",
+  "invalid-brief-lineage": "structural",
+  "invalid-evidence-lineage": "structural",
+  "illegal-supersession": "structural",
+  "missing-lifecycle-shape": "structural",
+  "extension-redefines-core": "structural",
+  "unauthorised-decision": "authority",
+  "unresolved-shape-identity": "execution",
+  "impossible-shape-transition": "execution",
+  "evidence-before-review": "execution",
+  "unauthorised-gate": "execution",
+  "unbounded-corrective-loop": "execution",
+  "replay-provenance-mismatch": "replay",
+};
+
 export function asRuleProblem(problem: Problem, rule: ValidationRuleId): RuleProblem {
-  return { ...problem, rule, ruleNumber: RULE_NUMBERS[rule]! };
+  return { ...problem, scope: RULE_SCOPES[rule], rule, ruleNumber: RULE_NUMBERS[rule]! };
+}
+
+/** An environment problem: Distribution §13's list, which has no rule number. */
+export function asScopedProblem(problem: Problem, scope: ValidationScope): ScopedProblem {
+  return { ...problem, scope };
+}
+
+/**
+ * The subset of `problems` that are §57 rule detections.
+ *
+ * Callers that report rule numbers — `validate`, its `--json` output, the
+ * validation-contract meta-test — narrow through here rather than assuming
+ * every problem the kernel returns carries a rule.
+ */
+export function ruleProblems(problems: readonly Problem[]): readonly RuleProblem[] {
+  return problems.filter((problem): problem is RuleProblem => "rule" in problem);
 }
 
 export interface RuleCheckOptions {
@@ -173,7 +222,9 @@ export function checkSemanticRules(
 ): readonly RuleProblem[] {
   const scopes = new Set<ValidationScope>(["authority", "execution"]);
   if (options.replay !== undefined) scopes.add("replay");
-  return validateSnapshot(snapshotOf(project), scopes, options.replay);
+  // These scopes only ever produce rule detections, but narrowing here keeps
+  // the signature honest rather than asserting it.
+  return ruleProblems(validateSnapshot(snapshotOf(project), scopes, options.replay));
 }
 
 /** Every rule the given problems were detected under, in specification order. */
