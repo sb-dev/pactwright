@@ -109,6 +109,18 @@ test("ci workflow: verifies exactly the Node versions the package supports", () 
   assert.deepEqual([...versions].sort(), [...admitted].sort());
 });
 
+test("ci workflow: verifies the repository's own Pactwright environment", () => {
+  // `pnpm verify` is the only gate CI runs, so the self-hosted stage has to
+  // live inside it. tests/self-hosted.test.ts asserts what that stage does;
+  // this asserts CI cannot pass without reaching it.
+  const scripts = (
+    JSON.parse(fs.readFileSync(path.join(repoRoot, "package.json"), "utf8")) as {
+      scripts: Record<string, string>;
+    }
+  ).scripts;
+  assert.match(scripts["verify"] ?? "", /\bverify:self\b/);
+});
+
 test("ci workflow: installs from the lockfile and runs the one verification gate", () => {
   const runs = steps.flatMap((step) => (step.run === undefined ? [] : [step.run]));
   assert.ok(runs.includes("corepack enable"), "uses the repository-pinned pnpm through Corepack");
