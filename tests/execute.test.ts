@@ -1,6 +1,6 @@
 import { after, test } from "node:test";
 import assert from "node:assert/strict";
-import { readFileSync, rmSync, writeFileSync } from "node:fs";
+import { cpSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import * as path from "node:path";
 import { parseConfig } from "../src/config/config.js";
 import { COMMAND_NAMES, templateFor } from "../src/adapter/commands.js";
@@ -22,7 +22,8 @@ import { runLifecycle } from "../src/lifecycle/run.js";
 import { createBrief, createIntent, recordDecision } from "../src/graph/mutations.js";
 import { deriveLineage } from "../src/graph/lineage.js";
 import { loadProject } from "../src/loader.js";
-import { makeTempProject } from "./helpers.js";
+import { acquireSide, type AcquiredPack } from "../src/eval/acquire.js";
+import { makeTempProject, repoRoot } from "./helpers.js";
 
 /**
  * One capability executor for lifecycle and evaluation (design §5).
@@ -359,4 +360,76 @@ test("executor: a project graph mutation still works with an executor declared",
   });
   const brief = createBrief(root, { contractId: contract!.id, title: "Brief", body: "Do it." });
   assert.ok(brief.id.startsWith("brief-"));
+});
+
+/* ---- isolated baseline acquisition (design §5.4) ---- */
+
+/** Stands in for the package manager: installs a fixture pack into `root`. */
+function installFixturePack(root: string, name: string): void {
+  const target = path.join(root, "node_modules", "@pactwright", "standard");
+  cpSync(path.join(repoRoot, "tests", "fixtures", "packs", name), target, { recursive: true });
+  writeFileSync(
+    path.join(target, "package.json"),
+    `${JSON.stringify({ name: "@pactwright/standard", version: "0.0.0" }, null, 2)}\n`,
+  );
+}
+
+test("acquire: a side is installed into its own project, not resolved from node_modules", () => {
+  const requests: Array<{ root: string; spec: string }> = [];
+  const side = acquireSide({
+    spec: "@pactwright/standard@0.0.0",
+    installer: ({ root, spec }) => {
+      requests.push({ root, spec });
+      installFixturePack(root, "complete");
+      return [];
+    },
+  });
+  assert.ok(!Array.isArray(side), JSON.stringify(side));
+  const acquired = side as AcquiredPack;
+  dirs.push(acquired.root);
+
+  // The exact version, into a directory of its own. Resolving both sides from
+  // the caller's node_modules made `@pactwright/standard@0.0.1` resolve to the
+  // installed `0.0.2` and then fail version matching.
+  assert.equal(requests.length, 1);
+  assert.equal(requests[0]?.spec, "@pactwright/standard@0.0.0");
+  assert.equal(requests[0]?.root, acquired.root);
+  assert.ok(acquired.pack.dir.startsWith(acquired.root), acquired.pack.dir);
+});
+
+test("acquire: an installer failure is reported and leaves no directory behind", () => {
+  const result = acquireSide({
+    spec: "@pactwright/standard@0.0.1",
+    installer: () => [{ code: "package-manager-failed", message: "no such version" }],
+  });
+  assert.ok(Array.isArray(result));
+  assert.equal((result as readonly { code: string }[])[0]?.code, "package-manager-failed");
+});
+
+test("acquire: a pack incompatible with the running runtime is refused", () => {
+  const result = acquireSide({
+    spec: "@pactwright/standard@0.0.0",
+    installer: ({ root }) => {
+      installFixturePack(root, "wrong-runtime");
+      return [];
+    },
+  });
+  assert.ok(Array.isArray(result));
+  const problems = result as readonly { code: string; message: string }[];
+  // Resolution owns the compatibility check, so an incompatible side never
+  // becomes a usable pack in the first place.
+  assert.equal(problems[0]?.code, "incompatible-runtime");
+});
+
+test("acquire: a malformed spec is a problem, not an install attempt", () => {
+  let attempted = false;
+  const result = acquireSide({
+    spec: "@pactwright/standard@not-a-version",
+    installer: () => {
+      attempted = true;
+      return [];
+    },
+  });
+  assert.ok(Array.isArray(result));
+  assert.equal(attempted, false);
 });

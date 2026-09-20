@@ -623,14 +623,13 @@ test("cli: eval rejects unexpected arguments", () => {
 });
 
 test("cli: eval --baseline/--candidate compares and reports no regression for an unchanged pack", () => {
-  const result = run(
-    "eval",
-    "--baseline",
-    "@pactwright/standard",
-    "--candidate",
-    "@pactwright/standard",
-  );
-  assert.equal(result.status, 0, result.stderr);
+  // Path sources, so the comparison is deterministic and offline. A package
+  // source is acquired at its exact version into its own project, which is
+  // what stops `@pactwright/standard@0.0.1` resolving to the installed
+  // `0.0.2` — tests/execute.test.ts covers that through the installer seam.
+  const pack = "./tests/fixtures/packs/complete";
+  const result = run("eval", "--baseline", pack, "--candidate", pack);
+  assert.equal(result.status, 0, result.stdout + result.stderr);
   assert.match(result.stdout, /Comparison of suite "core-delivery"/);
   assert.match(result.stdout, /No differences/);
   // §24: no opaque aggregate decides whether a candidate is better.
@@ -643,14 +642,14 @@ test("cli: eval rejects --baseline without --candidate", () => {
   assert.match(result.stderr, /--baseline and --candidate are used together/);
 });
 
-test("cli: eval reports an unresolvable baseline rather than comparing against nothing", () => {
+test("cli: eval reports an unacquirable baseline rather than comparing against nothing", () => {
   const result = run(
     "eval",
     "--baseline",
-    "@pactwright/does-not-exist",
+    "./tests/fixtures/packs/does-not-exist",
     "--candidate",
-    "@pactwright/standard",
+    "./tests/fixtures/packs/complete",
   );
   assert.equal(result.status, 1);
-  assert.match(result.stderr, /could not resolve the baseline/);
+  assert.match(result.stderr, /could not acquire the baseline/);
 });

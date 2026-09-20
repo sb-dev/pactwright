@@ -448,6 +448,7 @@ export {
   taskForAction,
   type TaskBuildOptions,
 } from "./execute/select.js";
+export { acquireSide, type AcquireOptions, type AcquiredPack } from "./eval/acquire.js";
 export { CORE_DELIVERY_SUITE } from "./eval/core-suite.js";
 export { CLOSURE_CASES } from "./eval/closure-cases.js";
 export {

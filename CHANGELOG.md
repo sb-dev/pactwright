@@ -45,6 +45,53 @@ reports regressions per capability, agent and case, with no aggregate score.
 Public learning material was re-delivered through Pactwright itself
 (`evidence-learning-path-realigned-and-checked-against-packed-artefacts-ee25a0b4`).
 
+### Checkpoint 1 consolidation
+
+The 19 September Checkpoint 1 review kept the checkpoint open. These changes
+close the findings it reproduced, by consolidating responsibilities the
+runtime already had rather than adding new ones.
+
+**One lifecycle transition reducer.** `transition()` is the only thing that
+applies a lifecycle transition. Completing a Gate step is refused unless the
+Gate is resolved by an actor its authority admits — on every path, including
+the adapter's — and a refusal leaves execution state byte-identical.
+`pactwright lifecycle record gate` records that resolution, so a configured
+human Gate no longer needs execution state edited by hand. Completion is an
+outcome of routing, so a failed run no longer reports `completed` on retry;
+it resumes and reports the failure again.
+
+**One validation kernel.** `validateSnapshot()` judges an in-memory graph
+state under the scopes a caller asks for, and `commitGraphChange` validates
+the complete *proposed* state before any write. Relationship cardinality is
+declared on the node schemas and checked for every record, so an orphan
+Decision, Contract, Brief or Evidence, and one Decision resolving two
+Intents, now fail through `validate` and the mutation gate alike.
+
+**Verifiable closure.** Evidence carries a compact runtime-written closure
+block — resolved shape, delivered and reviewed state identities, closing
+Review step, Gate resolutions — so a completed lineage stays verifiable after
+its run state is cleared. `repository_revision` replaces the `+dirty` marker
+with a digest of tracked modifications and untracked files, so two different
+delivered states at one commit are distinguishable and a change after Review
+refuses closure.
+
+**One capability executor.** `execution.executor` in `.pactwright/config.yml`
+declares who performs automatic responsibilities: `none` (the default, which
+refuses) or `claude-code`. `lifecycle run` and `pactwright eval` use the same
+interface, and evaluation without a declared executor reports every case as
+unevaluated instead of scoring the harness's own reference.
+`eval --baseline … --candidate …` acquires each side at its exact version
+into its own project.
+
+**A repository writer lock.** `.pactwright/.lock` makes a graph mutation's
+load → validate → write → reload atomic against other processes.
+
+Breaking changes to the package's public API: `isCurrent(id, edges)` is
+replaced by `GraphIndex.isCurrent`; `RepositoryRevision.dirty` becomes
+`workingTree`; `ExecutionState.completedSteps` becomes `visited` and
+execution state moves to version 2, migrating version 1 documents on read;
+`ExecutionStatus` gains `waiting-gate`; `EvalCaseResult` gains `evaluated`.
+
 ## 0.0.1 — 2026-09-01
 
 First public development release, published under the npm dist-tag `next`:

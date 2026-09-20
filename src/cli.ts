@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+import { rmSync } from "node:fs";
 import { formatProblem, PactwrightError, type Problem } from "./errors.js";
 import {
   lifecycleNext,
@@ -14,6 +15,7 @@ import { loadConfig, type PactwrightConfig } from "./config/config.js";
 import { CORE_DELIVERY_SUITE } from "./eval/core-suite.js";
 import { evalPassed, runEval, type EvalCaseResult, type EvalReport } from "./eval/runner.js";
 import { compareEvalReports, formatComparison } from "./eval/compare.js";
+import { acquireSide, type AcquiredPack } from "./eval/acquire.js";
 import type { CandidateRunner } from "./eval/case.js";
 import type { GraphNode } from "./graph/nodes.js";
 import {
@@ -28,7 +30,7 @@ import { initProject } from "./init.js";
 import { syncProject } from "./sync.js";
 import { loadProject } from "./loader.js";
 import { resolvePack, type ResolvedPack } from "./pack/resolve.js";
-import { parseSpec, upgradeAgentPack, useAgentPack, type PackChangeReport } from "./pack/select.js";
+import { upgradeAgentPack, useAgentPack, type PackChangeReport } from "./pack/select.js";
 import { validateProject } from "./validate.js";
 import { findProjectRoot, projectPaths } from "./project.js";
 import { runtimeVersion } from "./version.js";
@@ -771,30 +773,6 @@ function formatEvalReport(report: EvalReport): string {
  * `@pactwright/standard` pack, since evaluation is independent from any
  * project's Delivery (Distribution §16).
  */
-/** Resolves one side of a comparison from a pack source. */
-function resolveSide(root: string, source: string): ResolvedPack | PactwrightError {
-  const config: PactwrightConfig = {
-    version: 1,
-    agentPack: packSpecToConfig(source),
-    adapter: { type: "claude-code" },
-    extensions: {},
-    github: { enabled: false },
-  };
-  const resolved = resolvePack({ root, config });
-  if (resolved.value === undefined) {
-    return PactwrightError.fromProblems("pack-unresolved", resolved.problems);
-  }
-  return resolved.value;
-}
-
-function packSpecToConfig(source: string): { source: string; version?: string } {
-  const parsed = parseSpec(source);
-  if ("code" in parsed) return { source };
-  return parsed.version === undefined
-    ? { source: parsed.source }
-    : { source: parsed.source, version: parsed.version };
-}
-
 async function evalCompare(
   root: string,
   baselineSource: string,
@@ -805,39 +783,58 @@ async function evalCompare(
     ["baseline", baselineSource],
     ["candidate", candidateSource],
   ];
-  const packs: ResolvedPack[] = [];
+  // Each side is acquired into its own project at its exact version, never
+  // resolved from the caller's `node_modules`. Resolving both sides locally
+  // made `@pactwright/standard@0.0.1` resolve to the installed `0.0.2` and
+  // then fail version matching, so the published comparison command could not
+  // run at all.
+  const acquired: AcquiredPack[] = [];
+  const cleanUp = (): void => {
+    for (const side of acquired) rmSync(side.root, { recursive: true, force: true });
+  };
   for (const [which, source] of sides) {
-    const resolved = resolveSide(root, source);
-    if (resolved instanceof PactwrightError) {
-      err(`pactwright: could not resolve the ${which} "${source}"\n`);
-      printProblems(resolved, json);
+    const side = acquireSide({ spec: source });
+    if (Array.isArray(side)) {
+      err(`pactwright: could not acquire the ${which} "${source}"\n`);
+      printProblems(PactwrightError.fromProblems("pack-unacquired", side), json);
+      cleanUp();
       return 1;
     }
-    packs.push(resolved);
+    acquired.push(side as AcquiredPack);
   }
-  const [baselinePack, candidatePack] = packs as [ResolvedPack, ResolvedPack];
-  // Both sides are evaluated by the same configured executor, so a
-  // comparison measures the packs rather than the harness.
-  const runner = evalRunner(root);
-  const baseline = await runEval({ pack: baselinePack, suite: CORE_DELIVERY_SUITE, ...runner });
-  const candidate = await runEval({ pack: candidatePack, suite: CORE_DELIVERY_SUITE, ...runner });
-  const comparison = compareEvalReports({
-    baseline,
-    candidate,
-    baselineEnvironment: { agents: baselinePack.hashes.agents, skills: baselinePack.hashes.skills },
-    candidateEnvironment: {
-      agents: candidatePack.hashes.agents,
-      skills: candidatePack.hashes.skills,
-    },
-  });
-  out(
-    json
-      ? `${JSON.stringify({ baseline, candidate, comparison }, null, 2)}\n`
-      : formatComparison(comparison),
-  );
-  // A comparison reports; it does not gate on the candidate's own pass/fail,
-  // which `pactwright eval` already does. A regression is the failure here.
-  return comparison.hasRegressions ? 1 : 0;
+  const [baselinePack, candidatePack] = acquired.map((side) => side.pack) as [
+    ResolvedPack,
+    ResolvedPack,
+  ];
+  try {
+    // Both sides are evaluated by the same configured executor, so a
+    // comparison measures the packs rather than the harness.
+    const runner = evalRunner(root);
+    const baseline = await runEval({ pack: baselinePack, suite: CORE_DELIVERY_SUITE, ...runner });
+    const candidate = await runEval({ pack: candidatePack, suite: CORE_DELIVERY_SUITE, ...runner });
+    const comparison = compareEvalReports({
+      baseline,
+      candidate,
+      baselineEnvironment: {
+        agents: baselinePack.hashes.agents,
+        skills: baselinePack.hashes.skills,
+      },
+      candidateEnvironment: {
+        agents: candidatePack.hashes.agents,
+        skills: candidatePack.hashes.skills,
+      },
+    });
+    out(
+      json
+        ? `${JSON.stringify({ baseline, candidate, comparison }, null, 2)}\n`
+        : formatComparison(comparison),
+    );
+    // A comparison reports; it does not gate on the candidate's own pass/fail,
+    // which `pactwright eval` already does. A regression is the failure here.
+    return comparison.hasRegressions ? 1 : 0;
+  } finally {
+    cleanUp();
+  }
 }
 
 async function evalCommand(args: readonly string[]): Promise<number> {
