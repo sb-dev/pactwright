@@ -95,7 +95,11 @@ test("suite: deterministic assertions and semantic dimensions are separate chann
 // ---- reference run ----------------------------------------------------------
 
 test("runEval: the reference candidates pass every deterministic assertion", async () => {
-  const report = await runEval({ pack: standardPack, suite: CORE_DELIVERY_SUITE });
+  const report = await runEval({
+    pack: standardPack,
+    suite: CORE_DELIVERY_SUITE,
+    useReference: true,
+  });
   assert.equal(report.suite, "core-delivery");
   assert.equal(report.runtime, runtimeVersion());
   assert.equal(report.pack.name, "@pactwright/standard");
@@ -115,7 +119,11 @@ test("runEval: the reference candidates pass every deterministic assertion", asy
 });
 
 test("runEval: semantic dimensions stay unjudged without a judge and carry no score", async () => {
-  const report = await runEval({ pack: standardPack, suite: CORE_DELIVERY_SUITE });
+  const report = await runEval({
+    pack: standardPack,
+    suite: CORE_DELIVERY_SUITE,
+    useReference: true,
+  });
   const dimensions = report.cases.flatMap((entry) => entry.semantic);
   assert.ok(dimensions.length > 0);
   for (const dimension of dimensions) {
@@ -186,6 +194,7 @@ test("runEval: a semantic judge fills the semantic channel without touching dete
   const report = await runEval({
     pack: standardPack,
     suite: CORE_DELIVERY_SUITE,
+    useReference: true,
     judge: ({ caseId, dimension }) => {
       judged.push(`${caseId}/${dimension.id}`);
       return { verdict: "acceptable", rationale: "judged by the test judge" };
@@ -290,6 +299,7 @@ test("runEval: a slow judge times out per dimension; deterministic results are u
   const report = await runEval({
     pack: standardPack,
     suite: one(evalCase),
+    useReference: true,
     judge: () => new Promise(() => {}),
     judgeTimeoutMs: 50,
   });
@@ -304,7 +314,11 @@ test("runEval: a slow judge times out per dimension; deterministic results are u
 test("runEval: a pack missing a capability fails that case and still evaluates the others", async () => {
   const root = temp({ pack: "incomplete" });
   const incomplete = resolvePack({ root, config: loadProject({ root }).config }).value!;
-  const report = await runEval({ pack: incomplete, suite: CORE_DELIVERY_SUITE });
+  const report = await runEval({
+    pack: incomplete,
+    suite: CORE_DELIVERY_SUITE,
+    useReference: true,
+  });
   assert.equal(evalPassed(report), false);
   const review = report.cases.find((entry) => entry.capability === "delivery-review")!;
   assert.match(review.error!, /does not provide capability "delivery-review"/);

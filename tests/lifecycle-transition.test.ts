@@ -238,14 +238,14 @@ test("transition: the third revise exhausts the bound and blocks with its reason
     state = run(
       CORRECTIVE,
       state,
-      { kind: "step-completed", step: "delivery" },
+      { kind: "step-completed", step: "delivery", revision: "git:abc" },
       { kind: "step-completed", step: "review", review: "revise" },
     ).state;
   }
   const third = run(
     CORRECTIVE,
     state,
-    { kind: "step-completed", step: "delivery" },
+    { kind: "step-completed", step: "delivery", revision: "git:abc" },
     { kind: "step-completed", step: "review", review: "revise" },
   );
   assert.equal(third.outcome, "blocked");
@@ -259,7 +259,7 @@ test("transition: a revise with no declared corrective route blocks and says so"
   const result = run(
     DIRECT,
     fresh(),
-    { kind: "step-completed", step: "delivery" },
+    { kind: "step-completed", step: "delivery", revision: "git:abc" },
     { kind: "step-completed", step: "review", review: "revise" },
   );
   assert.equal(result.outcome, "blocked");
@@ -270,7 +270,7 @@ test("transition: a blocked Review stops with its own reason", () => {
   const result = run(
     CORRECTIVE,
     fresh(CORRECTIVE),
-    { kind: "step-completed", step: "delivery" },
+    { kind: "step-completed", step: "delivery", revision: "git:abc" },
     { kind: "step-completed", step: "review", review: "blocked" },
   );
   assert.equal(result.outcome, "blocked");
@@ -281,7 +281,7 @@ test("transition: a Review completed with no outcome fails rather than guessing"
   const result = run(
     DIRECT,
     fresh(),
-    { kind: "step-completed", step: "delivery" },
+    { kind: "step-completed", step: "delivery", revision: "git:abc" },
     { kind: "step-completed", step: "review" },
   );
   assert.equal(result.outcome, "failed");
@@ -318,4 +318,19 @@ test("transition: resuming a run that has not failed is refused", () => {
   assert.equal(result.outcome, "refused");
   assert.equal(result.state, state);
   assert.match(result.reason ?? "", /is running, not failed/);
+});
+
+test("transition: a Review with nothing delivered fails instead of writing an empty identity", () => {
+  // `revision: deliveredRevision ?? ""` wrote state that does not parse back,
+  // and `executionFor` replaces unparseable state with a pristine run — so an
+  // executor that keeps succeeding restarted the shape from its first step
+  // forever.
+  const result = run(
+    DIRECT,
+    fresh(),
+    { kind: "step-completed", step: "delivery" },
+    { kind: "step-completed", step: "review", review: "pass" },
+  );
+  assert.equal(result.outcome, "failed");
+  assert.match(result.reason ?? "", /no delivered state is on record/);
 });

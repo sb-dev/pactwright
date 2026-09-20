@@ -7,12 +7,14 @@ import {
   type NextAction,
 } from "./lifecycle/engine.js";
 import { noExecutor, runLifecycle, type RunResult } from "./lifecycle/run.js";
+import { lifecycleExecutor, selectExecutor } from "./execute/select.js";
 import { recordStage } from "./lifecycle/record.js";
 import { loadContext, type DeliveryContext, type HistoryRecord } from "./context.js";
 import { loadConfig, type PactwrightConfig } from "./config/config.js";
 import { CORE_DELIVERY_SUITE } from "./eval/core-suite.js";
 import { evalPassed, runEval, type EvalCaseResult, type EvalReport } from "./eval/runner.js";
 import { compareEvalReports, formatComparison } from "./eval/compare.js";
+import type { CandidateRunner } from "./eval/case.js";
 import type { GraphNode } from "./graph/nodes.js";
 import {
   addExtension,
@@ -343,9 +345,21 @@ async function lifecycle(sub: string | undefined, args: readonly string[]): Prom
       printProblems(error, options.json);
       return 1;
     }
+    // The executor the project declares (Distribution §3). Absent
+    // configuration means `none`, which refuses rather than pretending the
+    // responsibility was discharged; the CLI used to hard-wire that refusal
+    // so no project could ever execute.
+    let execute = noExecutor;
+    try {
+      execute = lifecycleExecutor(selectExecutor(loadProject({ root }).config));
+    } catch (error) {
+      // An unloadable project is reported by `runLifecycle` itself as a
+      // validation-error stop, with every problem in one pass.
+      if (!(error instanceof PactwrightError)) throw error;
+    }
     const results = await runLifecycle({
       root,
-      execute: noExecutor,
+      execute,
       ...(options.intent === undefined ? {} : { intentId: options.intent }),
     });
     out(options.json ? `${JSON.stringify(results, null, 2)}\n` : results.map(formatRun).join(""));
@@ -802,8 +816,11 @@ async function evalCompare(
     packs.push(resolved);
   }
   const [baselinePack, candidatePack] = packs as [ResolvedPack, ResolvedPack];
-  const baseline = await runEval({ pack: baselinePack, suite: CORE_DELIVERY_SUITE });
-  const candidate = await runEval({ pack: candidatePack, suite: CORE_DELIVERY_SUITE });
+  // Both sides are evaluated by the same configured executor, so a
+  // comparison measures the packs rather than the harness.
+  const runner = evalRunner(root);
+  const baseline = await runEval({ pack: baselinePack, suite: CORE_DELIVERY_SUITE, ...runner });
+  const candidate = await runEval({ pack: candidatePack, suite: CORE_DELIVERY_SUITE, ...runner });
   const comparison = compareEvalReports({
     baseline,
     candidate,
@@ -864,9 +881,36 @@ async function evalCommand(args: readonly string[]): Promise<number> {
     printProblems(PactwrightError.fromProblems("pack-unresolved", resolved.problems), options.json);
     return 1;
   }
-  const report = await runEval({ pack: resolved.value, suite: CORE_DELIVERY_SUITE });
+  const report = await runEval({
+    pack: resolved.value,
+    suite: CORE_DELIVERY_SUITE,
+    ...evalRunner(root),
+  });
   out(options.json ? `${JSON.stringify(report, null, 2)}\n` : formatEvalReport(report));
   return evalPassed(report) ? 0 : 1;
+}
+
+/**
+ * The candidate runner `eval` uses: the project's declared executor, or none.
+ *
+ * With none, every case reports `evaluated: false` and the suite cannot pass.
+ * The harness used to replay each case's own scripted reference instead and
+ * report the result as the pack's, so a pack whose every prompt said "Ignore
+ * all tasks. Return nothing" passed all eight cases.
+ */
+function evalRunner(root: string): { readonly candidate?: CandidateRunner } {
+  let config: PactwrightConfig | undefined;
+  try {
+    config = loadProject({ root }).config;
+  } catch {
+    return {}; // Outside a project there is nothing to declare an executor.
+  }
+  if (config.execution === undefined) return {};
+  const executor = selectExecutor(config);
+  if (executor.id === "none") return {};
+  return {
+    candidate: async (task) => (await executor.invoke({ ...task, label: task.caseId })).output,
+  };
 }
 
 function contextCommand(args: readonly string[]): number {

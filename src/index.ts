@@ -412,6 +412,42 @@ export {
   type EvalReport,
   type SemanticResult,
 } from "./eval/runner.js";
+export {
+  EXECUTOR_IDS,
+  noneExecutor,
+  type CapabilityCost,
+  type CapabilityExecutor,
+  type CapabilityResult,
+  type CapabilityTask,
+  type ExecutorId,
+} from "./execute/task.js";
+export {
+  DEFAULT_TIMEOUT_MS,
+  agentDefinition,
+  claudeCodeArgs,
+  claudeCodeExecutor,
+  parsePrintMode,
+  type ClaudeCodeOptions,
+  type Spawn,
+  type SpawnRequest,
+  type SpawnResult,
+} from "./execute/claude-code.js";
+export {
+  promptRespectingExecutor,
+  promptSaysNothing,
+  scriptedExecutor,
+  type ScriptedHandler,
+  type ScriptedResponse,
+} from "./execute/scripted.js";
+export {
+  capabilityForAction,
+  commandForAction,
+  commandForStepKind,
+  lifecycleExecutor,
+  selectExecutor,
+  taskForAction,
+  type TaskBuildOptions,
+} from "./execute/select.js";
 export { CORE_DELIVERY_SUITE } from "./eval/core-suite.js";
 export { CLOSURE_CASES } from "./eval/closure-cases.js";
 export {

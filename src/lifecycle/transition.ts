@@ -232,13 +232,23 @@ export function transition(
         reason: `review step "${step.name}" completed without reporting an outcome; the runtime cannot choose a transition without one`,
       };
     }
+    // A Review is taken against the delivered state currently recorded. With
+    // none there is nothing to review, and writing an empty identity would
+    // produce state that does not parse back — which `executionFor` then
+    // replaces with a pristine run, restarting the shape silently.
+    if (carried.deliveredRevision === undefined) {
+      return {
+        state: { ...carried, status: "failed", currentStep: step.name },
+        outcome: "failed",
+        reason: `review step "${step.name}" completed but no delivered state is on record; a Review is taken against what Delivery produced`,
+      };
+    }
     carried = {
       ...carried,
       review: {
         step: step.name,
         outcome: event.review,
-        // A Review is taken against the delivered state currently recorded.
-        revision: carried.deliveredRevision ?? "",
+        revision: carried.deliveredRevision,
       },
     };
   }

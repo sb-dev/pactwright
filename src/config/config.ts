@@ -10,6 +10,7 @@ import {
   requireKeys,
 } from "../validation.js";
 import { parseYaml, readYamlFile } from "../yaml.js";
+import { EXECUTOR_IDS, type ExecutorId } from "../execute/task.js";
 import { EXTENSION_ID_PATTERN } from "./lock.js";
 
 /** One configured extension: desired state only (Distribution §4). */
@@ -37,6 +38,18 @@ export interface PactwrightConfig {
   };
   /** Extension id → desired extension state (Distribution §4). */
   readonly extensions: Readonly<Record<string, ConfigExtension>>;
+  /**
+   * Which capability executor performs automatic lifecycle responsibilities
+   * (Distribution §3). Absent means `none`: Pactwright performs nothing and
+   * `lifecycle run` stops at the first automatic step.
+   *
+   * Autonomy is declared, never inferred. An installed binary is not consent
+   * to run an autonomous agent against a repository, so this is never
+   * derived from what is on `PATH`.
+   */
+  readonly execution?: {
+    readonly executor: ExecutorId;
+  };
   readonly github: {
     readonly enabled: boolean;
   };
@@ -61,6 +74,7 @@ export function parseConfig(raw: unknown, path: string): ParseResult<PactwrightC
     "agent_pack",
     "adapter",
     "extensions",
+    "execution",
     "github",
   ]);
   expectVersion(c, root["version"], "config.version", CONFIG_VERSION);
@@ -112,6 +126,14 @@ export function parseConfig(raw: unknown, path: string): ParseResult<PactwrightC
     }
   }
 
+  let executor: ExecutorId | undefined;
+  const execution = expectRecord(c, root["execution"], "config.execution");
+  if (execution !== undefined) {
+    requireKeys(c, execution, "config.execution", ["executor"]);
+    rejectUnknownKeys(c, execution, "config.execution", ["executor"]);
+    executor = expectEnum(c, execution["executor"], "config.execution.executor", EXECUTOR_IDS);
+  }
+
   let enabled: boolean | undefined;
   const github = expectRecord(c, root["github"], "config.github");
   if (github !== undefined) {
@@ -137,6 +159,7 @@ export function parseConfig(raw: unknown, path: string): ParseResult<PactwrightC
       // `Object.hasOwn` so an id like "constructor" cannot resolve to an
       // Object.prototype member.
       extensions: { ...extensions },
+      ...(executor === undefined ? {} : { execution: { executor } }),
       github: { enabled },
     },
     problems: [],
@@ -198,6 +221,9 @@ export function serialiseConfig(config: PactwrightConfig): string {
   // bytes `init` writes.
   lines.push("", "adapter:", `  type: ${config.adapter.type}`, "");
   lines.push(...extensionsBlock(config));
+  if (config.execution !== undefined) {
+    lines.push("", "execution:", `  executor: ${config.execution.executor}`);
+  }
   lines.push("", "github:", `  enabled: ${config.github.enabled}`, "");
   return lines.join("\n");
 }

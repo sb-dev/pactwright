@@ -181,6 +181,20 @@ async function runLineage(
 
     let execution = executionFor(project, lineage);
 
+    // Execution state that does not parse is a stop, not a fresh start.
+    // `executionFor` synthesises a pristine run when the document fails to
+    // parse, so an unreadable state file silently restarted the shape from
+    // its first step — and, with an executor that keeps succeeding, looped.
+    if (execution !== undefined && execution.problems.length > 0) {
+      return {
+        ...tag,
+        stop: "validation-error",
+        executed,
+        message: `the run state for brief "${execution.state.brief}" cannot be read`,
+        problems: execution.problems,
+      };
+    }
+
     // A failed run is resumed, not walked past. Treating "no next action" as
     // completion is what made a second `lifecycle run` report `stop:
     // completed` with an empty `executed` list while the lineage was still
