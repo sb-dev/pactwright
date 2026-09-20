@@ -1,6 +1,6 @@
 import { join } from "node:path";
 import type { Problem } from "../errors.js";
-import { decisionActor } from "../config/lifecycle.js";
+import { decisionActor, type Actor, type RecordingStage } from "../config/lifecycle.js";
 import type { LockFile } from "../config/lock.js";
 import { detectPackageManager, installedVersion } from "../config/package-manager.js";
 import { composedRegistries } from "../extension/resolve.js";
@@ -514,4 +514,118 @@ function replayProvenance(snapshot: GraphSnapshot, replay: ReplayCheck): readonl
     );
   }
   return problems;
+}
+
+/* ---- what is permitted now (consolidation design §12) ---- */
+
+/** A recording operation a lineage admits right now. */
+export interface PermittedOperation {
+  readonly stage: RecordingStage | "gate";
+  /**
+   * `initial` records something the lineage does not have yet; `supersede`
+   * replaces a current record under Core §45.
+   */
+  readonly mode: "initial" | "supersede";
+  /** The actor kind the operation's policy requires, when it declares one. */
+  readonly actor?: Actor;
+}
+
+/**
+ * Every recording operation `lineage` admits now, replacements included.
+ *
+ * `assertPermitted` used to allow only *pending* responsibilities, so
+ * Core §45's three replacements were unreachable through any command: a
+ * Brief could not be replaced on a delivering lineage, a Contract direction
+ * could not be changed once delivery began, and Evidence could not be
+ * corrected after closure (R11). The mutations have always supported all
+ * three — they emit the `supersedes` edges themselves — so what was missing
+ * was permission, not capability.
+ *
+ * One list, read by `lifecycle record` and by `lifecycle status`, so a CLI
+ * command and an adapter command can never disagree about what is legal.
+ */
+export function permittedOperations(
+  snapshot: GraphSnapshot,
+  lineage: Lineage | undefined,
+): readonly PermittedOperation[] {
+  const policy = snapshot.lifecycle.responsibilities;
+  // `prepare-evidence` is the shape's closing step, not a Contract-crafting
+  // responsibility, so policy declares no actor for it.
+  const actorOf = (stage: RecordingStage): Actor | undefined =>
+    stage === "prepare-evidence" ? undefined : policy[stage]?.actor;
+  const op = (stage: RecordingStage, mode: "initial" | "supersede"): PermittedOperation => {
+    const actor = actorOf(stage);
+    return { stage, mode, ...(actor === undefined ? {} : { actor }) };
+  };
+
+  // A new lineage is always available: capture-intent starts one and
+  // constrains nothing that already exists.
+  if (lineage === undefined) return [op("capture-intent", "initial")];
+
+  const operations: PermittedOperation[] = [op("capture-intent", "initial")];
+
+  // A superseded intent's lineage is frozen; work continues on the
+  // superseding one (Core §15).
+  if (lineage.superseded) return operations;
+
+  switch (lineage.state) {
+    case "open":
+      operations.push(op("approve-contract", "initial"));
+      break;
+
+    case "deferred":
+    case "rejected":
+      // §15: a deferred or rejected lineage resumes by recording a new
+      // Decision, which is what approve-contract does.
+      operations.push(op("approve-contract", "initial"));
+      break;
+
+    case "contracted":
+      operations.push(op("write-brief", "initial"));
+      // Deliberately *not* approve-contract. Core §45's Contract change is
+      // scoped to a lineage that is delivering: a contracted lineage has a
+      // current Contract and no Brief, and §15 pins re-deciding there as
+      // refused. Widening it is a separate decision from closing R11.
+      break;
+
+    case "delivering": {
+      // §45 Brief changes: the Contract stands, the execution strategy does
+      // not. The old run is closed by the replacement.
+      operations.push(op("write-brief", "supersede"));
+      // §45 Contract changes: a new authorised Decision and Contract, with
+      // the previous pair superseded.
+      operations.push(op("approve-contract", "supersede"));
+      // Evidence closes the shape, so it is permitted only once the run has
+      // reached its closing step — the §53 preconditions, unchanged.
+      if (atClosingStep(snapshot, lineage)) operations.push(op("prepare-evidence", "initial"));
+      if (openGate(snapshot, lineage) !== undefined) {
+        operations.push({ stage: "gate", mode: "initial" });
+      }
+      break;
+    }
+
+    case "done":
+      // §45 Evidence correction: a new Evidence record supersedes the old
+      // one, with its own closure block. This was refused outright, because
+      // closure left no active run and the check demanded one.
+      operations.push(op("prepare-evidence", "supersede"));
+      break;
+  }
+  return operations;
+}
+
+/** Whether the lineage's run stands at the shape's closing Evidence step. */
+function atClosingStep(snapshot: GraphSnapshot, lineage: Lineage): boolean {
+  const run = executionFor(snapshot, lineage);
+  if (run === undefined || run.state.currentStep === undefined) return false;
+  return stepNamed(snapshot.lifecycle.shape, run.state.currentStep)?.kind === "evidence";
+}
+
+/** The name of an unresolved Gate the run is waiting on, when there is one. */
+function openGate(snapshot: GraphSnapshot, lineage: Lineage): string | undefined {
+  const run = executionFor(snapshot, lineage);
+  if (run === undefined || run.state.currentStep === undefined) return undefined;
+  const step = stepNamed(snapshot.lifecycle.shape, run.state.currentStep);
+  if (step === undefined || !isGate(step)) return undefined;
+  return gateSatisfied(step, run.state.gates) ? undefined : step.name;
 }

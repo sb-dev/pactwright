@@ -8,6 +8,7 @@ import {
 } from "../config/lifecycle.js";
 import { deriveLineages, type DeliveryState, type Lineage } from "../graph/lineage.js";
 import type { Project } from "../loader.js";
+import { permittedOperations, snapshotOf, type PermittedOperation } from "../validate/kernel.js";
 import {
   DIRECT_SHAPE_ID,
   STEP_CAPABILITY,
@@ -165,6 +166,13 @@ export interface LineageStatus {
   /** The resolved shape a shape-phase lineage is executing (§23). */
   readonly shape?: string;
   readonly executionStatus?: ExecutionState["status"];
+  /**
+   * Every recording operation this lineage admits now, replacements
+   * included — the same list `lifecycle record` checks against, so a CLI
+   * command and an adapter command cannot disagree about what is legal
+   * (consolidation design §12).
+   */
+  readonly permitted: readonly PermittedOperation[];
 }
 
 export interface LifecycleStatus {
@@ -292,6 +300,7 @@ function statusOf(project: Project, lineage: Lineage | undefined): LineageStatus
       ? {}
       : { shape: execution.state.shape, executionStatus: execution.state.status }),
     ...(next.action === undefined ? {} : { current: next.action }),
+    permitted: permittedOperations(snapshotOf(project), lineage),
   };
   if (!next.gate || next.action === undefined) return base;
   return { ...base, blocked: next.action.name, requiredActor: next.action.actor ?? "human" };
