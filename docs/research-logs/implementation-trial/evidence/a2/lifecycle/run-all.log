@@ -1,0 +1,606 @@
+A2-L lifecycle probe suite
+checkout:  6fedc2542d56a424277ed1f105ffdc16dae95c21
+reference: ea6a948d0b1a84ceb3f8690396a8c1f554e91c43 (src tree; the pinned reference's src tree is ea6a948d0b1a84ceb3f8690396a8c1f554e91c43)
+node:      v22.22.2
+platform:  Linux 6.18.44-fc-v37 x86_64
+date:      2026-09-22T07:03:55Z
+work:      <temporary; recreated by run-all.sh>
+
+
+########## probe-01-closure.sh ##########
+
+=== 01a  repository with NO resolvable revision (git repo, no commits) ===
+run state after Delivery+Review:
+    version: 2
+    brief: "brief-implement-healthz-2b567190"
+    shape: "direct"
+    status: running
+    current_step: "evidence"
+    visited:
+      - "delivery"
+      - "review"
+    gates: {}
+    iterations: {}
+    delivered_revision: "none"
+    review:
+      step: "review"
+      outcome: pass
+      revision: "none"
+--> now add a file that NO Review has seen
+created evidence evidence-delivered-b6b4750a
+prepare-evidence exit: 0
+closure block written:
+    closure:
+      shape: direct
+      delivered_revision: none
+      reviewed_revision: none
+      review_step: review
+      gates: {}
+    ---
+    Valid: 5 nodes, 4 edges, 1 lineages
+      repository_revision:   none
+unreviewed file still present: src/backdoor.ts
+
+=== 01b  POSITIVE CONTROL — same sequence in a repository with commits ===
+--> add a file that no Review has seen
+Validation problems:
+  - /home/user/trial/evidence2/probe-01-closure/01b: cannot close brief "brief-implement-healthz-2b567190": the repository has changed since the Review (reviewed "git:24b35b843d9b9860be657f7d3f0e4609c471ccf6+sha256:b92aa449ec17829a84ef879edc3127e8706f7822639351b760172699e8c7fea4", now "git:24b35b843d9b9860be657f7d3f0e4609c471ccf6+sha256:2ba0f9c94753ebe1df53dfd188eb003e9a8ffdf703c6e6a1aa8e8a4a8bd203e3") [evidence-latest-delivery-reviewed]
+prepare-evidence exit: 1  (expected 1 — the drift guard fires)
+0
+    evidence nodes: 0
+
+=== 01c  POSITIVE CONTROL — an honest closure of a reviewed tree ===
+created evidence evidence-delivered-b6b4750a
+prepare-evidence exit: 0  (expected 0)
+
+=== 01d  advertised Evidence correction on a done lineage (Core §45) ===
+      state: done
+      permitted: capture-intent, prepare-evidence (supersede)
+      state: none
+      permitted: capture-intent
+created evidence evidence-delivered-corrected-cdca61c7
+correction exit: 0  (expected 0)
+    supersedes edges: 1
+    Valid: 6 nodes, 6 edges, 1 lineages
+
+WORK=/home/user/trial/evidence2/probe-01-closure
+
+
+########## probe-02-run-loop.sh ##########
+
+=== 02a  a full automatic run: does the closing Evidence step close anything? ===
+[
+  {
+    "intent": "intent-add-a-health-endpoint-3a12b9ee",
+    "stop": "completed",
+    "executed": [
+      "delivery",
+      "review",
+      "evidence"
+    ]
+  }
+]
+run exit: 0
+processes spawned:
+    SPAWN stage=delivery subject=brief-implement-healthz-2b567190 mode=report
+      prompt sections: ## 2. Execute the brief | ## 3. Hand the result to the runtime | ## 4. Stop
+    SPAWN stage=review subject=brief-implement-healthz-2b567190 mode=report
+      prompt sections: ## 2. Review | ## 3. Hand the result to the runtime | ## 4. Stop
+evidence nodes created: 0
+      state: delivering
+      shape: direct (completed)
+      steps visited: delivery, review, evidence
+      permitted: capture-intent, write-brief (supersede), approve-contract (supersede)
+run state:
+    version: 2
+    brief: "brief-implement-healthz-2b567190"
+    shape: "direct"
+    status: completed
+    visited:
+      - "delivery"
+      - "review"
+      - "evidence"
+    gates: {}
+    iterations: {}
+    delivered_revision: "git:91c6a44931141b2b0e68e2c4614c66140abf651b"
+    review:
+      step: "review"
+      outcome: pass
+      revision: "git:91c6a44931141b2b0e68e2c4614c66140abf651b"
+--> is the lineage still closable?
+Validation problems:
+  - prepare-evidence is not a permitted action for intent "intent-add-a-health-endpoint-3a12b9ee" now: lineage is delivering; record a new Decision with approve-contract to resume (Spec 01 §15) [stage-not-permitted]
+prepare-evidence exit: 1
+--> a second run:
+[
+  {
+    "intent": "intent-add-a-health-endpoint-3a12b9ee",
+    "stop": "blocked",
+    "executed": [],
+    "message": "lineage is delivering; record a new Decision with approve-contract to resume (Spec 01 §15)"
+  }
+]
+
+=== 02b  a COMPLIANT agent: the prompt tells it to call the runtime itself ===
+the instruction the runtime sends for the Delivery step contains:
+    lifecycle record delivery --file <path>
+[
+  {
+    "intent": "intent-add-a-health-endpoint-3a12b9ee",
+    "stop": "completed",
+    "executed": [
+      "delivery",
+      "review",
+      "evidence"
+    ]
+  }
+]
+run exit: 0
+what the agent recorded through the runtime:
+    SPAWN stage=delivery subject=brief-implement-healthz-2b567190 mode=obey
+      prompt sections: ## 2. Execute the brief | ## 3. Hand the result to the runtime | ## 4. Stop
+      agent recorded -> recorded delivery for brief brief-implement-healthz-2b567190; run is running at review
+    SPAWN stage=review subject=brief-implement-healthz-2b567190 mode=obey
+      prompt sections: ## 2. Review | ## 3. Hand the result to the runtime | ## 4. Stop
+      agent recorded -> recorded review for brief brief-implement-healthz-2b567190; run is running at delivery
+run state:
+    version: 2
+    brief: "brief-implement-healthz-2b567190"
+    shape: "direct"
+    status: completed
+    visited:
+      - "delivery"
+      - "review"
+      - "evidence"
+    gates: {}
+    iterations: {}
+    delivered_revision: "git:3f7b425e827150d247c88364b7a7ee7d80ff6e73"
+    review:
+      step: "review"
+      outcome: pass
+      revision: "git:3f7b425e827150d247c88364b7a7ee7d80ff6e73"
+
+=== 02c  POSITIVE CONTROL — the bounded corrective loop ===
+[
+  {
+    "intent": "intent-add-a-health-endpoint-3a12b9ee",
+    "stop": "blocked",
+    "action": "review",
+    "executed": [
+      "delivery",
+      "review",
+      "delivery",
+      "review",
+      "delivery",
+      "review",
+      "delivery",
+      "review"
+    ],
+    "message": "corrective route review->delivery has run 3 of 3 permitted iterations; policy requires human intervention now"
+  }
+]
+run exit: 0  (max_iterations is 3 in the shipped shape)
+run state:
+    version: 2
+    brief: "brief-implement-healthz-2b567190"
+    shape: "direct"
+    status: blocked
+    current_step: "review"
+    visited:
+      - "delivery"
+      - "review"
+      - "delivery"
+      - "review"
+      - "delivery"
+      - "review"
+      - "delivery"
+      - "review"
+    gates: {}
+    iterations:
+      "review->delivery": 3
+    delivered_revision: "git:84899d997a047654c26984022345d1efbb42b153"
+    review:
+      step: "review"
+      outcome: revise
+      revision: "git:84899d997a047654c26984022345d1efbb42b153"
+
+=== 02d  POSITIVE CONTROL — executor failure and denial ===
+[
+  {
+    "intent": "intent-add-a-health-endpoint-3a12b9ee",
+    "stop": "stage-failed",
+    "action": "delivery",
+    "executed": [],
+    "message": "the executor was denied 1 permission: {\"tool_name\":\"Write\",\"tool_input\":{\"file_path\":\"/etc/hosts\"}}"
+  }
+]
+run exit: 1
+run state:
+    version: 2
+    brief: "brief-implement-healthz-2b567190"
+    shape: "direct"
+    status: failed
+    current_step: "delivery"
+    visited: []
+    gates: {}
+    iterations: {}
+--> resume: a second run of a failed run
+[
+  {
+    "intent": "intent-add-a-health-endpoint-3a12b9ee",
+    "stop": "completed",
+    "executed": [
+      "delivery",
+      "review",
+      "evidence"
+    ]
+  }
+]
+run exit: 0
+run state:
+    version: 2
+    brief: "brief-implement-healthz-2b567190"
+    shape: "direct"
+    status: completed
+    visited:
+      - "delivery"
+      - "review"
+      - "evidence"
+    gates: {}
+    iterations: {}
+    delivered_revision: "git:69df6e338f4d27ec05caac8719ed9d8c1dd30342"
+    review:
+      step: "review"
+      outcome: pass
+      revision: "git:69df6e338f4d27ec05caac8719ed9d8c1dd30342"
+
+=== 02g  POSITIVE CONTROL — a failed REVIEW step, then a governed retry ===
+-- run 1: the review step's executor fails --
+        "stop": "stage-failed",
+        "action": "review",
+        "message": "the executor reported an error (error_during_execution)"
+run state:
+    version: 2
+    brief: "brief-implement-healthz-2b567190"
+    shape: "direct"
+    status: failed
+    current_step: "review"
+    visited:
+      - "delivery"
+    gates: {}
+    iterations: {}
+    delivered_revision: "git:833dafcb95d4e8bc9eb07d13c0e5e8f62230568d"
+-- run 2: resume; review now succeeds --
+        "stop": "completed",
+        "executed": [
+          "review",
+          "evidence"
+        ]
+      }
+run state:
+    version: 2
+    brief: "brief-implement-healthz-2b567190"
+    shape: "direct"
+    status: completed
+    visited:
+      - "delivery"
+      - "review"
+      - "evidence"
+    gates: {}
+    iterations: {}
+    delivered_revision: "git:833dafcb95d4e8bc9eb07d13c0e5e8f62230568d"
+    review:
+      step: "review"
+      outcome: pass
+      revision: "git:833dafcb95d4e8bc9eb07d13c0e5e8f62230568d"
+    validate (a clean walk leaves no undeclared transition):
+        Valid: 4 nodes, 3 edges, 1 lineages
+
+=== 02e  no executor declared ===
+    [
+      {
+        "intent": "intent-add-a-health-endpoint-3a12b9ee",
+        "stop": "stage-failed",
+        "action": "delivery",
+        "executed": [],
+        "message": "no executor is configured, so capability \"delivery-execution\" was not performed; declare one with execution.executor in .pactwright/config.yml"
+      }
+    ]
+
+=== 02f  executor: scripted — a value the config schema accepts ===
+    validate exit: 0
+    doctor exit: 0
+    [
+      {
+        "intent": "intent-add-a-health-endpoint-3a12b9ee",
+        "stop": "stage-failed",
+        "action": "delivery",
+        "executed": [],
+        "message": "no executor is configured, so capability \"delivery-execution\" was not performed; declare one with execution.executor in .pactwright/config.yml"
+      }
+    ]
+
+WORK=/home/user/trial/evidence2/probe-02-run-loop
+
+
+########## probe-03-gates-state.sh ##########
+
+=== 03a  a human Gate stops the automatic run ===
+[
+  {
+    "intent": "intent-add-a-health-endpoint-3a12b9ee",
+    "stop": "human-gate",
+    "action": "review",
+    "requiredActor": "human",
+    "executed": [
+      "delivery"
+    ]
+  }
+]
+run exit: 0
+processes spawned (the Gate must not have been executed):
+    SPAWN stage=delivery subject=brief-implement-healthz-2b567190 mode=report
+      prompt sections: ## 2. Execute the brief | ## 3. Hand the result to the runtime | ## 4. Stop
+      state: delivering
+      shape: direct (waiting-gate)
+      permitted: capture-intent, write-brief (supersede), approve-contract (supersede), gate
+      blocked: review (required actor: human)
+
+=== 03b  an unauthorised actor may not resolve a human Gate ===
+Validation problems:
+  - actor "agent:impostor" may not resolve Gate "review"; it requires human (human) authority [transition-refused]
+exit: 1  (expected 1)
+gates in run state:
+    gates: {}
+    iterations: {}
+    delivered_revision: "git:4d88ff618d427c6848df29042f655ed265cb53a1"
+
+=== 03c  POSITIVE CONTROL — an authorised human resolves the Gate ===
+recorded gate for brief brief-implement-healthz-2b567190; run is running at review
+exit: 0  (expected 0)
+    gates:
+      review:
+        resolved_by: "human:samir"
+
+=== 03d  completing the Gate step, and closure with the Gate on record ===
+recorded review for brief brief-implement-healthz-2b567190; run is running at evidence
+exit: 0
+created evidence evidence-delivered-2773b20b
+exit: 0
+    closure:
+      shape: direct
+      delivered_revision: git:4d88ff618d427c6848df29042f655ed265cb53a1
+      reviewed_revision: git:4d88ff618d427c6848df29042f655ed265cb53a1
+      review_step: review
+      gates:
+        review: human:samir
+    ---
+
+=== 03e  Decision authority: an agent may not take a human Decision ===
+Validation problems:
+  - actor "agent:autopilot" is not authorised for approve-contract; lifecycle.yml authorises human (human) actors [unauthorised-actor]
+exit: 1  (expected 1 — lifecycle.yml authorises human)
+nodes: intent-t-a9e9760d.md 
+
+=== 03f  run state that does not parse ===
+corrupt state written. Now:
+-- lifecycle run --
+    [
+      {
+        "intent": "intent-add-a-health-endpoint-3a12b9ee",
+        "stop": "validation-error",
+        "executed": [],
+        "message": "the run state for brief \"brief-implement-healthz-2b567190\" cannot be read",
+        "problems": [
+          {
+            "code": "invalid-value",
+            "message": "execution.status must be one of: running, waiting-gate, blocked, completed, failed",
+            "path": "/home/user/trial/evidence2/probe-03-gates-state/03f/.pactwright/execution/brief-implement-healthz-2b567190.yml"
+          }
+        ]
+      }
+    ]
+-- lifecycle status --
+    Intent: intent-add-a-health-endpoint-3a12b9ee
+      state: delivering
+      current: delivery (step)
+      completed responsibilities: capture-intent, propose-contracts, approve-contract, write-brief
+      shape: direct (running)
+      steps visited: none
+      permitted: capture-intent, write-brief (supersede), approve-contract (supersede)
+      current lineage: intent-add-a-health-endpoint-3a12b9ee → decision-proceed-with-add-a-health-endpoint-51e870cf → contract-unauthenticated-liveness-endpoint-9a78683c → brief-implement-healthz-2b567190
+    Validation problems:
+      - /home/user/trial/evidence2/probe-03-gates-state/03f/.pactwright/execution/brief-implement-healthz-2b567190.yml: execution.status must be one of: running, waiting-gate, blocked, completed, failed [invalid-value]
+-- lifecycle next --
+    Intent: intent-add-a-health-endpoint-3a12b9ee
+      next: delivery (step, automatic)
+      shape step "delivery" runs automatic
+-- validate --
+    Validation problems:
+      - /home/user/trial/evidence2/probe-03-gates-state/03f/.pactwright/execution/brief-implement-healthz-2b567190.yml: execution.status must be one of: running, waiting-gate, blocked, completed, failed [invalid-value]
+-- state file after all that --
+    version: 2
+    brief: "brief-implement-healthz-2b567190"
+    shape: "direct"
+    status: not-a-status
+    visited: []
+
+WORK=/home/user/trial/evidence2/probe-03-gates-state
+
+=== 03g  does the ADAPTER path launder unparseable run state? ===
+corrupt state on disk:
+    version: 2
+    brief: "brief-implement-healthz-2b567190"
+    shape: "direct"
+    status: not-a-status
+    visited: []
+recorded delivery for brief brief-implement-healthz-2b567190; run is running at review
+    exit: 0  (lifecycle run refuses this same state — see 03f)
+state after:
+    version: 2
+    brief: "brief-implement-healthz-2b567190"
+    shape: "direct"
+    status: running
+    current_step: "review"
+    visited:
+      - "delivery"
+    gates: {}
+    iterations: {}
+    delivered_revision: "git:2f3284da1a13118c45c6bc2f31a8ef3028368e5a"
+    Valid: 4 nodes, 3 edges, 1 lineages
+
+=== 03h  a bound that has been exhausted, then the state is corrupted ===
+        "stop": "blocked",
+        "message": "corrective route review->delivery has run 3 of 3 permitted iterations; policy requires human intervention now"
+    iterations: iterations:   "review->delivery": 3
+-- POSITIVE CONTROL: the bound is re-checked on the intact blocked run --
+    recorded review for brief brief-implement-healthz-2b567190; run is blocked at review
+    iterations: iterations:   "review->delivery": 3
+-- now corrupt one field of that blocked state and record a Delivery --
+    recorded delivery for brief brief-implement-healthz-2b567190; run is running at review
+    status now:     status: running
+    iterations now: iterations: {}
+
+
+########## probe-04-responsibilities.sh ##########
+
+=== 04a  run from the open state: propose-contracts then the approve-contract Gate ===
+[
+  {
+    "intent": "intent-add-a-health-endpoint-d519b295",
+    "stop": "human-gate",
+    "action": "approve-contract",
+    "requiredActor": "human",
+    "executed": [
+      "propose-contracts"
+    ]
+  }
+]
+run exit: 0
+spawned:
+    SPAWN stage=- subject=- mode=report
+      prompt sections: ## 2. Propose alternatives | ## 3. Report, do not record | ## 4. Stop
+
+=== 04b  run from the contracted state: write-brief is a RECORDING responsibility ===
+-- agent does NOT call the runtime (mode=report) --
+[
+  {
+    "intent": "intent-t-a9e9760d",
+    "stop": "stage-failed",
+    "action": "write-brief",
+    "executed": [
+      "write-brief"
+    ],
+    "message": "write-brief completed without advancing the graph"
+  }
+]
+run exit: 1
+-- agent DOES call the runtime, as its prompt instructs (mode=obey) --
+created brief brief-b-01d2aa44
+    exit: 0
+
+=== 04c  headless prompt vs. rendered command — are they the same instruction? ===
+rendered /propose-contracts sections:
+    ## 1. Ask the runtime first
+    ## 2. Propose alternatives
+    ## 3. Report, do not record
+    ## 4. Stop
+headless instruction sections (logged by the stub from the real argv):
+      prompt sections: ## 2. Propose alternatives | ## 3. Report, do not record | ## 4. Stop
+
+WORK=/home/user/trial/evidence2/probe-04-responsibilities
+
+
+########## probe-06-permitted.sh ##########
+
+=== 06a  POSITIVE CONTROL — write-brief (supersede) on a delivering lineage ===
+      permitted: capture-intent, write-brief (supersede), approve-contract (supersede)
+created brief brief-implement-healthz-v2-3fb3e373
+    exit: 0  (expected 0)
+    run documents left under .pactwright/execution:
+        brief-implement-healthz-2b567190.yml
+    (the superseded Brief's run is one of them)
+
+=== 06b  POSITIVE CONTROL — approve-contract (supersede) on a delivering lineage ===
+created decision decision-proceed-with-add-a-health-endpoint-8dfc979d
+created contract contract-authenticated-liveness-endpoint-4cdb69e5
+    exit: 0  (expected 0)
+    run documents left under .pactwright/execution:
+        brief-implement-healthz-2b567190.yml
+
+=== 06c  a shape the validator accepts, whose first Review can never succeed ===
+    the shape passes validate: exit 0
+    -- run 1 --
+            "stop": "stage-failed",
+            "message": "review step \"triage-review\" completed but no delivered state is on record; a Review is taken against what Delivery produced"
+    -- run 2 --
+            "stop": "stage-failed",
+            "message": "review step \"triage-review\" completed but no delivered state is on record; a Review is taken against what Delivery produced"
+    visited after two runs:
+        visited:
+          - "triage-review"
+          - "triage-review"
+        gates: {}
+    validate:
+        Validation problems:
+          - /home/user/trial/evidence2/probe-06-permitted/06c/.pactwright/execution/brief-implement-healthz-2b567190.yml: the run for brief "brief-implement-healthz-2b567190" moved from "triage-review" to "triage-review", which the "direct" shape does not declare [undeclared-transition]
+          - /home/user/trial/evidence2/probe-06-permitted/06c/.pactwright/execution/brief-implement-healthz-2b567190.yml: the run for brief "brief-implement-healthz-2b567190" moved from "triage-review" to "triage-review", which the "direct" shape does not declare [undeclared-transition]
+
+=== 06d  every advertised operation, on the project run 06c produced ===
+    advertised:   permitted: capture-intent, write-brief (supersede), approve-contract (supersede)
+    -- write-brief (supersede) --
+        Validation problems:
+          - /home/user/trial/evidence2/probe-06-permitted/06c/.pactwright/execution/brief-implement-healthz-2b567190.yml: the run for brief "brief-implement-healthz-2b567190" moved from "triage-review" to "triage-review", which the "direct" shape does not declare [undeclared-transition]
+          - /home/user/trial/evidence2/probe-06-permitted/06c/.pactwright/execution/brief-implement-healthz-2b567190.yml: the run for brief "brief-implement-healthz-2b567190" moved from "triage-review" to "triage-review", which the "direct" shape does not declare [undeclared-transition]
+        exit: 1
+    -- approve-contract (supersede) --
+        Validation problems:
+          - /home/user/trial/evidence2/probe-06-permitted/06c/.pactwright/execution/brief-implement-healthz-2b567190.yml: the run for brief "brief-implement-healthz-2b567190" moved from "triage-review" to "triage-review", which the "direct" shape does not declare [undeclared-transition]
+          - /home/user/trial/evidence2/probe-06-permitted/06c/.pactwright/execution/brief-implement-healthz-2b567190.yml: the run for brief "brief-implement-healthz-2b567190" moved from "triage-review" to "triage-review", which the "direct" shape does not declare [undeclared-transition]
+    -- capture-intent (start over) --
+        Validation problems:
+          - /home/user/trial/evidence2/probe-06-permitted/06c/.pactwright/execution/brief-implement-healthz-2b567190.yml: the run for brief "brief-implement-healthz-2b567190" moved from "triage-review" to "triage-review", which the "direct" shape does not declare [undeclared-transition]
+          - /home/user/trial/evidence2/probe-06-permitted/06c/.pactwright/execution/brief-implement-healthz-2b567190.yml: the run for brief "brief-implement-healthz-2b567190" moved from "triage-review" to "triage-review", which the "direct" shape does not declare [undeclared-transition]
+    run documents still present:
+        brief-implement-healthz-2b567190.yml
+
+WORK=/home/user/trial/evidence2/probe-06-permitted
+
+
+########## probe-05-executor.ts ##########
+
+-- 1. Review outcome derived from what the agent returned --
+  holds   structured { outcome: 'pass' }  => "completed/pass"
+  holds   structured { outcome: 'revise' }  => "completed/revise"
+  holds   structured { outcome: 'blocked' }  => "completed/blocked"
+  holds   structured { verdict: 'pass' } (a different key)  => "failed/<no outcome>"
+  holds   prose 'All checks pass.'  => "completed/pass"
+  holds   prose 'Two defects remain. I have asked for another delivery pass.'  => "completed/pass"
+  holds   prose 'Nothing is blocked and nothing needs revision: ship it.'  => "completed/blocked"
+  holds   prose 'I could not pass judgement; I have no access to the tests.'  => "completed/pass"
+  holds   prose '' (empty report)  => "failed/<no outcome>"
+  holds   structured { outcome: 'pass', blocked: true } — only `outcome` is read  => "completed/pass"
+
+-- 2. parsePrintMode --
+  holds   stdout that is not JSON  => "failed"
+  holds   is_error: true  => "failed"
+  holds   subtype other than success  => "failed"
+  holds   denials are structured, not prose  => ["Write(/etc/hosts)"]
+  holds   a SUCCESSFUL run that was nevertheless denied a permission  => "completed"
+  holds   stdout 'null'  => "failed"
+  holds   stdout is a bare JSON string  => "failed"
+
+-- 3. the invocation actually built --
+  holds   --permission-prompts  => "none"
+  holds   --permission-mode  => "acceptEdits"
+  holds   --add-dir  => "/home/user/trial/evidence2/probe-02-run-loop/02a"
+  holds   a turn bound is passed  => false
+  holds   a sandbox flag is passed  => false
+
+-- 4. spawn outcomes --
+  holds   binary missing, no stdout  => "failed"
+  holds   timeout, no stdout  => "failed"
+  holds   timeout WITH partial stdout that happens to parse  => "completed"
+  holds   the agent prompt file cannot be read  => "failed"
+
+26 expectations checked; 0 differed from the expectation stated above.
