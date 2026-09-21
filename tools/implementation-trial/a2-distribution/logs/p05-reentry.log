@@ -1,0 +1,56 @@
+
+--- A — upgrade to a runtime the pack pins away from ---
+{
+  "ok": false,
+  "from": "0.0.2",
+  "installerCalls": [
+    "pactwright@0.9.0",
+    "<frozen reinstall>"
+  ],
+  "restored": true,
+  "recovery": [],
+  "problems": [
+    "reentry-failed: the new runtime could not complete the upgrade: upgrade failed; the previous environment was restored"
+  ],
+  "lockUnchanged": true,
+  "installedRuntimeAfter": "0.0.2",
+  "writerLockLeftBehind": false,
+  "lifecycleVersionAfter": "version: 1"
+}
+
+--- B — successful re-entry through the installed binary ---
+{
+  "parentReport": {
+    "ok": true,
+    "from": "0.0.2",
+    "to": "0.0.2",
+    "unchanged": true,
+    "migrations": [],
+    "synced": []
+  },
+  "installerCalls": [
+    "pactwright@0.0.2"
+  ],
+  "theChildActuallyMigrated": true,
+  "lifecycleFirstLines": [
+    "version: 2",
+    "",
+    "responsibilities:"
+  ],
+  "adapterFilesRendered": true,
+  "writerLockLeftBehind": false
+}
+
+--- C — re-entry with no node_modules/.bin/pactwright ---
+{
+  "ok": false,
+  "problems": [
+    "reentry-unavailable: the newly installed runtime was not found at /tmp/a2d-dZm9Ah/node_modules/.bin/pactwright"
+  ],
+  "restored": true,
+  "recovery": [],
+  "installerCalls": [
+    "pactwright@0.0.2",
+    "<frozen reinstall>"
+  ]
+}

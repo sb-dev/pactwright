@@ -1,0 +1,49 @@
+
+--- argv the runtime hands the package manager to install / to undo ---
+[
+  "pnpm\tadd\t-D\tpactwright@0.0.2",
+  "pnpm\tinstall",
+  "npm\tinstall\t--save-dev\tpactwright@0.0.2",
+  "npm\tinstall",
+  "yarn\tadd\t--dev\tpactwright@0.0.2",
+  "yarn\tinstall",
+  "bun\tadd\t-D\tpactwright@0.0.2",
+  "bun\tinstall"
+]
+
+--- does any install carry a dependency-script policy? ---
+{
+  "ignoreScriptsAnywhere": false,
+  "frozenLockfileOnTheUndo": false
+}
+
+--- argv for target selection, and what came back ---
+{
+  "argv": [
+    "pnpm\tview\tpactwright\tversions\t--json"
+  ],
+  "versions": [
+    "0.0.1",
+    "0.0.2"
+  ]
+}
+
+--- acquireSide with a single-dash spec (the CLI guard only rejects `--`) ---
+{
+  "argvTheManagerReceived": [
+    "pnpm\tadd\t-D\t-C"
+  ],
+  "outcome": [
+    "pack-not-found: agent pack \"-C\" is not installed: it resolves neither from /tmp/pactwright-eval-side-Iw6ZM1 nor from the runtime"
+  ]
+}
+
+--- acquireSide with an ordinary spec, for contrast ---
+{
+  "argvTheManagerReceived": [
+    "pnpm\tadd\t-D\t@pactwright/standard@0.0.1"
+  ],
+  "outcome": [
+    "incompatible-pack-version: config.agent_pack.version wants 0.0.1 but the installed pack \"@pactwright/standard\" is 0.0.2"
+  ]
+}

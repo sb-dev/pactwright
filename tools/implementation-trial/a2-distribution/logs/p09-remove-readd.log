@@ -1,0 +1,89 @@
+
+--- remove ---
+{
+  "ok": true,
+  "changes": [
+    {
+      "id": "probe-notes",
+      "action": "removed",
+      "previousVersion": "0.1.0"
+    }
+  ],
+  "preserved": [
+    "specs/nodes/note-probe-cc33.md"
+  ],
+  "problems": [],
+  "recordPreservedOnDisk": true
+}
+
+--- config.yml after remove ---
+version: 1
+
+agent_pack:
+  source: "@probe/pack"
+
+adapter:
+  type: claude-code
+
+extensions: {}
+
+github:
+  enabled: false
+
+
+--- does the rewritten config still parse? ---
+{
+  "parses": true,
+  "problems": []
+}
+
+--- doctor with the removed extension's records still on disk ---
+{
+  "status": "action-required",
+  "checks": [
+    "[healthy] package-manager: pnpm@11.7.0 (declared in package.json)",
+    "[action-required] configuration: the project does not load"
+  ]
+}
+
+--- re-add by explicit package ---
+{
+  "ok": true,
+  "changes": [
+    {
+      "id": "probe-notes",
+      "action": "added",
+      "version": "0.1.0"
+    }
+  ],
+  "problems": [],
+  "lockIdenticalToBeforeRemoval": true,
+  "configIdenticalToBeforeRemoval": true
+}
+
+--- config.yml after re-add ---
+version: 1
+
+agent_pack:
+  source: "@probe/pack"
+
+adapter:
+  type: claude-code
+
+extensions:
+  probe-notes:
+    enabled: true
+    source: "@probe/probe-notes"
+
+github:
+  enabled: false
+
+
+--- id derivation in `extension add` ---
+{
+  "conventional": [],
+  "packageWhoseTailIsNotTheId": [
+    "extension-not-installed: extension package \"@probe/notes\" is not installed; run \"pactwright extension add @probe/notes\"",
+    "package-manager-failed: pnpm install exited 1: no output"
+  ]
+}

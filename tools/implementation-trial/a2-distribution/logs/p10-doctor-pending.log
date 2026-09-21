@@ -1,0 +1,27 @@
+
+--- pending migration with NO records of that type (the shape the suite tests) ---
+{
+  "status": "action-required",
+  "checks": [
+    "[healthy] package-manager: pnpm@11.7.0 (declared in package.json)",
+    "[healthy] configuration: configuration, lifecycle (version 2) and lock load through the canonical path",
+    "[healthy] runtime: runtime 0.0.2 matches the lock",
+    "[healthy] capabilities: agent pack \"@probe/pack@0.1.0\" provides every required capability",
+    "[action-required] lock-agreement: extension \"probe-mig\" \"@probe/mig\": the Pactwright lock records 0.1.0 but the package manager installed 0.2.0; run \"pnpm install\"; extension \"probe-mig\" version: lock records 0.1.0 but the installed environment resolves to 0.2.0; extension \"probe-mig\" hash: lock records sha256:43f734b0ff3d7d7711d205363780d5429cd6f304da5c2a396fa82133e12d1bea but the installed environment resolves to sha256:67d7a717714d45345c49fdf6434d0cb95b95d0426ab26bcbdd6642275753aceb",
+    "[healthy] extensions: 1 enabled: probe-mig@0.2.0",
+    "[action-required] extension-migrations: extension \"probe-mig\" records are at schema version 1 but the installed manifest declares 2",
+    "[healthy] generated-drift: 10 generated files match the resolved environment",
+    "[action-required] validation: 3 validation problems ()"
+  ],
+  "reachedTheMigrationCheck": true
+}
+
+--- pending migration WITH records of the migrating type ---
+{
+  "status": "action-required",
+  "checks": [
+    "[healthy] package-manager: pnpm@11.7.0 (declared in package.json)",
+    "[action-required] configuration: the project does not load"
+  ],
+  "reachedTheMigrationCheck": false
+}

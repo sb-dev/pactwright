@@ -1,0 +1,106 @@
+
+--- init ---
+{
+  "firstRun": {
+    "ok": true,
+    "scaffold": true,
+    "created": [
+      ".pactwright/config.yml",
+      ".pactwright/lifecycle.yml",
+      "specs/nodes/.gitkeep",
+      "specs/graph/edges.yml",
+      ".claude/agents",
+      ".claude/commands"
+    ]
+  },
+  "secondRun": {
+    "ok": true,
+    "everythingSkipped": true
+  },
+  "lockWrittenForAScaffold": false,
+  "withExtensionsButNoPack": {
+    "ok": false,
+    "problems": [
+      "no-agent-pack-selected"
+    ]
+  }
+}
+
+--- sync is deterministic ---
+{
+  "firstChanged": 0,
+  "secondChanged": 0,
+  "secondUnchanged": 10,
+  "ok": true
+}
+
+--- sync against user state ---
+{
+  "ok": false,
+  "conflicts": [
+    ".claude/commands/review.md"
+  ],
+  "kept": [
+    ".claude/commands/notes.md"
+  ],
+  "removed": [
+    ".claude/agents/gone.md"
+  ],
+  "conflictingFileUntouched": true,
+  "otherRenderedFilesStillLanded": true,
+  "problems": [
+    "unmanaged-conflict"
+  ]
+}
+
+--- writeAdapter with a traversal in a rendered key ---
+refused: refusing to write outside the managed adapter directories: .claude/agents/../../escape.md
+
+--- a non-generated file created inside a managed directory during a failing transaction ---
+{
+  "survivedTheRestore": false,
+  "managedDirNow": [
+    "approve-contract.md",
+    "capture-intent.md",
+    "deliver-brief.md",
+    "notes.md",
+    "prepare-evidence.md",
+    "propose-contracts.md",
+    "review.md",
+    "write-brief.md"
+  ]
+}
+
+--- extension remove ---
+{
+  "ok": true,
+  "changes": [
+    {
+      "id": "probe-notes",
+      "action": "removed",
+      "previousVersion": "0.1.0"
+    }
+  ],
+  "preserved": [
+    "/tmp/a2d-eywIsK/specs/nodes/note-probe-cc33.md"
+  ],
+  "problems": [],
+  "recordStillOnDisk": true,
+  "lockStillNamesIt": false
+}
+
+--- extension re-add ---
+{
+  "ok": false,
+  "changes": [],
+  "problems": [
+    "extension-id-mismatch: config.extensions.notes resolves a manifest declaring id \"probe-notes\""
+  ],
+  "lockIdenticalToBefore": false,
+  "configIdenticalToBefore": false,
+  "configNow": [
+    "  source: \"@probe/pack\"",
+    "extensions: {}",
+    "  enabled: false"
+  ]
+}

@@ -1,0 +1,102 @@
+
+--- managed set the transaction will snapshot ---
+[
+  ".pactwright/config.yml",
+  ".pactwright/lifecycle.yml",
+  ".pactwright/lock.yml",
+  "package.json",
+  "pnpm-lock.yaml"
+]
+
+--- records before the upgrade ---
+{
+  "alpha": [
+    "---",
+    "id: deployment-alpha-aa11",
+    "type: deployment",
+    "title: deployment-alpha-aa11",
+    "created: 2026-09-01",
+    "exposure_level: high",
+    "---"
+  ],
+  "beta": [
+    "---",
+    "id: deployment-beta-bb22",
+    "type: deployment",
+    "title: deployment-beta-bb22",
+    "created: 2026-09-01",
+    "exposure_level_typo: high",
+    "---"
+  ]
+}
+
+--- lock schema_version before ---
+absent (= version 1)
+
+--- extension upgrade result ---
+{
+  "ok": false,
+  "changes": [],
+  "problems": [
+    "missing-field: frontmatter is missing required field \"exposure\""
+  ],
+  "installerCalls": 2
+}
+
+--- installed extension manifest AFTER the failed upgrade ---
+id: probe-mig
+package: "@probe/mig"
+version: 0.1.0
+pactwright: 0.0.2
+
+graph:
+  schema_version: 1
+  node_types:
+    deployment:
+      required_fields: [exposure_level]
+
+runtime:
+  namespace: probes
+
+--- records AFTER the failed upgrade ---
+{
+  "alpha": [
+    "---",
+    "id: deployment-alpha-aa11",
+    "type: deployment",
+    "title: deployment-alpha-aa11",
+    "created: '2026-09-01'",
+    "exposure: high",
+    "environment: unknown"
+  ],
+  "beta": [
+    "---",
+    "id: deployment-beta-bb22",
+    "type: deployment",
+    "title: deployment-beta-bb22",
+    "created: '2026-09-01'",
+    "exposure_level_typo: high",
+    "environment: unknown"
+  ]
+}
+
+--- lock schema_version AFTER ---
+absent (= version 1)
+
+--- loadProject after the failed upgrade ---
+{
+  "threw": "2 problems:",
+  "problems": [
+    "missing-field: frontmatter is missing required field \"exposure_level\"",
+    "missing-field: frontmatter is missing required field \"exposure_level\""
+  ]
+}
+
+--- doctor after the failed upgrade ---
+{
+  "status": "action-required",
+  "checks": [
+    "[healthy] package-manager: pnpm@11.7.0 (declared in package.json)",
+    "[action-required] configuration: the project does not load"
+  ]
+}
