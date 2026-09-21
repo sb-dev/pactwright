@@ -76,8 +76,49 @@ commands are in [`../../analysis/README.md`](../../analysis/README.md).
 
 ## Created
 
-The checkouts are created in the A1 publication step, after the analysis PR
-exists, so that the `state.md` they carry already resolves the PR. Their branch
-names and overlay SHAs are recorded in the table above and below once created.
+All five were created on 21 September 2026, after PR #40 existed, so the
+`state.md` each one carries already resolves the analysis branch and PR.
 
-*Creation record: pending in this commit; written in the A1 publication commit.*
+Overlaid from `trial/restart-analysis` at `4981f4d2269f1b43129df0316c4c565639acb339`.
+
+| Session | Branch | Overlay commit |
+|---|---|---|
+| Graph and persistence | `trial/a2-graph` | `be08d0283036b52b2c64647652129c99fef50490` |
+| Lifecycle and agent execution | `trial/a2-lifecycle` | `b185f601f112c33daead01660add0ad7162d91bd` |
+| Distribution, recovery, concurrency | `trial/a2-distribution` | `290f3edbc70d2bbe31ada8120f41e4e3e294cdac` |
+| Tests, evaluation, simplicity | `trial/a2-verification` | `037f01c8b03e381abcc420814a8ba2daaf8ab8bf` |
+| Specifications and checkpoints | `trial/a2-runbooks` | `a295986a4b8a75cc2f50eb82cc3840f21d8980e1` |
+
+Each overlay commit is the sole commit on top of
+`19c66d5f2368932ff05306db1fae8da8ec5810dd`.
+
+### Verified, not assumed
+
+For every checkout:
+
+- `git diff --name-only 19c66d5f <overlay> -- src packages tests specs .pactwright .claude .github examples skills-lock.json package.json pnpm-lock.yaml …`
+  returns **0 paths**.
+- The overlay diff against the reference contains **only** the 28 files listed
+  under *What the overlay contains* — no path outside
+  `docs/research-logs/implementation-trial/`, the runbook and
+  `tools/implementation-trial/`.
+- `git status --porcelain` is **empty**: no stray working-tree change.
+- The `src`, `packages` and `tests` tree hashes are identical across all five
+  checkouts and identical to the reference's:
+
+  ```
+  src      ea6a948d0b1a84ceb3f8690396a8c1f554e91c43
+  packages 874973b940b485550d86854df9861ad62a2010d6
+  tests    c8089f77e7102923b554121485a517507c0d30b6
+  ```
+
+### Before a session starts work
+
+Dependencies are not installed. Run `pnpm install --frozen-lockfile` in the
+checkout first; A1 measured that at 1.7s against a warm pnpm store on the
+reference.
+
+A session that wants a clean reference *without* the overlay — to compare
+against, or to run a probe on untouched code — can use
+`/Users/samir/workspace/pactwright-trial/reference`, which is detached at the
+pinned SHA and already installed and built. Do not commit in it.
