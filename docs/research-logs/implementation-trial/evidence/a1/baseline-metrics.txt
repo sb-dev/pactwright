@@ -1,0 +1,18 @@
+reference@19c66d5f — 19c66d5f2368932ff05306db1fae8da8ec5810dd (reference)
+
+group                 files   lines    code  comment   blank     bytes
+runtime-source           70   16677   12456     3162    1059    629248
+prompts-embedded *        1     257     225       23       9      8971
+pack-source               1      13       5        4       4       602
+tests                    44   11545    9771      771    1003    457114
+test-fixtures           389    3971    3476        6     872     73648
+prompts-pack              6     175     137        0      44      8026
+prompts-generated        10     487     349        0     148     23116
+specs                     8    9228    6361        0    2867    258436
+checkpoints              14   13181    9061        0    4134    575059
+graph-records            17     473     411        0      79     22139
+workflows                 2     144     122       13      11      5134
+
+* already counted inside another group
+
+dependencies: runtime 2 direct + 8 dev; pack 0 direct + 0 dev; 141 locked resolutions

@@ -1,0 +1,21 @@
+### command: pnpm install --frozen-lockfile && pnpm verify
+### cwd: /Users/samir/workspace/pactwright
+### branch: trial/restart-analysis at c38fa95afe66fb68dcc3a297cebc04587365f23d
+### started: 2026-09-21T22:42:24Z
+Scope: all 2 workspace projects
+✓ Lockfile passes supply-chain policies (verified 26d ago)
+...[TAP body omitted: the full log is in the disposable workspace at /Users/samir/workspace/pactwright-trial/evidence/09-planning-verify.log]...
+
+# tests 562
+# suites 0
+# pass 562
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 19893.480178
+
+### note: this branch's `verify` has no verify:self stage; see baseline-checks.md
+$ pnpm --filter @pactwright/standard build && tsc -p tsconfig.build.json
+$ tsc -p tsconfig.build.json
+### exit=0 finished=2026-09-21T22:43:00Z

@@ -1,0 +1,52 @@
+### command: pnpm verify
+### cwd: /Users/samir/workspace/pactwright-trial/reference
+### HEAD: 19c66d5f2368932ff05306db1fae8da8ec5810dd
+### node: v22.16.0  pnpm: 11.7.0
+### started: 2026-09-21T22:26:31Z
+$ pnpm format:check && pnpm lint && pnpm typecheck && pnpm test && pnpm build && pnpm verify:self
+$ prettier --check .
+Checking formatting...
+...[TAP body omitted: 4142 lines; the full log is in the disposable workspace at /Users/samir/workspace/pactwright-trial/evidence/02-verify.log]...
+
+### the one failing subtest, verbatim
+# Subtest: acquire: a side is installed into its own project, not resolved from node_modules
+not ok 248 - acquire: a side is installed into its own project, not resolved from node_modules
+  ---
+  duration_ms: 19.706111
+  type: 'test'
+  location: '/Users/samir/workspace/pactwright-trial/reference/tests/execute.test.ts:5:52'
+  failureType: 'testCodeFailure'
+  error: '[{"code":"pack-not-isolated","message":"\\"@pactwright/standard@0.0.0\\" resolved to /private/var/folders/s2/vcs53cc14cvdbq1j2zwd7bvc0000gn/T/pactwright-eval-side-Ax1zs7/node_modules/@pactwright/standard, outside the acquired environment; the requested version was not installed"}]'
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: true
+  actual: false
+  operator: '=='
+  stack: |-
+    TestContext.<anonymous> (/Users/samir/workspace/pactwright-trial/reference/tests/execute.test.ts:392:10)
+    Test.runInAsyncScope (node:async_hooks:214:14)
+    Test.run (node:internal/test_runner/test:1047:25)
+    Test.processPendingSubtests (node:internal/test_runner/test:744:18)
+    Test.postRun (node:internal/test_runner/test:1173:19)
+    Test.run (node:internal/test_runner/test:1101:12)
+
+### the one skipped subtest, verbatim
+# Subtest: executor: claude-code performs a capability end to end
+ok 253 - executor: claude-code performs a capability end to end # SKIP
+  ---
+  duration_ms: 0.13969
+  type: 'test'
+  ...
+
+### TAP summary and exit
+# tests 684
+# suites 0
+# pass 682
+# fail 1
+# cancelled 0
+# skipped 1
+# todo 0
+# duration_ms 22877.398652
+[ELIFECYCLE] Test failed. See above for more details.
+[ELIFECYCLE] Command failed with exit code 1.
+### exit=1 finished=2026-09-21T22:27:07Z

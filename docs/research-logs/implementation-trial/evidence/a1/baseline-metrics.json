@@ -1,0 +1,167 @@
+{
+  "tool": "tools/implementation-trial/measure-source.ts",
+  "accounting_version": 1,
+  "status": "provisional — A4 owns the frozen comparable accounting",
+  "label": "reference@19c66d5f",
+  "root": "/Users/samir/workspace/pactwright-trial/reference",
+  "head": "19c66d5f2368932ff05306db1fae8da8ec5810dd",
+  "groups": [
+    {
+      "id": "runtime-source",
+      "what": "the published runtime and CLI",
+      "files": 70,
+      "bytes": 629248,
+      "lines": 16677,
+      "blank": 1059,
+      "comment": 3162,
+      "code": 12456,
+      "mixed": 14
+    },
+    {
+      "id": "prompts-embedded",
+      "what": "agent-facing prompt text held inside runtime source",
+      "subset_of": "runtime-source",
+      "files": 1,
+      "bytes": 8971,
+      "lines": 257,
+      "blank": 9,
+      "comment": 23,
+      "code": 225,
+      "mixed": 0
+    },
+    {
+      "id": "pack-source",
+      "what": "the default agent pack's own source",
+      "files": 1,
+      "bytes": 602,
+      "lines": 13,
+      "blank": 4,
+      "comment": 4,
+      "code": 5,
+      "mixed": 0
+    },
+    {
+      "id": "tests",
+      "what": "test drivers",
+      "files": 44,
+      "bytes": 457114,
+      "lines": 11545,
+      "blank": 1003,
+      "comment": 771,
+      "code": 9771,
+      "mixed": 8
+    },
+    {
+      "id": "test-fixtures",
+      "what": "fixture data the tests read",
+      "files": 389,
+      "bytes": 73648,
+      "lines": 3971,
+      "blank": 872,
+      "comment": 6,
+      "code": 3476,
+      "mixed": 0
+    },
+    {
+      "id": "prompts-pack",
+      "what": "agent prompts and skills shipped by the pack",
+      "files": 6,
+      "bytes": 8026,
+      "lines": 175,
+      "blank": 44,
+      "comment": 0,
+      "code": 137,
+      "mixed": 0
+    },
+    {
+      "id": "prompts-generated",
+      "what": "the rendered Claude Code adapter surface",
+      "files": 10,
+      "bytes": 23116,
+      "lines": 487,
+      "blank": 148,
+      "comment": 0,
+      "code": 349,
+      "mixed": 0
+    },
+    {
+      "id": "specs",
+      "what": "canonical specifications",
+      "files": 8,
+      "bytes": 258436,
+      "lines": 9228,
+      "blank": 2867,
+      "comment": 0,
+      "code": 6361,
+      "mixed": 0
+    },
+    {
+      "id": "checkpoints",
+      "what": "checkpoint instructions",
+      "files": 14,
+      "bytes": 575059,
+      "lines": 13181,
+      "blank": 4134,
+      "comment": 0,
+      "code": 9061,
+      "mixed": 0
+    },
+    {
+      "id": "graph-records",
+      "what": "the repository's own Delivery Graph",
+      "files": 17,
+      "bytes": 22139,
+      "lines": 473,
+      "blank": 79,
+      "comment": 0,
+      "code": 411,
+      "mixed": 0
+    },
+    {
+      "id": "workflows",
+      "what": "repository CI configuration",
+      "files": 2,
+      "bytes": 5134,
+      "lines": 144,
+      "blank": 11,
+      "comment": 13,
+      "code": 122,
+      "mixed": 0
+    }
+  ],
+  "dependencies": {
+    "runtime_package": {
+      "manifest": "package.json",
+      "runtime": [
+        "@pactwright/standard@workspace:*",
+        "js-yaml@^4.1.0"
+      ],
+      "development": [
+        "@eslint/js@^9.0.0",
+        "@types/js-yaml@^4.0.9",
+        "@types/node@^22.15.0",
+        "eslint@^9.0.0",
+        "prettier@^3.6.0",
+        "tsx@^4.19.0",
+        "typescript-eslint@^8.0.0",
+        "typescript@^5.8.0"
+      ]
+    },
+    "pack_package": {
+      "manifest": "packages/standard/package.json",
+      "runtime": [],
+      "development": []
+    },
+    "locked_resolutions": 141
+  },
+  "method": {
+    "excluded": [
+      "node_modules",
+      "dist",
+      ".git"
+    ],
+    "typescript": "character scanner; strings, template literals and regular-expression literals are not read as comments",
+    "markdown_yaml": "non-blank lines are code; a leading # is a comment in YAML only",
+    "subsets": "a group marked subset_of is already counted inside the named group"
+  }
+}

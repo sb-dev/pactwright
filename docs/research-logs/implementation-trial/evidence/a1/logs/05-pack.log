@@ -1,0 +1,175 @@
+### Checkpoint 1 Step 22 — pack runtime and standard Agent Pack
+### cwd: /Users/samir/workspace/pactwright-trial/reference
+### started: 2026-09-21T22:28:58Z
+### deviation: --out writes under /Users/samir/workspace/pactwright-trial/pack instead of /tmp so the artefacts are retained as evidence
+$ pnpm build
+$ pnpm --filter @pactwright/standard build && tsc -p tsconfig.build.json
+$ tsc -p tsconfig.build.json
+package: pactwright@0.0.2
+Tarball Contents
+dist/adapter/claude-code.d.ts
+dist/adapter/claude-code.js
+dist/adapter/commands.d.ts
+dist/adapter/commands.js
+dist/atomic.d.ts
+dist/atomic.js
+dist/canonical.d.ts
+dist/canonical.js
+dist/cli.d.ts
+dist/cli.js
+dist/config/agreement.d.ts
+dist/config/agreement.js
+dist/config/config.d.ts
+dist/config/config.js
+dist/config/lifecycle-policy.d.ts
+dist/config/lifecycle-policy.js
+dist/config/lifecycle.d.ts
+dist/config/lifecycle.js
+dist/config/lock.d.ts
+dist/config/lock.js
+dist/config/package-manager.d.ts
+dist/config/package-manager.js
+dist/context.d.ts
+dist/context.js
+dist/doctor.d.ts
+dist/doctor.js
+dist/environment/select-target.d.ts
+dist/environment/select-target.js
+dist/environment/transaction.d.ts
+dist/environment/transaction.js
+dist/errors.d.ts
+dist/errors.js
+dist/eval/acquire.d.ts
+dist/eval/acquire.js
+dist/eval/case.d.ts
+dist/eval/case.js
+dist/eval/closure-cases.d.ts
+dist/eval/closure-cases.js
+dist/eval/compare.d.ts
+dist/eval/compare.js
+dist/eval/core-suite.d.ts
+dist/eval/core-suite.js
+dist/eval/runner.d.ts
+dist/eval/runner.js
+dist/eval/sandbox.d.ts
+dist/eval/sandbox.js
+dist/execute/claude-code.d.ts
+dist/execute/claude-code.js
+dist/execute/scripted.d.ts
+dist/execute/scripted.js
+dist/execute/select.d.ts
+dist/execute/select.js
+dist/execute/task.d.ts
+dist/execute/task.js
+dist/extension/manage.d.ts
+dist/extension/manage.js
+dist/extension/manifest.d.ts
+dist/extension/manifest.js
+dist/extension/migrate.d.ts
+dist/extension/migrate.js
+dist/extension/resolve.d.ts
+dist/extension/resolve.js
+dist/graph/authority.d.ts
+dist/graph/authority.js
+dist/graph/closure.d.ts
+dist/graph/closure.js
+dist/graph/edge-schema.d.ts
+dist/graph/edge-schema.js
+dist/graph/edges.d.ts
+dist/graph/edges.js
+dist/graph/evidence-closure.d.ts
+dist/graph/evidence-closure.js
+dist/graph/graph-index.d.ts
+dist/graph/graph-index.js
+dist/graph/ids.d.ts
+dist/graph/ids.js
+dist/graph/lineage.d.ts
+dist/graph/lineage.js
+dist/graph/mutations.d.ts
+dist/graph/mutations.js
+dist/graph/nodes.d.ts
+dist/graph/nodes.js
+dist/graph/relationships.d.ts
+dist/graph/relationships.js
+dist/graph/repository.d.ts
+dist/graph/repository.js
+dist/graph/revision.d.ts
+dist/graph/revision.js
+dist/graph/schema.d.ts
+dist/graph/schema.js
+dist/graph/writer-lock.d.ts
+dist/graph/writer-lock.js
+dist/index.d.ts
+dist/index.js
+dist/init.d.ts
+dist/init.js
+dist/lifecycle/engine.d.ts
+dist/lifecycle/engine.js
+dist/lifecycle/provenance.d.ts
+dist/lifecycle/provenance.js
+dist/lifecycle/record.d.ts
+dist/lifecycle/record.js
+dist/lifecycle/run.d.ts
+dist/lifecycle/run.js
+dist/lifecycle/shape.d.ts
+dist/lifecycle/shape.js
+dist/lifecycle/state.d.ts
+dist/lifecycle/state.js
+dist/lifecycle/transition.d.ts
+dist/lifecycle/transition.js
+dist/loader.d.ts
+dist/loader.js
+dist/pack/capabilities.d.ts
+dist/pack/capabilities.js
+dist/pack/locate.d.ts
+dist/pack/locate.js
+dist/pack/manifest.d.ts
+dist/pack/manifest.js
+dist/pack/resolve.d.ts
+dist/pack/resolve.js
+dist/pack/select.d.ts
+dist/pack/select.js
+dist/project.d.ts
+dist/project.js
+dist/sync.d.ts
+dist/sync.js
+dist/upgrade.d.ts
+dist/upgrade.js
+dist/validate.d.ts
+dist/validate.js
+dist/validate/kernel.d.ts
+dist/validate/kernel.js
+dist/validate/rules.d.ts
+dist/validate/rules.js
+dist/validation.d.ts
+dist/validation.js
+dist/version.d.ts
+dist/version.js
+dist/yaml.d.ts
+dist/yaml.js
+LICENSE
+package.json
+README.md
+Tarball Details
+/Users/samir/workspace/pactwright-trial/pack/pactwright-checkpoint-1.tgz
+### pack(root) exit=0
+$ pnpm build
+$ tsc -p tsconfig.build.json
+package: @pactwright/standard@0.0.2
+Tarball Contents
+agents/implementer.md
+agents/reviewer.md
+agents/spec.md
+dist/index.d.ts
+dist/index.js
+LICENSE
+pack.yml
+package.json
+README.md
+skills/contract-writing.md
+skills/implementation-review.md
+skills/repository-analysis.md
+Tarball Details
+/Users/samir/workspace/pactwright-trial/pack/pactwright-standard-checkpoint-1.tgz
+### pack(standard) exit=0
+### finished=2026-09-21T22:29:06Z
