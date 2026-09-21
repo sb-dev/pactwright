@@ -1,0 +1,78 @@
+
+--- doctor on a healthy project ---
+{
+  "status": "healthy",
+  "checks": [
+    "[healthy] package-manager",
+    "[healthy] configuration",
+    "[healthy] runtime",
+    "[healthy] capabilities",
+    "[healthy] lock-agreement",
+    "[healthy] extensions",
+    "[healthy] generated-drift",
+    "[healthy] validation"
+  ]
+}
+
+--- §16's list against the checks doctor can emit ---
+{
+  "checksDoctorEmits": [
+    "package-manager",
+    "package-manager-declaration",
+    "configuration",
+    "agent-pack",
+    "runtime",
+    "capabilities",
+    "lock-agreement",
+    "extensions",
+    "extension-migrations",
+    "generated-drift",
+    "production-skills",
+    "validation"
+  ],
+  "requiredBySection16": [
+    "installed Pactwright runtime version",
+    "detected package manager",
+    "package-manager declaration/lock consistency",
+    "available runtime upgrade where determinable",
+    "Pactwright configuration validity",
+    "package-manager lock ↔ .pactwright/lock.yml drift",
+    "runtime ↔ Extension compatibility",
+    "runtime ↔ Agent Pack compatibility",
+    "missing required capabilities",
+    "missing/unresolvable Production Skills dependencies",
+    "pending or incomplete migrations",
+    "generated adapter/integration drift",
+    "validation failures affecting the resolved environment"
+  ]
+}
+
+--- after the package-manager lock is made to disagree with everything ---
+{
+  "packageManagerLockNowSays": {
+    "pactwright": "0.0.1",
+    "@probe/pack": "9.9.9"
+  },
+  "pactwrightLockSays": {
+    "runtime": "0.0.2",
+    "pack": "0.1.0"
+  },
+  "doctorStatus": "healthy",
+  "doctorChecks": [
+    "[healthy] package-manager: pnpm@11.7.0 (declared in package.json)",
+    "[healthy] configuration: configuration, lifecycle (version 2) and lock load through the canonical path",
+    "[healthy] runtime: runtime 0.0.2 matches the lock",
+    "[healthy] capabilities: agent pack \"@probe/pack@0.1.0\" provides every required capability",
+    "[healthy] lock-agreement: environment_lock_hash sha256:5541bc4b50ee5ff6db3685b9e1aebc143c3a74a74fb8fc77d5ed7e90f843c549",
+    "[healthy] extensions: no extensions are enabled",
+    "[healthy] generated-drift: 10 generated files match the resolved environment",
+    "[healthy] validation: the Project Graph satisfies the complete validation contract"
+  ],
+  "validateOk": true,
+  "detection": {
+    "name": "pnpm",
+    "version": "11.7.0",
+    "source": "declared",
+    "lockFile": "pnpm-lock.yaml"
+  }
+}

@@ -1,0 +1,27 @@
+
+--- two holders at once ---
+{
+  "p1Pid": 10199,
+  "p2Pid": 10211,
+  "lockFileWhileP1Held": "{\"pid\":10199,\"host\":\"vm\",\"startedAt\":1790033696817}",
+  "lockFileAfterP2Reclaimed": "{\"pid\":10211,\"host\":\"vm\",\"startedAt\":1790033697034}",
+  "p2ReclaimNotice": "stale-writer-lock: reclaimed a writer lock held by vm:10199 since 2026-09-21T23:34:56.817Z",
+  "bothInsideCriticalSection": true
+}
+
+--- after P1's ordinary release, while P2 is still inside its critical section ---
+{
+  "p2StillHolding": true,
+  "lockFile": "<absent>",
+  "lockFileBelongsTo": "nobody — P2's lock was deleted"
+}
+
+--- a third writer entered while P2 had not left ---
+{
+  "p3Pid": 10223,
+  "p2StillHolding": true,
+  "lockFile": "{\"pid\":10223,\"host\":\"vm\",\"startedAt\":1790033697273}"
+}
+
+--- final lock file ---
+<absent>

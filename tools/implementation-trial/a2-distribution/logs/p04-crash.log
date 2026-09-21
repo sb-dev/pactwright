@@ -1,0 +1,38 @@
+
+--- A — handled failure after the effect ---
+{
+  "restored": true,
+  "recovery": [],
+  "lockBackToItsPreviousBytes": true,
+  "writerLockLeftBehind": false
+}
+
+--- B — SIGKILL after the same effect ---
+{
+  "lockBackToItsPreviousBytes": false,
+  "lockYmlNow": [
+    "runtime:",
+    "  version: 9.9.9",
+    "# half-applied by a crashed transaction"
+  ],
+  "writerLockLeftBehind": true,
+  "writerLockContents": "{\"pid\":10288,\"host\":\"vm\",\"startedAt\":1790033698233}",
+  "recoveryRecordOnDisk": "none — the snapshot lived only in the dead process",
+  "managedSetTheDeadTransactionOwned": [
+    "/tmp/a2d-f2qKqt/.pactwright/config.yml",
+    "/tmp/a2d-f2qKqt/.pactwright/lifecycle.yml",
+    "/tmp/a2d-f2qKqt/.pactwright/lock.yml",
+    "/tmp/a2d-f2qKqt/package.json",
+    "/tmp/a2d-f2qKqt/pnpm-lock.yaml"
+  ]
+}
+
+--- B — what doctor says about the crashed project ---
+{
+  "status": "action-required",
+  "checks": [
+    "[healthy] package-manager: pnpm@11.7.0 (declared in package.json)",
+    "[action-required] configuration: the project does not load"
+  ],
+  "namesTheHalfAppliedTransaction": false
+}

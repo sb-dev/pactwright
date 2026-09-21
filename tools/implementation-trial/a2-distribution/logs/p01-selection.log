@@ -1,0 +1,59 @@
+
+--- running runtime ---
+0.0.2
+
+--- agent-pack use @probe/pack ---
+{
+  "ok": true,
+  "selected": {
+    "name": "@probe/pack",
+    "version": "0.2.0"
+  },
+  "problems": []
+}
+
+--- agent-pack upgrade, with 0.1.0 installed over a 0.2.0 lock ---
+{
+  "ok": true,
+  "selected": {
+    "name": "@probe/pack",
+    "version": "0.1.0"
+  },
+  "unchanged": true,
+  "problems": [],
+  "packageManagerInvocations": 0
+}
+
+--- lock.yml agent_pack block after the 'upgrade' ---
+runtime:
+  version: 0.0.2
+agent_pack:
+  name: '@probe/pack'
+  version: 0.1.0
+  hash: sha256:237cc8f7593f688f1c5b1ffe70f44496555b0b1afabe03f983a1bea7d686e427
+
+--- selectTarget as upgradeRuntime calls it (view publishes 9.9.9) ---
+{
+  "version": "9.9.9",
+  "rejected": []
+}
+
+--- selectTarget *with* a declaredRuntimeRange, for contrast ---
+{
+  "version": "0.0.2",
+  "rejected": [
+    "9.9.9"
+  ]
+}
+
+--- upgrade with only an OLDER version published ---
+{
+  "ok": true,
+  "from": "0.0.2",
+  "to": "0.0.1",
+  "unchanged": false,
+  "problems": [],
+  "installerCalls": [
+    "pactwright@0.0.1"
+  ]
+}
