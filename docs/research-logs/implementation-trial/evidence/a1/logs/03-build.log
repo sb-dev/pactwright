@@ -1,0 +1,6 @@
+### command: pnpm build
+### cwd: /Users/samir/workspace/pactwright-trial/reference
+### started: 2026-09-21T22:28:12Z
+$ pnpm --filter @pactwright/standard build && tsc -p tsconfig.build.json
+$ tsc -p tsconfig.build.json
+### exit=0 finished=2026-09-21T22:28:17Z

@@ -1,0 +1,47 @@
+### Checkpoint 1 Step 23 (second fixture) — one-shot init, packed consumer
+### cwd: /Users/samir/workspace/pactwright-trial/consumer-oneshot
+### started: 2026-09-21T22:30:18Z
+
+$ pnpm add -D /Users/samir/workspace/pactwright-trial/pack/pactwright-standard-checkpoint-1.tgz /Users/samir/workspace/pactwright-trial/pack/pactwright-checkpoint-1.tgz
+Progress: resolved 0, reused 1, downloaded 0, added 0
+Packages: +4
+++++
+Progress: resolved 4, reused 4, downloaded 0, added 4, done
+
+devDependencies:
++ @pactwright/standard 0.0.2
++ pactwright 0.0.2
+
+Done in 690ms using pnpm v10.32.0
+[exit=0]
+
+$ pnpm pactwright init --agent-pack @pactwright/standard
+created .pactwright/config.yml
+created .pactwright/lifecycle.yml
+created specs/nodes/.gitkeep
+created specs/graph/edges.yml
+created .claude/agents
+created .claude/commands
+created .pactwright/lock.yml
+[exit=0]
+
+$ pnpm pactwright doctor
+Pactwright 0.0.2 — warning
+
+  [healthy] package-manager: pnpm (inferred from pnpm-lock.yaml)
+  [warning] package-manager-declaration: package.json declares no "packageManager"; upgrades infer pnpm from lock-file state
+  [healthy] configuration: configuration, lifecycle (version 2) and lock load through the canonical path
+  [healthy] runtime: runtime 0.0.2 matches the lock
+  [healthy] capabilities: agent pack "@pactwright/standard@0.0.2" provides every required capability
+  [healthy] lock-agreement: environment_lock_hash sha256:76221cac587d9d6a4451d591a7738e88ceabca2c766eea90599bfc894a4cec68
+  [healthy] extensions: no extensions are enabled
+  [healthy] generated-drift: 10 generated files match the resolved environment
+  [healthy] validation: the Project Graph satisfies the complete validation contract
+[exit=0]
+
+$ pnpm pactwright validate
+Valid: 0 nodes, 0 edges, 0 lineages
+  repository_revision:   git:2d7703a266f23cef37bc5d6940b63809b12ab316+sha256:910291e0a987672bd5335b6491ac3e7ddf27fab88bdbd562965ebd2b0b93861f
+  project_graph_revision: sha256:b37741952d1f3ddfdda58cfbf8b7d9fcdb0521eb6983f81d4ce49502313e22e2
+  environment_lock_hash: sha256:76221cac587d9d6a4451d591a7738e88ceabca2c766eea90599bfc894a4cec68
+[exit=0]
