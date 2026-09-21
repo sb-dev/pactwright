@@ -1,0 +1,58 @@
+### Checkpoint 1 Step 23 (second fixture, extension half) — one-shot init with a fixture Extension
+### cwd: /Users/samir/workspace/pactwright-trial/consumer-extension
+### started: 2026-09-21T22:30:43Z
+
+$ pnpm add -D /Users/samir/workspace/pactwright-trial/pack/pactwright-standard-checkpoint-1.tgz /Users/samir/workspace/pactwright-trial/pack/pactwright-checkpoint-1.tgz
+Progress: resolved 0, reused 1, downloaded 0, added 0
+Packages: +4
+++++
+Progress: resolved 4, reused 4, downloaded 0, added 4, done
+
+devDependencies:
++ @pactwright/standard 0.0.2
++ pactwright 0.0.2
+
+Done in 725ms using pnpm v10.32.0
+[exit=0]
+
+$ pnpm add -D ./fixture-base
+Progress: resolved 0, reused 1, downloaded 0, added 0
+Already up to date
+Progress: resolved 4, reused 4, downloaded 0, added 0, done
+
+devDependencies:
++ @pactwright/fixture-base 0.1.0 <- fixture-base
+
+Done in 462ms using pnpm v10.32.0
+[exit=0]
+
+$ pnpm pactwright init --agent-pack @pactwright/standard --with @pactwright/fixture-base
+created .pactwright/config.yml
+created .pactwright/lifecycle.yml
+created specs/nodes/.gitkeep
+created specs/graph/edges.yml
+created .claude/agents
+created .claude/commands
+created .pactwright/lock.yml
+[exit=0]
+
+$ pnpm pactwright doctor
+Pactwright 0.0.2 — warning
+
+  [healthy] package-manager: pnpm (inferred from pnpm-lock.yaml)
+  [warning] package-manager-declaration: package.json declares no "packageManager"; upgrades infer pnpm from lock-file state
+  [healthy] configuration: configuration, lifecycle (version 2) and lock load through the canonical path
+  [healthy] runtime: runtime 0.0.2 matches the lock
+  [healthy] capabilities: agent pack "@pactwright/standard@0.0.2" provides every required capability
+  [healthy] lock-agreement: environment_lock_hash sha256:0b3fb904e4722fb2871fad45376d248c0b8f70e7bf11b3ed35e26e53ff51d5ea
+  [healthy] extensions: 1 enabled: fixture-base@0.1.0
+  [healthy] generated-drift: 10 generated files match the resolved environment
+  [healthy] validation: the Project Graph satisfies the complete validation contract
+[exit=0]
+
+$ pnpm pactwright validate
+Valid: 0 nodes, 0 edges, 0 lineages
+  repository_revision:   git:adef987aded2713f3dd0758e4c676b1650f7cc3c+sha256:045f5db694cbadf850505410663e07b0f89413bddd2930f9c4cbeb831d969172
+  project_graph_revision: sha256:b37741952d1f3ddfdda58cfbf8b7d9fcdb0521eb6983f81d4ce49502313e22e2
+  environment_lock_hash: sha256:0b3fb904e4722fb2871fad45376d248c0b8f70e7bf11b3ed35e26e53ff51d5ea
+[exit=0]
