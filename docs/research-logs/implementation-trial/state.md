@@ -15,7 +15,7 @@ points here rather than restating a SHA, a branch or a path.
 | Repository | `sb-dev/pactwright` (`git@github.com:sb-dev/pactwright.git`) |
 | Default branch recorded at A1 | `main` at `c38fa95afe66fb68dcc3a297cebc04587365f23d` |
 | Analysis branch | `trial/restart-analysis`, created from `main` at `c38fa95a` |
-| Analysis PR | *opened in the A1 publication commit; recorded there* |
+| Analysis PR | [**#40**](https://github.com/sb-dev/pactwright/pull/40) — draft, base `main`, head `trial/restart-analysis`. The shared PR for A1–A7; both agents work on it sequentially. |
 | Pinned reference | `19c66d5f2368932ff05306db1fae8da8ec5810dd` |
 | Reference live branch | `review/checkpoint-1` — local and `origin` both at the pinned SHA |
 | Reference PR | [#39](https://github.com/sb-dev/pactwright/pull/39), open, not draft, head `19c66d5f`, base `main` |
