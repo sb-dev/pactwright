@@ -1,6 +1,6 @@
 # A2 — independent audits
 
-A2 is in progress. Reports appear here only after path-restricted publication from their verified temporary audit branches.
+The five A2 audit sessions are complete. Some reports may still be reachable only from their completed audit branches/session hand-offs. Do not rerun A2 to normalise publication.
 
 Five sessions audit different boundaries of the pinned reference **before
 reading each other's conclusions**. Each writes one report into this directory.
@@ -58,44 +58,16 @@ letting silence imply coverage.
 Note also that the "review" on PR #39 is an issue comment by the branch's own
 author. Confidence in its prose is not evidence. Verify or qualify each claim.
 
-## Publication protocol
+## Provenance closeout
 
-Version 5 of the runbook is authoritative for live publication. The A1 evidence
-file describes how the original local checkouts were created; it is historical
-evidence, not permission to use a stale publication rule.
+A2 analysis is finished. A3 is next.
 
-Each audit session works only on its assigned `trial/a2-*` branch and may push
-that branch so work survives an ephemeral environment. It never writes directly
-to `trial/restart-analysis`. Its final hand-off gives the exact branch, audit
-base/overlay SHA, audit commit SHA and changed paths.
+At A3 start, resolve the exact existing source SHA for each completed report.
+Consume reports directly by SHA or copy the existing report/probe/evidence bytes
+onto `trial/restart-analysis`. Do not merge reference-runtime ancestry and do
+not rewrite a report to fit a later runbook layout.
 
-The coordinator serially publishes **paths, not commits**:
-
-1. fetch the exact audit commit;
-2. verify its diff from the recorded audit base contains only the runbook's
-   permitted report/probe/evidence paths;
-3. copy only those paths onto the current `trial/restart-analysis` worktree;
-4. commit the publication there with the source branch/SHA recorded;
-5. verify no PR #39 production path was imported.
-
-Never merge or cherry-pick a whole audit commit. Those commits sit on top of the
-pinned reference runtime and would bring its production ancestry into the
-planning branch.
-
-Current permitted probe roots are:
-
-```text
-tools/implementation-trial/a2/graph/**
-tools/implementation-trial/a2/lifecycle/**
-tools/implementation-trial/a2/distribution/**
-tools/implementation-trial/a2/verification/**
-```
-
-and the matching
-`docs/research-logs/implementation-trial/evidence/a2/<area>/**` roots. The
-runbooks audit has no production/spec/checkpoint writes in A2.
-
-After each publication, compare the shared branch against its recorded analysis
-base for `src packages tests specs .pactwright .claude .github examples`.
-During A2 that diff must remain empty.
-
+If a temporary remote branch was deleted or never pushed, recover/push the
+**existing completed commit or session output**. Do not repeat the analysis.
+A genuinely missing evidence item may justify one targeted supplemental probe in
+A3, not a wholesale A2 rerun.

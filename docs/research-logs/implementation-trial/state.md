@@ -4,9 +4,9 @@ The one place both agents resolve identities from. Every other trial record
 points here rather than restating a SHA, a branch or a path.
 
 **Runbook:** [`docs/research-logs/2026-09-21-pactwright-implementation-trial-spec.md`](../2026-09-21-pactwright-implementation-trial-spec.md)
-(v6, 22 September 2026) — Version 6 is the current execution contract; historical A1 evidence remains unchanged.
+(v7, 22 September 2026) — Version 7 is the current execution contract. A1 and A2 are completed historical work and are not rerun.
 
-**Last writer:** ChatGPT, runbook execution-contract audit, 22 September 2026.
+**Last writer:** ChatGPT, A2 grandfathering correction, 22 September 2026.
 
 ## Identities
 
@@ -89,12 +89,12 @@ committed under `evidence/a1/`.
 
 ## Status
 
-A1 complete. A2 is in progress. Audit work is produced on the temporary `trial/a2-*` branches and reaches `trial/restart-analysis` only through Version 5's path-restricted coordinator protocol. Branch existence or a pushed audit commit is not acceptance. A2 completes only after all five reports are published with verified source SHAs and the ChatGPT coverage review passes.
+A1 complete. All five A2 audit sessions are complete and frozen. **Do not rerun A2.** A3 is next. At A3 start, resolve and record the exact source SHA/hand-off for each completed A2 report; if any report is not yet reachable from `trial/restart-analysis`, publish or link the existing bytes without changing their meaning.
 
 
 ## A2 branch protocol
 
-Version 6 supersedes the original A1 publication instructions where they conflict.
+Version 7 supersedes later protocol rewrites where they conflict with already-completed A2 work.
 There is **no shared `trial/a2-base` requirement**. Each A2 branch has its own
 trial-only overlay/base commit on top of the pinned reference. Audit sessions
 push only their assigned temporary branch. The coordinator publishes only the
@@ -104,5 +104,17 @@ the PR #39 reference runtime.
 
 The exact source audit SHA for every published report is recorded when the
 coordinator publishes it. Historical `evidence/a1/a2-checkouts.md` remains a
-record of how A1 created the original local checkouts; Version 6 owns the live
-publication protocol.
+record of how A1 created the original local checkouts; Version 7 owns only how A3 consumes completed A2 outputs; it does not redefine how A2 was executed.
+
+
+## Completed A2 audit sources
+
+| Audit | Known source |
+|---|---|
+| Graph/persistence | `trial/a2-graph@2a5730d83a6e7a718310cc8bc3bf0d81ba18640c` |
+| Lifecycle/agents | `trial/a2-lifecycle@2ff14a65b8775cc85dc24e35260d5a37cd87f4cf` |
+| Specs/checkpoints | `trial/a2-runbooks@f6d75ccd6fd0589f49bd40899d9f12a9203482a7` |
+| Distribution/recovery | completed session output; resolve exact existing source commit/hand-off at A3 start if remote ref is absent |
+| Verification/evaluation | completed session output; resolve exact existing source commit/hand-off at A3 start if remote ref is absent |
+
+Missing remote refs do not invalidate completed A2 work and do not authorise a rerun.
