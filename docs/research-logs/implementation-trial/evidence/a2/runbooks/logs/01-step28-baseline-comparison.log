@@ -1,0 +1,11 @@
+# Checkpoint 1 v17 Step 28, run verbatim
+# cwd: /home/user/pactwright
+# runtime: pactwright 0.0.2
+# date: 2026-09-22T07:26:13Z
+$ pnpm pactwright eval --baseline @pactwright/standard@0.0.1 --candidate @pactwright/standard@0.0.2
+$ node dist/cli.js eval --baseline @pactwright/standard@0.0.1 --candidate @pactwright/standard@0.0.2
+pactwright: could not acquire the baseline "@pactwright/standard@0.0.1"
+Validation problems:
+  - /tmp/pactwright-eval-side-IiA4qh/node_modules/.pnpm/@pactwright+standard@0.0.1/node_modules/@pactwright/standard/pack.yml: pack "@pactwright/standard@0.0.1" requires pactwright 0.0.1; this runtime is 0.0.2 [incompatible-runtime]
+[ELIFECYCLE] Command failed with exit code 1.
+# exit: 1

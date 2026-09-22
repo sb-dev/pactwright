@@ -1,0 +1,58 @@
+# Checkpoint 1 Step 13 / exit gate: does core eval actually evaluate?
+# date: 2026-09-22T07:27:26Z
+$ pnpm pactwright eval
+$ node dist/cli.js eval
+Evaluating @pactwright/standard@0.0.2 (runtime 0.0.2, suite core-delivery)
+
+contract-fidelity — Contract fidelity of the delivered change
+  capability: delivery-execution (agent: implementer)
+  error: no executor is configured, so the pack's behaviour was not evaluated; declare one with execution.executor, or run the harness's own reference explicitly
+
+scope-discipline — Scope discipline of the delivered change
+  capability: delivery-execution (agent: implementer)
+  error: no executor is configured, so the pack's behaviour was not evaluated; declare one with execution.executor, or run the harness's own reference explicitly
+
+graph-output-structure — Required graph and output structure of contract proposals
+  capability: delivery-specification (agent: spec)
+  error: no executor is configured, so the pack's behaviour was not evaluated; declare one with execution.executor, or run the harness's own reference explicitly
+
+forbidden-mutation — Delivery execution performs no forbidden mutation
+  capability: delivery-execution (agent: implementer)
+  error: no executor is configured, so the pack's behaviour was not evaluated; declare one with execution.executor, or run the harness's own reference explicitly
+
+review-defect-detection — Review detects a planted contract defect
+  capability: delivery-review (agent: reviewer)
+  error: no executor is configured, so the pack's behaviour was not evaluated; declare one with execution.executor, or run the harness's own reference explicitly
+
+brief-quality — A Brief decomposes its Contract into executable, checkable work
+  capability: delivery-specification (agent: spec)
+  error: no executor is configured, so the pack's behaviour was not evaluated; declare one with execution.executor, or run the harness's own reference explicitly
+
+evidence-accuracy — Evidence states what was actually delivered and actually verified
+  capability: delivery-execution (agent: implementer)
+  error: no executor is configured, so the pack's behaviour was not evaluated; declare one with execution.executor, or run the harness's own reference explicitly
+
+lifecycle-compliance — The candidate respects authority, Gates and declared transitions
+  capability: delivery-execution (agent: implementer)
+  error: no executor is configured, so the pack's behaviour was not evaluated; declare one with execution.executor, or run the harness's own reference explicitly
+
+Deterministic assertions: 0 passed, 0 failed; 8 case(s) not evaluated.
+Semantic dimensions: 0 judged, 0 unjudged. No aggregate quality score is calculated.
+[ELIFECYCLE] Command failed with exit code 1.
+# exit: 1
+
+$ grep executor .pactwright/config.yml
+--- config.yml ---
+version: 1
+
+agent_pack:
+  source: "@pactwright/standard"
+  version: "^0.0.2"
+
+adapter:
+  type: claude-code
+
+extensions: {}
+
+github:
+  enabled: false

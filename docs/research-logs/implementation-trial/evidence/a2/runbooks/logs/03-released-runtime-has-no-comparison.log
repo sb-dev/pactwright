@@ -1,0 +1,37 @@
+# Does any RELEASED runtime carry the Step 28 comparison surface?
+# date: 2026-09-22T07:27:12Z
+
+$ npm install pactwright@0.0.1   (clean temp project)
+installed: pactwright 0.0.1
+
+$ ./node_modules/.bin/pactwright --version
+0.0.1
+
+$ ./node_modules/.bin/pactwright --help   | eval lines only
+  eval [--json]                              Run the core Delivery evaluation suite against
+                                             the selected agent pack (deterministic assertions
+                                             and semantic dimensions reported separately)
+
+
+$ ./node_modules/.bin/pactwright eval --baseline @pactwright/standard@0.0.1 --candidate @pactwright/standard@0.0.1
+pactwright: unknown option "--baseline"
+
+Usage: pactwright <command> [options]
+
+Commands:
+  init [--json]                              Create the Pactwright-owned core structure
+                                             (.pactwright, specs, .claude directories) in the
+                                             current directory and resolve the lock; existing
+                                             paths are left untouched
+  sync [--json]                              Render the Pactwright-managed .claude/ adapter
+                                             surface from config + lock (deterministic; only
+                                             files carrying the Pactwright banner are written
+                                             or removed, so user-authored files are kept)
+  validate [--json]                          Validate the Delivery Graph and typed-edge store
+  context <node-id> [--history] [--json]     Print the current core Delivery lineage of a node
+  lifecycle status [--intent <id>] [--json]  Report stage, completed stages, gates and lineage
+  lifecycle next   [--intent <id>] [--json]  Report the next permitted core Delivery action
+  lifecycle run    [--intent <id>] [--json]  Run automatic stages until a gate, completion,
+                                             a stage failure or a validation error
+  lifecycle record <stage> --file <yaml>     Record the content of a graph-marking stage
+# exit: 0

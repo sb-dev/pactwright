@@ -1,0 +1,15 @@
+# Is there ANY declarable pack.yml 'pactwright:' value that spans 0.0.1 -> 0.0.2?
+# probe: dist/index.js satisfiesRange, the same function resolvePack uses
+# date: 2026-09-22T07:27:58Z
+
+Can a pack declared for the 0.0.1 era run on runtime 0.0.2?
+  pack.yml pactwright: 0.0.1    -> satisfiesRange("0.0.2", "0.0.1") = false
+  pack.yml pactwright: ^0.0.1   -> satisfiesRange("0.0.2", "^0.0.1") = false
+  pack.yml pactwright: 0.0.2    -> satisfiesRange("0.0.2", "0.0.2") = true
+  pack.yml pactwright: ^0.0.2   -> satisfiesRange("0.0.2", "^0.0.2") = true
+  pack.yml pactwright: ^0.1.0   -> satisfiesRange("0.0.2", "^0.1.0") = false
+  pack.yml pactwright: ^1.0.0   -> satisfiesRange("0.0.2", "^1.0.0") = false
+
+The same question one minor series later (runtime 0.1.1, pack declared at 0.1.0):
+  pack.yml pactwright: 0.1.0    -> satisfiesRange("0.1.1", "0.1.0") = false
+  pack.yml pactwright: ^0.1.0   -> satisfiesRange("0.1.1", "^0.1.0") = true
