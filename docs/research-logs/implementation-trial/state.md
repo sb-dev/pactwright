@@ -4,7 +4,7 @@ The one place both agents resolve identities from. Every other trial record
 points here rather than restating a SHA, a branch or a path.
 
 **Runbook:** [`docs/research-logs/2026-09-21-pactwright-implementation-trial-spec.md`](../2026-09-21-pactwright-implementation-trial-spec.md)
-(v5, 22 September 2026) — Version 5 is the current execution contract; historical A1 evidence remains unchanged.
+(v6, 22 September 2026) — Version 6 is the current execution contract; historical A1 evidence remains unchanged.
 
 **Last writer:** ChatGPT, runbook execution-contract audit, 22 September 2026.
 
@@ -94,7 +94,7 @@ A1 complete. A2 is in progress. Audit work is produced on the temporary `trial/a
 
 ## A2 branch protocol
 
-Version 5 supersedes the original A1 publication instructions where they conflict.
+Version 6 supersedes the original A1 publication instructions where they conflict.
 There is **no shared `trial/a2-base` requirement**. Each A2 branch has its own
 trial-only overlay/base commit on top of the pinned reference. Audit sessions
 push only their assigned temporary branch. The coordinator publishes only the
@@ -104,5 +104,5 @@ the PR #39 reference runtime.
 
 The exact source audit SHA for every published report is recorded when the
 coordinator publishes it. Historical `evidence/a1/a2-checkouts.md` remains a
-record of how A1 created the original local checkouts; Version 5 owns the live
+record of how A1 created the original local checkouts; Version 6 owns the live
 publication protocol.

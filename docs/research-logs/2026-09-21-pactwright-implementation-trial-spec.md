@@ -1,6 +1,6 @@
 # Pactwright — Analysis and Reimplementation Trial
 
-**Version:** 5 · **Date:** 22 September 2026  
+**Version:** 6 · **Date:** 22 September 2026  
 **Status:** Execution specification; no step is completed by this document.  
 **Repository:** `sb-dev/pactwright`  
 **Reference implementation:** `19c66d5f2368932ff05306db1fae8da8ec5810dd` (`review/checkpoint-1`).  
@@ -129,7 +129,7 @@ Changed acceptance criteria, thresholds, core semantics or compatibility commitm
 
 ### 1.6 Runbook version discipline
 
-This runbook uses whole-number revisions only: **v5 → v6 → v7**. Any substantive change to prompts, branch ownership, gates, acceptance or execution order increments the version by exactly one whole number and updates the footer plus the runbook pointer in `state.md`. Do not create decimal versions such as v5.1.
+This runbook uses whole-number revisions only. Any substantive change to prompts, branch ownership, gates, acceptance or execution order increments the version by exactly one whole number and updates the footer plus the runbook pointer in `state.md`. Decimal version increments are never used.
 
 A version change does not silently rewrite historical evidence. Where an earlier A1/A2 record describes the protocol that existed when it was produced, keep that record and state explicitly which newer runbook rule supersedes it.
 
@@ -522,8 +522,12 @@ fresh ChatGPT A3 review. Do not self-approve the integrated result.
 Runbook: docs/research-logs/2026-09-21-pactwright-implementation-trial-spec.md
 Trial records: docs/research-logs/implementation-trial/
 
-In a fresh session, use GitHub to review the integrated A3 head on
-trial/restart-analysis. Read findings.md, research.md, A2 evidence, the prior
+Repository: sb-dev/pactwright
+Review branch: trial/restart-analysis
+Write policy: review/comment only; no repository edits
+
+In a fresh session, use GitHub to review the integrated A3 head. Read
+findings.md, research.md, A2 evidence, the prior
 research comment and any A3 probes. Check that disagreements are reconciled by
 evidence, not majority vote; recommendations are bounded; and pending maintainer
 decisions are explicit rather than hidden in implementation advice.
@@ -1245,8 +1249,12 @@ ACs and a hand-off to a fresh Claude reviewer. Do not accept your own repair.
 Runbook: docs/research-logs/2026-09-21-pactwright-implementation-trial-spec.md
 Trial records: docs/research-logs/implementation-trial/
 
-Read the restart runbook and ChatGPT repair hand-off for the implementation PR
-in sb-dev/pactwright. Fetch the exact repair commit in a fresh session.
+Repository: sb-dev/pactwright
+Review branch: trial/reimplementation
+Write policy: review/comment only; do not commit source changes
+
+Read the restart runbook and ChatGPT repair hand-off for the implementation PR.
+Fetch the exact repair commit in a fresh session.
 Apply code-review-and-quality, post-patch-validation and verification skills.
 
 Review the assigned correction independently against its unit/ACs. Reproduce the
@@ -1337,11 +1345,15 @@ Publication is an external effect, not a local test. Gate C readiness does **not
 Runbook: docs/research-logs/2026-09-21-pactwright-implementation-trial-spec.md
 Trial records: docs/research-logs/implementation-trial/
 
+Target repository/branch/PR: exactly the values named by the first unaccepted
+I6 checkpoint unit. If repository, branch, PR base, writer or effect scope is
+missing, return BLOCKED and do not choose defaults.
+Required source: the Gate C accepted implementation must already be merged and
+its resulting default-branch SHA recorded.
+
 Read the restart runbook, Gate C, release ledger and remaining CP1 units.
-Resolve the first unaccepted unit's exact repository, branch, PR base and writer
-from its embedded checkpoint contract. Refuse to run it if any target is implicit.
-Verify the accepted implementation PR has been merged before any release unit.
-Execute that I6 unit only.
+Resolve the first unaccepted unit's exact target from its embedded checkpoint
+contract and execute that I6 unit only.
 Require its actual merge/publication/Kakeibo authority; reuse existing approval
 rather than asking again. Apply release-readiness and verification skills.
 
@@ -1370,9 +1382,13 @@ fresh proof, not an overwritten artifact or hidden exception.
 Runbook: docs/research-logs/2026-09-21-pactwright-implementation-trial-spec.md
 Trial records: docs/research-logs/implementation-trial/
 
-Use GitHub to review the latest I6 unit at the exact repository/branch/PR named
-by its checkpoint contract. Read the restart runbook, Gate C, authorisations,
-release/external checkpoint and current hand-off.
+Target repository/branch/PR: exactly the values named by the I6 checkpoint
+unit under review. If any target is missing or the evidence belongs to another
+branch/version, return BLOCKED rather than inferring it.
+Write policy: review/comment only unless a later explicit repair hand-off exists.
+
+Use GitHub to review the latest I6 unit at that exact target. Read the restart
+runbook, Gate C, authorisations, release/external checkpoint and current hand-off.
 Follow linked release/CI and Kakeibo PR evidence through their connected sources;
 verify current public registry facts through official sources where necessary.
 
@@ -1396,7 +1412,7 @@ Use GitHub to preserve source, reviewed decisions and evidence. Keep the origina
 
 ## Sources and execution status
 
-This Version 5 runbook incorporates the pinned repository authorities, A1 execution records, the in-progress A2 branch protocol and PR #39's discussion. It designs and governs future work; it does not turn reported defects into fresh reproductions or claim workflows are deployed before their evidence exists. Official tooling references used by the automation design were last checked on 21 September 2026; I2 must verify the exact pinned installed versions again before deployment.
+This Version 6 runbook incorporates the pinned repository authorities, A1 execution records, the in-progress A2 branch protocol and PR #39's discussion. It designs and governs future work; it does not turn reported defects into fresh reproductions or claim workflows are deployed before their evidence exists. Official tooling references used by the automation design were last checked on 21 September 2026; I2 must verify the exact pinned installed versions again before deployment.
 
 - **[S1]** [PR #39](https://github.com/sb-dev/pactwright/pull/39) and its [review comment](https://github.com/sb-dev/pactwright/pull/39#issuecomment-5756888228).
 - **[S2]** [Pinned checkpoint set](https://github.com/sb-dev/pactwright/tree/19c66d5f2368932ff05306db1fae8da8ec5810dd/docs/checkpoints).
@@ -1409,4 +1425,4 @@ This Version 5 runbook incorporates the pinned repository authorities, A1 execut
 - **[S9]** [GitHub secure workflow use](https://docs.github.com/en/actions/reference/security/secure-use).
 - **[S10]** [Anthropic GitHub Action security guidance](https://github.com/anthropics/claude-code-action/blob/main/docs/security.md) and [integration documentation](https://code.claude.com/docs/en/github-actions).
 
-**Pactwright — Analysis and Reimplementation Trial v5**
+**Pactwright — Analysis and Reimplementation Trial v6**
