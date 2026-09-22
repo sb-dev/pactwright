@@ -1,0 +1,64 @@
+A2-V — live registry queries made by the reference's own test suite
+===================================================================
+
+Counted with strace, per test file, on the pinned reference. Each line is a
+real child process that queried the public npm registry.
+
+  $ strace -f -e trace=execve -o trace node --test --import tsx tests/upgrade.test.ts
+  $ grep -o 'execve("[^"]*", \[[^]]*view[^]]*\]' trace | sed 's/execve("[^"]*", \[//; s/"//g' | sort | uniq -c
+
+tests/upgrade.test.ts
+     16 pnpm, view, pactwright, versions, --json
+      8 npm,  view, pactwright, versions, --json
+
+tests/transaction.test.ts
+      4 pnpm, view, pactwright, versions, --json
+      2 npm,  view, pactwright, versions, --json
+
+Thirty registry queries per `pnpm test`. (Each appears twice in the raw trace —
+once as the shim, once as the resolved interpreter path; the counts above are
+the deduplicated child processes.)
+
+Cause: `upgradeRuntime` and `selectTarget` take a `view` seam that defaults to
+`packageManagerView` (src/environment/select-target.ts:126). These five tests
+call `upgradeRuntime` without supplying it:
+
+  tests/upgrade.test.ts:115  upgrade: re-entry runs through the newly installed runtime
+  tests/upgrade.test.ts:132  upgrade: a failed install restores the previous environment
+  tests/upgrade.test.ts:156  upgrade: a failed target recovers the previous valid config and lock
+  tests/upgrade.test.ts:295  upgrade: the agent pack and extension identities are not touched
+  tests/transaction.test.ts:182  transaction: a runtime upgrade does not hold the writer lock across re-entry
+
+Sibling tests in the same file DO supply it (tests/upgrade.test.ts:82,
+`view: () => ["0.0.1", "0.0.2"]`), so the omission is an oversight, not a design.
+
+What the registry currently answers:
+
+  $ pnpm view pactwright versions --json
+  [
+    "0.0.1"
+  ]
+
+Offline, all five fail. Inside a network namespace with only loopback, and with
+commit signing disabled so that git is not the variable:
+
+  exit=1  pass=678  fail=5
+    not ok 612 - transaction: a runtime upgrade does not hold the writer lock across re-entry
+    not ok 622 - upgrade: re-entry runs through the newly installed runtime
+    not ok 623 - upgrade: a failed install restores the previous environment
+    not ok 624 - upgrade: a failed target recovers the previous valid config and lock
+    not ok 630 - upgrade: the agent pack and extension identities are not touched
+
+`upgrade: re-entry runs through the newly installed runtime` took 71 seconds
+before failing: `spawnSync` waits out its timeout on the unreachable registry.
+
+Discarded first attempt, recorded so it is not mistaken for a finding: without
+disabling commit signing, 17 tests failed offline. Twelve of those were this
+sandbox's own git `gpg.program`, which calls a local service over loopback and
+cannot be reached inside the namespace:
+
+    Command failed: git -C … commit -q -m seed
+    MCP server request failed … dial tcp 127.0.0.1:42567: network is unreachable
+
+Those twelve are an artefact of the host, not of Pactwright. Only the five above
+are the product's network dependency.

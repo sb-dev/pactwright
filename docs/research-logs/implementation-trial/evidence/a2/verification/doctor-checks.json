@@ -1,0 +1,47 @@
+{
+  "root": "/home/user/pactwright",
+  "status": "healthy",
+  "runtime": "0.0.2",
+  "checks": [
+    {
+      "name": "package-manager",
+      "status": "healthy",
+      "detail": "pnpm@11.7.0 (declared in package.json)"
+    },
+    {
+      "name": "configuration",
+      "status": "healthy",
+      "detail": "configuration, lifecycle (version 2) and lock load through the canonical path"
+    },
+    {
+      "name": "runtime",
+      "status": "healthy",
+      "detail": "runtime 0.0.2 matches the lock"
+    },
+    {
+      "name": "capabilities",
+      "status": "healthy",
+      "detail": "agent pack \"@pactwright/standard@0.0.2\" provides every required capability"
+    },
+    {
+      "name": "lock-agreement",
+      "status": "healthy",
+      "detail": "environment_lock_hash sha256:76221cac587d9d6a4451d591a7738e88ceabca2c766eea90599bfc894a4cec68"
+    },
+    {
+      "name": "extensions",
+      "status": "healthy",
+      "detail": "no extensions are enabled"
+    },
+    {
+      "name": "generated-drift",
+      "status": "healthy",
+      "detail": "10 generated files match the resolved environment"
+    },
+    {
+      "name": "validation",
+      "status": "healthy",
+      "detail": "the Project Graph satisfies the complete validation contract"
+    }
+  ]
+}

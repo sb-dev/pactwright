@@ -1,0 +1,59 @@
+=== V14: the packed boundary ===
+
+pactwright-0.0.2.tgz  206491 bytes  sha256:87f4dce89127237f…
+  entries: 143
+  top level: LICENSE README.md dist package.json 
+
+pactwright-standard-0.0.2.tgz  8559 bytes  sha256:e35431fcb5cfb626…
+  entries: 12
+  top level: LICENSE README.md agents dist pack.yml package.json skills 
+
+  A consumer gets dist/ and three files; src/, tests/ and tests/fixtures/
+  are absent, as they should be. Two things about what IS shipped:
+
+    shipped: dist/eval/core-suite.js
+    shipped: dist/execute/scripted.js
+
+  - dist/eval/core-suite.js ships, so an installed consumer CAN run
+    `pactwright eval`. That is the point, and it is also why V03's
+    misattribution reaches consumers rather than staying in the harness.
+  - dist/execute/scripted.js ships too. `scriptedExecutor`,
+    `promptRespectingExecutor` and `promptSaysNothing` are described in
+    source as "the harness's own test double" and cannot be selected by
+    any configuration, yet they are in the published artefact and in the
+    package's single public export. The names below are what the shipped
+    type declaration offers a consumer:
+      promptRespectingExecutor
+      promptSaysNothing
+      scriptedExecutor
+
+=== V15: the network boundary ===
+  running the reference's own test gate inside a network namespace with
+  no interfaces but loopback.
+  exit=1  pass=678  fail=5
+    not ok 612 - transaction: a runtime upgrade does not hold the writer lock across re-entry
+    not ok 622 - upgrade: re-entry runs through the newly installed runtime
+    not ok 623 - upgrade: a failed install restores the previous environment
+    not ok 624 - upgrade: a failed target recovers the previous valid config and lock
+    not ok 630 - upgrade: the agent pack and extension identities are not touched
+
+  Production paths that spawn a package manager, and their test cover:
+    src/index.ts:227:  packageManagerInstaller,
+    src/index.ts:245:  packageManagerView,
+    src/environment/select-target.ts:67:export const packageManagerView: PackageView = ({ name, manager }) => {
+    src/environment/select-target.ts:68:  const result = spawnSync(manager, ["view", name, "versions", "--json"], {
+    src/environment/select-target.ts:126:  const view = seams.view ?? packageManagerView;
+    src/extension/manage.ts:24:import { packageManagerInstaller, type PackageInstaller } from "../upgrade.js";
+    src/extension/manage.ts:232:    { installer: options.install ?? packageManagerInstaller },
+    src/extension/manage.ts:404:  const install = options.install ?? packageManagerInstaller;
+    src/extension/manage.ts:612:  const install = options.install ?? packageManagerInstaller;
+    src/extension/manage.ts:721:    { installer: options.install ?? packageManagerInstaller },
+    src/eval/acquire.ts:11:import { packageManagerInstaller } from "../upgrade.js";
+    src/eval/acquire.ts:67:    const installer = options.installer ?? packageManagerInstaller;
+    src/upgrade.ts:114:export const packageManagerInstaller: PackageInstaller = ({ root, manager, spec }) => {
+    src/upgrade.ts:123:  const result = spawnSync(manager, args, { cwd: root, encoding: "utf8", timeout: 300_000 });
+    src/upgrade.ts:232:  const install = options.install ?? packageManagerInstaller;
+
+    Every test injects a double for these (installer:, view:, install:),
+    so no test executes the real one. The seam is well placed; the
+    consequence is that the registry contract behind it is unproven.

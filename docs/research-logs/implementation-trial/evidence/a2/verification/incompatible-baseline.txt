@@ -1,0 +1,71 @@
+A2-V — the Step 28 baseline comparison, executed
+================================================
+
+Checkpoint 1 Step 28's comparison names a released baseline. Run verbatim
+against the pinned reference, with the real registry reachable:
+
+  $ node dist/cli.js --version
+  0.0.2
+
+  $ node dist/cli.js eval --baseline "@pactwright/standard@0.0.1" \
+                          --candidate ./packages/standard
+  pactwright: could not acquire the baseline "@pactwright/standard@0.0.1"
+  Validation problems:
+    - /tmp/pactwright-eval-side-eUqckA/node_modules/.pnpm/@pactwright+standard@0.0.1/node_modules/@pactwright/standard/pack.yml:
+      pack "@pactwright/standard@0.0.1" requires pactwright 0.0.1;
+      this runtime is 0.0.2 [incompatible-runtime]
+  EXIT=1
+
+executed-fail, exit 1.
+
+Why, verified against the published artefact rather than inferred
+---------------------------------------------------------------
+
+  $ npm pack @pactwright/standard@0.0.1 && tar xzf pactwright-standard-0.0.1.tgz
+  $ head -3 package/pack.yml
+  name: "@pactwright/standard"
+  version: 0.0.1
+  pactwright: 0.0.1
+
+  $ head -3 packages/standard/pack.yml        # the reference's own pack
+  name: "@pactwright/standard"
+  version: 0.0.2
+  pactwright: 0.0.2
+
+`satisfiesRange` (src/pack/locate.ts:27) treats a range with no caret as an
+exact version, so `satisfiesRange("0.0.2", "0.0.1")` is false. Every released
+pack pins the runtime it shipped with, exactly, so **every released baseline is
+incompatible with every later runtime by construction**. PR #39's R06 third
+sub-claim is confirmed, and it is a release-policy decision (what `pack.yml`
+should pin) rather than a defect in the comparison code.
+
+Two things this qualifies
+------------------------
+
+1. **Acquisition itself works.** The baseline was installed into its own
+   temporary project at the exact requested version, and the incompatibility was
+   detected there rather than after silently resolving the local `0.0.2`. The
+   isolation that `tests/execute.test.ts:380` covers held against the real
+   registry, and the temporary directory was removed on the failure path. That
+   is a genuine improvement and should be retained.
+
+2. **The literal Step 28 command does not reach the false-agreement banner.**
+   PR #39's R06 first sub-claim says "This repository's `.pactwright/config.yml`
+   has no `execution:` block, so the literal Step 28 command takes exactly this
+   path." It does not: acquisition fails first, and a reader running Step 28
+   today sees `incompatible-runtime`, not "No differences". The false-agreement
+   output is real — see V01 — but it is reached when both sides *do* acquire,
+   for example with two path sources:
+
+  $ node dist/cli.js eval --baseline ./packages/standard --candidate ./packages/standard
+  Comparison of suite "core-delivery"
+    baseline:  @pactwright/standard@0.0.2 (sha256:f7c969ea…)
+    candidate: @pactwright/standard@0.0.2 (sha256:f7c969ea…)
+    changed:   nothing
+
+  No differences: every case behaved identically.
+  EXIT=0
+
+  The two sub-claims are therefore both true of the code and cannot both be
+  demonstrated by the same command. A3 should not treat one execution as
+  evidence for the other.

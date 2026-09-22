@@ -1,0 +1,20 @@
+command                            graph-nodes distinct edges.yml git-spawns       ms
+---------------------------------- -------- -------- -------- -------- --------
+validate                                 16       16        1       48      210
+doctor                                   32       16        2       48      220
+sync                                     16       16        1        0      181
+lifecycle status                         16       16        1        0      153
+context intent-quick-start-a1b2          16       16        1        0      169
+
+git subprocesses by argument vector — validate:
+     12 git, -C, /home/user/pactwright, rev-parse, HEAD
+     12 git, -C, /home/user/pactwright, ls-files, --others, --exclude-standard
+     12 git, -C, /home/user/pactwright, diff, HEAD, --name-only, --
+     12 git, -C, /home/user/pactwright, diff, HEAD, --
+
+Each row is one identical query, repeated. `repositoryRevision`
+(src/graph/repository.ts:136) is a pure function of the working tree at an
+instant and is not memoised; `validate/kernel.ts:499` calls it once per
+replay check and `validate.ts:97` once more. Every call spawns four git
+processes and `workingTreeDigest` hashes the contents of every untracked,
+non-ignored file. The cost is O(graph nodes x working-tree size).

@@ -1,0 +1,23 @@
+seed	file	verdict	failing	first_failure	aimed_at
+s01-compare-ignores-one-sided-error	src/eval/compare.ts	KILLED	1	compare: a case that errors only on the candidate side is a regression	compare: a case that errors only on the candidate side is a regression
+s02-compare-never-regresses	src/eval/compare.ts	KILLED	2	compare: a case that errors only on the candidate side is a regression	compare: a regression is visible at capability, agent and case
+s03-compare-drops-unchanged-guard	src/eval/compare.ts	KILLED	5	compare: a case added or removed between runs is reported, not silently dropped	compare: an unchanged candidate correctly reports no regressions
+s04-compare-ignores-added-case	src/eval/compare.ts	KILLED	1	compare: a case added or removed between runs is reported, not silently dropped	compare: a case added or removed between runs is reported, not silently dropped
+s05-evalpassed-ignores-evaluated	src/eval/runner.ts	SURVIVED	0	-	the `evaluated` flag added to stop an unevaluated run passing (R06)
+s06-evalpassed-ignores-error	src/eval/runner.ts	KILLED	5	eval: a pack whose every prompt declines the work regresses at its cases	runEval: a failing candidate is reported as a case error, not a crash
+s07-noexecutor-claims-evaluated	src/eval/runner.ts	KILLED	1	cli: eval --json marks every case unevaluated without an executor	cli: eval --json marks every case unevaluated without an executor
+s08-empty-run-passes	src/eval/runner.ts	KILLED	1	runEval: an empty suite never passes the gate	runEval: an empty suite never passes the gate
+s09-assertion-throw-becomes-pass	src/eval/runner.ts	SURVIVED	0	-	an assertion that throws must not be read as a pass
+s10-denials-dropped	src/execute/claude-code.ts	KILLED	1	executor: permission denials are structured, not prose to pattern-match	executor: permission denials are structured, not prose to pattern-match
+s11-missing-binary-becomes-success	src/execute/claude-code.ts	KILLED	1	executor: a binary that does not run is reported, not degraded into a no-op	executor: a binary that does not run is reported, not degraded into a no-op
+s12-subtype-failure-ignored	src/execute/claude-code.ts	KILLED	1	executor: a non-success subtype fails even without is_error	executor: a non-success subtype fails even without is_error
+s13-unparseable-output-becomes-success	src/execute/claude-code.ts	SURVIVED	0	-	executor: output that is not JSON fails loudly (control: a no-op edit)
+s14-prompt-read-failure-spawns-anyway	src/execute/claude-code.ts	KILLED	1	executor: an unreadable agent prompt is reported before anything is spawned	executor: an unreadable agent prompt is reported before anything is spawned
+s15-review-without-verdict-passes	src/execute/select.ts	KILLED	1	executor: a Review that reports no verdict fails rather than being guessed	executor: a Review that reports no verdict fails rather than being guessed
+s16-verdict-precedence-reversed	src/execute/select.ts	SURVIVED	0	-	the outcome parser's precedence: a blocked review must not read as a pass
+s17-executor-failure-not-propagated	src/execute/select.ts	KILLED	2	cli: lifecycle run stops with a stage failure when no executor exists (exit 1)	executor: none refuses the first automatic step without pretending
+s18-delivery-revision-not-recorded	src/execute/select.ts	KILLED	1	executor: lifecycle run performs Delivery through the interface and closes	a Delivery records the identity of what it delivered (§53 precondition 2)
+s19-isolation-check-removed	src/eval/acquire.ts	KILLED	1	acquire: a side is installed into its own project, not resolved from node_modules	acquire: a side is installed into its own project, not resolved from node_modules
+s20-acquire-installs-without-version	src/eval/acquire.ts	KILLED	1	acquire: a side is installed into its own project, not resolved from node_modules	acquire: the exact version is named, so a frozen install would be the bug
+s21-promptsaysnothing-always-false	src/execute/scripted.ts	KILLED	3	eval: a pack whose every prompt declines the work regresses at its cases	executor: promptSaysNothing recognises a pack that refuses to work
+s22-scripted-decline-becomes-success	src/execute/scripted.ts	KILLED	1	executor: a scripted handler that declines is a failure, not a silent success	executor: a scripted handler that declines is a failure, not a silent success
