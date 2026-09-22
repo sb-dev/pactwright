@@ -1,0 +1,17 @@
+# The documented repository gate, run at the A2-R base on Linux
+# base: 69cdc95a9d5ed578ef21c165b359ace8f5a2954f (= 19c66d5f + trial overlay)
+# node: v22.22.2  pnpm: 11.7.0  platform: Linux 6.18.44-fc-v37
+# date: 2026-09-22T07:40:02Z
+$ pnpm verify
+exit 0 — format:check, lint, typecheck, 684 tests (683 pass / 0 fail / 1 skipped), build, verify:self
+
+verify:self reported:
+  Pactwright 0.0.2 — healthy
+  Valid: 16 nodes, 12 edges, 4 lineages
+  project_graph_revision: sha256:63253100fa819a3c41f6e66896c3492488633707a8231ae5fe70a088816f16f8
+  environment_lock_hash:  sha256:76221cac587d9d6a4451d591a7738e88ceabca2c766eea90599bfc894a4cec68
+  two consecutive syncs: all ten generated files unchanged
+
+# Both hashes match the ones A1 recorded for the reference
+# (evidence/a1/baseline-checks.md). A1's macOS run of this gate exited 1 on
+# tests/execute.test.ts:392; that failure did not reproduce here.
