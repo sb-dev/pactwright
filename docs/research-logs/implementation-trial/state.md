@@ -99,9 +99,9 @@ Progress is recorded here, not in the runbook.
 | A2-D distribution/recovery | **not complete** | no `trial/a2-distribution` branch exists on GitHub at this record | pending |
 | A2-V verification/evaluation | complete | `trial/a2-verification@9eabe5234a7e793a418777b54ebb086390376aff` | v4 |
 | A2-R specs/checkpoints | complete | `trial/a2-runbooks@f6d75ccd6fd0589f49bd40899d9f12a9203482a7` | v4 |
-| A2 coordinator publication | pending | waits for all five audit commits | v8 |
-| A2 ChatGPT coverage review | pending | follows coordinator publication | v8 |
-| A3 | not started | starts after A2 gate | v8 |
+| A2 coordinator publication | pending | waits for all five audit commits | v9 |
+| A2 ChatGPT coverage review | pending | follows coordinator publication | v9 |
+| A3 | not started | starts after A2 gate | v9 |
 
 A missing required audit branch means that audit is not complete. Do not infer
 completion from an intended local session, a conversation statement or another
