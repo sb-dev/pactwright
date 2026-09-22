@@ -6,7 +6,7 @@ points here rather than restating a SHA, a branch or a path.
 **Runbook:** [`docs/research-logs/2026-09-21-pactwright-implementation-trial-spec.md`](../2026-09-21-pactwright-implementation-trial-spec.md)
 (v10, 22 September 2026) — Version 10 is the current execution contract. Progress is tracked here; the runbook contains instructions only.
 
-**Last writer:** ChatGPT, runbook/progress separation correction, 22 September 2026.
+**Last writer:** Claude Code, A2 coordinator publication, 22 September 2026.
 
 ## Identities
 
@@ -85,7 +85,8 @@ committed under `evidence/a1/`.
 | [`evidence/a1/a2-checkouts.md`](evidence/a1/a2-checkouts.md) | The five A2 checkouts, their branches and the serial publication protocol |
 | [`evidence/a1/logs/`](evidence/a1/logs/) | The command logs behind the checks, with the command, working directory and exit code on every one |
 | [`results.md`](results.md) | The phase-by-phase index; A1's entry is the baseline |
-| [`analysis/`](analysis/) | Empty until A2 publishes; `analysis/README.md` holds the five assignments |
+| [`analysis/`](analysis/) | The five A2 reports (`graph.md`, `lifecycle.md`, `distribution.md`, `verification.md`, `runbooks.md`); `analysis/README.md` holds the five assignments |
+| [`evidence/a2/`](evidence/a2/) | Scoped A2 evidence: `lifecycle/` (probe run log), `verification/` (measurements, fault seeds, discarded measurements), `runbooks/logs/` (executed checkpoint commands). Graph and distribution evidence sits beside their probes under `tools/implementation-trial/a2-graph/` and `tools/implementation-trial/a2-distribution/logs/` |
 
 ## Execution progress
 
@@ -96,19 +97,107 @@ Progress is recorded here, not in the runbook.
 | A1 | complete | PR #40 A1 hand-off/review history | v3 |
 | A2-G graph/persistence | complete | `trial/a2-graph@2a5730d83a6e7a718310cc8bc3bf0d81ba18640c` | v3 |
 | A2-L lifecycle/agents | complete | `trial/a2-lifecycle@2ff14a65b8775cc85dc24e35260d5a37cd87f4cf` | v3 |
-| A2-D distribution/recovery | **not complete** | no `trial/a2-distribution` branch exists on GitHub at this record | use current A2 instructions when started |
+| A2-D distribution/recovery | complete | `trial/a2-distribution@ace0492ff6ed37ecf6c9be18e154bc53e3c36672` | v3 |
 | A2-V verification/evaluation | complete | `trial/a2-verification@9eabe5234a7e793a418777b54ebb086390376aff` | v4 |
 | A2-R specs/checkpoints | complete | `trial/a2-runbooks@f6d75ccd6fd0589f49bd40899d9f12a9203482a7` | v4 |
-| A2 coordinator publication | pending | waits for all five audit commits | v10 |
-| A2 ChatGPT coverage review | pending | follows coordinator publication | v10 |
+| A2 coordinator publication | complete | `trial/restart-analysis@a04ecf60adc2eabe109fae8fcc28eacbed72bafe` plus the coordinator state commit; see [A2 integration](#a2-integration) | v10 |
+| A2 ChatGPT coverage review | pending | reviews `trial/restart-analysis` at the A2 integration head recorded below | v10 |
 | A3 | not started | starts after A2 gate | v10 |
 
 A missing required audit branch means that audit is not complete. Do not infer
 completion from an intended local session, a conversation statement or another
 audit's progress.
 
+## A2 integration
+
+Coordinator publication, 22 September 2026. Actor: Claude Code — session
+model id `claude-fable-5-1` (resolved from the session record, not inferred),
+Claude Code CLI `2.1.278`, Node `v22.22.2`, pnpm `11.7.0`, Linux container.
+
+Start of the writer turn: `trial/restart-analysis` at
+`911161ebc2288911ddbc12961fb854347afd6bf5`, fetched and fast-forwarded before
+any write; the remote head was re-fetched and unchanged immediately before the
+push. A1-reviewed head: `9aaeb0852c9dc063a2a56d7523c230e8544c904e`.
+
+### Verification of each audit commit
+
+For every audit the coordinator confirmed, with `git merge-base --is-ancestor`
+and `git diff --name-status <parent> <commit>`, that the audit commit is the tip
+of its assigned branch, that it descends from that branch's pushed overlay
+commit, that the overlay is the sole commit on top of the pinned reference
+`19c66d5f2368932ff05306db1fae8da8ec5810dd`, that the overlay changes nothing
+under `src`, `packages`, `tests`, `specs`, `.pactwright`, `.claude`, `.github`,
+`examples`, `skills-lock.json`, `package.json` or `pnpm-lock.yaml`, and that the
+audit commit only adds files under its report/probe/evidence paths. No audit
+commit modifies or deletes an existing file. None was rejected.
+
+| Audit | Source branch | Audit commit (source) | Overlay commit (pushed) | Cherry-picked onto `trial/restart-analysis` | Files |
+|---|---|---|---|---|---|
+| A2-G | `trial/a2-graph` | `2a5730d83a6e7a718310cc8bc3bf0d81ba18640c` | `209cdcddf187c88a4b3cf0c6e2002c782c7e9dc5` | `69210dff222546cca0c12cdba31a8db1f9ba5289` | `analysis/graph.md`, `tools/implementation-trial/a2-graph/**` (11 files) |
+| A2-L | `trial/a2-lifecycle` | `2ff14a65b8775cc85dc24e35260d5a37cd87f4cf` | `7f2678375bcf3fdd604dca1cda4d484eb2be0aaf` | `f42edb540b60503b1fafc60f43fd08afa913f051` | `analysis/lifecycle.md`, `evidence/a2/lifecycle/run-all.log`, `tools/implementation-trial/a2/lifecycle/**` (10 files) |
+| A2-D | `trial/a2-distribution` | `ace0492ff6ed37ecf6c9be18e154bc53e3c36672` | `38efdf101030d24769873ab612e8b6078b0a8a80` | `c2722847d87f93fd9e2e44816a582e107eae4f73` | `analysis/distribution.md`, `tools/implementation-trial/a2-distribution/**` (24 files, including `logs/`) |
+| A2-V | `trial/a2-verification` | `9eabe5234a7e793a418777b54ebb086390376aff` | `9335f29e0f15f4356222948bc8ea53a45032a09f` | `bef82d197cb6dd5568ada6a386f04329880d7b80` | `analysis/verification.md`, `evidence/a2/verification/**` (12 files), `tools/implementation-trial/a2/verification/**` (13 files) |
+| A2-R | `trial/a2-runbooks` | `f6d75ccd6fd0589f49bd40899d9f12a9203482a7` | `69cdc95a9d5ed578ef21c165b359ace8f5a2954f` | `a04ecf60adc2eabe109fae8fcc28eacbed72bafe` | `analysis/runbooks.md`, `evidence/a2/runbooks/logs/**` (7 files) |
+
+The five commits were cherry-picked with `git cherry-pick -x`, in the order
+A2-G, A2-L, A2-D, A2-V, A2-R, onto `911161eb`. No cherry-pick conflicted, so
+no report or evidence content was touched by the coordinator; each integrated
+commit carries the source commit's message, author and a `(cherry picked
+from commit …)` line. No temporary branch was merged, and none has been
+deleted.
+
+### Deviations and qualifications for the coverage review
+
+- **Overlay SHAs.** The overlay commits recorded in
+  [`evidence/a1/a2-checkouts.md`](evidence/a1/a2-checkouts.md) (`be08d028`,
+  `b185f601`, `290f3edb`, `037f01c8`, `a295986a`) do not exist on GitHub; the
+  A1 checkouts were separate object stores and each session pushed its own
+  overlay commit, listed in the table above. Every pushed overlay was verified
+  against the same production-path check A1 documents, with zero production
+  paths changed. The lifecycle overlay omits
+  `tools/implementation-trial/measure-source.ts`; that has no effect on the
+  cherry-pick, which applies only the audit commit's diff.
+- **Probe layout.** A2-G and A2-D ran under the v3 prompts, before the v4
+  permitted-path table existed, and placed probes and logs under
+  `tools/implementation-trial/a2-graph/` and
+  `tools/implementation-trial/a2-distribution/` rather than
+  `tools/implementation-trial/a2/<area>/` and `evidence/a2/<area>/`. Version
+  10 records the graph layout as an accepted, already-established exception;
+  the distribution layout is the same v3 convention but is not named in the
+  table because the branch was not yet on GitHub when v10 was written. The
+  coordinator accepted it on the same basis: both paths are trial probe and
+  evidence locations under `tools/implementation-trial/`, and neither commit
+  touches a production, package, specification or checkpoint file. The
+  coverage review may object to that acceptance.
+- **Hand-offs.** No A2 session posted a hand-off comment on PR #40; the PR
+  carries only the A1 hand-off and A1 review comments. Each audit's hand-off
+  is its commit message on its branch, and this file's progress table. The
+  coordinator treated the branch tips as the handed-off report SHAs.
+- **A1 review status.** The last recorded A1 decision on PR #40 is
+  `CHANGES REQUIRED` at `9aaeb085` (findings A1-F01–F03). This file records A1
+  as complete on the maintainer's authority; the coordinator did not find an
+  A1 `PASS` comment and did not resolve that itself.
+
+### Checks run on the integrated head
+
+| Check | Result |
+|---|---|
+| `git diff --name-only 9aaeb0852c9dc063a2a56d7523c230e8544c904e...a04ecf60` | 86 paths: the runbook, this file, `analysis/README.md`, the five reports, 20 files under `evidence/a2/`, 58 under `tools/implementation-trial/` — nothing else |
+| Same diff restricted to `src packages tests specs docs/checkpoints docs/specs .pactwright .claude .github examples skills-lock.json package.json pnpm-lock.yaml pnpm-workspace.yaml tsconfig*.json eslint.config.js .prettier*` | empty |
+| `pnpm install --frozen-lockfile` at `a04ecf60` | `executed-pass`, exit 0 |
+| `pnpm verify` at `a04ecf60` (format check, lint, typecheck, tests, build) on Node 22 | `executed-pass`, exit 0 — 562 tests, 562 pass, 0 fail, 0 skipped |
+
+The audit probes under `tools/implementation-trial/` are not in any
+`tsconfig` include set, so `typecheck` does not compile them; `prettier` and
+`eslint` do see them and pass. They were written against the reference's
+runtime and are not expected to run against this branch's `main`-based
+runtime; they are the record of what A2 executed, not a suite for this branch.
+
+Next owner: ChatGPT, the runbook's A2 independent coverage review, on
+PR #40 at the A2 integration head.
+
 ## Instruction provenance
 
-Graph/lifecycle were executed with v3 A2 prompts; verification/runbooks with v4.
+Graph, lifecycle and distribution were executed with v3 A2 prompts (the distribution audit commit is dated 21 September 2026 23:35 UTC, before the v4 runbook of 22 September 06:51 UTC introduced the permitted-path table); verification/runbooks with v4.
 Those branch copies are the historical instruction snapshots for their results.
 Version 10 keeps A2 as an executable instruction section. Completed sessions retain their original v3/v4 branch snapshots; remaining A2 work uses the current section. Do not encode progress back into the runbook.
