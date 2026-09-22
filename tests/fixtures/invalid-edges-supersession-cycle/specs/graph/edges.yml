@@ -1,7 +1,0 @@
-edges:
-  - source: intent-hello-world-a1b2
-    type: supersedes
-    target: intent-hello-world-b2c3
-  - source: intent-hello-world-b2c3
-    type: supersedes
-    target: intent-hello-world-a1b2

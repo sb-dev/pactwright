@@ -1,3 +1,0 @@
-# repository-analysis
-
-Fixture skill.

@@ -1,3 +1,0 @@
-# contract-writing
-
-Fixture skill.
