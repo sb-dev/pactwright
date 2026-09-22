@@ -1,6 +1,6 @@
 # Pactwright — Analysis and Reimplementation Trial
 
-**Version:** 3 · **Date:** 21 September 2026  
+**Version:** 4 · **Date:** 21 September 2026  
 **Status:** Execution specification; no step is completed by this document.  
 **Repository:** `sb-dev/pactwright`  
 **Reference implementation:** `19c66d5f2368932ff05306db1fae8da8ec5810dd` (`review/checkpoint-1`).  
@@ -44,7 +44,13 @@ Both agents collaborate on the **same task branch and PR, sequentially**. Separa
 
 | Branch | Purpose | PR base |
 |---|---|---|
-| `trial/restart-analysis` | Analysis records, acceptance tooling, revised specs/checkpoints | Default branch recorded at A1 |
+| `trial/restart-analysis` | Shared analysis records, acceptance design, revised specs/checkpoints | Default branch recorded at A1 |
+| `trial/a2-base` | Temporary immutable A2 input seed: pinned reference + trial-only planning inputs | `19c66d5f2368932ff05306db1fae8da8ec5810dd` |
+| `trial/a2-graph` | A2 graph/persistence audit | `trial/a2-base` |
+| `trial/a2-lifecycle` | A2 lifecycle/agent-execution audit | `trial/a2-base` |
+| `trial/a2-distribution` | A2 distribution/recovery/concurrency audit | `trial/a2-base` |
+| `trial/a2-verification` | A2 tests/evaluation/simplicity audit | `trial/a2-base` |
+| `trial/a2-runbooks` | A2 specifications/checkpoint audit | `trial/a2-base` |
 | `trial/restart-guards` | Small, separately reviewed CI/control bootstrap | Default branch |
 | `trial/reimplementation` | Replacement runtime and its accepted capabilities | Default branch once analysis and guardrails have landed |
 
@@ -144,13 +150,28 @@ Run documented installation, verification and available packed-consumer checks
 in a disposable reference checkout. Record failures, skips and unavailable
 external dependencies separately; do not fix the reference. Measure comparable
 runtime/pack source, comments, tests, prompts and dependencies separately.
-Prepare five isolated A2 analysis checkouts whose production files match the
-pinned reference; overlay only the runbook/state/evidence needed by the sessions.
-Their report commits must not import reference production code into planning.
+Prepare the A2 audit branches explicitly. From the pinned reference create
+`trial/a2-base`, then overlay only the runbook, state.md and captured trial
+evidence needed for independent analysis. Commit that overlay once as
+`docs(trial): seed A2 audit inputs`; record its SHA as `a2_base_sha` in state.md.
+The production tree at that commit must match the pinned reference outside the
+trial-only paths. From exactly `a2_base_sha`, create and push:
 
-Commit only A1 planning/evidence files with an A1 conventional-commit subject,
-push without force and post the standard hand-off to ChatGPT. Record exactly
-which checks ran; do not describe inherited PR claims as your results.
+- `trial/a2-graph`
+- `trial/a2-lifecycle`
+- `trial/a2-distribution`
+- `trial/a2-verification`
+- `trial/a2-runbooks`
+
+Create one isolated checkout per branch and record branch, checkout path and
+base SHA in state.md. Do not open separate PRs for these temporary branches.
+Their audit commits will later be cherry-picked by the A2 coordinator onto
+`trial/restart-analysis`; audit sessions must never commit directly there.
+
+Commit only A1 planning/evidence files on `trial/restart-analysis` with an A1
+conventional-commit subject, push without force and post the standard hand-off
+to ChatGPT. Record exactly which checks ran; do not describe inherited PR claims
+as your results.
 ```
 
 ### ChatGPT prompt
@@ -181,7 +202,17 @@ claim to have executed commands you only inspected. Use the shared hand-off.
 
 Each report includes successes as well as defects. For a finding record: stable ID, requirement, public trigger, source/test locations, expected/actual effect, evidence, cause and acceptance proposal. Classify cause as **missing requirement, ambiguity, contradiction, unenforced requirement, inadequate test or environment assumption**. Do not assume the checkpoints caused every defect.
 
-Run the five prompts below in separate sessions. They produce report commits in their assigned local checkouts; the A1 coordinator integrates only reports/probes, serially, into the **same analysis branch/PR**. No five competing writers on that branch.
+Run the five prompts below in separate sessions. Each session commits to its fixed temporary branch, never to `trial/restart-analysis`. The only permitted changes are its report plus scoped trial probes/evidence. After all five audit commits are pushed, run the A2 coordinator prompt to cherry-pick those commits, in order, onto the shared analysis branch/PR. The coordinator verifies that no audit commit changes production runtime, package, checkpoint or specification files. No five competing writers on the shared branch.
+
+| Audit | Branch | Commit subject marker | Permitted report/probe paths |
+|---|---|---|---|
+| Graph/persistence | `trial/a2-graph` | `A2-G` | `docs/research-logs/implementation-trial/analysis/graph.md`, `tools/implementation-trial/a2/graph/**`, scoped evidence under `docs/research-logs/implementation-trial/evidence/a2/graph/**` |
+| Lifecycle/agents | `trial/a2-lifecycle` | `A2-L` | `.../analysis/lifecycle.md`, `tools/implementation-trial/a2/lifecycle/**`, scoped lifecycle evidence |
+| Distribution/recovery | `trial/a2-distribution` | `A2-D` | `.../analysis/distribution.md`, `tools/implementation-trial/a2/distribution/**`, scoped distribution evidence |
+| Verification/evaluation | `trial/a2-verification` | `A2-V` | `.../analysis/verification.md`, `tools/implementation-trial/a2/verification/**`, scoped verification evidence |
+| Specs/checkpoints | `trial/a2-runbooks` | `A2-R` | `.../analysis/runbooks.md` and scoped evidence only; **no spec/checkpoint edits in A2** |
+
+Before committing, every audit session must prove `HEAD` descends from the recorded `a2_base_sha`, show its current branch, and inspect `git diff --name-only a2_base_sha...HEAD`. Push only its own branch. Do not merge, rebase, cherry-pick sibling audit work or open another PR.
 
 ### Claude Code prompt — Graph and persistence
 
@@ -190,7 +221,10 @@ Runbook: docs/research-logs/2026-09-21-pactwright-implementation-trial-spec.md
 Trial records: docs/research-logs/implementation-trial/
 
 Read the restart runbook and trial state.md in sb-dev/pactwright.
-Execute A2's graph audit in its assigned isolated checkout. Apply
+This session owns **only** branch `trial/a2-graph`. Before analysing, fetch,
+checkout that branch, confirm `git branch --show-current` equals it, and verify
+HEAD descends from state.md's `a2_base_sha`. Do not commit to
+`trial/restart-analysis`. Execute A2's graph audit in this isolated checkout. Apply
 acquire-codebase-knowledge, architecture-patterns and property-based-testing.
 Do not read sibling conclusions or repair the pinned production reference.
 
@@ -202,9 +236,13 @@ historical corrections. Check cycles per relation, not by assuming all graphs
 must be DAGs. Identify duplicate work, coupled semantics and reusable strengths.
 
 Reproduce high-risk issues in disposable fixtures and inspect durable effects
-independently. Label unexecuted findings accurately. Write analysis/graph.md
-using A2's format. Commit only the report and probes with A2-G in the subject.
-Return the commit and paths to the coordinator for serial publication.
+independently. Label unexecuted findings accurately. Write `docs/research-logs/implementation-trial/analysis/graph.md` using A2's
+format. Only change that report, `tools/implementation-trial/a2/graph/**` and
+scoped graph evidence. Before committing, run
+`git diff --name-only <a2_base_sha>...HEAD` and refuse any production-file
+change. Commit on `trial/a2-graph` with an A2-G subject, push that branch, and
+return the exact commit SHA and changed paths to the coordinator. Do not merge
+or cherry-pick it yourself.
 ```
 
 ### Claude Code prompt — Lifecycle and agent execution
@@ -214,7 +252,10 @@ Runbook: docs/research-logs/2026-09-21-pactwright-implementation-trial-spec.md
 Trial records: docs/research-logs/implementation-trial/
 
 Read the restart runbook and trial state.md in sb-dev/pactwright.
-Execute A2's lifecycle audit in isolation. Apply acquire-codebase-knowledge,
+This session owns **only** branch `trial/a2-lifecycle`. Before analysing, fetch,
+checkout that branch, confirm `git branch --show-current` equals it, and verify
+HEAD descends from state.md's `a2_base_sha`. Do not commit to
+`trial/restart-analysis`. Execute A2's lifecycle audit in isolation. Apply acquire-codebase-knowledge,
 systematic-debugging and contract-testing. Do not read sibling reports or fix
 reference code.
 
@@ -227,8 +268,12 @@ Check that advertised permitted operations really work, including corrections.
 Compose real lifecycle/adapter/executor code, replacing only external process
 I/O. Doubles must not create Evidence or repair state for the product. Validate
 and inspect every intermediate and failure state, not only successful endings.
-Write analysis/lifecycle.md in A2's format, retaining positive controls.
-Commit report/probes with A2-L; return them for serial coordinator publication.
+Write `docs/research-logs/implementation-trial/analysis/lifecycle.md` in A2's
+format, retaining positive controls. Only change that report,
+`tools/implementation-trial/a2/lifecycle/**` and scoped lifecycle evidence.
+Before committing, inspect the diff from `a2_base_sha` and refuse production
+changes. Commit on `trial/a2-lifecycle` with A2-L in the subject, push it, and
+return the exact commit SHA/paths. Do not merge or cherry-pick it yourself.
 ```
 
 ### Claude Code prompt — Distribution, recovery and concurrency
@@ -238,7 +283,10 @@ Runbook: docs/research-logs/2026-09-21-pactwright-implementation-trial-spec.md
 Trial records: docs/research-logs/implementation-trial/
 
 Read the restart runbook and trial state.md in sb-dev/pactwright.
-Execute A2's distribution audit in isolation. Apply systematic-debugging,
+This session owns **only** branch `trial/a2-distribution`. Before analysing,
+fetch, checkout that branch, confirm `git branch --show-current` equals it, and
+verify HEAD descends from state.md's `a2_base_sha`. Do not commit to
+`trial/restart-analysis`. Execute A2's distribution audit in isolation. Apply systematic-debugging,
 security-and-hardening and acquire-codebase-knowledge. Do not fix reference code.
 
 Trace every public init, selection, upgrade, migration, sync and doctor path.
@@ -251,8 +299,12 @@ Use real processes with explicit synchronisation for concurrency and hand-off.
 Inject failures after effects, not just before writes. Separate handled-failure
 and process-crash guarantees. Run package-script/security probes without real
 credentials. Record what is well built and what remains unsupported.
-Write analysis/distribution.md, commit report/probes with A2-D and return them
-for serial publication on the analysis PR.
+Write `docs/research-logs/implementation-trial/analysis/distribution.md`. Only
+change that report, `tools/implementation-trial/a2/distribution/**` and scoped
+distribution evidence. Inspect the diff from `a2_base_sha` before committing and
+refuse production changes. Commit on `trial/a2-distribution` with A2-D in the
+subject, push it, and return the exact commit SHA/paths to the coordinator. Do
+not publish directly to the analysis PR.
 ```
 
 ### Claude Code prompt — Tests, evaluation and simplicity
@@ -262,7 +314,10 @@ Runbook: docs/research-logs/2026-09-21-pactwright-implementation-trial-spec.md
 Trial records: docs/research-logs/implementation-trial/
 
 Read the restart runbook and trial state.md in sb-dev/pactwright.
-Execute A2's verification audit independently. Apply test-strategy,
+This session owns **only** branch `trial/a2-verification`. Before analysing,
+fetch, checkout that branch, confirm `git branch --show-current` equals it, and
+verify HEAD descends from state.md's `a2_base_sha`. Do not commit to
+`trial/restart-analysis`. Execute A2's verification audit independently. Apply test-strategy,
 mutation-testing, risk-based-testing and code-review-and-quality.
 
 Derive expected behaviour from requirements, then inspect tests for stronger-
@@ -275,8 +330,12 @@ Use disposable fault seeds to see whether critical proofs detect their intended
 defect. Measure repeated graph/I/O work and assess source-size/complexity metrics
 for gaming. Check actual packed and process boundaries. Do not build missing
 product capabilities into the harness or call missing tools a successful repro.
-Write analysis/verification.md with retain/rewrite/retire test recommendations.
-Commit report/probes with A2-V and return them for serial publication.
+Write `docs/research-logs/implementation-trial/analysis/verification.md` with
+retain/rewrite/retire test recommendations. Only change that report,
+`tools/implementation-trial/a2/verification/**` and scoped verification evidence.
+Inspect the diff from `a2_base_sha`; refuse production changes. Commit on
+`trial/a2-verification` with A2-V in the subject, push it, and return the exact
+commit SHA/paths to the coordinator. Do not publish directly to the analysis PR.
 ```
 
 ### Claude Code prompt — Specifications and checkpoint instructions
@@ -286,7 +345,10 @@ Runbook: docs/research-logs/2026-09-21-pactwright-implementation-trial-spec.md
 Trial records: docs/research-logs/implementation-trial/
 
 Read the restart runbook and trial state.md in sb-dev/pactwright.
-Execute A2's runbook audit independently. Apply documentation-and-adrs and
+This session owns **only** branch `trial/a2-runbooks`. Before analysing, fetch,
+checkout that branch, confirm `git branch --show-current` equals it, and verify
+HEAD descends from state.md's `a2_base_sha`. Do not commit to
+`trial/restart-analysis`. Execute A2's runbook audit independently. Apply documentation-and-adrs and
 acquire-codebase-knowledge. Do not amend specs or checkpoints yet.
 
 Read all checkpoint files and their owning specifications/adopted amendments.
@@ -299,8 +361,39 @@ For later checkpoints identify inherited assumptions, unsupported early
 capabilities, public-content/identity readiness and Kakeibo dependencies.
 Preserve the complete existing scope. Propose concrete instruction/proof changes
 and an old-step/exit-condition inventory; do not impose a new module layout.
-Write analysis/runbooks.md, commit it with A2-R and return it for coordinator
-publication. Identify every unreviewed area rather than implying full coverage.
+Write `docs/research-logs/implementation-trial/analysis/runbooks.md`. In A2 do
+not edit `docs/specs/**` or `docs/checkpoints/**`; only the report and scoped
+evidence may change. Inspect the diff from `a2_base_sha` before committing.
+Commit on `trial/a2-runbooks` with A2-R in the subject, push it, and return the
+exact commit SHA/paths to the coordinator. Do not publish directly to the
+analysis PR. Identify every unreviewed area rather than implying full coverage.
+```
+
+### Claude Code prompt — Coordinator: integrate the five audits
+
+```text
+Runbook: docs/research-logs/2026-09-21-pactwright-implementation-trial-spec.md
+Trial records: docs/research-logs/implementation-trial/
+
+This is the A2 coordinator publication step. Work only on
+`trial/restart-analysis`. Fetch the remote branch and fast-forward before any
+write. Read state.md and the five audit hand-offs. Confirm each audit commit is
+on its assigned branch, descends from the recorded `a2_base_sha`, and changes
+only its permitted A2 report/probe/evidence paths. Reject an audit commit that
+changes production runtime, package, spec or checkpoint files.
+
+Integrate the five accepted audit commits onto `trial/restart-analysis` in this
+order: A2-G, A2-L, A2-D, A2-V, A2-R. Cherry-pick the audit commits themselves;
+do not merge the temporary branches and do not bring in their `trial/a2-base`
+seed commit. Resolve only report/evidence conflicts without changing a finding's
+meaning; if semantic reconciliation is needed, leave it for A3.
+
+After integration, verify all five reports exist, record each source branch and
+commit SHA in state.md, and run `git diff --name-only <A1-reviewed-head>...HEAD`.
+A2 integration must not change production code, specs or checkpoints. Commit any
+coordinator-only state update with `docs(trial): A2 integrate independent audits`,
+push `trial/restart-analysis` without force, and post the standard hand-off for
+ChatGPT's A2 coverage review. Do not delete the temporary audit branches yet.
 ```
 
 ### ChatGPT prompt — Independent coverage review
@@ -1181,4 +1274,4 @@ This revision uses the v2 runbook, the pinned repository authorities and PR #39'
 - **[S9]** [GitHub secure workflow use](https://docs.github.com/en/actions/reference/security/secure-use).
 - **[S10]** [Anthropic GitHub Action security guidance](https://github.com/anthropics/claude-code-action/blob/main/docs/security.md) and [integration documentation](https://code.claude.com/docs/en/github-actions).
 
-**Pactwright — Analysis and Reimplementation Trial v3**
+**Pactwright — Analysis and Reimplementation Trial v4**
