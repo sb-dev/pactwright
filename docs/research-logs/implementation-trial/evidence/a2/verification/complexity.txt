@@ -1,0 +1,34 @@
+. — 70 runtime files, 16747 lines, 2510 decision points, 573 export statements
+
+file                                lines  decisions  longest-fn  depth  exports
+src/cli.ts                            974        291          66      6        1
+src/extension/manage.ts               742        108         130      5        7
+src/validate/kernel.ts                632        103         116      5        9
+src/extension/manifest.ts             580         92         164      6        9
+src/lifecycle/run.ts                  397         80         179      6        9
+src/lifecycle/engine.ts               332         77          23      6       17
+src/upgrade.ts                        433         68          61      6        9
+src/eval/compare.ts                   263         65          50      5        9
+src/graph/mutations.ts                527         65         118      5       14
+src/lifecycle/shape.ts                341         62          52      4       17
+src/execute/claude-code.ts            232         60          49      7        9
+src/lifecycle/state.ts                371         60         111      5       21
+
+Longest single function bodies:
+   179 lines  src/lifecycle/run.ts
+   178 lines  src/doctor.ts
+   164 lines  src/extension/manifest.ts
+   130 lines  src/extension/manage.ts
+   128 lines  src/eval/runner.ts
+   118 lines  src/graph/mutations.ts
+
+Where A1's accounting moves under a candidate's control:
+
+  prompts-embedded is one hard-coded path
+    measure-source.ts includes exactly `src/adapter/commands.ts` (3310 characters of template-literal text). 6 other runtime file(s) already carry 1000+: src/cli.ts (6755), src/eval/core-suite.ts (1924), src/validate/kernel.ts (1281), src/init.ts (1098), src/adapter/claude-code.ts (1094), src/extension/manifest.ts (1087). The subset is a path equality, so prompt text moved into a new module leaves prompts-embedded entirely while runtime-source is unchanged.
+
+  tests counts non-test modules as tests
+    1 module(s) under tests/ are not *.test.ts (tests/helpers.ts), totalling 372 lines. The tests group excludes only tests/fixtures, so logic moved into a helper leaves runtime-source and lands in the tests denominator.
+
+  test-fixtures counts executable files as data
+    389 file(s) under tests/fixtures, of which 0 are executable source. They are measured with the same 'non-blank line is content' rule as YAML.

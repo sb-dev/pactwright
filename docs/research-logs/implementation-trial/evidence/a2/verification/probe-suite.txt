@@ -1,0 +1,23 @@
+ok 1 - V01: two sides that evaluated nothing are reported as full agreement
+ok 2 - V02: the prompts that differ are named while the results they produce are not
+ok 3 - V02b: an identical error on both sides is dropped even when it is a case failure
+ok 4 - V06: no configuration reaches the prompt-respecting double
+ok 5 - V08: `executor: scripted` validates and is then silently downgraded to none
+ok 6 - V06b: the real executor hands the refusing prompt straight to the tool
+ok 7 - V07: the refusal recogniser is three phrases and an equivalent refusal evades it
+ok 8 - V07b: the shipped pack's own prompts are not what the acceptance case varies
+ok 9 - V03: a missing executor binary is recorded as the pack failing its assertions
+ok 10 - V03c: eleven of the suite's twenty assertions pass when nothing ran at all
+ok 11 - V03b: a broken executor makes two different packs compare as identical
+ok 12 - V04: a run completed with refused permissions reaches the lifecycle as a clean success
+ok 13 - V05: a non-zero exit with a JSON body is reported as a completed capability
+ok 14 - V05b: a SIGTERM'd run whose JSON survived is indistinguishable from a clean one
+ok 15 - V05c: the parser alone is sound — it is the invocation that drops the status
+ok 16 - V11: a passing review that mentions being blocked is read as blocked
+ok 17 - V11b: a negated word still decides the transition
+ok 18 - V11c: a review that never uses the three words is a stage failure
+ok 19 - V11d: a structured verdict is read correctly — the defect is prose, not the seam
+# tests 19
+# pass 19
+# fail 0
+# skipped 0

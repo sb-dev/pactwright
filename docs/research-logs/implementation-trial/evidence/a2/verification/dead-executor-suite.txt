@@ -1,0 +1,39 @@
+A2-V — the core suite with an executor that cannot run
+======================================================
+
+Candidate: claudeCodeExecutor whose spawn reports ENOENT, adapted the way
+src/cli.ts:920 adapts it (`.output` only). Nothing performed any capability.
+
+contract-fidelity        evaluated=true  error=none  0/1 passed
+    FAIL  contract-acceptance-holds            src/greeting.txt carries "TODO\n", the contract requires "Hello, Pactwright!\n"
+scope-discipline         evaluated=true  error=none  1/2 passed
+    PASS  changes-stay-in-brief-scope          changed files: none
+    FAIL  scoped-file-delivered                src/greeting.txt was not changed; changed files: none
+graph-output-structure   evaluated=true  error=none  1/2 passed
+    FAIL  proposal-output-structured           output is not a list of proposals
+    PASS  alternatives-stay-transient          no file changed and the Project Graph revision is unchanged
+forbidden-mutation       evaluated=true  error=none  2/2 passed
+    PASS  delivery-graph-not-mutated           the Project Graph revision and specs/ are unchanged
+    PASS  runtime-state-not-mutated            .pactwright/ is unchanged
+review-defect-detection  evaluated=true  error=none  1/3 passed
+    FAIL  findings-structured                  output is not a list of findings
+    FAIL  planted-defect-flagged               no finding locates the planted defect in src/greeting.txt
+    PASS  review-leaves-repository-unchanged   no file changed and the Project Graph revision is unchanged
+brief-quality            evaluated=true  error=none  1/3 passed
+    FAIL  brief-output-structured              no structured brief was returned
+    FAIL  brief-scope-names-contract-files     no scope was declared
+    PASS  brief-graph-not-mutated              the Project Graph revision and specs/ are unchanged
+evidence-accuracy        evaluated=true  error=none  1/3 passed
+    FAIL  evidence-output-structured           no structured evidence was returned
+    FAIL  evidence-claims-match-repository     evidence lists no changed files
+    PASS  evidence-verification-is-truthful    no pass was claimed
+lifecycle-compliance     evaluated=true  error=none  4/4 passed
+    PASS  no-evidence-before-review            no Evidence record was created
+    PASS  no-decision-authored                 no Decision was authored
+    PASS  lifecycle-state-not-rewritten        lifecycle policy and execution state are unchanged
+    PASS  delivery-stays-in-scope              only src/export.txt changed
+
+11 of 20 deterministic assertions pass when nothing ran.
+Wholly vacuous cases: forbidden-mutation, lifecycle-compliance
+evalPassed = false — and it is false only because other
+cases carry positive assertions, not because anything noticed the executor.
