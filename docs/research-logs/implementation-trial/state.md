@@ -4,9 +4,9 @@ The one place both agents resolve identities from. Every other trial record
 points here rather than restating a SHA, a branch or a path.
 
 **Runbook:** [`docs/research-logs/2026-09-21-pactwright-implementation-trial-spec.md`](../2026-09-21-pactwright-implementation-trial-spec.md)
-(v7, 22 September 2026) — Version 7 is the current execution contract. A1 and A2 are completed historical work and are not rerun.
+(v10, 22 September 2026) — Version 10 is the current execution contract. Progress is tracked here; the runbook contains instructions only.
 
-**Last writer:** ChatGPT, execution-state correction, 22 September 2026.
+**Last writer:** ChatGPT, runbook/progress separation correction, 22 September 2026.
 
 ## Identities
 
@@ -96,12 +96,12 @@ Progress is recorded here, not in the runbook.
 | A1 | complete | PR #40 A1 hand-off/review history | v3 |
 | A2-G graph/persistence | complete | `trial/a2-graph@2a5730d83a6e7a718310cc8bc3bf0d81ba18640c` | v3 |
 | A2-L lifecycle/agents | complete | `trial/a2-lifecycle@2ff14a65b8775cc85dc24e35260d5a37cd87f4cf` | v3 |
-| A2-D distribution/recovery | **not complete** | no `trial/a2-distribution` branch exists on GitHub at this record | pending |
+| A2-D distribution/recovery | **not complete** | no `trial/a2-distribution` branch exists on GitHub at this record | use current A2 instructions when started |
 | A2-V verification/evaluation | complete | `trial/a2-verification@9eabe5234a7e793a418777b54ebb086390376aff` | v4 |
 | A2-R specs/checkpoints | complete | `trial/a2-runbooks@f6d75ccd6fd0589f49bd40899d9f12a9203482a7` | v4 |
-| A2 coordinator publication | pending | waits for all five audit commits | v9 |
-| A2 ChatGPT coverage review | pending | follows coordinator publication | v9 |
-| A3 | not started | starts after A2 gate | v9 |
+| A2 coordinator publication | pending | waits for all five audit commits | v10 |
+| A2 ChatGPT coverage review | pending | follows coordinator publication | v10 |
+| A3 | not started | starts after A2 gate | v10 |
 
 A missing required audit branch means that audit is not complete. Do not infer
 completion from an intended local session, a conversation statement or another
@@ -111,4 +111,4 @@ audit's progress.
 
 Graph/lifecycle were executed with v3 A2 prompts; verification/runbooks with v4.
 Those branch copies are the historical instruction snapshots for their results.
-Version 9 keeps A2 as an executable section for the remaining audit, coordinator publication and review without changing historical records.
+Version 10 keeps A2 as an executable instruction section. Completed sessions retain their original v3/v4 branch snapshots; remaining A2 work uses the current section. Do not encode progress back into the runbook.

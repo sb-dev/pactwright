@@ -1,6 +1,6 @@
 # Pactwright — Analysis and Reimplementation Trial
 
-**Version:** 9 · **Date:** 22 September 2026  
+**Version:** 10 · **Date:** 22 September 2026  
 **Repository:** `sb-dev/pactwright`  
 **Reference implementation:** `19c66d5f2368932ff05306db1fae8da8ec5810dd` (`review/checkpoint-1`).  
 **Save as:** `docs/research-logs/2026-09-21-pactwright-implementation-trial-spec.md`
@@ -139,8 +139,6 @@ Once the first session for a step starts, that step's prompts and execution cont
 Every execution record stores the runbook version/SHA it used. Git history preserves older instructions; `state.md` preserves which version produced each result.
 
 ---
-
-# Part A — Analysis---
 
 # Part A — Analysis
 
@@ -1389,7 +1387,7 @@ Use GitHub to preserve source, reviewed decisions and evidence. Keep the origina
 
 ## Sources and execution status
 
-This Version 9 runbook incorporates the pinned repository authorities, trial execution records and PR #39's discussion. It designs and governs future work; it does not turn reported defects into fresh reproductions or claim workflows are deployed before their evidence exists. Official tooling references used by the automation design were last checked on 21 September 2026; I2 must verify the exact pinned installed versions again before deployment.
+This Version 10 runbook incorporates the pinned repository authorities, trial execution records and PR #39's discussion. It designs and governs future work; it does not turn reported defects into fresh reproductions or claim workflows are deployed before their evidence exists. Official tooling references used by the automation design were last checked on 21 September 2026; I2 must verify the exact pinned installed versions again before deployment.
 
 - **[S1]** [PR #39](https://github.com/sb-dev/pactwright/pull/39) and its [review comment](https://github.com/sb-dev/pactwright/pull/39#issuecomment-5756888228).
 - **[S2]** [Pinned checkpoint set](https://github.com/sb-dev/pactwright/tree/19c66d5f2368932ff05306db1fae8da8ec5810dd/docs/checkpoints).
@@ -1402,4 +1400,4 @@ This Version 9 runbook incorporates the pinned repository authorities, trial exe
 - **[S9]** [GitHub secure workflow use](https://docs.github.com/en/actions/reference/security/secure-use).
 - **[S10]** [Anthropic GitHub Action security guidance](https://github.com/anthropics/claude-code-action/blob/main/docs/security.md) and [integration documentation](https://code.claude.com/docs/en/github-actions).
 
-**Pactwright — Analysis and Reimplementation Trial v9**
+**Pactwright — Analysis and Reimplementation Trial v10**
