@@ -1,6 +1,5 @@
 # A2 — independent audits
 
-The five A2 audit sessions are complete. Some reports may still be reachable only from their completed audit branches/session hand-offs. Do not rerun A2 to normalise publication.
 
 Five sessions audit different boundaries of the pinned reference **before
 reading each other's conclusions**. Each writes one report into this directory.
@@ -58,16 +57,16 @@ letting silence imply coverage.
 Note also that the "review" on PR #39 is an issue comment by the branch's own
 author. Confidence in its prose is not evidence. Verify or qualify each claim.
 
-## Provenance closeout
+## Publication protocol
 
-A2 analysis is finished. A3 is next.
+Each audit session commits only to its assigned `trial/a2-*` branch. The
+coordinator verifies the audit commit's diff against that branch's recorded
+overlay/base SHA, then cherry-picks the audit commit onto
+`trial/restart-analysis` in A2-G, A2-L, A2-D, A2-V, A2-R order.
 
-At A3 start, resolve the exact existing source SHA for each completed report.
-Consume reports directly by SHA or copy the existing report/probe/evidence bytes
-onto `trial/restart-analysis`. Do not merge reference-runtime ancestry and do
-not rewrite a report to fit a later runbook layout.
+Do not merge the temporary branches. A verified cherry-pick applies the audit
+commit's diff; it does not import the branch ancestry. If publication conflicts
+occur, resolve only layout/integration conflicts without changing report meaning.
 
-If a temporary remote branch was deleted or never pushed, recover/push the
-**existing completed commit or session output**. Do not repeat the analysis.
-A genuinely missing evidence item may justify one targeted supplemental probe in
-A3, not a wholesale A2 rerun.
+Execution progress and the runbook version used by each audit are recorded in
+`../state.md`, not in this assignment file.
