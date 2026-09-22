@@ -1,0 +1,127 @@
+### Checkpoint 1 Step 23 — clean packed consumer, explicit path
+### cwd: /Users/samir/workspace/pactwright-trial/consumer-explicit
+### started: 2026-09-21T22:29:29Z
+--- pnpm add -D <both packed artefacts> ---
+Progress: resolved 0, reused 0, downloaded 1, added 0
+ ERR_PNPM_NO_MATCHING_VERSION  No matching version found for @pactwright/standard@0.0.2 while fetching it from https://registry.npmjs.org/
+
+This error happened while installing the dependencies of pactwright@0.0.2
+
+The latest release of @pactwright/standard is "0.0.1".
+
+Other releases are:
+  * next: 0.0.1
+
+If you need the full list of all 1 published versions run "pnpm view @pactwright/standard versions".
+### install exit=1
+--- retry with the documented local-package override (Step 23 allows one before first registry publication) ---
+Progress: resolved 0, reused 1, downloaded 0, added 0
+Packages: +4
+++++
+Progress: resolved 4, reused 4, downloaded 0, added 4, done
+
+devDependencies:
++ @pactwright/standard 0.0.2
++ pactwright 0.0.2
+
+Done in 710ms using pnpm v10.32.0
+### install(with override) exit=0
+=== Step 23 explicit path, packed consumer ===
+pnpm launcher version: 10.32.0
+
+$ pnpm pactwright init
+created .pactwright/config.yml
+created .pactwright/lifecycle.yml
+created specs/nodes/.gitkeep
+created specs/graph/edges.yml
+created .claude/agents
+created .claude/commands
+
+Scaffold created. No agent pack is selected, so this is not yet a complete
+execution environment. Choose one: pactwright agent-pack use <source>
+[exit=0]
+
+$ pnpm pactwright agent-pack use @pactwright/standard
+selected @pactwright/standard@0.0.2
+  configured constraint updated
+  wrote .claude/agents/implementer.md
+  wrote .claude/agents/reviewer.md
+  wrote .claude/agents/spec.md
+  wrote .claude/commands/approve-contract.md
+  wrote .claude/commands/capture-intent.md
+  wrote .claude/commands/deliver-brief.md
+  wrote .claude/commands/prepare-evidence.md
+  wrote .claude/commands/propose-contracts.md
+  wrote .claude/commands/review.md
+  wrote .claude/commands/write-brief.md
+[exit=0]
+
+$ pnpm pactwright sync
+unchanged .claude/agents/implementer.md
+unchanged .claude/agents/reviewer.md
+unchanged .claude/agents/spec.md
+unchanged .claude/commands/approve-contract.md
+unchanged .claude/commands/capture-intent.md
+unchanged .claude/commands/deliver-brief.md
+unchanged .claude/commands/prepare-evidence.md
+unchanged .claude/commands/propose-contracts.md
+unchanged .claude/commands/review.md
+unchanged .claude/commands/write-brief.md
+[exit=0]
+
+$ pnpm pactwright doctor
+Pactwright 0.0.2 — warning
+
+  [healthy] package-manager: pnpm (inferred from pnpm-lock.yaml)
+  [warning] package-manager-declaration: package.json declares no "packageManager"; upgrades infer pnpm from lock-file state
+  [healthy] configuration: configuration, lifecycle (version 2) and lock load through the canonical path
+  [healthy] runtime: runtime 0.0.2 matches the lock
+  [healthy] capabilities: agent pack "@pactwright/standard@0.0.2" provides every required capability
+  [healthy] lock-agreement: environment_lock_hash sha256:76221cac587d9d6a4451d591a7738e88ceabca2c766eea90599bfc894a4cec68
+  [healthy] extensions: no extensions are enabled
+  [healthy] generated-drift: 10 generated files match the resolved environment
+  [healthy] validation: the Project Graph satisfies the complete validation contract
+[exit=0]
+
+$ pnpm pactwright validate
+Valid: 0 nodes, 0 edges, 0 lineages
+  repository_revision:   git:89b71cc4ab2f97878172aedae568540633af8969+sha256:19f1ebcca5a7800270ea3e3311e76fdc73053f9aa31f50a67b52a51b86b32e0c
+  project_graph_revision: sha256:b37741952d1f3ddfdda58cfbf8b7d9fcdb0521eb6983f81d4ce49502313e22e2
+  environment_lock_hash: sha256:76221cac587d9d6a4451d591a7738e88ceabca2c766eea90599bfc894a4cec68
+[exit=0]
+
+$ pnpm pactwright lifecycle status
+No active lineage
+  state: none
+  current: capture-intent (responsibility)
+  completed responsibilities: none
+  permitted: capture-intent
+  blocked: capture-intent (required actor: human)
+Validation problems: none
+[exit=0]
+
+--- determinism: second sync must report every file unchanged ---
+
+$ pnpm pactwright sync
+unchanged .claude/agents/implementer.md
+unchanged .claude/agents/reviewer.md
+unchanged .claude/agents/spec.md
+unchanged .claude/commands/approve-contract.md
+unchanged .claude/commands/capture-intent.md
+unchanged .claude/commands/deliver-brief.md
+unchanged .claude/commands/prepare-evidence.md
+unchanged .claude/commands/propose-contracts.md
+unchanged .claude/commands/review.md
+unchanged .claude/commands/write-brief.md
+[exit=0]
+
+--- installed component origins ---
+
+$ node -e const{createRequire}=require('node:module');const r=createRequire(process.cwd()+'/');console.log('pactwright ->',r.resolve('pactwright'));console.log('standard pack.yml ->',r.resolve('@pactwright/standard/pack.yml'));
+pactwright -> /Users/samir/workspace/pactwright-trial/consumer-explicit/node_modules/.pnpm/pactwright@file+..+pack+pactwright-checkpoint-1.tgz/node_modules/pactwright/dist/index.js
+standard pack.yml -> /Users/samir/workspace/pactwright-trial/consumer-explicit/node_modules/.pnpm/@pactwright+standard@file+..+pack+pactwright-standard-checkpoint-1.tgz/node_modules/@pactwright/standard/pack.yml
+[exit=0]
+
+$ node -e console.log('runtime version:',require('./node_modules/pactwright/package.json').version,' pack version:',require('./node_modules/@pactwright/standard/package.json').version)
+runtime version: 0.0.2  pack version: 0.0.2
+[exit=0]
