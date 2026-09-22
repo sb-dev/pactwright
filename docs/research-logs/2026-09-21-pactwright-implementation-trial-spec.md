@@ -1,6 +1,6 @@
 # Pactwright — Analysis and Reimplementation Trial
 
-**Version:** 8 · **Date:** 22 September 2026  
+**Version:** 9 · **Date:** 22 September 2026  
 **Repository:** `sb-dev/pactwright`  
 **Reference implementation:** `19c66d5f2368932ff05306db1fae8da8ec5810dd` (`review/checkpoint-1`).  
 **Save as:** `docs/research-logs/2026-09-21-pactwright-implementation-trial-spec.md`
@@ -39,7 +39,7 @@ A unit should deliver one observable capability or resolve one coherent boundary
 
 Claude Code performs local analysis, probes, implementation and execution. Use the maintainer-selected Opus 5 configuration; record the **actual resolved model and CLI version**, not an inferred model name. ChatGPT conducts research, independent source/evidence reviews and bounded edits through GitHub. The maintainer decides material semantic changes, exceptions, merges, publication and external-project writes.
 
-Both agents normally collaborate on the **same task branch and PR, sequentially**. A2 was the deliberate exception: its five audits were already executed on isolated temporary branches. Those completed commits are historical evidence; do not recreate or rebase them to satisfy Version 7.
+Both agents normally collaborate on the **same task branch and PR, sequentially**. A2 is the deliberate exception: its five audits use isolated temporary branches so sessions do not compete for the shared analysis branch.
 
 | Branch | Purpose | Required base / integration |
 |---|---|---|
@@ -53,7 +53,7 @@ Both agents normally collaborate on the **same task branch and PR, sequentially*
 | `trial/reimplementation` | I3–I5 replacement runtime and accepted capabilities | Exact default-branch SHA after analysis + guardrail merges and I2 deployment proof |
 | Checkpoint-defined release/external branches | I6 publication and external acceptance | Must be named by the revised checkpoint unit; no implicit “active branch” |
 
-A1 created the analysis branch from the default branch, **not by merging PR #39**. A2 is complete. If an A2 report is not yet reachable from the shared analysis branch, A3 may recover or copy the **existing completed report/probe/evidence bytes** from its exact source commit or hand-off. Do not rerun the audit, normalise its paths, rewrite its findings, or import PR #39 production ancestry.
+A1 creates the analysis branch from the default branch, **not by merging PR #39**. A2 audit branches inspect the pinned reference. The coordinator integrates verified audit commits onto the shared analysis branch without merging the temporary branches.
 
 The implementation PR may remain draft while units accumulate. Review units by commit range and acceptance IDs, then recheck the integrated head. Do not merge a deliberately incomplete replacement into the default branch. Analysis and guardrail PRs can land independently only with maintainer authorisation.
 
@@ -249,7 +249,7 @@ Reproduce high-risk issues in disposable fixtures and inspect durable effects
 independently. Label unexecuted findings accurately. Write `docs/research-logs/implementation-trial/analysis/graph.md` using A2's
 format. Only change that report, `tools/implementation-trial/a2/graph/**` and
 scoped graph evidence. Before committing, run
-`git diff --name-only <a2_base_sha>...HEAD` and refuse any production-file
+`git diff --name-only <recorded-audit-overlay-base-sha>...HEAD` and refuse any production-file
 change. Commit on `trial/a2-graph` with an A2-G subject, push that branch, and
 return the exact commit SHA and changed paths to the coordinator. Do not merge
 or cherry-pick it yourself.
@@ -443,7 +443,7 @@ Allowed writes: docs/research-logs/implementation-trial/findings.md,
  research.md, scoped A3 probes/evidence, results/state metadata
 Forbidden: production runtime, specs and checkpoints
 
-Read the restart runbook and state.md. Resolve the five already-completed A2 reports from their source commits/hand-offs, recording every source SHA. If a report is not yet reachable from this branch, publish or link the existing bytes only; do not rerun or rewrite the audit. Then reconcile them
+Read the restart runbook, state.md and the five A2 reports integrated by the A2 coordinator. Reconcile them
 into findings.md: preserve/reimplement/correct/remove, root cause, owning
 requirement and candidate acceptance proof. Keep distinct triggers distinct.
 Inspect uncovered callers and repeat only the highest-risk local probes. Classify
@@ -1389,7 +1389,7 @@ Use GitHub to preserve source, reviewed decisions and evidence. Keep the origina
 
 ## Sources and execution status
 
-This Version 8 runbook incorporates the pinned repository authorities, trial execution records and PR #39's discussion. It designs and governs future work; it does not turn reported defects into fresh reproductions or claim workflows are deployed before their evidence exists. Official tooling references used by the automation design were last checked on 21 September 2026; I2 must verify the exact pinned installed versions again before deployment.
+This Version 9 runbook incorporates the pinned repository authorities, trial execution records and PR #39's discussion. It designs and governs future work; it does not turn reported defects into fresh reproductions or claim workflows are deployed before their evidence exists. Official tooling references used by the automation design were last checked on 21 September 2026; I2 must verify the exact pinned installed versions again before deployment.
 
 - **[S1]** [PR #39](https://github.com/sb-dev/pactwright/pull/39) and its [review comment](https://github.com/sb-dev/pactwright/pull/39#issuecomment-5756888228).
 - **[S2]** [Pinned checkpoint set](https://github.com/sb-dev/pactwright/tree/19c66d5f2368932ff05306db1fae8da8ec5810dd/docs/checkpoints).
@@ -1402,4 +1402,4 @@ This Version 8 runbook incorporates the pinned repository authorities, trial exe
 - **[S9]** [GitHub secure workflow use](https://docs.github.com/en/actions/reference/security/secure-use).
 - **[S10]** [Anthropic GitHub Action security guidance](https://github.com/anthropics/claude-code-action/blob/main/docs/security.md) and [integration documentation](https://code.claude.com/docs/en/github-actions).
 
-**Pactwright — Analysis and Reimplementation Trial v8**
+**Pactwright — Analysis and Reimplementation Trial v9**

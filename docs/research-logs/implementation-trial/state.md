@@ -111,5 +111,4 @@ audit's progress.
 
 Graph/lifecycle were executed with v3 A2 prompts; verification/runbooks with v4.
 Those branch copies are the historical instruction snapshots for their results.
-Version 8 restores A2 as an executable section for the remaining audit,
-coordinator publication and review without changing those historical records.
+Version 9 keeps A2 as an executable section for the remaining audit, coordinator publication and review without changing historical records.
