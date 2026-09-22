@@ -1,6 +1,6 @@
 # A2 — independent audits
 
-Nothing is published here yet. A2 has not started.
+A2 is in progress. Reports appear here only after path-restricted publication from their verified temporary audit branches.
 
 Five sessions audit different boundaries of the pinned reference **before
 reading each other's conclusions**. Each writes one report into this directory.
@@ -60,29 +60,42 @@ author. Confidence in its prose is not evidence. Verify or qualify each claim.
 
 ## Publication protocol
 
-One writer at a time on `trial/restart-analysis` (§1.2). Sessions never push to
-it; they hand their commit to the A1 coordinator, which publishes serially.
+Version 5 of the runbook is authoritative for live publication. The A1 evidence
+file describes how the original local checkouts were created; it is historical
+evidence, not permission to use a stale publication rule.
 
-A session finishes by reporting: its checkout, its branch, its report commit SHA
-and the exact paths it wrote. The coordinator then takes **only those paths**:
+Each audit session works only on its assigned `trial/a2-*` branch and may push
+that branch so work survives an ephemeral environment. It never writes directly
+to `trial/restart-analysis`. Its final hand-off gives the exact branch, audit
+base/overlay SHA, audit commit SHA and changed paths.
 
-```bash
-git -C <planning checkout> fetch <session checkout path> <session branch>
-git -C <planning checkout> checkout FETCH_HEAD -- \
-  docs/research-logs/implementation-trial/analysis/<report>.md \
-  tools/implementation-trial/<probe paths…>
+The coordinator serially publishes **paths, not commits**:
+
+1. fetch the exact audit commit;
+2. verify its diff from the recorded audit base contains only the runbook's
+   permitted report/probe/evidence paths;
+3. copy only those paths onto the current `trial/restart-analysis` worktree;
+4. commit the publication there with the source branch/SHA recorded;
+5. verify no PR #39 production path was imported.
+
+Never merge or cherry-pick a whole audit commit. Those commits sit on top of the
+pinned reference runtime and would bring its production ancestry into the
+planning branch.
+
+Current permitted probe roots are:
+
+```text
+tools/implementation-trial/a2/graph/**
+tools/implementation-trial/a2/lifecycle/**
+tools/implementation-trial/a2/distribution/**
+tools/implementation-trial/a2/verification/**
 ```
 
-Path-restricted, never a merge and never a cherry-pick of the whole commit.
-That is what keeps reference production code out of the planning branch: the
-session's checkout sits on top of the pinned reference, so merging it would
-import all 104 of PR #39's production files onto a branch that must not carry
-them.
+and the matching
+`docs/research-logs/implementation-trial/evidence/a2/<area>/**` roots. The
+runbooks audit has no production/spec/checkpoint writes in A2.
 
-After publishing, the coordinator verifies that:
+After each publication, compare the shared branch against its recorded analysis
+base for `src packages tests specs .pactwright .claude .github examples`.
+During A2 that diff must remain empty.
 
-```bash
-git diff --stat main..trial/restart-analysis -- src packages tests specs .pactwright .claude
-```
-
-is still empty. If it is not, the publication took more than it should have.
