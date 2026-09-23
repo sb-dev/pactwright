@@ -7,6 +7,12 @@
       "skillPath": "skills/acquire-codebase-knowledge/SKILL.md",
       "computedHash": "06b7a3d0bb44b70b470247aacc2ffffe37c8ce64cc3f9178be6f392c81cb6d22"
     },
+    "advanced-evaluation": {
+      "source": "muratcankoylan/Agent-Skills-for-Context-Engineering",
+      "sourceType": "github",
+      "skillPath": "skills/advanced-evaluation/SKILL.md",
+      "computedHash": "858102d2f604e4eb9c0904b78664d0a86146bfea7a2f43db1f63473964926e14"
+    },
     "agentic-actions-auditor": {
       "source": "trailofbits/skills",
       "sourceType": "github",
@@ -43,17 +49,53 @@
       "skillPath": "skills/code-simplification/SKILL.md",
       "computedHash": "7973e746e8e2ea5004d520da970c15a106824b8d6be1bcff48908aec021f3677"
     },
+    "context-compression": {
+      "source": "muratcankoylan/Agent-Skills-for-Context-Engineering",
+      "sourceType": "github",
+      "skillPath": "skills/context-compression/SKILL.md",
+      "computedHash": "1d6e5aa2442fa46c1be6803b96cd7530535fd66f845faf28bad52fdf071158cf"
+    },
+    "context-degradation": {
+      "source": "muratcankoylan/Agent-Skills-for-Context-Engineering",
+      "sourceType": "github",
+      "skillPath": "skills/context-degradation/SKILL.md",
+      "computedHash": "f8d161a299d4ae6de5516125ac5063f241a179c49b6905427fe6ccafac18310b"
+    },
+    "context-optimization": {
+      "source": "muratcankoylan/Agent-Skills-for-Context-Engineering",
+      "sourceType": "github",
+      "skillPath": "skills/context-optimization/SKILL.md",
+      "computedHash": "3e11c2340f85d1159d944897e130590bd1f6f8f3897872332aa9643c775bed66"
+    },
     "contract-testing": {
       "source": "petrkindlmann/qa-skills",
       "sourceType": "github",
       "skillPath": "skills/contract-testing/SKILL.md",
       "computedHash": "fb3502ba69d6fd07013d6f417178f5491997b5b0798b8cc42196f2772550d97f"
     },
+    "differential-review": {
+      "source": "trailofbits/skills",
+      "sourceType": "github",
+      "skillPath": "plugins/differential-review/skills/differential-review/SKILL.md",
+      "computedHash": "3c330b7d8e2a7a6bba9ff9c7f9971d3b6c17fef84b9382efdd325abdd481371c"
+    },
     "documentation-and-adrs": {
       "source": "addyosmani/agent-skills",
       "sourceType": "github",
       "skillPath": "skills/documentation-and-adrs/SKILL.md",
       "computedHash": "7464fd2950b99fb00bbf65cab27653e0a049eef00c98927713ffdfe232a9daa9"
+    },
+    "evaluation": {
+      "source": "muratcankoylan/Agent-Skills-for-Context-Engineering",
+      "sourceType": "github",
+      "skillPath": "skills/evaluation/SKILL.md",
+      "computedHash": "b826900db3894e2ba976ae7f05d8d02e8e944695496c0f13cbe027299507a8d3"
+    },
+    "filesystem-context": {
+      "source": "muratcankoylan/Agent-Skills-for-Context-Engineering",
+      "sourceType": "github",
+      "skillPath": "skills/filesystem-context/SKILL.md",
+      "computedHash": "78e70cb1b36e026f2fba0e01ecca16d1d10d2bdc67997258da43bf880f69a53f"
     },
     "github-actions-hardening": {
       "source": "github/awesome-copilot",
@@ -67,6 +109,12 @@
       "skillPath": "skills/github-issues/SKILL.md",
       "computedHash": "9917c1e0908f0fd9ae0910acf07e3f779091ceddb910ce6a03453add92a6a876"
     },
+    "harness-engineering": {
+      "source": "muratcankoylan/Agent-Skills-for-Context-Engineering",
+      "sourceType": "github",
+      "skillPath": "skills/harness-engineering/SKILL.md",
+      "computedHash": "ff8e6b8dd3d07d0563e646e2bfd00976bf8f406c99382077c55f748d51751e86"
+    },
     "humanizer": {
       "source": "blader/humanizer",
       "sourceType": "github",
@@ -78,6 +126,18 @@
       "sourceType": "github",
       "skillPath": "skills/incremental-implementation/SKILL.md",
       "computedHash": "bd40e91eac68b83ba0204dd57b4bd35511cb900f937a7127b79f2396b2bb305d"
+    },
+    "karpathy-guidelines": {
+      "source": "multica-ai/andrej-karpathy-skills",
+      "sourceType": "github",
+      "skillPath": "skills/karpathy-guidelines/SKILL.md",
+      "computedHash": "41e8ca055bbde13d240776a14a076a59614057200340c243130a76ba4e64cac8"
+    },
+    "multi-agent-patterns": {
+      "source": "muratcankoylan/Agent-Skills-for-Context-Engineering",
+      "sourceType": "github",
+      "skillPath": "skills/multi-agent-patterns/SKILL.md",
+      "computedHash": "b66e7cd7d4f434e8c8d1ca95207ef1a90033aeaa31f1b46fdf3865bd4faf2a41"
     },
     "mutation-testing": {
       "source": "trailofbits/skills",
@@ -103,6 +163,12 @@
       "skillPath": "plugins/post-patch-validation/skills/post-patch-validation/SKILL.md",
       "computedHash": "2345c4b2255c11626e3e12be548a9e27db93af8f21cbfaa403eff6f47fa626a8"
     },
+    "project-development": {
+      "source": "muratcankoylan/Agent-Skills-for-Context-Engineering",
+      "sourceType": "github",
+      "skillPath": "skills/project-development/SKILL.md",
+      "computedHash": "034bd3ed8210ce7317f24a5d48a6165c3e9a7a6e9dbdc5caa4fc499be8f375be"
+    },
     "property-based-testing": {
       "source": "trailofbits/skills",
       "sourceType": "github",
@@ -127,6 +193,12 @@
       "skillPath": "skills/security-and-hardening/SKILL.md",
       "computedHash": "23cf7d689a1d844844bba6c2de53acb4749eb6f3bd209762ccc77a75c2ec5f54"
     },
+    "self-improvement-loops": {
+      "source": "muratcankoylan/Agent-Skills-for-Context-Engineering",
+      "sourceType": "github",
+      "skillPath": "skills/self-improvement-loops/SKILL.md",
+      "computedHash": "775953e271a792cfef1b772e26092b97f93d2bc8866242f9a3341adad082fd3e"
+    },
     "skill-creator": {
       "source": "openai/skills",
       "sourceType": "github",
@@ -150,6 +222,12 @@
       "sourceType": "github",
       "skillPath": "skills/test-strategy/SKILL.md",
       "computedHash": "5ba58f1b0e0a389c46c1105f37e8b6f92c2c6c1e47f1ec931086e478855ef766"
+    },
+    "tool-design": {
+      "source": "muratcankoylan/Agent-Skills-for-Context-Engineering",
+      "sourceType": "github",
+      "skillPath": "skills/tool-design/SKILL.md",
+      "computedHash": "680d5fb4eaf540b1ac4067a6c4b16be6fe9a73f32423c7c8eeccb73cab6d4982"
     },
     "typescript-magician": {
       "source": "mcollina/skills",
