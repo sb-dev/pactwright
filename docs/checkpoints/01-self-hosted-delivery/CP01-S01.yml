@@ -22,7 +22,7 @@ requirements:
     source: [CORE#27, CORE#54, DISTRIBUTION#3, DISTRIBUTION#12]
     statement: The runtime shall load Pactwright configuration, lifecycle configuration, `.pactwright/lock.yml`, core Project Graph records and typed edges through one canonical loading path.
   R06:
-    source: [CORE#54, CORE#57]
+    source: [CORE#54, CORE#57, DISTRIBUTION#13]
     statement: The loader shall report an input it cannot parse, identifying that input, and shall not silently omit, repair or accept it.
   R07:
     source: [CHECKPOINT#4, CORE#4, DISTRIBUTION#10]
@@ -35,7 +35,7 @@ acceptance:
     covers: [R01, R02]
     given: A clean checkout of the candidate with no build output.
     when: The runtime package is packed and the archive is inspected.
-    then: Packing runs the build, and the archive is named `pactwright`, provides the `pactwright` executable, carries the required metadata and resolves every declared entry point, `bin` target and export to a file it contains.
+    then: Packing runs the build, and the archived package manifest names the package `pactwright`, declares the `pactwright` executable, carries the required metadata and resolves every declared entry point, `bin` target and export to a file the archive contains.
     verify: {automated: [package.archive-inspection]}
   AC02:
     covers: [R02]
@@ -60,9 +60,9 @@ acceptance:
   AC05:
     covers: [R05]
     cases: [configuration, lifecycle-configuration, lock, core-records, typed-edges]
-    given: A fixture repository containing the listed input.
+    given: A fixture repository holding a parseable instance of every input the loader reads, declaring no Extension and not enabling GitHub.
     when: The repository is loaded.
-    then: The loaded state reproduces the stored input exactly, with nothing omitted, altered or invented.
+    then: The loaded state holds every entry and value of the listed input unchanged, with nothing omitted, altered or invented.
     verify: {automated: [loader.loads-inputs]}
   AC06:
     covers: [R05]
@@ -75,7 +75,7 @@ acceptance:
     cases: [configuration, lifecycle-configuration, lock, core-record, typed-edge]
     given: A fixture repository whose only defect is that the listed input cannot be parsed.
     when: The repository is loaded.
-    then: Loading reports the input as unparseable and identifies it, and no loaded state presents it as absent, repaired or valid.
+    then: Loading reports the input as unparseable and identifies it; no loaded state is produced without that report, and none presents the input as parsed, repaired or valid.
     verify: {automated: [loader.unparseable-input]}
   AC08:
     covers: [R07, R08]

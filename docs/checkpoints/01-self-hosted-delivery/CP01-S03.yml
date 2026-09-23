@@ -2,7 +2,7 @@
 id: CP01-S03
 requires: [CP01-S02]
 outputs:
-  typed-edge-store: Shared persistence and validation for typed relationships.
+  typed-edge-store: Shared persistence, validation and relation registration for typed relationships.
 requirements:
   R01:
     source: [CORE#15]
@@ -11,17 +11,20 @@ requirements:
     source: [CORE#15, CORE#57]
     statement: The validator shall reject edges with absent endpoints.
   R03:
-    source: [CORE#15, CORE#57]
+    source: [CORE#15, CORE#45, CORE#57]
     statement: The validator shall enforce registered endpoint types, including same-type supersession.
   R04:
     source: [CORE#15, CORE#57]
     statement: The validator shall reject duplicate source/relation/target tuples.
   R05:
-    source: [CORE#15, CORE#57]
+    source: [CORE#15, CORE#45, CORE#57]
     statement: The validator shall reject supersession cycles, including self-supersession.
   R06:
     source: [CORE#15, CORE#57]
     statement: Additional relations shall not replace or weaken core relationship constraints.
+  R07:
+    source: [CORE#4, CORE#15, DISTRIBUTION#10]
+    statement: The registry shall accept an additional relation with its own endpoint constraints, and the shared store and validator shall apply those constraints to its edges.
 acceptance:
   AC01:
     covers: [R01, R03]
@@ -58,7 +61,7 @@ acceptance:
     then: Validation rejects the edge set and identifies the illegal supersession cycle.
     verify: {automated: [edges.supersession-cycles]}
   AC06:
-    covers: [R01, R06]
+    covers: [R01, R07]
     given: A fixture registers an additional relation that permits two-way links.
     when: Two-way links are validated, stored and reloaded.
     then: The links are preserved without imposing supersession-only acyclicity.
@@ -69,3 +72,17 @@ acceptance:
     when: Registration processes the declaration.
     then: Registration refuses it and the original core constraints remain effective.
     verify: {automated: [edges.core-registration-protection]}
+  AC08:
+    covers: [R03, R07]
+    cases: [wrong-source-type, wrong-target-type]
+    given: A fixture-registered additional relation and an edge of it whose only defect is the listed violation of that relation's endpoint types.
+    when: The edge set is validated.
+    then: Validation rejects the edge for the violated additional-relation constraint.
+    verify: {automated: [edges.additional-relation-endpoint-types]}
+  AC09:
+    covers: [R06]
+    cases: [supersession-cycle, cross-type-supersession]
+    given: Valid two-way links of a fixture-registered additional relation and core supersession edges whose only defect is the listed violation.
+    when: The edge set is validated.
+    then: Validation rejects the edge set for the violated core supersession constraint.
+    verify: {automated: [edges.core-constraints-kept]}

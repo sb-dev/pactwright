@@ -56,7 +56,7 @@ This runbook defines implementation order, not new Pactwright semantics.
 
 ## 3. Execution contract
 
-A converted step is defined by its YAML contract in [`01-self-hosted-delivery/`](./01-self-hosted-delivery/), in the format owned by [Spec 00](../specs/00-checkpoint-step-contract-and-delivery-tasks.md). The step section here links the contract and summarises its deliverables; the contract holds the requirements and acceptance criteria. Every contract inherits the settings and shared requirements in [`checkpoint.yml`](./01-self-hosted-delivery/checkpoint.yml), and [`crosswalk.yml`](./01-self-hosted-delivery/crosswalk.yml) records where each version 17 obligation went.
+A converted step is defined by its YAML contract in [`01-self-hosted-delivery/`](./01-self-hosted-delivery/), in the format owned by [Spec 00](../specs/00-checkpoint-step-contract-and-delivery-tasks.md). The step section here links the contract and summarises its deliverables; the contract holds the requirements and acceptance criteria. Every contract inherits the settings and shared requirements in [`checkpoint.yml`](./01-self-hosted-delivery/checkpoint.yml), and [`crosswalk.yml`](./01-self-hosted-delivery/crosswalk.yml) records where each obligation of the converted version 17 step prose went.
 
 Stage 1 is converted. Later steps keep the version 17 form until they are converted:
 
@@ -68,7 +68,7 @@ Step
 → Verify before continuing
 ```
 
-For repository/code changes, finish with `pnpm verify` (shared requirement `CP01/R01`).
+For Pactwright repository/code changes, finish with `pnpm verify` (shared requirement `CP01/R01`).
 
 Once a deterministic Pactwright responsibility exists, use the runtime rather than asking an agent to emulate it.
 
@@ -152,7 +152,7 @@ Checkpoint 1 must not turn adapter responsibilities such as capture-intent or wr
 
 **Deliverables**
 
-- `typed-edge-store` — Shared persistence and validation for typed relationships.
+- `typed-edge-store` — Shared persistence, validation and relation registration for typed relationships.
 
 This step proves relation registration with fixture relations. Installed Extension composition exercises the real integration in Step 16; a fixture does not establish that later capability.
 
@@ -172,10 +172,10 @@ Gate state arrives with Step 6. This step proves only that approval recorded out
 
 **Deliverables**
 
-- `repository-revision` — A runtime-provided repository revision identifying the exact repository state used as the execution input base.
+- `repository-revision` — A runtime-provided repository revision identifying the exact repository state used as the reconstructible execution input base.
 - `project-graph-revision` — A deterministic Project Graph revision derived from registered canonical Project Graph state only.
 
-A fixture-registered relation stands in for Extension-owned records here. Step 16 repeats the inclusion/exclusion proof with an enabled fixture Extension.
+Here a fixture-registered relation proves only that additional typed edges enter the Project Graph revision. Step 16 proves inclusion of enabled Extension-owned records by repeating the inclusion/exclusion proof with an enabled fixture Extension.
 
 ## Stage 2 — Implement Contract-driven lifecycle execution
 

@@ -15,11 +15,11 @@ sources:
 requirements:
   R01:
     source: [GUIDE#verification]
-    statement: A step that changes repository files shall leave the root `pnpm verify` gate passing.
+    statement: A step that changes files in the Pactwright repository shall leave its root `pnpm verify` gate passing.
 acceptance:
   AC01:
     covers: [R01]
-    given: A step candidate that changes repository files.
+    given: A step candidate that changes files in the Pactwright repository.
     when: The candidate revision is verified.
-    then: "`pnpm verify` completes successfully on the candidate revision."
+    then: "`pnpm verify` completes successfully at the Pactwright repository root on the candidate revision."
     verify: {automated: [repo.verify]}

@@ -2,7 +2,7 @@
 id: CP01-S05
 requires: [CP01-S02, CP01-S03]
 outputs:
-  repository-revision: A runtime-provided repository revision identifying the exact repository state used as the execution input base.
+  repository-revision: A runtime-provided repository revision identifying the exact repository state used as the reconstructible execution input base.
   project-graph-revision: A deterministic Project Graph revision derived from registered canonical Project Graph state only.
 requirements:
   R01:
@@ -13,7 +13,7 @@ requirements:
     statement: The runtime shall derive the same Project Graph revision from the same canonical Project Graph state.
   R03:
     source: [CORE#56]
-    statement: The Project Graph revision shall include registered canonical Delivery records, typed edges and enabled Extension-owned canonical records.
+    statement: The Project Graph revision shall include registered canonical Delivery records and typed edges, including edges of registered additional relations.
   R04:
     source: [CORE#5, CORE#56]
     statement: The Project Graph revision shall exclude generated reports, adapter output, lifecycle execution state, execution provenance, GitHub state and other derived state.
@@ -53,7 +53,7 @@ acceptance:
   AC05:
     covers: [R04]
     cases: [generated-report, adapter-output, lifecycle-execution-state, execution-provenance, github-state, derived-projection]
-    given: Two fixture repository states with identical canonical state whose only difference is the listed non-canonical content.
+    given: Two fixture repository states with identical canonical state whose only difference is non-canonical fixture content standing in for the listed kind.
     when: The Project Graph revision of each is derived.
     then: The two revisions are identical.
     verify: {automated: [revision.graph-non-canonical-change]}
@@ -70,3 +70,9 @@ acceptance:
     when: Both revisions are resolved for each state.
     then: The repository revisions differ and the Project Graph revisions are identical.
     verify: {automated: [revision.distinct-identities]}
+  AC08:
+    covers: [R01]
+    given: A repository revision recorded from a committed fixture state, after which a further commit changes a canonical record.
+    when: The state the recorded revision identifies is restored at another path with existing repository mechanisms and its Project Graph revision is derived.
+    then: The restored state is the recorded state, not the current one, and yields the Project Graph revision derived when the repository revision was recorded.
+    verify: {automated: [revision.repository-reconstructible]}

@@ -49,9 +49,9 @@ sources:
   DISTRIBUTION: ../../specs/02-distribution-agent-packs-extensions-and-evaluation.md
 ```
 
-`software-bootstrap` is a proposed model identifier. Source paths are relative to `checkpoint.yml`. `CORE#15` identifies numbered section 15; a source without numbered headings is cited by heading anchor, such as `GUIDE#replay-provenance`. The harness resolves and pins the actual source revisions for each run.
+`software-bootstrap` is a proposed model identifier. Source paths are relative to `checkpoint.yml`. `CORE#15` identifies numbered section 15; a heading without a section number, in any source, is cited by its GitHub heading anchor, such as `GUIDE#replay-provenance`. The harness resolves and pins the actual source revisions for each run.
 
-Shared requirements, mandatory review policy and checkpoint exit criteria are declared once in `checkpoint.yml` and inherited; their IDs take the checkpoint prefix, such as `CP01/R01`. Do not maintain a second hand-written plan or acceptance registry duplicating these contracts; generate indexes and coverage views from the contract files.
+Shared requirements, mandatory review policy and checkpoint exit criteria are declared once and inherited. Shared requirements live in `checkpoint.yml`; their IDs take the checkpoint prefix, such as `CP01/R01`. Do not maintain a second hand-written plan or acceptance registry duplicating these contracts; generate indexes and coverage views from the contract files.
 
 While a checkpoint is converted, `crosswalk.yml` records where each obligation of the replaced prose went, quoting it verbatim. It is conversion evidence for T1 and T2 review, not a plan to maintain.
 
@@ -74,13 +74,13 @@ Requirement/criterion IDs are local: `R01` becomes `CP01-S03/R01`. Optional `inp
 
 ### Example — Step 3: shared typed-edge store
 
-This contract retains the typed-edge obligations from the v1 example and is Checkpoint 1's Step 3 contract, `01-self-hosted-delivery/CP01-S03.yml`, without its title comment. Verifier IDs identify bindings to implement, not existing commands.
+This example is taken from Checkpoint 1's Step 3 contract, `01-self-hosted-delivery/CP01-S03.yml`, and retains the typed-edge obligations from the v1 example; the contract file governs if the two differ. Verifier IDs identify bindings to implement, not existing commands.
 
 ```yaml
 id: CP01-S03
 requires: [CP01-S02]
 outputs:
-  typed-edge-store: Shared persistence and validation for typed relationships.
+  typed-edge-store: Shared persistence, validation and relation registration for typed relationships.
 requirements:
   R01:
     source: [CORE#15]
@@ -89,17 +89,20 @@ requirements:
     source: [CORE#15, CORE#57]
     statement: The validator shall reject edges with absent endpoints.
   R03:
-    source: [CORE#15, CORE#57]
+    source: [CORE#15, CORE#45, CORE#57]
     statement: The validator shall enforce registered endpoint types, including same-type supersession.
   R04:
     source: [CORE#15, CORE#57]
     statement: The validator shall reject duplicate source/relation/target tuples.
   R05:
-    source: [CORE#15, CORE#57]
+    source: [CORE#15, CORE#45, CORE#57]
     statement: The validator shall reject supersession cycles, including self-supersession.
   R06:
     source: [CORE#15, CORE#57]
     statement: Additional relations shall not replace or weaken core relationship constraints.
+  R07:
+    source: [CORE#4, CORE#15, DISTRIBUTION#10]
+    statement: The registry shall accept an additional relation with its own endpoint constraints, and the shared store and validator shall apply those constraints to its edges.
 acceptance:
   AC01:
     covers: [R01, R03]
@@ -136,7 +139,7 @@ acceptance:
     then: Validation rejects the edge set and identifies the illegal supersession cycle.
     verify: {automated: [edges.supersession-cycles]}
   AC06:
-    covers: [R01, R06]
+    covers: [R01, R07]
     given: A fixture registers an additional relation that permits two-way links.
     when: Two-way links are validated, stored and reloaded.
     then: The links are preserved without imposing supersession-only acyclicity.
@@ -147,6 +150,20 @@ acceptance:
     when: Registration processes the declaration.
     then: Registration refuses it and the original core constraints remain effective.
     verify: {automated: [edges.core-registration-protection]}
+  AC08:
+    covers: [R03, R07]
+    cases: [wrong-source-type, wrong-target-type]
+    given: A fixture-registered additional relation and an edge of it whose only defect is the listed violation of that relation's endpoint types.
+    when: The edge set is validated.
+    then: Validation rejects the edge for the violated additional-relation constraint.
+    verify: {automated: [edges.additional-relation-endpoint-types]}
+  AC09:
+    covers: [R06]
+    cases: [supersession-cycle, cross-type-supersession]
+    given: Valid two-way links of a fixture-registered additional relation and core supersession edges whose only defect is the listed violation.
+    when: The edge set is validated.
+    then: Validation rejects the edge set for the violated core supersession constraint.
+    verify: {automated: [edges.core-constraints-kept]}
 ```
 
 This step proves the registration mechanism. Installed Extension composition must later exercise the real integration; a fixture does not establish that later capability.

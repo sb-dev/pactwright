@@ -7,6 +7,8 @@ entries:
   - key: S01.references
     text: "Specs 01–02; Implementation Guide engineering baseline."
     covered_by: [CP01-S01/R01, CP01-S01/R02, CP01-S01/R03, CP01-S01/R05]
+    allocated_to: CP01-S20
+    note: "The package-metadata rule against claiming compatibility that CI or package smoke tests do not exercise is proven by the Step 20 CI gate and the Step 22-23 packed consumers."
   - key: S01.run.1
     text: "Create the Pactwright runtime and CLI package foundation."
     covered_by: [CP01-S01/R01, CP01-S01/AC01]
@@ -51,20 +53,20 @@ entries:
     covered_by: [CP01-S02/R04, CP01-S02/R06, CP01-S02/R07, CP01-S02/AC01, CP01-S02/AC02, CP01-S02/AC05, CP01-S02/AC06, CP01-S02/AC07]
   - key: S02.run.8
     text: "Contract alternatives remain transient."
-    covered_by: [CP01-S02/R02, CP01-S02/AC03, CP01-S02/AC04]
+    covered_by: [CP01-S02/R02, CP01-S02/AC03, CP01-S02/AC04, CP01-S02/AC08]
   - key: S02.run.9
     text: "Delivery and Review executions remain execution provenance rather than core Project Graph record types."
-    covered_by: [CP01-S02/R03, CP01-S02/AC03, CP01-S02/AC04]
+    covered_by: [CP01-S02/R03, CP01-S02/AC03, CP01-S02/AC04, CP01-S02/AC08]
   - key: S02.expected.1
     text: "The runtime validates the complete core record set without inventing execution nodes."
-    covered_by: [CP01-S02/R01, CP01-S02/R03, CP01-S02/R04, CP01-S02/AC01, CP01-S02/AC02, CP01-S02/AC03, CP01-S02/AC04]
+    covered_by: [CP01-S02/R01, CP01-S02/R03, CP01-S02/R04, CP01-S02/AC01, CP01-S02/AC02, CP01-S02/AC03, CP01-S02/AC04, CP01-S02/AC08]
   - key: S02.verify.1
     text: "Add positive/negative fixtures for every record type and identity mutation."
     covered_by: [CP01-S02/R04, CP01-S02/R06, CP01-S02/R07, CP01-S02/AC01, CP01-S02/AC02, CP01-S02/AC05, CP01-S02/AC06, CP01-S02/AC07]
-    note: "Identity mutation covers identity defects in a record set (AC05) and in-place changes to an existing record's identity, type or content (AC06)."
+    note: "Identity mutation covers identity defects in a record set (AC05) and in-place type or content changes under an existing identity (AC06). Detecting a changed identity of an existing record waits on Q05."
   - key: S03.references
     text: "Spec 01 relationships and supersession."
-    covered_by: [CP01-S03/R01, CP01-S03/R02, CP01-S03/R03, CP01-S03/R04, CP01-S03/R05, CP01-S03/R06]
+    covered_by: [CP01-S03/R01, CP01-S03/R02, CP01-S03/R03, CP01-S03/R04, CP01-S03/R05, CP01-S03/R06, CP01-S03/R07]
   - key: S03.run.1
     text: "Implement the shared typed-edge registry/store for core lineage and same-type supersession."
     covered_by: [CP01-S03/R01, CP01-S03/R03, CP01-S03/AC01, CP01-S03/AC03]
@@ -73,12 +75,12 @@ entries:
     covered_by: [CP01-S03/R02, CP01-S03/R03, CP01-S03/R04, CP01-S03/R05, CP01-S03/AC02, CP01-S03/AC03, CP01-S03/AC04, CP01-S03/AC05]
   - key: S03.run.3
     text: "Keep the registry extensible for later Pactwright Extension relations."
-    covered_by: [CP01-S03/R06, CP01-S03/AC06, CP01-S03/AC07]
+    covered_by: [CP01-S03/R06, CP01-S03/R07, CP01-S03/AC06, CP01-S03/AC07, CP01-S03/AC08, CP01-S03/AC09]
     allocated_to: CP01-S16
     note: "Fixture registration proves the mechanism here; installed Extension composition exercises it through the Step 16 Extension loader."
   - key: S03.expected.1
     text: "Core relationships are deterministic and extension-ready."
-    covered_by: [CP01-S03/R01, CP01-S03/R06, CP01-S03/AC01, CP01-S03/AC06, CP01-S03/AC07]
+    covered_by: [CP01-S03/R01, CP01-S03/R06, CP01-S03/R07, CP01-S03/AC01, CP01-S03/AC06, CP01-S03/AC07, CP01-S03/AC08, CP01-S03/AC09]
   - key: S03.verify.1
     text: "Run invalid endpoint/type, duplicate, self-supersession and cycle fixtures."
     covered_by: [CP01-S03/R02, CP01-S03/R03, CP01-S03/R04, CP01-S03/R05, CP01-S03/AC02, CP01-S03/AC03, CP01-S03/AC04, CP01-S03/AC05]
@@ -110,22 +112,25 @@ entries:
     covered_by: [CP01-S05/R01, CP01-S05/R02, CP01-S05/R03, CP01-S05/R04, CP01-S05/R05, CP01-S05/R06]
   - key: S05.run.1
     text: "Implement runtime-provided repository revision and deterministic Project Graph revision."
-    covered_by: [CP01-S05/R01, CP01-S05/R02, CP01-S05/AC01, CP01-S05/AC02, CP01-S05/AC03]
+    covered_by: [CP01-S05/R01, CP01-S05/R02, CP01-S05/AC01, CP01-S05/AC02, CP01-S05/AC03, CP01-S05/AC08]
+    note: "Replay validation of recorded revisions is Step 9 validation rule 17."
   - key: S05.run.2
     text: "Project Graph revision includes registered canonical Delivery records, typed edges and enabled Extension-owned canonical records."
     covered_by: [CP01-S05/R03, CP01-S05/AC04]
     allocated_to: CP01-S16
-    note: "A fixture-registered relation stands in here; enabled Extension-owned records are proven through the Step 16 fixture Extension loader."
+    note: "Step 5 proves core records and typed edges, including edges of a fixture-registered relation. Inclusion of enabled Extension-owned canonical records is proven through the Step 16 fixture Extension loader."
   - key: S05.run.3
     text: "It excludes generated reports, adapter output, lifecycle execution state, execution provenance, GitHub projections and other derived state."
     covered_by: [CP01-S05/R04, CP01-S05/AC05]
+    allocated_to: CP01-S06
+    note: "Fixture content stands in here for execution state, adapter output, reports, provenance and GitHub state; Step 6 proves that execution progress alone leaves project_graph_revision unchanged."
   - key: S05.run.4
     text: "Canonicalise ordering before hashing."
     covered_by: [CP01-S05/R05, CP01-S05/AC06]
     note: "The contract does not fix a hash algorithm; see Q18."
   - key: S05.expected.1
     text: "Repository revision and Project Graph revision are stable, distinct identities."
-    covered_by: [CP01-S05/R01, CP01-S05/R02, CP01-S05/R06, CP01-S05/AC01, CP01-S05/AC03, CP01-S05/AC07]
+    covered_by: [CP01-S05/R01, CP01-S05/R02, CP01-S05/R06, CP01-S05/AC01, CP01-S05/AC03, CP01-S05/AC07, CP01-S05/AC08]
   - key: S05.verify.1
     text: "Prove identical state gives identical graph revision; generated-file or execution-state change does not; canonical mutation does."
     covered_by: [CP01-S05/R02, CP01-S05/R03, CP01-S05/R04, CP01-S05/AC03, CP01-S05/AC04, CP01-S05/AC05]
@@ -148,8 +153,8 @@ open_questions:
     affects: [CP01-S01/R01]
     question: "Does the runtime package stay at the repository root or move to packages/pactwright/ as Spec 08 §4 and §6 describe?"
   - id: Q05
-    affects: [CP01-S02/R06, CP01-S02/AC05]
-    question: "What is a core record's canonical identity: how is it represented and assigned, is the record type part of it, and what makes one malformed?"
+    affects: [CP01-S02/R06, CP01-S02/R07, CP01-S02/AC05]
+    question: "What is a core record's canonical identity: how is it represented and assigned, is the record type part of it, and what makes one malformed? How is a changed identity of an existing record told apart from removing one record and adding another, and must it be rejected?"
   - id: Q06
     affects: [CP01-S02/R07, CP01-S03/R01]
     question: "What does immutability cover and what is it checked against: every stored record, including an unresolved Intent? The current stored graph or Git history? May a record or typed edge be removed or changed in place?"
@@ -158,7 +163,7 @@ open_questions:
     question: "Is a record's canonical content its stored bytes or a normalised form? Does a formatting-only edit count as an in-place change or change the Project Graph revision?"
   - id: Q08
     affects: [CP01-S02/R04]
-    question: "Which items that Spec 01 says Intent, Contract, Brief and Evidence own are mandatory for validation, and is each a structured field or prose?"
+    question: "Which items that Spec 01 says Intent, Contract, Brief and Evidence own are mandatory schema rules, and is each a structured field or prose? Are the content exclusions and qualities in Spec 01 §§7, 9, 10, 11 and 14 (what a record must not contain, a concise rationale) schema rules or review judgements?"
   - id: Q09
     affects: [CP01-S02/R05]
     question: "Does a Decision record only the kind of its authorised actor (human, agent, automation) or an actor identity as well?"
@@ -194,4 +199,4 @@ open_questions:
     question: "Must Stage 1 provide a registration seam for Extension-owned record types so that Step 5 can prove their inclusion with a fixture, or is that inclusion delivered entirely in Step 16?"
   - id: Q20
     affects: [CP01-S01/R05, CP01-S02/R07, CP01-S03/R06, CP01-S04/R01]
-    question: "Should the later contracts carry these obligations, which v17 does not state at the named steps: Step 7 mutations refuse in-place rewrites through the Step 2 check; Step 16 exercises Step 3 relation registration and Step 4 derivation with a real Extension; Steps 6, 11, 14 and 15 load their real formats through the Step 1 loader?"
+    question: "Should the later contracts carry these obligations, which v17 does not state at the named steps: Step 7 mutations refuse in-place rewrites through the Step 2 check; Step 16 re-runs CP01-S03/AC06 to AC09 and exercises Step 4 derivation through the fixture Extension loader, beyond the graph contribution registration and core-redefinition failure its v17 text already requires; Steps 6, 11, 14 and 15 load their real formats through the Step 1 loader?"
