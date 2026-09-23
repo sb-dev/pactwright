@@ -55,6 +55,8 @@ Shared requirements, mandatory review policy and checkpoint exit criteria are de
 
 While a checkpoint is converted, `crosswalk.yml` records where each obligation of the replaced prose went, quoting it verbatim. It is conversion evidence for T1 and T2 review, not a plan to maintain.
 
+`pnpm contracts:check` validates every checkpoint directory that has a `checkpoint.yml`. It checks the format schema, step identity, key order, requirement coverage, `requires` targets and source citations. It also checks the crosswalk's IDs and, reading the replaced text from Git history, its verbatim quotes. `pnpm test` runs the same checks.
+
 ## 3. Compact step format
 
 | Field | Meaning |
