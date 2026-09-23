@@ -1,0 +1,65 @@
+name: PR41 temporary validation
+
+on:
+  push:
+    branches: [claude/checkpoint-contract-files-o06rm4]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: pr41-temporary-validation
+  cancel-in-progress: false
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: actions/setup-node@a0853c24544627f65ddf259abe73b1d18a591444
+        with:
+          node-version: "22"
+      - name: Install the declared package manager and frozen dependencies
+        shell: bash
+        run: |
+          npm install --prefix "$RUNNER_TEMP/pr41-tools" --ignore-scripts pnpm@11.7.0
+          echo "$RUNNER_TEMP/pr41-tools/node_modules/.bin" >> "$GITHUB_PATH"
+          "$RUNNER_TEMP/pr41-tools/node_modules/.bin/pnpm" install --frozen-lockfile
+      - name: Run each repository check without hiding failures
+        shell: bash
+        run: |
+          mkdir -p "$RUNNER_TEMP/pr41-evidence"
+          git rev-parse HEAD > "$RUNNER_TEMP/pr41-evidence/revision.txt"
+          node --version > "$RUNNER_TEMP/pr41-evidence/node.txt"
+          pnpm --version > "$RUNNER_TEMP/pr41-evidence/pnpm.txt"
+          failed=0
+          for command in contracts:check format:check lint typecheck test build verify; do
+            set +e
+            pnpm "$command" > "$RUNNER_TEMP/pr41-evidence/${command//:/-}.log" 2>&1
+            result=$?
+            set -e
+            printf '%s\t%s\n' "$command" "$result" | tee -a "$RUNNER_TEMP/pr41-evidence/results.tsv"
+            cat "$RUNNER_TEMP/pr41-evidence/${command//:/-}.log"
+            if [ "$result" -ne 0 ]; then failed=1; fi
+          done
+          exit "$failed"
+      - name: Preserve the exact inspected checkout and tools for local verification
+        if: always()
+        shell: bash
+        run: |
+          mkdir -p "$RUNNER_TEMP/pr41-evidence"
+          tar -czf "$RUNNER_TEMP/pr41-evidence/checkout.tar.gz" -C "$GITHUB_WORKSPACE" .
+          if [ -d "$RUNNER_TEMP/pr41-tools" ]; then
+            tar -czf "$RUNNER_TEMP/pr41-evidence/tools.tar.gz" -C "$RUNNER_TEMP/pr41-tools" .
+          fi
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        if: always()
+        with:
+          name: pr41-validation-${{ github.sha }}
+          path: ${{ runner.temp }}/pr41-evidence/
+          retention-days: 3
+          if-no-files-found: error
