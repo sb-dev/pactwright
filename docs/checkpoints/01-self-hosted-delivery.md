@@ -1,6 +1,6 @@
 # Pactwright — Checkpoint 1 — Self-Hosted Delivery
 
-**Version:** 17  
+**Version:** 18  
 **Entry condition:** No installable Pactwright runtime exists.  
 **Release:** `0.0.2` (corrective; `0.0.1` was published against version 14 of this runbook and remains the released baseline)  
 **Exit capability:** Pactwright is installable, upgradeable, can govern one complete Contract-driven Delivery in its own repository and in Kakeibo, can compare an Agent Pack candidate against a released baseline, and requires no manual Project Graph coherence work.
@@ -56,7 +56,9 @@ This runbook defines implementation order, not new Pactwright semantics.
 
 ## 3. Execution contract
 
-Every implementation action follows:
+A converted step is defined by its YAML contract in [`01-self-hosted-delivery/`](./01-self-hosted-delivery/), in the format owned by [Spec 00](../specs/00-checkpoint-step-contract-and-delivery-tasks.md). The step section here links the contract and summarises its deliverables; the contract holds the requirements and acceptance criteria. Every contract inherits the settings and shared requirements in [`checkpoint.yml`](./01-self-hosted-delivery/checkpoint.yml), and [`crosswalk.yml`](./01-self-hosted-delivery/crosswalk.yml) records where each version 17 obligation went.
+
+Stage 1 is converted. Later steps keep the version 17 form until they are converted:
 
 ```text
 Step
@@ -66,7 +68,7 @@ Step
 → Verify before continuing
 ```
 
-For repository/code changes, finish with `pnpm verify`.
+For repository/code changes, finish with `pnpm verify` (shared requirement `CP01/R01`).
 
 Once a deterministic Pactwright responsibility exists, use the runtime rather than asking an agent to emulate it.
 
@@ -128,116 +130,52 @@ Checkpoint 1 must not turn adapter responsibilities such as capture-intent or wr
 
 ### Step 1 — Create the runtime/package foundation
 
-**References:** Specs 01–02; Implementation Guide engineering baseline.
+**Contract:** [`CP01-S01`](./01-self-hosted-delivery/CP01-S01.yml)
 
-**Run**
+**Deliverables**
 
-```text
-Create the Pactwright runtime and CLI package foundation.
-
-Implement one canonical loader for Pactwright configuration, lifecycle configuration, .pactwright/lock.yml, core Project Graph records and typed edges.
-
-Make the runtime publishable as `pactwright` with the repository's normal build/prepack/verify discipline and a repository-local `pnpm pactwright ...` path using the same built runtime.
-
-Do not implement optional Extension semantics or GitHub provisioning.
-```
-
-**Expected result**
-
-One buildable, testable and packable Pactwright runtime exists with one canonical loading path.
-
-**Verify before continuing**
-
-Run `pnpm verify`, pack the runtime and inspect the archive.
+- `runtime-package` — The `pactwright` runtime and CLI package, built, tested and packed through the repository's normal build, prepack and verify discipline.
+- `canonical-loader` — One loading path for Pactwright configuration, lifecycle configuration, `.pactwright/lock.yml`, core Project Graph records and typed edges.
+- `repository-cli` — A repository-local `pnpm pactwright ...` path that runs the same built runtime the package publishes.
 
 ### Step 2 — Implement the five durable core Delivery record types
 
-**References:** Spec 01 core Project Graph model.
+**Contract:** [`CP01-S02`](./01-self-hosted-delivery/CP01-S02.yml)
 
-**Run**
+**Deliverables**
 
-```text
-Implement exactly:
-- Intent
-- Decision
-- Contract
-- Brief
-- Evidence
-
-Enforce canonical identity, immutability and type-specific validation.
-Contract alternatives remain transient.
-Delivery and Review executions remain execution provenance rather than core Project Graph record types.
-```
-
-**Expected result**
-
-The runtime validates the complete core record set without inventing execution nodes.
-
-**Verify before continuing**
-
-Add positive/negative fixtures for every record type and identity mutation.
+- `core-record-model` — The five durable core Delivery record types, Intent, Decision, Contract, Brief and Evidence, with canonical identity, immutability and type-specific validation.
 
 ### Step 3 — Implement the shared typed-edge store
 
-**References:** Spec 01 relationships and supersession.
+**Contract:** [`CP01-S03`](./01-self-hosted-delivery/CP01-S03.yml)
 
-**Run**
+**Deliverables**
 
-```text
-Implement the shared typed-edge registry/store for core lineage and same-type supersession.
-Validate endpoint existence/types, duplicate tuples, self-supersession and supersession cycles.
-Keep the registry extensible for later Pactwright Extension relations.
-```
+- `typed-edge-store` — Shared persistence and validation for typed relationships.
 
-**Expected result**
-
-Core relationships are deterministic and extension-ready.
-
-**Verify before continuing**
-
-Run invalid endpoint/type, duplicate, self-supersession and cycle fixtures.
+This step proves relation registration with fixture relations. Installed Extension composition exercises the real integration in Step 16; a fixture does not establish that later capability.
 
 ### Step 4 — Implement current-lineage and authority derivation
 
-**References:** Spec 01 authority and supersession.
+**Contract:** [`CP01-S04`](./01-self-hosted-delivery/CP01-S04.yml)
 
-**Run**
+**Deliverables**
 
-```text
-Derive current Delivery lineage from canonical graph structure.
-Decision changes WHAT authorised outcome is current.
-Gate state controls HOW execution continues and cannot substitute for Decision authority.
-Do not store redundant derived lifecycle state.
-```
+- `lineage-derivation` — Derivation of each Intent's current Delivery lineage, authorised Contract and broad Delivery state from canonical records and typed edges alone.
 
-**Expected result**
-
-The runtime derives authoritative current lineage from Project Graph state.
-
-**Verify before continuing**
-
-Use proceed/reject/defer, supersession and ambiguous-lineage fixtures; invalid ambiguity fails closed.
+Gate state arrives with Step 6. This step proves only that approval recorded outside a Decision cannot act as Decision authority.
 
 ### Step 5 — Implement repository and Project Graph revision identity
 
-**References:** Spec 01 replay/revision semantics; Implementation Guide replay provenance.
+**Contract:** [`CP01-S05`](./01-self-hosted-delivery/CP01-S05.yml)
 
-**Run**
+**Deliverables**
 
-```text
-Implement runtime-provided repository revision and deterministic Project Graph revision.
-Project Graph revision includes registered canonical Delivery records, typed edges and enabled Extension-owned canonical records.
-It excludes generated reports, adapter output, lifecycle execution state, execution provenance, GitHub projections and other derived state.
-Canonicalise ordering before hashing.
-```
+- `repository-revision` — A runtime-provided repository revision identifying the exact repository state used as the execution input base.
+- `project-graph-revision` — A deterministic Project Graph revision derived from registered canonical Project Graph state only.
 
-**Expected result**
-
-Repository revision and Project Graph revision are stable, distinct identities.
-
-**Verify before continuing**
-
-Prove identical state gives identical graph revision; generated-file or execution-state change does not; canonical mutation does. Repeat the inclusion/exclusion proof with an enabled fixture Extension in Step 16 once its registration path exists.
+A fixture-registered relation stands in for Extension-owned records here. Step 16 repeats the inclusion/exclusion proof with an enabled fixture Extension.
 
 ## Stage 2 — Implement Contract-driven lifecycle execution
 
@@ -1070,4 +1008,4 @@ Checkpoint 1 closes only when:
 
 ---
 
-**Pactwright — Checkpoint 1 — Self-Hosted Delivery v17**
+**Pactwright — Checkpoint 1 — Self-Hosted Delivery v18**

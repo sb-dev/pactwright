@@ -5,6 +5,7 @@ format: 2
 checkpoint: CP01
 run_model: software-bootstrap
 sources:
+  CHECKPOINT: ../01-self-hosted-delivery.md
   CORE: ../../specs/01-pactwright-core-system-and-lifecycle.md
   DISTRIBUTION: ../../specs/02-distribution-agent-packs-extensions-and-evaluation.md
   OSS: ../../specs/08-open-source-project-organisation.md

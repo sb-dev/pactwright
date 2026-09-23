@@ -1,0 +1,85 @@
+# CP01 Step 1 — Create the runtime/package foundation
+id: CP01-S01
+requires: []
+outputs:
+  runtime-package: The `pactwright` runtime and CLI package, built, tested and packed through the repository's normal build, prepack and verify discipline.
+  canonical-loader: One loading path for Pactwright configuration, lifecycle configuration, `.pactwright/lock.yml`, core Project Graph records and typed edges.
+  repository-cli: A repository-local `pnpm pactwright ...` path that runs the same built runtime the package publishes.
+requirements:
+  R01:
+    source: [OSS#6, DISTRIBUTION#3]
+    statement: The runtime and its CLI shall be one publishable package named `pactwright` that provides the `pactwright` executable.
+  R02:
+    source: [GUIDE#package-metadata]
+    statement: The package shall declare an explicit supported Node range, repository and licence metadata, an explicit public status, controlled contents, valid entry points, `bin` and exports, and a normal `prepack` build.
+  R03:
+    source: [GUIDE#verification, GUIDE#test-layers]
+    statement: The root `pnpm verify` gate shall format-check, lint, type-check, test and build the runtime.
+  R04:
+    source: [PRINCIPLES#11, OSS#16]
+    statement: The repository-local `pnpm pactwright ...` path shall run the same built runtime that the package publishes.
+  R05:
+    source: [CORE#27, CORE#54, DISTRIBUTION#3, DISTRIBUTION#12]
+    statement: The runtime shall load Pactwright configuration, lifecycle configuration, `.pactwright/lock.yml`, core Project Graph records and typed edges through one canonical loading path.
+  R06:
+    source: [CORE#54, CORE#57]
+    statement: The loader shall report an input it cannot parse, identifying that input, and shall not silently omit, repair or accept it.
+  R07:
+    source: [CHECKPOINT#4, CORE#4, DISTRIBUTION#10]
+    statement: The runtime shall not implement optional Pactwright Extension semantics.
+  R08:
+    source: [CHECKPOINT#4, DISTRIBUTION#14]
+    statement: The runtime shall not implement GitHub provisioning or remote GitHub reconciliation.
+acceptance:
+  AC01:
+    covers: [R01, R02]
+    given: A clean checkout of the candidate with no build output.
+    when: The runtime package is packed and the archive is inspected.
+    then: Packing runs the build, and the archive is named `pactwright`, provides the `pactwright` executable, carries the required metadata and resolves every declared entry point, `bin` target and export to a file it contains.
+    verify: {automated: [package.archive-inspection]}
+  AC02:
+    covers: [R02]
+    given: A candidate repository that holds tests, test fixtures and its own Pactwright configuration and Project Graph files.
+    when: The runtime package is packed.
+    then: The archive contains the built runtime and none of those files.
+    verify: {automated: [package.archive-contents]}
+  AC03:
+    covers: [R03]
+    cases: [format-violation, lint-violation, type-error, failing-test, build-failure]
+    given: A candidate whose only defect is the listed defect in the runtime package.
+    when: "`pnpm verify` runs at the repository root."
+    then: The gate fails at the stage that detects the defect.
+    verify: {automated: [repo.verify-covers-runtime]}
+  AC04:
+    covers: [R04]
+    cases: [built, unbuilt]
+    given: A repository checkout in the listed build state.
+    when: A command runs through `pnpm pactwright ...` at the repository root.
+    then: The command executes the built `bin` file that the package publishes and never runs runtime source directly; without build output it fails explicitly or builds first.
+    verify: {automated: [cli.repository-path]}
+  AC05:
+    covers: [R05]
+    cases: [configuration, lifecycle-configuration, lock, core-records, typed-edges]
+    given: A fixture repository containing the listed input.
+    when: The repository is loaded.
+    then: The loaded state reproduces the stored input exactly, with nothing omitted, altered or invented.
+    verify: {automated: [loader.loads-inputs]}
+  AC06:
+    covers: [R05]
+    given: The candidate runtime source.
+    when: Every runtime read of the inputs the loader owns is traced.
+    then: Each read goes through the canonical loading path, and no component parses those inputs another way.
+    verify: {review: [loader.single-path]}
+  AC07:
+    covers: [R06]
+    cases: [configuration, lifecycle-configuration, lock, core-record, typed-edge]
+    given: A fixture repository whose only defect is that the listed input cannot be parsed.
+    when: The repository is loaded.
+    then: Loading reports the input as unparseable and identifies it, and no loaded state presents it as absent, repaired or valid.
+    verify: {automated: [loader.unparseable-input]}
+  AC08:
+    covers: [R07, R08]
+    given: The candidate runtime source and its packed archive.
+    when: They are reviewed against the Checkpoint 1 scope.
+    then: They implement no Project Intelligence, Graph Review, Assets / Publication or Operations semantics and no GitHub provisioning or remote reconciliation.
+    verify: {review: [scope.no-extension-semantics, scope.no-github-provisioning]}

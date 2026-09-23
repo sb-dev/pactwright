@@ -74,7 +74,7 @@ Requirement/criterion IDs are local: `R01` becomes `CP01-S03/R01`. Optional `inp
 
 ### Example — Step 3: shared typed-edge store
 
-This proposed contract retains the typed-edge obligations from the v1 example. Verifier IDs identify bindings to implement, not existing commands.
+This contract retains the typed-edge obligations from the v1 example and is Checkpoint 1's Step 3 contract, `01-self-hosted-delivery/CP01-S03.yml`, without its title comment. Verifier IDs identify bindings to implement, not existing commands.
 
 ```yaml
 id: CP01-S03
@@ -124,16 +124,16 @@ acceptance:
     verify: {automated: [edges.endpoint-types]}
   AC04:
     covers: [R04]
-    given: A valid edge set with an exact repeated tuple.
+    given: An otherwise valid edge set with an exact repeated tuple.
     when: The edge set is validated.
-    then: Validation reports the duplicate rather than silently accepting it.
+    then: Validation rejects the edge set and identifies the duplicate tuple.
     verify: {automated: [edges.duplicate-tuple]}
   AC05:
     covers: [R05]
     cases: [self-loop, two-record-cycle, longer-cycle]
     given: Otherwise valid same-type records with the listed supersession cycle.
     when: The edge set is validated.
-    then: Validation identifies the illegal supersession cycle.
+    then: Validation rejects the edge set and identifies the illegal supersession cycle.
     verify: {automated: [edges.supersession-cycles]}
   AC06:
     covers: [R01, R06]

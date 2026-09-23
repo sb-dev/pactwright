@@ -1,0 +1,71 @@
+# CP01 Step 3 — Implement the shared typed-edge store
+id: CP01-S03
+requires: [CP01-S02]
+outputs:
+  typed-edge-store: Shared persistence and validation for typed relationships.
+requirements:
+  R01:
+    source: [CORE#15]
+    statement: The runtime shall preserve directed edge tuples when storing and reloading them.
+  R02:
+    source: [CORE#15, CORE#57]
+    statement: The validator shall reject edges with absent endpoints.
+  R03:
+    source: [CORE#15, CORE#57]
+    statement: The validator shall enforce registered endpoint types, including same-type supersession.
+  R04:
+    source: [CORE#15, CORE#57]
+    statement: The validator shall reject duplicate source/relation/target tuples.
+  R05:
+    source: [CORE#15, CORE#57]
+    statement: The validator shall reject supersession cycles, including self-supersession.
+  R06:
+    source: [CORE#15, CORE#57]
+    statement: Additional relations shall not replace or weaken core relationship constraints.
+acceptance:
+  AC01:
+    covers: [R01, R03]
+    cases: [resolves, selects, decomposes, evidences, supersedes]
+    given: Valid core records and a permitted edge of the listed relation.
+    when: The edge set is validated, stored and reloaded.
+    then: Validation succeeds and repeated loading preserves the exact directed tuples.
+    verify: {automated: [edges.valid-roundtrip]}
+  AC02:
+    covers: [R02]
+    cases: [missing-source, missing-target]
+    given: An edge whose only defect is the listed absent endpoint.
+    when: The edge set is validated.
+    then: Validation rejects the edge and identifies the missing endpoint.
+    verify: {automated: [edges.missing-endpoint]}
+  AC03:
+    covers: [R03]
+    cases: [wrong-source-type, wrong-target-type, cross-type-supersession]
+    given: An edge whose only defect is the listed endpoint-type violation.
+    when: The edge set is validated.
+    then: Validation rejects the edge for the violated relation constraint.
+    verify: {automated: [edges.endpoint-types]}
+  AC04:
+    covers: [R04]
+    given: An otherwise valid edge set with an exact repeated tuple.
+    when: The edge set is validated.
+    then: Validation rejects the edge set and identifies the duplicate tuple.
+    verify: {automated: [edges.duplicate-tuple]}
+  AC05:
+    covers: [R05]
+    cases: [self-loop, two-record-cycle, longer-cycle]
+    given: Otherwise valid same-type records with the listed supersession cycle.
+    when: The edge set is validated.
+    then: Validation rejects the edge set and identifies the illegal supersession cycle.
+    verify: {automated: [edges.supersession-cycles]}
+  AC06:
+    covers: [R01, R06]
+    given: A fixture registers an additional relation that permits two-way links.
+    when: Two-way links are validated, stored and reloaded.
+    then: The links are preserved without imposing supersession-only acyclicity.
+    verify: {automated: [edges.additional-relation]}
+  AC07:
+    covers: [R06]
+    given: A fixture attempts to replace a core relation's endpoint constraints.
+    when: Registration processes the declaration.
+    then: Registration refuses it and the original core constraints remain effective.
+    verify: {automated: [edges.core-registration-protection]}

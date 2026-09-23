@@ -1,0 +1,75 @@
+# CP01 Step 2 — Implement the five durable core Delivery record types
+id: CP01-S02
+requires: [CP01-S01]
+outputs:
+  core-record-model: The five durable core Delivery record types, Intent, Decision, Contract, Brief and Evidence, with canonical identity, immutability and type-specific validation.
+requirements:
+  R01:
+    source: [CORE#4, CORE#6]
+    statement: The runtime shall define exactly five core Delivery record types, Intent, Decision, Contract, Brief and Evidence.
+  R02:
+    source: [CORE#3, CORE#8]
+    statement: The runtime shall not represent Contract alternatives as Project Graph records.
+  R03:
+    source: [CORE#5, CORE#13]
+    statement: The runtime shall not represent Delivery or Review executions as core Project Graph record types.
+  R04:
+    source: [CORE#6, CORE#7, CORE#9, CORE#10, CORE#11, CORE#14, CORE#57]
+    statement: The validator shall check each core record against the rules of its record type and reject a record that violates them as malformed.
+  R05:
+    source: [CORE#9]
+    statement: A Decision shall record an outcome of proceed, reject or defer, its authorised actor and a concise rationale.
+  R06:
+    source: [CORE#15, CORE#45]
+    statement: Each core record shall have a canonical identity that is unique within the Project Graph and unchanged across loads.
+  R07:
+    source: [CORE#45, CORE#58, GUIDE#replay-provenance]
+    statement: The runtime shall reject a proposed record set that changes the identity, type or content of an existing core record in place.
+acceptance:
+  AC01:
+    covers: [R01, R04, R05, R06]
+    cases: [intent, decision-proceed, decision-reject, decision-defer, contract, brief, evidence]
+    given: A valid fixture record of the listed type or Decision outcome.
+    when: The record is loaded, validated and loaded again.
+    then: Validation succeeds and both loads yield the same identity, type and content.
+    verify: {automated: [records.valid-per-type]}
+  AC02:
+    covers: [R04, R05]
+    cases: [intent, decision, contract, brief, evidence]
+    given: For each rule of the listed type, a fixture record whose only defect violates that rule.
+    when: Each record is validated.
+    then: Validation rejects every such record as malformed and identifies the record and the violated rule.
+    verify: {automated: [records.invalid-per-type]}
+  AC03:
+    covers: [R01, R02, R03]
+    given: The runtime's core record model.
+    when: Its record types are enumerated.
+    then: The set is exactly intent, decision, contract, brief and evidence, with no type for Contract alternatives or Delivery or Review executions.
+    verify: {automated: [records.core-type-set]}
+  AC04:
+    covers: [R01, R02, R03]
+    cases: [contract-alternative, delivery-execution, review-execution, unknown-type]
+    given: An otherwise valid record set whose only defect is one record presented as the listed kind.
+    when: The record set is validated.
+    then: Validation rejects that record as not a core Delivery record type.
+    verify: {automated: [records.non-core-type]}
+  AC05:
+    covers: [R06]
+    cases: [missing-identity, duplicate-identity]
+    given: An otherwise valid record set whose only defect is the listed identity defect.
+    when: The record set is loaded and validated.
+    then: Loading or validation rejects the record set and identifies the affected records.
+    verify: {automated: [records.identity-defects]}
+  AC06:
+    covers: [R07]
+    cases: [identity-changed, type-changed, content-changed]
+    given: A stored valid record set and a proposed set whose only difference is the listed in-place change to one existing record.
+    when: The proposed set is checked against the stored set.
+    then: The check rejects the proposed set and identifies the changed record.
+    verify: {automated: [records.in-place-change]}
+  AC07:
+    covers: [R07]
+    given: A stored valid record set and a proposed set that adds a valid record and leaves every existing record unchanged.
+    when: The proposed set is checked against the stored set.
+    then: The check accepts the proposed set.
+    verify: {automated: [records.additive-change]}
