@@ -242,6 +242,24 @@ Each node owns information that is not redundantly owned by another node.
 
 Downstream records reference upstream truth instead of reproducing it.
 
+## Storage envelope and identity
+
+A core graph record is UTF-8 Markdown with one YAML frontmatter mapping delimited by `---`, followed by a non-empty body. Common required fields are non-blank strings `id`, `type`, `title` and `created`; `created` is a valid Gregorian date in `YYYY-MM-DD` form, not a parsed date object. Core `type` is one of the five names above. Extensions own their record schemas and identities; the generic contribution seam in section 54 must not impose this core envelope on them or let them replace a core type.
+
+An identity is `<type>-<slug>-<suffix>`. The exact `type` prefix matches the record type; type is a lower-case kebab token starting with a letter, slug is one or more lower-case alphanumeric kebab tokens, and suffix is at least four lower-case hexadecimal digits. The filename is exactly `<id>.md`. Core IDs are unique among all active graph-node endpoint identities, assigned once by the runtime at creation, persisted and never regenerated on loading. The suffix is an identity discriminator, not a promise that the current body hashes to it. Allocation must check collisions before writing; its particular minting algorithm is internal.
+
+Core YAML inputs use JSON-compatible values: string-keyed objects, arrays, strings, booleans, null and finite numbers. Reject duplicate keys, aliases, merge keys, custom tags, invalid Unicode, non-finite numbers and integers outside the interoperable safe-integer range. Do not implicitly convert dates into objects. Extra descriptive frontmatter is allowed but has no independent lifecycle authority and is included in canonical content.
+
+## Structural validation and content review
+
+Structural validation checks the common envelope, identity, field types and the Decision fields in section 9. The other information owned by sections 7, 10, 11 and 14 is required semantic content expressed in the body, not a new mandatory structured-field inventory. A non-empty body alone does not prove semantic acceptance.
+
+Independent content review must check each applicable ownership item, the exclusions in those sections, upstream non-duplication, Contract completeness, Brief fidelity and factual Evidence. An omitted conditional item needs an explicit, defensible not-applicable judgement. The reviewer cites the relevant text and returns a reasoned pass or specific failures; concision and factuality are not inferred from a field being present or an arbitrary word count. Decision rationale and any rejected-option summaries receive the same review. These judgements do not introduce new core record fields.
+
+## Canonical content
+
+For comparison and hashing, canonical record content is its complete parsed frontmatter plus its body after CRLF/CR line endings become LF and leading/trailing whitespace is trimmed as defined by ECMAScript `String.prototype.trim`. YAML comments, mapping-key order, quoting style and this boundary whitespace do not change content. Internal Markdown whitespace, line wrapping, string values and array order remain significant. Do not normalise Unicode or interpret Markdown into a different document. Physical paths and parser diagnostics are not content.
+
 ---
 
 # 7. Intent
@@ -333,6 +351,8 @@ automation
 ```
 
 according to repository lifecycle policy.
+
+Persist both actor kind and identity in the required `decided_by` string, `<kind>:<identity>`, where kind is `human`, `agent` or `automation` and identity is non-empty and contains no whitespace. Persist the selected outcome in the required `outcome` field. Actor syntax is not authentication: the mutation guard must check the claimed identity against the trusted invoking actor and the applicable lifecycle policy before committing the Decision.
 
 A Decision is about **what is authorised**.
 
@@ -543,8 +563,16 @@ Rules:
 - a `reject` or `defer` Decision resolves the Intent without selecting a Contract;
 - a Brief decomposes one canonical Contract;
 - Evidence evidences the current Brief;
-- supersession links one durable record to its replacement;
+- supersession points from a replacement record to its predecessor;
 - optional extensions may register additional cross-graph relationships without changing core Delivery meaning.
+
+## Validation and registration
+
+Stored edges are mappings with exactly `source`, `type` and `target` string fields; `type` is the relation name. Validate endpoint existence and registered endpoint types, and reject duplicate `(source, type, target)` tuples. Core `supersedes` applies to all five core record types, including Intent, and to registered Extension node types. It requires equal registered node endpoint types, no self-link, no cycle, at most one outgoing and at most one incoming supersession edge per node. Both a split replacement and a merge replacement are invalid at edge validation, not merely a later lineage warning.
+
+Relation names and type names have one owner. Registration cannot reuse a core name, replace a core definition, or relax endpoint existence/types, tuple uniqueness, same-type supersession, acyclicity or supersession cardinality. A rejected registration leaves the previous registry effective. Additional relations may permit two-way links and cycles; supersession-only constraints do not make the whole graph a DAG.
+
+Unknown types or relations in active canonical storage are errors, including a misspelt relation. They are preserved and reported, never silently omitted from a successful graph revision. Inactive Extension storage is handled separately under section 54; a core record cannot depend on an inactive endpoint. Generic canonical-record registration and optional node projection belong to the record model; relation registration belongs to the edge store. Installed Extensions compose those same registries rather than substituting another parser, validator, derivation path or hash implementation.
 
 ---
 
@@ -655,7 +683,7 @@ No additional core lifecycle primitives are required initially.
 
 # 19. Domain-Specific Stages Stay Outside Pactwright
 
-Pactwright must not encode production-domain stages such as storyboard, shot generation, edit, mix, master, wireframe, prototype, implementation, migration, grey-box, search map or claim synthesis.
+Pactwright must not encode production-domain stages such as storyboard, shot generation, edit, mix, master, wireframe, prototype, implementation, migration, grey-box, search map, claim synthesis or other domain-specific stages.
 
 Those concepts belong to Production Skills.
 
@@ -1360,11 +1388,19 @@ execution state
 
 It does not imply deployed, published or successful in production.
 
+For each non-superseded Intent, derive at most one current Decision; a current proceeding Decision selects exactly one current Contract. A Contract belongs to exactly one Intent direction through its selecting Decisions and cannot be shared by current Decisions of different Intents. A current Contract has at most one unsuperseded Brief, and a current Brief at most one unsuperseded Evidence record. Independent Intents may progress concurrently; competing current Briefs or Evidence for the same parent are ambiguity, not parallel execution. Records reached only through a non-current ancestor are not current merely because they have no direct supersession edge.
+
+Reject contradictory cardinality, malformed records, invalid edges and cross-direction supersession rather than choosing by order, timestamp or ID. Decision supersession stays within one Intent; Contract supersession stays within that Intent's authorised direction; Brief supersession stays within one Contract and Evidence supersession within one Brief. A superseded Intent and its descendants cease to be a current direction; its replacement starts without inheriting the old Decision.
+
+This is structural derivation from graph records and edges, including the syntactic validity of a Decision actor. It does not evaluate lifecycle policy or authenticate that actor. The selected Contract is recorded graph authority, not permission to execute. Policy validation and mutation/execution guards must reject unauthorised action before effects; changing policy neither edits historical Decisions nor changes the graph revision. Diagnostics may derive an unaffected Intent while reporting another Intent's failure, but an incomplete repository load does not become an executable state.
+
 ---
 
 # 45. Supersession
 
-Canonical truth changes explicitly.
+Canonical truth changes explicitly. Every already stored core record, including an unresolved Intent, is immutable in identity, type and canonical content. Before mutation, compare the complete proposed graph with the currently stored validated graph, not a scan of Git history. Removing an existing core ID is invalid, including removal followed by an addition under another ID. Removing or replacing an existing core edge tuple is invalid. Additions and explicit supersession preserve their predecessors; normalisation-equivalent edits are not semantic mutations.
+
+A single snapshot cannot establish whether a user manually rewrote an earlier snapshot. Normal loading does not claim historical tamper detection. Git remains the history mechanism. Extension-owned data has its owning semantics and the explicit preservation/deletion authority in Spec 02; that cannot authorise rewriting core records or lineage edges.
 
 ## Brief changes
 
@@ -1387,6 +1423,8 @@ new Brief    --decomposes--> new Contract
 ```
 
 The previous current Decision and Contract are both superseded so there remains one current authorised direction and one readable canonical Contract.
+
+A current `reject` or `defer` Decision may instead supersede a proceeding Decision. It selects no Contract: the old Contract and its descendants remain stored but are withdrawn from current lineage through the superseded Decision. No replacement Contract or cross-type supersession is manufactured. Later re-authorisation creates a new proceeding Decision and a new Contract, superseding the previous Decision and the last Contract of that direction where one exists; it does not revive the withdrawn Contract or its Brief/Evidence. The replacement operations are validated as one complete proposed graph.
 
 ## Evidence correction
 
@@ -1604,6 +1642,36 @@ These include:
 
 AI must not independently decide canonical transition validity.
 
+## Canonical loading profile
+
+All runtime reads of Pactwright-owned repository inputs use one canonical loader and its registered decoders. For a supplied project root, the required paths are:
+
+| Input | Path and representation |
+|---|---|
+| Desired configuration | `.pactwright/config.yml`, YAML mapping owned by Spec 02 |
+| Lifecycle configuration | `.pactwright/lifecycle.yml`, YAML mapping owned by section 27 |
+| Resolved environment | `.pactwright/lock.yml`, YAML mapping owned by Spec 02 |
+| Core records | `specs/nodes/<id>.md`, section 6 envelope |
+| Core edges | `specs/graph/edges.yml`, YAML mapping containing only `edges`, an array of section 15 tuples |
+
+These retain the released `0.0.1` core paths and representation. Valid released core envelopes remain readable without an automatic rewrite; this is not a guarantee to accept previously tolerated malformed data or to make later formats readable by an older runtime. Unsupported configuration/schema versions are explicit errors. Shape, lock and package semantics are validated by their owning components through this loader, not re-parsed at each caller.
+
+Missing required files or the records directory, unreadable inputs, malformed documents and unrecognised entries in the core records directory are reported with their path and cause. An existing empty record directory and explicit `edges: []` are valid; an empty edge document is not an empty graph. Only an empty `.gitkeep` placeholder may be ignored in the core records directory. Nested entries there are errors; declared Extension subdirectories follow their owning decoder. Symlinks in canonical storage are not followed or silently skipped. Loading never invents defaults, repairs data, writes files, installs components or accesses GitHub.
+
+The result retains parseable values and all problems for `validate`, `doctor` and read-only diagnostics, with an explicit incomplete/error result when required inputs fail. No mutation, execution or successful complete Project Graph revision may use that partial result. Component-level inspection is not whole-repository acceptance.
+
+Configuration may declare Extensions and GitHub before their implementations are available. Preserve those declarations. An enabled Extension that cannot register its canonical contribution is an unsupported/incomplete-environment error; it cannot be treated as an empty contribution. A GitHub declaration is inert during local loading: report unavailable GitHub operations without provisioning them or disabling otherwise supported local graph inspection. Neither declaration proves the corresponding capability works.
+
+## Extension storage ownership
+
+The shared store is the union of the core stores above and enabled Extension contributions. Each Extension owns its canonical storage below `specs/extensions/<extension-id>/`; the Extension declares the files/subdirectories, decoders, schemas and canonical projections there. Its typed edges use `edges.yml` with the shared edge envelope. Reports and execution output are not canonical files. Extension IDs are lower-case kebab tokens starting with a letter; `core` is reserved and cannot name an Extension. Core storage accepts only core record types and core lineage tuples. An Extension cannot claim another owner's path, store its records in core storage, store a core node type in its directory, or place core-to-core lineage edges there. Additional cross-graph relations and same-type supersession of its own registered node types remain permitted through the shared validator.
+
+Every canonical contribution has a reserved owner (`core` or an Extension ID), a non-empty `kind`, a stable non-empty `key` and a JSON-compatible canonical `value`. `(owner, kind, key)` is unique in the active contribution set. The core contribution uses its type as kind, ID as key, and complete normalised frontmatter/body as value. All contribution values obey the JSON, Unicode and numeric domain in section 6. Extension keys, values and serialisations otherwise follow their own semantic schemas: a Domain Definition or Source must not acquire a core ID/title/date/body merely to be hashed. A contribution becomes an edge endpoint only when its owner also registers a node projection with a globally unique endpoint ID and a registered node type. Non-node canonical records still contribute to graph revision.
+
+The Step 2 seam validates contribution ownership/identity/value and dispatches to the owner schema; Step 3 validates optional node projections and edges. An Extension's canonical projection is part of its versioned semantic format, not permission to reinterpret stored data silently during an upgrade. Step 16 installs the same declarations through the normal compatibility/locking path and supplies every declared canonical input to those existing mechanisms.
+
+Disabled or removed Extension directories remain user data: list them as inactive, preserve every byte and exclude their records/edges from the active graph and its revision. Do not interpret or repair inactive contents, and do not let active edges resolve to their records. Re-enabling requires successful registration and full validation before activation. Unknown data in active/core stores still fails closed; moving or deleting that data is never an automatic repair. Legacy Extension data with ambiguous ownership is preserved and reported as a migration prerequisite, not silently attributed or discarded.
+
 ---
 
 # 55. Graph Mutation Boundary
@@ -1638,6 +1706,8 @@ runtime
 ```
 
 This prevents prompts and model behaviour from becoming an implicit state machine.
+
+Every public mutation entry point, including CLI, API and adapter-driven calls, uses the same plan, complete-state validation, section 45 immutability check and authority guards. Check that the stored base still matches the validated input before an atomic write; a stale base or any failed guard leaves records, edges and unrelated files unchanged. Validate the resulting state before reporting success. A prompt instruction or an early fixture does not substitute for this integrated guard.
 
 ---
 
@@ -1674,6 +1744,18 @@ The same canonical graph state must produce the same Project Graph revision.
 
 A Project Graph revision identifies semantic graph state. It does **not** identify all repository bytes or the AI execution environment used by an execution.
 
+## Graph revision protocol
+
+The initial protocol is `pg1:sha256:<digest>`, with exactly 64 lower-case hexadecimal digest digits. Compute SHA-256 over the UTF-8 [RFC 8785 JSON Canonicalization Scheme](https://www.rfc-editor.org/rfc/rfc8785.html) serialization, without a trailing newline, of:
+
+```json
+{"format":1,"records":[],"edges":[]}
+```
+
+Populate `records` with `{ "owner": <owner>, "kind": <kind>, "key": <key>, "value": <canonical value> }` from the section 54 contribution registry for every stored core record, including superseded records, and every enabled registered Extension canonical record, including non-node records. Sort records by `owner`, then `kind`, then `key`. Populate `edges` with the exact active tuples and sort by `source`, then `type`, then `target`. These comparisons use unsigned UTF-16 code-unit order, not locale order. Core values are `{ "frontmatter": <complete mapping>, "body": <normalised body> }` using section 6 normalisation; Extension values follow their owning canonical projection. JCS preserves other array order and string content. Do not include file paths, directory order, registry implementation objects or any excluded derived state. Invalidly encoded, schema-invalid, duplicate, unresolved-endpoint or incompletely loaded active contributions yield no successful revision. Revision calculation is not downstream lineage acceptance or execution authority: a schema-valid stored graph can be identified for review even when lineage derivation or lifecycle policy prevents action. This keeps the revision mechanism dependent on canonical loading, records and edges rather than on execution policy.
+
+A runtime or platform change must preserve this protocol's bytes and digest for the same canonical input. Any future incompatible normalisation/serialization change needs a different protocol identifier and explicit replay compatibility handling; never reinterpret a recorded `pg1` digest using new rules. Unknown protocols fail pinned replay. Frozen input, canonical-byte and digest examples are retained in [the pg1 protocol vectors](./fixtures/project-graph-revision-pg1.json). They are definition fixtures, not evidence that a runtime verifier has executed. This protocol does not define environment-lock or lifecycle-shape hashing.
+
 For execution provenance that promises pinned replay, Pactwright uses the shared replay base:
 
 ```text
@@ -1682,7 +1764,11 @@ repository_revision
 + environment_lock_hash
 ```
 
-`repository_revision` identifies the exact repository state used as the reconstructible execution input base.
+`repository_revision` identifies the exact committed repository input base as `git:<object-format>:<full-commit-id>`, with Git's object format and full commit ID, not a branch, abbreviated ID, tree-only ID or an unrecorded working-tree hash.
+
+Resolution requires an existing Git commit, no staged/unstaged tracked changes and no non-ignored untracked files. Required Pactwright input files, including active graph stores, configuration, lifecycle and locks, must be tracked in that commit even if an ignore rule would hide them. An empty record directory represented by its tracked `.gitkeep` is valid. Ignored generated output and installed dependencies are not part of the repository input base; the resolved environment and other external inputs retain their separate provenance. Do not read an ignored input and describe it as reconstructed from the commit.
+
+Without Git, without a commit, with a dirty input base or with required input bytes unavailable from the recorded commit, report the repository revision as unavailable and refuse pinned execution/replay. Do not auto-commit, stash, reset, add or delete files to make it available. Graph-only diagnostics and hashing of a complete valid graph do not require Git. Required submodule/LFS or other external content must be reconstructible and verified separately or pinned replay fails explicitly. Restoring an old revision uses existing Git mechanisms in an isolated location and verifies the recorded graph revision before execution.
 
 `project_graph_revision` identifies the canonical Project Graph state derived from that repository state.
 
@@ -1729,6 +1815,8 @@ Pactwright validation must detect at least:
 - replay provenance whose recorded repository state does not derive its recorded Project Graph revision when replay validation is requested.
 
 Validation should fail before canonical mutation where possible.
+
+Structural graph validation and read-only lineage derivation do not authenticate actors. Integrated validation checks current Decisions against the applicable lifecycle policy and reports unauthorised Decisions; mutation and execution guards enforce that policy before effects. A changed current policy does not retroactively invalidate withdrawn historical Decisions solely because their actors are no longer allowed. Historical attribution remains stored; a requested historical authority check needs the recorded historical policy rather than substituting today's policy. A missing policy or incomplete load cannot grant permission. Diagnostic results distinguish malformed structure, unsupported/inactive components and unavailable execution authority rather than claiming that every parsed record is ready to run.
 
 ---
 
@@ -1899,4 +1987,4 @@ No neighbouring specification may redefine the Contract, Delivery Graph or core 
 
 ---
 
-**Pactwright Core System and Lifecycle v1**
+**Pactwright Core System and Lifecycle v2**

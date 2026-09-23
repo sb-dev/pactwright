@@ -2,64 +2,119 @@
 id: CP01-S04
 requires: [CP01-S02, CP01-S03]
 outputs:
-  lineage-derivation: Derivation of each Intent's current Delivery lineage, authorised Contract and broad Delivery state from canonical records and typed edges alone.
+  lineage-derivation: Derivation of each Intent's current Delivery lineage, recorded authorised Contract and
+    broad Delivery state from canonical records and typed edges alone.
 requirements:
   R01:
     source: [CORE#15, CORE#44, CORE#45]
-    statement: The runtime shall derive each Intent's current lineage from core records and typed edges, excluding superseded records and records reached only through a superseded record.
+    statement: Derivation shall exclude superseded records and records reached only through a non-current ancestor,
+      including the descendants of a superseded Intent; replacements shall not inherit old authority implicitly.
   R02:
-    source: [CORE#9, CORE#15, CORE#31, CORE#45, CORE#58]
-    statement: The runtime shall derive an Intent's authorised Contract only from its current Decision, as the Contract a proceed Decision selects and none after reject or defer.
+    source: [CORE#9, CORE#15, CORE#31, CORE#44, CORE#45, CORE#58]
+    statement: Recorded Contract authority shall come from one current proceeding Decision selecting one Contract;
+      reject/defer select none, including when withdrawing a preceding proceed Decision. Derivation checks
+      actor syntax, not authentication or lifecycle policy, and grants no execution permission.
   R03:
     source: [CORE#44]
-    statement: The runtime shall derive each Intent's broad Delivery state from its current lineage as the canonical derived-state table assigns.
+    statement: Broad Delivery state shall be derived using the canonical open/deferred/rejected/contracted/delivering/done
+      table, not stored as mutable graph fields.
   R04:
     source: [CORE#5, CORE#31, CORE#58]
-    statement: The runtime shall not treat Gate state or any approval outside a Decision record as Decision authority.
+    statement: A Gate or approval outside the applicable Decision shall not establish Contract authority.
   R05:
     source: [CORE#28, CORE#44]
-    statement: The runtime shall not store derived lineage or broad Delivery state as canonical Project Graph state, and derivation shall write no files.
+    statement: Derivation shall be read-only and shall not duplicate canonical lineage/currency/state in persisted
+      fields or create execution progress as graph truth.
   R06:
-    source: [CORE#57, CORE#58]
-    statement: The runtime shall fail derivation for an Intent whose lineage is ambiguous, contradictory or rests on an invalid record or edge, identifying the cause, rather than choose a lineage.
+    source: [CORE#15, CORE#44, CORE#45, CORE#57, CORE#58]
+    statement: Ambiguous or invalid affected lineage shall fail explicitly without a selected winner, including
+      competing current Briefs/Evidence, shared current Contracts across Intent directions and cross-parent
+      supersession. Unaffected lineage may be reported diagnostically; an incomplete repository remains non-executable.
 acceptance:
   AC01:
     covers: [R01, R02, R03]
     cases: [open, deferred, rejected, contracted, delivering, done]
-    given: A fixture graph whose only Intent has the canonical structure the derived-state table assigns to the listed state.
-    when: Current lineage, authorised Contract and broad Delivery state are derived.
-    then: The state is the listed state, the lineage holds exactly that structure's records, and the authorised Contract is the one the proceed Decision selects for contracted, delivering and done and absent otherwise.
+    given: The minimal valid canonical graph for the listed state.
+    when: Lineage and broad state are derived.
+    then: The exact listed state is returned, with the selected Contract only where the current proceeding
+      Decision authorises it.
     verify: {automated: [lineage.derived-states]}
   AC02:
     covers: [R01, R02, R03]
     cases: [brief-change, contract-change, evidence-correction]
-    given: A done lineage changed only by the listed pattern, where brief-change adds a Brief superseding the current Brief, contract-change adds a Decision and a Contract superseding the current ones and a Brief decomposing the new Contract, and evidence-correction adds Evidence superseding the current Evidence.
-    when: Current lineage, authorised Contract and broad Delivery state are derived.
-    then: The lineage holds the replacement records and no record that is superseded or reached only through one, the authorised Contract is the one the current Decision selects, and the state is delivering for brief-change and contract-change and done for evidence-correction.
+    given: A completed lineage changed through the listed valid explicit supersession pattern while retaining
+      predecessors.
+    when: Derivation is repeated.
+    then: Only current ancestry contributes; changed Brief/Contract delivery is delivering and corrected current
+      Evidence is done. Old descendants are not revived.
     verify: {automated: [lineage.supersession]}
   AC03:
     covers: [R02, R04]
     cases: [no-decision, defer]
-    given: An Intent with the listed Decision state, a separate valid contracted Intent, and non-canonical fixture content recording a passed Gate and a human approval of the other Intent's Contract for the listed Intent.
-    when: Current lineage, authorised Contract and broad Delivery state are derived.
-    then: The listed Intent is open or deferred as listed with no authorised Contract, and the other Contract stays authorised only for its own Intent.
+    given: An Intent with the listed Decision state plus a Gate/approval record outside its Decision and a
+      separate valid Intent.
+    when: Contract authority is derived.
+    then: No Contract becomes authorised by the external approval; the unrelated valid lineage is unaffected.
     verify: {automated: [authority.gate-not-decision]}
   AC04:
-    covers: [R01, R05]
-    given: A fixture repository and a copy whose only difference is an added file outside canonical graph storage recording lineages and states that contradict the graph.
-    when: Derivation runs on both.
-    then: Both yield identical lineages, authorised Contracts and states, and derivation creates, changes or deletes no file.
+    covers: [R03, R05]
+    given: A valid canonical lineage and contradictory non-canonical cache/execution state.
+    when: Derivation runs repeatedly.
+    then: Only canonical records and edges determine lineage and broad state; no files are created, changed
+      or deleted.
     verify: {automated: [lineage.canonical-only]}
   AC05:
     covers: [R05]
-    given: The candidate's core record schemas and canonical graph storage.
-    when: They are reviewed for duplicated derived state.
-    then: No record field or other canonical state stores current lineage, record currency or broad Delivery state.
+    given: Candidate record schemas, stored outputs and derivation call paths.
+    when: Independent review checks state ownership and write boundaries.
+    then: No persisted duplicate lineage/currency/broad-state field or execution-progress node is required;
+      the reviewer cites inspected definitions and call paths.
     verify: {review: [lineage.no-stored-derived-state]}
   AC06:
-    covers: [R06]
-    cases: [two-current-decisions, decision-selects-two-contracts, proceed-without-contract, reject-selecting-contract, contract-superseded-without-decision, invalid-supersession-edge, malformed-decision]
-    given: A fixture graph with one valid Intent lineage and one Intent whose only defect is the listed one.
-    when: Current lineages are derived.
-    then: Derivation fails for the defective Intent, identifies the cause and reports no lineage, authorised Contract or state for it, while the valid Intent derives normally.
+    covers: [R01, R02, R06]
+    cases: [two-current-decisions, decision-selects-two-contracts, proceed-without-contract, reject-selecting-contract,
+      contract-superseded-without-decision, invalid-supersession-edge, malformed-decision, two-current-briefs,
+      two-current-evidence, defer-selecting-contract, decision-resolves-two-intents, brief-decomposes-two-contracts,
+      evidence-evidences-two-briefs, cross-intent-decision-supersession, cross-intent-contract-supersession,
+      cross-contract-brief-supersession, cross-brief-evidence-supersession]
+    given: A defective affected lineage with only the listed fault and a separate valid Intent.
+    when: Both are derived from the supplied graph and problems.
+    then: Affected lineage returns explicit problems and no current Contract/state rather than selecting a
+      winner; the valid Intent remains diagnosable. No incomplete repository is presented as executable and
+      no files change.
     verify: {automated: [lineage.fails-closed]}
+  AC07:
+    covers: [R01, R02, R03]
+    cases: [proceed-to-reject, proceed-to-defer, defer-to-proceed, reject-to-proceed]
+    given: Valid explicit replacement Decisions for the listed transition, with original records/edges retained
+      and a fresh Contract for a new proceed outcome.
+    when: The complete proposed graph is validated and its current lineage derived.
+    then: Reject/defer have no current Contract and old delivery stays inactive. Re-authorisation uses the
+      new Decision/Contract and does not resurrect old Brief/Evidence; the last Contract is superseded where
+      one exists.
+    verify: {automated: [lineage.withdrawal-and-reauthorisation]}
+  AC08:
+    covers: [R02, R05]
+    cases: [allowed-policy, denied-policy, changed-policy]
+    given: Identical valid canonical Decisions with syntactically valid actor identities and the listed non-canonical
+      policy condition.
+    when: Only structural lineage derivation is called.
+    then: Recorded lineage stays the same and no writes or execution occur. The result is not authenticated
+      authority; real policy validation and guarded calls are proved in Steps 6–9, not faked by this fixture.
+    verify: {automated: [lineage.policy-separation]}
+  AC09:
+    covers: [R01, R02, R03]
+    cases: [empty-replacement, new-decision]
+    given: A superseded Intent with completed old descendants and its replacement in the listed state.
+    when: Current lineage is derived.
+    then: The old direction has no current lineage. The replacement is open without its own Decision, or contracted
+      with its own new proceeding Decision/Contract; no old authority or completion is inherited.
+    verify: {automated: [lineage.intent-replacement]}
+  AC10:
+    covers: [R02, R06]
+    given: Two active Intent directions whose current Decisions select the same Contract, plus one independent
+      valid direction.
+    when: Lineage is derived.
+    then: Both sharing directions are reported invalid without a selected winner; the independent direction
+      remains diagnosable and no execution permission or write results.
+    verify: {automated: [lineage.no-shared-current-contract]}

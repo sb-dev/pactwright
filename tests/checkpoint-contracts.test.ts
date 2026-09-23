@@ -58,9 +58,11 @@ describe("checkpoint contracts", () => {
     {
       name: "uncovered requirement",
       file: "CP01-S04.yml",
-      from: "covers: [R06]",
-      to: "covers: [R05]",
-      expect: /R06: not covered/,
+      from: "\nacceptance:\n",
+      to:
+        "\n  R07:\n    source: [CORE#44]\n" +
+        "    statement: Added requirement without acceptance coverage.\nacceptance:\n",
+      expect: /R07: not covered/,
     },
     {
       name: "prerequisite on a later step",

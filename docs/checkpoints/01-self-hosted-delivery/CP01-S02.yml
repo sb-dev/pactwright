@@ -2,80 +2,159 @@
 id: CP01-S02
 requires: [CP01-S01]
 outputs:
-  core-record-model: The five durable core Delivery record types, Intent, Decision, Contract, Brief and Evidence, with canonical identity, immutability and type-specific validation.
+  core-record-model: The five durable core Delivery record types, Intent, Decision, Contract, Brief and Evidence,
+    with canonical identity, immutability and type-specific validation.
 requirements:
   R01:
     source: [CORE#4, CORE#6]
-    statement: The runtime shall define exactly five core Delivery record types, Intent, Decision, Contract, Brief and Evidence.
+    statement: The core registry shall contain exactly intent, decision, contract, brief and evidence; registered
+      Extension types shall not become core types.
   R02:
     source: [CORE#3, CORE#8]
-    statement: The runtime shall not represent Contract alternatives as Project Graph records.
+    statement: Contract alternatives shall remain transient and shall not be core graph records.
   R03:
     source: [CORE#5, CORE#13]
-    statement: The runtime shall not represent Delivery or Review executions as core Project Graph record types.
+    statement: Delivery and Review execution, including attempts and transcripts, shall not become core graph
+      record types.
   R04:
     source: [CORE#6, CORE#7, CORE#9, CORE#10, CORE#11, CORE#14, CORE#57]
-    statement: The validator shall check each core record against the schema rules of its record type and reject a record that violates them as malformed.
+    statement: Validate each record using CORE#6 common envelope/identity/value rules and the type-specific
+      structural rules; semantic ownership and prose qualities require the separate content review, not a schema-presence
+      claim.
   R05:
     source: [CORE#9]
-    statement: A Decision shall record an outcome of proceed, reject or defer, its authorised actor and a concise rationale, and may record rejected-option summaries where materially useful.
+    statement: A Decision shall contain outcome proceed, reject or defer and decided_by as human, agent or
+      automation plus a non-empty actor identity. Its body shall give concise rationale; useful rejected-option
+      summaries are permitted. Parsing actor syntax shall not claim authentication.
   R06:
-    source: [CORE#15, CORE#45]
-    statement: Each core record shall have a canonical identity that is unique within the Project Graph and unchanged across loads.
+    source: [CORE#6, CORE#15, CORE#45]
+    statement: Canonical core IDs shall be well formed, unique among active graph-node endpoint identities,
+      match type and filename, be assigned once at creation and remain unchanged on load. Missing IDs are errors,
+      not instructions to mint replacements.
   R07:
-    source: [CORE#45, CORE#58, GUIDE#replay-provenance]
-    statement: The runtime shall reject a proposed record set that changes the type or content of an existing core record in place.
+    source: [CORE#6, CORE#45, CORE#58]
+    statement: Comparison of a proposed graph with the currently stored validated graph shall reject removal,
+      identity replacement, type changes or changes of canonical content of any stored core record, including
+      an unresolved Intent. New records and normalisation-equivalent content are permitted without scanning
+      Git history.
+  R08:
+    source: [CORE#6, CORE#7, CORE#9, CORE#10, CORE#11, CORE#14]
+    statement: Independent content review shall apply the CORE#6 rubric to owned information, exclusions, upstream
+      non-duplication and factuality; structural validity alone shall not satisfy this obligation.
+  R09:
+    source: [CORE#4, CORE#6, CORE#15, CORE#54]
+    statement: The record model shall expose the generic Extension-type registration seam used by Step 5 and
+      later installed Extensions. Additional contributions retain their owner schemas and identities, including
+      non-node canonical records with no core envelope. Canonical values use the CORE#6 JSON/Unicode/numeric
+      domain. Canonical keys are unique within owner/kind; optional node projections have unique endpoint IDs
+      and cannot replace a core or another registered node type.
 acceptance:
   AC01:
     covers: [R01, R04, R05, R06]
-    cases: [intent, decision-proceed, decision-reject, decision-defer, decision-with-rejected-options, contract, brief, evidence]
-    given: A fixture record set holding a valid record of the listed type or Decision form, a second valid record of the same type and a valid record of every other core type, each with a distinct identity.
-    when: The record set is loaded, validated and loaded again.
-    then: Validation succeeds and both loads yield the same identities, types and content.
+    cases: [intent, decision-proceed, decision-reject, decision-defer, decision-with-rejected-options, contract,
+      brief, evidence]
+    given: Valid records for the listed case, including two distinct records of one type alongside other types.
+    when: They are loaded, validated, stored and reloaded.
+    then: Each permitted record remains valid with the same distinct identity and canonical content.
     verify: {automated: [records.valid-per-type]}
   AC02:
-    covers: [R04, R05]
+    covers: [R04, R05, R06]
     cases: [intent, decision, contract, brief, evidence]
-    given: For each schema rule of the listed type, a fixture record whose only defect violates that rule.
-    when: Each record is validated.
-    then: Validation rejects every such record as malformed and identifies the record and the violated rule.
+    given: A separate fixture for each structural rule of each listed type; each has exactly one missing or
+      malformed required field, invalid date/body/identity, or invalid Decision field.
+    when: Records are loaded and validated.
+    then: Every defective case is rejected with its specific rule and record; no rule is represented only by
+      a generic invalid fixture.
     verify: {automated: [records.invalid-per-type]}
   AC03:
-    covers: [R01, R02, R03]
-    given: The runtime's core record model.
-    when: Its record types are enumerated.
-    then: The set is exactly intent, decision, contract, brief and evidence, with no type for Contract alternatives or Delivery or Review executions.
+    covers: [R01]
+    given: The core-only registry.
+    when: Its registered core type set is enumerated.
+    then: The set is exactly the five core types, with no transient or fixture Extension type counted as core.
     verify: {automated: [records.core-type-set]}
   AC04:
     covers: [R01, R02, R03]
     cases: [contract-alternative, delivery-execution, review-execution, unknown-type]
-    given: An otherwise valid record set whose only defect is one record presented as the listed kind.
-    when: The record set is validated.
-    then: Validation rejects that record as not a core Delivery record type.
+    given: A core-only registry and an attempted record of the listed unregistered type.
+    when: The record is validated.
+    then: It is rejected as non-core/unregistered; this does not prohibit separately registered Extension types.
     verify: {automated: [records.non-core-type]}
   AC05:
     covers: [R06]
     cases: [missing-identity, duplicate-identity]
-    given: An otherwise valid record set whose only defect is the listed identity defect.
-    when: The record set is loaded and validated.
-    then: Loading or validation rejects the record set for the listed identity defect and identifies the affected records.
+    given: An otherwise valid record set containing the listed identity defect.
+    when: It is loaded and validated.
+    then: The missing or duplicate ID is reported and no successful complete record set or replacement identity
+      is produced.
     verify: {automated: [records.identity-defects]}
   AC06:
     covers: [R07]
-    cases: [type-changed, content-changed]
-    given: A stored valid record set and a proposed set whose only difference is that one existing record keeps its identity and is replaced by a valid record with the listed change.
-    when: The proposed set is checked against the stored set.
-    then: The check rejects the proposed set as an in-place change and identifies the changed record.
+    cases: [type-changed, content-changed, frontmatter-value-changed, internal-body-whitespace-changed, content-array-reordered,
+      unresolved-intent-changed]
+    given: A valid stored core graph and a proposed graph with only the listed semantic rewrite under an existing
+      ID.
+    when: The immutable-record comparison is run.
+    then: The proposal is rejected and identifies the changed record; the stored graph is unchanged.
     verify: {automated: [records.in-place-change]}
   AC07:
     covers: [R07]
-    given: A stored valid record set and a proposed set that adds a valid record and leaves every existing record unchanged.
-    when: The proposed set is checked against the stored set.
-    then: The check accepts the proposed set.
+    given: A valid stored graph and a proposed graph that preserves every stored record and adds valid distinct
+      records.
+    when: The immutable-record comparison is run.
+    then: The additive proposal passes the comparison without weakening later lineage or authority validation.
     verify: {automated: [records.additive-change]}
   AC08:
-    covers: [R02, R03]
-    given: The candidate's core record schemas and canonical record storage.
-    when: They are reviewed for representations of Contract alternatives and of Delivery or Review executions.
-    then: No record type, field or status value holds a Contract alternative or marks a Contract as an unselected candidate, and none holds Delivery or Review attempts, retries or reviewer transcripts; a Decision's rejected-option summaries remain permitted.
+    covers: [R02, R03, R08]
+    given: Candidate core schemas, supported record outputs and valid Decision rejected-option summaries.
+    when: An independent reviewer applies the CORE#6 exclusions rubric.
+    then: No alternative, unselected candidate, execution attempt/retry/transcript or derived mutable lifecycle
+      state is treated as core truth; concise Decision rejected-option summaries remain permitted. The review
+      cites inspected definitions and records.
     verify: {review: [records.no-transient-state]}
+  AC09:
+    covers: [R06, R07]
+    cases: [removed-record, removed-then-added-with-new-id]
+    given: A valid stored graph and only the listed removal/re-identification in the proposed graph.
+    when: The immutable-record comparison uses the stored graph as its base.
+    then: Both cases fail because the old ID disappeared, including rename plus addition; no Git-history scan
+      or heuristic is required and no files change.
+    verify: {automated: [records.identity-preservation]}
+  AC10:
+    covers: [R04, R07]
+    cases: [mapping-key-order, yaml-comments, quoting-style, line-endings, boundary-whitespace]
+    given: Two presentations of the same record differing only in the listed CORE#6 normalisation-equivalent
+      form.
+    when: The records are parsed and their canonical content compared.
+    then: Both are valid and compare equal; the existing identity is preserved. Internal Markdown or array-order
+      changes are not included in these equivalence cases.
+    verify: {automated: [records.normalisation-equivalence]}
+  AC11:
+    covers: [R04, R05, R08]
+    cases: [valid-all-types, missing-intent-outcome, missing-contract-acceptance, brief-weakens-contract, evidence-invents-verification,
+      decision-without-rationale, transient-state-in-body, useful-rejected-option-summary]
+    given: Structurally valid records with the listed semantic condition and their governing context/evidence.
+    when: Independent content review applies each relevant CORE#6 rubric item and records reasons with cited
+      text.
+    then: Valid complete records and useful rejected-option summaries pass. Each other case fails the appropriate
+      semantic obligation despite structural success; no field-presence or word-count shortcut counts as review.
+    verify: {review: [records.content-rubric]}
+  AC12:
+    covers: [R01, R04, R09]
+    cases: [valid-additional-node-type, valid-non-node-record, duplicate-node-type, replace-core-type, duplicate-canonical-key,
+      malformed-owner-field]
+    given: A core registry and a fixture declaration or record with the listed condition.
+    when: The record-model seam registers and validates it.
+    then: Valid additional nodes and non-node canonical records succeed using owner schemas while the core
+      set stays at five; the non-node control has an owner-defined key/value and no core id/title/date/body
+      envelope. Duplicate/replacement registrations fail without changing the old registry; malformed owner
+      data fails its own schema.
+    verify: {automated: [records.extension-registration]}
+  AC13:
+    covers: [R04, R05]
+    cases: [human-identity, agent-identity, automation-identity, kind-only, empty-identity, whitespace-identity,
+      unknown-kind]
+    given: A Decision otherwise valid except for the listed actor representation.
+    when: Its structural fields are validated.
+    then: Human, agent and automation with non-empty identities pass. Kind-only, empty, whitespace-containing
+      and unknown-kind representations fail; the parser makes no authentication claim.
+    verify: {automated: [records.actor-identity]}

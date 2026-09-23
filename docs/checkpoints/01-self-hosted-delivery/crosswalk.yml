@@ -1,7 +1,11 @@
 # Conversion record for Checkpoint 1, version 17 → step contracts (Spec 00 §2).
 # Each entry quotes one v17 obligation verbatim and names the IDs that carry it;
 # allocated_to names the later step that owns the rest of the proof. Open
-# questions are inputs to Delivery Task T2 and are not resolved by the contracts.
+# questions are retained historical inputs to T2, not runtime acceptance evidence.
+# Decisions and review/check status: ../../research-logs/2026-09-23-pr41-b1-loading.md
+# B1 Q01-Q04; B2 Q05-Q09,Q18; B3 Q10-Q13,Q19; B4 Q14-Q16; B5 Q17; B6 Q20.
+# Applied clauses: Core v2 / Checkpoint 1 v19. Mandatory checks and independent
+# acceptance remain pending where the batch records say so; no question is deleted.
 source: docs/checkpoints/01-self-hosted-delivery.md@26ea12a
 entries:
   - key: S01.references
@@ -14,7 +18,7 @@ entries:
     covered_by: [CP01-S01/R01, CP01-S01/AC01]
   - key: S01.run.2
     text: "Implement one canonical loader for Pactwright configuration, lifecycle configuration, .pactwright/lock.yml, core Project Graph records and typed edges."
-    covered_by: [CP01-S01/R05, CP01-S01/R06, CP01-S01/AC05, CP01-S01/AC06, CP01-S01/AC07]
+    covered_by: [CP01-S01/R05, CP01-S01/R06, CP01-S01/AC05, CP01-S01/AC06, CP01-S01/AC07, CP01-S01/R09, CP01-S01/AC09, CP01-S01/AC10, CP01-S01/AC11]
   - key: S01.run.3
     text: "Make the runtime publishable as `pactwright` with the repository's normal build/prepack/verify discipline and a repository-local `pnpm pactwright ...` path using the same built runtime."
     covered_by: [CP01-S01/R01, CP01-S01/R02, CP01-S01/R03, CP01-S01/R04, CP01-S01/AC01, CP01-S01/AC02, CP01-S01/AC03, CP01-S01/AC04, CP01/R01, CP01/AC01]
@@ -38,7 +42,7 @@ entries:
     covered_by: [CP01-S02/R01, CP01-S02/R04, CP01-S02/AC01, CP01-S02/AC02]
   - key: S02.run.3
     text: "- Decision"
-    covered_by: [CP01-S02/R01, CP01-S02/R04, CP01-S02/R05, CP01-S02/AC01, CP01-S02/AC02]
+    covered_by: [CP01-S02/R01, CP01-S02/R04, CP01-S02/R05, CP01-S02/AC01, CP01-S02/AC02, CP01-S02/AC13]
   - key: S02.run.4
     text: "- Contract"
     covered_by: [CP01-S02/R01, CP01-S02/R04, CP01-S02/AC01, CP01-S02/AC02]
@@ -50,7 +54,7 @@ entries:
     covered_by: [CP01-S02/R01, CP01-S02/R04, CP01-S02/AC01, CP01-S02/AC02]
   - key: S02.run.7
     text: "Enforce canonical identity, immutability and type-specific validation."
-    covered_by: [CP01-S02/R04, CP01-S02/R06, CP01-S02/R07, CP01-S02/AC01, CP01-S02/AC02, CP01-S02/AC05, CP01-S02/AC06, CP01-S02/AC07]
+    covered_by: [CP01-S02/R04, CP01-S02/R06, CP01-S02/R07, CP01-S02/AC01, CP01-S02/AC02, CP01-S02/AC05, CP01-S02/AC06, CP01-S02/AC07, CP01-S02/R08, CP01-S02/AC09, CP01-S02/AC10, CP01-S02/AC11]
   - key: S02.run.8
     text: "Contract alternatives remain transient."
     covered_by: [CP01-S02/R02, CP01-S02/AC03, CP01-S02/AC04, CP01-S02/AC08]
@@ -62,22 +66,22 @@ entries:
     covered_by: [CP01-S02/R01, CP01-S02/R03, CP01-S02/R04, CP01-S02/AC01, CP01-S02/AC02, CP01-S02/AC03, CP01-S02/AC04, CP01-S02/AC08]
   - key: S02.verify.1
     text: "Add positive/negative fixtures for every record type and identity mutation."
-    covered_by: [CP01-S02/R04, CP01-S02/R06, CP01-S02/R07, CP01-S02/AC01, CP01-S02/AC02, CP01-S02/AC05, CP01-S02/AC06, CP01-S02/AC07]
-    note: "Identity mutation covers identity defects in a record set (AC05) and in-place type or content changes under an existing identity (AC06). Detecting a changed identity of an existing record waits on Q05."
+    covered_by: [CP01-S02/R04, CP01-S02/R06, CP01-S02/R07, CP01-S02/AC01, CP01-S02/AC02, CP01-S02/AC05, CP01-S02/AC06, CP01-S02/AC07, CP01-S02/AC09, CP01-S02/AC10, CP01-S02/AC11, CP01-S02/AC13]
+    note: "Q05-Q08 are applied in Core sections 6/45 and B2: AC05 rejects identity defects, AC06 in-place rewrites, AC09 removal/rename-plus-add, AC10 tests canonical normalisation and AC11 applies the content-review rubric. Step 7 integrates the proposed-state comparison."
   - key: S03.references
     text: "Spec 01 relationships and supersession."
     covered_by: [CP01-S03/R01, CP01-S03/R02, CP01-S03/R03, CP01-S03/R04, CP01-S03/R05, CP01-S03/R06, CP01-S03/R07]
   - key: S03.run.1
     text: "Implement the shared typed-edge registry/store for core lineage and same-type supersession."
-    covered_by: [CP01-S03/R01, CP01-S03/R03, CP01-S03/AC01, CP01-S03/AC03]
+    covered_by: [CP01-S03/R01, CP01-S03/R03, CP01-S03/AC01, CP01-S03/AC03, CP01-S03/R08, CP01-S03/AC10, CP01-S03/AC11]
   - key: S03.run.2
     text: "Validate endpoint existence/types, duplicate tuples, self-supersession and supersession cycles."
-    covered_by: [CP01-S03/R02, CP01-S03/R03, CP01-S03/R04, CP01-S03/R05, CP01-S03/AC02, CP01-S03/AC03, CP01-S03/AC04, CP01-S03/AC05]
+    covered_by: [CP01-S03/R02, CP01-S03/R03, CP01-S03/R04, CP01-S03/R05, CP01-S03/AC02, CP01-S03/AC03, CP01-S03/AC04, CP01-S03/AC05, CP01-S03/AC10]
   - key: S03.run.3
     text: "Keep the registry extensible for later Pactwright Extension relations."
-    covered_by: [CP01-S03/R06, CP01-S03/R07, CP01-S03/AC06, CP01-S03/AC07, CP01-S03/AC08, CP01-S03/AC09]
+    covered_by: [CP01-S03/R06, CP01-S03/R07, CP01-S03/AC06, CP01-S03/AC07, CP01-S03/AC08, CP01-S03/AC09, CP01-S02/R09, CP01-S02/AC12, CP01-S03/R09, CP01-S03/AC12, CP01-S03/AC13]
     allocated_to: CP01-S16
-    note: "Fixture registration proves the mechanism here; installed Extension composition exercises it through the Step 16 Extension loader."
+    note: "Fixture registration proves the mechanism here; Step 16 explicitly repeats AC06-AC13 through the installed fixture Extension loader, including ownership and inactive-state cases."
   - key: S03.expected.1
     text: "Core relationships are deterministic and extension-ready."
     covered_by: [CP01-S03/R01, CP01-S03/R06, CP01-S03/R07, CP01-S03/AC01, CP01-S03/AC06, CP01-S03/AC07, CP01-S03/AC08, CP01-S03/AC09]
@@ -89,7 +93,7 @@ entries:
     covered_by: [CP01-S04/R01, CP01-S04/R02, CP01-S04/R04]
   - key: S04.run.1
     text: "Derive current Delivery lineage from canonical graph structure."
-    covered_by: [CP01-S04/R01, CP01-S04/R03, CP01-S04/AC01, CP01-S04/AC02, CP01-S04/AC04]
+    covered_by: [CP01-S04/R01, CP01-S04/R03, CP01-S04/AC01, CP01-S04/AC02, CP01-S04/AC04, CP01-S04/AC07, CP01-S04/AC08, CP01-S04/AC09, CP01-S04/AC10]
   - key: S04.run.2
     text: "Decision changes WHAT authorised outcome is current."
     covered_by: [CP01-S04/R02, CP01-S04/AC01, CP01-S04/AC02, CP01-S04/AC03]
@@ -106,19 +110,19 @@ entries:
     covered_by: [CP01-S04/R01, CP01-S04/R02, CP01-S04/AC01, CP01-S04/AC02]
   - key: S04.verify.1
     text: "Use proceed/reject/defer, supersession and ambiguous-lineage fixtures; invalid ambiguity fails closed."
-    covered_by: [CP01-S04/R01, CP01-S04/R02, CP01-S04/R06, CP01-S04/AC01, CP01-S04/AC02, CP01-S04/AC06]
+    covered_by: [CP01-S04/R01, CP01-S04/R02, CP01-S04/R06, CP01-S04/AC01, CP01-S04/AC02, CP01-S04/AC06, CP01-S04/AC07, CP01-S04/AC09, CP01-S04/AC10]
   - key: S05.references
     text: "Spec 01 replay/revision semantics; Implementation Guide replay provenance."
     covered_by: [CP01-S05/R01, CP01-S05/R02, CP01-S05/R03, CP01-S05/R04, CP01-S05/R05, CP01-S05/R06]
   - key: S05.run.1
     text: "Implement runtime-provided repository revision and deterministic Project Graph revision."
-    covered_by: [CP01-S05/R01, CP01-S05/R02, CP01-S05/AC01, CP01-S05/AC02, CP01-S05/AC03, CP01-S05/AC08]
+    covered_by: [CP01-S05/R01, CP01-S05/R02, CP01-S05/AC01, CP01-S05/AC02, CP01-S05/AC03, CP01-S05/AC08, CP01-S05/AC11, CP01-S05/AC12, CP01-S05/AC13]
     note: "Replay validation of recorded revisions is Step 9 validation rule 17."
   - key: S05.run.2
     text: "Project Graph revision includes registered canonical Delivery records, typed edges and enabled Extension-owned canonical records."
-    covered_by: [CP01-S05/R03, CP01-S05/AC04]
+    covered_by: [CP01-S05/R03, CP01-S05/AC04, CP01-S02/R09, CP01-S02/AC12]
     allocated_to: CP01-S16
-    note: "Step 5 proves inclusion with a fixture-registered Extension-owned record type; Step 16 repeats the proof through the installed fixture Extension loader."
+    note: "Step 2 owns canonical contribution registration, including non-node records with owner-defined schemas. Step 5 proves record and edge inclusion now; Step 16 repeats it through the installed fixture Extension loader. F01 is retained, not deferred away."
   - key: S05.run.3
     text: "It excludes generated reports, adapter output, lifecycle execution state, execution provenance, GitHub projections and other derived state."
     covered_by: [CP01-S05/R04, CP01-S05/AC05]
@@ -126,8 +130,8 @@ entries:
     note: "Fixture content stands in here for execution state, adapter output, reports, provenance and GitHub state; Step 6 proves that execution progress alone leaves project_graph_revision unchanged."
   - key: S05.run.4
     text: "Canonicalise ordering before hashing."
-    covered_by: [CP01-S05/R05, CP01-S05/AC06, CP01-S05/AC09]
-    note: "Hashing is required; the algorithm, serialisation and cross-version stability remain Q18."
+    covered_by: [CP01-S05/R05, CP01-S05/AC06, CP01-S05/AC09, CP01-S05/AC10, CP01-S05/AC13]
+    note: "Q18 is applied in Core section 56 and B2: pg1 uses SHA-256 over the defined JCS envelope, with frozen byte/digest vectors and explicit incompatible-protocol handling. Hashing remains mandatory; a serialised graph string is not a revision."
   - key: S05.expected.1
     text: "Repository revision and Project Graph revision are stable, distinct identities."
     covered_by: [CP01-S05/R01, CP01-S05/R02, CP01-S05/R06, CP01-S05/AC01, CP01-S05/AC03, CP01-S05/AC07, CP01-S05/AC08]

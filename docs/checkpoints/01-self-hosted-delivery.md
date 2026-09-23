@@ -1,6 +1,6 @@
 # Pactwright — Checkpoint 1 — Self-Hosted Delivery
 
-**Version:** 18  
+**Version:** 19  
 **Entry condition:** No installable Pactwright runtime exists.  
 **Release:** `0.0.2` (corrective; `0.0.1` was published against version 14 of this runbook and remains the released baseline)  
 **Exit capability:** Pactwright is installable, upgradeable, can govern one complete Contract-driven Delivery in its own repository and in Kakeibo, can compare an Agent Pack candidate against a released baseline, and requires no manual Project Graph coherence work.
@@ -58,7 +58,7 @@ This runbook defines implementation order, not new Pactwright semantics.
 
 A converted step is defined by its YAML contract in [`01-self-hosted-delivery/`](./01-self-hosted-delivery/), in the format owned by [Spec 00](../specs/00-checkpoint-step-contract-and-delivery-tasks.md). The step section here links the contract and summarises its deliverables; the contract holds the requirements and acceptance criteria. Every contract inherits the settings and shared requirements in [`checkpoint.yml`](./01-self-hosted-delivery/checkpoint.yml), and [`crosswalk.yml`](./01-self-hosted-delivery/crosswalk.yml) records where each obligation of the converted version 17 step prose went.
 
-Stage 1 is converted. Later steps keep the version 17 form until they are converted:
+Stage 1 is converted and its contracts are amended against Core v2. Later steps retain the version 17 form, with the integration obligations below amended in version 19, until they are converted:
 
 ```text
 Step
@@ -69,6 +69,8 @@ Step
 ```
 
 For Pactwright repository/code changes, finish with `pnpm verify` (shared requirement `CP01/R01`).
+
+The Q01–Q20 resolution pass is recorded in six dependency-ordered [batch records](../research-logs/2026-09-23-pr41-b1-loading.md). The crosswalk retains the original questions and version 17 quotes; the amended specifications and contracts govern new attempts. These document changes do not establish runtime acceptance or bypass independent review.
 
 Once a deterministic Pactwright responsibility exists, use the runtime rather than asking an agent to emulate it.
 
@@ -146,6 +148,8 @@ Checkpoint 1 must not turn adapter responsibilities such as capture-intent or wr
 
 - `core-record-model` — The five durable core Delivery record types, Intent, Decision, Contract, Brief and Evidence, with canonical identity, immutability and type-specific validation.
 
+Step 2 also owns the generic canonical-contribution registry described in Core §54. Fixture Extension records keep their own schema and identity; they are not forced into the core record envelope. Step 16 repeats this proof through installed packages.
+
 ### Step 3 — Implement the shared typed-edge store
 
 **Contract:** [`CP01-S03`](./01-self-hosted-delivery/CP01-S03.yml)
@@ -162,9 +166,9 @@ This step proves relation registration with fixture relations. Installed Extensi
 
 **Deliverables**
 
-- `lineage-derivation` — Derivation of each Intent's current Delivery lineage, authorised Contract and broad Delivery state from canonical records and typed edges alone.
+- `lineage-derivation` — Derivation of each Intent's current Delivery lineage, recorded authorised Contract and broad Delivery state from canonical records and typed edges alone.
 
-Gate state arrives with Step 6. This step proves only that approval recorded outside a Decision cannot act as Decision authority.
+Gate state and executable policy arrive with Step 6. Step 4 derives recorded Decision/Contract authority, not permission to execute; Steps 7 and 9 enforce and diagnose actual actor-policy compatibility. Approval outside a Decision cannot act as Decision authority.
 
 ### Step 5 — Implement repository and Project Graph revision identity
 
@@ -175,7 +179,7 @@ Gate state arrives with Step 6. This step proves only that approval recorded out
 - `repository-revision` — A runtime-provided repository revision identifying the exact repository state used as the reconstructible execution input base.
 - `project-graph-revision` — A deterministic Project Graph revision hashed from canonically ordered, registered canonical Project Graph state only.
 
-This step proves inclusion of Extension-owned records and relations with fixture registrations. Step 16 repeats the inclusion/exclusion proof with an enabled fixture Extension installed through its loader.
+This step proves inclusion of Extension-owned canonical records, including non-node records with their own schema, and relations with fixture registrations. Step 16 repeats the inclusion/exclusion proof with an enabled fixture Extension installed through its loader. The `pg1` byte/digest vectors in Core §56 are protocol tests, not proof that the runtime implements them.
 
 ## Stage 2 — Implement Contract-driven lifecycle execution
 
@@ -212,6 +216,8 @@ The runtime represents fulfilment topology and execution progress without confla
 
 Test automatic/manual policy, authorised and unauthorised Gate progression, invalid shape/policy configuration, impossible corrective routes and unbounded-loop rejection. Changing execution progress alone must leave canonical graph records and `project_graph_revision` unchanged.
 
+Load the real lifecycle configuration and policy through Step 1's canonical loader, with valid, malformed, missing and unsupported-version controls. No lifecycle caller may add a fallback parser or default a failed load into permission to run. A structurally valid lineage with a disallowed actor remains inspectable but cannot progress.
+
 ### Step 7 — Implement authoritative core mutations and Evidence closure guards
 
 **References:** Spec 01 authority, graph mutation, supersession and `/prepare-evidence`.
@@ -243,6 +249,8 @@ Only authorised paths produce canonical structures; successful closing Review of
 
 Exercise authorised/unauthorised Decisions and forced write/validation failure. For each Evidence precondition, provide a failing fixture and require no Evidence or partial edge to be written. Include superseded Brief, unreviewed delivery change, blocking closing Review, pending Gate and invalid-lineage cases, plus successful closure.
 
+Exercise the same guards through public CLI, API and adapter-driven mutation entry points. Before writing, use the Step 2 stored-versus-proposed record check and Step 3 core-edge immutability check, validate the complete proposed graph and reject a changed stored base. Include valid additive/superseding mutations, an unresolved Intent rewrite, deletion, rename-plus-add, core tuple replacement/removal, stale base and incomplete-load failures. Every failure preserves records, edges and unrelated files. Validate the actual caller's actor kind and identity against lifecycle policy; a syntactically valid `decided_by` string is not authentication.
+
 ### Step 8 — Implement lifecycle status, next and run
 
 **References:** Spec 01 lifecycle command surface and execution-state boundary.
@@ -273,6 +281,8 @@ The runtime owns fulfilment progression and exposes inspection separately from e
 **Verify before continuing**
 
 Prove status/next perform no writes, report the correct actor/blocker/lineage, and next does not invoke an agent. Prove Gate/failure stopping, no next core fulfilment stage after current Evidence, and execution-state changes do not alter graph truth.
+
+Repeat with incomplete canonical loading and policy-denied recorded Decisions. Status may report diagnostic lineage, but next/run must not turn diagnostic availability into an executable action, invoke an agent or mutate state.
 
 ### Step 9 — Implement the complete core validation contract and bounded context assembly
 
@@ -313,6 +323,8 @@ The core semantic contract is machine-enforced and agents receive bounded canoni
 **Verify before continuing**
 
 Maintain valid controls and a failing fixture mapped to each numbered rule. Use a fixture graph contribution for rule 16 now and rerun it through real fixture Extension loading in Step 16. Verify rule 17 on a requested replay check, not by requiring historical reconstruction on every ordinary validation. Test context inclusions/exclusions and prove validation failures perform no writes.
+
+Reuse the Step 1 problem collection and Steps 2–4 structural validators. Rule 8 includes branching/merging supersession; rules 6–7 include competing current Briefs/Evidence and cross-parent replacements. Rule 13 checks current recorded actor kind and identity against real lifecycle policy, separately from pure lineage derivation; changing current policy alone must not retroactively invalidate withdrawn historical Decisions. Test partial loads without a false whole-graph pass. For requested replay, exercise the Step 5 typed Git identity and `pg1` vectors, unknown revision protocols, unavailable/dirty input bases and reconstructed-state mismatch. Ordinary graph diagnostics need not require Git.
 
 ## Stage 3 — Add replaceable AI execution
 
@@ -367,6 +379,8 @@ Projects explicitly select one complete Agent Pack and can upgrade it independen
 **Verify before continuing**
 
 Select standard, switch to a compatible fixture pack, reject an incompatible pack without state loss, upgrade a selected fixture pack to a compatible newer version, then reject an incompatible upgrade while preserving the previous valid environment. Prove an exact configured target remains selected even when a newer compatible package is available; desired constraints do not authorise silently changing pack identity.
+
+Read and round-trip the actual selected-pack configuration through the Step 1 loader. Missing or malformed configuration must not trigger silent pack selection, a second parser or replacement of the previous valid environment; repeat with the real resolved lock once Step 15 exists.
 
 ### Step 12 — Implement the seven canonical Claude Code adapter commands
 
@@ -463,6 +477,8 @@ A clean repository can initialise safely, and one-shot activation preserves expl
 
 Run init in a temporary repository with unrelated files. Test scaffold then explicit `agent-pack use`, explicit selection during one-shot init, missing selection, incompatible selection and preservation of an existing pack choice. Require no Extension activation on missing/incompatible selection and no unrelated writes.
 
+Round-trip the created Core §54 paths and actual configuration through Step 1. A plain scaffold without a selected/resolved environment remains explicitly incomplete; it is not a healthy executable environment. An empty graph uses an existing records directory and `edges: []`; init must not change Git history to manufacture a repository revision.
+
 ### Step 15 — Implement config/lock agreement and `environment_lock_hash`
 
 **References:** Spec 02 locking; Implementation Guide replay provenance.
@@ -490,6 +506,8 @@ Identical exact environments produce identical locks/hashes and inconsistent ins
 **Verify before continuing**
 
 Resolve twice and compare byte-for-byte, then change one resolved identity and require a hash change. Test runtime/Agent Pack lock disagreement and tampered component identity; repeat for package-backed fixture Extensions in Step 16. Failed resolution preserves the previous valid environment.
+
+Load the actual lock and configuration formats through Step 1. Exercise malformed, absent and unsupported-version inputs and require explicit incomplete diagnostics, no successful environment identity and no replacement of valid generated state. This proves the real lock integration rather than only the Step 1 parse fixture.
 
 ### Step 16 — Implement transaction-safe Extension mechanics and one-shot init composition
 
@@ -538,6 +556,10 @@ Exercise dependency-first add, exact lock agreement, compatible upgrade/migratio
 
 Repeat Steps 5 and 9 through the actual fixture Extension loader: its canonical node/edge mutation changes `project_graph_revision`; its generated files and execution output do not; attempted redefinition of core semantics fails.
 
+Also repeat the Step 2 contribution-registration proof with an Extension-owned non-node canonical record lacking core envelope fields, plus a separately registered node projection. Repeat CP01-S03/AC06–AC13 through the installed loader, including core-name/constraint protection, valid two-way additional relations, wrong endpoint types, linear supersession, unknown active relations and ownership failures. Exercise Step 4 current lineage, competing records and withdrawn Contract behaviour with that composition; the Extension must not change core authority or lineage meaning.
+
+Disable/remove and then re-enable the fixture: preserve inactive user-authored bytes, exclude inactive canonical contributions from the active graph revision, reject active references to inactive endpoints and validate all preserved state before reactivation. Do not infer unknown core-store data to be an inactive Extension. Any legacy Extension layout with ambiguous ownership requires an explicit migration disposition, never automatic deletion. These are installed-package integration results, not repeats of a mocked registry call.
+
 Compare clean one-shot and explicit init + `agent-pack use` + `extension add` + sync paths using the same explicitly chosen compatible fixture pack/version. Require equivalent configuration, package locks, resolved environment identity, canonical structure and generated output, not merely successful exit codes.
 
 ### Step 17 — Implement deterministic `pactwright sync`
@@ -584,6 +606,8 @@ Environment problems can be diagnosed without mutation and the reported capabili
 
 Run healthy, lock-drift, missing-capability, pending-migration and unsupported-import fixtures. Prove doctor performs no writes and gives concrete remediation only when supported and deterministic.
 
+Include the canonical loader's partial-input diagnostics, preserved inactive Extension data and unavailable repository revision. Doctor must distinguish healthy local graph inspection from unavailable activation or pinned execution, and must not repair either automatically.
+
 ### Step 19 — Implement Pactwright runtime upgrade and rollback-safe failure
 
 **References:** Spec 02 upgrade model; Implementation Guide package/release rules.
@@ -617,6 +641,8 @@ Pactwright can safely replace its own runtime without becoming a second package 
 **Verify before continuing**
 
 Use packed fixture runtime versions to prove latest-compatible upgrade, explicit `--to` upgrade/rollback, package-manager detection, new-runtime re-entry, unchanged Agent Pack/Extension identities, migration execution and failed-target recovery with the previous valid Project Graph/config/lock intact.
+
+Include valid released `0.0.1` core record/path fixtures: keep existing IDs, actor attribution and content readable without automatic graph rewrites. Previously tolerated malformed inputs must be reported, not repaired or silently accepted. A genuinely changed stored format or revision protocol requires an explicit versioned migration/compatibility path; unsupported targets fail without silently reinterpreting old graph identities.
 
 ## Stage 5 — Establish repository CI and release safety
 
@@ -720,6 +746,8 @@ The full canonical Delivery lineage completes with alternatives/execution transc
 **Verify before continuing**
 
 Inspect durable Project Graph state. Require all 17 validation cases, Evidence precondition failures, seven adapter mutation-boundary cases and complete core evaluation dimensions to pass before self-hosting.
+
+Rerun the strengthened Stage 1 loading, record, edge, lineage and revision cases through the assembled runtime and installed fixture Extension. Include non-node canonical contributions, withdrawal/re-authorisation, actor-policy denial and no-write failure controls. Neither schema validation of these contract files nor their declared verifier IDs count as execution evidence.
 
 ## Stage 7 — Adopt Pactwright in Pactwright
 
@@ -1008,4 +1036,4 @@ Checkpoint 1 closes only when:
 
 ---
 
-**Pactwright — Checkpoint 1 — Self-Hosted Delivery v18**
+**Pactwright — Checkpoint 1 — Self-Hosted Delivery v19**

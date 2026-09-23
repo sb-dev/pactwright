@@ -2,84 +2,150 @@
 id: CP01-S05
 requires: [CP01-S02, CP01-S03]
 outputs:
-  repository-revision: A runtime-provided repository revision identifying the exact repository state used as the reconstructible execution input base.
-  project-graph-revision: A deterministic Project Graph revision hashed from canonically ordered, registered canonical Project Graph state only.
+  repository-revision: A runtime-provided repository revision identifying the exact committed repository state
+    used as the reconstructible execution input base.
+  project-graph-revision: A deterministic Project Graph revision hashed from canonically ordered, registered
+    canonical Project Graph state only.
 requirements:
   R01:
     source: [CORE#54, CORE#56, GUIDE#replay-provenance]
-    statement: The runtime shall provide a repository revision that identifies the exact repository state used as the reconstructible execution input base.
+    statement: Repository revision shall follow the CORE#56 clean committed-input profile, returning git:<object-format>:<full-commit-id>
+      only when the recorded input base is reconstructible; unavailable identity shall never be replaced by
+      current or dirty state.
   R02:
-    source: [CORE#56]
-    statement: The runtime shall derive the same Project Graph revision from the same canonical Project Graph state.
+    source: [CORE#6, CORE#56]
+    statement: The same canonical graph shall produce the same pg1 revision across processes, paths, supported
+      platforms and runtime versions implementing that protocol.
   R03:
     source: [CORE#56]
-    statement: The Project Graph revision shall include registered canonical Delivery records, typed edges and enabled Extension-owned canonical records.
+    statement: Graph revision shall include all stored registered Delivery records, including superseded records,
+      typed edges and enabled Extension-owned canonical graph records.
   R04:
-    source: [CORE#5, CORE#56]
-    statement: The Project Graph revision shall exclude generated reports, adapter output, lifecycle execution state, execution provenance, GitHub state and other derived state.
+    source: [CORE#5, CORE#54, CORE#56]
+    statement: Graph revision shall exclude reports, adapter output, execution state, provenance, GitHub state,
+      derived projections and explicitly inactive Extension stores; unknown active contributions are errors,
+      not exclusions.
   R05:
-    source: [CORE#56]
-    statement: The runtime shall canonicalise the ordering of canonical state before hashing it to derive the Project Graph revision.
+    source: [CORE#6, CORE#56]
+    statement: Apply CORE#6 normalisation to core values and the owning projection to Extension values, then
+      canonical record/tuple ordering and RFC 8785 serialization of the exact CORE#56 envelope before SHA-256
+      hashing. Emit pg1:sha256:<64 lower-case hexadecimal digits>; incompatible protocols require explicit
+      replay handling, not reinterpretation.
   R06:
     source: [CORE#56, CORE#58]
-    statement: The repository revision and the Project Graph revision shall be distinct identities.
+    statement: Repository revision and Project Graph revision shall remain distinct identities; non-canonical
+      committed changes may change only the repository revision.
+  R07:
+    source: [CORE#15, CORE#54, CORE#56]
+    statement: An incomplete or structurally invalid active contribution set shall not produce a successful
+      complete graph revision, even when part of it is parseable.
 acceptance:
   AC01:
     covers: [R01]
-    given: A committed fixture repository state with a clean working tree.
-    when: The runtime resolves its repository revision twice, including once in a separate process from a copy at another path.
-    then: Both resolutions yield the same repository revision.
+    given: A clean committed repository with all required inputs tracked.
+    when: Repository revision is resolved repeatedly in separate processes and equivalent checkouts at different
+      paths.
+    then: It is the same full typed Git commit identity and refers to the actual committed input base, not
+      the current branch name or tree alone.
     verify: {automated: [revision.repository-stable]}
   AC02:
     covers: [R01]
-    cases: [canonical-file-changed, non-canonical-file-changed]
-    given: Two committed fixture repository states whose only difference is the listed file change.
-    when: The runtime resolves the repository revision of each.
-    then: The two repository revisions differ.
+    cases: [canonical-file-change, non-canonical-file-change]
+    given: Two independently constructed valid committed snapshots differing in the listed kind of file.
+    when: Each repository revision is resolved.
+    then: The commit identities differ and each reconstructs its recorded input; this sensitivity test is not
+      permission to rewrite immutable stored records.
     verify: {automated: [revision.repository-identifies-state]}
   AC03:
     covers: [R02]
-    given: A fixture canonical Project Graph state.
-    when: The Project Graph revision is derived twice, including once in a separate process from a copy at another path.
-    then: Both derivations yield the same Project Graph revision.
+    given: The same complete registered canonical graph at different locations and in separate processes.
+    when: Each graph revision is derived.
+    then: The pg1 bytes and digest are identical; runtime/platform compatibility is also checked against the
+      fixed protocol vectors, not a freshly generated expectation.
     verify: {automated: [revision.graph-stable]}
   AC04:
     covers: [R03]
-    cases: [record-added, record-content-changed, edge-added, edge-removed, additional-relation-edge-added, extension-owned-record-added]
-    given: Two valid fixture canonical states, with a fixture-registered Extension-owned record type and relation, whose only difference is the listed canonical change.
-    when: The Project Graph revision of each is derived.
-    then: The two revisions differ.
+    cases: [record-added, record-content-changed, edge-added, edge-removed, additional-relation-edge-added,
+      extension-owned-record-added, extension-node-record-added, superseded-record-content-difference]
+    given: Two independently constructed valid graph snapshots differing only in the listed canonical contribution.
+      Extension cases use the Step 2/3 registration seams, not an installed package; extension-owned-record-added
+      is a non-node canonical record with its own schema and identity, distinct from the additional-node case.
+    when: Their revisions are derived.
+    then: The digests differ. These independent-snapshot sensitivity cases do not authorise removal or in-place
+      rewrite through a mutation API.
     verify: {automated: [revision.graph-canonical-change]}
   AC05:
     covers: [R04]
-    cases: [generated-report, adapter-output, lifecycle-execution-state, execution-provenance, github-state, derived-projection]
-    given: Two fixture repository states with identical canonical state whose only difference is non-canonical fixture content standing in for the listed kind.
-    when: The Project Graph revision of each is derived.
-    then: The two revisions are identical.
+    cases: [generated-report, adapter-output, lifecycle-execution-state, execution-provenance, github-state,
+      derived-projection, inactive-extension-data]
+    given: The same complete active canonical graph while only the listed excluded state differs.
+    when: Its revision is derived before and after the difference.
+    then: The graph revision is unchanged; inactive Extension bytes are preserved and reported rather than
+      parsed into the active graph.
     verify: {automated: [revision.graph-non-canonical-change]}
   AC06:
-    covers: [R05]
-    cases: [records-reordered, edges-reordered]
-    given: The same canonical state stored in two copies whose only difference is the listed storage order.
-    when: The Project Graph revision of each is derived.
-    then: The two revisions are identical.
+    covers: [R02, R05]
+    cases: [records-reordered, edges-reordered, mapping-keys-reordered, yaml-comments, line-endings, boundary-whitespace]
+    given: Equivalent presentations of the same graph differing only in the listed permitted ordering or normalisation.
+    when: Their revisions are derived.
+    then: They yield exactly the same pg1 digest; only record/edge collection order and CORE#6-equivalent presentation
+      differences are ignored.
     verify: {automated: [revision.graph-order-independent]}
   AC07:
     covers: [R06]
-    given: Two committed fixture repository states with identical canonical state whose only difference is one non-canonical file.
-    when: Both revisions are resolved for each state.
-    then: The repository revisions differ and the Project Graph revisions are identical.
+    given: A clean committed graph followed by a commit changing only non-canonical tracked content.
+    when: Both repository and graph revisions are resolved.
+    then: Repository revision changes while Project Graph revision remains identical.
     verify: {automated: [revision.distinct-identities]}
   AC08:
-    covers: [R01]
-    given: A repository revision recorded from a committed fixture state, after which a further commit changes a canonical record.
-    when: The state the recorded revision identifies is restored at another path with existing repository mechanisms and its Project Graph revision is derived.
-    then: The restored state is the recorded state, not the current one, and yields the Project Graph revision derived when the repository revision was recorded.
+    covers: [R01, R02]
+    given: A recorded committed input and its graph revision, followed by a newer canonical commit.
+    when: The recorded old commit is restored in an isolated different path and verified.
+    then: The old inputs derive the recorded graph revision without using current branch contents or altering
+      the working project.
     verify: {automated: [revision.repository-reconstructible]}
   AC09:
+    covers: [R02, R05]
+    given: Small and large canonical graphs and the frozen fixtures referenced by CORE#56.
+    when: The implementation derives each revision.
+    then: Every result uses the same protocol prefix and 64-digit digest length, not serialized content. Every
+      fixed vector matches its independently recorded canonical UTF-8 bytes and digest; a candidate-generated
+      expectation cannot replace it.
+    verify: {automated: [revision.graph-hashed, revision.pg1-vectors]}
+  AC10:
+    covers: [R02, R03, R05]
+    cases: [internal-body-whitespace, content-array-order, metadata-value, unicode-normalisation-difference]
+    given: Two valid graph snapshots differing only in the listed significant content, with otherwise identical
+      IDs and structure.
+    when: Their revisions are derived.
+    then: The digests differ; array order, internal body whitespace, metadata values and distinct Unicode strings
+      are not normalised away.
+    verify: {automated: [revision.significant-content]}
+  AC11:
+    covers: [R01]
+    cases: [unstaged-tracked-change, staged-tracked-change, deleted-tracked-input, untracked-file, ignored-generated-output,
+      no-git, no-commit, ignored-required-canonical-input, staged-new-canonical-input]
+    given: A repository or directory with only the listed condition. Required canonical inputs are independently
+      checked against the commit, not only git status.
+    when: Repository revision is requested without modifying the working tree, index or refs.
+    then: Ignored generated output leaves the committed identity available and unchanged. Every other case
+      reports unavailable identity and cannot start pinned execution/replay; no commit, stash, reset, add or
+      deletion is performed. Graph-only diagnostics remain separately available.
+    verify: {automated: [revision.repository-input-boundary]}
+  AC12:
+    covers: [R04, R07]
+    cases: [duplicate-record-id, unknown-record-type, unknown-relation, missing-input, malformed-input, duplicate-edge,
+      invalid-extension-record]
+    given: An otherwise valid active graph load with the listed structural or completeness defect.
+    when: A complete graph revision is requested.
+    then: It fails explicitly with no successful digest and no file mutation; parseable remainder or inactive-data
+      exclusion is not used to hide the active defect.
+    verify: {automated: [revision.no-partial-graph]}
+  AC13:
     covers: [R05]
-    cases: [small-graph, large-graph]
-    given: Fixture canonical states of the listed, very different sizes.
-    when: The Project Graph revision of each is derived.
-    then: Each revision is a fixed-length digest, both have the same length, and neither contains any record content.
-    verify: {automated: [revision.graph-hashed]}
+    cases: [unknown-protocol, malformed-digest]
+    given: A recorded revision with the listed invalid or unsupported identity.
+    when: The revision protocol validator checks it before comparison.
+    then: It refuses the identity explicitly rather than comparing with a different protocol or substituting
+      a new digest; end-to-end replay repeats this through Step 9 rule 17.
+    verify: {automated: [revision.protocol-validation]}

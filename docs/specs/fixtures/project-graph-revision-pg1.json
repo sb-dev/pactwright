@@ -1,0 +1,200 @@
+{
+  "protocol": "pg1:sha256",
+  "purpose": "Frozen definition vectors for Core §56. Inputs are already validated canonical projections; these vectors do not implement loading or establish runtime acceptance.",
+  "vectors": [
+    {
+      "id": "empty",
+      "input": {
+        "format": 1,
+        "records": [],
+        "edges": []
+      },
+      "canonical_json": "{\"edges\":[],\"format\":1,\"records\":[]}",
+      "revision": "pg1:sha256:7f839064b4647b19e70826f7a5f5640b5a4ee8d8467de3bb9f857f90d46faf49"
+    },
+    {
+      "id": "core-lineage",
+      "input": {
+        "format": 1,
+        "records": [
+          {
+            "owner": "core",
+            "kind": "intent",
+            "key": "intent-probe-aaaa",
+            "value": {
+              "frontmatter": {
+                "id": "intent-probe-aaaa",
+                "type": "intent",
+                "title": "Probe",
+                "created": "2026-09-23"
+              },
+              "body": "Demonstrate graph identity."
+            }
+          },
+          {
+            "owner": "core",
+            "kind": "decision",
+            "key": "decision-probe-bbbb",
+            "value": {
+              "frontmatter": {
+                "id": "decision-probe-bbbb",
+                "type": "decision",
+                "title": "Probe",
+                "created": "2026-09-23",
+                "outcome": "proceed",
+                "decided_by": "human:fixture"
+              },
+              "body": "Proceed to establish the agreed identity."
+            }
+          },
+          {
+            "owner": "core",
+            "kind": "contract",
+            "key": "contract-probe-cccc",
+            "value": {
+              "frontmatter": {
+                "id": "contract-probe-cccc",
+                "type": "contract",
+                "title": "Probe",
+                "created": "2026-09-23"
+              },
+              "body": "The graph revision must identify this canonical state."
+            }
+          }
+        ],
+        "edges": [
+          {
+            "source": "decision-probe-bbbb",
+            "type": "resolves",
+            "target": "intent-probe-aaaa"
+          },
+          {
+            "source": "decision-probe-bbbb",
+            "type": "selects",
+            "target": "contract-probe-cccc"
+          }
+        ]
+      },
+      "canonical_json": "{\"edges\":[{\"source\":\"decision-probe-bbbb\",\"target\":\"intent-probe-aaaa\",\"type\":\"resolves\"},{\"source\":\"decision-probe-bbbb\",\"target\":\"contract-probe-cccc\",\"type\":\"selects\"}],\"format\":1,\"records\":[{\"key\":\"contract-probe-cccc\",\"kind\":\"contract\",\"owner\":\"core\",\"value\":{\"body\":\"The graph revision must identify this canonical state.\",\"frontmatter\":{\"created\":\"2026-09-23\",\"id\":\"contract-probe-cccc\",\"title\":\"Probe\",\"type\":\"contract\"}}},{\"key\":\"decision-probe-bbbb\",\"kind\":\"decision\",\"owner\":\"core\",\"value\":{\"body\":\"Proceed to establish the agreed identity.\",\"frontmatter\":{\"created\":\"2026-09-23\",\"decided_by\":\"human:fixture\",\"id\":\"decision-probe-bbbb\",\"outcome\":\"proceed\",\"title\":\"Probe\",\"type\":\"decision\"}}},{\"key\":\"intent-probe-aaaa\",\"kind\":\"intent\",\"owner\":\"core\",\"value\":{\"body\":\"Demonstrate graph identity.\",\"frontmatter\":{\"created\":\"2026-09-23\",\"id\":\"intent-probe-aaaa\",\"title\":\"Probe\",\"type\":\"intent\"}}}]}",
+      "revision": "pg1:sha256:cb9c00637379041da0bf2a40113d462414d59f52735dc8aab1b921c48bf4fc91"
+    },
+    {
+      "id": "same-lineage-reordered",
+      "input": {
+        "format": 1,
+        "records": [
+          {
+            "owner": "core",
+            "kind": "contract",
+            "key": "contract-probe-cccc",
+            "value": {
+              "frontmatter": {
+                "id": "contract-probe-cccc",
+                "type": "contract",
+                "title": "Probe",
+                "created": "2026-09-23"
+              },
+              "body": "The graph revision must identify this canonical state."
+            }
+          },
+          {
+            "owner": "core",
+            "kind": "decision",
+            "key": "decision-probe-bbbb",
+            "value": {
+              "frontmatter": {
+                "id": "decision-probe-bbbb",
+                "type": "decision",
+                "title": "Probe",
+                "created": "2026-09-23",
+                "outcome": "proceed",
+                "decided_by": "human:fixture"
+              },
+              "body": "Proceed to establish the agreed identity."
+            }
+          },
+          {
+            "owner": "core",
+            "kind": "intent",
+            "key": "intent-probe-aaaa",
+            "value": {
+              "frontmatter": {
+                "id": "intent-probe-aaaa",
+                "type": "intent",
+                "title": "Probe",
+                "created": "2026-09-23"
+              },
+              "body": "Demonstrate graph identity."
+            }
+          }
+        ],
+        "edges": [
+          {
+            "source": "decision-probe-bbbb",
+            "type": "selects",
+            "target": "contract-probe-cccc"
+          },
+          {
+            "source": "decision-probe-bbbb",
+            "type": "resolves",
+            "target": "intent-probe-aaaa"
+          }
+        ]
+      },
+      "canonical_json": "{\"edges\":[{\"source\":\"decision-probe-bbbb\",\"target\":\"intent-probe-aaaa\",\"type\":\"resolves\"},{\"source\":\"decision-probe-bbbb\",\"target\":\"contract-probe-cccc\",\"type\":\"selects\"}],\"format\":1,\"records\":[{\"key\":\"contract-probe-cccc\",\"kind\":\"contract\",\"owner\":\"core\",\"value\":{\"body\":\"The graph revision must identify this canonical state.\",\"frontmatter\":{\"created\":\"2026-09-23\",\"id\":\"contract-probe-cccc\",\"title\":\"Probe\",\"type\":\"contract\"}}},{\"key\":\"decision-probe-bbbb\",\"kind\":\"decision\",\"owner\":\"core\",\"value\":{\"body\":\"Proceed to establish the agreed identity.\",\"frontmatter\":{\"created\":\"2026-09-23\",\"decided_by\":\"human:fixture\",\"id\":\"decision-probe-bbbb\",\"outcome\":\"proceed\",\"title\":\"Probe\",\"type\":\"decision\"}}},{\"key\":\"intent-probe-aaaa\",\"kind\":\"intent\",\"owner\":\"core\",\"value\":{\"body\":\"Demonstrate graph identity.\",\"frontmatter\":{\"created\":\"2026-09-23\",\"id\":\"intent-probe-aaaa\",\"title\":\"Probe\",\"type\":\"intent\"}}}]}",
+      "revision": "pg1:sha256:cb9c00637379041da0bf2a40113d462414d59f52735dc8aab1b921c48bf4fc91"
+    },
+    {
+      "id": "non-node-extension",
+      "input": {
+        "format": 1,
+        "records": [
+          {
+            "owner": "fixture",
+            "kind": "domain",
+            "key": "discovery",
+            "value": {
+              "id": "discovery",
+              "scope": "Project discovery",
+              "core": true,
+              "depends_on": []
+            }
+          }
+        ],
+        "edges": []
+      },
+      "canonical_json": "{\"edges\":[],\"format\":1,\"records\":[{\"key\":\"discovery\",\"kind\":\"domain\",\"owner\":\"fixture\",\"value\":{\"core\":true,\"depends_on\":[],\"id\":\"discovery\",\"scope\":\"Project discovery\"}}]}",
+      "revision": "pg1:sha256:2d9e825195258f83856fcef52b6fbc9ae73626846cf89bc3ab2b4a20738dd99e"
+    },
+    {
+      "id": "unicode-and-arrays",
+      "input": {
+        "format": 1,
+        "records": [
+          {
+            "owner": "fixture",
+            "kind": "probe",
+            "key": "ordering",
+            "value": {
+              "2": 2,
+              "10": 10,
+              "😀": 4,
+              "": 5,
+              "ordered": [
+                2,
+                1
+              ],
+              "fraction": 1.25,
+              "text": "a\nb",
+              "composed": "é",
+              "decomposed": "é"
+            }
+          }
+        ],
+        "edges": []
+      },
+      "canonical_json": "{\"edges\":[],\"format\":1,\"records\":[{\"key\":\"ordering\",\"kind\":\"probe\",\"owner\":\"fixture\",\"value\":{\"10\":10,\"2\":2,\"composed\":\"é\",\"decomposed\":\"é\",\"fraction\":1.25,\"ordered\":[2,1],\"text\":\"a\\nb\",\"😀\":4,\"\":5}}]}",
+      "revision": "pg1:sha256:545ec642b97e9162b226f07870b27dd91f7bbae34dd036e024e2410074cb6c78"
+    }
+  ]
+}
