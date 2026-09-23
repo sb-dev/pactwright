@@ -3,7 +3,7 @@ id: CP01-S05
 requires: [CP01-S02, CP01-S03]
 outputs:
   repository-revision: A runtime-provided repository revision identifying the exact repository state used as the reconstructible execution input base.
-  project-graph-revision: A deterministic Project Graph revision derived from registered canonical Project Graph state only.
+  project-graph-revision: A deterministic Project Graph revision hashed from canonically ordered, registered canonical Project Graph state only.
 requirements:
   R01:
     source: [CORE#54, CORE#56, GUIDE#replay-provenance]
@@ -13,13 +13,13 @@ requirements:
     statement: The runtime shall derive the same Project Graph revision from the same canonical Project Graph state.
   R03:
     source: [CORE#56]
-    statement: The Project Graph revision shall include registered canonical Delivery records and typed edges, including edges of registered additional relations.
+    statement: The Project Graph revision shall include registered canonical Delivery records, typed edges and enabled Extension-owned canonical records.
   R04:
     source: [CORE#5, CORE#56]
     statement: The Project Graph revision shall exclude generated reports, adapter output, lifecycle execution state, execution provenance, GitHub state and other derived state.
   R05:
     source: [CORE#56]
-    statement: The runtime shall canonicalise the ordering of canonical state before deriving the Project Graph revision.
+    statement: The runtime shall canonicalise the ordering of canonical state before hashing it to derive the Project Graph revision.
   R06:
     source: [CORE#56, CORE#58]
     statement: The repository revision and the Project Graph revision shall be distinct identities.
@@ -45,8 +45,8 @@ acceptance:
     verify: {automated: [revision.graph-stable]}
   AC04:
     covers: [R03]
-    cases: [record-added, record-content-changed, edge-added, edge-removed, additional-relation-edge-added]
-    given: Two valid fixture canonical states whose only difference is the listed canonical change.
+    cases: [record-added, record-content-changed, edge-added, edge-removed, additional-relation-edge-added, extension-owned-record-added]
+    given: Two valid fixture canonical states, with a fixture-registered Extension-owned record type and relation, whose only difference is the listed canonical change.
     when: The Project Graph revision of each is derived.
     then: The two revisions differ.
     verify: {automated: [revision.graph-canonical-change]}
@@ -76,3 +76,10 @@ acceptance:
     when: The state the recorded revision identifies is restored at another path with existing repository mechanisms and its Project Graph revision is derived.
     then: The restored state is the recorded state, not the current one, and yields the Project Graph revision derived when the repository revision was recorded.
     verify: {automated: [revision.repository-reconstructible]}
+  AC09:
+    covers: [R05]
+    cases: [small-graph, large-graph]
+    given: Fixture canonical states of the listed, very different sizes.
+    when: The Project Graph revision of each is derived.
+    then: Each revision is a fixed-length digest, both have the same length, and neither contains any record content.
+    verify: {automated: [revision.graph-hashed]}

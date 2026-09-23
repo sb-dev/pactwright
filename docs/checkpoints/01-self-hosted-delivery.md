@@ -173,9 +173,9 @@ Gate state arrives with Step 6. This step proves only that approval recorded out
 **Deliverables**
 
 - `repository-revision` — A runtime-provided repository revision identifying the exact repository state used as the reconstructible execution input base.
-- `project-graph-revision` — A deterministic Project Graph revision derived from registered canonical Project Graph state only.
+- `project-graph-revision` — A deterministic Project Graph revision hashed from canonically ordered, registered canonical Project Graph state only.
 
-Here a fixture-registered relation proves only that additional typed edges enter the Project Graph revision. Step 16 proves inclusion of enabled Extension-owned records by repeating the inclusion/exclusion proof with an enabled fixture Extension.
+This step proves inclusion of Extension-owned records and relations with fixture registrations. Step 16 repeats the inclusion/exclusion proof with an enabled fixture Extension installed through its loader.
 
 ## Stage 2 — Implement Contract-driven lifecycle execution
 

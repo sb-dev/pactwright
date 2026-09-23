@@ -118,7 +118,7 @@ entries:
     text: "Project Graph revision includes registered canonical Delivery records, typed edges and enabled Extension-owned canonical records."
     covered_by: [CP01-S05/R03, CP01-S05/AC04]
     allocated_to: CP01-S16
-    note: "Step 5 proves core records and typed edges, including edges of a fixture-registered relation. Inclusion of enabled Extension-owned canonical records is proven through the Step 16 fixture Extension loader."
+    note: "Step 5 proves inclusion with a fixture-registered Extension-owned record type; Step 16 repeats the proof through the installed fixture Extension loader."
   - key: S05.run.3
     text: "It excludes generated reports, adapter output, lifecycle execution state, execution provenance, GitHub projections and other derived state."
     covered_by: [CP01-S05/R04, CP01-S05/AC05]
@@ -126,8 +126,8 @@ entries:
     note: "Fixture content stands in here for execution state, adapter output, reports, provenance and GitHub state; Step 6 proves that execution progress alone leaves project_graph_revision unchanged."
   - key: S05.run.4
     text: "Canonicalise ordering before hashing."
-    covered_by: [CP01-S05/R05, CP01-S05/AC06]
-    note: "The contract does not fix a hash algorithm; see Q18."
+    covered_by: [CP01-S05/R05, CP01-S05/AC06, CP01-S05/AC09]
+    note: "Hashing is required; the algorithm, serialisation and cross-version stability remain Q18."
   - key: S05.expected.1
     text: "Repository revision and Project Graph revision are stable, distinct identities."
     covered_by: [CP01-S05/R01, CP01-S05/R02, CP01-S05/R06, CP01-S05/AC01, CP01-S05/AC03, CP01-S05/AC07, CP01-S05/AC08]
@@ -193,10 +193,10 @@ open_questions:
     question: "Which repository state does the repository revision identify (commit, tree, or commit plus working tree), and how must it behave with uncommitted, untracked or ignored changes or without Git?"
   - id: Q18
     affects: [CP01-S05/R02, CP01-S05/R05]
-    question: "v17 says to canonicalise ordering before hashing. Must the Project Graph revision be a content hash with a fixed algorithm and serialisation, stable across runtime versions and platforms?"
+    question: "Which hash algorithm and canonical serialisation does the Project Graph revision use, and must it be stable across runtime versions and platforms?"
   - id: Q19
     affects: [CP01-S05/R03]
-    question: "Must Stage 1 provide a registration seam for Extension-owned record types so that Step 5 can prove their inclusion with a fixture, or is that inclusion delivered entirely in Step 16?"
+    question: "Step 5 now needs a fixture registration seam for Extension-owned record types. Which step owns that seam (the Step 2 record model or Step 5), and how does Step 16 replace the fixture with installed Extensions?"
   - id: Q20
     affects: [CP01-S01/R05, CP01-S02/R07, CP01-S03/R06, CP01-S04/R01]
     question: "Should the later contracts carry these obligations, which v17 does not state at the named steps: Step 7 mutations refuse in-place rewrites through the Step 2 check; Step 16 re-runs CP01-S03/AC06 to AC09 and exercises Step 4 derivation through the fixture Extension loader, beyond the graph contribution registration and core-redefinition failure its v17 text already requires; Steps 6, 11, 14 and 15 load their real formats through the Step 1 loader?"
