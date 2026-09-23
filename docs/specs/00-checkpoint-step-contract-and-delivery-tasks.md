@@ -1,7 +1,7 @@
 # Pactwright — Checkpoint Step Contract and Delivery Tasks
 
-**Version:** 2  
-**Date:** 22 September 2026  
+**Version:** 3  
+**Date:** 23 September 2026  
 **Purpose:** Replace checkpoint prompts with requirements and acceptance criteria, then execute them through progressively self-hosted run models.
 
 ## 1. Execution model
@@ -23,22 +23,37 @@ Checkpoint 1 proves a software-development instance using an external bootstrap 
 
 ## 2. Checkpoint organisation
 
-Keep `docs/checkpoints/`, the existing numbered files, goals, scope, canonical references, Stage/Step headings and checkpoint exit obligations. Replace each step's prompt and duplicated expected-result/verification prose with one YAML contract.
+Keep `docs/checkpoints/`, the existing numbered files, goals, scope, canonical references, Stage/Step headings and checkpoint exit obligations. Replace each step's prompt and duplicated expected-result/verification prose with one YAML contract in its own file. The step section keeps its heading, a link to the contract and a short summary of the contract's `outputs`:
 
-Declare common settings once at checkpoint level:
+```text
+docs/checkpoints/
+├── contract.schema.json          minimal format schema
+├── 01-self-hosted-delivery.md    goal, scope, Stage/Step headings, deliverable summaries, exit gate
+└── 01-self-hosted-delivery/
+    ├── checkpoint.yml            common settings and shared requirements
+    ├── CP01-S01.yml              one contract per step, named by step ID
+    ├── …
+    └── crosswalk.yml             conversion record: replaced prose → requirement/criterion IDs
+```
+
+The deliverable summary restates the contract's outputs and adds no obligation. If the two disagree, the contract governs.
+
+Declare common settings once at checkpoint level, in `checkpoint.yml`:
 
 ```yaml
 format: 2
 checkpoint: CP01
 run_model: software-bootstrap
 sources:
-  CORE: ../specs/01-pactwright-core-system-and-lifecycle.md
-  DISTRIBUTION: ../specs/02-distribution-agent-packs-extensions-and-evaluation.md
+  CORE: ../../specs/01-pactwright-core-system-and-lifecycle.md
+  DISTRIBUTION: ../../specs/02-distribution-agent-packs-extensions-and-evaluation.md
 ```
 
-`software-bootstrap` is a proposed model identifier. Source paths are relative to the checkpoint file; `CORE#15` identifies numbered section 15. The harness resolves and pins the actual source revisions for each run.
+`software-bootstrap` is a proposed model identifier. Source paths are relative to `checkpoint.yml`. `CORE#15` identifies numbered section 15; a source without numbered headings is cited by heading anchor, such as `GUIDE#replay-provenance`. The harness resolves and pins the actual source revisions for each run.
 
-Shared requirements, mandatory review policy and checkpoint exit criteria are declared once and inherited. Do not maintain a second hand-written plan or acceptance registry duplicating these contracts; generate indexes and coverage views from the checkpoint files.
+Shared requirements, mandatory review policy and checkpoint exit criteria are declared once in `checkpoint.yml` and inherited; their IDs take the checkpoint prefix, such as `CP01/R01`. Do not maintain a second hand-written plan or acceptance registry duplicating these contracts; generate indexes and coverage views from the contract files.
+
+While a checkpoint is converted, `crosswalk.yml` records where each obligation of the replaced prose went, quoting it verbatim. It is conversion evidence for T1 and T2 review, not a plan to maintain.
 
 ## 3. Compact step format
 
@@ -184,10 +199,10 @@ Step definitions remain project plans. Pactwright owns authorised graph mutation
 
 ## Source basis
 
-This revision edits the supplied v1 proposal; it does not re-audit the repository or claim that any task above has run. The original example and capability boundaries were grounded in `sb-dev/pactwright` at `19c66d5f2368932ff05306db1fae8da8ec5810dd`:
+Version 2 edited the supplied v1 proposal; version 3 moves each step contract into its own file. Neither re-audits the repository or claims that any task above has run. The original example and capability boundaries were grounded in `sb-dev/pactwright` at `19c66d5f2368932ff05306db1fae8da8ec5810dd`:
 
 - [Checkpoint 1](https://github.com/sb-dev/pactwright/blob/19c66d5f2368932ff05306db1fae8da8ec5810dd/docs/checkpoints/01-self-hosted-delivery.md), particularly Step 3 and the exit gate.
 - [Core specification](https://github.com/sb-dev/pactwright/blob/19c66d5f2368932ff05306db1fae8da8ec5810dd/docs/specs/01-pactwright-core-system-and-lifecycle.md), especially §§15, 34–38 and 53–57.
 - [Implementation Principles](https://github.com/sb-dev/pactwright/blob/19c66d5f2368932ff05306db1fae8da8ec5810dd/docs/checkpoints/00-implementation-principles.md), §§3–6.
 
-**Pactwright — Checkpoint Step Contract and Delivery Tasks v2**
+**Pactwright — Checkpoint Step Contract and Delivery Tasks v3**
