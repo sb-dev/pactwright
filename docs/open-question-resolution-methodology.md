@@ -1,7 +1,7 @@
 # Pactwright — Open Question Resolution Methodology
 
-**Version:** 1  
-**Date:** 23 September 2026  
+**Version:** 2  
+**Date:** 24 September 2026  
 **Purpose:** Resolve related open questions together and apply the necessary specification and acceptance changes before implementation.
 
 ## 1. Scope and authority
@@ -13,9 +13,11 @@ Canonical specifications define product meaning. Checkpoint contracts allocate t
 The method is:
 
 ```text
-Inventory → classify → batch → resolve → apply fixes → verify → independent review
-                               ↑                              │
-                               └──── bounded correction ─────┘
+Inventory → classify → batch → trace authority → design challenge plan → resolve
+                                                                  ↓
+independent review ← verify ← apply fixes ←───────────────────────┘
+        │
+        └──────────── bounded correction ────────────→ challenge/resolve
 ```
 
 This document contains instructions, not execution progress. Use existing execution records and SHA-bound PR hand-offs for assignments, decisions, evidence and review outcomes. Resolving questions does not implement the runtime or satisfy product acceptance.
@@ -69,10 +71,13 @@ For example, B2 must align identity, immutability and normalisation rather than 
 | Activity | Required result |
 |---|---|
 | Trace authority | For every question, identify the exact governing clauses, conflicting interpretations and affected acceptance cases. Distinguish requirements from historical implementation choices. |
+| Design the challenge plan | Before adopting an answer, derive the checks needed for this batch from the semantic changes being considered. Identify plausible failure modes, affected owners and consumers, compatibility surfaces and competing interpretations, then choose proportionate searches, comparisons, probes or acceptance cases that could expose a wrong answer. Generic repository checks are not sufficient on their own. |
 | Compare and investigate | For genuine decisions, compare a few viable options against correctness, compatibility, simplicity and later-feature use. Research primary sources or run a bounded probe only when it can change the decision. State the question the probe answers before running it. |
 | Select and authorise | Recommend one consistent answer, with rationale and consequences. Obtain any required semantic or compatibility approval before adoption; reuse existing explicit authorisation. Unresolved authority blocks dependent work, not unrelated batches. |
 | Apply necessary fixes | Update the owning specification, affected step contracts and traceability together. A decision note alone does not repair an ambiguous contract. If no change is necessary, cite the existing clause and demonstrate adequate coverage. |
-| Verify and review | Check the changed documents and mappings, then obtain independent review of the integrated result. Correct specific findings within the batch and repeat affected checks. |
+| Verify and review | Execute the batch-specific challenge plan as well as the changed-document and repository checks, then obtain independent review of the integrated result. Correct specific findings within the batch and repeat affected checks. |
+
+The challenge plan is deliberately not a fixed checklist. Choosing the right checks is part of the analysis: they must follow from the decision's observable consequences and be strong enough to distinguish the selected behaviour from plausible wrong implementations.
 
 ### Apply changes at their owner
 
@@ -98,6 +103,7 @@ A batch record contains:
 Batch and question IDs; starting source/contract revisions
 Owning clauses; dependencies; affected requirement and criterion IDs
 Answer for each question; rationale and alternatives where needed
+Batch-specific challenge plan and why those checks were chosen
 Evidence and required approval references
 Applied changes, or why no change is needed
 Later proof owners and remaining blockers
@@ -106,7 +112,7 @@ Verification results and independent review reference
 
 Link the record from the PR or supported inventory fields. Do not add unsupported metadata to contract YAML merely to track progress.
 
-Run the available repository checks against the changed tree, including `pnpm contracts:check` and the required verification commands. Report exact commands, revisions, results and skipped checks. Do not describe an inherited build failure as a new pass or fix unrelated product code to hide it.
+Execute the recorded batch-specific challenge plan, then run the available repository checks against the changed tree, including `pnpm contracts:check` and the required verification commands. Report exact commands, revisions, results and skipped checks. Do not describe an inherited build failure as a new pass or fix unrelated product code to hide it.
 
 Schema, citation and mapping checks establish structural consistency, not semantic correctness. Future verifier IDs establish obligations, not executed proof. The independent reviewer must compare the actual specification and contract changes with the original questions and intended outcomes.
 
@@ -122,4 +128,4 @@ The stage is requirement-ready when no unresolved behaviour needed by its steps 
 
 This result is scoped T2 work. It does not declare all T1/T2 complete, bypass harness construction and testing, or authorise implementation before the remaining checkpoint-level prerequisites are met.
 
-**Pactwright — Open Question Resolution Methodology v1**
+**Pactwright — Open Question Resolution Methodology v2**
