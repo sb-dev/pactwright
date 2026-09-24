@@ -4,7 +4,9 @@
 // Usage: pnpm contracts:check [--skip-source] [checkpoint-dir ...]
 // With no directory, every docs/checkpoints/* directory holding a
 // checkpoint.yml is checked. --skip-source skips the verbatim crosswalk checks,
-// which read the replaced checkpoint text from Git history.
+// which read the replaced checkpoint text from Git history. In a shallow clone,
+// only the sources whose revision is absent are skipped, with a warning; in a
+// full clone an unavailable source revision is an error.
 
 import { execFileSync } from "node:child_process";
 import { existsSync, readdirSync, readFileSync } from "node:fs";
@@ -31,8 +33,9 @@ type CrosswalkEntry = {
   covered_by?: string[];
   allocated_to?: string;
 };
+type CrosswalkSource = { source?: string; steps?: string[] };
 type Crosswalk = {
-  source?: string;
+  sources?: CrosswalkSource[];
   entries?: CrosswalkEntry[];
   open_questions?: { id: string; affects: string[] }[];
 };
@@ -43,9 +46,38 @@ export type StepUnits = Record<string, { title: string; units: Unit[] }>;
 export type ValidateOptions = {
   /** Skip checks that read the replaced checkpoint text from Git. */
   skipSource?: boolean;
-  /** Git working tree used to read the crosswalk source revision. */
+  /**
+   * Skip only the crosswalk sources whose revision is absent from the
+   * repository, as in a shallow clone, and still check every reachable source.
+   * Without it an unavailable source revision is an error.
+   */
+  skipUnavailableSources?: boolean;
+  /** Called with each source skipped under skipUnavailableSources. */
+  onSkippedSource?: (source: string) => void;
+  /** Git working tree used to read the crosswalk source revisions. */
   gitDir?: string;
 };
+
+const git = (cwd: string, args: string[]): string =>
+  execFileSync("git", args, { cwd, encoding: "utf8", stdio: ["ignore", "pipe", "pipe"] });
+
+function hasCommit(cwd: string, rev: string): boolean {
+  try {
+    git(cwd, ["cat-file", "-e", `${rev}^{commit}`]);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+/** Whether the Git working tree is a shallow clone, which may lack older crosswalk sources. */
+export function isShallowRepository(cwd: string): boolean {
+  try {
+    return git(cwd, ["rev-parse", "--is-shallow-repository"]).trim() === "true";
+  } catch {
+    return false;
+  }
+}
 
 const STEP_KEYS = ["id", "requires", "inputs", "uses", "outputs", "requirements", "acceptance"];
 const CRITERION_KEYS = ["covers", "cases", "given", "when", "then", "verify"];
@@ -308,27 +340,61 @@ export function validateCheckpointDir(
     return errors;
   }
   const crosswalk = yaml.load(readFileSync(crosswalkFile, "utf8")) as Crosswalk;
-  let units: StepUnits | undefined;
-  if (!options.skipSource) {
-    const [sourcePath, rev] = (crosswalk.source ?? "").split("@");
-    try {
-      const text = execFileSync("git", ["show", `${rev}:${sourcePath}`], {
-        cwd: options.gitDir ?? repoRoot,
-        encoding: "utf8",
-        stdio: ["ignore", "pipe", "pipe"],
-      });
-      units = splitUnits(text);
-    } catch {
-      errors.push(`crosswalk: cannot read source ${crosswalk.source ?? "(none)"} from Git`);
+
+  // Each converted step quotes the checkpoint revision whose prose it replaced.
+  const sourceOf = new Map<string, string>();
+  for (const { source = "", steps: listed = [] } of crosswalk.sources ?? []) {
+    for (const sid of listed) {
+      if (sourceOf.has(sid)) {
+        errors.push(`crosswalk: ${sid} is listed in more than one source`);
+        continue;
+      }
+      if (!steps.includes(sid))
+        errors.push(`crosswalk: ${source} lists ${sid}, which has no contract`);
+      sourceOf.set(sid, source);
     }
   }
+  for (const sid of steps) {
+    if (!sourceOf.has(sid)) errors.push(`crosswalk: ${sid} has no source`);
+  }
+
+  // Replaced units by step key ("S06"); null when the step's source could not be read.
+  let units: Map<string, Unit[] | null> | undefined;
+  if (!options.skipSource) {
+    units = new Map();
+    const parsed = new Map<string, StepUnits | null>();
+    for (const [sid, source] of sourceOf) {
+      if (!parsed.has(source)) {
+        const [sourcePath, rev = ""] = source.split("@");
+        const cwd = options.gitDir ?? repoRoot;
+        if (options.skipUnavailableSources && !hasCommit(cwd, rev)) {
+          options.onSkippedSource?.(source);
+          parsed.set(source, null);
+        } else {
+          try {
+            parsed.set(source, splitUnits(git(cwd, ["show", `${rev}:${sourcePath}`])));
+          } catch {
+            errors.push(`crosswalk: cannot read source ${source || "(none)"} from Git`);
+            parsed.set(source, null);
+          }
+        }
+      }
+      const text = parsed.get(source);
+      const step = `S${sid.slice(-2)}`;
+      const stepUnits = text === null ? null : (text?.[step]?.units ?? []);
+      if (stepUnits?.length === 0) errors.push(`crosswalk: ${source} has no prose for ${sid}`);
+      units.set(step, stepUnits ?? null);
+    }
+  }
+
   const seen = new Set<string>();
   const stepPrefix = new RegExp(`^${cpid}-S\\d{2}$`);
   for (const entry of crosswalk.entries ?? []) {
     if (seen.has(entry.key)) errors.push(`crosswalk: duplicate key ${entry.key}`);
     seen.add(entry.key);
-    if (units) {
-      const unit = units[entry.key.split(".")[0] ?? ""]?.units.find((u) => u.key === entry.key);
+    const stepUnits = units?.get(entry.key.split(".")[0] ?? "");
+    if (units && stepUnits !== null) {
+      const unit = stepUnits?.find((u) => u.key === entry.key);
       if (!unit) errors.push(`crosswalk: unknown key ${entry.key}`);
       else if (norm(entry.text ?? "") !== unit.text) {
         errors.push(`crosswalk: text for ${entry.key} is not the verbatim source unit`);
@@ -346,11 +412,9 @@ export function validateCheckpointDir(
       );
     }
   }
-  if (units) {
-    for (const sid of steps) {
-      for (const unit of units[`S${sid.slice(-2)}`]?.units ?? []) {
-        if (!seen.has(unit.key)) errors.push(`crosswalk: missing key ${unit.key}`);
-      }
+  for (const stepUnits of units?.values() ?? []) {
+    for (const unit of stepUnits ?? []) {
+      if (!seen.has(unit.key)) errors.push(`crosswalk: missing key ${unit.key}`);
     }
   }
   for (const question of crosswalk.open_questions ?? []) {
@@ -375,10 +439,16 @@ export function checkpointDirs(repoRoot: string): string[] {
 function main(argv: string[]): number {
   const repoRoot = join(dirname(fileURLToPath(import.meta.url)), "..");
   const skipSource = argv.includes("--skip-source");
+  const skipUnavailableSources = isShallowRepository(repoRoot);
   const dirs = argv.filter((a) => !a.startsWith("--"));
   let failed = 0;
   for (const dir of dirs.length > 0 ? dirs : checkpointDirs(repoRoot)) {
-    const errors = validateCheckpointDir(repoRoot, dir, { skipSource });
+    const errors = validateCheckpointDir(repoRoot, dir, {
+      skipSource,
+      skipUnavailableSources,
+      onSkippedSource: (source) =>
+        console.warn(`${dir}: ${source} is not in this shallow clone; its quotes were not checked`),
+    });
     for (const e of errors) console.error(`${dir}: ${e}`);
     console.log(`${dir}: ${errors.length === 0 ? "ok" : `${errors.length} error(s)`}`);
     failed += errors.length;

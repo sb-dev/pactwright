@@ -1,0 +1,159 @@
+# CP01 Step 6 — Implement the initial direct lifecycle shape and execution policy
+id: CP01-S06
+requires: [CP01-S01, CP01-S04, CP01-S05]
+outputs:
+  lifecycle-shape: The built-in direct fulfilment shape, Brief → Delivery → Review → Evidence, and shape
+    validation over the domain-neutral delivery, review, gate and transition vocabulary.
+  execution-policy: Execution policy loaded from lifecycle configuration through the canonical loader, covering
+    automatic or manual execution, allowed actor kinds, Gate authority and iteration bounds, separate from shape
+    topology and Contract authority.
+  execution-state: Fine-grained lifecycle execution state for a Brief, held outside the Project Graph, identifying
+    the current Brief, resolved shape, current and completed steps, Gate state, iteration counts and execution
+    status.
+requirements:
+  R01:
+    source: [CORE#16, CORE#17, CORE#20]
+    statement: The runtime shall provide the built-in direct shape Brief → Delivery → Review → Evidence. A shape
+      starts from a valid current Brief, and its successful path ends ready for Evidence closure.
+  R02:
+    source: [CORE#18, CORE#19, CORE#25, CORE#59, CHECKPOINT#4]
+    statement: Shapes shall use only the delivery, review, gate and transition vocabulary, with Delivery steps
+      mapped to the core Delivery responsibility and Review steps to the core Review responsibility. Capture-intent,
+      propose-contracts, approve-contract and write-brief shall not be shape steps; Deployment, Asset, Publication,
+      Experiment, Observation and domain production stages shall not enter the core lifecycle.
+  R03:
+    source: [CORE#12, CORE#26, CORE#31, CORE#58]
+    statement: Contract/Decision authority, shape topology, execution policy and execution state shall remain
+      separate. A Gate changes progression authority only; resolving a Gate or recording an approval never creates
+      a Decision or changes the recorded Contract, and changing policy or authority shall not require a different
+      shape.
+  R04:
+    source: [CORE#28, CORE#44, CORE#56]
+    statement: Execution state shall identify the current Brief, resolved shape, current and completed steps,
+      Gate state, iteration counts where applicable and execution status. It is held outside the Delivery Graph;
+      broad Delivery state remains derived from canonical lineage, and changing execution state alone shall change
+      no canonical record, edge or project_graph_revision.
+  R05:
+    source: [CORE#18, CORE#25, CORE#32, CORE#34]
+    statement: A corrective transition shall be accepted only when the resolved shape declares it and it returns
+      to a prior Delivery step; policy shall bound the automatic iterations of every loop it creates. Configuration
+      with an undeclared corrective route or one that does not return to a prior Delivery step, an unbounded
+      loop, a Gate without policy authority, or a successful path that skips Review of the latest delivered
+      state or never reaches Evidence shall be rejected before execution. AI output cannot add a route.
+  R06:
+    source: [CORE#11, CORE#23, CORE#28, CHECKPOINT#4]
+    statement: Execution shall identify which resolved shape it runs without inventing a lifecycle-shape hash
+      or making shape identity part of Brief identity or the Brief schema.
+  R07:
+    source: [CORE#27, CORE#54]
+    statement: Lifecycle configuration and policy shall be read through the Step 1 canonical loader, where the
+      released version 1 stages mapping is native. Malformed, missing and unsupported-version inputs, including
+      the unreleased version 2 draft, are reported with path and cause; no lifecycle caller may add a fallback
+      parser or treat a failed or incomplete load as permission to run.
+  R08:
+    source: [CORE#9, CORE#25, CORE#26, CORE#27, CORE#57]
+    statement: Policy shall decide automatic or manual execution, the actor kinds allowed to decide, and the
+      authority each Gate requires. A structurally valid lineage whose recorded Decision actor kind the policy
+      disallows remains inspectable through derivation but shall not progress.
+acceptance:
+  AC01:
+    covers: [R01, R04, R06]
+    given: A complete valid graph with one contracted Intent, its current Brief and the released version 1 lifecycle
+      configuration.
+    when: The shape for the Brief is resolved and its execution state initialised.
+    then: The resolved shape is direct, with a Delivery step, then a Review step, then Evidence closure. Execution
+      state names the Brief, the resolved shape, the Delivery step as current, no completed steps, no pending
+      Gate, no iterations and its initial status. The Brief record and every other canonical file are unchanged,
+      and no shape hash or Brief shape field is created.
+    verify:
+      automated: [lifecycle.direct-shape]
+  AC02:
+    covers: [R03, R08]
+    cases: [automatic, manual]
+    given: The direct shape with its Delivery step configured by the listed execution policy.
+    when: Progression is evaluated at that step.
+    then: An automatic step is eligible to run without an actor; a manual step is not executed automatically
+      and is reported as awaiting its actor. Neither case changes the resolved shape or any canonical record.
+    verify:
+      automated: [lifecycle.execution-policy]
+  AC03:
+    covers: [R03, R08]
+    cases: [authorised-actor, unauthorised-actor]
+    given: A fixture shape with a Gate between two Delivery steps, the authority its policy requires for that
+      Gate, and a Gate resolution supplied by an actor that authority does or does not cover, as listed.
+    when: The Gate resolution is applied.
+    then: The authorised actor resolves the Gate and the next declared step becomes current. The unauthorised
+      actor leaves Gate state and the current step unchanged with an explicit authority problem. Neither case
+      creates a Decision, Contract or other canonical record.
+    verify:
+      automated: [lifecycle.gate-authority]
+  AC04:
+    covers: [R02, R05]
+    cases: [adapter-responsibility-step, post-delivery-step, domain-stage-step, unknown-primitive, gate-without-authority,
+      path-skipping-review, path-without-evidence]
+    given: Shape and policy configuration whose only defect is the listed step or path.
+    when: The shape and policy are resolved.
+    then: Resolution fails with a problem naming the defect; no execution state is created or advanced and no
+      canonical file changes.
+    verify:
+      automated: [lifecycle.invalid-shape]
+  AC05:
+    covers: [R05]
+    given: An iterative fixture shape whose Review may route back to its Delivery step, with a policy limit of
+      two corrective iterations.
+    when: Review requests correction through the declared route twice.
+    then: Each correction makes the declared Delivery step current and increments the iteration count; no canonical
+      file changes.
+    verify:
+      automated: [lifecycle.bounded-correction]
+  AC06:
+    covers: [R05]
+    cases: [undeclared-route, route-to-non-delivery-step, unbounded-loop, iteration-limit-reached]
+    given: 'The AC05 fixture with only the listed defect: Review requests a route the shape does not declare,
+      configuration routes correction to a step that is not a prior Delivery step, configuration declares the
+      loop without an iteration limit, or Review requests a third correction.'
+    when: The configuration is resolved and the route requested.
+    then: Configuration defects are rejected before any step runs. The undeclared route is refused with the
+      reason and no route is added. With no escalation configured, progression stops at the exhausted limit
+      and no further automatic re-entry occurs.
+    verify:
+      automated: [lifecycle.invalid-correction]
+  AC07:
+    covers: [R04]
+    given: One project with a delivering lineage under a fixture shape that has a Gate and a declared corrective
+      route, with its canonical bytes, broad state and project_graph_revision recorded.
+    when: The runtime advances execution state from Delivery to Review, resolves the Gate and runs one correction.
+    then: Execution state reflects each advance, while the canonical record and edge bytes, the broad state
+      delivering and project_graph_revision are identical before and after.
+    verify:
+      automated: [lifecycle.state-outside-graph]
+  AC08:
+    covers: [R07]
+    cases: [released-v1-stages, malformed, missing, unreleased-version-2-draft, unknown-version]
+    given: A project whose lifecycle configuration is the listed input, loaded through the Step 1 loader.
+    when: Shape and policy are resolved and progression is requested.
+    then: The released version 1 stages mapping resolves natively and its policy applies unchanged. The other
+      inputs are reported with path and cause, the version 2 draft as unsupported rather than as a released
+      format; resolution yields no policy, no step runs and nothing is written.
+    verify:
+      automated: [lifecycle.config-loading]
+  AC09:
+    covers: [R08]
+    cases: [disallowed-kind, allowed-kind-control]
+    given: The same structurally valid contracted lineage whose current Decision records a syntactically valid
+      actor, under a lifecycle policy that disallows or, for the control, allows that actor kind for approve-contract.
+    when: Lineage is derived and progression requested.
+    then: Both derive the same lineage, recorded Contract and broad state. Under the disallowing policy progression
+      is refused with an actor-kind problem and neither execution state nor any file changes; the control progresses.
+    verify:
+      automated: [lifecycle.actor-kind-policy]
+  AC10:
+    covers: [R02, R03, R06, R07]
+    given: The candidate shape, policy, execution-state and lifecycle-loading code and the files it writes.
+    when: Independent review checks ownership and loading boundaries.
+    then: Contract-crafting responsibilities appear only as policy entries, never as shape steps. Gate and approval
+      paths create no Decision. No shape hash is computed and no shape field joins Brief identity or schema.
+      Execution state is not stored as a Project Graph record. Every lifecycle read goes through the canonical
+      loader, with no fallback parser or default permission.
+    verify:
+      review: [lifecycle.separation-of-concerns]
