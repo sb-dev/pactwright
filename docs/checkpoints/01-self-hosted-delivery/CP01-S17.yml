@@ -1,0 +1,96 @@
+# CP01 Step 17 — Implement deterministic `pactwright sync`
+id: CP01-S17
+requires: [CP01-S11, CP01-S12, CP01-S15, CP01-S16]
+outputs:
+  sync-command: A deterministic pactwright sync that validates the configured and locked composition, including
+    enabled fixture Extensions and the selected Agent Pack with its direct skills, and renders only Pactwright-managed
+    local integration.
+requirements:
+  R01:
+    source: [DISTRIBUTION#14]
+    statement: Sync shall load configuration and lock through the canonical loader, load enabled Extensions, derive
+      the required capabilities, load the selected pack and its direct skills and validate the complete composition
+      and lock agreement before rendering the active adapter and Pactwright-managed local integration.
+  R02:
+    source: [DISTRIBUTION#14]
+    statement: Repeated sync with identical locked inputs shall produce byte-identical generated output, and a
+      second run changes nothing.
+  R03:
+    source: [DISTRIBUTION#14, GUIDE#filesystem-mutation]
+    statement: Sync shall write only files and managed regions Pactwright owns. Unrelated user files stay unchanged.
+      When validation or lock agreement fails, the previous generated environment stays byte-identical.
+  R04:
+    source: [DISTRIBUTION#14]
+    statement: Sync shall change local generated integration only. It does not change configuration, the locks
+      or canonical Project Graph state, and does not contact GitHub.
+  R05:
+    source: [DISTRIBUTION#14, CHECKPOINT#explicitly-out-of-scope]
+    statement: In Checkpoint 1, sync shall render no GitHub product workflow, whether or not configuration declares
+      GitHub.
+  R06:
+    source: [DISTRIBUTION#6, DISTRIBUTION#14]
+    statement: Sync shall report a configured external Production Skills import as unsupported by this release
+      and fail without resolving or silently dropping it.
+acceptance:
+  AC01:
+    covers: [R01, R02]
+    cases: [core-only, with-fixture-extension]
+    given: A project with a fixture pack with direct skills selected and locked, and an enabled fixture Extension
+      for with-fixture-extension; plus a separate copy of the same commit and installed packages.
+    when: Sync runs twice in the project and once in the copy.
+    then: The generated adapter holds the pack's agents, direct skills and the seven commands. The second run changes
+      no file, and all three outputs are byte-identical.
+    verify:
+      automated: [sync.converges]
+  AC02:
+    covers: [R03, R04]
+    given: A synced project with user files inside and outside .claude/, a user workflow under .github/workflows/
+      and a changed input requiring new generated output.
+    when: Sync runs.
+    then: Only Pactwright-owned generated files change. User files, configuration, both locks and canonical files
+      are byte-identical.
+    verify:
+      automated: [sync.owned-files-only]
+  AC03:
+    covers: [R01, R03]
+    cases: [lock-mismatch, missing-capability, incompatible-extension, tampered-content]
+    given: A synced project with unrelated user files, and the listed defect in the locked composition.
+    when: Sync runs.
+    then: Sync fails with a problem naming the defect. Generated files and unrelated files are byte-identical.
+    verify:
+      automated: [sync.validation-failure]
+  AC04:
+    covers: [R06]
+    given: A synced project whose selected fixture pack declares an external Production Skills import.
+    when: Sync runs.
+    then: Sync fails, naming the import as unsupported by this release. Generated files are byte-identical.
+    verify:
+      automated: [sync.unsupported-import]
+  AC05:
+    covers: [R04, R05]
+    cases: [github-absent, github-declared]
+    given: A project whose configuration omits GitHub or declares it enabled, as listed, with network access to
+      GitHub blocked and recorded.
+    when: Sync runs.
+    then: No GitHub workflow or other GitHub product file is rendered and no GitHub request is attempted.
+    verify:
+      automated: [sync.no-github]
+  AC06:
+    covers: [R01, R02]
+    cases: [adapter-render, agent-pack-use, agent-pack-upgrade]
+    given: A project with a real resolved lock; agent-pack-use and agent-pack-upgrade also have a compatible fixture
+      pack for the listed command.
+    when: adapter-render repeats CP01-S12/AC01 through sync; the other cases run the listed command, then sync
+      again.
+    then: Rendering is byte-identical across runs. After each command the follow-up sync changes nothing, so the
+      command ran the same sync.
+    verify:
+      automated: [sync.integration-repeat]
+  AC07:
+    covers: [R03, R04]
+    given: The candidate sync code.
+    when: Independent review traces its writes.
+    then: Sync writes only Pactwright-owned generated paths or managed regions, and never configuration, locks,
+      canonical files or remote state.
+    verify:
+      review: [sync.ownership]

@@ -1,0 +1,147 @@
+# CP01 Step 15 — Implement config/lock agreement and `environment_lock_hash`
+id: CP01-S15
+requires: [CP01-S01, CP01-S05, CP01-S10, CP01-S11]
+outputs:
+  environment-lock: Resolution of the exact Pactwright execution environment, covering the runtime, the selected
+    Agent Pack and its resolved agents and direct skills, into the version 1 .pactwright/lock.yml.
+  lock-agreement: A check that the package-manager lock and .pactwright/lock.yml agree on every runtime and package-backed
+    component version they both identify, applied before a new environment is accepted.
+  environment-lock-hash: A deterministic environment_lock_hash derived from the exact resolved lock state, forming
+    the shared replay base with the repository and Project Graph revisions.
+requirements:
+  R01:
+    source: [DISTRIBUTION#12]
+    statement: Resolution shall write the version 1 lock with the exact runtime version, the configured pack source,
+      its exact version and content hash, and agents and skills maps with the content hash of each direct agent
+      and skill. Package-backed components record their exact package or source, version, content identity and
+      resolved dependencies as applicable.
+  R02:
+    source: [DISTRIBUTION#3, DISTRIBUTION#12]
+    statement: Configuration records desired constraints, the package-manager manifest and lock record installed
+      packages, and .pactwright/lock.yml records the resolved Pactwright environment. Resolution reads configuration
+      and installed package state and changes neither.
+  R03:
+    source: [DISTRIBUTION#12, DISTRIBUTION#13]
+    statement: The two locks shall agree on every runtime and package-backed component version they both identify.
+      A disagreement, a component whose installed content does not match its recorded identity, or an incompatible
+      resolution is rejected before a new environment is accepted or generated integration is replaced.
+  R04:
+    source: [DISTRIBUTION#11, GUIDE#filesystem-mutation]
+    statement: Failed resolution or validation shall leave the previous valid configuration, lock and generated
+      environment byte-identical.
+  R05:
+    source: [DISTRIBUTION#12, GUIDE#replay-provenance]
+    statement: The environment_lock_hash shall be derived deterministically from the exact resolved lock state.
+      Identical exact environments produce identical lock bytes and hash; a change to any resolved identity changes
+      the hash. It is distinct from the repository and Project Graph revisions, and the three form the shared replay
+      base repository_revision + project_graph_revision + environment_lock_hash.
+  R06:
+    source: [CORE#54, DISTRIBUTION#12]
+    statement: The lock and configuration shall be read through the Step 1 canonical loader. A missing, malformed
+      or unsupported-version input is reported as a distinct explicit incomplete diagnostic, and a recognised released
+      unversioned lock as migration required. None of them yields an environment_lock_hash or replaces valid generated
+      state.
+  R07:
+    source: [DISTRIBUTION#6, DISTRIBUTION#12]
+    statement: Resolution shall not resolve external Production Skills imports. A selected pack that declares one
+      is reported as unsupported by this release. No Production Skills entry is recorded and no environment_lock_hash
+      is produced for that environment.
+  R08:
+    source: [DISTRIBUTION#6, DISTRIBUTION#12]
+    statement: Resolution shall retain an integration point where the Checkpoint 5 external Production Skills resolver
+      can later add resolved imports to the environment and lock. This step neither implements that resolution nor
+      prescribes the integration mechanism.
+acceptance:
+  AC01:
+    covers: [R01, R02, R05]
+    cases: [repeat-resolution, separate-checkout]
+    given: A project with a fixture pack selected and installed through the package manager; separate-checkout
+      is a second copy of the same commit and installed packages, resolved in another process.
+    when: The environment is resolved twice.
+    then: Both locks are byte-identical and yield the same environment_lock_hash. The lock records the runtime
+      version, pack source, version and content hash, and each agent and direct skill content hash. Configuration
+      and package-manager files are byte-identical.
+    verify:
+      automated: [lock.deterministic]
+  AC02:
+    covers: [R05]
+    cases: [runtime-version, pack-version, pack-content-hash, agent-content, direct-skill-content]
+    given: Two resolved environments that differ only in the listed identity.
+    when: Each environment_lock_hash is derived.
+    then: The two hashes differ.
+    verify:
+      automated: [lock.hash-sensitivity]
+  AC03:
+    covers: [R05]
+    cases: [graph-change-only, environment-change-only]
+    given: A clean committed project, followed by a commit that changes only a canonical record, or only the resolved
+      pack version, as listed.
+    when: The repository revision, Project Graph revision and environment_lock_hash are derived for both commits.
+    then: graph-change-only changes the repository and Project Graph revisions but not the environment_lock_hash.
+      environment-change-only changes the repository revision and environment_lock_hash but not the Project Graph
+      revision.
+    verify:
+      automated: [lock.replay-base-distinct]
+  AC04:
+    covers: [R03, R04]
+    cases: [runtime-version-disagreement, pack-version-disagreement, tampered-pack-content, tampered-agent-content,
+      tampered-direct-skill-content]
+    given: A valid resolved environment with generated files, and installed package state with the listed defect.
+    when: The environment is resolved and accepted.
+    then: It is refused with a problem naming the component and both identities. No environment_lock_hash is produced,
+      and configuration, lock and generated files are byte-identical.
+    verify:
+      automated: [lock.agreement]
+  AC05:
+    covers: [R06]
+    cases: [missing-lock, malformed-lock, unsupported-lock-version, released-unversioned-lock, missing-config, malformed-config,
+      unsupported-config-version]
+    given: A previously valid environment with generated files, and the listed lock or configuration condition.
+    when: The environment is loaded and resolution is requested.
+    then: The listed condition is reported with its path and a distinct diagnosis, and released-unversioned-lock
+      as migration required. No environment_lock_hash is produced and generated files are byte-identical.
+    verify:
+      automated: [lock.loader-integration]
+  AC06:
+    covers: [R04, R06]
+    cases: [use-malformed-lock, use-unsupported-lock, upgrade-missing-lock, upgrade-malformed-lock, upgrade-unsupported-lock]
+    given: A project with a fixture pack selected and a valid generated environment, and the real lock in the listed
+      condition.
+    when: Agent-pack use runs with an explicit compatible source, or agent-pack upgrade runs, as listed.
+    then: The command is refused with the loader's problem. No pack is selected or upgraded, and configuration,
+      lock and generated files are byte-identical.
+    verify:
+      automated: [lock.selection-loader]
+  AC07:
+    covers: [R01]
+    cases: [agent-pack-use, agent-pack-upgrade]
+    given: A project and a compatible fixture pack available for the listed command.
+    when: The listed command completes and the resulting environment is then resolved independently.
+    then: The lock the command wrote is byte-identical to the independent resolution and has the same environment_lock_hash.
+    verify:
+      automated: [lock.selection-integration]
+  AC08:
+    covers: [R07]
+    given: A previously valid environment and a candidate fixture pack declaring an external Production Skills import.
+    when: The environment is resolved with the candidate pack.
+    then: The import is reported as unsupported by this release. No Production Skills entry is recorded, no environment_lock_hash
+      is produced and the previous environment is byte-identical.
+    verify:
+      automated: [lock.unsupported-production-skills]
+  AC09:
+    covers: [R02, R03, R06]
+    given: The candidate resolution and lock-agreement code.
+    when: Independent review traces configuration, package-manager and lock handling.
+    then: Package-manager state is only read, configuration and lock are read only through the canonical loader,
+      and the lock is written only after agreement and validation succeed.
+    verify:
+      review: [lock.ownership]
+  AC10:
+    covers: [R08]
+    given: The candidate resolution code.
+    when: Independent review traces how a declared external Production Skills import reaches resolution.
+    then: The import reaches an identifiable resolution integration point that the Checkpoint 5 resolver can extend
+      without replacing core, pack or lock resolution. This release refuses the import there, and no Production Skills
+      resolution is implemented.
+    verify:
+      review: [lock.production-skills-seam]

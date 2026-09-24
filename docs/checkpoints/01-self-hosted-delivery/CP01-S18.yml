@@ -1,0 +1,122 @@
+# CP01 Step 18 — Implement `pactwright doctor`
+id: CP01-S18
+requires: [CP01-S05, CP01-S09, CP01-S15, CP01-S16, CP01-S17]
+outputs:
+  doctor-command: A read-only pactwright doctor that diagnoses runtime, package-manager, configuration, lock, capability,
+    migration, generated-drift and validation problems as healthy, warning or action required, with deterministic
+    remediation commands where known.
+requirements:
+  R01:
+    source: [DISTRIBUTION#16]
+    statement: 'Doctor shall report at least: the installed runtime version; the detected package manager; package-manager
+      declaration and lock consistency; configuration validity; package-manager lock and .pactwright/lock.yml drift;
+      runtime compatibility with each Extension and the Agent Pack; missing required capabilities; pending or incomplete
+      migrations; generated adapter and integration drift; and validation failures affecting the resolved environment.'
+  R02:
+    source: [DISTRIBUTION#16]
+    statement: Doctor shall report an available runtime upgrade where it can determine one, and state when it cannot.
+  R03:
+    source: [DISTRIBUTION#6, DISTRIBUTION#16]
+    statement: Doctor shall identify a configured external Production Skills import as unsupported by this release,
+      and shall not claim the full Production Skills dependency diagnostics that arrive in Checkpoint 5.
+  R04:
+    source: [DISTRIBUTION#16]
+    statement: Doctor shall classify its result as healthy, warning or action required, without a separate health-state
+      subsystem.
+  R05:
+    source: [DISTRIBUTION#16]
+    statement: Doctor shall give a concrete remediation command only where the correction is supported and deterministic,
+      and never runs it.
+  R06:
+    source: [DISTRIBUTION#16, CORE#56]
+    statement: Doctor shall perform no write, Git mutation, replay record or GitHub request, and no repair, and
+      shall not act as a second GitHub reconciler.
+  R07:
+    source: [DISTRIBUTION#16, CORE#56]
+    statement: An unavailable repository revision shall be a warning for ordinary inspection when local graph loading
+      and hashing are otherwise valid, and action required for a requested pinned execution or replay. Doctor names
+      the cause, such as a missing commit or input, a dirty tree, an unsupported input transport or a migration
+      prerequisite.
+  R08:
+    source: [CORE#54, DISTRIBUTION#16]
+    statement: Doctor shall report load problems with path and cause. An incomplete active load or a required migration
+      is action required for activation, never healthy, and a recognised legacy format is migration required,
+      not an unknown version. Preserved inactive Extension data is reported as inactive.
+acceptance:
+  AC01:
+    covers: [R01, R04]
+    given: A synced project with a selected pack, an enabled fixture Extension and agreeing locks.
+    when: Doctor runs.
+    then: The result is healthy and reports the runtime version, the detected package manager and each R01 item.
+    verify:
+      automated: [doctor.healthy]
+  AC02:
+    covers: [R01, R04, R05]
+    cases: [package-manager-declaration-mismatch, invalid-configuration, lock-drift, incompatible-extension, incompatible-pack,
+      missing-capability, generated-drift, validation-failure]
+    given: The AC01 project with only the listed defect.
+    when: Doctor runs.
+    then: The result is not healthy and names the defect. A remediation command is given exactly when the correction
+      is deterministic, such as pactwright sync for generated-drift.
+    verify:
+      automated: [doctor.problems]
+  AC03:
+    covers: [R08]
+    cases: [pending-migration, missing-input, malformed-input, enabled-extension-cannot-register]
+    given: A project in the listed condition; pending-migration is a complete released 0.0.1 project.
+    when: Doctor runs.
+    then: The result is action required, never healthy, naming each path and cause. pending-migration is reported
+      as migration required, not as an unknown version.
+    verify:
+      automated: [doctor.incomplete-and-migration]
+  AC04:
+    covers: [R08]
+    given: The AC01 project with a disabled fixture Extension whose records remain in its owned root.
+    when: Doctor runs.
+    then: The Extension's data is reported as preserved inactive data and does not make the active environment
+      unhealthy.
+    verify:
+      automated: [doctor.inactive-extension]
+  AC05:
+    covers: [R07]
+    cases: [ordinary-no-commit, ordinary-dirty-tree, pinned-no-commit, pinned-dirty-tree]
+    given: A project with a valid complete graph whose repository revision is unavailable for the listed cause; the
+      pinned cases diagnose a requested pinned execution.
+    when: Doctor runs.
+    then: The ordinary cases report a warning and the pinned cases action required, each naming the cause.
+    verify:
+      automated: [doctor.repository-revision]
+  AC06:
+    covers: [R03]
+    given: The AC01 project whose selected fixture pack declares an external Production Skills import.
+    when: Doctor runs.
+    then: The import is identified as unsupported by this release, and no Production Skills dependency is reported
+      as resolved or checked.
+    verify:
+      automated: [doctor.unsupported-import]
+  AC07:
+    covers: [R02]
+    cases: [upgrade-available, latest-installed, not-determinable]
+    given: The AC01 project with a newer compatible packed runtime available, none available, or no reachable release
+      source, as listed.
+    when: Doctor runs.
+    then: It reports the available version with pactwright upgrade, that none is available, or that availability
+      cannot be determined.
+    verify:
+      automated: [doctor.runtime-upgrade]
+  AC08:
+    covers: [R06]
+    given: Every fixture of AC01 to AC07, with filesystem and Git state snapshotted and network access to GitHub
+      blocked and recorded.
+    when: Doctor runs.
+    then: Files, index, HEAD and refs are identical afterwards. No replay record or GitHub request exists.
+    verify:
+      automated: [doctor.read-only]
+  AC09:
+    covers: [R04, R05, R06]
+    given: The candidate doctor code.
+    when: Independent review traces its diagnostics and outputs.
+    then: Doctor derives its classification from existing loader, validation and environment results, runs no remediation
+      command and implements no GitHub reconciliation.
+    verify:
+      review: [doctor.boundaries]

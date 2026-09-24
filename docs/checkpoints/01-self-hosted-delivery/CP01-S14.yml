@@ -1,0 +1,121 @@
+# CP01 Step 14 — Implement `pactwright init` with explicit Agent Pack selection
+id: CP01-S14
+requires: [CP01-S01, CP01-S05, CP01-S11]
+outputs:
+  init-command: A pactwright init that gives a repository only Pactwright-owned core configuration and Project
+    Graph structure, reported as an incomplete scaffold until an Agent Pack is explicitly selected.
+  init-pack-selection: A documented init selection input through which initialisation obtains an explicit compatible
+    Agent Pack choice, resolved and validated through the agent-pack use selection path rather than a second resolver.
+requirements:
+  R01:
+    source: [DISTRIBUTION#3, CORE#54]
+    statement: 'Init shall create only the Pactwright-owned core configuration and Project Graph structure at the
+      CORE#54 paths. An empty graph is an empty specs/nodes/.gitkeep and specs/graph/edges.yml containing `edges:
+      []`. Init changes no other file.'
+  R02:
+    source: [DISTRIBUTION#3, DISTRIBUTION#14]
+    statement: In Checkpoint 1, init shall write configuration with GitHub disabled, create no Pactwright-managed
+      GitHub workflow and make no GitHub request.
+  R03:
+    source: [DISTRIBUTION#3, DISTRIBUTION#5]
+    statement: Init without an explicit pack choice shall select no Agent Pack, including an installed @pactwright/standard.
+      It reports the result as an unactivated scaffold, not as a complete or healthy executable environment.
+  R04:
+    source: [DISTRIBUTION#3, DISTRIBUTION#5]
+    statement: Init shall accept an explicit pack source and target version through its documented selection input
+      and resolve, validate and record it through the agent-pack use selection path. An incompatible choice is refused
+      before configuration or lock records any pack. This contract defines no canonical CLI flag for the input.
+  R05:
+    source: [DISTRIBUTION#5]
+    statement: Init in a project that already has an explicit pack choice shall preserve that choice and never switch
+      Agent Pack identity.
+  R06:
+    source: [CORE#54]
+    statement: The created paths and configuration shall load through the Step 1 canonical loader without a second
+      parser, and the loader shall read back exactly the configuration init wrote.
+  R07:
+    source: [CORE#56]
+    statement: Init shall not stage or commit files. The repository revision stays unavailable until the owner commits
+      the scaffold, including specs/nodes/.gitkeep and every required input. An empty records directory that is not
+      tracked is not reconstructible, even when git status reports a clean tree.
+  R08:
+    source: [GUIDE#filesystem-mutation]
+    statement: Init shall write its complete scaffold atomically. A failure leaves no partial scaffold and no changed
+      unrelated file.
+acceptance:
+  AC01:
+    covers: [R01, R02, R03]
+    cases: [empty-repository, unrelated-files]
+    given: A temporary Git repository in the listed condition; unrelated-files holds tracked and untracked user files,
+      a user .github/workflows/ file and an installed @pactwright/standard.
+    when: Init runs without a pack choice.
+    then: 'Only the CORE#54 scaffold is created, with an empty specs/nodes/.gitkeep and `edges: []`. Configuration
+      has no agent_pack and GitHub disabled. No Pactwright-managed workflow exists and no GitHub request is attempted.
+      Unrelated files are byte-identical. The result reports an unactivated, incomplete scaffold.'
+    verify:
+      automated: [init.scaffold]
+  AC02:
+    covers: [R06]
+    given: A repository initialised by AC01.
+    when: The Step 1 canonical loader reads the project.
+    then: The loader reads the created configuration, lifecycle configuration, records directory and edges as written
+      and reports an empty graph. Any incompleteness it reports concerns only the unselected pack and unresolved
+      environment.
+    verify:
+      automated: [init.loader-roundtrip]
+  AC03:
+    covers: [R04]
+    cases: [scaffold-then-use, selection-during-init]
+    given: Two clean repositories and one compatible complete fixture pack at an explicit source and target version.
+    when: scaffold-then-use runs init and then agent-pack use with that source and version; selection-during-init
+      runs init with the same source and version through the documented selection input.
+    then: Both repositories hold identical configuration, lock and generated files, and both select the fixture
+      pack at the given version.
+    verify:
+      automated: [init.explicit-selection]
+  AC04:
+    covers: [R03, R04]
+    cases: [missing-selection, incompatible-selection]
+    given: A clean repository with unrelated files and @pactwright/standard installed; incompatible-selection supplies
+      a fixture pack missing a required capability.
+    when: Init runs with the listed selection input.
+    then: No pack is selected in configuration or lock and @pactwright/standard is not chosen. incompatible-selection
+      is refused with a problem naming the missing capability. Unrelated files are byte-identical.
+    verify:
+      automated: [init.selection-refusal]
+  AC05:
+    covers: [R05]
+    given: An initialised project with a fixture pack explicitly selected, a valid lock and generated files, and @pactwright/standard
+      installed.
+    when: Init runs again without a pack choice.
+    then: Configuration, lock, generated files and canonical files are byte-identical, and the fixture pack remains
+      selected.
+    verify:
+      automated: [init.preserve-selection]
+  AC06:
+    covers: [R07]
+    cases: [before-commit, after-owner-commit, gitkeep-not-committed]
+    given: A Git repository with one prior commit, initialised by init; after-owner-commit then commits the scaffold
+      with .gitkeep; gitkeep-not-committed commits every scaffold file except .gitkeep and deletes the untracked .gitkeep
+      so git status is clean.
+    when: The index and HEAD are inspected and the repository revision is requested.
+    then: Init changed neither the index nor HEAD. The revision is unavailable for before-commit and gitkeep-not-committed,
+      naming the untracked or missing input. after-owner-commit resolves, and a clean checkout of its commit loads
+      the empty graph.
+    verify:
+      automated: [init.repository-revision]
+  AC07:
+    covers: [R08]
+    given: A clean repository with unrelated files and a write failure injected after the first scaffold file.
+    when: Init runs.
+    then: Init reports the failure. No scaffold file remains and unrelated files are byte-identical.
+    verify:
+      automated: [init.atomic]
+  AC08:
+    covers: [R04]
+    given: The candidate init code.
+    when: Independent review traces the handling of the selection input.
+    then: Init resolves and validates the choice by calling the agent-pack use selection path, not a second resolver
+      or configuration writer.
+    verify:
+      review: [init.selection-reuse]
