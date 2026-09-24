@@ -114,8 +114,8 @@ acceptance:
       loop without an iteration limit, or Review requests a third correction.'
     when: The configuration is resolved and the route requested.
     then: Configuration defects are rejected before any step runs. The undeclared route is refused with the
-      reason and no route is added. At the exhausted limit no further automatic re-entry occurs; progression
-      stops or escalates as policy configures.
+      reason and no route is added. With no escalation configured, progression stops at the exhausted limit
+      and no further automatic re-entry occurs.
     verify:
       automated: [lifecycle.invalid-correction]
   AC07:

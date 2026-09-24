@@ -20,8 +20,8 @@ requirements:
   R03:
     source: [CORE#26, CORE#32, CORE#34, CORE#46, CORE#58]
     statement: Lifecycle run shall execute automatic responsibilities through the resolved shape and policy
-      and stop at a required Gate, completion, execution failure or validation failure. It shall not skip a
-      Gate, take an undeclared transition or exceed an iteration bound.
+      and stop at a required Gate, a manual responsibility, completion, execution failure or validation failure.
+      It shall not skip a Gate, take an undeclared transition or exceed an iteration bound.
   R04:
     source: [CORE#53, CORE#55]
     statement: Every canonical mutation that run causes shall go through the Step 7 mutation API and its guards;
@@ -117,11 +117,12 @@ acceptance:
   AC08:
     covers: [R04]
     cases: [superseded-brief, unreviewed-delivery-change, blocking-closing-review, pending-gate, invalid-lineage]
-    given: A run reaching Evidence closure with the listed closure precondition failing, and a control with
-      every precondition met; superseded-brief supersedes the Brief after run has inspected state and before
-      commit.
-    when: Run attempts closure.
-    then: No Evidence or evidences edge is written and run stops naming the failed precondition. The control
-      closes with Evidence.
+    given: A run toward Evidence closure with the listed closure precondition failing, and a control with every
+      precondition met. In superseded-brief, execution state still targets a Brief that was superseded before
+      run started; invalid-lineage holds a lineage defect in the graph.
+    when: Run is invoked.
+    then: No Evidence or evidences edge is written and nothing else is committed. Run stops at the guard that
+      owns the failure. The closure guard names the failed precondition; invalid-lineage is refused by complete-state
+      validation before any step runs. The control closes with Evidence.
     verify:
       automated: [lifecycle.run-closure-guards]

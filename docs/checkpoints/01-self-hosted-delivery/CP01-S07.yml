@@ -112,8 +112,8 @@ acceptance:
     given: A complete valid stored graph and a proposed graph whose only defect is the listed change to stored
       core state.
     when: The mutation is applied.
-    then: It is refused before writing with a problem identifying the record or tuple; stored records, edges
-      and unrelated files are byte-identical afterwards.
+    then: It is refused before writing with a problem identifying the record or tuple; stored records, edges,
+      unrelated files and execution state are byte-identical afterwards.
     verify:
       automated: [mutation.immutability]
   AC06:
@@ -122,7 +122,7 @@ acceptance:
       incomplete-load-at-plan, incomplete-load-before-commit]
     given: A mutation planned against a stored base, with the listed condition. incomplete-load-at-plan fails
       loading when the plan is made; the other cases change the base after a complete plan and before commit,
-      by another writer or by a load failure. An unchanged-base control.
+      through another writer's edit, a changed registry identity or a load failure. An unchanged-base control.
     when: The mutation is planned and committed.
     then: Each listed case is refused as stale or incomplete, nothing is written and any other writer's change
       is preserved byte for byte. The control commits.
@@ -144,7 +144,7 @@ acceptance:
       is injected after the first of those files has been written.
     when: The mutation is applied.
     then: The mutation reports failure; no record or edge is partially written, and records, edges, configuration,
-      lock and unrelated files keep their prior bytes.
+      lock, unrelated files and execution state keep their prior bytes.
     verify:
       automated: [mutation.atomic-failure]
   AC09:

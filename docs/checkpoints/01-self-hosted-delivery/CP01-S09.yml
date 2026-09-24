@@ -106,21 +106,23 @@ acceptance:
       provenance.
     when: Pactwright validate runs.
     then: The allowed kind passes. The disallowed current kind fails rule 13 and the decided_by value is unchanged.
-      A policy change alone raises no problem for the withdrawn Decision. historically-allowed passes and historically-denied
-      fails rule 13, each by the restored configuration rather than current policy; historical-check-unavailable
-      reports unavailable verification, not an unauthorised Decision. Lineage derivation output is unchanged
+      A policy change alone raises no problem for the withdrawn Decision. historically-allowed reports the Decision's
+      actor kind as compatible and historically-denied as incompatible, each judged by the restored configuration
+      rather than current policy; historical-check-unavailable reports unavailable verification, not an unauthorised
+      Decision. Lineage derivation output is unchanged
       by the policy condition.
     verify:
       automated: [validate.actor-policy]
   AC05:
     covers: [R06]
     cases: [not-requested, matching-sha1-base, matching-sha256-base, pg1-stored-byte-vectors, unknown-protocol,
-      legacy-protocol, unavailable-base, dirty-base, reconstructed-state-mismatch]
+      malformed-protocol, legacy-protocol, unavailable-base, dirty-base, reconstructed-state-mismatch]
     given: Execution provenance recording a repository revision and Project Graph revision under the listed
       condition; not-requested is ordinary validation of a project whose recorded history cannot be reconstructed.
     when: Pactwright validate runs, with replay validation requested except for not-requested.
     then: Not-requested attempts no historical reconstruction and raises no replay problem. Matching bases pass
-      and the pg1 vectors reproduce their fixed bytes and digests. An unknown protocol fails rule 17. A legacy
+      and the pg1 vectors reproduce their fixed bytes and digests. Unknown and malformed protocols fail rule
+      17. A legacy
       sha256 identity is reported as unavailable replay verification without its legacy implementation, never
       prefixed or compared as pg1. Unavailable and dirty bases are refused before any execution effect, with
       no attempt or replay record. Mismatch fails rule 17 naming both revisions.
@@ -128,14 +130,13 @@ acceptance:
       automated: [validate.replay]
   AC06:
     covers: [R07]
-    cases: [incomplete-load, inactive-extension, unsupported-component, unavailable-authority, no-git, uncommitted-canonical-edit]
+    cases: [incomplete-load, inactive-extension, unsupported-component, no-git, uncommitted-canonical-edit]
     given: A project with the listed condition and otherwise valid canonical state; unsupported-component enables
-      an Extension whose implementation is unavailable, and unavailable-authority has no loadable lifecycle
-      policy.
+      an Extension whose implementation is unavailable.
     when: Pactwright validate runs and the graph revision is computed.
     then: An incomplete load fails with its input problem and never reports a whole-graph pass. An inactive
-      Extension is reported as inactive, an unsupported component as unsupported and missing policy as unavailable
-      execution authority, each distinct from malformed structure and none granting permission. Without Git,
+      Extension is reported as inactive and an unsupported component as unsupported, each distinct from malformed
+      structure and neither granting permission. Without Git,
       ordinary validation and graph-only hashing succeed. An uncommitted canonical edit changes the revision
       computed from the loaded root.
     verify:
@@ -169,7 +170,7 @@ acceptance:
     when: Delivery context is assembled.
     then: In separate-namespaces each contribution appears under its own namespace, and neither replaces nor
       edits the governing Contract/Brief content. A contribution claiming the core or another owner's namespace
-      is refused and the governing content is unchanged.
+      does not appear under that namespace, and the governing content is unchanged.
     verify:
       automated: [context.namespaced-contributions]
   AC10:
