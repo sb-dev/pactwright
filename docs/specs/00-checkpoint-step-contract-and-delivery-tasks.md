@@ -1,7 +1,7 @@
 # Pactwright — Checkpoint Step Contract and Delivery Tasks
 
-**Version:** 4  
-**Date:** 23 September 2026  
+**Version:** 5  
+**Date:** 24 September 2026  
 **Purpose:** Replace checkpoint prompts with requirements and acceptance criteria, then execute them through progressively self-hosted run models.
 
 ## 1. Execution model
@@ -53,9 +53,9 @@ sources:
 
 Shared requirements, mandatory review policy and checkpoint exit criteria are declared once and inherited. Shared requirements live in `checkpoint.yml`; their IDs take the checkpoint prefix, such as `CP01/R01`. Do not maintain a second hand-written plan or acceptance registry duplicating these contracts; generate indexes and coverage views from the contract files.
 
-While a checkpoint is converted, `crosswalk.yml` records where each obligation of the replaced prose went, quoting it verbatim. It is conversion evidence for T1 and T2 review, not a plan to maintain.
+While a checkpoint is converted, `crosswalk.yml` records where each obligation of the replaced prose went, quoting it verbatim. Its `sources` list names, for each set of converted steps, the checkpoint revision whose prose they replaced, so stages converted at different revisions each quote their own text. It is conversion evidence for T1 and T2 review, not a plan to maintain.
 
-`pnpm contracts:check` validates every checkpoint directory that has a `checkpoint.yml`. It checks the format schema, step identity, key order, requirement coverage, `requires` targets and source citations. It also checks the crosswalk's IDs and, reading the replaced text from Git history, its verbatim quotes. `pnpm test` runs the same checks.
+`pnpm contracts:check` validates every checkpoint directory that has a `checkpoint.yml`. It checks the format schema, step identity, key order, requirement coverage, `requires` targets and source citations. It also checks the crosswalk's IDs and, reading each step's replaced text from its source revision in Git history, its verbatim quotes. `pnpm test` runs the same checks.
 
 ## 3. Compact step format
 
@@ -224,4 +224,4 @@ Version 2 edited the supplied v1 proposal; version 3 moves each step contract in
 - [Core specification](https://github.com/sb-dev/pactwright/blob/19c66d5f2368932ff05306db1fae8da8ec5810dd/docs/specs/01-pactwright-core-system-and-lifecycle.md), especially §§15, 34–38 and 53–57.
 - [Implementation Principles](https://github.com/sb-dev/pactwright/blob/19c66d5f2368932ff05306db1fae8da8ec5810dd/docs/checkpoints/00-implementation-principles.md), §§3–6.
 
-**Pactwright — Checkpoint Step Contract and Delivery Tasks v4**
+**Pactwright — Checkpoint Step Contract and Delivery Tasks v5**

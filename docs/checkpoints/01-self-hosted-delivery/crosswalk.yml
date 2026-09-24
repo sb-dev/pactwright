@@ -1,12 +1,23 @@
-# Conversion record for Checkpoint 1, version 17 → step contracts (Spec 00 §2).
-# Each entry quotes one v17 obligation verbatim and names the IDs that carry it;
-# allocated_to names the later step that owns the rest of the proof. Open
-# questions are retained historical inputs to T2, not runtime acceptance evidence.
-# Decisions and review/check status: ../../research-logs/2026-09-23-pr41-b1-loading.md
+# Conversion record for Checkpoint 1 → step contracts (Spec 00 §2).
+# Each entry quotes one obligation of the replaced step prose verbatim and names
+# the IDs that carry it; allocated_to names the later step that owns the rest of
+# the proof. `sources` names the checkpoint revision each converted step
+# replaced: Stage 1 replaced version 17, Stage 2 version 20. Open questions are
+# retained historical inputs to T2, not runtime acceptance evidence.
+#
+# Stage 1 (Q01-Q20) decisions and review/check status:
+# ../../research-logs/2026-09-23-pr41-b1-loading.md
 # B1 Q01-Q04; B2 Q05-Q09,Q18; B3 Q10-Q13,Q19; B4 Q14-Q16; B5 Q17; B6 Q20.
 # Applied clauses: Core v3 / Checkpoint 1 v20. Mandatory checks and independent
 # acceptance remain pending where the batch records say so; no question is deleted.
-source: docs/checkpoints/01-self-hosted-delivery.md@26ea12a
+#
+# Stage 2 (Q21-Q30) is a T1 conversion drafted against Core v3. Its open
+# questions are unresolved inputs to T2 review; no specification was amended.
+sources:
+  - source: docs/checkpoints/01-self-hosted-delivery.md@26ea12a
+    steps: [CP01-S01, CP01-S02, CP01-S03, CP01-S04, CP01-S05]
+  - source: docs/checkpoints/01-self-hosted-delivery.md@e1c1ea3
+    steps: [CP01-S06, CP01-S07, CP01-S08, CP01-S09]
 entries:
   - key: S01.references
     text: "Specs 01–02; Implementation Guide engineering baseline."
@@ -143,6 +154,356 @@ entries:
     covered_by: []
     allocated_to: CP01-S16
     note: "Belongs to Step 16, which repeats Steps 5 and 9 through the fixture Extension loader."
+  - key: S06.references
+    text: "Spec 01 lifecycle shape, execution state, policy and Gate boundaries."
+    covered_by: [CP01-S06/R01, CP01-S06/R02, CP01-S06/R03, CP01-S06/R04, CP01-S06/R05, CP01-S06/R08]
+  - key: S06.run.1
+    text: "Implement the initial built-in direct fulfilment shape:"
+    covered_by: [CP01-S06/R01, CP01-S06/AC01]
+  - key: S06.run.2
+    text: "Brief → Delivery → Review → Evidence"
+    covered_by: [CP01-S06/R01, CP01-S06/AC01]
+  - key: S06.run.3
+    text: "Keep separate:"
+    covered_by: [CP01-S06/R03, CP01-S06/AC10]
+  - key: S06.run.4
+    text: "- Contract/Decision authority;"
+    covered_by: [CP01-S06/R03, CP01-S06/AC03, CP01-S06/AC10]
+  - key: S06.run.5
+    text: "- lifecycle shape/topology;"
+    covered_by: [CP01-S06/R02, CP01-S06/R03, CP01-S06/AC04, CP01-S06/AC10]
+  - key: S06.run.6
+    text: "- execution policy such as automatic/manual execution and human Gates;"
+    covered_by: [CP01-S06/R03, CP01-S06/R08, CP01-S06/AC02, CP01-S06/AC03]
+  - key: S06.run.7
+    text: "- fine-grained lifecycle execution state."
+    covered_by: [CP01-S06/R04, CP01-S06/AC07]
+  - key: S06.run.8
+    text: "Execution state must identify the current Brief, resolved shape, current/completed steps, Gate state, iteration counts where applicable and execution status."
+    covered_by: [CP01-S06/R04, CP01-S06/AC01]
+  - key: S06.run.9
+    text: "Broad Delivery state remains derived from canonical lineage; fine-grained progression is not stored as Delivery Graph truth."
+    covered_by: [CP01-S06/R04, CP01-S06/AC07]
+  - key: S06.run.10
+    text: "Do not encode capture-intent, propose-contracts, approve-contract or write-brief as shape stages."
+    covered_by: [CP01-S06/R02, CP01-S06/AC04, CP01-S06/AC10]
+  - key: S06.run.11
+    text: "Do not add Deployment, Asset, Publication, Experiment or Observation to the core lifecycle."
+    covered_by: [CP01-S06/R02, CP01-S06/AC04]
+  - key: S06.run.12
+    text: "Do not invent lifecycle-shape hashes or make shape identity part of Brief identity."
+    covered_by: [CP01-S06/R06, CP01-S06/AC01, CP01-S06/AC10]
+  - key: S06.run.13
+    text: "Any configured corrective transition must exist in its declared shape and have bounded execution policy; AI cannot invent routes."
+    covered_by: [CP01-S06/R05, CP01-S06/AC05, CP01-S06/AC06]
+  - key: S06.expected.1
+    text: "The runtime represents fulfilment topology and execution progress without conflating either with Contract authority or durable graph state."
+    covered_by: [CP01-S06/R03, CP01-S06/R04, CP01-S06/AC07, CP01-S06/AC10]
+  - key: S06.verify.1
+    text: "Test automatic/manual policy, authorised and unauthorised Gate progression, invalid shape/policy configuration, impossible corrective routes and unbounded-loop rejection."
+    covered_by: [CP01-S06/R03, CP01-S06/R05, CP01-S06/R08, CP01-S06/AC02, CP01-S06/AC03, CP01-S06/AC04, CP01-S06/AC05, CP01-S06/AC06]
+    note: "Gate progression and corrective routes need shapes beyond direct; where Checkpoint 1 declares them is Q21, and Gate authority recording is Q22."
+  - key: S06.verify.2
+    text: "Changing execution progress alone must leave canonical graph records and `project_graph_revision` unchanged."
+    covered_by: [CP01-S06/R04, CP01-S06/AC07]
+  - key: S06.verify.3
+    text: "Load the real lifecycle configuration and policy through Step 1's canonical loader, with valid, malformed, missing and unsupported-version controls."
+    covered_by: [CP01-S06/R07, CP01-S06/AC08]
+  - key: S06.verify.4
+    text: "No lifecycle caller may add a fallback parser or default a failed load into permission to run."
+    covered_by: [CP01-S06/R07, CP01-S06/AC08, CP01-S06/AC10]
+  - key: S06.verify.5
+    text: "A structurally valid lineage with a disallowed actor remains inspectable but cannot progress."
+    covered_by: [CP01-S06/R08, CP01-S06/AC09]
+  - key: S07.references
+    text: "Spec 01 authority, graph mutation, supersession and `/prepare-evidence`."
+    covered_by: [CP01-S07/R01, CP01-S07/R02, CP01-S07/R05, CP01-S07/R08, CP01-S07/R09]
+  - key: S07.run.1
+    text: "Implement runtime mutation responsibilities for Intent, Decision, selected Contract, Brief, Evidence, required edges and explicit supersession."
+    covered_by: [CP01-S07/R02, CP01-S07/R04, CP01-S07/AC01]
+  - key: S07.run.2
+    text: "Contract alternatives remain transient until selection."
+    covered_by: [CP01-S07/R02, CP01-S07/AC02]
+  - key: S07.run.3
+    text: "Approval/Gate state never auto-creates a Decision."
+    covered_by: [CP01-S07/R03, CP01-S07/AC03]
+  - key: S07.run.4
+    text: "All mutations use plan → validate complete proposed state → atomic write → validate resulting state."
+    covered_by: [CP01-S07/R01, CP01-S07/AC01, CP01-S07/AC08]
+  - key: S07.run.5
+    text: "Before creating Evidence or its evidences edge, require:"
+    covered_by: [CP01-S07/R09, CP01-S07/AC12]
+  - key: S07.run.6
+    text: "- the Brief is current;"
+    covered_by: [CP01-S07/R09, CP01-S07/AC12]
+  - key: S07.run.7
+    text: "- the latest delivered state has been reviewed;"
+    covered_by: [CP01-S07/R09, CP01-S07/R10, CP01-S07/AC12]
+    note: "How the latest delivered state and the closing Review outcome are identified and recorded is Q25."
+  - key: S07.run.8
+    text: "- the closing Review permits successful Evidence closure;"
+    covered_by: [CP01-S07/R09, CP01-S07/AC12]
+  - key: S07.run.9
+    text: "- no required Gate remains unresolved;"
+    covered_by: [CP01-S07/R09, CP01-S07/AC12]
+  - key: S07.run.10
+    text: "- Contract and Brief lineage is valid."
+    covered_by: [CP01-S07/R09, CP01-S07/AC12]
+  - key: S07.run.11
+    text: "Enforce these as pre-mutation runtime guards, not only as checks after writing Evidence."
+    covered_by: [CP01-S07/R09, CP01-S07/AC12, CP01-S07/AC14]
+  - key: S07.run.12
+    text: "A delivery change after Review requires Review of the new delivered state before closure."
+    covered_by: [CP01-S07/R10, CP01-S07/AC12, CP01-S07/AC13]
+  - key: S07.expected.1
+    text: "Only authorised paths produce canonical structures; successful closing Review of the latest state is required for Evidence, and failed mutation leaves no partial state."
+    covered_by: [CP01-S07/R01, CP01-S07/R02, CP01-S07/R09, CP01-S07/AC08, CP01-S07/AC12, CP01-S07/AC13, CP01-S07/AC14]
+  - key: S07.verify.1
+    text: "Exercise authorised/unauthorised Decisions and forced write/validation failure."
+    covered_by: [CP01-S07/R01, CP01-S07/R07, CP01-S07/AC04, CP01-S07/AC08]
+  - key: S07.verify.2
+    text: "For each Evidence precondition, provide a failing fixture and require no Evidence or partial edge to be written."
+    covered_by: [CP01-S07/R09, CP01-S07/AC12]
+  - key: S07.verify.3
+    text: "Include superseded Brief, unreviewed delivery change, blocking closing Review, pending Gate and invalid-lineage cases, plus successful closure."
+    covered_by: [CP01-S07/R09, CP01-S07/R10, CP01-S07/AC12, CP01-S07/AC13]
+  - key: S07.verify.4
+    text: "Exercise the guards through the runtime mutation API that every later entry point must call."
+    covered_by: [CP01-S07/R01, CP01-S07/AC12, CP01-S07/AC14]
+  - key: S07.verify.5
+    text: "Step 8 repeats them through `lifecycle run`; Step 12 repeats them through each mutating adapter command."
+    covered_by: [CP01-S08/R04, CP01-S08/AC07, CP01-S08/AC08]
+    allocated_to: CP01-S12
+    note: "Step 8 carries the lifecycle run repetition; the adapter repetition remains in Step 12's version 20 prose until Stage 3 is converted."
+  - key: S07.verify.6
+    text: "Before writing, use the Step 2 record and Step 3 core-edge immutability checks, validate the complete proposed graph and reject a changed stored base under Core §55."
+    covered_by: [CP01-S07/R05, CP01-S07/R06, CP01-S07/AC05, CP01-S07/AC06]
+  - key: S07.verify.7
+    text: "Include valid additions/supersession, unresolved Intent rewrite, deletion, rename-plus-add, core tuple replacement/removal, stale graph, concurrent configuration/lifecycle/lock edit and incomplete-load failures."
+    covered_by: [CP01-S07/R01, CP01-S07/R05, CP01-S07/R06, CP01-S07/AC01, CP01-S07/AC05, CP01-S07/AC06]
+  - key: S07.verify.8
+    text: "Race two Pactwright mutations against the same base: the check-and-write boundary must serialize them, so no accepted write overwrites the other's changed base."
+    covered_by: [CP01-S07/R06, CP01-S07/AC07]
+  - key: S07.verify.9
+    text: "Each failure preserves records, edges and unrelated files, including the concurrent writer's changes."
+    covered_by: [CP01-S07/R01, CP01-S07/R06, CP01-S07/AC05, CP01-S07/AC06, CP01-S07/AC08]
+  - key: S07.verify.10
+    text: "The supplied actor is attribution, not identity-provider authentication."
+    covered_by: [CP01-S07/R07, CP01-S07/AC04]
+  - key: S07.verify.11
+    text: "Check its kind against the actual lifecycle policy and preserve its full `decided_by` value unchanged."
+    covered_by: [CP01-S07/R07, CP01-S07/AC04]
+  - key: S07.verify.12
+    text: "Valid controls include two different identities of the same allowed kind and a human acting through an adapter later; denial is based on a disallowed kind or invalid actor syntax, not an invented Git-identity or allow-list rule."
+    covered_by: [CP01-S07/R07, CP01-S07/AC04]
+    allocated_to: CP01-S12
+    note: "The human-acting-through-an-adapter control needs the Step 12 adapter, whose prose already requires recording that human attribution unchanged."
+  - key: S07.verify.13
+    text: "Prove withdrawal separately for reject and defer superseding a current proceed Decision: write no Contract or Contract supersession, preserve the withdrawn records and derive no authorised Contract."
+    covered_by: [CP01-S07/R08, CP01-S07/AC09]
+  - key: S07.verify.14
+    text: "Prove re-authorisation after withdrawal with a new proceed Decision and a fresh Contract superseding the last Contract of the direction, even when the immediately previous Decision selected none."
+    covered_by: [CP01-S07/R08, CP01-S07/AC10]
+  - key: S07.verify.15
+    text: "Refuse re-selection of an existing Contract and omission of required supersession."
+    covered_by: [CP01-S07/R08, CP01-S07/AC11]
+  - key: S07.verify.16
+    text: "Every case validates one complete proposed graph and writes atomically; the released `0.0.1` refusal of withdrawal is not the target behaviour."
+    covered_by: [CP01-S07/R01, CP01-S07/R08, CP01-S07/AC09, CP01-S07/AC10]
+  - key: S08.references
+    text: "Spec 01 lifecycle command surface and execution-state boundary."
+    covered_by: [CP01-S08/R01, CP01-S08/R02, CP01-S08/R03, CP01-S08/R05]
+  - key: S08.run.1
+    text: "Implement:"
+    covered_by: [CP01-S08/R01, CP01-S08/R02, CP01-S08/R03]
+  - key: S08.run.2
+    text: "pactwright lifecycle status"
+    covered_by: [CP01-S08/R01, CP01-S08/AC01]
+  - key: S08.run.3
+    text: "pactwright lifecycle next"
+    covered_by: [CP01-S08/R02, CP01-S08/AC01]
+  - key: S08.run.4
+    text: "pactwright lifecycle run"
+    covered_by: [CP01-S08/R03, CP01-S08/AC02]
+  - key: S08.run.5
+    text: "`status` reports current/completed steps, blocking step, required actor, validation problems and current lineage."
+    covered_by: [CP01-S08/R01, CP01-S08/AC01]
+    note: "Whether status covers one selected Intent or every active direction is Q27."
+  - key: S08.run.6
+    text: "`next` determines the next permitted lifecycle action without executing it."
+    covered_by: [CP01-S08/R02, CP01-S08/AC01]
+    note: "Whether next names Contract-crafting responsibilities alongside shape steps is Q26."
+  - key: S08.run.7
+    text: "Both are read-only."
+    covered_by: [CP01-S08/R02, CP01-S08/AC01]
+  - key: S08.run.8
+    text: "`run` executes automatic responsibilities through the resolved shape/policy until a required Gate, completion, execution failure or validation failure."
+    covered_by: [CP01-S08/R03, CP01-S08/AC02]
+    allocated_to: CP01-S24
+    note: "Step 8 proves dispatch with an instrumented capability invoker; real Agent Pack capabilities arrive in Step 10 and the full fixture Delivery in Step 24 runs through them. What Step 8 may dispatch is Q26."
+  - key: S08.run.9
+    text: "It cannot skip Gates, invent transitions or create Evidence before the Step 7 closure guards pass."
+    covered_by: [CP01-S08/R03, CP01-S08/R04, CP01-S08/AC03, CP01-S08/AC08]
+  - key: S08.run.10
+    text: "Derive progression from current Contract/Brief lineage, resolved shape, policy, Gate state and repository state."
+    covered_by: [CP01-S08/R05, CP01-S08/AC01, CP01-S08/AC02]
+  - key: S08.run.11
+    text: "Keep execution progress outside the Delivery Graph."
+    covered_by: [CP01-S08/R05, CP01-S08/AC05]
+  - key: S08.expected.1
+    text: "The runtime owns fulfilment progression and exposes inspection separately from execution."
+    covered_by: [CP01-S08/R02, CP01-S08/R03, CP01-S08/AC01, CP01-S08/AC02]
+  - key: S08.verify.1
+    text: "Prove status/next perform no writes, report the correct actor/blocker/lineage, and next does not invoke an agent."
+    covered_by: [CP01-S08/R01, CP01-S08/R02, CP01-S08/AC01]
+  - key: S08.verify.2
+    text: "Prove Gate/failure stopping, no next core fulfilment stage after current Evidence, and execution-state changes do not alter graph truth."
+    covered_by: [CP01-S08/R03, CP01-S08/R05, CP01-S08/R06, CP01-S08/AC02, CP01-S08/AC04, CP01-S08/AC05]
+  - key: S08.verify.3
+    text: "Repeat with incomplete canonical loading, a complete graph containing one defective Intent and one unaffected Intent, and policy-denied recorded Decisions."
+    covered_by: [CP01-S08/R07, CP01-S08/AC06]
+  - key: S08.verify.4
+    text: "Status returns the unaffected Intent's exact standalone lineage/Contract/state, but diagnostic availability does not bypass whole-state validation for next/run."
+    covered_by: [CP01-S08/R07, CP01-S08/AC06]
+  - key: S08.verify.5
+    text: "Neither may invoke an agent or mutate state while the complete-state or actor-kind guard fails."
+    covered_by: [CP01-S08/R07, CP01-S08/AC06]
+  - key: S08.verify.6
+    text: "Through real `lifecycle run` dispatch, repeat Step 7's stale-base (including concurrent policy/config/lock changes), immutable-record/edge rewrite/removal, incomplete-load and disallowed-actor-kind failures and their valid controls."
+    covered_by: [CP01-S08/R04, CP01-S08/AC07]
+  - key: S08.verify.7
+    text: "Supply candidate mutations through the runtime API; no separate CLI mutation command is assumed."
+    covered_by: [CP01-S08/R04, CP01-S08/AC07]
+  - key: S08.verify.8
+    text: "Assert exact no-write/no-advance outcomes at the guard that owns each failure, including denial after inspection but before commit."
+    covered_by: [CP01-S08/R04, CP01-S08/AC07]
+  - key: S09.references
+    text: "Spec 01 sections 39, 46–57."
+    covered_by: [CP01-S09/R01, CP01-S09/R02, CP01-S09/R09]
+  - key: S09.run.1
+    text: "Implement read-only `pactwright validate` with the full minimum detection contract:"
+    covered_by: [CP01-S09/R01, CP01-S09/R02, CP01-S09/AC01, CP01-S09/AC02]
+  - key: S09.run.2
+    text: "1. malformed core nodes;"
+    covered_by: [CP01-S09/R01, CP01-S09/AC01]
+  - key: S09.run.3
+    text: "2. invalid core relationships;"
+    covered_by: [CP01-S09/R01, CP01-S09/AC01]
+  - key: S09.run.4
+    text: "3. missing required lineage;"
+    covered_by: [CP01-S09/R01, CP01-S09/AC01]
+  - key: S09.run.5
+    text: "4. contradictory current records;"
+    covered_by: [CP01-S09/R01, CP01-S09/AC01]
+  - key: S09.run.6
+    text: "5. multiple unsuperseded canonical Decisions or Contracts for one active direction;"
+    covered_by: [CP01-S09/R01, CP01-S09/R03, CP01-S09/AC01, CP01-S09/AC03]
+  - key: S09.run.7
+    text: "6. invalid Brief-to-Contract lineage;"
+    covered_by: [CP01-S09/R01, CP01-S09/R03, CP01-S09/AC01, CP01-S09/AC03]
+  - key: S09.run.8
+    text: "7. invalid Evidence-to-Brief lineage;"
+    covered_by: [CP01-S09/R01, CP01-S09/R03, CP01-S09/AC01, CP01-S09/AC03]
+  - key: S09.run.9
+    text: "8. illegal supersession;"
+    covered_by: [CP01-S09/R01, CP01-S09/R03, CP01-S09/AC01, CP01-S09/AC03]
+  - key: S09.run.10
+    text: "9. missing lifecycle shape;"
+    covered_by: [CP01-S09/R01, CP01-S09/R05, CP01-S09/AC01]
+    note: "What rules 9 and 10 check while the shape identity mechanism is unresolved is Q24."
+  - key: S09.run.11
+    text: "10. unresolved or incompatible shape identity;"
+    covered_by: [CP01-S09/R01, CP01-S09/R05, CP01-S09/AC01]
+    note: "What rules 9 and 10 check while the shape identity mechanism is unresolved is Q24."
+  - key: S09.run.12
+    text: "11. impossible shape transitions;"
+    covered_by: [CP01-S09/R01, CP01-S09/R05, CP01-S09/AC01]
+  - key: S09.run.13
+    text: "12. Evidence attempted before successful closing Review;"
+    covered_by: [CP01-S09/R01, CP01-S09/R05, CP01-S09/AC01]
+  - key: S09.run.14
+    text: "13. unauthorised Decision;"
+    covered_by: [CP01-S09/R01, CP01-S09/R04, CP01-S09/AC01, CP01-S09/AC04]
+  - key: S09.run.15
+    text: "14. unauthorised Gate progression;"
+    covered_by: [CP01-S09/R01, CP01-S09/R05, CP01-S09/AC01]
+  - key: S09.run.16
+    text: "15. unbounded configured corrective loops;"
+    covered_by: [CP01-S09/R01, CP01-S09/R05, CP01-S09/AC01]
+  - key: S09.run.17
+    text: "16. Extension state illegally redefining core Delivery semantics;"
+    covered_by: [CP01-S09/R01, CP01-S09/R08, CP01-S09/AC01, CP01-S09/AC07]
+    allocated_to: CP01-S16
+    note: "Proven here with a fixture graph contribution; Step 16 reruns it through installed fixture Extension loading."
+  - key: S09.run.18
+    text: "17. repository replay provenance that does not derive the recorded Project Graph revision when replay validation is requested."
+    covered_by: [CP01-S09/R01, CP01-S09/R06, CP01-S09/AC01, CP01-S09/AC05]
+    note: "Which execution-provenance record rule 17 reads is Q28."
+  - key: S09.run.19
+    text: "Use the same validation mechanics before canonical mutation wherever possible."
+    covered_by: [CP01-S09/R02, CP01-S09/AC10]
+  - key: S09.run.20
+    text: "Do not repair graph state as a side effect of validation."
+    covered_by: [CP01-S09/R02, CP01-S09/AC02]
+  - key: S09.run.21
+    text: "Implement the runtime context-assembly API consumed by Agent Packs/adapters."
+    covered_by: [CP01-S09/R09, CP01-S09/AC08]
+    allocated_to: CP01-S12
+    note: "Step 9 proves the API directly; its Agent Pack and adapter consumers arrive in Steps 10 and 12."
+  - key: S09.run.22
+    text: "Default Delivery context contains current relevant Contract/Brief lineage and excludes rejected alternatives, superseded state, execution transcripts and unrelated history unless explicitly required."
+    covered_by: [CP01-S09/R09, CP01-S09/AC08]
+    note: "Exactly which records form the current relevant lineage is Q29."
+  - key: S09.run.23
+    text: "Keep a namespaced context-contribution seam for later Extensions."
+    covered_by: [CP01-S09/R10, CP01-S09/AC09]
+  - key: S09.run.24
+    text: "Do not introduce `pactwright context` as a required public CLI contract."
+    covered_by: [CP01-S09/R10, CP01-S09/AC10]
+  - key: S09.expected.1
+    text: "The core semantic contract is machine-enforced and agents receive bounded canonical context rather than reconstructing truth from chat history."
+    covered_by: [CP01-S09/R01, CP01-S09/R09, CP01-S09/AC01, CP01-S09/AC08]
+  - key: S09.verify.1
+    text: "Maintain valid controls and a failing fixture mapped to each numbered rule."
+    covered_by: [CP01-S09/R01, CP01-S09/AC01]
+  - key: S09.verify.2
+    text: "Use a fixture graph contribution for rule 16 now and rerun it through real fixture Extension loading in Step 16."
+    covered_by: [CP01-S09/R08, CP01-S09/AC07]
+    allocated_to: CP01-S16
+    note: "Step 16 prose already repeats Step 9 through the actual fixture Extension loader."
+  - key: S09.verify.3
+    text: "Verify rule 17 on a requested replay check, not by requiring historical reconstruction on every ordinary validation."
+    covered_by: [CP01-S09/R06, CP01-S09/AC05]
+  - key: S09.verify.4
+    text: "Test context inclusions/exclusions and prove validation failures perform no writes."
+    covered_by: [CP01-S09/R02, CP01-S09/R09, CP01-S09/AC02, CP01-S09/AC08]
+  - key: S09.verify.5
+    text: "Reuse the Step 1 problem collection and Steps 2–4 structural validators."
+    covered_by: [CP01-S09/R02, CP01-S09/AC10]
+  - key: S09.verify.6
+    text: "Rule 8 includes branching/merging supersession; rules 6–7 include competing current Briefs/Evidence and cross-parent replacements."
+    covered_by: [CP01-S09/R03, CP01-S09/AC03]
+  - key: S09.verify.7
+    text: "Rule 13 checks the current recorded actor kind against real lifecycle policy, separately from pure lineage derivation, and preserves supplied identity as attribution."
+    covered_by: [CP01-S09/R04, CP01-S09/AC04]
+  - key: S09.verify.8
+    text: "Changing current policy alone must not retroactively invalidate withdrawn historical Decisions; a requested historical policy check restores lifecycle configuration from the recorded repository revision in execution provenance and reports unavailable when that evidence is absent or unreconstructible."
+    covered_by: [CP01-S09/R04, CP01-S09/AC04]
+  - key: S09.verify.9
+    text: "Test partial loads without a false whole-graph pass."
+    covered_by: [CP01-S09/R07, CP01-S09/AC06]
+  - key: S09.verify.10
+    text: "For requested replay, exercise the Step 5 typed Git identity and fixed stored-byte `pg1` vectors, unknown/legacy revision protocols, unavailable/dirty input bases and reconstructed-state mismatch."
+    covered_by: [CP01-S09/R06, CP01-S09/AC05]
+  - key: S09.verify.11
+    text: "Resolve the entire replay base before any execution effect; unavailable identity refuses without an attempt or replay record."
+    covered_by: [CP01-S09/R06, CP01-S09/AC05]
+  - key: S09.verify.12
+    text: "Graph-only hashing uses the loaded root, works without Git and reflects uncommitted canonical edits."
+    covered_by: [CP01-S09/R07, CP01-S09/AC06]
+  - key: S09.verify.13
+    text: "Ordinary graph diagnostics need not require Git."
+    covered_by: [CP01-S09/R07, CP01-S09/AC06]
 open_questions:
   - id: Q01
     affects: [CP01-S01/R05, CP01-S02/R06, CP01-S03/R01]
@@ -204,3 +565,33 @@ open_questions:
   - id: Q20
     affects: [CP01-S01/R05, CP01-S02/R07, CP01-S03/R06, CP01-S04/R01]
     question: "Should the later contracts carry these obligations, which v17 does not state at the named steps: Step 7 mutations refuse in-place rewrites through the Step 2 check; Step 16 re-runs CP01-S03/AC06 to AC09 and exercises Step 4 derivation through the fixture Extension loader, beyond the graph contribution registration and core-redefinition failure its v17 text already requires; Steps 6, 11, 14 and 15 load their real formats through the Step 1 loader?"
+  - id: Q21
+    affects: [CP01-S06/R02, CP01-S06/R05, CP01-S06/R07, CP01-S06/AC03, CP01-S06/AC05, CP01-S09/R05]
+    question: "Core §27 recognises only the released lifecycle `version: 1` / `stages` policy format and treats an unreleased `version: 2` draft as unsupported. Where and in what format does Checkpoint 1 declare lifecycle shapes, Gates, corrective transitions and iteration limits, so that Step 6 can test Gate progression, corrective routes and unbounded loops and validation rules 9-11 and 15 have configuration to check: built-in shapes only, test-only fixture shapes, or a new explicitly versioned lifecycle schema with its migration?"
+  - id: Q22
+    affects: [CP01-S06/R03, CP01-S06/R08, CP01-S06/AC03, CP01-S07/R09, CP01-S09/R05]
+    question: "How does lifecycle policy declare the authority a Gate requires, and how are a Gate resolution and its actor recorded in execution state? Does a Gate resolution use the Decision actor syntax `<kind>:<identity>` with kind-only authorisation, and does the direct shape have any Gate?"
+  - id: Q23
+    affects: [CP01-S06/R04, CP01-S06/AC07, CP01-S08/R05]
+    question: "Where is lifecycle execution state stored (path, tracked or ignored, per Brief or per project)? Core §56 makes the repository revision unavailable while non-ignored untracked files exist and requires provenance to be committed before the next pinned run: must execution state be ignored, committed or kept outside the repository?"
+  - id: Q24
+    affects: [CP01-S06/R06, CP01-S09/R05]
+    question: "Core §§23 and 28 leave the resolved-shape identity mechanism unresolved. What must execution state record to identify the resolved direct shape, and what do validation rules 9 (missing lifecycle shape) and 10 (unresolved or incompatible shape identity) check in Checkpoint 1?"
+  - id: Q25
+    affects: [CP01-S07/R09, CP01-S07/R10, CP01-S07/AC12, CP01-S09/R05]
+    question: "How does the runtime identify the latest delivered state and detect a delivery change after Review (for example by repository revision, working-tree content or an execution-state counter), and where is the closing Review outcome recorded so that the closure guard can read it? Core §§32 and 52 fix no Review-result vocabulary."
+  - id: Q26
+    affects: [CP01-S08/R02, CP01-S08/R03, CP01-S08/AC01, CP01-S08/AC02]
+    question: "Step 8 precedes Agent Pack capabilities (Step 10) and adapter commands (Step 12). What may `lifecycle run` dispatch at Step 8, and through which invocation seam? Do `status` and `next` name the Contract-crafting responsibilities (capture-intent, propose-contracts, approve-contract, write-brief) as lifecycle actions alongside shape steps, given that they are policy entries but not shape steps?"
+  - id: Q27
+    affects: [CP01-S08/R01, CP01-S08/R02, CP01-S08/R07]
+    question: "Do `lifecycle status`, `next` and `run` operate on one selected Intent or Brief, or across every active direction? What is reported and run when several independent Intent directions are active at once?"
+  - id: Q28
+    affects: [CP01-S09/R04, CP01-S09/R06, CP01-S09/AC05]
+    question: "Which execution-provenance record, location and format do rule 17 and the historical policy check read? No Checkpoint 1 step before Step 9 writes execution provenance: do Step 9 fixtures define it, or does a later step own it?"
+  - id: Q29
+    affects: [CP01-S09/R09, CP01-S09/R10, CP01-S09/AC08, CP01-S09/AC09]
+    question: "Which records make up the default Delivery context's current relevant Contract/Brief lineage (for example the Intent, the current Decision and its rationale, or earlier Evidence)? How does a caller explicitly require excluded history, and what namespace, ordering and size rules apply to Extension context contributions?"
+  - id: Q30
+    affects: [CP01-S09/R01, CP01-S09/R07]
+    question: "What exit status and output contract does `pactwright validate` have: how are errors, warnings, inactive components and unavailable verification (such as a historical policy or replay check) distinguished, and is machine-readable output required?"

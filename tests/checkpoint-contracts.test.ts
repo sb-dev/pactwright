@@ -6,6 +6,8 @@ import { dirname, join } from "node:path";
 import { after, describe, it } from "node:test";
 import { fileURLToPath } from "node:url";
 
+import yaml from "js-yaml";
+
 import {
   checkpointDirs,
   githubSlug,
@@ -15,7 +17,7 @@ import {
 const repoRoot = join(dirname(fileURLToPath(import.meta.url)), "..");
 const CP01 = "docs/checkpoints/01-self-hosted-delivery";
 
-// The crosswalk quotes Checkpoint 1 version 17, which shallow clones may lack.
+// The crosswalk quotes earlier Checkpoint 1 revisions, which shallow clones may lack.
 function hasCommit(rev: string): boolean {
   try {
     execFileSync("git", ["cat-file", "-e", `${rev}^{commit}`], { cwd: repoRoot, stdio: "ignore" });
@@ -24,14 +26,20 @@ function hasCommit(rev: string): boolean {
     return false;
   }
 }
-const skipSource = !hasCommit("26ea12a");
+const crosswalk = yaml.load(readFileSync(join(repoRoot, CP01, "crosswalk.yml"), "utf8")) as {
+  sources: { source: string }[];
+};
+const missing = crosswalk.sources
+  .map((s) => s.source.split("@")[1] ?? "")
+  .filter((rev) => !hasCommit(rev));
+const skipSource = missing.length > 0;
 
 describe("checkpoint contracts", () => {
   const scratch = mkdtempSync(join(tmpdir(), "pactwright-contracts-"));
   after(() => rmSync(scratch, { recursive: true, force: true }));
 
   it("validates every converted checkpoint in the repository", (t) => {
-    if (skipSource) t.diagnostic("26ea12a unavailable: verbatim crosswalk checks skipped");
+    if (skipSource) t.diagnostic(`${missing.join(", ")} unavailable: verbatim checks skipped`);
     const dirs = checkpointDirs(repoRoot);
     assert.ok(dirs.includes(CP01));
     for (const dir of dirs) {
@@ -86,6 +94,13 @@ describe("checkpoint contracts", () => {
       expect: /covered_by unknown id CP01-S01\/AC99/,
     },
     {
+      name: "converted step without a crosswalk source",
+      file: "crosswalk.yml",
+      from: "steps: [CP01-S06, CP01-S07, CP01-S08, CP01-S09]",
+      to: "steps: [CP01-S06, CP01-S07, CP01-S08]",
+      expect: /CP01-S09 has no source/,
+    },
+    {
       name: "non-verbatim crosswalk quote",
       file: "crosswalk.yml",
       from: '"Create the Pactwright runtime and CLI package foundation."',
@@ -97,7 +112,7 @@ describe("checkpoint contracts", () => {
   for (const [i, defect] of defects.entries()) {
     it(`reports a planted ${defect.name}`, (t) => {
       if (defect.name.startsWith("non-verbatim") && skipSource) {
-        t.skip("26ea12a unavailable");
+        t.skip(`${missing.join(", ")} unavailable`);
         return;
       }
       const root = join(scratch, String(i));

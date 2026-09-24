@@ -1,0 +1,121 @@
+# CP01 Step 8 — Implement lifecycle status, next and run
+id: CP01-S08
+requires: [CP01-S06, CP01-S07]
+outputs:
+  lifecycle-status: A read-only pactwright lifecycle status reporting current and completed steps, blocking
+    step, required actor, validation problems and current lineage.
+  lifecycle-next: A read-only pactwright lifecycle next that determines the next permitted lifecycle action
+    without executing it.
+  lifecycle-run: A pactwright lifecycle run that executes automatic responsibilities through the resolved shape
+    and policy until a required Gate, completion, execution failure or validation failure.
+requirements:
+  R01:
+    source: [CORE#46]
+    statement: Lifecycle status shall report current and completed steps, the blocking step, the required actor,
+      validation problems and current lineage.
+  R02:
+    source: [CORE#46, CORE#54]
+    statement: Lifecycle next shall determine the next permitted lifecycle action without executing it. Status
+      and next shall be read-only; they write no file, advance no execution state and invoke no agent or capability.
+  R03:
+    source: [CORE#26, CORE#32, CORE#34, CORE#46, CORE#58]
+    statement: Lifecycle run shall execute automatic responsibilities through the resolved shape and policy
+      and stop at a required Gate, completion, execution failure or validation failure. It shall not skip a
+      Gate, take an undeclared transition or exceed an iteration bound.
+  R04:
+    source: [CORE#53, CORE#55]
+    statement: Every canonical mutation that run causes shall go through the Step 7 mutation API and its guards;
+      run shall not create Evidence before the closure guards pass.
+  R05:
+    source: [CORE#28, CORE#44, CORE#54]
+    statement: Progression shall be derived from current Contract/Brief lineage, resolved shape, policy, Gate
+      state and repository state, and execution progress stays outside the Delivery Graph.
+  R06:
+    source: [CORE#44, CORE#58]
+    statement: After current Evidence no further core fulfilment step shall be offered or run for that Brief.
+  R07:
+    source: [CORE#44, CORE#54, CORE#55, CORE#57]
+    statement: Under an incomplete load, a lineage defect or a policy-denied recorded Decision, status remains
+      diagnostic and still returns each unaffected Intent's exact standalone lineage, Contract and state. Next
+      and run shall not bypass complete-state validation, invoke an agent or mutate state while the complete-state
+      or actor-kind guard fails.
+acceptance:
+  AC01:
+    covers: [R01, R02, R05]
+    cases: [open, contracted, delivery-step, review-step, awaiting-gate, done]
+    given: A complete valid project at the listed lifecycle position, with an instrumented capability invoker
+      that records every call.
+    when: Lifecycle status and lifecycle next are run.
+    then: Status reports the expected current and completed steps, blocking step, required actor, no problems
+      and the current lineage; next names the expected permitted action. Neither writes a file, advances execution
+      state or invokes a capability.
+    verify:
+      automated: [lifecycle.status-next]
+  AC02:
+    covers: [R03, R04, R05]
+    cases: [required-gate, completion, execution-failure, validation-failure]
+    given: A project whose run reaches the listed stopping condition.
+    when: Lifecycle run is invoked.
+    then: Run executes automatic responsibilities in declared order, stops at the listed condition and reports
+      it. It performs no step beyond that point, and every canonical change it made went through the mutation
+      API.
+    verify:
+      automated: [lifecycle.run-stops]
+  AC03:
+    covers: [R03]
+    cases: [unresolved-gate, undeclared-route-request, iteration-limit-reached]
+    given: A run in which capability output requests progression past an unresolved Gate, along an undeclared
+      route or beyond the iteration bound, as listed.
+    when: Lifecycle run continues.
+    then: Run does not pass the Gate, take the route or exceed the bound; it stops with the reason, and execution
+      state shows no skipped or invented step.
+    verify:
+      automated: [lifecycle.run-no-bypass]
+  AC04:
+    covers: [R06]
+    given: A done lineage with current Evidence.
+    when: Lifecycle status, next and run are invoked.
+    then: Status reports completion, next offers no further core fulfilment action and run performs no step,
+      invocation or write.
+    verify:
+      automated: [lifecycle.after-evidence]
+  AC05:
+    covers: [R05]
+    given: A run that advances one Brief's execution state from its Delivery step to its Review step.
+    when: Canonical records, broad state and project_graph_revision are compared before and after.
+    then: They are identical and the broad state stays delivering; only execution state changed.
+    verify:
+      automated: [lifecycle.progress-not-graph]
+  AC06:
+    covers: [R07]
+    cases: [incomplete-load, defective-and-unaffected-intents, policy-denied-decision]
+    given: A project with the listed condition. The defective case holds one Intent with a lineage defect and
+      one unaffected Intent, with a standalone control for the unaffected Intent.
+    when: Lifecycle status, next and run are invoked.
+    then: Status reports the problems and returns the unaffected Intent's lineage, Contract and state equal
+      to its standalone control, marked diagnostic when the load is incomplete. Next and run refuse with the
+      owning problem; neither invokes a capability, advances execution state nor writes.
+    verify:
+      automated: [lifecycle.fail-closed]
+  AC07:
+    covers: [R04]
+    cases: [stale-graph, concurrent-policy-edit, concurrent-configuration-edit, concurrent-lock-edit, record-rewrite,
+      record-removal, core-edge-replacement, core-edge-removal, incomplete-load, disallowed-actor-kind, denial-after-inspection]
+    given: A lifecycle run whose dispatched responsibility supplies a candidate mutation through the runtime
+      API, and the listed Step 7 failure; denial-after-inspection changes the base after run has inspected
+      state but before commit. Each case has a valid control without the failure.
+    when: Lifecycle run dispatches the responsibility.
+    then: The guard that owns the failure refuses it; nothing is written, execution state does not advance and
+      run reports the failure. Each control commits and advances. No separate CLI mutation command is used.
+    verify:
+      automated: [lifecycle.run-guard-matrix]
+  AC08:
+    covers: [R04]
+    cases: [unreviewed-delivery-change, blocking-closing-review, pending-gate]
+    given: A run reaching Evidence closure with the listed closure precondition failing, and a control with
+      every precondition met.
+    when: Run attempts closure.
+    then: No Evidence or evidences edge is written and run stops naming the failed precondition. The control
+      closes with Evidence.
+    verify:
+      automated: [lifecycle.run-closure-guards]

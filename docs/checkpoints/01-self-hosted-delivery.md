@@ -1,6 +1,6 @@
 # Pactwright — Checkpoint 1 — Self-Hosted Delivery
 
-**Version:** 20  
+**Version:** 21  
 **Entry condition:** No installable Pactwright runtime exists.  
 **Release:** `0.0.2` (corrective; `0.0.1` was published against version 14 of this runbook and remains the released baseline)  
 **Exit capability:** Pactwright is installable, upgradeable, can govern one complete Contract-driven Delivery in its own repository and in Kakeibo, can compare an Agent Pack candidate against a released baseline, and requires no manual Project Graph coherence work.
@@ -56,9 +56,9 @@ This runbook defines implementation order, not new Pactwright semantics.
 
 ## 3. Execution contract
 
-A converted step is defined by its YAML contract in [`01-self-hosted-delivery/`](./01-self-hosted-delivery/), in the format owned by [Spec 00](../specs/00-checkpoint-step-contract-and-delivery-tasks.md). The step section here links the contract and summarises its deliverables; the contract holds the requirements and acceptance criteria. Every contract inherits the settings and shared requirements in [`checkpoint.yml`](./01-self-hosted-delivery/checkpoint.yml), and [`crosswalk.yml`](./01-self-hosted-delivery/crosswalk.yml) records where each obligation of the converted version 17 step prose went.
+A converted step is defined by its YAML contract in [`01-self-hosted-delivery/`](./01-self-hosted-delivery/), in the format owned by [Spec 00](../specs/00-checkpoint-step-contract-and-delivery-tasks.md). The step section here links the contract and summarises its deliverables; the contract holds the requirements and acceptance criteria. Every contract inherits the settings and shared requirements in [`checkpoint.yml`](./01-self-hosted-delivery/checkpoint.yml), and [`crosswalk.yml`](./01-self-hosted-delivery/crosswalk.yml) records where each obligation of the replaced step prose went: version 17 for Stage 1 and version 20 for Stage 2.
 
-Stage 1 is converted and its contracts are amended against Core v3. Later steps retain the version 17 form, with the integration obligations below amended in version 20, until they are converted:
+Stages 1 and 2 are converted. Stage 1 contracts are amended against Core v3 through the Q01–Q20 resolution pass. Stage 2 contracts are drafted against Core v3; their open questions Q21–Q30 await T2 review. Later steps retain the version 17 form, with the integration obligations below amended in version 20, until they are converted:
 
 ```text
 Step
@@ -70,7 +70,7 @@ Step
 
 For Pactwright repository/code changes, finish with `pnpm verify` (shared requirement `CP01/R01`).
 
-The Q01–Q20 resolution pass is recorded in six dependency-ordered [batch records](../research-logs/2026-09-23-pr41-b1-loading.md). The crosswalk retains the original questions and version 17 quotes; the amended specifications and contracts govern new attempts. These document changes do not establish runtime acceptance or bypass independent review.
+The Q01–Q20 resolution pass is recorded in six dependency-ordered [batch records](../research-logs/2026-09-23-pr41-b1-loading.md). The crosswalk retains the original questions and replaced-prose quotes; the amended specifications and contracts govern new attempts. These document changes do not establish runtime acceptance or bypass independent review.
 
 Once a deterministic Pactwright responsibility exists, use the runtime rather than asking an agent to emulate it.
 
@@ -186,152 +186,50 @@ This step proves inclusion of Extension-owned canonical records, including non-n
 
 ### Step 6 — Implement the initial direct lifecycle shape and execution policy
 
-**References:** Spec 01 lifecycle shape, execution state, policy and Gate boundaries.
+**Contract:** [`CP01-S06`](./01-self-hosted-delivery/CP01-S06.yml)
 
-**Run**
+**Deliverables**
 
-```text
-Implement the initial built-in direct fulfilment shape:
-Brief → Delivery → Review → Evidence
+- `lifecycle-shape` — The built-in direct fulfilment shape, Brief → Delivery → Review → Evidence, and shape validation over the domain-neutral delivery, review, gate and transition vocabulary.
+- `execution-policy` — Execution policy loaded from lifecycle configuration through the canonical loader, covering automatic or manual execution, allowed actor kinds, Gate authority and iteration bounds, separate from shape topology and Contract authority.
+- `execution-state` — Fine-grained lifecycle execution state for a Brief, held outside the Project Graph, identifying the current Brief, resolved shape, current and completed steps, Gate state, iteration counts and execution status.
 
-Keep separate:
-- Contract/Decision authority;
-- lifecycle shape/topology;
-- execution policy such as automatic/manual execution and human Gates;
-- fine-grained lifecycle execution state.
-
-Execution state must identify the current Brief, resolved shape, current/completed steps, Gate state, iteration counts where applicable and execution status.
-Broad Delivery state remains derived from canonical lineage; fine-grained progression is not stored as Delivery Graph truth.
-
-Do not encode capture-intent, propose-contracts, approve-contract or write-brief as shape stages.
-Do not add Deployment, Asset, Publication, Experiment or Observation to the core lifecycle.
-Do not invent lifecycle-shape hashes or make shape identity part of Brief identity.
-Any configured corrective transition must exist in its declared shape and have bounded execution policy; AI cannot invent routes.
-```
-
-**Expected result**
-
-The runtime represents fulfilment topology and execution progress without conflating either with Contract authority or durable graph state.
-
-**Verify before continuing**
-
-Test automatic/manual policy, authorised and unauthorised Gate progression, invalid shape/policy configuration, impossible corrective routes and unbounded-loop rejection. Changing execution progress alone must leave canonical graph records and `project_graph_revision` unchanged.
-
-Load the real lifecycle configuration and policy through Step 1's canonical loader, with valid, malformed, missing and unsupported-version controls. No lifecycle caller may add a fallback parser or default a failed load into permission to run. A structurally valid lineage with a disallowed actor remains inspectable but cannot progress.
+Contract-crafting responsibilities such as capture-intent and write-brief remain policy entries, not shape steps. Step 8 exposes progression through the lifecycle commands and Step 9 diagnoses shape and policy configuration.
 
 ### Step 7 — Implement authoritative core mutations and Evidence closure guards
 
-**References:** Spec 01 authority, graph mutation, supersession and `/prepare-evidence`.
+**Contract:** [`CP01-S07`](./01-self-hosted-delivery/CP01-S07.yml)
 
-**Run**
+**Deliverables**
 
-```text
-Implement runtime mutation responsibilities for Intent, Decision, selected Contract, Brief, Evidence, required edges and explicit supersession.
-Contract alternatives remain transient until selection.
-Approval/Gate state never auto-creates a Decision.
-All mutations use plan → validate complete proposed state → atomic write → validate resulting state.
+- `mutation-api` — The runtime canonical mutation API that every public entry point calls, performing plan, complete-state validation, immutability and authority guards, a serialised stored-base check, an atomic write and result validation.
+- `authoritative-mutations` — Authorised mutations creating Intent, Decision with its selected Contract, Brief, Evidence, required edges and explicit supersession, including withdrawal and re-authorisation.
+- `evidence-closure-guards` — Pre-mutation guards that refuse Evidence and its evidences edge until all five closure preconditions hold.
 
-Before creating Evidence or its evidences edge, require:
-- the Brief is current;
-- the latest delivered state has been reviewed;
-- the closing Review permits successful Evidence closure;
-- no required Gate remains unresolved;
-- Contract and Brief lineage is valid.
-
-Enforce these as pre-mutation runtime guards, not only as checks after writing Evidence.
-A delivery change after Review requires Review of the new delivered state before closure.
-```
-
-**Expected result**
-
-Only authorised paths produce canonical structures; successful closing Review of the latest state is required for Evidence, and failed mutation leaves no partial state.
-
-**Verify before continuing**
-
-Exercise authorised/unauthorised Decisions and forced write/validation failure. For each Evidence precondition, provide a failing fixture and require no Evidence or partial edge to be written. Include superseded Brief, unreviewed delivery change, blocking closing Review, pending Gate and invalid-lineage cases, plus successful closure.
-
-Exercise the guards through the runtime mutation API that every later entry point must call. Step 8 repeats them through `lifecycle run`; Step 12 repeats them through each mutating adapter command. Before writing, use the Step 2 record and Step 3 core-edge immutability checks, validate the complete proposed graph and reject a changed stored base under Core §55. Include valid additions/supersession, unresolved Intent rewrite, deletion, rename-plus-add, core tuple replacement/removal, stale graph, concurrent configuration/lifecycle/lock edit and incomplete-load failures. Race two Pactwright mutations against the same base: the check-and-write boundary must serialize them, so no accepted write overwrites the other's changed base. Each failure preserves records, edges and unrelated files, including the concurrent writer's changes.
-
-The supplied actor is attribution, not identity-provider authentication. Check its kind against the actual lifecycle policy and preserve its full `decided_by` value unchanged. Valid controls include two different identities of the same allowed kind and a human acting through an adapter later; denial is based on a disallowed kind or invalid actor syntax, not an invented Git-identity or allow-list rule.
-
-Prove withdrawal separately for reject and defer superseding a current proceed Decision: write no Contract or Contract supersession, preserve the withdrawn records and derive no authorised Contract. Prove re-authorisation after withdrawal with a new proceed Decision and a fresh Contract superseding the last Contract of the direction, even when the immediately previous Decision selected none. Refuse re-selection of an existing Contract and omission of required supersession. Every case validates one complete proposed graph and writes atomically; the released `0.0.1` refusal of withdrawal is not the target behaviour.
+Step 7 proves the guards through the runtime mutation API. Step 8 repeats them through `lifecycle run`, Step 12 through each mutating adapter command and Step 24 through the assembled runtime. The supplied actor is attribution, not identity-provider authentication.
 
 ### Step 8 — Implement lifecycle status, next and run
 
-**References:** Spec 01 lifecycle command surface and execution-state boundary.
+**Contract:** [`CP01-S08`](./01-self-hosted-delivery/CP01-S08.yml)
 
-**Run**
+**Deliverables**
 
-```text
-Implement:
-pactwright lifecycle status
-pactwright lifecycle next
-pactwright lifecycle run
+- `lifecycle-status` — A read-only pactwright lifecycle status reporting current and completed steps, blocking step, required actor, validation problems and current lineage.
+- `lifecycle-next` — A read-only pactwright lifecycle next that determines the next permitted lifecycle action without executing it.
+- `lifecycle-run` — A pactwright lifecycle run that executes automatic responsibilities through the resolved shape and policy until a required Gate, completion, execution failure or validation failure.
 
-`status` reports current/completed steps, blocking step, required actor, validation problems and current lineage.
-`next` determines the next permitted lifecycle action without executing it.
-Both are read-only.
-
-`run` executes automatic responsibilities through the resolved shape/policy until a required Gate, completion, execution failure or validation failure.
-It cannot skip Gates, invent transitions or create Evidence before the Step 7 closure guards pass.
-
-Derive progression from current Contract/Brief lineage, resolved shape, policy, Gate state and repository state.
-Keep execution progress outside the Delivery Graph.
-```
-
-**Expected result**
-
-The runtime owns fulfilment progression and exposes inspection separately from execution.
-
-**Verify before continuing**
-
-Prove status/next perform no writes, report the correct actor/blocker/lineage, and next does not invoke an agent. Prove Gate/failure stopping, no next core fulfilment stage after current Evidence, and execution-state changes do not alter graph truth.
-
-Repeat with incomplete canonical loading, a complete graph containing one defective Intent and one unaffected Intent, and policy-denied recorded Decisions. Status returns the unaffected Intent's exact standalone lineage/Contract/state, but diagnostic availability does not bypass whole-state validation for next/run. Neither may invoke an agent or mutate state while the complete-state or actor-kind guard fails.
-
-Through real `lifecycle run` dispatch, repeat Step 7's stale-base (including concurrent policy/config/lock changes), immutable-record/edge rewrite/removal, incomplete-load and disallowed-actor-kind failures and their valid controls. Supply candidate mutations through the runtime API; no separate CLI mutation command is assumed. Assert exact no-write/no-advance outcomes at the guard that owns each failure, including denial after inspection but before commit.
+Agent Pack capabilities arrive in Step 10 and adapter commands in Step 12; Step 24 completes a full Delivery through them. Execution progress stays outside the Delivery Graph.
 
 ### Step 9 — Implement the complete core validation contract and bounded context assembly
 
-**References:** Spec 01 sections 39, 46–57.
+**Contract:** [`CP01-S09`](./01-self-hosted-delivery/CP01-S09.yml)
 
-**Run**
+**Deliverables**
 
-Implement read-only `pactwright validate` with the full minimum detection contract:
+- `validate-command` — A read-only pactwright validate implementing the complete Core §57 minimum detection contract without repairing state.
+- `context-assembly` — A runtime context-assembly API giving Agent Packs and adapters bounded current Contract/Brief lineage context, with a namespaced contribution seam for later Extensions.
 
-```text
-1. malformed core nodes;
-2. invalid core relationships;
-3. missing required lineage;
-4. contradictory current records;
-5. multiple unsuperseded canonical Decisions or Contracts for one active direction;
-6. invalid Brief-to-Contract lineage;
-7. invalid Evidence-to-Brief lineage;
-8. illegal supersession;
-9. missing lifecycle shape;
-10. unresolved or incompatible shape identity;
-11. impossible shape transitions;
-12. Evidence attempted before successful closing Review;
-13. unauthorised Decision;
-14. unauthorised Gate progression;
-15. unbounded configured corrective loops;
-16. Extension state illegally redefining core Delivery semantics;
-17. repository replay provenance that does not derive the recorded Project Graph revision when replay validation is requested.
-```
-
-Use the same validation mechanics before canonical mutation wherever possible. Do not repair graph state as a side effect of validation.
-
-Implement the runtime context-assembly API consumed by Agent Packs/adapters. Default Delivery context contains current relevant Contract/Brief lineage and excludes rejected alternatives, superseded state, execution transcripts and unrelated history unless explicitly required. Keep a namespaced context-contribution seam for later Extensions. Do not introduce `pactwright context` as a required public CLI contract.
-
-**Expected result**
-
-The core semantic contract is machine-enforced and agents receive bounded canonical context rather than reconstructing truth from chat history.
-
-**Verify before continuing**
-
-Maintain valid controls and a failing fixture mapped to each numbered rule. Use a fixture graph contribution for rule 16 now and rerun it through real fixture Extension loading in Step 16. Verify rule 17 on a requested replay check, not by requiring historical reconstruction on every ordinary validation. Test context inclusions/exclusions and prove validation failures perform no writes.
-
-Reuse the Step 1 problem collection and Steps 2–4 structural validators. Rule 8 includes branching/merging supersession; rules 6–7 include competing current Briefs/Evidence and cross-parent replacements. Rule 13 checks the current recorded actor kind against real lifecycle policy, separately from pure lineage derivation, and preserves supplied identity as attribution. Changing current policy alone must not retroactively invalidate withdrawn historical Decisions; a requested historical policy check restores lifecycle configuration from the recorded repository revision in execution provenance and reports unavailable when that evidence is absent or unreconstructible. Test partial loads without a false whole-graph pass. For requested replay, exercise the Step 5 typed Git identity and fixed stored-byte `pg1` vectors, unknown/legacy revision protocols, unavailable/dirty input bases and reconstructed-state mismatch. Resolve the entire replay base before any execution effect; unavailable identity refuses without an attempt or replay record. Graph-only hashing uses the loaded root, works without Git and reflects uncommitted canonical edits. Ordinary graph diagnostics need not require Git.
+Rule 16 uses a fixture graph contribution here; Step 16 reruns it through installed fixture Extension loading. Rule 17 runs only when replay validation is requested. Agent Packs and adapters consume context assembly from Steps 10 and 12.
 
 ## Stage 3 — Add replaceable AI execution
 
@@ -1049,4 +947,4 @@ Checkpoint 1 closes only when:
 
 ---
 
-**Pactwright — Checkpoint 1 — Self-Hosted Delivery v20**
+**Pactwright — Checkpoint 1 — Self-Hosted Delivery v21**
