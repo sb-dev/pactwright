@@ -1,6 +1,6 @@
 # Pactwright — Checkpoint Step Contract and Delivery Tasks
 
-**Version:** 3  
+**Version:** 4  
 **Date:** 23 September 2026  
 **Purpose:** Replace checkpoint prompts with requirements and acceptance criteria, then execute them through progressively self-hosted run models.
 
@@ -76,7 +76,7 @@ Requirement/criterion IDs are local: `R01` becomes `CP01-S03/R01`. Optional `inp
 
 ### Example — Step 3: shared typed-edge store
 
-This example is taken from Checkpoint 1's Step 3 contract, `01-self-hosted-delivery/CP01-S03.yml`, and retains the typed-edge obligations from the v1 example; the contract file governs if the two differ. Verifier IDs identify bindings to implement, not existing commands.
+This example is adapted from Checkpoint 1's Step 3 contract at `3c053bd622630c2e460d8cec40a633ead884873f`. It illustrates the format, not the complete current Step 3 requirements; the current `01-self-hosted-delivery/CP01-S03.yml` contract governs. Verifier IDs identify bindings to implement, not existing commands.
 
 ```yaml
 id: CP01-S03
@@ -224,4 +224,4 @@ Version 2 edited the supplied v1 proposal; version 3 moves each step contract in
 - [Core specification](https://github.com/sb-dev/pactwright/blob/19c66d5f2368932ff05306db1fae8da8ec5810dd/docs/specs/01-pactwright-core-system-and-lifecycle.md), especially §§15, 34–38 and 53–57.
 - [Implementation Principles](https://github.com/sb-dev/pactwright/blob/19c66d5f2368932ff05306db1fae8da8ec5810dd/docs/checkpoints/00-implementation-principles.md), §§3–6.
 
-**Pactwright — Checkpoint Step Contract and Delivery Tasks v3**
+**Pactwright — Checkpoint Step Contract and Delivery Tasks v4**

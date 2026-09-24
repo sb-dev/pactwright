@@ -1,6 +1,6 @@
 # Pactwright — Checkpoint 4 — Graph Review
 
-**Version:** 13  
+**Version:** 14  
 **Entry condition:** Checkpoint 3 is accepted.  
 **Release:** `0.0.4`  
 **Exit capability:** Pactwright and Kakeibo can run reproducible specialist Graph Reviews over registered Project Graph state, retain immutable Review Execution provenance, route every successful Finding through Project Intelligence, and turn accepted Project Intelligence consequences motivated by Findings into normal governed Delivery.
@@ -346,7 +346,7 @@ Every execution records at least:
 
 Store execution provenance in an implementation-owned repository location outside normal Project Graph traversal. A repository-local `.pactwright/executions/graph-reviews/` layout is acceptable as an implementation choice, but is not new canonical semantics.
 
-Failed attempts still create Review Execution provenance.
+An attempt starts only after complete replay-base preflight. A missing or unavailable identity refuses before agent invocation and creates no Review Execution or Findings. Failed attempts after successful preflight still create Review Execution provenance against that base.
 Partial/failed model output remains execution evidence only and never becomes a successful Finding.
 ```
 
@@ -637,6 +637,7 @@ The Graph Review GitHub surface must support the configured Spec 07 responsibili
 Relevant managed/validated state includes:
 - .pactwright/executions/graph-reviews/**
 - docs/graph-review/reports/**
+- specs/extensions/graph-review/edges.yml and cross-graph endpoint-owner routes
 - affected registered relationships where applicable.
 
 The existing shared Project may gain configured:
@@ -1081,6 +1082,10 @@ Learning remains governed evidence and no blocker is deferred into Checkpoint 5 
 
 Trace each blocker to its correction and passing re-verification. Require no unresolved blocking failure before closing; retained future candidates must be explicitly non-blocking and must not undermine the current canonical contract.
 
+## Replay preflight and provenance controls
+
+Exercise an unavailable repository revision, graph revision and environment identity independently: each is a reported preflight refusal with no execution record, agent invocation, Findings or canonical writes. A valid base followed by a failed agent attempt instead creates failed immutable provenance and no Findings. Immediately retry a pinned run with that provenance uncommitted and require refusal without another record; after the owner commits it, a new current-state attempt may resolve a new base. An explicit historical rerun still reconstructs its recorded base through existing repository mechanisms. Apply the same boundary through local runtime and configured GitHub dispatch (Specs 04 §§8/20 and 07 §§18–19).
+
 ## Exit gate
 
 Checkpoint 4 closes only when:
@@ -1119,4 +1124,4 @@ Checkpoint 4 closes only when:
 
 ---
 
-**Pactwright — Checkpoint 4 — Graph Review v13**
+**Pactwright — Checkpoint 4 — Graph Review v14**

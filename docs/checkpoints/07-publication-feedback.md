@@ -1,6 +1,6 @@
 # Pactwright — Checkpoint 7 — Publication Feedback
 
-**Version:** 11  
+**Version:** 12  
 **Entry condition:** Checkpoint 6 is accepted.  
 **Release:** `0.0.7`  
 **Exit capability:** Operations observes canonical Publications through the registered exposure contract, and Pactwright completes a real evidence-supported corrective Delivery, human-approved revised Asset and actual new Publication while preserving every subsystem's ownership and historical records.
@@ -264,10 +264,10 @@ Compose both enabled Extensions through the existing GitHub planner, workflow re
 Use the existing pactwright-assets-publication.yml and pactwright-operations.yml workflows; do not create a publication-feedback workflow or new required check.
 
 Route supported changes by ownership:
-- assets/** and docs/assets-publication/assets/** → Asset validation;
-- docs/assets-publication/publications/** → Publication validation and configured exposure-related Operations work;
+- assets/** and specs/extensions/assets-publication/assets/** → Asset validation;
+- specs/extensions/assets-publication/publications/** → Publication validation and configured exposure-related Operations work;
 - Operations source/environment, execution, Observation and corrective-report paths → their existing owning responsibilities;
-- shared graph edges → validators selected by registered type/endpoints, including cross-owner relationships.
+- specs/graph/edges.yml → core validation only; specs/extensions/<id>/edges.yml → the registered relation owner (or node-type owner for supersedes), plus endpoint-owner validators for cross-graph relationships. Foreign placement fails; consider both removed and added tuples.
 
 Preserve the exact checks and their meanings:
 Pactwright / Assets
@@ -758,4 +758,4 @@ Checkpoint 7 closes only when:
 
 ---
 
-**Pactwright — Checkpoint 7 — Publication Feedback v11**
+**Pactwright — Checkpoint 7 — Publication Feedback v12**

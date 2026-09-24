@@ -1,6 +1,6 @@
 # Pactwright — Checkpoint 6 — Operations
 
-**Version:** 14  
+**Version:** 15  
 **Entry condition:** Checkpoint 5 is accepted.  
 **Release:** `0.0.6`  
 **Exit capability:** Pactwright and Kakeibo can record real software exposure, predeclare controlled comparisons as immutable Experiments, collect bounded operational evidence, create durable Observations, route every canonical Observation through Project Intelligence, and prove governed corrective candidates without turning Operations into a telemetry store or second roadmap.
@@ -723,8 +723,8 @@ Relevant paths:
 .pactwright/operations/sources/**
 .pactwright/operations/environments/**
 .pactwright/executions/operations/**
-docs/operations/deployments/**
-docs/operations/observations/**
+specs/extensions/operations/deployments/**
+specs/extensions/operations/observations/**
 docs/operations/reports/corrective-intent-roadmap.md
 
 Shared graph edges route by registered type/endpoints/semantic owner, not path alone.
@@ -758,7 +758,7 @@ Operations executes and projects through the existing shared integration, with c
 Use generated-workflow, runtime integration and remote test fixtures to prove:
 - Core + PI + Graph Review + Assets / Publication + Operations uses the same shared Project, with compatible profile merging and conflict rejection;
 - each supported trusted deployment route invokes the runtime with actual exposure provenance; a merge alone and an untrusted event create no Deployment;
-- source/environment, canonical record, execution and shared-edge changes route correctly, while irrelevant paths do not trigger unrelated work;
+- source/environment, canonical record, execution and owner-edge changes route correctly, while irrelevant paths do not trigger unrelated work; core edges stay in specs/graph/edges.yml, Operations relations and Operations-node supersession in specs/extensions/operations/edges.yml, with endpoint owners included for cross-graph changes;
 - configured refresh and accepted-PI-change routes use the same semantics as local commands;
 - both exact checks distinguish invalid records, stale candidates/revision, external failures and successful no-finding results;
 - local and Actions-resolved environment identities agree for the same lock, including any selected external skills/packs;
@@ -1268,6 +1268,10 @@ Checkpoint learning reaches the correct owner while all required Operations outc
 
 Trace every blocker to a correction and passing re-verification. Run repository verification and relevant core/PI/Operations validation/evaluation. Record retained non-blocking dispositions and their provenance; require no known blocking failure before Checkpoint 7.
 
+## Canonical storage and routing cross-check
+
+Prove the installed `operations` Extension's canonical records use its manifest-declared paths below `specs/extensions/operations/`, with registered relation tuples and its node supersession in `edges.yml` there. Core lineage tuples remain in `specs/graph/edges.yml`. A cross-graph relation routes to its registered owner and endpoint owners, including deletion/old endpoints; wrong-owner placement fails without moving data. Disabling the owner preserves its directory and excludes its contributions; active edges cannot resolve inactive endpoints. Generated reports remain under `docs/<owner>/reports/` only where the owning specification defines them; configuration and execution provenance are not canonical stores.
+
 ## Exit gate
 
 Checkpoint 6 closes only when:
@@ -1315,4 +1319,4 @@ Checkpoint 6 closes only when:
 
 ---
 
-**Pactwright — Checkpoint 6 — Operations v14**
+**Pactwright — Checkpoint 6 — Operations v15**

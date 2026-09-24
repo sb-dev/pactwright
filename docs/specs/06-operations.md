@@ -620,11 +620,13 @@ Exact GitHub triggers, workflow paths, checks and Project views belong to the Gi
 Conceptually:
 
 ```text
-docs/operations/
+specs/extensions/operations/
 ├── deployments/
 ├── observations/
-└── reports/
-    └── corrective-intent-roadmap.md
+└── edges.yml
+
+docs/operations/reports/
+└── corrective-intent-roadmap.md
 
 .pactwright/operations/
 ├── sources/
@@ -642,7 +644,7 @@ Observation
 typed relationships
 ```
 
-Operational execution records and the corrective roadmap are non-canonical provenance/derived views.
+Canonical records and relation-owned edges follow Core section 54 and the versioned declaration in Spec 02 section 11; cross-graph relations remain in the Operations owner edge file and are validated with endpoint owners. Operational execution records and the corrective roadmap are non-canonical provenance/derived views.
 
 External telemetry remains external.
 
@@ -825,4 +827,4 @@ The redesign preserves these semantics while separating Graph Review and Assets 
 
 ---
 
-**Pactwright Operations v1**
+**Pactwright Operations v2**

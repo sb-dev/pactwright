@@ -237,6 +237,8 @@ packages/pactwright/
 
 owns the Pactwright runtime and CLI, including core Delivery semantics, graph validation, configuration, locking, Extension loading, Agent Pack loading, Production Skills integration resolution, adapters, synchronisation and common evaluation infrastructure.
 
+For Checkpoint 1, the single publishable `pactwright` package and its `pactwright` executable remain at the repository root. This is the explicit temporary physical-layout exception to the target monorepo above; `@pactwright/standard` remains independently owned and published. Do not duplicate the runtime under `packages/pactwright/`. A later move may adopt the target path without changing package identity, exported behaviour or the root command's use of the same built runtime.
+
 It remains production-domain neutral.
 
 ## Standard Agent Pack
@@ -1180,4 +1182,4 @@ Before Project Intelligence is available, bounded Decision/Contract authority go
 
 ---
 
-**Pactwright Open-Source Project Organisation v1**
+**Pactwright Open-Source Project Organisation v2**

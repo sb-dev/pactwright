@@ -211,7 +211,9 @@ The repository revision is not itself the Project Graph revision.
 
 # 8. Review Execution
 
-Every attempted Graph Review creates an immutable Review Execution record.
+A Graph Review attempt begins only after the runtime resolves and verifies its complete replay base under Core section 56, before agent invocation or any execution effect. Missing/unavailable repository, graph or environment identity is a preflight refusal, reported without a Review Execution, Findings or canonical mutation. This applies to initial, pinned and explicitly current-state reruns alike; `--current` selects a new verified base, not permission to omit one.
+
+Every Graph Review that passes preflight and is attempted creates an immutable Review Execution record, including failures during execution.
 
 Conceptually:
 
@@ -254,7 +256,7 @@ Resolved Agent Pack and Production Skills identities remain useful explicit prov
 
 A Review Execution is execution provenance, not a normal Project Graph node.
 
-Failed reviews still record their execution provenance.
+Failed attempted reviews still record their execution provenance against the resolved base; a preflight refusal is not an attempted review.
 
 A failed review emits **no Findings** for Project Intelligence ingestion.
 
@@ -560,8 +562,8 @@ Regeneration against current state uses the current deterministic Project Graph 
 
 Failure rules are:
 
-- deterministic request, scope or configuration errors fail immediately;
-- every attempted review records immutable execution provenance;
+- deterministic request, scope or configuration errors fail immediately; an unavailable replay base fails preflight before an attempt exists;
+- every review attempted after successful replay-base preflight records immutable execution provenance; a preflight refusal is reported without such a record;
 - a failed review emits no Findings;
 - a successful review remains successful even if Finding hand-off later fails;
 - failed Project Intelligence hand-off is retryable from the existing Finding;
@@ -570,7 +572,7 @@ Failure rules are:
 - duplicate Findings are handled by Project Intelligence triage rather than Graph Review suppression;
 - report-generation failure never mutates canonical state.
 
-A rerun always creates a new Review Execution rather than mutating the original.
+A rerun that passes preflight and is attempted creates a new Review Execution rather than mutating the original. Provenance written by an earlier attempt is ordinary repository content and must be committed before the next pinned execution; Pactwright never auto-commits, stashes or omits it to manufacture a clean base.
 
 ---
 
@@ -579,7 +581,7 @@ A rerun always creates a new Review Execution rather than mutating the original.
 `pactwright graph-review validate` must ensure at least:
 
 1. every Review Execution is immutable once recorded;
-2. every attempted review records a valid execution status;
+2. every review attempted after complete replay-base preflight records a valid execution status, and a preflight refusal creates no execution record or execution effects;
 3. every Review Execution records `repository_revision`, Project Graph revision and `environment_lock_hash`;
 4. the recorded repository revision can be verified to derive the recorded Project Graph revision when replay is requested;
 5. review scope references valid registered graph state for the recorded revision;
@@ -592,7 +594,8 @@ A rerun always creates a new Review Execution rather than mutating the original.
 12. Graph Review does not directly mutate sibling-owned canonical records;
 13. pinned reruns identify and resolve the original complete replay base;
 14. current-state reruns are explicitly marked and record the new replay base;
-15. generated reports identify their source Project Graph revision and relevant Review Execution provenance.
+15. generated reports identify their source Project Graph revision and relevant Review Execution provenance;
+16. unavailable identities refuse before an attempt; a successful preflight followed by execution failure records failed provenance and no Findings; a second pinned attempt with uncommitted prior provenance is refused without another record.
 
 Core `pactwright validate` may invoke Graph Review validation when the Extension is enabled.
 
@@ -776,4 +779,4 @@ Project-specific durable guidance belongs in Project Intelligence.
 
 ---
 
-**Pactwright Graph Review v1**
+**Pactwright Graph Review v2**

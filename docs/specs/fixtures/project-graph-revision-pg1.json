@@ -1,6 +1,6 @@
 {
   "protocol": "pg1:sha256",
-  "purpose": "Frozen definition vectors for Core §56. Inputs are already validated canonical projections; these vectors do not implement loading or establish runtime acceptance.",
+  "purpose": "Frozen definition vectors for Core §§6/56. input collections are unsorted canonical projections: sort records by owner/kind/key and edges by source/type/target in unsigned UTF-16 order before RFC 8785 serialization. stored_files, when present, fixes exact UTF-8 graph-file bytes and the expected decoded projection; a runtime fixture supplies otherwise valid required configuration/lifecycle/lock without hashing those files. These fixtures do not establish runtime acceptance.",
   "vectors": [
     {
       "id": "empty",
@@ -195,6 +195,112 @@
       },
       "canonical_json": "{\"edges\":[],\"format\":1,\"records\":[{\"key\":\"ordering\",\"kind\":\"probe\",\"owner\":\"fixture\",\"value\":{\"10\":10,\"2\":2,\"composed\":\"é\",\"decomposed\":\"é\",\"fraction\":1.25,\"ordered\":[2,1],\"text\":\"a\\nb\",\"😀\":4,\"\":5}}]}",
       "revision": "pg1:sha256:545ec642b97e9162b226f07870b27dd91f7bbae34dd036e024e2410074cb6c78"
+    },
+    {
+      "id": "stored-yaml-crlf",
+      "stored_files": {
+        "specs/nodes/intent-scalar-aaaa.md": "---\r\n# Deliberately reordered keys and a YAML 1.1-looking string.\r\nflag: yes\r\ncreated: 2026-09-24\r\ntitle: Scalar profile\r\ntype: intent\r\nid: intent-scalar-aaaa\r\n---\r\n\r\n  Preserve the scalar value.\r\nInternal spacing  stays.\r\n\r\n",
+        "specs/nodes/decision-scalar-bbbb.md": "---\r\noutcome: reject\r\ndecided_by: human:fixture\r\ntitle: Do not proceed\r\nid: decision-scalar-bbbb\r\ntype: decision\r\ncreated: 2026-09-24\r\n---\r\nReject because the requested change is not justified.\r\n",
+        "specs/graph/edges.yml": "# CRLF plus tuple mapping-key reorder is presentation.\r\nedges:\r\n  - target: intent-scalar-aaaa\r\n    type: resolves\r\n    source: decision-scalar-bbbb\r\n"
+      },
+      "input": {
+        "format": 1,
+        "records": [
+          {
+            "owner": "core",
+            "kind": "intent",
+            "key": "intent-scalar-aaaa",
+            "value": {
+              "frontmatter": {
+                "id": "intent-scalar-aaaa",
+                "type": "intent",
+                "title": "Scalar profile",
+                "created": "2026-09-24",
+                "flag": "yes"
+              },
+              "body": "Preserve the scalar value.\nInternal spacing  stays."
+            }
+          },
+          {
+            "owner": "core",
+            "kind": "decision",
+            "key": "decision-scalar-bbbb",
+            "value": {
+              "frontmatter": {
+                "id": "decision-scalar-bbbb",
+                "type": "decision",
+                "title": "Do not proceed",
+                "created": "2026-09-24",
+                "outcome": "reject",
+                "decided_by": "human:fixture"
+              },
+              "body": "Reject because the requested change is not justified."
+            }
+          }
+        ],
+        "edges": [
+          {
+            "source": "decision-scalar-bbbb",
+            "type": "resolves",
+            "target": "intent-scalar-aaaa"
+          }
+        ]
+      },
+      "canonical_json": "{\"edges\":[{\"source\":\"decision-scalar-bbbb\",\"target\":\"intent-scalar-aaaa\",\"type\":\"resolves\"}],\"format\":1,\"records\":[{\"key\":\"decision-scalar-bbbb\",\"kind\":\"decision\",\"owner\":\"core\",\"value\":{\"body\":\"Reject because the requested change is not justified.\",\"frontmatter\":{\"created\":\"2026-09-24\",\"decided_by\":\"human:fixture\",\"id\":\"decision-scalar-bbbb\",\"outcome\":\"reject\",\"title\":\"Do not proceed\",\"type\":\"decision\"}}},{\"key\":\"intent-scalar-aaaa\",\"kind\":\"intent\",\"owner\":\"core\",\"value\":{\"body\":\"Preserve the scalar value.\\nInternal spacing  stays.\",\"frontmatter\":{\"created\":\"2026-09-24\",\"flag\":\"yes\",\"id\":\"intent-scalar-aaaa\",\"title\":\"Scalar profile\",\"type\":\"intent\"}}}]}",
+      "revision": "pg1:sha256:2a21fed3cbf302ddd872a67cd3fc2d4847701899e940f4aec537b22cd95cce45"
+    },
+    {
+      "id": "stored-yaml-lf-quoted",
+      "stored_files": {
+        "specs/nodes/intent-scalar-aaaa.md": "---\nid: intent-scalar-aaaa\ntype: intent\ntitle: \"Scalar profile\"\ncreated: \"2026-09-24\"\nflag: \"yes\"\n---\nPreserve the scalar value.\nInternal spacing  stays.\n",
+        "specs/nodes/decision-scalar-bbbb.md": "---\nid: decision-scalar-bbbb\ntype: decision\ntitle: \"Do not proceed\"\ncreated: \"2026-09-24\"\noutcome: reject\ndecided_by: \"human:fixture\"\n---\nReject because the requested change is not justified.\n",
+        "specs/graph/edges.yml": "edges: [{source: decision-scalar-bbbb, type: resolves, target: intent-scalar-aaaa}]\n"
+      },
+      "input": {
+        "format": 1,
+        "records": [
+          {
+            "owner": "core",
+            "kind": "intent",
+            "key": "intent-scalar-aaaa",
+            "value": {
+              "frontmatter": {
+                "id": "intent-scalar-aaaa",
+                "type": "intent",
+                "title": "Scalar profile",
+                "created": "2026-09-24",
+                "flag": "yes"
+              },
+              "body": "Preserve the scalar value.\nInternal spacing  stays."
+            }
+          },
+          {
+            "owner": "core",
+            "kind": "decision",
+            "key": "decision-scalar-bbbb",
+            "value": {
+              "frontmatter": {
+                "id": "decision-scalar-bbbb",
+                "type": "decision",
+                "title": "Do not proceed",
+                "created": "2026-09-24",
+                "outcome": "reject",
+                "decided_by": "human:fixture"
+              },
+              "body": "Reject because the requested change is not justified."
+            }
+          }
+        ],
+        "edges": [
+          {
+            "source": "decision-scalar-bbbb",
+            "type": "resolves",
+            "target": "intent-scalar-aaaa"
+          }
+        ]
+      },
+      "canonical_json": "{\"edges\":[{\"source\":\"decision-scalar-bbbb\",\"target\":\"intent-scalar-aaaa\",\"type\":\"resolves\"}],\"format\":1,\"records\":[{\"key\":\"decision-scalar-bbbb\",\"kind\":\"decision\",\"owner\":\"core\",\"value\":{\"body\":\"Reject because the requested change is not justified.\",\"frontmatter\":{\"created\":\"2026-09-24\",\"decided_by\":\"human:fixture\",\"id\":\"decision-scalar-bbbb\",\"outcome\":\"reject\",\"title\":\"Do not proceed\",\"type\":\"decision\"}}},{\"key\":\"intent-scalar-aaaa\",\"kind\":\"intent\",\"owner\":\"core\",\"value\":{\"body\":\"Preserve the scalar value.\\nInternal spacing  stays.\",\"frontmatter\":{\"created\":\"2026-09-24\",\"flag\":\"yes\",\"id\":\"intent-scalar-aaaa\",\"title\":\"Scalar profile\",\"type\":\"intent\"}}}]}",
+      "revision": "pg1:sha256:2a21fed3cbf302ddd872a67cd3fc2d4847701899e940f4aec537b22cd95cce45"
     }
   ]
 }

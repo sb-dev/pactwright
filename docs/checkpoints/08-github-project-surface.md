@@ -1,6 +1,6 @@
 # Pactwright — Checkpoint 8 — Full Project Operating Surface
 
-**Version:** 12  
+**Version:** 13  
 **Entry condition:** Checkpoint 7 is accepted and all first-party graph semantics, including Operations Experiment, exist.  
 **Release:** `0.0.8`  
 **Exit capability:** Pactwright and Kakeibo prove the complete configured operating surface, including the controlled Experiment lineage, through the existing five workflows and one shared Project, with deterministic generation, ownership-safe reconciliation, exact runtime provenance and no transfer of canonical authority to GitHub.
@@ -382,7 +382,7 @@ Compare fields and cross-Extension Publication → Observation → Source/Knowle
 **Run**
 
 ```text
-Complete managed-path and validation composition for docs/operations/experiments/** in the Operations GitHub profile. Experiment file changes trigger the appropriate deterministic Operations validation/projection refresh. GitHub may validate/project/trigger analysis, but a Project field edit alone cannot create a valid Experiment and there is no GitHub promotion action.
+Complete managed-path and validation composition for specs/extensions/operations/experiments/** in the Operations GitHub profile. Experiment file changes trigger the appropriate deterministic Operations validation/projection refresh. GitHub may validate/project/trigger analysis, but a Project field edit alone cannot create a valid Experiment and there is no GitHub promotion action.
 ```
 
 **Expected result**
@@ -416,7 +416,8 @@ Record the active workspace package/manifest identities and generated-file hashe
 | Input or event | Existing responsibility to exercise |
 |---|---|
 | Core records, `specs/**`, relevant `.pactwright/**` changes | Core and registered owning validators; configured continuation through `lifecycle run`. |
-| `specs/graph/edges.yml` | Validators chosen by registered edge type/endpoints, including multiple owners for cross-graph relationships. |
+| `specs/graph/edges.yml` | Core lineage validation only; non-core placement fails. |
+| `specs/extensions/<id>/edges.yml` | Registered relation owner (node-type owner for `supersedes`) and affected endpoint-owner validators; include removed tuples in routing. |
 | PI Sources, Domain/Knowledge proposals and accepted changes | Source capture, promotion validation, onboard/roadmap/propagation and configured freshness processing. |
 | Graph Review execution/report paths and configured manual/scheduled/event routes | Review execution/provenance validation, Finding hand-off and projection; retry hand-off without rerunning review. |
 | `assets/**` and Asset/Publication canonical paths | Exact hash, approval, grounding and release validation; only configured trusted release/feedback operations. |
@@ -879,6 +880,10 @@ The complete operating surface has evidence-backed acceptance and governed non-b
 
 Trace each blocker to its correction and passing re-verification. Review the full result map, live Pactwright/Kakeibo traces, example/public-readiness evidence and exact release/upgrade proof. Require no known blocking failure before Checkpoint 9; retain explicit owner, evidence and non-blocking disposition for every open gap carried forward.
 
+## Canonical storage and routing cross-check
+
+Prove the installed `operations` Extension's canonical records use its manifest-declared paths below `specs/extensions/operations/`, with registered relation tuples and its node supersession in `edges.yml` there. Core lineage tuples remain in `specs/graph/edges.yml`. A cross-graph relation routes to its registered owner and endpoint owners, including deletion/old endpoints; wrong-owner placement fails without moving data. Disabling the owner preserves its directory and excludes its contributions; active edges cannot resolve inactive endpoints. Generated reports remain under `docs/<owner>/reports/` only where the owning specification defines them; configuration and execution provenance are not canonical stores.
+
 ## Exit gate
 
 Checkpoint 8 closes only when:
@@ -917,4 +922,4 @@ Checkpoint 8 closes only when:
 
 ---
 
-**Pactwright — Checkpoint 8 — Full Project Operating Surface v12**
+**Pactwright — Checkpoint 8 — Full Project Operating Surface v13**

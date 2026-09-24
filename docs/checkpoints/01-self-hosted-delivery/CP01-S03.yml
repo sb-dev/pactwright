@@ -39,9 +39,10 @@ requirements:
       other validation.
   R09:
     source: [CORE#15, CORE#54]
-    statement: Active contributions shall have unambiguous storage/type/relation ownership. Unknown active
+    statement: 'Active contributions shall have unambiguous storage/type/relation ownership. Unknown active
       data shall fail closed; inactive Extension stores shall be reported, preserved and excluded, not mistaken
-      for valid active contributions.
+      for valid active contributions. Physical ownership follows CORE#54: only core lineage tuples in specs/graph/edges.yml;
+      Extension relation tuples and its same-type node supersession in specs/extensions/<id>/edges.yml.'
 acceptance:
   AC01:
     covers: [R01, R03]
@@ -50,40 +51,46 @@ acceptance:
       five core types.
     when: The edge set is validated, stored and reloaded.
     then: Validation succeeds and repeated loading preserves the exact directed tuples.
-    verify: {automated: [edges.valid-roundtrip]}
+    verify:
+      automated: [edges.valid-roundtrip]
   AC02:
     covers: [R02]
     cases: [missing-source, missing-target]
     given: An edge whose only defect is the listed absent endpoint.
     when: The edge set is validated.
     then: Validation rejects the edge and identifies the missing endpoint.
-    verify: {automated: [edges.missing-endpoint]}
+    verify:
+      automated: [edges.missing-endpoint]
   AC03:
     covers: [R03]
     cases: [wrong-source-type, wrong-target-type, cross-type-supersession]
     given: An edge whose only defect is the listed endpoint-type violation.
     when: The edge set is validated.
     then: Validation rejects the edge for the violated relation constraint.
-    verify: {automated: [edges.endpoint-types]}
+    verify:
+      automated: [edges.endpoint-types]
   AC04:
     covers: [R04]
     given: An otherwise valid edge set with an exact repeated tuple.
     when: The edge set is validated.
     then: Validation rejects the edge set and identifies the duplicate tuple.
-    verify: {automated: [edges.duplicate-tuple]}
+    verify:
+      automated: [edges.duplicate-tuple]
   AC05:
     covers: [R05]
     cases: [self-loop, two-record-cycle, longer-cycle]
     given: Otherwise valid same-type records with the listed supersession cycle.
     when: The edge set is validated.
     then: Validation rejects the edge set and identifies the illegal supersession cycle.
-    verify: {automated: [edges.supersession-cycles]}
+    verify:
+      automated: [edges.supersession-cycles]
   AC06:
     covers: [R01, R07]
     given: A fixture registers an additional relation that permits two-way links.
     when: Two-way links are validated, stored and reloaded.
     then: The links are preserved without imposing supersession-only acyclicity.
-    verify: {automated: [edges.additional-relation]}
+    verify:
+      automated: [edges.additional-relation]
   AC07:
     covers: [R06]
     cases: [replace-endpoints, reuse-core-name, relax-endpoint-existence, relax-duplicates, relax-same-type,
@@ -92,15 +99,17 @@ acceptance:
     when: Registration processes the declaration.
     then: Registration refuses it; the original core definition remains effective, including valid controls
       and rejection of the affected violation.
-    verify: {automated: [edges.core-registration-protection]}
+    verify:
+      automated: [edges.core-registration-protection]
   AC08:
     covers: [R03, R07]
     cases: [wrong-source-type, wrong-target-type]
-    given: A fixture-registered additional relation and an edge whose only defect is the listed violation of
-      that relation endpoint types.
+    given: A fixture-registered additional relation and an edge whose only defect is the listed violation
+      of that relation endpoint types.
     when: The edge set is validated.
     then: Validation rejects the edge for the violated additional-relation constraint.
-    verify: {automated: [edges.additional-relation-endpoint-types]}
+    verify:
+      automated: [edges.additional-relation-endpoint-types]
   AC09:
     covers: [R06]
     cases: [supersession-cycle, cross-type-supersession, branching-supersession]
@@ -108,16 +117,21 @@ acceptance:
       only defect is the listed violation.
     when: The edge set is validated.
     then: Validation rejects the edge set for the violated core supersession constraint.
-    verify: {automated: [edges.core-constraints-kept]}
+    verify:
+      automated: [edges.core-constraints-kept]
   AC10:
     covers: [R03, R05]
-    cases: [intent-chain, extension-chain, branching-successors, merging-predecessors]
-    given: Otherwise valid records and the listed supersession topology, using the Step 2 additional-type seam
-      where needed.
+    cases: [intent-chain, extension-chain, branching-successors, merging-predecessors, extension-cross-type,
+      extension-supersedes-core, core-supersedes-extension]
+    given: Valid core records and two fixture-registered Extension node types from the record-model seam,
+      with only the listed supersession pattern. Supply the tuples directly to the shared edge validator so
+      placement cannot mask a type defect.
     when: The shared validator checks the edge set.
-    then: A linear Intent chain and a linear registered Extension-type chain pass. Branching and merging supersession
-      fail at this layer, with no stored change or arbitrary winner.
-    verify: {automated: [edges.supersession-cardinality]}
+    then: Linear Intent and same-type registered Extension chains pass. Branching, merging, supersession between
+      distinct Extension node types, and supersession between an Extension and a core type fail at edge validation
+      with no stored change.
+    verify:
+      automated: [edges.supersession-cardinality]
   AC11:
     covers: [R01, R08]
     cases: [add-core-edge, remove-core-edge, replace-core-edge, reorder-only]
@@ -125,7 +139,8 @@ acceptance:
     when: The proposed-state comparison is run.
     then: A valid addition and order-only change pass; removing or replacing an old tuple fails and identifies
       it. The stored set remains untouched.
-    verify: {automated: [edges.immutable-core-tuples]}
+    verify:
+      automated: [edges.immutable-core-tuples]
   AC12:
     covers: [R02, R09]
     cases: [unknown-active-relation, unknown-active-type, inactive-extension-store, active-edge-to-inactive-record]
@@ -134,14 +149,20 @@ acceptance:
     then: Unknown active relations/types and active links to inactive records fail without a complete active
       graph result. An inactive store is listed, byte-preserved and excluded; it is not parsed into active
       authority or automatically repaired.
-    verify: {automated: [edges.active-registration-boundary]}
+    verify:
+      automated: [edges.active-registration-boundary]
   AC13:
     covers: [R06, R07, R09]
     cases: [extension-record-in-core-store, core-record-in-extension-store, core-lineage-edge-in-extension-store,
-      duplicate-owner, valid-cross-graph-relation]
-    given: Fixture contributions with the listed storage or registration ownership condition.
+      duplicate-extension-id, valid-cross-graph-relation, extension-relation-edge-in-core-store, extension-supersession-edge-in-core-store,
+      foreign-relation-in-extension-edges, extension-record-outside-owner-root]
+    given: Fixture owners with the listed placement or identity condition. The valid cross-graph relation
+      is stored in specs/extensions/<relation-owner>/edges.yml. Core records use specs/nodes/; core lineage
+      tuples use specs/graph/edges.yml; Extension records remain inside their declared owner root. The core-to-core-edge
+      defect uses a core lineage relation, not an Extension-owned additional relation.
     when: Registration and shared-store validation run without installing a package.
-    then: The valid additional cross-graph relation passes. Ownership collisions, Extension records in core
-      storage, core records in Extension storage and core-to-core lineage edges in Extension storage fail without
-      changing files or the previous registry.
-    verify: {automated: [edges.storage-ownership]}
+    then: The valid cross-graph control passes through the shared validator. Every invalid placement, duplicate
+      Extension ID or foreign-owner claim fails with the paths and owners identified, without moving, deleting
+      or rewriting data.
+    verify:
+      automated: [edges.storage-ownership]

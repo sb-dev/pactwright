@@ -4,7 +4,7 @@
 # questions are retained historical inputs to T2, not runtime acceptance evidence.
 # Decisions and review/check status: ../../research-logs/2026-09-23-pr41-b1-loading.md
 # B1 Q01-Q04; B2 Q05-Q09,Q18; B3 Q10-Q13,Q19; B4 Q14-Q16; B5 Q17; B6 Q20.
-# Applied clauses: Core v2 / Checkpoint 1 v19. Mandatory checks and independent
+# Applied clauses: Core v3 / Checkpoint 1 v20. Mandatory checks and independent
 # acceptance remain pending where the batch records say so; no question is deleted.
 source: docs/checkpoints/01-self-hosted-delivery.md@26ea12a
 entries:
@@ -116,7 +116,7 @@ entries:
     covered_by: [CP01-S05/R01, CP01-S05/R02, CP01-S05/R03, CP01-S05/R04, CP01-S05/R05, CP01-S05/R06]
   - key: S05.run.1
     text: "Implement runtime-provided repository revision and deterministic Project Graph revision."
-    covered_by: [CP01-S05/R01, CP01-S05/R02, CP01-S05/AC01, CP01-S05/AC02, CP01-S05/AC03, CP01-S05/AC08, CP01-S05/AC11, CP01-S05/AC12, CP01-S05/AC13]
+    covered_by: [CP01-S05/R07, CP01-S05/R01, CP01-S05/R02, CP01-S05/AC01, CP01-S05/AC02, CP01-S05/AC03, CP01-S05/AC08, CP01-S05/AC11, CP01-S05/AC12, CP01-S05/AC13]
     note: "Replay validation of recorded revisions is Step 9 validation rule 17."
   - key: S05.run.2
     text: "Project Graph revision includes registered canonical Delivery records, typed edges and enabled Extension-owned canonical records."
