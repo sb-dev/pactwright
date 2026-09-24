@@ -11,7 +11,7 @@
 # Applied clauses: Core v3 / Checkpoint 1 v20. Mandatory checks and independent
 # acceptance remain pending where the batch records say so; no question is deleted.
 #
-# Stage 2 (Q21-Q30) is a T1 conversion drafted against Core v3. Its open
+# Stage 2 (Q21-Q33) is a T1 conversion drafted against Core v3. Its open
 # questions are unresolved inputs to T2 review; no specification was amended.
 sources:
   - source: docs/checkpoints/01-self-hosted-delivery.md@26ea12a
@@ -340,7 +340,7 @@ entries:
     text: "`run` executes automatic responsibilities through the resolved shape/policy until a required Gate, completion, execution failure or validation failure."
     covered_by: [CP01-S08/R03, CP01-S08/AC02]
     allocated_to: CP01-S24
-    note: "Step 8 proves dispatch with an instrumented capability invoker; real Agent Pack capabilities arrive in Step 10 and the full fixture Delivery in Step 24 runs through them. What Step 8 may dispatch is Q26."
+    note: "Step 8 proves dispatch with an instrumented capability invoker (AC01). Step 24's version 20 prose completes the Delivery through the adapter and does not yet run real Agent Pack capabilities through lifecycle run; that pending later-step amendment is Q33. What Step 8 may dispatch is Q26."
   - key: S08.run.9
     text: "It cannot skip Gates, invent transitions or create Evidence before the Step 7 closure guards pass."
     covered_by: [CP01-S08/R03, CP01-S08/R04, CP01-S08/AC03, CP01-S08/AC08]
@@ -449,7 +449,7 @@ entries:
     text: "Implement the runtime context-assembly API consumed by Agent Packs/adapters."
     covered_by: [CP01-S09/R09, CP01-S09/AC08]
     allocated_to: CP01-S12
-    note: "Step 9 proves the API directly; its Agent Pack and adapter consumers arrive in Steps 10 and 12."
+    note: "Step 9 proves the API directly (AC08-AC09). The version 20 prose of Steps 10-12 does not yet require Agent Packs or the adapter to consume it; that pending later-step amendment is Q33."
   - key: S09.run.22
     text: "Default Delivery context contains current relevant Contract/Brief lineage and excludes rejected alternatives, superseded state, execution transcripts and unrelated history unless explicitly required."
     covered_by: [CP01-S09/R09, CP01-S09/AC08]
@@ -566,14 +566,15 @@ open_questions:
     affects: [CP01-S01/R05, CP01-S02/R07, CP01-S03/R06, CP01-S04/R01]
     question: "Should the later contracts carry these obligations, which v17 does not state at the named steps: Step 7 mutations refuse in-place rewrites through the Step 2 check; Step 16 re-runs CP01-S03/AC06 to AC09 and exercises Step 4 derivation through the fixture Extension loader, beyond the graph contribution registration and core-redefinition failure its v17 text already requires; Steps 6, 11, 14 and 15 load their real formats through the Step 1 loader?"
   - id: Q21
-    affects: [CP01-S06/R02, CP01-S06/R05, CP01-S06/R07, CP01-S06/AC03, CP01-S06/AC05, CP01-S09/R05]
+    affects: [CP01-S06/R02, CP01-S06/R05, CP01-S06/R07, CP01-S06/AC03, CP01-S06/AC04, CP01-S06/AC05, CP01-S06/AC06,
+      CP01-S09/R05]
     question: "Core §27 recognises only the released lifecycle `version: 1` / `stages` policy format and treats an unreleased `version: 2` draft as unsupported. Where and in what format does Checkpoint 1 declare lifecycle shapes, Gates, corrective transitions and iteration limits, so that Step 6 can test Gate progression, corrective routes and unbounded loops and validation rules 9-11 and 15 have configuration to check: built-in shapes only, test-only fixture shapes, or a new explicitly versioned lifecycle schema with its migration?"
   - id: Q22
     affects: [CP01-S06/R03, CP01-S06/R08, CP01-S06/AC03, CP01-S07/R09, CP01-S09/R05]
-    question: "How does lifecycle policy declare the authority a Gate requires, and how are a Gate resolution and its actor recorded in execution state? Does a Gate resolution use the Decision actor syntax `<kind>:<identity>` with kind-only authorisation, and does the direct shape have any Gate?"
+    question: "How does lifecycle policy declare the authority a Gate requires, and how are a Gate resolution and its actor recorded in execution state? Does a Gate resolution use the Decision actor syntax `<kind>:<identity>` with kind-only authorisation, or another authority model?"
   - id: Q23
     affects: [CP01-S06/R04, CP01-S06/AC07, CP01-S08/R05]
-    question: "Where is lifecycle execution state stored (path, tracked or ignored, per Brief or per project)? Core §56 makes the repository revision unavailable while non-ignored untracked files exist and requires provenance to be committed before the next pinned run: must execution state be ignored, committed or kept outside the repository?"
+    question: "Core §28 leaves the storage path of lifecycle execution state to the implementation, but Core §56 makes the repository revision unavailable while non-ignored untracked files exist and requires written provenance to be committed before the next pinned run. Must execution state be ignored, committed or kept outside the repository so that ordinary lifecycle progress does not make the repository revision unavailable?"
   - id: Q24
     affects: [CP01-S06/R06, CP01-S09/R05]
     question: "Core §§23 and 28 leave the resolved-shape identity mechanism unresolved. What must execution state record to identify the resolved direct shape, and what do validation rules 9 (missing lifecycle shape) and 10 (unresolved or incompatible shape identity) check in Checkpoint 1?"
@@ -588,10 +589,19 @@ open_questions:
     question: "Do `lifecycle status`, `next` and `run` operate on one selected Intent or Brief, or across every active direction? What is reported and run when several independent Intent directions are active at once?"
   - id: Q28
     affects: [CP01-S09/R04, CP01-S09/R06, CP01-S09/AC05]
-    question: "Which execution-provenance record, location and format do rule 17 and the historical policy check read? No Checkpoint 1 step before Step 9 writes execution provenance: do Step 9 fixtures define it, or does a later step own it?"
+    question: "Which execution-provenance record, location and format do rule 17 and the historical policy check read? No Checkpoint 1 step before Step 9 writes execution provenance: do Step 9 fixtures define it, or does a later step own it? For a read-only `validate` of recorded provenance, what do a dirty input base and refusing without an attempt or replay record mean, given that validate performs no execution?"
   - id: Q29
     affects: [CP01-S09/R09, CP01-S09/R10, CP01-S09/AC08, CP01-S09/AC09]
-    question: "Which records make up the default Delivery context's current relevant Contract/Brief lineage (for example the Intent, the current Decision and its rationale, or earlier Evidence)? How does a caller explicitly require excluded history, and what namespace, ordering and size rules apply to Extension context contributions?"
+    question: "Which records make up the default Delivery context's current relevant Contract/Brief lineage (for example the Intent, the current Decision and its rationale, or earlier Evidence)? How does a caller explicitly require excluded history, and how is included non-current history distinguished from current lineage? What namespace, ordering and size rules apply to Extension context contributions?"
   - id: Q30
     affects: [CP01-S09/R01, CP01-S09/R07]
     question: "What exit status and output contract does `pactwright validate` have: how are errors, warnings, inactive components and unavailable verification (such as a historical policy or replay check) distinguished, and is machine-readable output required?"
+  - id: Q31
+    affects: [CP01-S06/R08, CP01-S06/AC02, CP01-S07/R07, CP01-S07/AC04, CP01-S08/R01, CP01-S08/AC02]
+    question: "Lifecycle `version: 1` defines `actor` only for approve-contract. What does `execution: manual` mean for deliver-brief, review and prepare-evidence, and what required actor does `lifecycle status` report for them? Which actor kinds may decide when approve-contract declares no `actor` (Core §57: a missing policy cannot grant permission)? Do reject and defer Decisions use the approve-contract entry, as CP01-S07/AC04 assumes?"
+  - id: Q32
+    affects: [CP01-S06/R04, CP01-S08/R03]
+    question: "Core §55 serialises canonical mutations only. How are writes to lifecycle execution state serialised when two `lifecycle run` invocations or Gate resolutions for the same Brief race, so that neither loses the other's progress or double-counts an iteration?"
+  - id: Q33
+    affects: [CP01-S08/R03, CP01-S09/R09, CP01-S12, CP01-S24]
+    question: "Should the later contracts carry these obligations, which their version 20 prose does not state: Step 24 (or another later step) runs real Agent Pack capabilities through `lifecycle run`, beyond Step 8's instrumented invoker; and Agent Packs (Step 10) and the adapter (Step 12) consume the Step 9 context-assembly API rather than assembling context themselves?"

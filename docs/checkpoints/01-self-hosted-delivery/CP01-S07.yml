@@ -66,8 +66,8 @@ requirements:
 acceptance:
   AC01:
     covers: [R01, R02, R04]
-    cases: [intent, proceed-decision, reject-decision, defer-decision, brief, brief-supersession, contract-change,
-      evidence, evidence-correction]
+    cases: [intent, intent-replacement, proceed-decision, reject-decision, defer-decision, brief, brief-supersession,
+      contract-change, evidence, evidence-correction]
     given: A complete valid graph, an allowed actor where a Decision is involved, and a request for the listed
       change.
     when: The mutation is applied through the runtime API.
@@ -93,13 +93,16 @@ acceptance:
       automated: [mutation.no-implicit-decision]
   AC04:
     covers: [R07]
-    cases: [allowed-kind, second-identity-same-kind, disallowed-kind, invalid-syntax]
-    given: An open Intent, a lifecycle policy allowing one actor kind to decide, and a proceed request supplied
-      with the listed actor; second-identity-same-kind uses a different well-formed identity of the allowed
-      kind.
+    cases: [allowed-kind, second-identity-same-kind, disallowed-kind-proceed, disallowed-kind-reject, disallowed-kind-defer,
+      invalid-syntax]
+    given: An open Intent, the project's real .pactwright/lifecycle.yml allowing one actor kind for approve-contract,
+      and a Decision request supplied with the listed actor and outcome (proceed unless named);
+      second-identity-same-kind uses a different well-formed identity of the allowed kind. In every case the
+      repository's configured Git user identity matches neither supplied identity.
     when: The Decision mutation is applied.
     then: The allowed-kind and second-identity requests commit and record the supplied decided_by value byte
-      for byte. Disallowed-kind and invalid-syntax requests are refused with no Decision, Contract or edge written.
+      for byte, never the Git identity. The disallowed-kind and invalid-syntax requests are refused; no Decision,
+      Contract or edge is written, and unrelated files and execution state keep their prior bytes.
     verify:
       automated: [mutation.actor-policy]
   AC05:
@@ -115,17 +118,20 @@ acceptance:
       automated: [mutation.immutability]
   AC06:
     covers: [R01, R06]
-    cases: [changed-graph, changed-configuration, changed-lifecycle, changed-lock, added-input, incomplete-load]
-    given: A mutation planned against a complete stored base, followed before commit by the listed change from
-      another writer or the listed load failure; an unchanged-base control.
-    when: The mutation commits.
-    then: Each listed case is refused as stale or incomplete, nothing is written and the other writer's change
+    cases: [changed-graph, changed-configuration, changed-lifecycle, changed-lock, added-input, changed-registry-identity,
+      incomplete-load-at-plan, incomplete-load-before-commit]
+    given: A mutation planned against a stored base, with the listed condition. incomplete-load-at-plan fails
+      loading when the plan is made; the other cases change the base after a complete plan and before commit,
+      by another writer or by a load failure. An unchanged-base control.
+    when: The mutation is planned and committed.
+    then: Each listed case is refused as stale or incomplete, nothing is written and any other writer's change
       is preserved byte for byte. The control commits.
     verify:
       automated: [mutation.stale-base]
   AC07:
     covers: [R06]
-    given: Two Pactwright mutations planned against the same stored base and started concurrently.
+    given: Two Pactwright mutations planned against the same stored base and started concurrently in separate
+      runtime processes.
     when: Both attempt to commit.
     then: The boundary serialises them. Exactly one commits and the other is refused as stale rather than overwriting
       it; the resulting graph validates and contains only the committed change.
@@ -134,7 +140,8 @@ acceptance:
   AC08:
     covers: [R01]
     cases: [proposed-state-invalid, write-failure, result-validation-failure]
-    given: A valid mutation request and the listed forced failure.
+    given: A valid mutation request that writes several files and the listed forced failure; write-failure
+      is injected after the first of those files has been written.
     when: The mutation is applied.
     then: The mutation reports failure; no record or edge is partially written, and records, edges, configuration,
       lock and unrelated files keep their prior bytes.
@@ -162,19 +169,24 @@ acceptance:
       automated: [mutation.reauthorisation]
   AC11:
     covers: [R08]
-    cases: [reselect-withdrawn-contract, reselect-current-contract, missing-contract-supersession, missing-decision-supersession]
-    given: A lineage and a Decision request whose only defect is the listed case.
+    cases: [reselect-withdrawn-contract, reselect-current-contract, other-intent-selects-existing-contract, missing-contract-supersession,
+      missing-decision-supersession]
+    given: A lineage and a Decision request whose only defect is the listed case; other-intent-selects-existing-contract
+      is a Decision of an unrelated Intent selecting a stored Contract.
     when: The mutation is applied.
-    then: It is refused as invalid lineage before writing, and no record or edge changes.
+    then: It is refused as invalid lineage before writing; records, edges, unrelated files and execution state
+      keep their prior bytes.
     verify:
       automated: [mutation.reauthorisation-refusals]
   AC12:
     covers: [R09, R10]
-    cases: [superseded-brief, unreviewed-delivery-change, blocking-closing-review, pending-gate, invalid-lineage]
-    given: A delivering lineage whose only closure defect is the listed precondition failure.
+    cases: [superseded-brief, never-reviewed, unreviewed-delivery-change, blocking-closing-review, pending-gate,
+      invalid-lineage]
+    given: A delivering lineage whose only closure defect is the listed precondition failure; never-reviewed
+      has delivered state but no Review at all.
     when: Evidence creation is requested through the runtime API.
-    then: The guard refuses before any write and names the failed precondition; no Evidence record or evidences
-      edge exists afterwards, even partially.
+    then: The guard refuses before any write and names the failed precondition. No Evidence record or evidences
+      edge exists afterwards, even partially, and unrelated files and execution state keep their prior bytes.
     verify:
       automated: [evidence.closure-guards]
   AC13:

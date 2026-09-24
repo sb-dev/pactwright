@@ -35,9 +35,10 @@ requirements:
   R06:
     source: [CORE#56, CORE#57, GUIDE#replay-provenance]
     statement: Rule 17 shall run only when replay validation is requested. It resolves the entire replay base
-      before any execution effect, verifies the typed Git repository identity and pg1 revision, and reports
-      unknown or legacy protocols, unavailable or dirty input bases and reconstructed-state mismatch. Unavailable
-      identity is refused without creating an attempt or replay record.
+      before any execution effect and verifies the typed Git repository identity and pg1 revision. Unknown
+      or malformed revision protocols fail; a recognised legacy sha256 identity is reported unavailable without
+      its legacy implementation, never reinterpreted. Unavailable or dirty input bases and reconstructed-state
+      mismatch are reported, and unavailable identity is refused without creating an attempt or replay record.
   R07:
     source: [CORE#54, CORE#56, CORE#57]
     statement: A partial load shall never produce a whole-graph pass, and diagnostics distinguish malformed
@@ -62,11 +63,12 @@ acceptance:
     covers: [R01, R05, R08]
     cases: [malformed-core-node, invalid-core-relationship, missing-required-lineage, contradictory-current-records,
       multiple-current-decisions-or-contracts, invalid-brief-contract-lineage, invalid-evidence-brief-lineage,
-      illegal-supersession, missing-lifecycle-shape, unresolved-shape-identity, impossible-shape-transition,
+      illegal-supersession, missing-lifecycle-shape, unresolved-shape-identity, incompatible-shape-identity, impossible-shape-transition,
       evidence-before-closing-review, unauthorised-decision, unauthorised-gate-progression, unbounded-corrective-loop,
       extension-redefines-core, replay-revision-mismatch]
-    given: A valid control project and a copy whose only defect is the failing fixture for the listed rule;
-      the replay case requests replay validation.
+    given: A valid control project and a copy whose only defect is the failing fixture for the listed rule
+      (rule 10 has one case for an unresolved and one for an incompatible shape identity); the replay case
+      requests replay validation.
     when: Pactwright validate runs on both.
     then: The control passes with no problems. The copy fails with a problem mapped to the listed rule that identifies
       the affected records, inputs or provenance.
@@ -76,32 +78,38 @@ acceptance:
     covers: [R02]
     given: Each AC01 failing fixture, plus a graph missing a required supersession edge that a repair could add.
     when: Pactwright validate runs.
-    then: Every file under the project root, including execution state, is byte-identical afterwards; no repair,
-      default or rewrite occurs.
+    then: Every file under the project root, including execution state, is byte-identical afterwards and no
+      file is created or deleted; no repair, default or rewrite occurs.
     verify:
       automated: [validate.read-only]
   AC03:
     covers: [R03]
     cases: [two-current-decisions, two-current-contracts, competing-current-briefs, competing-current-evidence,
       cross-parent-brief-replacement, cross-parent-evidence-replacement, branching-supersession, merging-supersession]
-    given: A graph whose only defect is the listed lineage fault.
+    given: A graph whose only defect is the listed lineage fault, and a valid control with two independent Intent
+      directions that each hold one current Brief.
     when: Pactwright validate runs.
-    then: It fails with the rule 5, 6, 7 or 8 problem that owns the fault, identifying the competing or cross-parent
-      records.
+    then: Each case fails with its rule's problem, identifying the competing or cross-parent records. two-current-decisions
+      and two-current-contracts fail rule 5; competing-current-briefs and cross-parent-brief-replacement fail
+      rule 6; competing-current-evidence and cross-parent-evidence-replacement fail rule 7; branching-supersession
+      and merging-supersession fail rule 8. The control passes.
     verify:
       automated: [validate.lineage-detail]
   AC04:
     covers: [R04]
-    cases: [allowed-current-kind, disallowed-current-kind, policy-changed-for-withdrawn-decision, historical-check-reconstructible,
-      historical-check-unavailable]
+    cases: [allowed-current-kind, disallowed-current-kind, policy-changed-for-withdrawn-decision, historically-allowed,
+      historically-denied, historical-check-unavailable]
     given: A lineage with the listed actor and policy condition. The historical cases request a historical policy
-      check for a withdrawn Decision, with or without execution provenance whose recorded repository revision
-      restores that Decision's lifecycle configuration.
+      check for a withdrawn Decision. historically-allowed and historically-denied have execution provenance
+      whose recorded repository revision restores a lifecycle configuration that allows or denies the Decision's
+      actor kind, while current policy gives the opposite answer; historical-check-unavailable has no such
+      provenance.
     when: Pactwright validate runs.
     then: The allowed kind passes. The disallowed current kind fails rule 13 and the decided_by value is unchanged.
-      A policy change alone raises no problem for the withdrawn Decision. The reconstructible check evaluates
-      against the restored configuration; the unavailable check reports unavailable verification, not an unauthorised
-      Decision. Lineage derivation output is identical across cases.
+      A policy change alone raises no problem for the withdrawn Decision. historically-allowed passes and historically-denied
+      fails rule 13, each by the restored configuration rather than current policy; historical-check-unavailable
+      reports unavailable verification, not an unauthorised Decision. Lineage derivation output is unchanged
+      by the policy condition.
     verify:
       automated: [validate.actor-policy]
   AC05:
@@ -112,19 +120,24 @@ acceptance:
       condition; not-requested is ordinary validation of a project whose recorded history cannot be reconstructed.
     when: Pactwright validate runs, with replay validation requested except for not-requested.
     then: Not-requested attempts no historical reconstruction and raises no replay problem. Matching bases pass
-      and the pg1 vectors reproduce their fixed bytes and digests. Unknown and legacy protocols report unavailable
-      replay verification without reinterpreting the digest. Unavailable and dirty bases are refused before
-      any execution effect, with no attempt or replay record. Mismatch fails rule 17 naming both revisions.
+      and the pg1 vectors reproduce their fixed bytes and digests. An unknown protocol fails rule 17. A legacy
+      sha256 identity is reported as unavailable replay verification without its legacy implementation, never
+      prefixed or compared as pg1. Unavailable and dirty bases are refused before any execution effect, with
+      no attempt or replay record. Mismatch fails rule 17 naming both revisions.
     verify:
       automated: [validate.replay]
   AC06:
     covers: [R07]
-    cases: [incomplete-load, inactive-extension, no-git, uncommitted-canonical-edit]
-    given: A project with the listed condition and otherwise valid canonical state.
+    cases: [incomplete-load, inactive-extension, unsupported-component, unavailable-authority, no-git, uncommitted-canonical-edit]
+    given: A project with the listed condition and otherwise valid canonical state; unsupported-component enables
+      an Extension whose implementation is unavailable, and unavailable-authority has no loadable lifecycle
+      policy.
     when: Pactwright validate runs and the graph revision is computed.
     then: An incomplete load fails with its input problem and never reports a whole-graph pass. An inactive
-      Extension is reported as inactive, not malformed. Without Git, ordinary validation and graph-only hashing
-      succeed. An uncommitted canonical edit changes the revision computed from the loaded root.
+      Extension is reported as inactive, an unsupported component as unsupported and missing policy as unavailable
+      execution authority, each distinct from malformed structure and none granting permission. Without Git,
+      ordinary validation and graph-only hashing succeed. An uncommitted canonical edit changes the revision
+      computed from the loaded root.
     verify:
       automated: [validate.partial-and-no-git]
   AC07:
@@ -144,16 +157,19 @@ acceptance:
       for its current Brief; explicitly-required-history names a superseded Brief the caller requires.
     when: Delivery context is assembled.
     then: The context contains the current Contract/Brief lineage and excludes the listed material, except that
-      explicitly required history is included and marked non-current. Assembly writes nothing.
+      explicitly required history is included. Assembly writes nothing.
     verify:
       automated: [context.bounded-lineage]
   AC09:
     covers: [R09, R10]
-    given: Two fixture context contributions under different namespaces, one of which supplies text that restates
-      the governing Contract differently.
+    cases: [separate-namespaces, claims-core-namespace, claims-other-owner-namespace]
+    given: Fixture context contributions for the listed case. separate-namespaces has two contributions under
+      their own namespaces, one of which restates the governing Contract differently; the other cases have
+      a contribution claiming the core namespace or another contributor's namespace.
     when: Delivery context is assembled.
-    then: Each contribution appears under its own namespace, and neither replaces nor edits the governing Contract/Brief
-      content.
+    then: In separate-namespaces each contribution appears under its own namespace, and neither replaces nor
+      edits the governing Contract/Brief content. A contribution claiming the core or another owner's namespace
+      is refused and the governing content is unchanged.
     verify:
       automated: [context.namespaced-contributions]
   AC10:

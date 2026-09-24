@@ -53,12 +53,13 @@ acceptance:
       automated: [lifecycle.status-next]
   AC02:
     covers: [R03, R04, R05]
-    cases: [required-gate, completion, execution-failure, validation-failure]
-    given: A project whose run reaches the listed stopping condition.
+    cases: [required-gate, manual-step, completion, execution-failure, validation-failure]
+    given: A project whose run reaches the listed stopping condition; manual-step reaches a responsibility whose
+      policy is manual.
     when: Lifecycle run is invoked.
     then: Run executes automatic responsibilities in declared order, stops at the listed condition and reports
-      it. It performs no step beyond that point, and every canonical change it made went through the mutation
-      API.
+      it; it never executes the manual responsibility itself. It performs no step beyond that point, and every
+      canonical change it made went through the mutation API.
     verify:
       automated: [lifecycle.run-stops]
   AC03:
@@ -90,11 +91,15 @@ acceptance:
     covers: [R07]
     cases: [incomplete-load, defective-and-unaffected-intents, policy-denied-decision]
     given: A project with the listed condition. The defective case holds one Intent with a lineage defect and
-      one unaffected Intent, with a standalone control for the unaffected Intent.
-    when: Lifecycle status, next and run are invoked.
+      one unaffected Intent, with a standalone control for the unaffected Intent. The policy-denied case holds
+      a structurally valid lineage whose current Decision's actor kind the policy disallows.
+    when: Lifecycle status is invoked, and next and run are requested for the unaffected Intent or, in the
+      policy-denied case, for the denied Intent.
     then: Status reports the problems and returns the unaffected Intent's lineage, Contract and state equal
-      to its standalone control, marked diagnostic when the load is incomplete. Next and run refuse with the
-      owning problem; neither invokes a capability, advances execution state nor writes.
+      to its standalone control, marked diagnostic when the load is incomplete; for the policy-denied Intent
+      it returns that Intent's own recorded lineage, Contract and state with the actor-kind problem. Next and
+      run refuse with the owning problem, including for the unaffected Intent; neither invokes a capability,
+      advances execution state nor writes.
     verify:
       automated: [lifecycle.fail-closed]
   AC07:
@@ -111,9 +116,10 @@ acceptance:
       automated: [lifecycle.run-guard-matrix]
   AC08:
     covers: [R04]
-    cases: [unreviewed-delivery-change, blocking-closing-review, pending-gate]
+    cases: [superseded-brief, unreviewed-delivery-change, blocking-closing-review, pending-gate, invalid-lineage]
     given: A run reaching Evidence closure with the listed closure precondition failing, and a control with
-      every precondition met.
+      every precondition met; superseded-brief supersedes the Brief after run has inspected state and before
+      commit.
     when: Run attempts closure.
     then: No Evidence or evidences edge is written and run stops naming the failed precondition. The control
       closes with Evidence.

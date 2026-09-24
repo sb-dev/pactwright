@@ -58,7 +58,7 @@ This runbook defines implementation order, not new Pactwright semantics.
 
 A converted step is defined by its YAML contract in [`01-self-hosted-delivery/`](./01-self-hosted-delivery/), in the format owned by [Spec 00](../specs/00-checkpoint-step-contract-and-delivery-tasks.md). The step section here links the contract and summarises its deliverables; the contract holds the requirements and acceptance criteria. Every contract inherits the settings and shared requirements in [`checkpoint.yml`](./01-self-hosted-delivery/checkpoint.yml), and [`crosswalk.yml`](./01-self-hosted-delivery/crosswalk.yml) records where each obligation of the replaced step prose went: version 17 for Stage 1 and version 20 for Stage 2.
 
-Stages 1 and 2 are converted. Stage 1 contracts are amended against Core v3 through the Q01–Q20 resolution pass. Stage 2 contracts are drafted against Core v3; their open questions Q21–Q30 await T2 review. Later steps retain the version 17 form, with the integration obligations below amended in version 20, until they are converted:
+Stages 1 and 2 are converted. Stage 1 contracts are amended against Core v3 through the Q01–Q20 resolution pass. Stage 2 contracts are drafted against Core v3; their open questions Q21–Q33 await T2 review. Later steps retain the version 17 form, with the integration obligations below amended in version 20, until they are converted:
 
 ```text
 Step

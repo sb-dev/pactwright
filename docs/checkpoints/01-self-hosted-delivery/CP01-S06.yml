@@ -34,12 +34,12 @@ requirements:
       broad Delivery state remains derived from canonical lineage, and changing execution state alone shall change
       no canonical record, edge or project_graph_revision.
   R05:
-    source: [CORE#25, CORE#32, CORE#34]
-    statement: A corrective or iterative transition shall be accepted only when the resolved shape declares
-      it, it targets a declared Delivery step and policy bounds its iterations. Configuration with an undeclared
-      or non-Delivery corrective route, an unbounded loop, a Gate without policy authority, or a successful path
-      that skips Review of the latest delivered state or never reaches Evidence shall be rejected before execution.
-      AI output cannot add a route.
+    source: [CORE#18, CORE#25, CORE#32, CORE#34]
+    statement: A corrective transition shall be accepted only when the resolved shape declares it and it returns
+      to a prior Delivery step; policy shall bound the automatic iterations of every loop it creates. Configuration
+      with an undeclared corrective route or one that does not return to a prior Delivery step, an unbounded
+      loop, a Gate without policy authority, or a successful path that skips Review of the latest delivered
+      state or never reaches Evidence shall be rejected before execution. AI output cannot add a route.
   R06:
     source: [CORE#11, CORE#23, CORE#28, CHECKPOINT#4]
     statement: Execution shall identify which resolved shape it runs without inventing a lifecycle-shape hash
@@ -47,14 +47,14 @@ requirements:
   R07:
     source: [CORE#27, CORE#54]
     statement: Lifecycle configuration and policy shall be read through the Step 1 canonical loader, where the
-      released version 1 stages mapping is native. Malformed, missing and unsupported-version inputs are reported
-      with path and cause; no lifecycle caller may add a fallback parser or treat a failed or incomplete load
-      as permission to run.
+      released version 1 stages mapping is native. Malformed, missing and unsupported-version inputs, including
+      the unreleased version 2 draft, are reported with path and cause; no lifecycle caller may add a fallback
+      parser or treat a failed or incomplete load as permission to run.
   R08:
-    source: [CORE#9, CORE#26, CORE#27, CORE#57]
-    statement: Policy shall decide automatic or manual execution and the actor kinds allowed to perform a responsibility
-      or resolve a Gate. A structurally valid lineage whose recorded Decision actor kind the policy disallows
-      remains inspectable through derivation but shall not progress.
+    source: [CORE#9, CORE#25, CORE#26, CORE#27, CORE#57]
+    statement: Policy shall decide automatic or manual execution, the actor kinds allowed to decide, and the
+      authority each Gate requires. A structurally valid lineage whose recorded Decision actor kind the policy
+      disallows remains inspectable through derivation but shall not progress.
 acceptance:
   AC01:
     covers: [R01, R04, R06]
@@ -72,19 +72,19 @@ acceptance:
     cases: [automatic, manual]
     given: The direct shape with its Delivery step configured by the listed execution policy.
     when: Progression is evaluated at that step.
-    then: An automatic step is eligible to run without an actor; a manual step stops and names the actor kind
-      it requires. Neither case changes the resolved shape or any canonical record.
+    then: An automatic step is eligible to run without an actor; a manual step is not executed automatically
+      and is reported as awaiting its actor. Neither case changes the resolved shape or any canonical record.
     verify:
       automated: [lifecycle.execution-policy]
   AC03:
     covers: [R03, R08]
-    cases: [allowed-actor-kind, disallowed-actor-kind, invalid-actor-syntax]
-    given: A fixture shape with a Gate between two Delivery steps whose policy allows one actor kind to resolve
-      it, and a Gate resolution supplied by the listed actor.
+    cases: [authorised-actor, unauthorised-actor]
+    given: A fixture shape with a Gate between two Delivery steps, the authority its policy requires for that
+      Gate, and a Gate resolution supplied by an actor that authority does or does not cover, as listed.
     when: The Gate resolution is applied.
-    then: The allowed kind resolves the Gate and the next declared step becomes current. The disallowed kind
-      and invalid syntax leave Gate state and the current step unchanged with an explicit authority problem.
-      No case creates a Decision, Contract or other canonical record.
+    then: The authorised actor resolves the Gate and the next declared step becomes current. The unauthorised
+      actor leaves Gate state and the current step unchanged with an explicit authority problem. Neither case
+      creates a Decision, Contract or other canonical record.
     verify:
       automated: [lifecycle.gate-authority]
   AC04:
@@ -110,30 +110,31 @@ acceptance:
     covers: [R05]
     cases: [undeclared-route, route-to-non-delivery-step, unbounded-loop, iteration-limit-reached]
     given: 'The AC05 fixture with only the listed defect: Review requests a route the shape does not declare,
-      configuration routes correction to a non-Delivery step, configuration declares the loop without an iteration
-      limit, or Review requests a third correction.'
+      configuration routes correction to a step that is not a prior Delivery step, configuration declares the
+      loop without an iteration limit, or Review requests a third correction.'
     when: The configuration is resolved and the route requested.
-    then: Configuration defects are rejected before any step runs. The undeclared route and the exhausted limit
-      are refused and progression stops with the reason; no route is added and no Delivery step is re-entered.
+    then: Configuration defects are rejected before any step runs. The undeclared route is refused with the
+      reason and no route is added. At the exhausted limit no further automatic re-entry occurs; progression
+      stops or escalates as policy configures.
     verify:
       automated: [lifecycle.invalid-correction]
   AC07:
     covers: [R04]
-    given: Two copies of a project with identical canonical records and edges whose execution state differs only
-      in current step, completed steps, Gate state and iteration count.
-    when: Canonical state is loaded, broad state derived and project_graph_revision computed in each copy.
-    then: Records, edges, the broad state delivering and project_graph_revision are identical in both copies,
-      and advancing execution state wrote no canonical file.
+    given: One project with a delivering lineage under a fixture shape that has a Gate and a declared corrective
+      route, with its canonical bytes, broad state and project_graph_revision recorded.
+    when: The runtime advances execution state from Delivery to Review, resolves the Gate and runs one correction.
+    then: Execution state reflects each advance, while the canonical record and edge bytes, the broad state
+      delivering and project_graph_revision are identical before and after.
     verify:
       automated: [lifecycle.state-outside-graph]
   AC08:
     covers: [R07]
-    cases: [released-v1-stages, malformed, missing, unsupported-version]
+    cases: [released-v1-stages, malformed, missing, unreleased-version-2-draft, unknown-version]
     given: A project whose lifecycle configuration is the listed input, loaded through the Step 1 loader.
     when: Shape and policy are resolved and progression is requested.
-    then: The released version 1 stages mapping resolves natively and its policy applies unchanged. Malformed,
-      missing and unsupported-version inputs are reported with path and cause; resolution yields no policy,
-      no step runs and nothing is written.
+    then: The released version 1 stages mapping resolves natively and its policy applies unchanged. The other
+      inputs are reported with path and cause, the version 2 draft as unsupported rather than as a released
+      format; resolution yields no policy, no step runs and nothing is written.
     verify:
       automated: [lifecycle.config-loading]
   AC09:
