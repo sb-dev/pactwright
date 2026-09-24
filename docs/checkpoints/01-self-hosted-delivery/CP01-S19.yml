@@ -150,11 +150,12 @@ acceptance:
       automated: [upgrade.compatibility-tightenings]
   AC10:
     covers: [R10]
-    cases: [rollback-restores, rollback-refused]
-    given: A project migrated by AC07; rollback-refused injects a failure into the reverse migration.
+    cases: [rollback-restores, rollback-fails]
+    given: A project migrated by AC07; rollback-fails injects a failure into the implementation's selected rollback
+      or restoration path.
     when: Upgrade --to 0.0.1 runs.
-    then: rollback-restores restores the original layout and lock. rollback-refused fails recoverably before 0.0.1
-      is installed, and 0.0.1 is never run against the new-format stores.
+    then: rollback-restores restores the recognised original layout and lock. rollback-fails fails recoverably.
+      In both cases the 0.0.1 runtime never runs against the new-format stores.
     verify:
       automated: [upgrade.rollback]
   AC11:

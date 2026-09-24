@@ -192,15 +192,13 @@ acceptance:
       automated: [extension.inactive-state]
   AC11:
     covers: [R01, R09]
-    cases: [contribution-registration, non-node-record, edge-registration]
-    given: Each case of CP01-S02/AC12 for contribution-registration and of CP01-S03/AC06 to AC13 for edge-registration,
-      with its declarations and records supplied by an installed packed fixture Extension rather than a direct registry
-      call. non-node-record has an Extension-owned non-node record without core envelope fields and a separately
-      registered node projection.
-    when: The project is loaded and validated.
-    then: Each case gives the result its source criterion requires, including core-name and constraint protection,
-      valid two-way and cross-graph relations in the relation owner's edges.yml, supersession and ownership failures,
-      and unknown active relations.
+    cases: [s02-ac12, s03-ac06, s03-ac07, s03-ac08, s03-ac09, s03-ac10, s03-ac11, s03-ac12, s03-ac13]
+    given: The given of the listed source criterion, CP01-S02/AC12 or CP01-S03/AC06 to AC13, for each of its cases,
+      with every declaration and record it registers supplied by an installed packed fixture Extension through the
+      Step 16 loader rather than a direct registry call.
+    when: The when of the source criterion runs unchanged, including the store and reload of CP01-S03/AC06 and
+      the comparison of a stored edge set with a proposed set in CP01-S03/AC11.
+    then: The then of the source criterion holds, with a separate result for each of its cases.
     verify:
       automated: [extension.installed-contribution-controls]
   AC12:
@@ -251,3 +249,12 @@ acceptance:
       package manager, and no first-party Extension semantics exist.
     verify:
       review: [extension.shared-path]
+  AC17:
+    covers: [R01, R09]
+    given: An installed packed fixture Extension that owns a non-node canonical record without core envelope fields,
+      and a separately registered node projection over another of its records.
+    when: The project is loaded and validated and its Project Graph revision derived.
+    then: The non-node record passes its owner's schema without acquiring core fields and contributes to the revision.
+      The projected record is a valid edge endpoint, and an edge to the non-node record is rejected.
+    verify:
+      automated: [extension.installed-non-node-record]

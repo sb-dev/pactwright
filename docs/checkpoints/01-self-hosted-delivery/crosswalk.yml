@@ -784,7 +784,7 @@ entries:
     note: "Fixture Extension lock entries are CP01-S16/R04."
   - key: S15.run.2
     text: "Retain integration seams for the external Production Skills resolver delivered in Checkpoint 5; do not implement or pretend to resolve those imports here."
-    covered_by: [CP01-S15/R07, CP01-S15/AC08]
+    covered_by: [CP01-S15/R07, CP01-S15/R08, CP01-S15/AC08, CP01-S15/AC10]
     note: "How a pack declares an external import in Checkpoint 1 is Q46."
   - key: S15.run.3
     text: "Configuration records desired constraints. The package-manager manifest/lock records installed packages; `.pactwright/lock.yml` records the resolved Pactwright environment."
@@ -930,7 +930,7 @@ entries:
     covered_by: [CP01-S16/R09, CP01-S16/AC13]
   - key: S16.verify.9
     text: "Also repeat the Step 2 contribution-registration proof with an Extension-owned non-node canonical record lacking core envelope fields, plus a separately registered node projection."
-    covered_by: [CP01-S16/R09, CP01-S16/AC11]
+    covered_by: [CP01-S16/R09, CP01-S16/AC11, CP01-S16/AC17]
   - key: S16.verify.10
     text: "Repeat CP01-S03/AC06–AC13 through the installed loader, including core-name/constraint protection, valid two-way additional relations, wrong endpoint types, linear supersession, unknown active relations and ownership failures."
     covered_by: [CP01-S16/R09, CP01-S16/AC11]
@@ -948,7 +948,7 @@ entries:
     covered_by: [CP01-S16/R08, CP01-S16/AC10]
   - key: S16.verify.15
     text: "These are installed-package integration results, not repeats of a mocked registry call."
-    covered_by: [CP01-S16/R01, CP01-S16/AC11, CP01-S16/AC12, CP01-S16/AC13]
+    covered_by: [CP01-S16/R01, CP01-S16/AC11, CP01-S16/AC12, CP01-S16/AC13, CP01-S16/AC17]
   - key: S16.verify.16
     text: "Compare clean one-shot and explicit init + `agent-pack use` + `extension add` + sync paths using the same explicitly chosen compatible fixture pack/version."
     covered_by: [CP01-S16/R10, CP01-S16/AC14]

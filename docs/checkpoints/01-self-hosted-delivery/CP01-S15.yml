@@ -46,6 +46,11 @@ requirements:
     statement: Resolution shall not resolve external Production Skills imports. A selected pack that declares one
       is reported as unsupported by this release. No Production Skills entry is recorded and no environment_lock_hash
       is produced for that environment.
+  R08:
+    source: [DISTRIBUTION#6, DISTRIBUTION#12]
+    statement: Resolution shall retain an integration point where the Checkpoint 5 external Production Skills resolver
+      can later add resolved imports to the environment and lock. This step neither implements that resolution nor
+      prescribes the integration mechanism.
 acceptance:
   AC01:
     covers: [R01, R02, R05]
@@ -131,3 +136,12 @@ acceptance:
       and the lock is written only after agreement and validation succeed.
     verify:
       review: [lock.ownership]
+  AC10:
+    covers: [R08]
+    given: The candidate resolution code.
+    when: Independent review traces how a declared external Production Skills import reaches resolution.
+    then: The import reaches an identifiable resolution integration point that the Checkpoint 5 resolver can extend
+      without replacing core, pack or lock resolution. This release refuses the import there, and no Production Skills
+      resolution is implemented.
+    verify:
+      review: [lock.production-skills-seam]
