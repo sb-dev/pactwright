@@ -115,14 +115,18 @@ acceptance:
     verify:
       automated: [lifecycle.run-guard-matrix]
   AC08:
-    covers: [R04]
+    covers: [R03, R04]
     cases: [superseded-brief, unreviewed-delivery-change, blocking-closing-review, pending-gate, invalid-lineage]
-    given: A run toward Evidence closure with the listed closure precondition failing, and a control with every
-      precondition met. In superseded-brief, execution state still targets a Brief that was superseded before
-      run started; invalid-lineage holds a lineage defect in the graph.
+    given: 'A run toward Evidence closure with only the listed failure, and a control with every precondition
+      met. In superseded-brief, unreviewed-delivery-change and blocking-closing-review, execution state records
+      closure as the next step and the dispatched closure responsibility supplies an Evidence mutation through
+      the runtime API: for a Brief superseded before run started, for a delivered state changed after its closing
+      Review, or despite a closing Review that does not permit closure. pending-gate leaves a required Gate
+      before closure unresolved; invalid-lineage holds a lineage defect in the graph.'
     when: Run is invoked.
-    then: No Evidence or evidences edge is written and nothing else is committed. Run stops at the guard that
-      owns the failure. The closure guard names the failed precondition; invalid-lineage is refused by complete-state
-      validation before any step runs. The control closes with Evidence.
+    then: 'No Evidence or evidences edge is written and nothing else is committed. Each case stops at its owning
+      guard: the Evidence closure guard refuses superseded-brief, unreviewed-delivery-change and blocking-closing-review,
+      naming the failed precondition; Gate progression stops pending-gate before closure is dispatched; complete-state
+      validation refuses invalid-lineage before any step runs. The control closes with Evidence.'
     verify:
       automated: [lifecycle.run-closure-guards]

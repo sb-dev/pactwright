@@ -4,7 +4,9 @@
 // Usage: pnpm contracts:check [--skip-source] [checkpoint-dir ...]
 // With no directory, every docs/checkpoints/* directory holding a
 // checkpoint.yml is checked. --skip-source skips the verbatim crosswalk checks,
-// which read the replaced checkpoint text from Git history.
+// which read the replaced checkpoint text from Git history. In a shallow clone,
+// only the sources whose revision is absent are skipped, with a warning; in a
+// full clone an unavailable source revision is an error.
 
 import { execFileSync } from "node:child_process";
 import { existsSync, readdirSync, readFileSync } from "node:fs";
@@ -44,9 +46,38 @@ export type StepUnits = Record<string, { title: string; units: Unit[] }>;
 export type ValidateOptions = {
   /** Skip checks that read the replaced checkpoint text from Git. */
   skipSource?: boolean;
-  /** Git working tree used to read the crosswalk source revision. */
+  /**
+   * Skip only the crosswalk sources whose revision is absent from the
+   * repository, as in a shallow clone, and still check every reachable source.
+   * Without it an unavailable source revision is an error.
+   */
+  skipUnavailableSources?: boolean;
+  /** Called with each source skipped under skipUnavailableSources. */
+  onSkippedSource?: (source: string) => void;
+  /** Git working tree used to read the crosswalk source revisions. */
   gitDir?: string;
 };
+
+const git = (cwd: string, args: string[]): string =>
+  execFileSync("git", args, { cwd, encoding: "utf8", stdio: ["ignore", "pipe", "pipe"] });
+
+function hasCommit(cwd: string, rev: string): boolean {
+  try {
+    git(cwd, ["cat-file", "-e", `${rev}^{commit}`]);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+/** Whether the Git working tree is a shallow clone, which may lack older crosswalk sources. */
+export function isShallowRepository(cwd: string): boolean {
+  try {
+    return git(cwd, ["rev-parse", "--is-shallow-repository"]).trim() === "true";
+  } catch {
+    return false;
+  }
+}
 
 const STEP_KEYS = ["id", "requires", "inputs", "uses", "outputs", "requirements", "acceptance"];
 const CRITERION_KEYS = ["covers", "cases", "given", "when", "then", "verify"];
@@ -334,17 +365,18 @@ export function validateCheckpointDir(
     const parsed = new Map<string, StepUnits | null>();
     for (const [sid, source] of sourceOf) {
       if (!parsed.has(source)) {
-        const [sourcePath, rev] = source.split("@");
-        try {
-          const text = execFileSync("git", ["show", `${rev}:${sourcePath}`], {
-            cwd: options.gitDir ?? repoRoot,
-            encoding: "utf8",
-            stdio: ["ignore", "pipe", "pipe"],
-          });
-          parsed.set(source, splitUnits(text));
-        } catch {
-          errors.push(`crosswalk: cannot read source ${source || "(none)"} from Git`);
+        const [sourcePath, rev = ""] = source.split("@");
+        const cwd = options.gitDir ?? repoRoot;
+        if (options.skipUnavailableSources && !hasCommit(cwd, rev)) {
+          options.onSkippedSource?.(source);
           parsed.set(source, null);
+        } else {
+          try {
+            parsed.set(source, splitUnits(git(cwd, ["show", `${rev}:${sourcePath}`])));
+          } catch {
+            errors.push(`crosswalk: cannot read source ${source || "(none)"} from Git`);
+            parsed.set(source, null);
+          }
         }
       }
       const text = parsed.get(source);
@@ -407,10 +439,16 @@ export function checkpointDirs(repoRoot: string): string[] {
 function main(argv: string[]): number {
   const repoRoot = join(dirname(fileURLToPath(import.meta.url)), "..");
   const skipSource = argv.includes("--skip-source");
+  const skipUnavailableSources = isShallowRepository(repoRoot);
   const dirs = argv.filter((a) => !a.startsWith("--"));
   let failed = 0;
   for (const dir of dirs.length > 0 ? dirs : checkpointDirs(repoRoot)) {
-    const errors = validateCheckpointDir(repoRoot, dir, { skipSource });
+    const errors = validateCheckpointDir(repoRoot, dir, {
+      skipSource,
+      skipUnavailableSources,
+      onSkippedSource: (source) =>
+        console.warn(`${dir}: ${source} is not in this shallow clone; its quotes were not checked`),
+    });
     for (const e of errors) console.error(`${dir}: ${e}`);
     console.log(`${dir}: ${errors.length === 0 ? "ok" : `${errors.length} error(s)`}`);
     failed += errors.length;
