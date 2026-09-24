@@ -279,8 +279,8 @@ entries:
     covered_by: [CP01-S07/R01, CP01-S07/AC12, CP01-S07/AC14]
   - key: S07.verify.5
     text: "Step 8 repeats them through `lifecycle run`; Step 12 repeats them through each mutating adapter command."
-    covered_by: [CP01-S08/R04, CP01-S08/AC07, CP01-S08/AC08, CP01-S12/R11, CP01-S12/AC04]
-    note: "Step 8 carries the lifecycle run repetition and Step 12 the adapter repetition (CP01-S12/AC04)."
+    covered_by: [CP01-S08/R04, CP01-S08/AC07, CP01-S08/AC08, CP01-S12/R09, CP01-S12/R11, CP01-S12/AC04, CP01-S12/AC10]
+    note: "Step 8 carries the lifecycle run repetition. Step 12 repeats the mutation guards through each mutating command (CP01-S12/AC04) and every Evidence closure guard, with the latest-state closure control, through /prepare-evidence (CP01-S12/AC10)."
   - key: S07.verify.6
     text: "Before writing, use the Step 2 record and Step 3 core-edge immutability checks, validate the complete proposed graph and reject a changed stored base under Core §55."
     covered_by: [CP01-S07/R05, CP01-S07/R06, CP01-S07/AC05, CP01-S07/AC06]
@@ -641,7 +641,7 @@ entries:
     covered_by: [CP01-S12/R08, CP01-S12/AC02, CP01-S12/AC03]
   - key: S12.run.16
     text: "- prepare-evidence invokes all Step 7 preconditions before creating Evidence and its evidences relationship."
-    covered_by: [CP01-S12/R09, CP01-S12/AC02, CP01-S12/AC03, CP01-S12/AC04]
+    covered_by: [CP01-S12/R09, CP01-S12/AC02, CP01-S12/AC03, CP01-S12/AC04, CP01-S12/AC10]
   - key: S12.run.17
     text: "Their decomposition does not define lifecycle topology."
     covered_by: [CP01-S12/R10, CP01-S12/AC09]
@@ -658,7 +658,7 @@ entries:
     note: "Step 12 renders from a fixture resolved lock; Step 17 repeats convergence through real sync over the real lock."
   - key: S12.verify.2
     text: "Exercise every command's permitted/forbidden mutations, including graph-read-only alternatives, no direct Delivery graph writes, no Evidence from review, and failed premature prepare-evidence."
-    covered_by: [CP01-S12/AC02, CP01-S12/AC03]
+    covered_by: [CP01-S12/AC02, CP01-S12/AC03, CP01-S12/AC10]
   - key: S12.verify.3
     text: "Then complete one valid command lineage."
     covered_by: [CP01-S12/AC07]
@@ -678,7 +678,7 @@ entries:
     covered_by: [CP01-S12/R05, CP01-S12/AC06]
   - key: S12.verify.8
     text: "No public API or adapter may bypass the checks already proved at Step 7."
-    covered_by: [CP01-S12/R11, CP01-S12/AC04, CP01-S12/AC09]
+    covered_by: [CP01-S12/R11, CP01-S12/AC04, CP01-S12/AC06, CP01-S12/AC09, CP01-S12/AC10]
   - key: S13.references
     text: "Spec 02 evaluation and baseline/regression reporting."
     covered_by: [CP01-S13/R01, CP01-S13/R02, CP01-S13/R06, CP01-S13/R07]

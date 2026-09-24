@@ -113,12 +113,13 @@ acceptance:
       automated: [adapter.actor-attribution]
   AC06:
     covers: [R05]
-    cases: [reject-withdrawal, defer-withdrawal, reauthorisation-after-reject, reauthorisation-after-defer, reselect-existing-contract,
-      missing-contract-supersession]
-    given: The lineage that the matching CP01-S07 criterion (AC09, AC10 or AC11) starts from.
+    cases: [reject-withdrawal, defer-withdrawal, reauthorisation-after-reject, reauthorisation-after-defer, reselect-withdrawn-contract,
+      reselect-current-contract, other-intent-selects-existing-contract, missing-contract-supersession, missing-decision-supersession]
+    given: The lineage and Decision request of the same-named case of CP01-S07/AC09, AC10 or AC11.
     when: The Decision is requested through /approve-contract.
-    then: The outcome equals that criterion's outcome through the runtime API, record for record and edge for
-      edge; refusals leave every file byte-identical.
+    then: Each case has its own result equal to that case's outcome through the runtime API, record for record
+      and edge for edge. The withdrawal and re-authorisation cases commit; every refusal case is refused as
+      invalid lineage before writing and leaves every file and execution state byte-identical.
     verify:
       automated: [adapter.approve-contract-lineage]
   AC07:
@@ -148,3 +149,18 @@ acceptance:
       as lifecycle topology. Every canonical write passes through the Step 7 mutation API; no bypass exists.
     verify:
       review: [adapter.semantic-boundary]
+  AC10:
+    covers: [R09, R11]
+    cases: [superseded-brief, never-reviewed, unreviewed-delivery-change, blocking-closing-review, pending-gate,
+      invalid-lineage, latest-state-closure]
+    given: 'The lineage of the same-named case of CP01-S07/AC12: a delivering lineage whose only closure defect
+      is the listed precondition failure. latest-state-closure is the CP01-S07/AC13 control: a lineage changed
+      after its first Review and reviewed again, whose closing Review of that latest state permits closure,
+      with no pending Gate and valid lineage.'
+    when: /prepare-evidence runs.
+    then: Each failure case is refused by the Evidence closure guard before any write, naming the failed precondition.
+      No Evidence record or evidences edge exists afterwards, even partially, execution state does not advance
+      and unrelated files keep their bytes. latest-state-closure writes exactly one Evidence record and its
+      evidences edge atomically, and the lineage derives done.
+    verify:
+      automated: [adapter.prepare-evidence-guards]
