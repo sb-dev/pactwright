@@ -2,8 +2,9 @@
 # Each entry quotes one obligation of the replaced step prose verbatim and names
 # the IDs that carry it; allocated_to names the later step that owns the rest of
 # the proof. `sources` names the checkpoint revision each converted step
-# replaced: Stage 1 replaced version 17, Stage 2 version 20. Open questions are
-# retained historical inputs to T2, not runtime acceptance evidence.
+# replaced: Stage 1 replaced version 17, Stage 2 version 20 and Stage 3
+# version 21. Open questions are retained historical inputs to T2, not runtime
+# acceptance evidence.
 #
 # Stage 1 (Q01-Q20) decisions and review/check status:
 # ../../research-logs/2026-09-23-pr41-b1-loading.md
@@ -13,11 +14,17 @@
 #
 # Stage 2 (Q21-Q33) is a T1 conversion drafted against Core v3. Its open
 # questions are unresolved inputs to T2 review; no specification was amended.
+#
+# Stage 3 (Q34-Q40) is a T1 conversion drafted against Core v3 and Distribution
+# v2. Its open questions are unresolved inputs to T2 review; no specification
+# was amended.
 sources:
   - source: docs/checkpoints/01-self-hosted-delivery.md@26ea12a
     steps: [CP01-S01, CP01-S02, CP01-S03, CP01-S04, CP01-S05]
   - source: docs/checkpoints/01-self-hosted-delivery.md@e1c1ea3
     steps: [CP01-S06, CP01-S07, CP01-S08, CP01-S09]
+  - source: docs/checkpoints/01-self-hosted-delivery.md@cbf1c1b
+    steps: [CP01-S10, CP01-S11, CP01-S12, CP01-S13]
 entries:
   - key: S01.references
     text: "Specs 01–02; Implementation Guide engineering baseline."
@@ -272,9 +279,8 @@ entries:
     covered_by: [CP01-S07/R01, CP01-S07/AC12, CP01-S07/AC14]
   - key: S07.verify.5
     text: "Step 8 repeats them through `lifecycle run`; Step 12 repeats them through each mutating adapter command."
-    covered_by: [CP01-S08/R04, CP01-S08/AC07, CP01-S08/AC08]
-    allocated_to: CP01-S12
-    note: "Step 8 carries the lifecycle run repetition; the adapter repetition remains in Step 12's version 20 prose until Stage 3 is converted."
+    covered_by: [CP01-S08/R04, CP01-S08/AC07, CP01-S08/AC08, CP01-S12/R11, CP01-S12/AC04]
+    note: "Step 8 carries the lifecycle run repetition and Step 12 the adapter repetition (CP01-S12/AC04)."
   - key: S07.verify.6
     text: "Before writing, use the Step 2 record and Step 3 core-edge immutability checks, validate the complete proposed graph and reject a changed stored base under Core §55."
     covered_by: [CP01-S07/R05, CP01-S07/R06, CP01-S07/AC05, CP01-S07/AC06]
@@ -295,9 +301,8 @@ entries:
     covered_by: [CP01-S07/R07, CP01-S07/AC04]
   - key: S07.verify.12
     text: "Valid controls include two different identities of the same allowed kind and a human acting through an adapter later; denial is based on a disallowed kind or invalid actor syntax, not an invented Git-identity or allow-list rule."
-    covered_by: [CP01-S07/R07, CP01-S07/AC04]
-    allocated_to: CP01-S12
-    note: "The human-acting-through-an-adapter control needs the Step 12 adapter, whose prose already requires recording that human attribution unchanged."
+    covered_by: [CP01-S07/R07, CP01-S07/AC04, CP01-S12/R05, CP01-S12/AC05]
+    note: "The human-acting-through-an-adapter control is CP01-S12/AC05."
   - key: S07.verify.13
     text: "Prove withdrawal separately for reject and defer superseding a current proceed Decision: write no Contract or Contract supersession, preserve the withdrawn records and derive no authorised Contract."
     covered_by: [CP01-S07/R08, CP01-S07/AC09]
@@ -447,9 +452,9 @@ entries:
     covered_by: [CP01-S09/R02, CP01-S09/AC02]
   - key: S09.run.21
     text: "Implement the runtime context-assembly API consumed by Agent Packs/adapters."
-    covered_by: [CP01-S09/R09, CP01-S09/AC08]
-    allocated_to: CP01-S12
-    note: "Step 9 proves the API directly (AC08-AC09). The version 20 prose of Steps 10-12 does not yet require Agent Packs or the adapter to consume it; that pending later-step amendment is Q33."
+    covered_by: [CP01-S09/R09, CP01-S09/AC08, CP01-S12/R07, CP01-S12/R08, CP01-S12/AC08]
+    allocated_to: CP01-S24
+    note: "Step 9 proves the API directly (AC08-AC09). The Stage 3 conversion requires the adapter to consume it (CP01-S12/AC08) and pack prompts to rely on runtime-supplied context (CP01-S10/R05). Whether Step 24 must run real Agent Pack capabilities through lifecycle run remains Q33."
   - key: S09.run.22
     text: "Default Delivery context contains current relevant Contract/Brief lineage and excludes rejected alternatives, superseded state, execution transcripts and unrelated history unless explicitly required."
     covered_by: [CP01-S09/R09, CP01-S09/AC08]
@@ -504,6 +509,219 @@ entries:
   - key: S09.verify.13
     text: "Ordinary graph diagnostics need not require Git."
     covered_by: [CP01-S09/R07, CP01-S09/AC06]
+  - key: S10.references
+    text: "Spec 02 capabilities and Agent Packs."
+    covered_by: [CP01-S10/R01, CP01-S10/R02, CP01-S10/R04, CP01-S10/R05]
+  - key: S10.run.1
+    text: "Implement:"
+    covered_by: [CP01-S10/R01, CP01-S10/AC01]
+  - key: S10.run.2
+    text: "- delivery-specification"
+    covered_by: [CP01-S10/R01, CP01-S10/AC01]
+  - key: S10.run.3
+    text: "- delivery-execution"
+    covered_by: [CP01-S10/R01, CP01-S10/AC01]
+  - key: S10.run.4
+    text: "- delivery-review"
+    covered_by: [CP01-S10/R01, CP01-S10/AC01]
+  - key: S10.run.5
+    text: "Create `@pactwright/standard` as a separate publishable Agent Pack package."
+    covered_by: [CP01-S10/R04, CP01-S10/AC04]
+    allocated_to: CP01-S22
+    note: "Step 10 proves the separate package by building and packing it in the workspace; Step 22 packs it for clean consumers and Step 28 publishes it. The Agent Pack content format is Q36."
+  - key: S10.run.6
+    text: "The pack maps capabilities to agents/prompts/skills but does not own graph or lifecycle semantics."
+    covered_by: [CP01-S10/R02, CP01-S10/R05, CP01-S10/AC01, CP01-S10/AC06]
+  - key: S10.run.7
+    text: "Do not make Pactwright semantics depend on this specific pack identity."
+    covered_by: [CP01-S10/R06, CP01-S10/AC03, CP01-S10/AC06]
+  - key: S10.expected.1
+    text: "Core AI responsibilities are replaceable and capability checked."
+    covered_by: [CP01-S10/R02, CP01-S10/R06, CP01-S10/AC01, CP01-S10/AC02, CP01-S10/AC03]
+  - key: S10.verify.1
+    text: "Test complete and incomplete fixture packs; incomplete selection leaves valid state intact."
+    covered_by: [CP01-S10/R02, CP01-S10/R03, CP01-S10/AC01, CP01-S10/AC02, CP01-S11/R02, CP01-S11/AC02]
+    note: "Step 10 has no selection command, so it proves that a failed capability check leaves state intact; CP01-S11/AC02 repeats the proof through agent-pack use."
+  - key: S11.references
+    text: "Spec 02 Agent Pack selection and upgrade."
+    covered_by: [CP01-S11/R01, CP01-S11/R03, CP01-S11/R04, CP01-S11/R08]
+  - key: S11.run.1
+    text: "Implement:"
+    covered_by: [CP01-S11/R01, CP01-S11/R04]
+  - key: S11.run.2
+    text: "pactwright agent-pack use <source>"
+    covered_by: [CP01-S11/R01, CP01-S11/AC01]
+    note: "Which source forms agent-pack use accepts and how packages are obtained is Q35."
+  - key: S11.run.3
+    text: "pactwright agent-pack upgrade"
+    covered_by: [CP01-S11/R04, CP01-S11/AC04]
+  - key: S11.run.4
+    text: "`agent-pack use` resolves a compatible complete pack, validates all required capabilities, updates configuration only after success, locks exact identity, runs sync and reports later GitHub reconciliation needs."
+    covered_by: [CP01-S11/R01, CP01-S11/R02, CP01-S11/R07, CP01-S11/AC01, CP01-S11/AC02, CP01-S11/AC08]
+    allocated_to: CP01-S17
+    note: "The resolved lock arrives with Step 15 and deterministic sync with Step 17; what Step 11 locks and runs as sync before them is Q34."
+  - key: S11.run.5
+    text: "Never silently switch packs."
+    covered_by: [CP01-S11/R03, CP01-S11/R05, CP01-S11/AC02, CP01-S11/AC03, CP01-S11/AC06]
+  - key: S11.run.6
+    text: "`agent-pack upgrade` upgrades the currently selected pack within its configured compatibility constraints without changing Agent Pack identity."
+    covered_by: [CP01-S11/R04, CP01-S11/R08, CP01-S11/AC04, CP01-S11/AC05]
+  - key: S11.run.7
+    text: "It validates the complete required capability set before changing the current lock or generated environment."
+    covered_by: [CP01-S11/R04, CP01-S11/AC05]
+  - key: S11.run.8
+    text: "Failure leaves the previous valid configuration, lock and generated environment intact."
+    covered_by: [CP01-S11/R02, CP01-S11/AC02, CP01-S11/AC05]
+  - key: S11.expected.1
+    text: "Projects explicitly select one complete Agent Pack and can upgrade it independently from the runtime."
+    covered_by: [CP01-S11/R01, CP01-S11/R03, CP01-S11/R04, CP01-S11/R08, CP01-S11/AC01, CP01-S11/AC04, CP01-S11/AC09]
+  - key: S11.verify.1
+    text: "Select standard, switch to a compatible fixture pack, reject an incompatible pack without state loss, upgrade a selected fixture pack to a compatible newer version, then reject an incompatible upgrade while preserving the previous valid environment."
+    covered_by: [CP01-S11/AC01, CP01-S11/AC02, CP01-S11/AC04, CP01-S11/AC05]
+  - key: S11.verify.2
+    text: "Prove an exact configured target remains selected even when a newer compatible package is available; desired constraints do not authorise silently changing pack identity."
+    covered_by: [CP01-S11/R05, CP01-S11/AC06]
+  - key: S11.verify.3
+    text: "Read and round-trip the actual selected-pack configuration through the Step 1 loader."
+    covered_by: [CP01-S11/R06, CP01-S11/AC07]
+  - key: S11.verify.4
+    text: "Missing or malformed configuration must not trigger silent pack selection, a second parser or replacement of the previous valid environment; repeat with the real resolved lock once Step 15 exists."
+    covered_by: [CP01-S11/R06, CP01-S11/AC07, CP01-S11/AC09]
+    allocated_to: CP01-S15
+    note: "The repeat with the real resolved lock belongs to Step 15, whose version 21 prose loads the actual lock and configuration through Step 1."
+  - key: S12.references
+    text: "Specs 01 sections 46–53 and 02 adapter boundary."
+    covered_by: [CP01-S12/R01, CP01-S12/R02, CP01-S12/R03, CP01-S12/R04, CP01-S12/R05, CP01-S12/R06, CP01-S12/R07, CP01-S12/R08, CP01-S12/R09, CP01-S12/R10]
+  - key: S12.run.1
+    text: "Render deterministic Pactwright-managed Claude Code agents and these exact commands:"
+    covered_by: [CP01-S12/R01, CP01-S12/R02, CP01-S12/AC01]
+  - key: S12.run.2
+    text: "/capture-intent"
+    covered_by: [CP01-S12/R01, CP01-S12/AC01]
+  - key: S12.run.3
+    text: "/propose-contracts"
+    covered_by: [CP01-S12/R01, CP01-S12/AC01]
+  - key: S12.run.4
+    text: "/approve-contract"
+    covered_by: [CP01-S12/R01, CP01-S12/AC01]
+  - key: S12.run.5
+    text: "/write-brief"
+    covered_by: [CP01-S12/R01, CP01-S12/AC01]
+  - key: S12.run.6
+    text: "/deliver-brief"
+    covered_by: [CP01-S12/R01, CP01-S12/AC01]
+  - key: S12.run.7
+    text: "/review"
+    covered_by: [CP01-S12/R01, CP01-S12/AC01]
+  - key: S12.run.8
+    text: "/prepare-evidence"
+    covered_by: [CP01-S12/R01, CP01-S12/AC01]
+  - key: S12.run.9
+    text: "The commands invoke runtime responsibilities and the selected Agent Pack capabilities:"
+    covered_by: [CP01-S12/R07, CP01-S12/R08, CP01-S12/AC02]
+    note: "Which capability each command invokes and how a command reaches the runtime mutation API is Q38."
+  - key: S12.run.10
+    text: "- capture-intent creates an Intent through the runtime;"
+    covered_by: [CP01-S12/R03, CP01-S12/AC02]
+  - key: S12.run.11
+    text: "- propose-contracts is graph-read-only and keeps alternatives transient;"
+    covered_by: [CP01-S12/R04, CP01-S12/AC02, CP01-S12/AC03]
+  - key: S12.run.12
+    text: "- approve-contract applies normal Decision authority and, for proceed, creates the selected Contract and required lineage;"
+    covered_by: [CP01-S12/R05, CP01-S12/AC02, CP01-S12/AC05, CP01-S12/AC06]
+  - key: S12.run.13
+    text: "- write-brief inspects current state and creates the Brief under its canonical Contract;"
+    covered_by: [CP01-S12/R06, CP01-S12/AC02]
+  - key: S12.run.14
+    text: "- deliver-brief executes the active Delivery step without directly mutating the Delivery Graph or independently selecting transitions;"
+    covered_by: [CP01-S12/R07, CP01-S12/AC02, CP01-S12/AC03]
+    note: "How the runtime keeps an executing agent from writing canonical storage directly is Q37."
+  - key: S12.run.15
+    text: "- review evaluates the latest delivered state without creating Evidence or inventing transitions;"
+    covered_by: [CP01-S12/R08, CP01-S12/AC02, CP01-S12/AC03]
+  - key: S12.run.16
+    text: "- prepare-evidence invokes all Step 7 preconditions before creating Evidence and its evidences relationship."
+    covered_by: [CP01-S12/R09, CP01-S12/AC02, CP01-S12/AC03, CP01-S12/AC04]
+  - key: S12.run.17
+    text: "Their decomposition does not define lifecycle topology."
+    covered_by: [CP01-S12/R10, CP01-S12/AC09]
+  - key: S12.run.18
+    text: "Do not duplicate graph-transition or authority semantics in prompts."
+    covered_by: [CP01-S12/R10, CP01-S12/AC09]
+  - key: S12.expected.1
+    text: "The adapter exposes the canonical command surface with explicit, runtime-enforced mutation boundaries."
+    covered_by: [CP01-S12/R01, CP01-S12/R11, CP01-S12/AC01, CP01-S12/AC02, CP01-S12/AC04]
+  - key: S12.verify.1
+    text: "Assert the exact seven command names, render twice from identical locked inputs and require byte-identical output."
+    covered_by: [CP01-S12/R01, CP01-S12/R02, CP01-S12/AC01]
+    allocated_to: CP01-S17
+    note: "Step 12 renders from a fixture resolved lock; Step 17 repeats convergence through real sync over the real lock."
+  - key: S12.verify.2
+    text: "Exercise every command's permitted/forbidden mutations, including graph-read-only alternatives, no direct Delivery graph writes, no Evidence from review, and failed premature prepare-evidence."
+    covered_by: [CP01-S12/AC02, CP01-S12/AC03]
+  - key: S12.verify.3
+    text: "Then complete one valid command lineage."
+    covered_by: [CP01-S12/AC07]
+    allocated_to: CP01-S24
+    note: "Step 12 uses scripted capabilities; Step 24 completes a full Delivery through the generated adapter of the packed runtime."
+  - key: S12.verify.4
+    text: "Repeat the Step 7 guard matrix through each mutating command (`/capture-intent`, `/approve-contract`, `/write-brief`, `/prepare-evidence`): stale graph or policy/config/lock base, record rewrite/removal/re-identification, core-edge replacement/removal, incomplete load and disallowed actor kind must not commit or partially write."
+    covered_by: [CP01-S12/R11, CP01-S12/AC04]
+  - key: S12.verify.5
+    text: "Exercise the relevant valid control for each command through the same runtime API, rather than only asserting prompt text."
+    covered_by: [CP01-S12/AC04]
+  - key: S12.verify.6
+    text: "An adapter running on behalf of an allowed human records that human attribution unchanged; a different well-formed identity of that allowed kind remains permitted."
+    covered_by: [CP01-S12/R05, CP01-S12/AC05]
+  - key: S12.verify.7
+    text: "For `/approve-contract`, repeat reject/defer withdrawal, fresh re-authorisation over the last Contract in the withdrawn chain, existing-Contract re-selection refusal and missing-supersession refusal."
+    covered_by: [CP01-S12/R05, CP01-S12/AC06]
+  - key: S12.verify.8
+    text: "No public API or adapter may bypass the checks already proved at Step 7."
+    covered_by: [CP01-S12/R11, CP01-S12/AC04, CP01-S12/AC09]
+  - key: S13.references
+    text: "Spec 02 evaluation and baseline/regression reporting."
+    covered_by: [CP01-S13/R01, CP01-S13/R02, CP01-S13/R06, CP01-S13/R07]
+  - key: S13.run.1
+    text: "Implement `pactwright eval` with core responsibility cases for Contract fidelity, scope discipline, Brief quality, Review quality/defect detection, Evidence accuracy and lifecycle compliance, plus required output structure and forbidden mutation."
+    covered_by: [CP01-S13/R01, CP01-S13/AC01, CP01-S13/AC04]
+    note: "Who performs semantic judgement and how capabilities are executed during eval is Q39."
+  - key: S13.run.2
+    text: "Evidence accuracy cases compare claimed delivered work and verification with actual recorded results."
+    covered_by: [CP01-S13/R03, CP01-S13/AC02]
+  - key: S13.run.3
+    text: "Lifecycle compliance cases cover authority, Gate stopping, valid transitions and successful closing Review before Evidence."
+    covered_by: [CP01-S13/R04, CP01-S13/AC03]
+  - key: S13.run.4
+    text: "Implement the canonical comparison surface:"
+    covered_by: [CP01-S13/R06, CP01-S13/AC06]
+  - key: S13.run.5
+    text: "pactwright eval --baseline <released-pack-or-baseline> --candidate <candidate-pack-or-environment>"
+    covered_by: [CP01-S13/R06, CP01-S13/AC06]
+    note: "Which inputs --baseline and --candidate accept and what counts as a regression is Q40."
+  - key: S13.run.6
+    text: "Keep deterministic assertions separate from semantic judgement."
+    covered_by: [CP01-S13/R05, CP01-S13/AC05]
+  - key: S13.run.7
+    text: "Report regressions by meaningful dimensions such as capability, agent, evaluation case and changed Agent Pack/prompt/direct-skill environment."
+    covered_by: [CP01-S13/R07, CP01-S13/AC07, CP01-S13/AC08]
+  - key: S13.run.8
+    text: "Do not compute one opaque aggregate score."
+    covered_by: [CP01-S13/R07, CP01-S13/AC07, CP01-S13/AC08]
+  - key: S13.run.9
+    text: "Before the first public release, prove comparison mechanics with exact fixture/pinned package inputs. After `0.0.1` is published, Step 28 must prove resolution against the real released baseline."
+    covered_by: [CP01-S13/R06, CP01-S13/AC06]
+    allocated_to: CP01-S28
+    note: "Step 13 uses packed fixture packs; Step 28 resolves the real released @pactwright/standard@0.0.1 baseline."
+  - key: S13.expected.1
+    text: "The AI execution environment is evaluable independently from a real Delivery and candidate changes can be compared against an exact baseline."
+    covered_by: [CP01-S13/R01, CP01-S13/R06, CP01-S13/AC01, CP01-S13/AC06]
+  - key: S13.verify.1
+    text: "Run core eval, compare compatible baseline/candidate fixtures and introduce known regressions in Evidence accuracy and lifecycle compliance."
+    covered_by: [CP01-S13/AC01, CP01-S13/AC06, CP01-S13/AC07]
+  - key: S13.verify.2
+    text: "Require each to appear at its affected capability/agent/case dimensions rather than being hidden in an aggregate result."
+    covered_by: [CP01-S13/R07, CP01-S13/AC07]
 open_questions:
   - id: Q01
     affects: [CP01-S01/R05, CP01-S02/R06, CP01-S03/R01]
@@ -607,3 +825,24 @@ open_questions:
   - id: Q33
     affects: [CP01-S08/R03, CP01-S09/R09, CP01-S12, CP01-S24]
     question: "Should the later contracts carry these obligations, which their version 20 prose does not state: Step 24 (or another later step) runs real Agent Pack capabilities through `lifecycle run`, beyond Step 8's instrumented invoker; and Agent Packs (Step 10) and the adapter (Step 12) consume the Step 9 context-assembly API rather than assembling context themselves?"
+  - id: Q34
+    affects: [CP01-S11/R01, CP01-S11/AC01, CP01-S11/AC04, CP01-S15, CP01-S17]
+    question: "Step 11 requires `agent-pack use` to lock exact identity and run sync, but the resolved lock and `environment_lock_hash` arrive with Step 15, adapter rendering with Step 12 and deterministic sync with Step 17. What does Step 11 write to `.pactwright/lock.yml` and run as sync before those steps exist, and must Steps 15 and 17 repeat the selection and upgrade proofs through the real lock and sync?"
+  - id: Q35
+    affects: [CP01-S11/R01, CP01-S11/R08, CP01-S11/AC01, CP01-S11/AC04, CP01-S11/AC09]
+    question: "Which source forms does `agent-pack use <source>` accept (package name, name with version or range, local path or tarball)? Must the package already be installed, as Step 23 installs packed artefacts first, or do `use` and `upgrade` delegate installation to the project package manager under Spec 02 section 15, whose package-manager detection is specified only at Step 19?"
+  - id: Q36
+    affects: [CP01-S10/R02, CP01-S10/R04, CP01-S10/AC01, CP01-S10/AC02, CP01-S11/AC02, CP01-S11/AC05]
+    question: "Spec 02 section 5 describes Agent Pack content only conceptually. What format declares a pack's capability mappings, agents, prompts, direct skills and evaluation cases, and how does a pack declare its compatible runtime versions, so that the incompatible-runtime and capability-check criteria have a defined input?"
+  - id: Q37
+    affects: [CP01-S12/R07, CP01-S12/R08, CP01-S12/AC03]
+    question: "The agent executing `/deliver-brief` or `/review` has write access to the repository. How does the runtime keep it from mutating the Delivery Graph directly: prevent the write, detect an out-of-band canonical change and refuse progression, or leave the change to `pactwright validate`? CP01-S12/AC03 assumes detection and refusal to advance."
+  - id: Q38
+    affects: [CP01-S12/R03, CP01-S12/R05, CP01-S12/R06, CP01-S12/R09, CP01-S12/R11, CP01-S12/AC02, CP01-S12/AC04]
+    question: "Which capability does each adapter command invoke? Core section 35 assigns delivery-specification to Intent, alternatives, selection, Contract and Brief work, but names none for `/prepare-evidence`. How does a Claude Code command reach the runtime mutation API, given that CP01-S08 assumes no separate CLI mutation command and Principles section 11 lists no mutating runtime command for these responsibilities?"
+  - id: Q39
+    affects: [CP01-S13/R01, CP01-S13/R05, CP01-S13/AC01, CP01-S13/AC05]
+    question: "How does `pactwright eval` execute capabilities and semantic judgement: live model calls through the adapter, a runtime-invoked provider, or recorded outputs? Which judge performs semantic assertions, how is it identified and pinned so that baseline and candidate results are comparable, and what does eval need when no model is available, as in CI?"
+  - id: Q40
+    affects: [CP01-S13/R02, CP01-S13/R06, CP01-S13/R07, CP01-S13/AC06, CP01-S13/AC07, CP01-S28]
+    question: "What do `--baseline <released-pack-or-baseline>` and `--candidate <candidate-pack-or-environment>` accept (a package specifier, a stored evaluation result or a resolved lock/environment)? When is a case a regression, particularly for semantic results that vary between runs? Where are evaluation results written, and are they committed?"

@@ -1,0 +1,138 @@
+# CP01 Step 11 — Implement Agent Pack selection and upgrade
+id: CP01-S11
+requires: [CP01-S01, CP01-S10]
+outputs:
+  agent-pack-use: A pactwright agent-pack use <source> that explicitly selects one compatible complete Agent Pack,
+    updating configuration and lock only after successful resolution and validation.
+  agent-pack-upgrade: A pactwright agent-pack upgrade that upgrades the selected pack within its configured compatibility
+    constraints without changing its identity.
+requirements:
+  R01:
+    source: [DISTRIBUTION#5]
+    statement: 'Agent-pack use shall, in order: resolve a compatible complete pack from the explicit source, validate
+      it against the required capabilities, update configuration, record the exact pack and agent identities
+      in the lock, run sync and report GitHub reconciliation needs. Configuration and lock change only after
+      resolution and validation succeed.'
+  R02:
+    source: [DISTRIBUTION#5, DISTRIBUTION#15]
+    statement: If resolution, compatibility, capability validation, locking or sync fails, use and upgrade shall
+      leave the previous configuration, lock, generated environment and canonical state byte-identical.
+  R03:
+    source: [DISTRIBUTION#3, DISTRIBUTION#5]
+    statement: Pactwright shall never silently select or switch a pack. Pack identity changes only through agent-pack
+      use with an explicit source. Missing selection is an unactivated scaffold, not implicit selection of
+      @pactwright/standard. Pactwright may recommend a compatible pack without selecting it.
+  R04:
+    source: [DISTRIBUTION#5, DISTRIBUTION#15]
+    statement: Agent-pack upgrade shall upgrade the currently selected pack within its configured compatibility
+      constraints without changing its source identity. It validates the complete required capability set before
+      changing the lock or generated environment.
+  R05:
+    source: [DISTRIBUTION#3, DISTRIBUTION#12]
+    statement: Configuration expresses desired constraints and the lock the exact resolved pack. An exact configured
+      version shall stay selected when a newer compatible version is available, and no constraint authorises
+      replacing the configured source with another pack.
+  R06:
+    source: [CORE#54, DISTRIBUTION#3]
+    statement: Use and upgrade shall read and write the released version 1 configuration through the Step 1
+      canonical loader, preserving the adapter, Extension and GitHub declarations. Missing, malformed or unsupported
+      configuration shall be refused without selecting a pack, parsing it another way or replacing the previous
+      valid environment.
+  R07:
+    source: [CORE#54, DISTRIBUTION#5, DISTRIBUTION#14]
+    statement: The GitHub report shall state what remote reconciliation, owned by pactwright github sync, the
+      change needs, or that none is needed. Neither command contacts or mutates GitHub.
+  R08:
+    source: [DISTRIBUTION#15, GUIDE#command-ownership]
+    statement: Package installation or replacement that use or upgrade needs shall be delegated to the project
+      package manager; Pactwright implements no parallel installer. Neither command changes the runtime or
+      an Extension.
+acceptance:
+  AC01:
+    covers: [R01, R03]
+    cases: [select-standard-from-scaffold, switch-to-compatible-fixture]
+    given: 'An initial scaffold with no selected pack for select-standard-from-scaffold, or a project with @pactwright/standard
+      selected for switch-to-compatible-fixture, and the listed pack available: @pactwright/standard or a complete
+      compatible fixture pack.'
+    when: Agent-pack use runs with that pack's explicit source.
+    then: Configuration names the explicit source. The lock records the exact pack version, content hash and
+      agent identities. Sync runs and the report states the GitHub reconciliation need.
+    verify:
+      automated: [agent-pack.use]
+  AC02:
+    covers: [R01, R02]
+    cases: [incompatible-runtime, missing-capability, unresolvable-source, malformed-pack, sync-failure]
+    given: A project with @pactwright/standard selected and a valid generated environment, and a candidate
+      source with the listed defect; sync-failure injects a failure into sync after validation passes.
+    when: Agent-pack use runs with the candidate source.
+    then: It is refused with a problem naming the defect. Configuration, lock, generated environment and canonical
+      files are byte-identical afterwards, and @pactwright/standard remains selected.
+    verify:
+      automated: [agent-pack.use-failure]
+  AC03:
+    covers: [R03]
+    given: An initial scaffold with no selected pack and @pactwright/standard installed.
+    when: Agent-pack upgrade runs and a compatible pack is recommended.
+    then: Upgrade is refused because no pack is selected. The recommendation names a pack without selecting
+      it; configuration and lock are unchanged.
+    verify:
+      automated: [agent-pack.no-silent-selection]
+  AC04:
+    covers: [R04, R08]
+    given: A fixture pack selected at 1.0.0 under a configured ^1.0.0 constraint, and a compatible complete
+      1.1.0 of the same source available.
+    when: Agent-pack upgrade runs.
+    then: The lock records 1.1.0 with the same source, its content hash and agent identities, and sync runs.
+      The configured source and constraint are unchanged, and the runtime and Extension identities in configuration
+      and lock are unchanged.
+    verify:
+      automated: [agent-pack.upgrade]
+  AC05:
+    covers: [R02, R04]
+    cases: [missing-capability, incompatible-runtime, newer-only-outside-constraint, sync-failure]
+    given: 'A fixture pack selected at 1.0.0 under a configured ^1.0.0 constraint, and a newer version with the
+      listed condition: newer-only-outside-constraint offers only an otherwise valid 2.0.0.'
+    when: Agent-pack upgrade runs.
+    then: Nothing is upgraded, and the problem names the missing capability, incompatibility, absent compatible
+      version or sync failure. Configuration, lock and generated environment are byte-identical, and 1.0.0
+      of the same source remains selected.
+    verify:
+      automated: [agent-pack.upgrade-failure]
+  AC06:
+    covers: [R05]
+    given: Configuration selecting a fixture pack at exactly 1.0.0, with a compatible 1.1.0 of the same source
+      and a different complete pack both available.
+    when: Agent-pack use is re-applied with the configured source and agent-pack upgrade runs.
+    then: The lock still records 1.0.0 of the configured source. Upgrade reports no upgrade within the exact
+      constraint, and the other pack is never selected.
+    verify:
+      automated: [agent-pack.exact-target]
+  AC07:
+    covers: [R06]
+    cases: [round-trip, missing-config, malformed-config, unsupported-version]
+    given: A previous valid environment, and configuration in the listed condition; round-trip configuration
+      also declares an adapter, a disabled Extension and GitHub.
+    when: Agent-pack use runs with an explicit compatible source.
+    then: In round-trip only the agent_pack entry changes, and the loader reads back the new selection with
+      the other declarations unchanged. The other cases are refused with the loader's problem; no pack is selected
+      and the previous environment is byte-identical.
+    verify:
+      automated: [agent-pack.config-loading]
+  AC08:
+    covers: [R07]
+    cases: [github-absent, github-declared]
+    given: A project whose configuration omits GitHub or declares it enabled, as listed, and a compatible pack
+      source.
+    when: Agent-pack use runs with network access to GitHub blocked and recorded.
+    then: The report states that no reconciliation is needed, or which reconciliation pactwright github sync
+      would need. No GitHub request is attempted.
+    verify:
+      automated: [agent-pack.github-report]
+  AC09:
+    covers: [R06, R08]
+    given: The candidate agent-pack use and upgrade code.
+    when: Independent review traces package, configuration and lock handling.
+    then: Package installation or replacement is delegated to the project package manager. Configuration is
+      read and written only through the canonical loader, and neither command changes runtime or Extension identity.
+    verify:
+      review: [agent-pack.ownership]

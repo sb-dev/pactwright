@@ -1,0 +1,99 @@
+# CP01 Step 10 — Implement core capabilities and `@pactwright/standard`
+id: CP01-S10
+requires: [CP01-S01]
+outputs:
+  core-capabilities: The core capability identities delivery-specification, delivery-execution and delivery-review,
+    and the runtime capability check that a candidate Agent Pack implements each required capability.
+  agent-pack-loading: Runtime loading and validation of an Agent Pack's capability mappings, agents, prompts and
+    direct skills, independent of the pack's identity.
+  standard-agent-pack: '@pactwright/standard, a separate publishable Agent Pack package that implements the three
+    core capabilities without owning graph or lifecycle semantics.'
+requirements:
+  R01:
+    source: [CORE#35, DISTRIBUTION#4]
+    statement: The runtime shall define delivery-specification, delivery-execution and delivery-review as the
+      core capabilities. A capability identifies a semantic responsibility, not an agent, skill, model, provider
+      or production domain.
+  R02:
+    source: [DISTRIBUTION#5, DISTRIBUTION#13]
+    statement: The capability check shall accept a pack only when it maps every required capability to an agent
+      the pack defines and every prompt and direct skill those agents reference is present. Otherwise it reports
+      each missing capability or reference by name.
+  R03:
+    source: [DISTRIBUTION#5, DISTRIBUTION#13]
+    statement: A pack that fails loading or the capability check shall not be accepted. Configuration, lock,
+      generated environment and canonical state keep their prior bytes.
+  R04:
+    source: [DISTRIBUTION#5, OSS#6]
+    statement: '@pactwright/standard shall be a separate publishable package under packages/standard/, versioned
+      independently of the runtime, that maps each core capability to its own agents, prompts and direct skills.'
+  R05:
+    source: [CORE#39, CORE#54, CORE#58, DISTRIBUTION#5, DISTRIBUTION#18]
+    statement: Pack content shall not own graph or lifecycle semantics. It declares no record types, relations,
+      lifecycle transitions, Gates or authority rules. Its prompts do not instruct agents to decide transition
+      validity, write canonical graph storage or reconstruct lineage themselves; they rely on the context and
+      operations the runtime supplies.
+  R06:
+    source: [DISTRIBUTION#4, DISTRIBUTION#5, DISTRIBUTION#26]
+    statement: Pactwright semantics shall not depend on a specific pack identity. Any complete pack is checked
+      and resolved by the same rules, and the runtime has no behaviour keyed on @pactwright/standard or its agent
+      names.
+  R07:
+    source: [CHECKPOINT#4, DISTRIBUTION#12]
+    statement: A pack that declares external Production Skills imports shall be reported as unsupported by this
+      release, naming each import. The runtime neither resolves nor silently drops the imports.
+acceptance:
+  AC01:
+    covers: [R01, R02]
+    cases: [standard-pack, complete-fixture-pack]
+    given: The listed pack, complete for the core capabilities.
+    when: The pack is loaded and the capability check runs.
+    then: The required capability set is exactly delivery-specification, delivery-execution and delivery-review.
+      The check passes and resolves each capability to the agent the pack maps, with that agent's prompts and
+      direct skills.
+    verify:
+      automated: [capabilities.complete-pack]
+  AC02:
+    covers: [R02, R03]
+    cases: [missing-capability, unknown-agent, missing-prompt, missing-direct-skill, malformed-pack]
+    given: A project with valid configuration, lock, generated environment and canonical state, and a fixture
+      pack whose only defect is the listed one.
+    when: The pack is loaded and checked as a candidate.
+    then: It is refused with a problem naming the missing capability, reference or malformed input. Configuration,
+      lock, generated environment and canonical state are byte-identical afterwards.
+    verify:
+      automated: [capabilities.incomplete-pack]
+  AC03:
+    covers: [R06]
+    given: A complete fixture pack whose package name, agent names, prompts and direct skills all differ from
+      @pactwright/standard.
+    when: The pack is loaded, checked and its capabilities resolved.
+    then: The check and resolution give the same results for the fixture as for the standard pack, capability
+      for capability.
+    verify:
+      automated: [capabilities.identity-independent]
+  AC04:
+    covers: [R04]
+    given: The Pactwright repository workspace.
+    when: '@pactwright/standard and the runtime are built and packed separately.'
+    then: The standard archive has its own package name and version, contains mappings for the three core capabilities
+      with every agent, prompt and direct skill they reference, and does not contain the runtime. The runtime
+      archive does not contain the pack.
+    verify:
+      automated: [standard.package]
+  AC05:
+    covers: [R07]
+    given: A fixture pack that is complete except that it declares one external Production Skills import.
+    when: The pack is loaded and checked.
+    then: The pack is not accepted. The problem names the import as unsupported by this release, and nothing
+      is fetched or resolved for it.
+    verify:
+      automated: [capabilities.unsupported-import]
+  AC06:
+    covers: [R05, R06]
+    given: The candidate runtime code and the @pactwright/standard content.
+    when: Independent review inspects the capability check, pack loading and every pack agent and prompt.
+    then: The pack declares no graph or lifecycle semantics, and its prompts leave transition validity, authority
+      and canonical writes to the runtime. The runtime has no special case for the standard pack's identity.
+    verify:
+      review: [capabilities.semantic-boundary]
