@@ -2,9 +2,9 @@
 # Each entry quotes one obligation of the replaced step prose verbatim and names
 # the IDs that carry it; allocated_to names the later step that owns the rest of
 # the proof. `sources` names the checkpoint revision each converted step
-# replaced: Stage 1 replaced version 17, Stage 2 version 20, Stage 3 version 21
-# and Stage 4 version 22. Open questions are retained historical inputs to T2,
-# not runtime acceptance evidence.
+# replaced: Stage 1 replaced version 17, Stage 2 version 20, Stage 3 version 21,
+# Stage 4 version 22 and Stage 5 version 23. Open questions are retained
+# historical inputs to T2, not runtime acceptance evidence.
 #
 # Stage 1 (Q01-Q20) decisions and review/check status:
 # ../../research-logs/2026-09-23-pr41-b1-loading.md
@@ -22,6 +22,10 @@
 # Stage 4 (Q41-Q51) is a T1 conversion drafted against Core v3 and Distribution
 # v2. Its open questions are unresolved inputs to T2 review; no specification
 # was amended.
+#
+# Stage 5 (Q52-Q56) is a T1 conversion drafted against the Implementation Guide.
+# Its open questions are unresolved inputs to T2 review; no specification was
+# amended.
 sources:
   - source: docs/checkpoints/01-self-hosted-delivery.md@26ea12a
     steps: [CP01-S01, CP01-S02, CP01-S03, CP01-S04, CP01-S05]
@@ -31,12 +35,14 @@ sources:
     steps: [CP01-S10, CP01-S11, CP01-S12, CP01-S13]
   - source: docs/checkpoints/01-self-hosted-delivery.md@f5ee66b
     steps: [CP01-S14, CP01-S15, CP01-S16, CP01-S17, CP01-S18, CP01-S19]
+  - source: docs/checkpoints/01-self-hosted-delivery.md@ef18fa9
+    steps: [CP01-S20, CP01-S21]
 entries:
   - key: S01.references
     text: "Specs 01–02; Implementation Guide engineering baseline."
-    covered_by: [CP01-S01/R01, CP01-S01/R02, CP01-S01/R03, CP01-S01/R05]
-    allocated_to: CP01-S20
-    note: "The package-metadata rule against claiming compatibility that CI or package smoke tests do not exercise is proven by the Step 20 CI gate and the Step 22-23 packed consumers."
+    covered_by: [CP01-S01/R01, CP01-S01/R02, CP01-S01/R03, CP01-S01/R05, CP01-S20/R05, CP01-S20/AC01]
+    allocated_to: CP01-S23
+    note: "The package-metadata rule against claiming compatibility that CI or package smoke tests do not exercise is proven by CP01-S20/AC01, which runs verify on each claimed Node major, and the Step 22-23 packed consumers. How the two share the claim is Q52."
   - key: S01.run.1
     text: "Create the Pactwright runtime and CLI package foundation."
     covered_by: [CP01-S01/R01, CP01-S01/AC01]
@@ -1114,6 +1120,40 @@ entries:
   - key: S19.verify.12
     text: "No old acceptance result is carried forward across a changed definition or revision protocol."
     covered_by: [CP01-S19/R10, CP01-S19/AC11]
+  - key: S20.references
+    text: "Implementation Guide GitHub Actions baseline."
+    covered_by: [CP01-S20/R01, CP01-S20/R02, CP01-S20/R03, CP01-S20/R04, CP01-S20/R05, CP01-S20/R06]
+  - key: S20.run.1
+    text: "Create repository-owned `.github/workflows/ci.yml` using least privilege, SHA-pinned actions, frozen install, `pnpm verify`, bounded timeout/concurrency and no pull_request_target."
+    covered_by: [CP01-S20/R01, CP01-S20/R02, CP01-S20/AC01, CP01-S20/AC03, CP01-S20/AC04]
+    note: "Which events trigger the workflow and whether it is a required status check are Q53."
+  - key: S20.run.2
+    text: "This is repository engineering infrastructure, not generated Pactwright product integration."
+    covered_by: [CP01-S20/R04, CP01-S20/AC06, CP01-S17/AC02]
+    note: "CP01-S17/AC02 proves sync leaves a user workflow under .github/workflows/ unchanged."
+  - key: S20.expected.1
+    text: "A clean checkout proves the same repository gate used locally."
+    covered_by: [CP01-S20/R01, CP01-S20/R06, CP01-S20/AC01, CP01-S20/AC02, CP01-S20/AC05]
+    allocated_to: CP01-S25
+    note: "The local gate checks crosswalk quotes against Git history, so R06 requires the CI checkout to hold it. Step 25 requires this CI to pass for the self-hosted repository."
+  - key: S20.verify.1
+    text: "Run `pnpm verify` and inspect workflow hardening."
+    covered_by: [CP01/R01, CP01/AC01, CP01-S20/AC03, CP01-S20/AC04, CP01-S20/AC06]
+  - key: S21.references
+    text: "Implementation Guide npm release model."
+    covered_by: [CP01-S21/R01, CP01-S21/R02, CP01-S21/R03, CP01-S21/R04, CP01-S21/R05, CP01-S21/R06, CP01-S21/R07]
+  - key: S21.run.1
+    text: "Create repository-owned `.github/workflows/release.yml` following the trusted-release contract: exact tagged source, frozen install, verify, publish dry-run, OIDC publishing after bootstrap, registry verification, no npm publish token."
+    covered_by: [CP01-S21/R01, CP01-S21/R03, CP01-S21/R04, CP01-S21/R07, CP01-S21/AC01, CP01-S21/AC02, CP01-S21/AC04, CP01-S21/AC05, CP01-S21/AC07]
+    note: "The npm trusted-publisher bootstrap was completed for 0.0.1. How the npm-release environment and trusted-publisher configuration are evidenced is Q56."
+  - key: S21.expected.1
+    text: "A version tag can later release accepted source reproducibly."
+    covered_by: [CP01-S21/R01, CP01-S21/R02, CP01-S21/R06, CP01-S21/AC03, CP01-S21/AC04, CP01-S21/AC06]
+    allocated_to: CP01-S28
+    note: "Step 21 proves the workflow without publishing; Step 28 runs it on the v0.0.2 tag. Which checkpoint-to-version mapping governs is Q54, and whether a rerun may resume recursive publishing is Q55."
+  - key: S21.verify.1
+    text: "Validate workflow syntax, permissions and release assertions."
+    covered_by: [CP01-S21/R02, CP01-S21/R03, CP01-S21/AC01, CP01-S21/AC02, CP01-S21/AC03, CP01-S21/AC04, CP01-S21/AC07]
 open_questions:
   - id: Q01
     affects: [CP01-S01/R05, CP01-S02/R06, CP01-S03/R01]
@@ -1271,3 +1311,18 @@ open_questions:
   - id: Q51
     affects: [CP01-S16/R06, CP01-S16/AC07, CP01-S19/R07]
     question: "Spec 02 section 11 requires a new `graph.format_version` with explicit compatibility or migration, and section 15 an owner's declared source-to-target format migration, but neither defines how an Extension package declares a migration. Which manifest field and registration export declare it, and how is a migration's identity locked?"
+  - id: Q52
+    affects: [CP01-S20/R05, CP01-S20/AC01, CP01-S01/R02]
+    question: "The Implementation Guide forbids claiming compatibility that CI or package smoke tests do not exercise, and the runtime's engines range claims Node 22 and 24. Must CI run `pnpm verify` on every claimed Node major, or may the Step 22-23 packed-consumer smoke tests carry part of the claim? Which operating systems must CI cover?"
+  - id: Q53
+    affects: [CP01-S20/R01, CP01-S20/AC01, CP01-S25]
+    question: "Which events trigger ci.yml (pull requests, pushes to the default branch, a merge queue)? Must it be a required status check before merge? Branch protection is repository configuration outside the committed files; who configures it and how is it evidenced?"
+  - id: Q54
+    affects: [CP01-S21/R02, CP01-S28]
+    question: "The Implementation Guide maps Checkpoint 1 to 0.0.1 and Checkpoint 2 to 0.0.2, but this checkpoint publishes the corrective 0.0.2. Which version does Checkpoint 2 publish, and should the Guide's mapping be amended?"
+  - id: Q55
+    affects: [CP01-S21/R06, CP01-S21/AC06, CP01-S28]
+    question: "The Guide allows recursive publishing to resume only where skipping already published immutable versions has been verified safe. Does `pnpm publish -r` skip them safely under trusted publishing, and must Step 21 prove that with a fixture registry, or is review sufficient until the Step 28 release?"
+  - id: Q56
+    affects: [CP01-S21/R03, CP01-S21/AC07, CP01-S28]
+    question: "The npm-release environment's protection rules and each package's npm trusted-publisher configuration live outside the repository. Must each publish have a human approval binding through the environment, and how are the environment and trusted-publisher configuration evidenced for acceptance?"

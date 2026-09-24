@@ -1,6 +1,6 @@
 # Pactwright — Checkpoint 1 — Self-Hosted Delivery
 
-**Version:** 23  
+**Version:** 24  
 **Entry condition:** No installable Pactwright runtime exists.  
 **Release:** `0.0.2` (corrective; `0.0.1` was published against version 14 of this runbook and remains the released baseline)  
 **Exit capability:** Pactwright is installable, upgradeable, can govern one complete Contract-driven Delivery in its own repository and in Kakeibo, can compare an Agent Pack candidate against a released baseline, and requires no manual Project Graph coherence work.
@@ -56,9 +56,9 @@ This runbook defines implementation order, not new Pactwright semantics.
 
 ## 3. Execution contract
 
-A converted step is defined by its YAML contract in [`01-self-hosted-delivery/`](./01-self-hosted-delivery/), in the format owned by [Spec 00](../specs/00-checkpoint-step-contract-and-delivery-tasks.md). The step section here links the contract and summarises its deliverables; the contract holds the requirements and acceptance criteria. Every contract inherits the settings and shared requirements in [`checkpoint.yml`](./01-self-hosted-delivery/checkpoint.yml), and [`crosswalk.yml`](./01-self-hosted-delivery/crosswalk.yml) records where each obligation of the replaced step prose went: version 17 for Stage 1, version 20 for Stage 2, version 21 for Stage 3 and version 22 for Stage 4.
+A converted step is defined by its YAML contract in [`01-self-hosted-delivery/`](./01-self-hosted-delivery/), in the format owned by [Spec 00](../specs/00-checkpoint-step-contract-and-delivery-tasks.md). The step section here links the contract and summarises its deliverables; the contract holds the requirements and acceptance criteria. Every contract inherits the settings and shared requirements in [`checkpoint.yml`](./01-self-hosted-delivery/checkpoint.yml), and [`crosswalk.yml`](./01-self-hosted-delivery/crosswalk.yml) records where each obligation of the replaced step prose went: version 17 for Stage 1, version 20 for Stage 2, version 21 for Stage 3, version 22 for Stage 4 and version 23 for Stage 5.
 
-Stages 1–4 are converted. Stage 1 contracts are amended against Core v3 through the Q01–Q20 resolution pass. Stage 2 contracts are drafted against Core v3; their open questions Q21–Q33 await T2 review. Stage 3 contracts are drafted against Core v3 and Distribution v2; their open questions Q34–Q40 await T2 review. Stage 4 contracts are drafted against Core v3 and Distribution v2; their open questions Q41–Q51 await T2 review. Later steps retain the version 17 form, with the integration obligations below amended in version 20, until they are converted:
+Stages 1–5 are converted. Stage 1 contracts are amended against Core v3 through the Q01–Q20 resolution pass. Stage 2 contracts are drafted against Core v3; their open questions Q21–Q33 await T2 review. Stage 3 contracts are drafted against Core v3 and Distribution v2; their open questions Q34–Q40 await T2 review. Stage 4 contracts are drafted against Core v3 and Distribution v2; their open questions Q41–Q51 await T2 review. Stage 5 contracts are drafted against the Implementation Guide; their open questions Q52–Q56 await T2 review. Later steps retain the version 17 form, with the integration obligations below amended in version 20, until they are converted:
 
 ```text
 Step
@@ -351,40 +351,23 @@ Step 19 proves upgrade with packed fixture runtimes. Step 28 publishes the corre
 
 ### Step 20 — Implement repository verification workflow
 
-**References:** Implementation Guide GitHub Actions baseline.
+**Contract:** [`CP01-S20`](./01-self-hosted-delivery/CP01-S20.yml)
 
-**Run**
+**Deliverables**
 
-```text
-Create repository-owned `.github/workflows/ci.yml` using least privilege, SHA-pinned actions, frozen install, `pnpm verify`, bounded timeout/concurrency and no pull_request_target.
-This is repository engineering infrastructure, not generated Pactwright product integration.
-```
+- `ci-workflow` — A repository-owned .github/workflows/ci.yml that runs the root pnpm verify gate on a clean GitHub-hosted checkout under the Implementation Guide hardening rules.
 
-**Expected result**
-
-A clean checkout proves the same repository gate used locally.
-
-**Verify before continuing**
-
-Run `pnpm verify` and inspect workflow hardening.
+Step 25 requires this CI to pass for the self-hosted repository. `pactwright sync` leaves the workflow untouched (CP01-S17/AC02).
 
 ### Step 21 — Implement trusted release workflow
 
-**References:** Implementation Guide npm release model.
+**Contract:** [`CP01-S21`](./01-self-hosted-delivery/CP01-S21.yml)
 
-**Run**
+**Deliverables**
 
-```text
-Create repository-owned `.github/workflows/release.yml` following the trusted-release contract: exact tagged source, frozen install, verify, publish dry-run, OIDC publishing after bootstrap, registry verification, no npm publish token.
-```
+- `release-workflow` — A repository-owned .github/workflows/release.yml that publishes the accepted tagged source of pactwright and @pactwright/standard through npm trusted publishing and verifies the registry result.
 
-**Expected result**
-
-A version tag can later release accepted source reproducibly.
-
-**Verify before continuing**
-
-Validate workflow syntax, permissions and release assertions.
+Step 21 validates the workflow without publishing. Step 28 runs it on the `v0.0.2` tag and verifies the registry.
 
 ## Stage 6 — Prove packed consumer behaviour
 
@@ -739,4 +722,4 @@ Checkpoint 1 closes only when:
 
 ---
 
-**Pactwright — Checkpoint 1 — Self-Hosted Delivery v23**
+**Pactwright — Checkpoint 1 — Self-Hosted Delivery v24**
