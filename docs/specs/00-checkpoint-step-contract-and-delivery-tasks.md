@@ -1,7 +1,7 @@
 # Pactwright — Checkpoint Step Contract and Delivery Tasks
 
-**Version:** 2  
-**Date:** 22 September 2026  
+**Version:** 4  
+**Date:** 23 September 2026  
 **Purpose:** Replace checkpoint prompts with requirements and acceptance criteria, then execute them through progressively self-hosted run models.
 
 ## 1. Execution model
@@ -23,22 +23,39 @@ Checkpoint 1 proves a software-development instance using an external bootstrap 
 
 ## 2. Checkpoint organisation
 
-Keep `docs/checkpoints/`, the existing numbered files, goals, scope, canonical references, Stage/Step headings and checkpoint exit obligations. Replace each step's prompt and duplicated expected-result/verification prose with one YAML contract.
+Keep `docs/checkpoints/`, the existing numbered files, goals, scope, canonical references, Stage/Step headings and checkpoint exit obligations. Replace each step's prompt and duplicated expected-result/verification prose with one YAML contract in its own file. The step section keeps its heading, a link to the contract and a short summary of the contract's `outputs`:
 
-Declare common settings once at checkpoint level:
+```text
+docs/checkpoints/
+├── contract.schema.json          minimal format schema
+├── 01-self-hosted-delivery.md    goal, scope, Stage/Step headings, deliverable summaries, exit gate
+└── 01-self-hosted-delivery/
+    ├── checkpoint.yml            common settings and shared requirements
+    ├── CP01-S01.yml              one contract per step, named by step ID
+    ├── …
+    └── crosswalk.yml             conversion record: replaced prose → requirement/criterion IDs
+```
+
+The deliverable summary restates the contract's outputs and adds no obligation. If the two disagree, the contract governs.
+
+Declare common settings once at checkpoint level, in `checkpoint.yml`:
 
 ```yaml
 format: 2
 checkpoint: CP01
 run_model: software-bootstrap
 sources:
-  CORE: ../specs/01-pactwright-core-system-and-lifecycle.md
-  DISTRIBUTION: ../specs/02-distribution-agent-packs-extensions-and-evaluation.md
+  CORE: ../../specs/01-pactwright-core-system-and-lifecycle.md
+  DISTRIBUTION: ../../specs/02-distribution-agent-packs-extensions-and-evaluation.md
 ```
 
-`software-bootstrap` is a proposed model identifier. Source paths are relative to the checkpoint file; `CORE#15` identifies numbered section 15. The harness resolves and pins the actual source revisions for each run.
+`software-bootstrap` is a proposed model identifier. Source paths are relative to `checkpoint.yml`. `CORE#15` identifies numbered section 15; a heading without a section number, in any source, is cited by its GitHub heading anchor, such as `GUIDE#replay-provenance`. The harness resolves and pins the actual source revisions for each run.
 
-Shared requirements, mandatory review policy and checkpoint exit criteria are declared once and inherited. Do not maintain a second hand-written plan or acceptance registry duplicating these contracts; generate indexes and coverage views from the checkpoint files.
+Shared requirements, mandatory review policy and checkpoint exit criteria are declared once and inherited. Shared requirements live in `checkpoint.yml`; their IDs take the checkpoint prefix, such as `CP01/R01`. Do not maintain a second hand-written plan or acceptance registry duplicating these contracts; generate indexes and coverage views from the contract files.
+
+While a checkpoint is converted, `crosswalk.yml` records where each obligation of the replaced prose went, quoting it verbatim. It is conversion evidence for T1 and T2 review, not a plan to maintain.
+
+`pnpm contracts:check` validates every checkpoint directory that has a `checkpoint.yml`. It checks the format schema, step identity, key order, requirement coverage, `requires` targets and source citations. It also checks the crosswalk's IDs and, reading the replaced text from Git history, its verbatim quotes. `pnpm test` runs the same checks.
 
 ## 3. Compact step format
 
@@ -59,13 +76,13 @@ Requirement/criterion IDs are local: `R01` becomes `CP01-S03/R01`. Optional `inp
 
 ### Example — Step 3: shared typed-edge store
 
-This proposed contract retains the typed-edge obligations from the v1 example. Verifier IDs identify bindings to implement, not existing commands.
+This example is adapted from Checkpoint 1's Step 3 contract at `3c053bd622630c2e460d8cec40a633ead884873f`. It illustrates the format, not the complete current Step 3 requirements; the current `01-self-hosted-delivery/CP01-S03.yml` contract governs. Verifier IDs identify bindings to implement, not existing commands.
 
 ```yaml
 id: CP01-S03
 requires: [CP01-S02]
 outputs:
-  typed-edge-store: Shared persistence and validation for typed relationships.
+  typed-edge-store: Shared persistence, validation and relation registration for typed relationships.
 requirements:
   R01:
     source: [CORE#15]
@@ -74,17 +91,20 @@ requirements:
     source: [CORE#15, CORE#57]
     statement: The validator shall reject edges with absent endpoints.
   R03:
-    source: [CORE#15, CORE#57]
+    source: [CORE#15, CORE#45, CORE#57]
     statement: The validator shall enforce registered endpoint types, including same-type supersession.
   R04:
     source: [CORE#15, CORE#57]
     statement: The validator shall reject duplicate source/relation/target tuples.
   R05:
-    source: [CORE#15, CORE#57]
+    source: [CORE#15, CORE#45, CORE#57]
     statement: The validator shall reject supersession cycles, including self-supersession.
   R06:
     source: [CORE#15, CORE#57]
     statement: Additional relations shall not replace or weaken core relationship constraints.
+  R07:
+    source: [CORE#4, CORE#15, DISTRIBUTION#10]
+    statement: The registry shall accept an additional relation with its own endpoint constraints, and the shared store and validator shall apply those constraints to its edges.
 acceptance:
   AC01:
     covers: [R01, R03]
@@ -109,19 +129,19 @@ acceptance:
     verify: {automated: [edges.endpoint-types]}
   AC04:
     covers: [R04]
-    given: A valid edge set with an exact repeated tuple.
+    given: An otherwise valid edge set with an exact repeated tuple.
     when: The edge set is validated.
-    then: Validation reports the duplicate rather than silently accepting it.
+    then: Validation rejects the edge set and identifies the duplicate tuple.
     verify: {automated: [edges.duplicate-tuple]}
   AC05:
     covers: [R05]
     cases: [self-loop, two-record-cycle, longer-cycle]
     given: Otherwise valid same-type records with the listed supersession cycle.
     when: The edge set is validated.
-    then: Validation identifies the illegal supersession cycle.
+    then: Validation rejects the edge set and identifies the illegal supersession cycle.
     verify: {automated: [edges.supersession-cycles]}
   AC06:
-    covers: [R01, R06]
+    covers: [R01, R07]
     given: A fixture registers an additional relation that permits two-way links.
     when: Two-way links are validated, stored and reloaded.
     then: The links are preserved without imposing supersession-only acyclicity.
@@ -132,6 +152,20 @@ acceptance:
     when: Registration processes the declaration.
     then: Registration refuses it and the original core constraints remain effective.
     verify: {automated: [edges.core-registration-protection]}
+  AC08:
+    covers: [R03, R07]
+    cases: [wrong-source-type, wrong-target-type]
+    given: A fixture-registered additional relation and an edge of it whose only defect is the listed violation of that relation's endpoint types.
+    when: The edge set is validated.
+    then: Validation rejects the edge for the violated additional-relation constraint.
+    verify: {automated: [edges.additional-relation-endpoint-types]}
+  AC09:
+    covers: [R06]
+    cases: [supersession-cycle, cross-type-supersession]
+    given: Valid two-way links of a fixture-registered additional relation and core supersession edges whose only defect is the listed violation.
+    when: The edge set is validated.
+    then: Validation rejects the edge set for the violated core supersession constraint.
+    verify: {automated: [edges.core-constraints-kept]}
 ```
 
 This step proves the registration mechanism. Installed Extension composition must later exercise the real integration; a fixture does not establish that later capability.
@@ -184,10 +218,10 @@ Step definitions remain project plans. Pactwright owns authorised graph mutation
 
 ## Source basis
 
-This revision edits the supplied v1 proposal; it does not re-audit the repository or claim that any task above has run. The original example and capability boundaries were grounded in `sb-dev/pactwright` at `19c66d5f2368932ff05306db1fae8da8ec5810dd`:
+Version 2 edited the supplied v1 proposal; version 3 moves each step contract into its own file. Neither re-audits the repository or claims that any task above has run. The original example and capability boundaries were grounded in `sb-dev/pactwright` at `19c66d5f2368932ff05306db1fae8da8ec5810dd`:
 
 - [Checkpoint 1](https://github.com/sb-dev/pactwright/blob/19c66d5f2368932ff05306db1fae8da8ec5810dd/docs/checkpoints/01-self-hosted-delivery.md), particularly Step 3 and the exit gate.
 - [Core specification](https://github.com/sb-dev/pactwright/blob/19c66d5f2368932ff05306db1fae8da8ec5810dd/docs/specs/01-pactwright-core-system-and-lifecycle.md), especially §§15, 34–38 and 53–57.
 - [Implementation Principles](https://github.com/sb-dev/pactwright/blob/19c66d5f2368932ff05306db1fae8da8ec5810dd/docs/checkpoints/00-implementation-principles.md), §§3–6.
 
-**Pactwright — Checkpoint Step Contract and Delivery Tasks v2**
+**Pactwright — Checkpoint Step Contract and Delivery Tasks v4**

@@ -1,0 +1,177 @@
+# CP01 Step 1 — Create the runtime/package foundation
+id: CP01-S01
+requires: []
+outputs:
+  runtime-package: The pactwright runtime and CLI package, built, tested and packed through the repository's
+    normal build, prepack and verify discipline.
+  canonical-loader: One loading path for Pactwright configuration, lifecycle configuration, .pactwright/lock.yml,
+    core Project Graph records and typed edges.
+  repository-cli: A repository-local pnpm pactwright path that runs the same built runtime the package publishes.
+requirements:
+  R01:
+    source: [OSS#4, OSS#6, DISTRIBUTION#3]
+    statement: Deliver exactly one publishable package named `pactwright`, providing the `pactwright` executable,
+      at the repository root for CP01. Preserve runtime versus Agent Pack ownership; do not create a second
+      runtime package under packages/pactwright. The CP01 location is the explicit exception in OSS#6.
+  R02:
+    source: [GUIDE#package-metadata]
+    statement: The package shall declare an explicit supported Node range, repository and licence metadata,
+      explicit public status, controlled contents, valid entry points, bin and exports, and a normal prepack
+      build.
+  R03:
+    source: [GUIDE#verification, GUIDE#test-layers]
+    statement: The root pnpm verify gate shall cover formatting, lint, typechecking, runtime tests and the
+      runtime build; it shall not accept a skipped or no-op runtime build.
+  R04:
+    source: [PRINCIPLES#11, OSS#16]
+    statement: The repository-local CLI shall run the same built runtime entry point that the published package
+      exposes, not a separate source-only implementation.
+  R05:
+    source: [CORE#54, DISTRIBUTION#3, DISTRIBUTION#12]
+    statement: The canonical loader shall use the CORE#54 paths and serialisations and compose owning decoders
+      through one path. Step 1 proves loading and parse diagnostics; later schemas and integrations extend
+      that path, not duplicate it.
+  R06:
+    source: [CORE#54, CORE#57]
+    statement: Missing, unreadable, unknown-version or malformed required inputs and unrecognised active-storage
+      entries shall be reported with path and cause. Recognised released formats receive their native or migration-required
+      disposition under CORE#54 and DISTRIBUTION#12, never an unsupported-version label. Parseable values
+      remain diagnostic only when incomplete; no silent default, omission, repair or write may make the result
+      appear complete.
+  R07:
+    source: [CHECKPOINT#4, CORE#4, DISTRIBUTION#10]
+    statement: This foundation shall not implement Project Intelligence, Graph Review, Assets/Publication
+      or Operations semantics; generic fixture registration is not installed Extension support.
+  R08:
+    source: [CHECKPOINT#4, DISTRIBUTION#14]
+    statement: This foundation shall not provision GitHub resources or reconcile remote state.
+  R09:
+    source: [CORE#54]
+    statement: The loader shall preserve Extension and GitHub configuration declarations without activating
+      them. An unavailable enabled Extension makes the environment incomplete; unsupported GitHub operations
+      are reported without preventing otherwise supported local inspection or causing remote effects.
+acceptance:
+  AC01:
+    covers: [R01, R02]
+    given: A clean checkout of the candidate with no build output.
+    when: The package is packed through its normal prepack path and the archive inspected.
+    then: Packing runs the build. Exactly one runtime package is produced at the repository root, with no
+      second runtime manifest under packages/pactwright. Its archived manifest names the package pactwright,
+      declares the pactwright executable, carries all R02 metadata, and resolves every declared main, types,
+      bin and exports target to a file inside the archive.
+    verify:
+      automated: [package.archive-inspection]
+  AC02:
+    covers: [R02]
+    given: A candidate repository holding tests, test fixtures, and its own Pactwright configuration and Project
+      Graph files, packed through the normal path.
+    when: Its entries are enumerated.
+    then: The archive contains the built runtime and none of those tests, fixtures, configuration or graph
+      files.
+    verify:
+      automated: [package.archive-contents]
+  AC03:
+    covers: [R03]
+    cases: [format-violation, lint-violation, type-error, failing-test, build-failure]
+    given: An otherwise passing candidate whose only defect is the listed fault in the runtime package.
+    when: The root pnpm verify gate is run.
+    then: The gate fails at the affected mandatory check; missing runtime input is not converted into a successful
+      no-op.
+    verify:
+      automated: [repo.verify-covers-runtime]
+  AC04:
+    covers: [R04]
+    cases: [built, unbuilt]
+    given: The listed repository build state.
+    when: The repository-local pnpm pactwright path is invoked.
+    then: A built repository executes the published runtime entry point; an unbuilt repository either builds
+      that same target or fails explicitly, never falling back to source or stale unrelated binaries.
+    verify:
+      automated: [cli.repository-path]
+  AC05:
+    covers: [R05]
+    cases: [configuration, lifecycle, lock, core-records, typed-edges]
+    given: A valid core-only repository with the listed input at its canonical path.
+    when: The canonical loader reads it.
+    then: All parsed entries and values are represented without invented defaults; canonical comparison applies
+      only CORE#6 normalisation. The result contains no missing-input problem.
+    verify:
+      automated: [loader.loads-inputs]
+  AC06:
+    covers: [R05]
+    given: All repository input-reading call sites and decoder registrations.
+    when: An independent code reviewer traces each required input from caller to decoder.
+    then: Every runtime read of the owned inputs uses the canonical loading path; no caller uses an alternative
+      parser, undocumented path or swallowed problem.
+    verify:
+      review: [loader.single-path]
+  AC07:
+    covers: [R06]
+    cases: [configuration, lifecycle, lock, core-records, typed-edges]
+    given: Exactly the listed required input is unparseable; the others are valid.
+    when: The canonical loader reads the repository.
+    then: It identifies the offending input and cause, retains available diagnostic values, marks the result
+      incomplete and leaves all files unchanged. No partial result is advertised as executable or complete.
+    verify:
+      automated: [loader.unparseable-input]
+  AC08:
+    covers: [R07, R08]
+    given: The candidate source and packed archive.
+    when: Independent scope review traces implemented commands and side effects.
+    then: No Project Intelligence, Graph Review, Assets/Publication or Operations semantics and no GitHub
+      provisioning or remote reconciliation are implemented.
+    verify:
+      review: [scope.no-extension-semantics, scope.no-github-provisioning]
+  AC09:
+    covers: [R05, R06]
+    cases: [valid-core-layout, explicit-empty-graph, missing-config, missing-lifecycle, missing-lock, missing-record-directory,
+      missing-edge-file, unreadable-file, empty-edge-document, unexpected-record-file, nested-record-directory,
+      canonical-symlink, unsupported-version, null-edge-document, unexpected-graph-file, nested-graph-directory,
+      unexpected-extension-root-file, invalid-extension-root-name, symlinked-record-directory, symlinked-graph-directory,
+      symlinked-extension-root, unexpected-active-extension-entry]
+    given: The CORE#54 layout with only the listed condition.
+    when: The canonical loader reads it.
+    then: The valid-layout and explicit-empty-graph controls load successfully. Every missing, unreadable,
+      unsupported or unexpected input is identified and leaves an incomplete result without writes; an empty
+      edge document is not silently an empty graph.
+    verify:
+      automated: [loader.storage-profile]
+  AC10:
+    covers: [R07, R08, R09]
+    cases: [no-extensions, unavailable-enabled-extension, github-enabled, disabled-extension-without-implementation]
+    given: Valid configuration with the listed optional-feature declaration and no available Extension/GitHub
+      implementation.
+    when: Local loading is requested.
+    then: Declarations are retained unchanged. No Extensions and a disabled Extension without implementation
+      permit otherwise complete local loading; inactive owner data is reported and preserved without decoding.
+      An unavailable enabled Extension is an explicit incomplete-environment error. GitHub-enabled configuration
+      remains locally inspectable while unsupported remote operations are reported. No component activation,
+      remote effect or file mutation occurs.
+    verify:
+      automated: [loader.optional-declarations]
+  AC11:
+    covers: [R05, R06]
+    cases: [duplicate-key, yaml-alias, yaml-merge, custom-tag, invalid-unicode, unsafe-integer, non-finite-number,
+      non-string-key, yaml11-scalar-stays-string, yaml12-finite-number, quoted-string-key]
+    given: A required YAML input with only the listed CORE#6 condition. The scalar controls include yes/on/0b101/1_000/timestamps
+      as strings, finite Core decimal/octal/hex/float forms as numbers, and quoted numeric or boolean keys
+      as strings; the non-string-key case uses unquoted numeric and boolean keys.
+    when: The shared decoder loads it.
+    then: The three valid scalar/key controls resolve to the exact CORE#6 values. Every forbidden construct
+      or value fails with path and cause, without key stringification, coercion into a complete state or file
+      changes.
+    verify:
+      automated: [loader.canonical-values]
+  AC12:
+    covers: [R05, R06]
+    cases: [released-config-v1, released-lifecycle-v1, released-unversioned-lock, released-extension-in-core-store,
+      unknown-config-version, unknown-lifecycle-version, unknown-lock-version]
+    given: A fixture with the listed input from released 0.0.1 or an otherwise valid document with an unknown
+      version. All other required inputs are valid.
+    when: The canonical loader reports the input disposition.
+    then: Released configuration and lifecycle are recognised native formats. The released unversioned lock
+      and legacy Extension placement are recognised migration-required inputs available for read-only diagnosis
+      and explicit migration, not normal execution. Unknown versions are unsupported. Every input is preserved
+      byte-for-byte; no loading path applies a migration.
+    verify:
+      automated: [loader.released-formats]

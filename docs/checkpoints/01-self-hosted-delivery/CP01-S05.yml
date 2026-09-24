@@ -1,0 +1,203 @@
+# CP01 Step 5 — Implement repository and Project Graph revision identity
+id: CP01-S05
+requires: [CP01-S02, CP01-S03]
+outputs:
+  repository-revision: A runtime-provided repository revision identifying the exact committed repository state
+    used as the reconstructible execution input base.
+  project-graph-revision: A deterministic Project Graph revision hashed from canonically ordered, registered
+    canonical Project Graph state only.
+requirements:
+  R01:
+    source: [CORE#54, CORE#56, GUIDE#replay-provenance]
+    statement: Repository revision shall follow the CORE#56 clean committed-input profile, returning git:<object-format>:<full-commit-id>
+      only when the recorded input base is reconstructible; unavailable identity shall never be replaced by
+      current or dirty state.
+  R02:
+    source: [CORE#6, CORE#56]
+    statement: The same canonical graph shall produce the same pg1 revision across processes, paths, supported
+      platforms and runtime versions implementing that protocol. Derive it from canonical inputs loaded at
+      the supplied project root, not HEAD objects; Git, a commit and a clean tree are not required. An unavailable
+      repository revision prevents the replay base only.
+  R03:
+    source: [CORE#56]
+    statement: Graph revision shall include all stored registered Delivery records, including superseded records,
+      typed edges and enabled Extension-owned canonical graph records.
+  R04:
+    source: [CORE#5, CORE#54, CORE#56]
+    statement: Graph revision shall exclude reports, adapter output, execution state, provenance, GitHub state,
+      derived projections and explicitly inactive Extension stores; unknown active contributions are errors,
+      not exclusions.
+  R05:
+    source: [CORE#6, CORE#56]
+    statement: Apply CORE#6 normalisation to core values and the owning projection to Extension values, then
+      canonical record/tuple ordering and RFC 8785 serialization of the exact CORE#56 envelope before SHA-256
+      hashing. Emit pg1:sha256:<64 lower-case hexadecimal digits>; incompatible protocols require explicit
+      replay handling, not reinterpretation.
+  R06:
+    source: [CORE#56, CORE#58]
+    statement: Repository revision and Project Graph revision shall remain distinct identities; non-canonical
+      committed changes may change only the repository revision.
+  R07:
+    source: [CORE#15, CORE#54, CORE#56]
+    statement: A successful graph revision requires every CORE#54 required input (including configuration,
+      lifecycle and lock), registration, record/node projection and edge to pass CORE#6, CORE#15 and CORE#54
+      validation. No incomplete load or structural defect may produce a digest. CORE#44 lineage and CORE#57
+      actor-policy failures alone do not prevent a revision.
+acceptance:
+  AC01:
+    covers: [R01]
+    cases: [sha1-repository, sha256-repository]
+    given: A clean committed repository with all required inputs tracked.
+    when: Repository revision is resolved repeatedly in separate processes and equivalent checkouts at different
+      paths.
+    then: It is the same full typed Git commit identity and refers to the actual committed input base, not
+      the current branch name or tree alone.
+    verify:
+      automated: [revision.repository-stable]
+  AC02:
+    covers: [R01]
+    cases: [canonical-file-change, non-canonical-file-change]
+    given: Two independently constructed valid committed snapshots differing in the listed kind of file.
+    when: Each repository revision is resolved.
+    then: The commit identities differ and each reconstructs its own recorded input.
+    verify:
+      automated: [revision.repository-identifies-state]
+  AC03:
+    covers: [R02]
+    cases: [equivalent-locations, directory-without-git, uncommitted-canonical-edit]
+    given: The same complete registered graph at equivalent project roots in separate processes; one control
+      has no Git directory. In the edit case, a tracked canonical record differs from HEAD and matches a separately
+      constructed edited-graph control.
+    when: Each graph revision is derived.
+    then: Equivalent loaded graphs have identical pg1 bytes/digests, including without Git. The edit case
+      yields exactly the edited-graph control digest, not HEAD's digest, while repository revision is unavailable.
+    verify:
+      automated: [revision.graph-stable]
+  AC04:
+    covers: [R03]
+    cases: [record-added, record-content-changed, edge-added, edge-removed, additional-relation-edge-added,
+      extension-owned-record-added, extension-node-record-added, superseded-record-content-difference]
+    given: Two independently constructed valid graph snapshots differing only in the listed canonical contribution.
+      Extension cases use the Step 2/3 registration seams, not an installed package; extension-owned-record-added
+      is a non-node canonical record with its own schema and identity, distinct from the additional-node case.
+    when: Their revisions are derived.
+    then: Each listed canonical difference changes the digest.
+    verify:
+      automated: [revision.graph-canonical-change]
+  AC05:
+    covers: [R04]
+    cases: [generated-report, adapter-output, lifecycle-execution-state, execution-provenance, github-state,
+      derived-projection, inactive-extension-data]
+    given: The same complete active canonical graph while only the listed excluded state differs.
+    when: Its revision is derived before and after the difference.
+    then: The graph revision is unchanged; inactive Extension bytes are preserved and reported rather than
+      parsed into the active graph.
+    verify:
+      automated: [revision.graph-non-canonical-change]
+  AC06:
+    covers: [R02, R05]
+    cases: [records-reordered, edges-reordered, mapping-keys-reordered, yaml-comments, line-endings, boundary-whitespace,
+      quoting-style]
+    given: Equivalent presentations of the same graph differing only in the listed permitted ordering or normalisation.
+    when: Their revisions are derived.
+    then: They yield exactly the same pg1 digest; only record/edge collection order and CORE#6-equivalent
+      presentation differences are ignored.
+    verify:
+      automated: [revision.graph-order-independent]
+  AC07:
+    covers: [R06]
+    given: A clean committed graph followed by a commit changing only non-canonical tracked content.
+    when: Both repository and graph revisions are resolved.
+    then: Repository revision changes while Project Graph revision remains identical.
+    verify:
+      automated: [revision.distinct-identities]
+  AC08:
+    covers: [R01, R02]
+    given: A recorded committed input and its graph revision, followed by a newer canonical commit.
+    when: The recorded old commit is restored with existing repository mechanisms in an isolated different
+      path and its graph revision is derived.
+    then: The old inputs derive the recorded graph revision without using current branch contents or altering
+      the working project.
+    verify:
+      automated: [revision.repository-reconstructible]
+  AC09:
+    covers: [R02, R05]
+    given: Small and large canonical graphs and the frozen fixtures referenced by CORE#56.
+    when: The implementation derives each revision.
+    then: Every result uses pg1:sha256 and exactly 64 lower-case hexadecimal digest digits. Every frozen vector
+      matches its recorded canonical UTF-8 bytes and digest after the required record/edge sort; stored-byte
+      vectors also match the recorded parsed projection.
+    verify:
+      automated: [revision.graph-hashed, revision.pg1-vectors]
+  AC10:
+    covers: [R02, R03, R05]
+    cases: [internal-body-whitespace, content-array-order, metadata-value, unicode-normalisation-difference]
+    given: Two valid graph snapshots differing only in the listed significant content, with otherwise identical
+      IDs and structure.
+    when: Their revisions are derived.
+    then: The digests differ; array order, internal body whitespace, metadata values and distinct Unicode
+      strings are not normalised away.
+    verify:
+      automated: [revision.significant-content]
+  AC11:
+    covers: [R01]
+    cases: [unstaged-tracked-change, staged-tracked-change, deleted-tracked-input, untracked-file, ignored-generated-output,
+      no-git, no-commit, ignored-required-canonical-input, staged-new-canonical-input, ignored-required-configuration,
+      ignored-required-lifecycle, ignored-required-lock, untracked-empty-record-directory, tracked-gitkeep-empty-graph,
+      ignored-required-extension-store, nested-project-root, required-submodule-input, required-lfs-input]
+    given: A repository or directory with only the listed condition. Every required CORE#54 input (configuration,
+      lifecycle, lock, core records directory/edges and active Extension stores) is independently checked
+      against the commit, not only git status. The empty-graph control tracks its .gitkeep; nested-root and
+      required-submodule/LFS cases use the CORE#56 unsupported input conditions.
+    when: Repository revision is requested without modifying the working tree, index or refs.
+    then: Ignored generated output and the tracked-gitkeep empty-graph control retain the correct committed
+      identity. All other cases report repository revision unavailable with the specific cause. The tree,
+      index and refs remain unchanged; no commit, stash, reset, add or deletion occurs.
+    verify:
+      automated: [revision.repository-input-boundary]
+  AC12:
+    covers: [R04, R07]
+    cases: [duplicate-record-id, unknown-record-type, unknown-relation, missing-input, malformed-input, duplicate-edge,
+      invalid-extension-record, invalid-encoding, invalid-value-domain, invalid-identity, ownership-error,
+      registration-conflict, missing-endpoint, inactive-endpoint, wrong-endpoint-type, self-supersession,
+      cyclic-supersession, branching-supersession, merging-supersession, enabled-extension-cannot-register,
+      malformed-configuration, malformed-lifecycle, missing-lock, malformed-lock]
+    given: A CORE#54 required input, active registration, record or edge with only the listed structural/completeness
+      defect; all other inputs pass. Relational cases are passed to the shared validator so another failure
+      does not mask the required cause.
+    when: A complete graph revision is requested.
+    then: It fails explicitly with no successful digest and no file mutation; parseable remainder or inactive-data
+      exclusion is not used to hide the active defect.
+    verify:
+      automated: [revision.no-partial-graph]
+  AC13:
+    covers: [R05]
+    cases: [unknown-protocol, malformed-digest, legacy-sha256]
+    given: A recorded revision with the listed invalid or unsupported identity.
+    when: The revision protocol validator checks it before comparison.
+    then: Unknown or malformed identities are rejected. A well-formed legacy sha256 identity is recognised
+      as requiring its legacy implementation, never prefixed or compared as pg1; absent legacy support is
+      reported as unavailable.
+    verify:
+      automated: [revision.protocol-validation]
+  AC14:
+    covers: [R02, R07]
+    cases: [two-current-briefs, actor-kind-denied]
+    given: A complete load passing CORE#6, CORE#15 and CORE#54. The first case has two current Briefs under
+      one Contract; the second has structurally valid Decision attribution denied only by lifecycle policy.
+      Each has a frozen structurally derived expected revision.
+    when: Graph revision and, separately, lineage/policy validation are requested.
+    then: Graph revision equals its expected pg1 digest in both cases. Lineage or policy validation reports
+      the applicable failure and grants no permission to execute; no files change.
+    verify:
+      automated: [revision.lineage-policy-independent]
+  AC15:
+    covers: [R01]
+    cases: [sha1-commit, sha256-commit, abbreviated-id, ref-name, malformed-typed-id, tree-object, unknown-object-format]
+    given: A recorded repository identity with the listed grammar/object condition and existing Git objects
+      for the valid controls.
+    when: The repository identity validator checks its syntax and resolved object type.
+    then: Full lower-case typed SHA-1 and SHA-256 commit identities pass. Abbreviations, ref names, malformed
+      values, tree objects and unknown object formats fail explicitly with no substitutions or writes.
+    verify:
+      automated: [revision.repository-identity-grammar]

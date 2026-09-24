@@ -1,6 +1,6 @@
 # Pactwright — Checkpoint 2 — Remote Delivery
 
-**Version:** 16  
+**Version:** 17  
 **Entry condition:** Checkpoint 1 is accepted and Pactwright can self-host core Delivery.  
 **Release:** `0.0.2`  
 **Exit capability:** Pactwright and Kakeibo can initialise, execute, evaluate and project Contract-driven Delivery through GitHub using one deterministic profile-composition/reconciliation model while repository canonical state remains authoritative.
@@ -310,7 +310,7 @@ Implement deterministic routing for relevant changes under:
 
 Route changed canonical records to the validators that own their semantics.
 
-For shared graph storage such as `specs/graph/edges.yml`, route by registered edge type/endpoints/semantic ownership rather than path alone. A cross-owner relationship may require multiple validators.
+Route `specs/graph/edges.yml` to core validation only. Extension canonical records live below `specs/extensions/<id>/`; registered relation tuples and owner-node supersession live in that owner's `edges.yml`. Route those tuple changes through the owning Extension validator and every relevant endpoint-owner validator, considering removed as well as added tuples. The shared graph API does not permit Extension tuples in the core file; invalid placement fails rather than being silently rerouted.
 
 Prove the generic mechanism using one fixture Extension-owned canonical type/edge contribution without adding first-party Extension semantics.
 ```
@@ -861,6 +861,10 @@ Do not generalise Kakeibo-specific preferences.
 
 Blocking failures must be fixed inside this checkpoint.
 
+## Replay-base preflight integration
+
+For any configured operation promising pinned replay, resolve the full Core section 56 / Spec 02 replay base before dispatch. Use a fixture operation to prove that a dirty tree or missing required identity causes a reported refusal with no agent invocation, Review Execution or canonical effect. After successful preflight, execution failure records its pinned provenance; that provenance must be committed before the next pinned invocation. Checkpoint 4 repeats this through real Graph Review. GitHub must not manufacture a clean base or substitute current identities.
+
 ## Exit gate
 
 Checkpoint 2 closes only when:
@@ -911,4 +915,4 @@ The Kakeibo acceptance additionally requires:
 
 ---
 
-**Pactwright — Checkpoint 2 — Remote Delivery v16**
+**Pactwright — Checkpoint 2 — Remote Delivery v17**

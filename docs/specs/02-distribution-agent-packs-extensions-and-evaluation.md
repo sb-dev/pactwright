@@ -133,6 +133,8 @@ github:
 
 Configuration records desired Pactwright state.
 
+The released configuration format is the `version: 1` mapping above: an optional explicitly selected `agent_pack` with `source` and version constraint, adapter selection, an Extension-ID map and GitHub enablement. It remains a native input; missing pack selection denotes an unactivated scaffold, not implicit selection of standard. Extension entries retain their source, configured version and enabled/disabled state. The canonical loader reads this format without rewriting it. Unknown format versions are unsupported; the recognised earlier lock and lifecycle dispositions are specified in section 12 and Core section 27.
+
 The package-manager manifest and lock record installed package state.
 
 `.pactwright/lock.yml` records the exact resolved Pactwright execution environment.
@@ -502,6 +504,8 @@ pactwright extension remove <id>
 pactwright extension upgrade <id>
 ```
 
+Canonical storage follows Core section 54: an Extension's records and relation-owned edge file live below `specs/extensions/<id>/`, while the shared graph API composes enabled owners. This replaces the released `0.0.1` physical shared-store placement, not the shared validation mechanism. Section 15 owns migration of released Extension records/edges out of the core stores. An inactive owner needs no installed decoder merely to preserve and report its directory; its data does not participate in active endpoint resolution or graph hashing.
+
 ## Installation
 
 `extension add` must:
@@ -555,7 +559,21 @@ github:
   profile: graph-review
 ```
 
-It may additionally register extension-owned graph types.
+## Canonical contribution declarations
+
+The package-root manifest remains `extension.yml`. Its existing `graph.node_types` and `graph.edge_types` list the names it owns; the reserved core relations are reused, never redeclared. A package contributing canonical data additionally declares this versioned graph interface:
+
+| Field | Meaning |
+|---|---|
+| `graph.format_version` | Positive integer identifying the owner's stored schema and projection contract; independent of package version. |
+| `graph.registration` | Package-relative module export, written `./path/to/module.js#export`, supplying the named read-only decoders, schema validators, canonical projections and optional node projections. |
+| `graph.storage` | List of declarations, each with a root-relative `path`, `kind`, `decoder`, `schema` and `projection` identifier. Optional `node_projection` names the endpoint projection. |
+
+Each storage `path` is a literal file or directory relative to `specs/extensions/<id>/`, not an absolute path, glob or path containing `..`; directory declarations enumerate their supported file forms through the named decoder. Paths must be disjoint, cannot claim `edges.yml`, generated output or another owner's data, and cannot follow symlinks. Decoder/validator/projection identifiers must resolve uniquely in the declared registration export. An absent or unknown identifier, duplicate paths within an owner, conflicting type/relation ownership or incompatible `format_version` fails registration before activation. A format without canonical records need not declare storage; an Extension with relation types still uses its owner `edges.yml` under Core section 54.
+
+A decoder receives the declared input bytes and returns decoded values or path-specific problems. Its schema validator checks the owning semantic format. The canonical projection emits Core section 54 `(kind, key, value)` contributions; an optional node projection additionally supplies globally unique endpoint ID and a registered node type. All projected values obey Core section 6. The registration also supplies endpoint constraints for each declared additional relation, without replacing core rules. These are deterministic, read-only package functions: loading cannot install dependencies, write files, make network requests or use undeclared project inputs. Their private implementation layout is not prescribed.
+
+Installed packages and fixtures use this same interface and record/edge validation path. A package cannot supply an installed-only hash or validation shortcut. Changing the decoder, schema or projection semantics requires a new `graph.format_version` with explicit compatibility or migration under section 15; a package version change alone does not authorise reinterpreting stored bytes.
 
 At runtime:
 
@@ -599,6 +617,8 @@ The lock must record enough immutable identity to reproduce the result.
 Conceptually:
 
 ```yaml
+version: 1
+
 runtime:
   version: ...
 
@@ -606,6 +626,10 @@ extensions:
   graph-review:
     version: ...
     hash: ...
+    graph:
+      format_version: ...
+      declaration_hash: ...
+      implementation_hash: ...
     dependencies:
       project-intelligence: ...
 
@@ -649,6 +673,14 @@ package-manager lock
 They must agree on the installed Pactwright and package-backed component versions they both identify.
 
 Configuration expresses intent. The locks record exact resolved state at their respective layers.
+
+## Recognised lock formats and graph implementation identity
+
+The current resolved lock has top-level `version: 1`. It retains the runtime, Extension, selected Agent Pack, agent/direct-skill and applicable Production Skills identities described above. `agent_pack.source` is the configured source identity, not an implicitly chosen package. `agents` and `skills` maps retain the resolved content hashes for direct pack content. A recognised released `0.0.1` lock has **no top-level version key**, has `runtime.version`, `agent_pack.name/version/hash`, `agents`, `skills` and `extensions`, and is labelled **migration required**, not unsupported. Its `agent_pack.name` is matched to the explicitly configured source during section 15 migration; missing or conflicting identity blocks migration instead of inventing a source or choosing a newer component. A document with an unknown explicit version is unsupported. Missing, malformed and unsupported documents are distinct diagnoses.
+
+Each enabled Extension lock entry includes its package/source, exact version, package content hash, resolved dependencies and the graph declaration's `format_version`. `graph.declaration_hash` covers the canonical manifest graph declaration; `graph.implementation_hash` covers the registration module and every package file it imports or reads to decode, validate or project canonical data. Implementation identity includes executable code and schema resources, not just declared names. Exact immutable dependency identities are included when those functions use package dependencies. These identities participate in `environment_lock_hash`; changing a decoder's bytes while retaining its version must be detected before activation. There is no separate code archive: use normal package hashes and exact dependency resolution, and fail when the declared closure cannot be verified.
+
+The released `version: 1` / `stages` lifecycle file remains recognised native policy under Core section 27. It does not need a synthetic format-version field on the old lock. The unreleased `version: 2` / `shape` draft has no automatic released compatibility claim; encountering it requires its own recognised schema/migration or an unsupported-version report. Ordinary loading never upgrades any of these files.
 
 ## Environment lock identity
 
@@ -808,6 +840,26 @@ If the target runtime has no compatible complete environment, the operation must
 
 Canonical Project Graph state must never be left partially migrated. Upgrade implementation must preserve enough previous package/configuration/lock state to restore or explicitly target the previous runtime when an upgrade cannot complete safely.
 
+## Released-format migration boundary
+
+The corrective runtime provides the explicit migration `released-0.0.1-to-owned-stores-v1`. `pactwright upgrade` selects it when the source environment is recognised as released `0.0.1` and the target uses Core's owner-separated stores and version-1 resolved lock. This is a named, versioned migration, not normal loader repair or a permanent unsupported-data refusal.
+
+The new runtime first reads all source inputs with their recognised source decoders, diagnoses every prerequisite and constructs a complete target plan. Only a **complete valid legacy source** can enter migration despite not being a complete current-format load. Syntax failures, missing required input, unknown ownership or a failed source-schema check cannot use this exception. The plan uses Core section 55's exact-input stale-base and serialised atomic-write boundary. Validate the complete target and preserve enough original package/configuration/lock/graph bytes for failure recovery and explicit rollback; no partial moves or half-updated locks are permitted.
+
+| Released input | Required target treatment |
+|---|---|
+| Core-type Markdown records and core-relation tuples | Preserve valid IDs, attribution and canonical content. Do not rewrite conforming core files merely because the runtime changes. |
+| Extension-typed records in `specs/nodes/` and Extension tuples in `specs/graph/edges.yml` | Resolve exactly one owner from an enabled, compatible Extension's registered types/relations. The migration maps those records through that owner's declared source-to-target format migration into its storage declaration and moves relation tuples to its `edges.yml`. Same-type Extension supersession belongs to the endpoint-type owner. Preserve identities, semantic values and exact directed tuples; leave core records and tuples in core storage. |
+| Ambiguous, disabled, removed or unavailable legacy Extension ownership | Preserve every byte and report the specific owner/registration/migration prerequisite. Do not guess, discard data or activate an Extension implicitly. An existing conflicting target record/tuple also blocks before writes. |
+| Desired config v1 and lifecycle v1/stages | Keep the explicitly selected component constraints, actor-kind policy and manual/automatic settings. Reuse their native formats; do not turn policy entries into topology or add an identity allow-list. |
+| Released unversioned lock | Resolve the explicitly selected compatible complete target environment and write the section 12 `version: 1` lock with exact graph declaration/implementation identities. Check the source lock against its own installed source environment before changing it; never silently upgrade or switch other components. |
+| Empty YAML edge document or `edges: null` accepted by 0.0.1 | Report migration required on ordinary load. This explicit migration may replace it with `edges: []` after validating that the complete legacy edge set is empty. It may not use that rule to discard malformed or unknown tuples. |
+| Non-`.md` core-store entries, including `.DS_Store`, formerly ignored by 0.0.1 | Intentionally no longer ignored by the current loader. Preserve the file, identify the blocked path and require the owner to move/remove it explicitly before migration; never auto-delete or silently exclude it. |
+
+The Extension relocation, empty/null-edge normalisation and newly reported non-Markdown entries are intentional compatibility changes. A legacy scalar whose released decoder produced a different value from Core section 6's pinned YAML profile also needs explicit value-preserving migration or a named prerequisite; re-parsing identical bytes into different truth is not migration. Recognising the source format is not a promise to accept every previously tolerated input under the target format.
+
+Source and target graph-revision protocols remain distinct: a released `sha256:` graph revision is not a `pg1:` revision. Preserve prior execution evidence and its protocol; replay needs the recorded runtime/protocol, otherwise fails explicitly. A migration may record the newly derived identity of the migrated graph but never rewrite historical provenance or relabel an old digest. Rollback must restore or migrate back to the recognised original format under an explicit supported path; an older runtime must not be pointed at new stores and allowed to ignore them.
+
 ## Agent Pack upgrade
 
 `pactwright agent-pack upgrade` upgrades the currently selected Agent Pack within its configured compatibility constraints.
@@ -873,6 +925,8 @@ action required
 ```
 
 without inventing a separate health-state subsystem.
+
+An unavailable repository revision is a warning during ordinary graph/environment diagnosis when local graph loading and hashing are otherwise valid. It becomes action required when diagnosing a requested pinned execution or replay. Report the missing commit/input, dirty tree, unsupported repository-input transport or migration prerequisite; do not auto-commit or label a partial load healthy. A recognised legacy format needing migration is action required for target-runtime activation, not an unknown-version error.
 
 `doctor` must provide concrete remediation commands where the correction is deterministic, for example:
 
@@ -1264,4 +1318,4 @@ Production-specific semantics remain in independent Production Skills repositori
 
 ---
 
-**Pactwright Distribution, Agent Packs, Extensions and Evaluation v1**
+**Pactwright Distribution, Agent Packs, Extensions and Evaluation v2**

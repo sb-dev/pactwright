@@ -1,6 +1,6 @@
 # Pactwright — Checkpoint 5 — Production Skills + Assets / Publication
 
-**Version:** 12  
+**Version:** 13  
 **Entry condition:** Checkpoint 4 is accepted.  
 **Release:** `0.0.5`  
 **Exit capability:** Pactwright and Kakeibo can resolve exact external Production Skills and Production Extension Packs through the selected Agent Pack during normal Delivery, then turn successful Delivery Evidence into exact human-approved Assets and real Publications without introducing a second production lifecycle.
@@ -727,8 +727,8 @@ Generate:
 
 Relevant managed/validated paths:
 - assets/**
-- docs/assets-publication/assets/**
-- docs/assets-publication/publications/**
+- specs/extensions/assets-publication/assets/**
+- specs/extensions/assets-publication/publications/**
 
 Exact checks:
 - Pactwright / Assets
@@ -1217,6 +1217,10 @@ Learning reaches the correct owner, while governance cannot be used to defer a f
 
 Trace every blocker to a correction and passing re-verification. Require no unresolved blocker before Checkpoint 6, and trace retained domain findings to their owning family with an explicit non-blocking disposition.
 
+## Canonical storage and routing cross-check
+
+Prove the installed `assets-publication` Extension's canonical records use its manifest-declared paths below `specs/extensions/assets-publication/`, with registered relation tuples and its node supersession in `edges.yml` there. Core lineage tuples remain in `specs/graph/edges.yml`. A cross-graph relation routes to its registered owner and endpoint owners, including deletion/old endpoints; wrong-owner placement fails without moving data. Disabling the owner preserves its directory and excludes its contributions; active edges cannot resolve inactive endpoints. Generated reports remain under `docs/<owner>/reports/` only where the owning specification defines them; configuration and execution provenance are not canonical stores.
+
 ## Exit gate
 
 Checkpoint 5 closes only when:
@@ -1260,4 +1264,4 @@ Checkpoint 5 closes only when:
 
 ---
 
-**Pactwright — Checkpoint 5 — Production Skills + Assets / Publication v12**
+**Pactwright — Checkpoint 5 — Production Skills + Assets / Publication v13**

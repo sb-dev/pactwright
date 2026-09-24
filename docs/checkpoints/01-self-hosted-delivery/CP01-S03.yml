@@ -1,0 +1,168 @@
+# CP01 Step 3 — Implement the shared typed-edge store
+id: CP01-S03
+requires: [CP01-S02]
+outputs:
+  typed-edge-store: Shared persistence, validation and relation registration for typed relationships.
+requirements:
+  R01:
+    source: [CORE#15]
+    statement: The runtime shall preserve directed source/type/target edge tuples when storing and reloading
+      them.
+  R02:
+    source: [CORE#15, CORE#57]
+    statement: The validator shall reject edges with absent active endpoints.
+  R03:
+    source: [CORE#15, CORE#45, CORE#57]
+    statement: The validator shall enforce registered endpoint types, including same-type supersession for
+      every core and registered Extension node type.
+  R04:
+    source: [CORE#15, CORE#57]
+    statement: The validator shall reject duplicate source/type/target tuples.
+  R05:
+    source: [CORE#15, CORE#45, CORE#57]
+    statement: Supersession validation shall reject self-links, cycles, branching successors and merging predecessors;
+      other relations need not be acyclic.
+  R06:
+    source: [CORE#15, CORE#57]
+    statement: Additional registrations shall not reuse core names, replace definitions or weaken endpoint,
+      duplicate, same-type, cycle or supersession-cardinality constraints. Rejection shall preserve the effective
+      registry.
+  R07:
+    source: [CORE#4, CORE#15, DISTRIBUTION#10]
+    statement: The registry shall accept an additional relation with its own endpoint constraints, and the
+      shared store and validator shall apply those constraints without imposing supersession-only rules on
+      it.
+  R08:
+    source: [CORE#15, CORE#45]
+    statement: A proposed-state comparison shall preserve every existing core edge tuple; removing or replacing
+      a core tuple shall be rejected while additions and order-only differences remain permitted subject to
+      other validation.
+  R09:
+    source: [CORE#15, CORE#54]
+    statement: 'Active contributions shall have unambiguous storage/type/relation ownership. Unknown active
+      data shall fail closed; inactive Extension stores shall be reported, preserved and excluded, not mistaken
+      for valid active contributions. Physical ownership follows CORE#54: only core lineage tuples in specs/graph/edges.yml;
+      Extension relation tuples and its same-type node supersession in specs/extensions/<id>/edges.yml.'
+acceptance:
+  AC01:
+    covers: [R01, R03]
+    cases: [resolves, selects, decomposes, evidences, supersedes]
+    given: Valid core records and a permitted edge of the listed relation; supersedes includes each of the
+      five core types.
+    when: The edge set is validated, stored and reloaded.
+    then: Validation succeeds and repeated loading preserves the exact directed tuples.
+    verify:
+      automated: [edges.valid-roundtrip]
+  AC02:
+    covers: [R02]
+    cases: [missing-source, missing-target]
+    given: An edge whose only defect is the listed absent endpoint.
+    when: The edge set is validated.
+    then: Validation rejects the edge and identifies the missing endpoint.
+    verify:
+      automated: [edges.missing-endpoint]
+  AC03:
+    covers: [R03]
+    cases: [wrong-source-type, wrong-target-type, cross-type-supersession]
+    given: An edge whose only defect is the listed endpoint-type violation.
+    when: The edge set is validated.
+    then: Validation rejects the edge for the violated relation constraint.
+    verify:
+      automated: [edges.endpoint-types]
+  AC04:
+    covers: [R04]
+    given: An otherwise valid edge set with an exact repeated tuple.
+    when: The edge set is validated.
+    then: Validation rejects the edge set and identifies the duplicate tuple.
+    verify:
+      automated: [edges.duplicate-tuple]
+  AC05:
+    covers: [R05]
+    cases: [self-loop, two-record-cycle, longer-cycle]
+    given: Otherwise valid same-type records with the listed supersession cycle.
+    when: The edge set is validated.
+    then: Validation rejects the edge set and identifies the illegal supersession cycle.
+    verify:
+      automated: [edges.supersession-cycles]
+  AC06:
+    covers: [R01, R07]
+    given: A fixture registers an additional relation that permits two-way links.
+    when: Two-way links are validated, stored and reloaded.
+    then: The links are preserved without imposing supersession-only acyclicity.
+    verify:
+      automated: [edges.additional-relation]
+  AC07:
+    covers: [R06]
+    cases: [replace-endpoints, reuse-core-name, relax-endpoint-existence, relax-duplicates, relax-same-type,
+      relax-acyclicity, relax-cardinality]
+    given: A fixture attempts the listed change to core relation registration.
+    when: Registration processes the declaration.
+    then: Registration refuses it; the original core definition remains effective, including valid controls
+      and rejection of the affected violation.
+    verify:
+      automated: [edges.core-registration-protection]
+  AC08:
+    covers: [R03, R07]
+    cases: [wrong-source-type, wrong-target-type]
+    given: A fixture-registered additional relation and an edge whose only defect is the listed violation
+      of that relation endpoint types.
+    when: The edge set is validated.
+    then: Validation rejects the edge for the violated additional-relation constraint.
+    verify:
+      automated: [edges.additional-relation-endpoint-types]
+  AC09:
+    covers: [R06]
+    cases: [supersession-cycle, cross-type-supersession, branching-supersession]
+    given: Valid two-way links of a fixture-registered additional relation and core supersession edges whose
+      only defect is the listed violation.
+    when: The edge set is validated.
+    then: Validation rejects the edge set for the violated core supersession constraint.
+    verify:
+      automated: [edges.core-constraints-kept]
+  AC10:
+    covers: [R03, R05]
+    cases: [intent-chain, extension-chain, branching-successors, merging-predecessors, extension-cross-type,
+      extension-supersedes-core, core-supersedes-extension]
+    given: Valid core records and two fixture-registered Extension node types from the record-model seam,
+      with only the listed supersession pattern. Supply the tuples directly to the shared edge validator so
+      placement cannot mask a type defect.
+    when: The shared validator checks the edge set.
+    then: Linear Intent and same-type registered Extension chains pass. Branching, merging, supersession between
+      distinct Extension node types, and supersession between an Extension and a core type fail at edge validation
+      with no stored change.
+    verify:
+      automated: [edges.supersession-cardinality]
+  AC11:
+    covers: [R01, R08]
+    cases: [add-core-edge, remove-core-edge, replace-core-edge, reorder-only]
+    given: A valid stored core edge set and a proposed set with only the listed difference.
+    when: The proposed-state comparison is run.
+    then: A valid addition and order-only change pass; removing or replacing an old tuple fails and identifies
+      it. The stored set remains untouched.
+    verify:
+      automated: [edges.immutable-core-tuples]
+  AC12:
+    covers: [R02, R09]
+    cases: [unknown-active-relation, unknown-active-type, inactive-extension-store, active-edge-to-inactive-record]
+    given: Fixture registrations/stores with the listed condition and otherwise valid active core state.
+    when: The shared loader and validator inspect the contribution set.
+    then: Unknown active relations/types and active links to inactive records fail without a complete active
+      graph result. An inactive store is listed, byte-preserved and excluded; it is not parsed into active
+      authority or automatically repaired.
+    verify:
+      automated: [edges.active-registration-boundary]
+  AC13:
+    covers: [R06, R07, R09]
+    cases: [extension-record-in-core-store, core-record-in-extension-store, core-lineage-edge-in-extension-store,
+      duplicate-extension-id, valid-cross-graph-relation, extension-relation-edge-in-core-store, extension-supersession-edge-in-core-store,
+      foreign-relation-in-extension-edges, extension-record-outside-owner-root]
+    given: Fixture owners with the listed placement or identity condition. The valid cross-graph relation
+      is stored in specs/extensions/<relation-owner>/edges.yml. Core records use specs/nodes/; core lineage
+      tuples use specs/graph/edges.yml; Extension records remain inside their declared owner root. The core-to-core-edge
+      defect uses a core lineage relation, not an Extension-owned additional relation.
+    when: Registration and shared-store validation run without installing a package.
+    then: The valid cross-graph control passes through the shared validator. Every invalid placement, duplicate
+      Extension ID or foreign-owner claim fails with the paths and owners identified, without moving, deleting
+      or rewriting data.
+    verify:
+      automated: [edges.storage-ownership]

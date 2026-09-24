@@ -1,0 +1,25 @@
+# Checkpoint 1 — Self-Hosted Delivery: settings and requirements every step
+# contract in this directory inherits. Goal, scope and step order live in
+# ../01-self-hosted-delivery.md.
+format: 2
+checkpoint: CP01
+run_model: software-bootstrap
+sources:
+  CHECKPOINT: ../01-self-hosted-delivery.md
+  CORE: ../../specs/01-pactwright-core-system-and-lifecycle.md
+  DISTRIBUTION: ../../specs/02-distribution-agent-packs-extensions-and-evaluation.md
+  OSS: ../../specs/08-open-source-project-organisation.md
+  PRINCIPLES: ../00-implementation-principles.md
+  GUIDE: ../00-implementation-guide.md
+  KAKEIBO_PROFILE: ../00-kakeibo-acceptance-profile.md
+requirements:
+  R01:
+    source: [GUIDE#verification]
+    statement: A step that changes files in the Pactwright repository shall leave its root `pnpm verify` gate passing.
+acceptance:
+  AC01:
+    covers: [R01]
+    given: A step candidate that changes files in the Pactwright repository.
+    when: The candidate revision is verified.
+    then: "`pnpm verify` completes successfully at the Pactwright repository root on the candidate revision."
+    verify: {automated: [repo.verify]}
