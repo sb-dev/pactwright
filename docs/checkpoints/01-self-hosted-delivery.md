@@ -1,6 +1,6 @@
 # Pactwright — Checkpoint 1 — Self-Hosted Delivery
 
-**Version:** 22  
+**Version:** 23  
 **Entry condition:** No installable Pactwright runtime exists.  
 **Release:** `0.0.2` (corrective; `0.0.1` was published against version 14 of this runbook and remains the released baseline)  
 **Exit capability:** Pactwright is installable, upgradeable, can govern one complete Contract-driven Delivery in its own repository and in Kakeibo, can compare an Agent Pack candidate against a released baseline, and requires no manual Project Graph coherence work.
@@ -56,9 +56,9 @@ This runbook defines implementation order, not new Pactwright semantics.
 
 ## 3. Execution contract
 
-A converted step is defined by its YAML contract in [`01-self-hosted-delivery/`](./01-self-hosted-delivery/), in the format owned by [Spec 00](../specs/00-checkpoint-step-contract-and-delivery-tasks.md). The step section here links the contract and summarises its deliverables; the contract holds the requirements and acceptance criteria. Every contract inherits the settings and shared requirements in [`checkpoint.yml`](./01-self-hosted-delivery/checkpoint.yml), and [`crosswalk.yml`](./01-self-hosted-delivery/crosswalk.yml) records where each obligation of the replaced step prose went: version 17 for Stage 1, version 20 for Stage 2 and version 21 for Stage 3.
+A converted step is defined by its YAML contract in [`01-self-hosted-delivery/`](./01-self-hosted-delivery/), in the format owned by [Spec 00](../specs/00-checkpoint-step-contract-and-delivery-tasks.md). The step section here links the contract and summarises its deliverables; the contract holds the requirements and acceptance criteria. Every contract inherits the settings and shared requirements in [`checkpoint.yml`](./01-self-hosted-delivery/checkpoint.yml), and [`crosswalk.yml`](./01-self-hosted-delivery/crosswalk.yml) records where each obligation of the replaced step prose went: version 17 for Stage 1, version 20 for Stage 2, version 21 for Stage 3 and version 22 for Stage 4.
 
-Stages 1–3 are converted. Stage 1 contracts are amended against Core v3 through the Q01–Q20 resolution pass. Stage 2 contracts are drafted against Core v3; their open questions Q21–Q33 await T2 review. Stage 3 contracts are drafted against Core v3 and Distribution v2; their open questions Q34–Q40 await T2 review. Later steps retain the version 17 form, with the integration obligations below amended in version 20, until they are converted:
+Stages 1–4 are converted. Stage 1 contracts are amended against Core v3 through the Q01–Q20 resolution pass. Stage 2 contracts are drafted against Core v3; their open questions Q21–Q33 await T2 review. Stage 3 contracts are drafted against Core v3 and Distribution v2; their open questions Q34–Q40 await T2 review. Stage 4 contracts are drafted against Core v3 and Distribution v2; their open questions Q41–Q51 await T2 review. Later steps retain the version 17 form, with the integration obligations below amended in version 20, until they are converted:
 
 ```text
 Step
@@ -283,200 +283,69 @@ Step 13 proves comparison with exact fixture and pinned package inputs. Step 28 
 
 ### Step 14 — Implement `pactwright init` with explicit Agent Pack selection
 
-**References:** Spec 02 initialisation/configuration and Agent Pack selection.
+**Contract:** [`CP01-S14`](./01-self-hosted-delivery/CP01-S14.yml)
 
-**Run**
+**Deliverables**
 
-```text
-Implement init so a clean repository receives only Pactwright-owned core configuration/Project Graph structure.
-Checkpoint 1 keeps GitHub disabled and creates no Pactwright-managed GitHub workflow.
-Do not silently select or switch Agent Pack identity.
+- `init-command` — A pactwright init that gives a repository only Pactwright-owned core configuration and Project Graph structure, reported as an incomplete scaffold until an Agent Pack is explicitly selected.
+- `init-pack-selection` — A documented init selection input through which initialisation obtains an explicit compatible Agent Pack choice, resolved and validated through the agent-pack use selection path rather than a second resolver.
 
-A plain init may create the initial scaffold before `agent-pack use` explicitly selects a pack; do not claim that scaffold is a complete activated execution environment.
-For compositional init that activates an Extension or later GitHub integration, obtain an explicit compatible Agent Pack choice through the documented normal init selection interaction/input before activation. Reuse agent-pack selection/resolution, not a second resolver.
-
-Tests must supply the same explicit pack source and target version in both the one-shot and explicit setup paths. With no supplied choice, do not activate dependent features or silently choose standard.
-Exact input ergonomics are implementation details; do not invent an additional canonical CLI flag in this runbook.
-```
-
-**Expected result**
-
-A clean repository can initialise safely, and one-shot activation preserves explicit pack authority.
-
-**Verify before continuing**
-
-Run init in a temporary repository with unrelated files. Test scaffold then explicit `agent-pack use`, explicit selection during one-shot init, missing selection, incompatible selection and preservation of an existing pack choice. Require no Extension activation on missing/incompatible selection and no unrelated writes.
-
-Round-trip the created Core §54 paths and actual configuration through Step 1. A plain scaffold without a selected/resolved environment remains explicitly incomplete; it is not a healthy executable environment. An empty graph uses `specs/nodes/.gitkeep` (empty) and `edges: []`. Init creates the placeholder but never stages or commits it; the owner commits the scaffold, including `.gitkeep` and every required input, before requesting a reconstructible repository revision. An untracked empty directory is not reconstructible merely because git status is clean.
+Step 16 reuses the selection input for one-shot init with a fixture Extension, and Step 23 repeats it with packed artefacts.
 
 ### Step 15 — Implement config/lock agreement and `environment_lock_hash`
 
-**References:** Spec 02 locking; Implementation Guide replay provenance.
+**Contract:** [`CP01-S15`](./01-self-hosted-delivery/CP01-S15.yml)
 
-**Run**
+**Deliverables**
 
-```text
-Resolve and lock the exact Pactwright execution environment: runtime, selected Agent Pack, resolved agents/direct skills and fixture Extensions once Step 16 is available.
-Retain integration seams for the external Production Skills resolver delivered in Checkpoint 5; do not implement or pretend to resolve those imports here.
+- `environment-lock` — Resolution of the exact Pactwright execution environment, covering the runtime, the selected Agent Pack and its resolved agents and direct skills, into the version 1 .pactwright/lock.yml.
+- `lock-agreement` — A check that the package-manager lock and .pactwright/lock.yml agree on every runtime and package-backed component version they both identify, applied before a new environment is accepted.
+- `environment-lock-hash` — A deterministic environment_lock_hash derived from the exact resolved lock state, forming the shared replay base with the repository and Project Graph revisions.
 
-Configuration records desired constraints. The package-manager manifest/lock records installed packages; `.pactwright/lock.yml` records the resolved Pactwright environment.
-The two locks must agree on every runtime and package-backed component version they both identify.
-Record exact package/source, version, content identity and resolved dependencies as applicable.
-Reject lock mismatch or incompatible resolution before accepting a new environment or replacing generated integration.
-
-Derive deterministic `environment_lock_hash` from the exact resolved `.pactwright/lock.yml` state.
-The shared replay base is:
-repository_revision + project_graph_revision + environment_lock_hash
-```
-
-**Expected result**
-
-Identical exact environments produce identical locks/hashes and inconsistent installed/resolved state is not accepted.
-
-**Verify before continuing**
-
-Resolve twice and compare byte-for-byte, then change one resolved identity and require a hash change. Test runtime/Agent Pack lock disagreement and tampered component identity; repeat for package-backed fixture Extensions in Step 16. Failed resolution preserves the previous valid environment.
-
-Load the actual lock and configuration formats through Step 1. Exercise malformed, absent and unsupported-version inputs and require explicit incomplete diagnostics, no successful environment identity and no replacement of valid generated state. This proves the real lock integration rather than only the Step 1 parse fixture.
+Step 16 adds package-backed fixture Extensions to the lock and repeats the agreement proof. External Production Skills resolution remains a Checkpoint 5 capability.
 
 ### Step 16 — Implement transaction-safe Extension mechanics and one-shot init composition
 
-**References:** Spec 02 sections 10–15 and one-shot initialisation.
+**Contract:** [`CP01-S16`](./01-self-hosted-delivery/CP01-S16.yml)
 
-**Run**
+**Deliverables**
 
-```text
-Using fixture Extensions only, implement Spec 02 §11 manifest loading (including graph.format_version, registration export and declared storage/decoder/schema/projections), graph contribution registration, command namespaces, capability contribution and GitHub profile metadata. Do not invent a second installed-only declaration format.
+- `extension-loading` — Loading of installed fixture Extension packages through the Distribution §11 manifest, covering graph.format_version, the registration export, declared storage, decoders, schemas and projections, graph contribution registration, command namespaces, capability contribution and GitHub profile metadata.
+- `extension-commands` — pactwright extension add, remove and upgrade, which install, remove and upgrade fixture Extensions and their dependencies transactionally, with exact locking, versioned migrations and preserved user-authored data.
+- `one-shot-init` — A pactwright init --with <extension> that composes normal init, explicit Agent Pack selection, normal Extension installation and sync, producing the same state as the equivalent separate operations.
 
-Implement:
-pactwright extension add <id-or-package>
-pactwright extension remove <id>
-pactwright extension upgrade <id>
-
-Installation must:
-- resolve a compatible package and the complete Extension dependency graph;
-- validate runtime/schema compatibility and the selected pack's complete required capability set before activation or canonical mutation;
-- install required dependencies first through the same normal installation path;
-- delegate package installation to the project package manager;
-- register the Extension in project configuration;
-- record exact package/version/hash and resolved dependencies in the Pactwright lock, consistent with the package-manager lock;
-- create owned repository structure only for the valid environment;
-- run normal sync;
-- report any later GitHub provisioning needs without mutating remote state.
-
-On incompatibility or installation/sync failure, preserve or restore the previous valid package/configuration/lock/generated environment and leave no partial canonical graph mutation. Never silently switch Agent Packs.
-
-Upgrade validates every enabled dependent Extension and the complete capability set. Canonical schema changes use explicitly defined versioned migrations, not silent reinterpretation. Protect canonical state from partial migration and preserve recovery to the prior valid environment.
-
-Removal/disable preserves user-authored canonical data. Remove only unambiguously owned generated contributions no enabled component still requires. Reject removal of a required dependency unless the dependent is disabled/removed in the same supported operation. Preserve ambiguous ownership and report it.
-
-Do not implement first-party Extension semantics yet.
-
-One-shot `pactwright init --with <fixture-extension>` composes normal init + explicit Agent Pack selection + normal Extension installation + sync, using Step 14's documented selection input.
-Later first-party Extension ids and `--github` reuse this composition mechanism; they do not create a new setup implementation.
-```
-
-**Expected result**
-
-Later Extensions can compose through one transactional distribution path, and one-shot initialisation uses the same explicit selection and managed operations as separate setup.
-
-**Verify before continuing**
-
-Exercise dependency-first add, exact lock agreement, compatible upgrade/migration, incompatible dependent upgrade, missing capability, blocked removal, safe disable and preserved canonical data. Inject package, migration and sync failures; require no partial graph records and restoration/recoverability of the previous valid environment without a pack switch.
-
-Repeat Steps 5 and 9 through the actual fixture Extension loader: its canonical node/edge mutation changes `project_graph_revision`; its generated files and execution output do not; attempted redefinition of core semantics fails.
-
-Repeat S02/AC12–AC13 contribution controls through installed declarations: core/Extension and cross-owner endpoint collisions, duplicate node or relation ownership, reserved `core`, unsafe owner values and non-node canonical records. Repeat S03/AC06–AC13, including Extension cross-type supersession, all reverse/wrong-owner placements and a valid cross-graph tuple in its relation owner's `specs/extensions/<id>/edges.yml`. Missing decoder/schema/projection exports, escaping/overlapping storage declarations, unknown graph format versions and tampered graph implementation bytes must fail before activation, preserving the prior registry, lock and generated state. A changed implementation hash must affect environment identity; equal graph meaning still yields the same pg1. Repeat S04 exact-lineage and unaffected-Intent controls through the installed fixture loader.
-
-Also repeat the Step 2 contribution-registration proof with an Extension-owned non-node canonical record lacking core envelope fields, plus a separately registered node projection. Repeat CP01-S03/AC06–AC13 through the installed loader, including core-name/constraint protection, valid two-way additional relations, wrong endpoint types, linear supersession, unknown active relations and ownership failures. Exercise Step 4 current lineage, competing records and withdrawn Contract behaviour with that composition; the Extension must not change core authority or lineage meaning.
-
-Disable/remove and then re-enable the fixture: preserve inactive user-authored bytes, exclude inactive canonical contributions from the active graph revision, reject active references to inactive endpoints and validate all preserved state before reactivation. Do not infer unknown core-store data to be an inactive Extension. Any legacy Extension layout with ambiguous ownership requires an explicit migration disposition, never automatic deletion. These are installed-package integration results, not repeats of a mocked registry call.
-
-Compare clean one-shot and explicit init + `agent-pack use` + `extension add` + sync paths using the same explicitly chosen compatible fixture pack/version. Require equivalent configuration, package locks, resolved environment identity, canonical structure and generated output, not merely successful exit codes.
+Step 16 repeats the Step 2 to 5 and Step 9 proofs through the installed fixture Extension loader. First-party Extensions and `--github` reuse this composition in later checkpoints. Step 23 repeats one-shot init with packed artefacts.
 
 ### Step 17 — Implement deterministic `pactwright sync`
 
-**References:** Spec 02 synchronisation.
+**Contract:** [`CP01-S17`](./01-self-hosted-delivery/CP01-S17.yml)
 
-**Run**
+**Deliverables**
 
-```text
-Implement sync over config + lock + enabled fixture Extensions + selected Agent Pack and its direct skills.
-Validate the complete supported composition and lock agreement before rendering only Pactwright-managed local integration.
-Checkpoint 1 renders no GitHub product workflow.
-External Production Skills imports remain a Checkpoint 5 capability; report them as unsupported rather than silently dropping or resolving them.
-Repeated sync with identical locked inputs must be byte-identical.
-```
+- `sync-command` — A deterministic pactwright sync that validates the configured and locked composition, including enabled fixture Extensions and the selected Agent Pack with its direct skills, and renders only Pactwright-managed local integration.
 
-**Expected result**
-
-Local generated integration converges without claiming later Production Skills support.
-
-**Verify before continuing**
-
-Run sync twice in a fixture and require a clean second run. An unsupported external import or lock mismatch must fail without replacing the previous generated environment; unrelated local files remain unchanged.
+Step 17 repeats the Step 11 selection sync and Step 12 rendering through real sync. Step 23 requires a clean second sync in a packed consumer.
 
 ### Step 18 — Implement `pactwright doctor`
 
-**References:** Spec 02 doctor.
+**Contract:** [`CP01-S18`](./01-self-hosted-delivery/CP01-S18.yml)
 
-**Run**
+**Deliverables**
 
-```text
-Implement read-only diagnostics for runtime/package-manager state, config/lock consistency, capability/dependency compatibility, migrations, generated local drift and validation failures.
-Report available runtime upgrades where determinable.
-Identify configured external Production Skills imports as unsupported by this release, rather than claiming the full dependency diagnostics implemented in Checkpoint 5.
-Report healthy / warning / action required with deterministic remediation commands where known.
-Do not auto-fix or create a second GitHub reconciler.
-```
+- `doctor-command` — A read-only pactwright doctor that diagnoses runtime, package-manager, configuration, lock, capability, migration, generated-drift and validation problems as healthy, warning or action required, with deterministic remediation commands where known.
 
-**Expected result**
-
-Environment problems can be diagnosed without mutation and the reported capability boundary matches the installed release.
-
-**Verify before continuing**
-
-Run healthy, lock-drift, missing-capability, pending-migration and unsupported-import fixtures. Prove doctor performs no writes and gives concrete remediation only when supported and deterministic.
-
-Include partial-input diagnostics, preserved inactive Extension data, recognised migration-required formats and unavailable repository revision. The last is a warning for otherwise valid local graph inspection, but action required for a requested pinned execution/replay. An incomplete active load or required migration is action required for activation, never healthy. Prove each severity separately, with no repair, Git mutation or replay record from a preflight refusal.
+Step 19 relies on doctor to report released `0.0.1` projects as migration required before upgrade.
 
 ### Step 19 — Implement Pactwright runtime upgrade and rollback-safe failure
 
-**References:** Spec 02 upgrade model; Implementation Guide package/release rules.
+**Contract:** [`CP01-S19`](./01-self-hosted-delivery/CP01-S19.yml)
 
-**Run**
+**Deliverables**
 
-```text
-Implement:
-pactwright upgrade
-pactwright upgrade --to <version>
+- `runtime-upgrade` — pactwright upgrade and pactwright upgrade --to <version>, which replace the runtime through the detected project package manager, re-enter through the new runtime and leave the environment valid at the target or recoverable to the previous one.
+- `released-format-migration` — The named released-0.0.1-to-owned-stores-v1 migration, which moves a complete released 0.0.1 project to owner-separated stores and the version 1 lock without partial moves.
 
-The runtime upgrade flow must:
-- detect the project package manager from explicit declaration or unambiguous lock state;
-- resolve the target Pactwright release;
-- delegate package replacement to that package manager;
-- re-enter through the newly installed Pactwright runtime;
-- validate the complete resolved environment;
-- run explicit versioned migrations where required;
-- update `.pactwright/lock.yml`;
-- run `pactwright sync` and `pactwright validate` using the new runtime.
-
-`pactwright upgrade` upgrades the runtime only. It must not silently change Agent Pack or Extension identity or major-upgrade them.
-`--to` supports explicit forward upgrade or rollback target selection.
-If the target environment cannot complete safely, canonical Project Graph state must not be left partially migrated and enough prior package/config/lock state must remain to recover or explicitly target the previous runtime.
-```
-
-**Expected result**
-
-Pactwright can safely replace its own runtime without becoming a second package manager or corrupting canonical state.
-
-**Verify before continuing**
-
-Use packed fixture runtime versions to prove latest-compatible upgrade, explicit `--to` upgrade/rollback, package-manager detection, new-runtime re-entry, unchanged Agent Pack/Extension identities, migration execution and failed-target recovery with the previous valid Project Graph/config/lock intact.
-
-Use a released `0.0.1` project with core records, an enabled fixture Extension's records in `specs/nodes/`, its tuples in `specs/graph/edges.yml`, configuration v1, lifecycle v1/stages and the unversioned lock. Exercise Spec 02 §15's named `released-0.0.1-to-owned-stores-v1` migration through new-runtime re-entry. Before explicit upgrade, ordinary load/validate/doctor report the recognised native/migration-required dispositions without writes. Migration preserves core IDs/content/actor attribution, moves only unambiguously owned Extension data to its declared owner root, preserves tuples, retains chosen component constraints and actor-kind settings, and writes an exact version-1 lock. A complete legacy source is permitted as migration input; arbitrary partial/current parse failures are not.
-
-Require separate results for disabled/removed/ambiguous ownership, target collision, missing declared owner migration, malformed source, stale policy/base and forced write/validation/sync failure: each leaves no partial graph move and preserves recovery to the complete source environment. Include intentional empty/null-edge migration to `edges: []`, and non-Markdown core-store entries such as `.DS_Store` preserved with a prerequisite for explicit owner remediation, never silently discarded. Include a legacy scalar requiring value-preserving representation under the pinned YAML profile. Prove explicit rollback restores the recognised original layout/lock or fails recoverably before exposing new-format stores to the older runtime. Preserve historical `sha256:` provenance unchanged; do not relabel it `pg1:`. No old acceptance result is carried forward across a changed definition or revision protocol.
+Step 19 proves upgrade with packed fixture runtimes. Step 28 publishes the corrective `0.0.2` release.
 
 ## Stage 5 — Establish repository CI and release safety
 
@@ -870,4 +739,4 @@ Checkpoint 1 closes only when:
 
 ---
 
-**Pactwright — Checkpoint 1 — Self-Hosted Delivery v22**
+**Pactwright — Checkpoint 1 — Self-Hosted Delivery v23**

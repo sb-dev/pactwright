@@ -1,0 +1,253 @@
+# CP01 Step 16 — Implement transaction-safe Extension mechanics and one-shot init composition
+id: CP01-S16
+requires: [CP01-S02, CP01-S03, CP01-S04, CP01-S05, CP01-S09, CP01-S11, CP01-S14, CP01-S15]
+outputs:
+  extension-loading: Loading of installed fixture Extension packages through the Distribution §11 manifest, covering
+    graph.format_version, the registration export, declared storage, decoders, schemas and projections, graph contribution
+    registration, command namespaces, capability contribution and GitHub profile metadata.
+  extension-commands: pactwright extension add, remove and upgrade, which install, remove and upgrade fixture Extensions
+    and their dependencies transactionally, with exact locking, versioned migrations and preserved user-authored
+    data.
+  one-shot-init: A pactwright init --with <extension> that composes normal init, explicit Agent Pack selection,
+    normal Extension installation and sync, producing the same state as the equivalent separate operations.
+requirements:
+  R01:
+    source: [DISTRIBUTION#10, DISTRIBUTION#11]
+    statement: The runtime shall load an installed Extension from its package-root extension.yml, including graph.node_types,
+      graph.edge_types, graph.format_version, the graph.registration export and graph.storage declarations, and
+      register its graph contributions, command namespace, agent capabilities and GitHub profile metadata. Installed
+      packages and fixtures use this one declaration format and validation path; there is no installed-only format,
+      hash or validation shortcut.
+  R02:
+    source: [DISTRIBUTION#11, DISTRIBUTION#12, CORE#54]
+    statement: 'Registration shall fail before activation, leaving the prior registry, configuration, lock and generated
+      state byte-identical, when: a declared decoder, schema or projection export is missing; a storage path is
+      absolute, a glob, contains `..`, escapes the owner root or follows a symlink; storage paths overlap or claim
+      edges.yml or another owner''s path; the graph.format_version is unknown or incompatible; the installed implementation
+      bytes do not match the locked implementation_hash; or type or relation ownership conflicts.'
+  R03:
+    source: [DISTRIBUTION#10, DISTRIBUTION#11]
+    statement: 'Extension add shall: resolve a compatible package and the complete Extension dependency graph; install
+      required dependencies first through the same path; validate runtime and schema compatibility and the selected
+      pack''s complete required capability set, core plus enabled Extension capabilities, before activation or canonical
+      mutation; register the Extension in configuration; record it in the lock; create Extension-owned structure
+      only for the valid environment; run sync; and report GitHub provisioning needs without contacting or mutating
+      GitHub.'
+  R04:
+    source: [DISTRIBUTION#12, DISTRIBUTION#13]
+    statement: The lock entry of each enabled Extension shall record its package or source, exact version, package
+      content hash, resolved dependencies, graph.format_version, graph.declaration_hash and graph.implementation_hash,
+      in agreement with the package-manager lock. These identities participate in environment_lock_hash, so a changed
+      implementation hash changes environment identity while equal graph meaning yields the same pg1 revision.
+  R05:
+    source: [DISTRIBUTION#11, DISTRIBUTION#15, GUIDE#filesystem-mutation]
+    statement: On incompatibility, a missing capability, or a package, installation, migration or sync failure,
+      add, upgrade and remove shall preserve or restore the previous valid package, configuration, lock and generated
+      environment, leave no partial canonical graph mutation and never switch Agent Packs.
+  R06:
+    source: [DISTRIBUTION#15]
+    statement: Extension upgrade shall resolve a compatible package, validate the complete dependency graph including
+      every enabled dependent, schema compatibility and the complete capability set, and run explicitly defined
+      versioned migrations where canonical Extension state requires them, never reinterpreting stored bytes silently.
+      It updates package, configuration and lock only after the target environment is valid, then runs sync and
+      reports GitHub reconciliation needs.
+  R07:
+    source: [DISTRIBUTION#10, CORE#54]
+    statement: Remove and disable shall preserve user-authored canonical data byte-identically and remove only unambiguously
+      owned generated contributions that no enabled component still requires. Removing or disabling a required
+      dependency is rejected unless its dependents are disabled or removed in the same operation. Ambiguous ownership
+      is preserved and reported.
+  R08:
+    source: [CORE#54]
+    statement: Inactive Extension data shall be preserved byte-identically, inventoried without decoding and excluded
+      from the active graph and its revision. Active references to inactive endpoints are rejected, and re-enabling
+      requires successful registration and full validation of the preserved state before activation. Unknown core-store
+      data is never inferred to be inactive Extension data, and legacy Extension data with ambiguous ownership requires
+      an explicit migration disposition, never automatic deletion.
+  R09:
+    source: [CORE#54, CORE#56, CORE#57]
+    statement: With an installed fixture Extension, the contribution, edge, lineage, revision and validation guarantees
+      of Steps 2 to 5 and 9 shall hold through the installed loader. Its canonical records and edges change project_graph_revision,
+      its generated files and execution output do not, attempted redefinition of core semantics fails, and it
+      does not change core authority or lineage meaning.
+  R10:
+    source: [DISTRIBUTION#3, DISTRIBUTION#5]
+    statement: Init --with <extension> shall compose normal init, explicit pack selection through the Step 14 selection
+      input, normal Extension installation and sync, with no separate setup implementation. Without a compatible
+      explicit choice it activates no Extension and selects no pack. Later first-party Extension IDs and --github
+      reuse this composition.
+  R11:
+    source: [DISTRIBUTION#10, CHECKPOINT#explicitly-out-of-scope]
+    statement: This step shall use fixture Extensions only and implement no first-party Extension semantics.
+  R12:
+    source: [DISTRIBUTION#15, GUIDE#command-ownership]
+    statement: Package installation, replacement and removal shall be delegated to the project package manager;
+      Pactwright implements no parallel installer.
+acceptance:
+  AC01:
+    covers: [R01, R03]
+    given: A packed fixture Extension whose extension.yml declares a node type, a relation, graph.format_version,
+      a registration export, a storage declaration, a command namespace, an agent capability supplied by the selected
+      pack and a GitHub profile, in a project with a compatible pack selected.
+    when: Extension add installs it.
+    then: Its types, relation and storage are registered, its command namespace resolves, its capability is in
+      the required set and the GitHub profile appears in the report. Configuration and lock name it, its owned root
+      exists under specs/extensions/<id>/, sync has run and no GitHub request is attempted.
+    verify:
+      automated: [extension.manifest-loading]
+  AC02:
+    covers: [R02]
+    cases: [missing-decoder-export, missing-schema-export, missing-projection-export, absolute-storage-path, glob-storage-path,
+      escaping-storage-path, symlinked-storage-path, overlapping-storage-paths, storage-claims-edges-file, storage-claims-other-owner,
+      unknown-format-version, tampered-implementation-bytes, conflicting-type-ownership, conflicting-relation-ownership]
+    given: A valid environment with generated files, and a packed fixture Extension whose only defect is the listed
+      condition; tampered-implementation-bytes alters an installed registration file after locking.
+    when: The Extension is added, or the environment is loaded for tampered-implementation-bytes.
+    then: Registration fails before activation with a problem naming the condition. Registry, configuration, lock
+      and generated files are byte-identical.
+    verify:
+      automated: [extension.registration-failure]
+  AC03:
+    covers: [R03, R12]
+    given: Packed fixture Extensions A and B, where A depends on B, neither installed, and a compatible pack selected.
+    when: Extension add runs for A.
+    then: B is resolved, installed through the package manager, registered and locked before A, through the same
+      path. Both lock entries record their dependencies, both owned roots exist and sync has run once the environment
+      is valid.
+    verify:
+      automated: [extension.add-dependency-first]
+  AC04:
+    covers: [R04]
+    cases: [lock-fields, package-manager-disagreement, tampered-package-content]
+    given: A project after AC01, or a candidate environment whose package-manager lock or installed content has
+      the listed defect.
+    when: The lock is inspected, or the environment is resolved and accepted.
+    then: lock-fields records every R04 field and matches the package-manager lock. The defect cases are refused
+      before activation, naming the component, with configuration, lock and generated files byte-identical.
+    verify:
+      automated: [extension.lock-agreement]
+  AC05:
+    covers: [R04]
+    given: Two installs of one fixture Extension version that differ only in registration module bytes whose projections
+      of the same stored records are equal.
+    when: Each environment is resolved and the graph revision derived.
+    then: The implementation hashes and environment_lock_hash values differ, and the pg1 revisions are equal.
+    verify:
+      automated: [extension.implementation-identity]
+  AC06:
+    covers: [R03, R05]
+    cases: [incompatible-runtime, missing-capability, unresolvable-dependency, package-install-failure, sync-failure]
+    given: A valid environment with a pack selected and generated files, and a fixture Extension add with the listed
+      defect or injected failure.
+    when: Extension add runs.
+    then: It fails with a problem naming the defect. Package, configuration, lock, generated and canonical files
+      are byte-identical, no Extension record or owned root exists, and the same pack remains selected.
+    verify:
+      automated: [extension.add-failure]
+  AC07:
+    covers: [R06]
+    cases: [same-format-version, versioned-migration]
+    given: An enabled fixture Extension at 1.0.0 with stored records, and a compatible newer version with the same
+      graph.format_version, or with a new graph.format_version and a declared migration, as listed.
+    when: Extension upgrade runs.
+    then: The lock records the new version and graph identities. versioned-migration stores the records in the
+      new format through the declared migration. Validate passes and sync has run.
+    verify:
+      automated: [extension.upgrade]
+  AC08:
+    covers: [R05, R06]
+    cases: [incompatible-dependent, missing-capability, format-change-without-migration, migration-failure, package-failure,
+      sync-failure]
+    given: An enabled fixture Extension with stored records and an enabled dependent, and a target version or injected
+      failure with the listed defect.
+    when: Extension upgrade runs.
+    then: It fails with a problem naming the defect. Canonical files, package, configuration, lock and generated
+      files are byte-identical to before, or restored to it, and the same pack remains selected.
+    verify:
+      automated: [extension.upgrade-failure]
+  AC09:
+    covers: [R07]
+    cases: [remove-required-dependency, remove-dependency-with-dependent, disable-preserves-data, remove-preserves-data,
+      owned-generated-removed, shared-generated-kept, ambiguous-ownership]
+    given: Enabled fixture Extensions A depending on B, each with user-authored records and generated files, and
+      the listed condition; shared-generated-kept has a generated file required by another enabled component.
+    when: The listed disable or remove operation runs.
+    then: remove-required-dependency is refused with everything byte-identical. Every other case preserves user-authored
+      records byte-identically, removes only the unambiguously owned generated files that no enabled component still
+      requires, and reports preserved ambiguous files.
+    verify:
+      automated: [extension.removal]
+  AC10:
+    covers: [R08]
+    cases: [disable-then-reenable, remove-then-reenable, active-reference-to-inactive-endpoint, invalid-state-on-reenable,
+      unknown-core-store-data, legacy-ambiguous-layout]
+    given: A fixture Extension with records and edges in the listed condition; legacy-ambiguous-layout holds Extension-typed
+      data in the core stores with no unambiguous owner.
+    when: The project is loaded and the Extension disabled, removed or re-enabled as listed.
+    then: Inactive bytes are preserved and excluded from the active graph revision. Active edges to inactive records
+      and invalid preserved state on re-enable are rejected before activation. Unknown core-store data fails closed
+      and is not treated as Extension data, and legacy-ambiguous-layout reports a migration prerequisite with nothing
+      deleted.
+    verify:
+      automated: [extension.inactive-state]
+  AC11:
+    covers: [R01, R09]
+    cases: [contribution-registration, non-node-record, edge-registration]
+    given: Each case of CP01-S02/AC12 for contribution-registration and of CP01-S03/AC06 to AC13 for edge-registration,
+      with its declarations and records supplied by an installed packed fixture Extension rather than a direct registry
+      call. non-node-record has an Extension-owned non-node record without core envelope fields and a separately
+      registered node projection.
+    when: The project is loaded and validated.
+    then: Each case gives the result its source criterion requires, including core-name and constraint protection,
+      valid two-way and cross-graph relations in the relation owner's edges.yml, supersession and ownership failures,
+      and unknown active relations.
+    verify:
+      automated: [extension.installed-contribution-controls]
+  AC12:
+    covers: [R09]
+    cases: [extension-record-added, extension-edge-added, non-node-record-added, generated-file-changed, execution-output-changed,
+      core-redefinition]
+    given: A project with an installed fixture Extension enabled, and a copy that differs only in the listed change.
+    when: Project Graph revisions are derived and validate runs.
+    then: The first three cases change project_graph_revision, generated-file-changed and execution-output-changed
+      do not, and core-redefinition fails validation rule 16.
+    verify:
+      automated: [extension.installed-revision-and-validation]
+  AC13:
+    covers: [R09]
+    cases: [exact-lineage, unaffected-intent, competing-records, withdrawn-contract]
+    given: A lineage of the listed CP01-S04 case with an installed fixture Extension enabled and its records linked
+      to core records, and the same lineage without the Extension.
+    when: Lineage is derived for both.
+    then: The derived lineage, authorised Contract and broad state are identical with and without the Extension.
+    verify:
+      automated: [extension.installed-lineage]
+  AC14:
+    covers: [R10]
+    given: Two clean repositories, one compatible complete fixture pack at an explicit source and version, and a
+      packed fixture Extension.
+    when: One repository runs init --with <fixture-extension> with the pack supplied through the Step 14 selection
+      input. The other runs init, agent-pack use, extension add and sync with the same pack and Extension.
+    then: Configuration, package-manager lock, Pactwright lock, environment_lock_hash, canonical structure and generated
+      output are equivalent.
+    verify:
+      automated: [extension.one-shot-equivalence]
+  AC15:
+    covers: [R10]
+    cases: [missing-selection, incompatible-selection]
+    given: A clean repository with unrelated files and @pactwright/standard installed; incompatible-selection supplies
+      a fixture pack lacking the Extension's required capability.
+    when: Init --with <fixture-extension> runs with the listed selection input.
+    then: No Extension is registered, locked or given an owned root, and no pack is selected, including @pactwright/standard.
+      The refusal names the missing choice or capability, and unrelated files are byte-identical.
+    verify:
+      automated: [extension.one-shot-selection]
+  AC16:
+    covers: [R01, R10, R11, R12]
+    given: The candidate Extension, init and package-handling code.
+    when: Independent review traces manifest loading, one-shot init and package operations.
+    then: Installed and fixture Extensions share one declaration and validation path. One-shot init calls the same
+      init, selection, installation and sync operations as the explicit path. Packages change only through the project
+      package manager, and no first-party Extension semantics exist.
+    verify:
+      review: [extension.shared-path]
