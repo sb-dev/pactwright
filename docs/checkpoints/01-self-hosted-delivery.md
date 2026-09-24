@@ -1,6 +1,6 @@
 # Pactwright — Checkpoint 1 — Self-Hosted Delivery
 
-**Version:** 21  
+**Version:** 22  
 **Entry condition:** No installable Pactwright runtime exists.  
 **Release:** `0.0.2` (corrective; `0.0.1` was published against version 14 of this runbook and remains the released baseline)  
 **Exit capability:** Pactwright is installable, upgradeable, can govern one complete Contract-driven Delivery in its own repository and in Kakeibo, can compare an Agent Pack candidate against a released baseline, and requires no manual Project Graph coherence work.
@@ -56,9 +56,9 @@ This runbook defines implementation order, not new Pactwright semantics.
 
 ## 3. Execution contract
 
-A converted step is defined by its YAML contract in [`01-self-hosted-delivery/`](./01-self-hosted-delivery/), in the format owned by [Spec 00](../specs/00-checkpoint-step-contract-and-delivery-tasks.md). The step section here links the contract and summarises its deliverables; the contract holds the requirements and acceptance criteria. Every contract inherits the settings and shared requirements in [`checkpoint.yml`](./01-self-hosted-delivery/checkpoint.yml), and [`crosswalk.yml`](./01-self-hosted-delivery/crosswalk.yml) records where each obligation of the replaced step prose went: version 17 for Stage 1 and version 20 for Stage 2.
+A converted step is defined by its YAML contract in [`01-self-hosted-delivery/`](./01-self-hosted-delivery/), in the format owned by [Spec 00](../specs/00-checkpoint-step-contract-and-delivery-tasks.md). The step section here links the contract and summarises its deliverables; the contract holds the requirements and acceptance criteria. Every contract inherits the settings and shared requirements in [`checkpoint.yml`](./01-self-hosted-delivery/checkpoint.yml), and [`crosswalk.yml`](./01-self-hosted-delivery/crosswalk.yml) records where each obligation of the replaced step prose went: version 17 for Stage 1, version 20 for Stage 2 and version 21 for Stage 3.
 
-Stages 1 and 2 are converted. Stage 1 contracts are amended against Core v3 through the Q01–Q20 resolution pass. Stage 2 contracts are drafted against Core v3; their open questions Q21–Q33 await T2 review. Later steps retain the version 17 form, with the integration obligations below amended in version 20, until they are converted:
+Stages 1–3 are converted. Stage 1 contracts are amended against Core v3 through the Q01–Q20 resolution pass. Stage 2 contracts are drafted against Core v3; their open questions Q21–Q33 await T2 review. Stage 3 contracts are drafted against Core v3 and Distribution v2; their open questions Q34–Q40 await T2 review. Later steps retain the version 17 form, with the integration obligations below amended in version 20, until they are converted:
 
 ```text
 Step
@@ -235,126 +235,49 @@ Rule 16 uses a fixture graph contribution here; Step 16 reruns it through instal
 
 ### Step 10 — Implement core capabilities and `@pactwright/standard`
 
-**References:** Spec 02 capabilities and Agent Packs.
+**Contract:** [`CP01-S10`](./01-self-hosted-delivery/CP01-S10.yml)
 
-**Run**
+**Deliverables**
 
-```text
-Implement:
-- delivery-specification
-- delivery-execution
-- delivery-review
+- `core-capabilities` — The core capability identities delivery-specification, delivery-execution and delivery-review, and the runtime capability check that a candidate Agent Pack implements each required capability.
+- `agent-pack-loading` — Runtime loading and validation of an Agent Pack's capability mappings, agents, prompts and direct skills, independent of the pack's identity.
+- `standard-agent-pack` — @pactwright/standard, a separate publishable Agent Pack package that implements the three core capabilities without owning graph or lifecycle semantics.
 
-Create `@pactwright/standard` as a separate publishable Agent Pack package.
-The pack maps capabilities to agents/prompts/skills but does not own graph or lifecycle semantics.
-Do not make Pactwright semantics depend on this specific pack identity.
-```
-
-**Expected result**
-
-Core AI responsibilities are replaceable and capability checked.
-
-**Verify before continuing**
-
-Test complete and incomplete fixture packs; incomplete selection leaves valid state intact.
+Step 11 repeats the incomplete-pack proof through `agent-pack use`. Step 22 packs `@pactwright/standard` for clean consumers and Step 28 publishes it. External Production Skills imports remain unsupported until Checkpoint 5.
 
 ### Step 11 — Implement Agent Pack selection and upgrade
 
-**References:** Spec 02 Agent Pack selection and upgrade.
+**Contract:** [`CP01-S11`](./01-self-hosted-delivery/CP01-S11.yml)
 
-**Run**
+**Deliverables**
 
-```text
-Implement:
-pactwright agent-pack use <source>
-pactwright agent-pack upgrade
+- `agent-pack-use` — A pactwright agent-pack use <source> that explicitly selects one compatible complete Agent Pack, updating configuration and lock only after successful resolution and validation.
+- `agent-pack-upgrade` — A pactwright agent-pack upgrade that upgrades the selected pack within its configured compatibility constraints without changing its identity.
 
-`agent-pack use` resolves a compatible complete pack, validates all required capabilities, updates configuration only after success, locks exact identity, runs sync and reports later GitHub reconciliation needs.
-Never silently switch packs.
-
-`agent-pack upgrade` upgrades the currently selected pack within its configured compatibility constraints without changing Agent Pack identity.
-It validates the complete required capability set before changing the current lock or generated environment.
-Failure leaves the previous valid configuration, lock and generated environment intact.
-```
-
-**Expected result**
-
-Projects explicitly select one complete Agent Pack and can upgrade it independently from the runtime.
-
-**Verify before continuing**
-
-Select standard, switch to a compatible fixture pack, reject an incompatible pack without state loss, upgrade a selected fixture pack to a compatible newer version, then reject an incompatible upgrade while preserving the previous valid environment. Prove an exact configured target remains selected even when a newer compatible package is available; desired constraints do not authorise silently changing pack identity.
-
-Read and round-trip the actual selected-pack configuration through the Step 1 loader. Missing or malformed configuration must not trigger silent pack selection, a second parser or replacement of the previous valid environment; repeat with the real resolved lock once Step 15 exists.
+Step 15 repeats the configuration proof with the real resolved lock, and Step 14 reuses this selection path for one-shot init.
 
 ### Step 12 — Implement the seven canonical Claude Code adapter commands
 
-**References:** Specs 01 sections 46–53 and 02 adapter boundary.
+**Contract:** [`CP01-S12`](./01-self-hosted-delivery/CP01-S12.yml)
 
-**Run**
+**Deliverables**
 
-```text
-Render deterministic Pactwright-managed Claude Code agents and these exact commands:
-/capture-intent
-/propose-contracts
-/approve-contract
-/write-brief
-/deliver-brief
-/review
-/prepare-evidence
+- `claude-code-adapter` — Deterministic rendering of Pactwright-managed Claude Code agents and the seven canonical commands from the resolved environment into Pactwright-owned files under .claude/.
+- `adapter-commands` — The seven commands /capture-intent, /propose-contracts, /approve-contract, /write-brief, /deliver-brief, /review and /prepare-evidence, each invoking runtime responsibilities and the selected pack's capabilities within runtime-enforced mutation boundaries.
 
-The commands invoke runtime responsibilities and the selected Agent Pack capabilities:
-- capture-intent creates an Intent through the runtime;
-- propose-contracts is graph-read-only and keeps alternatives transient;
-- approve-contract applies normal Decision authority and, for proceed, creates the selected Contract and required lineage;
-- write-brief inspects current state and creates the Brief under its canonical Contract;
-- deliver-brief executes the active Delivery step without directly mutating the Delivery Graph or independently selecting transitions;
-- review evaluates the latest delivered state without creating Evidence or inventing transitions;
-- prepare-evidence invokes all Step 7 preconditions before creating Evidence and its evidences relationship.
-
-Their decomposition does not define lifecycle topology.
-Do not duplicate graph-transition or authority semantics in prompts.
-```
-
-**Expected result**
-
-The adapter exposes the canonical command surface with explicit, runtime-enforced mutation boundaries.
-
-**Verify before continuing**
-
-Assert the exact seven command names, render twice from identical locked inputs and require byte-identical output. Exercise every command's permitted/forbidden mutations, including graph-read-only alternatives, no direct Delivery graph writes, no Evidence from review, and failed premature prepare-evidence. Then complete one valid command lineage.
-
-Repeat the Step 7 guard matrix through each mutating command (`/capture-intent`, `/approve-contract`, `/write-brief`, `/prepare-evidence`): stale graph or policy/config/lock base, record rewrite/removal/re-identification, core-edge replacement/removal, incomplete load and disallowed actor kind must not commit or partially write. Exercise the relevant valid control for each command through the same runtime API, rather than only asserting prompt text. An adapter running on behalf of an allowed human records that human attribution unchanged; a different well-formed identity of that allowed kind remains permitted. For `/approve-contract`, repeat reject/defer withdrawal, fresh re-authorisation over the last Contract in the withdrawn chain, existing-Contract re-selection refusal and missing-supersession refusal. No public API or adapter may bypass the checks already proved at Step 7.
+The command decomposition does not define lifecycle topology. Step 12 repeats the Step 7 guard, withdrawal and re-authorisation matrix through each mutating command; Step 24 completes a full Delivery through the generated adapter.
 
 ### Step 13 — Implement Pactwright evaluation and baseline comparison
 
-**References:** Spec 02 evaluation and baseline/regression reporting.
+**Contract:** [`CP01-S13`](./01-self-hosted-delivery/CP01-S13.yml)
 
-**Run**
+**Deliverables**
 
-```text
-Implement `pactwright eval` with core responsibility cases for Contract fidelity, scope discipline, Brief quality, Review quality/defect detection, Evidence accuracy and lifecycle compliance, plus required output structure and forbidden mutation.
+- `eval-command` — A pactwright eval that runs core responsibility evaluation against the resolved AI execution environment, keeping deterministic assertions separate from semantic judgement.
+- `core-eval-cases` — Core-owned evaluation cases for Contract fidelity, scope discipline, Brief quality, Review quality and defect detection, Evidence accuracy and lifecycle compliance, plus required output structure and forbidden mutation.
+- `baseline-comparison` — A pactwright eval --baseline --candidate comparison that resolves both sides exactly and reports regressions by capability, agent, case and changed environment component.
 
-Evidence accuracy cases compare claimed delivered work and verification with actual recorded results.
-Lifecycle compliance cases cover authority, Gate stopping, valid transitions and successful closing Review before Evidence.
-
-Implement the canonical comparison surface:
-pactwright eval --baseline <released-pack-or-baseline> --candidate <candidate-pack-or-environment>
-
-Keep deterministic assertions separate from semantic judgement.
-Report regressions by meaningful dimensions such as capability, agent, evaluation case and changed Agent Pack/prompt/direct-skill environment.
-Do not compute one opaque aggregate score.
-
-Before the first public release, prove comparison mechanics with exact fixture/pinned package inputs. After `0.0.1` is published, Step 28 must prove resolution against the real released baseline.
-```
-
-**Expected result**
-
-The AI execution environment is evaluable independently from a real Delivery and candidate changes can be compared against an exact baseline.
-
-**Verify before continuing**
-
-Run core eval, compare compatible baseline/candidate fixtures and introduce known regressions in Evidence accuracy and lifecycle compliance. Require each to appear at its affected capability/agent/case dimensions rather than being hidden in an aggregate result.
+Step 13 proves comparison with exact fixture and pinned package inputs. Step 28 resolves the real released `@pactwright/standard@0.0.1` baseline.
 
 ## Stage 4 — Implement exact environment resolution and local composition
 
@@ -947,4 +870,4 @@ Checkpoint 1 closes only when:
 
 ---
 
-**Pactwright — Checkpoint 1 — Self-Hosted Delivery v21**
+**Pactwright — Checkpoint 1 — Self-Hosted Delivery v22**

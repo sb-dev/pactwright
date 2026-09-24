@@ -1,0 +1,166 @@
+# CP01 Step 12 — Implement the seven canonical Claude Code adapter commands
+id: CP01-S12
+requires: [CP01-S07, CP01-S08, CP01-S09, CP01-S10, CP01-S11]
+outputs:
+  claude-code-adapter: Deterministic rendering of Pactwright-managed Claude Code agents and the seven canonical
+    commands from the resolved environment into Pactwright-owned files under .claude/.
+  adapter-commands: The seven commands /capture-intent, /propose-contracts, /approve-contract, /write-brief,
+    /deliver-brief, /review and /prepare-evidence, each invoking runtime responsibilities and the selected
+    pack's capabilities within runtime-enforced mutation boundaries.
+requirements:
+  R01:
+    source: [CORE#46, DISTRIBUTION#14]
+    statement: The adapter shall render the selected pack's agents and exactly the seven commands /capture-intent,
+      /propose-contracts, /approve-contract, /write-brief, /deliver-brief, /review and /prepare-evidence.
+  R02:
+    source: [DISTRIBUTION#14, DISTRIBUTION#26]
+    statement: Rendering from identical locked inputs shall produce byte-identical output. It writes only files
+      or managed regions Pactwright owns and leaves user-authored files untouched.
+  R03:
+    source: [CORE#47, CORE#55]
+    statement: /capture-intent shall create one Intent through the runtime mutation API.
+  R04:
+    source: [CORE#8, CORE#48]
+    statement: /propose-contracts shall be graph-read-only. Its alternatives remain transient and are never
+      written as records.
+  R05:
+    source: [CORE#9, CORE#27, CORE#49, CORE#55]
+    statement: /approve-contract shall apply normal Decision authority through the Step 7 mutation API. For
+      proceed it creates the Decision, the selected Contract and their resolves and selects edges; reject,
+      defer, withdrawal and re-authorisation follow Step 7. The actor on whose behalf the adapter acts is recorded
+      unchanged as attribution, and its kind is checked against lifecycle policy.
+  R06:
+    source: [CORE#50]
+    statement: /write-brief shall inspect current state, resolve delivery context and create the Brief with
+      its decomposes edge under the current canonical Contract.
+  R07:
+    source: [CORE#39, CORE#51]
+    statement: /deliver-brief shall read execution state, determine the active Delivery step and invoke delivery-execution
+      with Contract, Brief and project context from the Step 9 context-assembly API. It shall not mutate the
+      Delivery Graph or choose the next transition.
+  R08:
+    source: [CORE#39, CORE#52]
+    statement: /review shall evaluate the latest delivered state through delivery-review, with context from
+      the Step 9 context-assembly API, and report whether progression may continue or correction is required.
+      It shall not create Evidence or invent transitions; the runtime validates and applies the next permitted
+      transition.
+  R09:
+    source: [CORE#53]
+    statement: /prepare-evidence shall invoke every Step 7 closure precondition before creating Evidence and
+      its evidences edge.
+  R10:
+    source: [CORE#46, CORE#58, DISTRIBUTION#14, PRINCIPLES#11]
+    statement: The command decomposition shall not define lifecycle topology. Rendered prompts shall not duplicate
+      graph-transition or authority semantics; the runtime enforces them.
+  R11:
+    source: [CORE#55, CORE#58]
+    statement: Every canonical write by a command shall go through the Step 7 mutation API with its guards. No
+      public API or adapter path may bypass them.
+acceptance:
+  AC01:
+    covers: [R01, R02]
+    given: A project with a selected pack and a resolved lock, and unrelated user-authored files inside and outside
+      .claude/.
+    when: The adapter renders twice from the same locked inputs.
+    then: The rendered command set is exactly the seven named commands, and both renders are byte-identical.
+      Only Pactwright-owned paths are written, and the unrelated files keep their bytes.
+    verify:
+      automated: [adapter.render-deterministic]
+  AC02:
+    covers: [R03, R04, R05, R06, R07, R08, R09]
+    cases: [capture-intent, propose-contracts, approve-contract, write-brief, deliver-brief, review, prepare-evidence]
+    given: A complete valid project at the lifecycle position the listed command needs, with an instrumented
+      capability invoker that records every call and returns scripted output.
+    when: The listed command runs.
+    then: 'The canonical change is exactly the command''s permitted mutation: one Intent; none; Decision, Contract
+      and their edges; Brief and its decomposes edge; none; none; Evidence and its evidences edge. Any capability
+      invoked is resolved through the selected pack''s mapping, and the resulting graph validates.'
+    verify:
+      automated: [adapter.permitted-mutations]
+  AC03:
+    covers: [R04, R07, R08, R09, R10]
+    cases: [propose-writes-alternative, deliver-writes-graph, deliver-chooses-transition, review-requests-evidence,
+      review-invents-transition, premature-prepare-evidence]
+    given: 'A valid project and scripted capability output attempting the listed forbidden action: writing an
+      alternative or graph file, naming a next transition, requesting Evidence or naming an undeclared route.
+      premature-prepare-evidence runs before a successful closing Review.'
+    when: The command runs.
+    then: No canonical record or edge is committed and no alternative becomes a record. Execution state advances
+      only along declared transitions. A direct write to canonical storage is reported and does not advance
+      execution state. Premature prepare-evidence is refused, naming the failed precondition.
+    verify:
+      automated: [adapter.forbidden-mutations]
+  AC04:
+    covers: [R03, R05, R06, R09, R11]
+    cases: [stale-graph, concurrent-policy-edit, concurrent-configuration-edit, concurrent-lock-edit, record-rewrite,
+      record-removal, record-re-identification, core-edge-replacement, core-edge-removal, incomplete-load, disallowed-actor-kind]
+    given: Each mutating command (/capture-intent, /approve-contract, /write-brief and /prepare-evidence) with
+      the listed Step 7 failure, and a valid control for each command without it. disallowed-actor-kind applies
+      to /approve-contract.
+    when: The command runs through the runtime API.
+    then: The guard that owns the failure refuses it. Nothing is committed or partially written, and execution
+      state does not advance. Each control commits through the same runtime API.
+    verify:
+      automated: [adapter.guard-matrix]
+  AC05:
+    covers: [R05]
+    cases: [allowed-human, second-identity-same-kind]
+    given: Lifecycle policy allowing human for approve-contract, and the adapter acting on behalf of the listed
+      well-formed human identity. The repository's configured Git user identity matches neither.
+    when: /approve-contract records a proceed Decision.
+    then: Both commit, and each Decision records the supplied decided_by value byte for byte, never the Git identity.
+    verify:
+      automated: [adapter.actor-attribution]
+  AC06:
+    covers: [R05]
+    cases: [reject-withdrawal, defer-withdrawal, reauthorisation-after-reject, reauthorisation-after-defer, reselect-withdrawn-contract,
+      reselect-current-contract, other-intent-selects-existing-contract, missing-contract-supersession, missing-decision-supersession]
+    given: The lineage and Decision request of the same-named case of CP01-S07/AC09, AC10 or AC11.
+    when: The Decision is requested through /approve-contract.
+    then: Each case has its own result equal to that case's outcome through the runtime API, record for record
+      and edge for edge. The withdrawal and re-authorisation cases commit; every refusal case is refused as
+      invalid lineage before writing and leaves every file and execution state byte-identical.
+    verify:
+      automated: [adapter.approve-contract-lineage]
+  AC07:
+    covers: [R03, R04, R05, R06, R07, R08, R09]
+    given: An empty valid project with an allowed actor and fixture capabilities returning scripted output.
+    when: /capture-intent, /propose-contracts, /approve-contract (proceed), /write-brief, /deliver-brief, /review
+      and /prepare-evidence run in order.
+    then: The graph validates and the lineage derives done. Only the selected Contract exists, and the Evidence
+      evidences the current Brief.
+    verify:
+      automated: [adapter.valid-lineage]
+  AC08:
+    covers: [R07, R08]
+    cases: [deliver-brief, review]
+    given: A delivering lineage whose project also holds a superseded Brief, rejected alternatives and an execution
+      transcript.
+    when: The listed command invokes its capability.
+    then: The context passed to the capability equals the Step 9 context assembly for the current Brief and
+      excludes the superseded Brief, alternatives and transcript.
+    verify:
+      automated: [adapter.context-assembly]
+  AC09:
+    covers: [R10, R11]
+    given: The candidate adapter code and rendered agents and commands.
+    when: Independent review traces each command from prompt to runtime call to write.
+    then: Prompts contain no transition or authority rules the runtime owns, and the command set is not treated
+      as lifecycle topology. Every canonical write passes through the Step 7 mutation API; no bypass exists.
+    verify:
+      review: [adapter.semantic-boundary]
+  AC10:
+    covers: [R09, R11]
+    cases: [superseded-brief, never-reviewed, unreviewed-delivery-change, blocking-closing-review, pending-gate,
+      invalid-lineage, latest-state-closure]
+    given: 'The lineage of the same-named case of CP01-S07/AC12: a delivering lineage whose only closure defect
+      is the listed precondition failure. latest-state-closure is the CP01-S07/AC13 control: a lineage changed
+      after its first Review and reviewed again, whose closing Review of that latest state permits closure,
+      with no pending Gate and valid lineage.'
+    when: /prepare-evidence runs.
+    then: Each failure case is refused by the Evidence closure guard before any write, naming the failed precondition.
+      No Evidence record or evidences edge exists afterwards, even partially, execution state does not advance
+      and unrelated files keep their bytes. latest-state-closure writes exactly one Evidence record and its
+      evidences edge atomically, and the lineage derives done.
+    verify:
+      automated: [adapter.prepare-evidence-guards]
