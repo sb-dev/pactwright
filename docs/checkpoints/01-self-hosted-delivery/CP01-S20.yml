@@ -1,0 +1,85 @@
+# CP01 Step 20 — Implement repository verification workflow
+id: CP01-S20
+requires: [CP01-S01]
+outputs:
+  ci-workflow: A repository-owned .github/workflows/ci.yml that runs the root pnpm verify gate on a clean GitHub-hosted
+    checkout under the Implementation Guide hardening rules.
+requirements:
+  R01:
+    source: [GUIDE#verification, GUIDE#github-actions]
+    statement: CI shall install with `pnpm install --frozen-lockfile` on a clean checkout and run the same root
+      `pnpm verify` gate used locally, not a differently composed gate.
+  R02:
+    source: [GUIDE#github-actions]
+    statement: The workflow shall declare least-privilege GITHUB_TOKEN permissions, pin every third-party action
+      to a full commit SHA, check out with `persist-credentials` false, bound every job with a timeout, cancel
+      superseded validation runs through concurrency and not use `pull_request_target`.
+  R03:
+    source: [GUIDE#github-actions]
+    statement: The workflow shall place no credential or sensitive payload in the workflow file or its logs.
+  R04:
+    source: [GUIDE#github-actions, OSS#26, CHECKPOINT#explicitly-out-of-scope]
+    statement: The workflow shall be repository engineering infrastructure, not generated Pactwright product integration.
+      Pactwright neither renders nor manages it, and it carries no lifecycle, Project Graph, Extension or authority
+      semantics.
+  R05:
+    source: [GUIDE#package-metadata]
+    statement: CI shall run the verify gate on each Node major version that a publishable package's engines range
+      claims, so that no package claims compatibility that CI or package smoke tests do not exercise.
+  R06:
+    source: [GUIDE#verification]
+    statement: The CI checkout shall hold the Git history that the checkpoint contract checks read, so the verify
+      gate checks every crosswalk quote against its source revision instead of skipping it as a shallow clone.
+acceptance:
+  AC01:
+    covers: [R01, R05]
+    given: A candidate revision pushed to the repository, and the Node major versions claimed by the engines range
+      of each publishable package.
+    when: The CI workflow runs on GitHub-hosted runners.
+    then: For each claimed Node major, a job checks out the candidate clean, installs from the committed lockfile
+      without changing it, runs `pnpm verify` and succeeds. The run is recorded by its identity and result.
+    verify:
+      automated: [ci.run-passes]
+  AC02:
+    covers: [R01]
+    cases: [failing-check, lockfile-drift]
+    given: A candidate branch whose only defect is the listed one, either a check that `pnpm verify` runs failing
+      or a package manifest change without the matching lockfile update.
+    when: The CI workflow runs.
+    then: The run fails at the defect and reports no success.
+    verify:
+      automated: [ci.fails-closed]
+  AC03:
+    covers: [R02, R03]
+    given: The candidate .github/workflows/ci.yml.
+    when: The workflow hardening check parses it.
+    then: The workflow is syntactically valid, declares explicit read-only token permissions, pins every third-party
+      action to a full commit SHA, checks out with `persist-credentials` false, sets a timeout on every job, declares
+      a concurrency group that cancels superseded runs, has no `pull_request_target` trigger and references no secret.
+    verify:
+      automated: [ci.workflow-hardening]
+  AC04:
+    covers: [R02, R03]
+    cases: [write-permission, unpinned-action, persisted-credentials, missing-timeout, missing-concurrency, pull-request-target,
+      secret-reference]
+    given: A copy of the candidate workflow whose only defect is the listed one.
+    when: The workflow hardening check parses it.
+    then: The check fails and names the defect.
+    verify:
+      automated: [ci.workflow-hardening-controls]
+  AC05:
+    covers: [R06]
+    given: A CI run of a candidate revision whose crosswalk quotes checkpoint revisions older than the candidate.
+    when: The contract checks run inside the CI verify gate.
+    then: Every source revision the crosswalk names is read and its quotes checked. The log has no shallow-clone
+      warning that quotes were not checked.
+    verify:
+      automated: [ci.contract-history]
+  AC06:
+    covers: [R02, R03, R04]
+    given: The candidate workflow and a CI run log.
+    when: Independent review inspects the workflow hardening and ownership.
+    then: The token permissions are the least the jobs need, no credential or sensitive payload is exposed, and
+      the workflow is repository-owned, outside Pactwright-generated paths and free of Pactwright product semantics.
+    verify:
+      review: [ci.hardening-review]
