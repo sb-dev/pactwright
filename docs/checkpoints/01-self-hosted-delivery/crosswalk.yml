@@ -1144,7 +1144,7 @@ entries:
     covered_by: [CP01-S21/R01, CP01-S21/R02, CP01-S21/R03, CP01-S21/R04, CP01-S21/R05, CP01-S21/R06, CP01-S21/R07]
   - key: S21.run.1
     text: "Create repository-owned `.github/workflows/release.yml` following the trusted-release contract: exact tagged source, frozen install, verify, publish dry-run, OIDC publishing after bootstrap, registry verification, no npm publish token."
-    covered_by: [CP01-S21/R01, CP01-S21/R03, CP01-S21/R04, CP01-S21/R07, CP01-S21/AC01, CP01-S21/AC02, CP01-S21/AC05, CP01-S21/AC07]
+    covered_by: [CP01-S21/R01, CP01-S21/R03, CP01-S21/R04, CP01-S21/R07, CP01-S21/AC01, CP01-S21/AC02, CP01-S21/AC04, CP01-S21/AC05, CP01-S21/AC07]
     note: "The npm trusted-publisher bootstrap was completed for 0.0.1. How the npm-release environment and trusted-publisher configuration are evidenced is Q56."
   - key: S21.expected.1
     text: "A version tag can later release accepted source reproducibly."

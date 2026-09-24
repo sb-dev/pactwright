@@ -9,7 +9,8 @@ requirements:
     source: [GUIDE#trusted-release-workflow, GUIDE#verification]
     statement: The workflow shall run only on version tags. It checks out the exact tagged source on a clean GitHub-hosted
       runner, installs with `pnpm install --frozen-lockfile` and runs `pnpm verify`, without a cached node_modules
-      tree.
+      tree. Before any publish, it asserts that the checked-out commit is the commit the triggering tag points
+      to.
   R02:
     source: [GUIDE#trusted-release-workflow, GUIDE#npm-release-model]
     statement: Before any publish, the workflow shall assert that the tag names the version of every package it
@@ -45,7 +46,8 @@ acceptance:
     given: The candidate .github/workflows/release.yml.
     when: The release workflow check parses it.
     then: The workflow is syntactically valid, triggers only on version tags and runs in the npm-release environment
-      with permissions `contents` read and `id-token` write only. It checks out without persisted credentials,
+      with permissions `contents` read and `id-token` write only. It checks out the triggering tag's commit without
+      persisted credentials,
       installs from the frozen lockfile without a node_modules cache and runs `pnpm verify`, the release assertions,
       a publish dry-run, the trusted publish and registry verification in that order. Every third-party action
       is pinned to a full commit SHA, every job has a timeout and no npm token or other secret is referenced.
@@ -53,8 +55,8 @@ acceptance:
       automated: [release.workflow-structure]
   AC02:
     covers: [R01, R03, R05]
-    cases: [branch-trigger, pull-request-target, write-contents, missing-id-token, missing-environment, token-reference,
-      unpinned-action, persisted-credentials, node-modules-cache, publish-before-verify, cancel-in-progress]
+    cases: [branch-trigger, pull-request-target, wrong-checkout-ref, write-contents, missing-id-token, missing-environment,
+      token-reference, unpinned-action, persisted-credentials, node-modules-cache, publish-before-verify, cancel-in-progress]
     given: A copy of the candidate workflow whose only defect is the listed one.
     when: The release workflow check parses it.
     then: The check fails and names the defect.
@@ -70,9 +72,10 @@ acceptance:
     verify:
       automated: [release.assertions-pass]
   AC04:
-    covers: [R02, R06]
-    cases: [tag-version-mismatch, package-version-disagreement, not-on-default-branch, malformed-tag]
-    given: The AC03 fixture with only the listed defect.
+    covers: [R01, R02, R06]
+    cases: [tag-version-mismatch, package-version-disagreement, not-on-default-branch, malformed-tag, checkout-not-tagged-commit]
+    given: The AC03 fixture with only the listed defect. For checkout-not-tagged-commit, the default branch has a
+      later commit with the same package versions, and that commit is checked out instead of the tagged one.
     when: The release assertions run.
     then: The assertions fail, naming the defect, before any dry-run or publish command runs.
     verify:
@@ -91,8 +94,10 @@ acceptance:
     given: The candidate workflow and the publish commands it runs.
     when: Independent review traces a failure before publication, a failure after one package published, and a
       rerun of each.
-    then: No path overwrites, unpublishes or moves a dist-tag, a failure before publication publishes nothing, and
-      a rerun skips an already published version only through behaviour the review finds verified.
+    then: No path overwrites or unpublishes a version or moves a dist-tag to an earlier version. A failure before
+      publication publishes nothing. A successful run or rerun advances the expected npm tag to the tagged version
+      for each package it publishes, and a rerun skips an already published version only through behaviour the
+      review finds verified.
     verify:
       review: [release.failure-safety]
   AC07:
