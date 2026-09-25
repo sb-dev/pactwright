@@ -87,11 +87,14 @@ acceptance:
   AC05:
     covers: [R04]
     cases: [generated-report, adapter-output, lifecycle-execution-state, execution-provenance, github-state,
-      derived-projection, inactive-extension-data]
-    given: The same complete active canonical graph while only the listed excluded state differs.
+      derived-projection, inactive-extension-data, configuration-edit, lock-edit]
+    given: The same complete active canonical graph while only the listed excluded state differs. configuration-edit
+      and lock-edit change a valid value in .pactwright/config.yml or .pactwright/lock.yml (such as the adapter
+      type or a recorded hash) without changing declared Extensions or any active contribution; the lifecycle-policy
+      control is CP01-S06/AC09.
     when: Its revision is derived before and after the difference.
     then: The graph revision is unchanged; inactive Extension bytes are preserved and reported rather than
-      parsed into the active graph.
+      parsed into the active graph, and configuration and lock bytes are not folded into the digest.
     verify:
       automated: [revision.graph-non-canonical-change]
   AC06:
@@ -126,8 +129,9 @@ acceptance:
     given: Small and large canonical graphs and the frozen fixtures referenced by CORE#56.
     when: The implementation derives each revision.
     then: Every result uses pg1:sha256 and exactly 64 lower-case hexadecimal digest digits. Every frozen vector
-      matches its recorded canonical UTF-8 bytes and digest after the required record/edge sort; stored-byte
-      vectors also match the recorded parsed projection.
+      matches its recorded canonical UTF-8 bytes and digest after the required record/edge sort, including
+      collection-order, whose record and edge sort under unsigned UTF-16 order differs from code-point and
+      locale order; stored-byte vectors also match the recorded parsed projection.
     verify:
       automated: [revision.graph-hashed, revision.pg1-vectors]
   AC10:
@@ -169,11 +173,16 @@ acceptance:
       invalid-extension-record, invalid-encoding, invalid-value-domain, invalid-identity, ownership-error,
       registration-conflict, missing-endpoint, inactive-endpoint, wrong-endpoint-type, self-supersession,
       cyclic-supersession, branching-supersession, merging-supersession, enabled-extension-cannot-register,
-      malformed-configuration, malformed-lifecycle, missing-lock, malformed-lock]
+      malformed-configuration, malformed-lifecycle, missing-lock, malformed-lock, unreadable-input, unknown-version-input,
+      migration-required-input, unexpected-store-entry, legacy-extension-record-in-core-store, malformed-edge-shape,
+      unknown-key-input]
     given: A CORE#54 required input, active registration, record or edge with only the listed structural/completeness
-      defect; all other inputs pass. Relational cases are passed to the shared validator so another failure
-      does not mask the required cause; inactive-endpoint fails as an unresolvable active endpoint, and naming
-      the inactive store is permitted, not required.
+      defect; all other inputs pass. The last seven cases are the CP01-S01 load dispositions for an unreadable
+      file, an unknown document version, a migration-required released input (the unversioned lock), an unexpected
+      core-store entry, a released Extension-typed record in specs/nodes/, an edge document outside the CP01-S03/R10
+      shape and a document with an unknown key. Relational cases are passed to the shared validator so another
+      failure does not mask the required cause; inactive-endpoint fails as an unresolvable active endpoint,
+      and naming the inactive store is permitted, not required.
     when: A complete graph revision is requested.
     then: It fails explicitly with no successful digest and no file mutation; parseable remainder or inactive-data
       exclusion is not used to hide the active defect.

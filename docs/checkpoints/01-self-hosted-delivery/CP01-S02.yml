@@ -176,7 +176,8 @@ acceptance:
       the non-node control has its own key/value without the core envelope. Collisions and duplicate/replacement
       registrations identify both claimants; reserved-owner and invalid-value cases identify the violated
       rule and do not register or hash the value. All failures leave the prior registry unchanged; malformed
-      owner data fails its own schema.
+      owner data fails its own schema. Each successful registration changes the registry identity that the
+      CP01-S01/R10 load result exposes; each failure leaves it unchanged.
     verify:
       automated: [records.extension-registration]
   AC13:

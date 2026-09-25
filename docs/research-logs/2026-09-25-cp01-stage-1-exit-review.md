@@ -2,7 +2,7 @@
 
 **Scope:** Spec 00 T2 for Checkpoint 1 Stage 1 (CP01-S01 to CP01-S05) under the [resolution methodology](../open-question-resolution-methodology.md) v2 §7. Starting revision `8e7804fd5b6b42634308b167cd2d02f01067c2c6` on `refactor/pactwright-v2`. Source revisions: Core v3, Distribution v2, OSS v2, Implementation Guide v16, Checkpoint 1 v24, Spec 00 v5, contract format 2. Questions Q01–Q20 keep their crosswalk IDs and wording; the batch records B1–B6 (`2026-09-23-pr41-b*.md`) remain the decision records.
 
-**Prior state, verified:** PR #41 resolved Q01–Q20 and applied Core v3 / Checkpoint 1 v20. Independent review [5298715756](https://github.com/sb-dev/pactwright/pull/41#pullrequestreview-5298715756) returned R1–R16 at `1bcd2ea`; the targeted correction review [5301803981](https://github.com/sb-dev/pactwright/pull/41#pullrequestreview-5301803981) passed at `87bd3eb` and PR #41 merged. The batch records' "fresh review required / not requirement-ready" lines predate that passing review; they are left as history and superseded by this record. Stages 2–5 were converted afterwards (PRs #42–#45), so every later-step proof that Stage 1 allocates can now be checked against a YAML contract rather than prose. No §7 stage-level review existed before this pass.
+**Prior state, verified:** PR #41 resolved Q01–Q20 and applied Core v3 / Checkpoint 1 v20. Independent review [5298715756](https://github.com/sb-dev/pactwright/pull/41#pullrequestreview-5298715756) returned R1–R16 at `1bcd2ea`; the targeted correction review [5301803981](https://github.com/sb-dev/pactwright/pull/41#pullrequestreview-5301803981) passed at `87bd3eb` and PR #41 merged. The batch records' "fresh review required / not requirement-ready" lines predate that passing review; they are left as history and superseded by this record. Stages 2–5 were converted afterwards (PRs #42–#45), so every later-step proof that Stage 1 allocates can now be checked against a YAML contract rather than prose. No §7 stage-level review existed before this pass. The first version of this record (`006d99f`) received the owner's review [5318111810](https://github.com/sb-dev/pactwright/pull/48#pullrequestreview-5318111810), which directed resolution of D1 and six further acceptance gaps (G1–G6 below) at their owners; this version applies them.
 
 ## Method
 
@@ -71,17 +71,25 @@ Applied in this pass. Each is a coverage or feasibility correction under an exis
 | F-B5-3, F-B5-4 | S05/AC11, AC08 | Index "unchanged" defined as staged content; restore isolation defined observably. |
 | F-B3-2 / F-B6-4, F-B4-11 / F-B6-2 | S16/AC11, AC13 | `when` no longer contradicts S03/AC13; AC13 cases bound to real S04 fixtures. |
 | F-B6-5, F-B6-6 | Checkpoint 1 §3, Step 4 note; crosswalk header | Status text names the passing correction review and this record; Step 6 added to the policy-enforcement note. |
+| D1 (F-B1-2) | Distribution §3 (v3); S01/R06, AC07; S05/AC12 | Extension entries are `source`, `enabled` and optional `version`; configuration, lifecycle and lock documents reject unknown keys with path and cause, as the released decoders did (`207ac08` `src/config/{config,lifecycle,lock}.ts`). Unknown-key cases added per document and as a no-digest disposition. |
+| D2 (F-B2-2) | Core §56 fixtures; S05/AC09 | Frozen `collection-order` vector: keys `""`, `B`, `a`, U+1F600, U+E000 and four edges, computed by an independent Python serializer (UTF-16 code-unit sort, RFC 8785) and reproduced by the repository's separate test serializer; code-point and locale orders both reverse it. AC09 names it. |
+| G1 | S03/R10, AC14 | Stored edge-document shape: envelope with only `edges` as an array; tuples exactly `source`/`type`/`target` strings. Twelve defect cases over core and Extension edge files plus a control; incomplete load, bytes unchanged, no revision. |
+| G2 | (= D2) | Blocking, applied as above. |
+| G3 | S01/R10, AC13; S02/AC12; S07/AC06 | The load result exposes the Core §55 stored-base inputs (bytes and inventory, registry identity, decoder identity covering built core decoder code and Distribution §12 hashes). `decoder-code` case at Step 1; registry identity exercised by S02/AC12; S07/AC06 gains `changed-decoder-identity`. |
+| G4 | S05/AC12 | No-digest cases for every S01 disposition: unreadable, unknown version, migration required, unexpected store entry, released Extension record in a core store, malformed edge shape, unknown key. |
+| G5 | S05/AC05 | `configuration-edit` and `lock-edit` controls prove configuration and lock bytes are not folded into pg1; the lifecycle-policy control stays at S06/AC09. |
+| G6 | S03/AC02, AC04 | Missing-endpoint and duplicate-tuple cases for a fixture-registered additional relation. |
 
-Checkpoint 1 moves to version 25. Crosswalk quotes, source revisions and Q01–Q20 wording are unchanged.
+Checkpoint 1 moves to version 25 and Distribution to version 3. Crosswalk quotes, source revisions and Q01–Q20 wording are unchanged.
 
-## Specification decisions held open (owner approval required)
+## Specification decisions
 
-These need a change under `docs/specs/`. They were not applied; the owner decides. Recommendation and consequence for each:
+D1 and D2 were applied after the owner's review 5318111810 directed their resolution at the owning specification and fixture; their rows are retained below for traceability. D3–D8 remain proposals: they need a change under `docs/specs/`, are not applied, and do not block requirement-readiness. Recommendation and consequence for each:
 
 | ID | Owner | Issue | Recommendation |
 |---|---|---|---|
-| D1 (F-B1-2) | Distribution §3 | The released 0.0.1 decoder accepts only `source` and `enabled` per Extension entry and rejects unknown keys (`207ac08:src/config/config.ts`); §3 says entries retain a "configured version". No clause states the unknown-key policy for configuration, lifecycle or lock documents. Two loaders diverge on persisted configuration. | State the entry keys (`source`, `enabled`, optional `version`) and that these documents reject unknown keys with path and cause. This is the one item that blocks full requirement-readiness. |
-| D2 (F-B2-2) | Core §56 fixtures | No pg1 vector distinguishes the UTF-16 record/edge collection sort from locale or code-point order; all keys are ASCII kebab. A `localeCompare` sort passes every vector and emits a different digest for Extension keys. | Add one frozen `collection-order` vector with keys `B`, `a`, `😀` and U+E000, frozen by the probe method, not the implementation under test. |
+| D1 (F-B1-2) | Distribution §3 | The released 0.0.1 decoder accepts only `source` and `enabled` per Extension entry and rejects unknown keys (`207ac08:src/config/config.ts`); §3 said entries retain a "configured version", and no clause stated the unknown-key policy for configuration, lifecycle or lock documents. | **Applied** (Distribution v3): entry keys `source`, `enabled`, optional `version`; unknown keys rejected with path and cause in all three documents. |
+| D2 (F-B2-2) | Core §56 fixtures | No pg1 vector distinguished the UTF-16 record/edge collection sort from locale or code-point order; a `localeCompare` sort passed every vector. | **Applied**: frozen `collection-order` vector, digest `pg1:sha256:385b50c45739f48efe28a0428b99273031997259369a6c8721c048e4deda45e0`, computed independently and reproduced by the repository test. |
 | D3 (F-B2-5) | Core §6 | "quoting style … does not change content" is unqualified; plain `1` and `"1"` are different values under the pinned profile. | Qualify: quoting of a scalar that resolves to the same value. |
 | D4 (F-B2-9, F-B2-6a) | Core §6 | BOM, `---` line form and "non-blank" are unspecified for the record envelope. | State: file starts with `---` at byte 0, frontmatter ends at the next line that is exactly `---`; non-blank means not empty after `String.prototype.trim`. |
 | D5 (F-B4-7) | Core §44 | Derived-state table rows 1–4 omit "current"; only §44 prose makes a withdrawn lineage `rejected`. | Add the qualifier to the four rows. |
@@ -91,9 +99,9 @@ These need a change under `docs/specs/`. They were not applied; the owner decide
 
 ## Stage-level result (§7)
 
-Identity, storage, relationships, authority, failure behaviour and revisions agree across S01–S05, `checkpoint.yml`, the Checkpoint 1 Stage 1 section and the later contracts they rely on; the deliverable summaries equal the contract `outputs`. Every requirement has exercising acceptance coverage; the 60 verifier binding IDs are unique and their methods fit; deferred integration proofs have explicit owners and prerequisites. With the corrections above, no unresolved behaviour needed by Stage 1 steps remains except D1. Verdict: **ready with fixes; requirement-ready once D1 is recorded in Distribution §3 and this correction set has independent review.** D2–D8 are recommended but do not block. This is scoped T2 work: it authorises no implementation, harness construction or acceptance.
+Identity, storage, relationships, authority, failure behaviour and revisions agree across S01–S05, `checkpoint.yml`, the Checkpoint 1 Stage 1 section and the later contracts they rely on; the deliverable summaries equal the contract `outputs`. Every requirement has exercising acceptance coverage; the 60 verifier binding IDs are unique and their methods fit; deferred integration proofs have explicit owners and prerequisites. With the corrections above, including D1, D2 and G1–G6, no unresolved behaviour needed by Stage 1 steps remains. Verdict: **requirement-ready, subject to independent review of the corrections in PR #48.** D3–D8 are recommended wording and legibility improvements that do not block. This is scoped T2 work: it authorises no implementation, harness construction or acceptance.
 
-The corrections in this pass were authored by the reviewer of record and therefore require fresh independent review (methodology §6). That review is requested on the pull request carrying this record.
+The corrections in this pass were authored by the reviewer of record and therefore require fresh independent review (methodology §6). The first correction set was reviewed in 5318111810; the second is requested on the same pull request.
 
 ## Verification
 
@@ -105,9 +113,9 @@ Commands run on the corrected tree, Node `v22.22.2`, pnpm `11.7.0`, `pnpm instal
 | `pnpm format:check` | PASS |
 | `pnpm lint` | PASS |
 | `pnpm typecheck` | PASS |
-| `pnpm test` | PASS, 19/19 |
+| `pnpm test` | PASS, 20/20 (eleven contract-checker tests, eight pg1 vectors including `collection-order`, one vector-set control) |
 | `pnpm build` / `pnpm verify` | FAIL, inherited: `@pactwright/standard` filter matches nothing and TS18003 no runtime inputs; identical on the starting revision |
 
 Schema, citation and mapping checks establish structural consistency only. No verifier binding, runtime or harness was executed.
 
-**Checkpoint 1 Stage 1 exit review v1**
+**Checkpoint 1 Stage 1 exit review v2**

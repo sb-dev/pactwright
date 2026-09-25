@@ -133,7 +133,7 @@ github:
 
 Configuration records desired Pactwright state.
 
-The released configuration format is the `version: 1` mapping above: an optional explicitly selected `agent_pack` with `source` and version constraint, adapter selection, an Extension-ID map and GitHub enablement. It remains a native input; missing pack selection denotes an unactivated scaffold, not implicit selection of standard. Extension entries retain their source, configured version and enabled/disabled state. The canonical loader reads this format without rewriting it. Unknown format versions are unsupported; the recognised earlier lock and lifecycle dispositions are specified in section 12 and Core section 27.
+The released configuration format is the `version: 1` mapping above: an optional explicitly selected `agent_pack` with `source` and version constraint, adapter selection, an Extension-ID map and GitHub enablement. It remains a native input; missing pack selection denotes an unactivated scaffold, not implicit selection of standard. `extensions` maps each Extension ID to a mapping with `source` (string), `enabled` (boolean) and an optional `version` constraint (string); the released `0.0.1` decoder accepted only `source` and `enabled`, so the optional `version` key is a compatible addition within version 1. Configuration, lifecycle and lock documents reject unknown keys with path and cause, as the released decoders did; an unknown key makes the load incomplete rather than being preserved as inert data. The canonical loader reads this format without rewriting it. Unknown format versions are unsupported; the recognised earlier lock and lifecycle dispositions are specified in section 12 and Core section 27.
 
 The package-manager manifest and lock record installed package state.
 
@@ -1318,4 +1318,4 @@ Production-specific semantics remain in independent Production Skills repositori
 
 ---
 
-**Pactwright Distribution, Agent Packs, Extensions and Evaluation v2**
+**Pactwright Distribution, Agent Packs, Extensions and Evaluation v3**

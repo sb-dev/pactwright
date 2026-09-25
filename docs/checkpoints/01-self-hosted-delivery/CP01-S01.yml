@@ -32,7 +32,7 @@ requirements:
       through one path. Step 1 proves loading and parse diagnostics; later schemas and integrations extend
       that path, not duplicate it.
   R06:
-    source: [CORE#54, CORE#57]
+    source: [CORE#54, CORE#57, DISTRIBUTION#3]
     statement: Missing, unreadable, unknown-version or malformed required inputs and unrecognised active-storage
       entries shall be reported with path and cause. Recognised released formats receive their native or migration-required
       disposition under CORE#54 and DISTRIBUTION#12, never an unsupported-version label. Parseable values
@@ -50,6 +50,13 @@ requirements:
     statement: The loader shall preserve Extension and GitHub configuration declarations without activating
       them. An unavailable enabled Extension makes the environment incomplete; unsupported GitHub operations
       are reported without preventing otherwise supported local inspection or causing remote effects.
+  R10:
+    source: [CORE#54, CORE#55, DISTRIBUTION#12]
+    statement: 'The canonical load result shall expose the CORE#55 stored-base inputs: the exact bytes and existence
+      inventory of every required input and active canonical-storage entry, and the resolved registry and decoder
+      identities. Core decoder identity covers the built runtime code that decodes, validates or projects canonical
+      data, not only its package version; registered owner decoders use their DISTRIBUTION#12 declaration and
+      implementation hashes.'
 acceptance:
   AC01:
     covers: [R01, R02]
@@ -109,8 +116,10 @@ acceptance:
       review: [loader.single-path]
   AC07:
     covers: [R06]
-    cases: [configuration, lifecycle, lock, core-records, typed-edges]
-    given: Exactly the listed required input is unparseable; the others are valid.
+    cases: [configuration, lifecycle, lock, core-records, typed-edges, configuration-unknown-key, lifecycle-unknown-key,
+      lock-unknown-key]
+    given: Exactly the listed required input is unparseable; the others are valid. The unknown-key cases are well-formed
+      YAML with one key that DISTRIBUTION#3 does not define for that document.
     when: The canonical loader reads the repository.
     then: It identifies the offending input and cause, retains available diagnostic values, marks the result
       incomplete and leaves all files unchanged. No partial result is advertised as executable or complete.
@@ -182,3 +191,15 @@ acceptance:
       byte-for-byte; no loading path applies a migration.
     verify:
       automated: [loader.released-formats]
+  AC13:
+    covers: [R05, R10]
+    cases: [input-bytes, inventory, decoder-code]
+    given: Two loads of the same valid project that differ only in the listed stale-base input. input-bytes rewrites
+      one required input to a normalisation-equivalent presentation; inventory adds one valid record file; decoder-code
+      rebuilds the runtime from a source change inside a core decoder under the same package version.
+    when: Both load results are compared.
+    then: The exposed byte digest of the changed input, the inventory, or the core decoder identity differs
+      respectively, while every other exposed input is identical. Registry identity exposure is exercised by
+      CP01-S02/AC12, whose successful registrations change it.
+    verify:
+      automated: [loader.stale-base-inputs]

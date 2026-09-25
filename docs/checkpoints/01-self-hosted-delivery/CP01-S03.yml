@@ -43,6 +43,12 @@ requirements:
       data shall fail closed; inactive Extension stores shall be reported, preserved and excluded, not mistaken
       for valid active contributions. Physical ownership follows CORE#54: only core lineage tuples in specs/graph/edges.yml;
       Extension relation tuples and its same-type node supersession in specs/extensions/<id>/edges.yml.'
+  R10:
+    source: [CORE#15, CORE#54]
+    statement: An edge document shall be a mapping whose only key is edges, an array of tuples that are mappings
+      with exactly the string fields source, type and target. Any other envelope or tuple shape in a core or
+      registered Extension edge file shall make the load incomplete with path and cause, with bytes unchanged
+      and no graph revision; a loader shall not project the expected keys and discard the rest.
 acceptance:
   AC01:
     covers: [R01, R03]
@@ -55,10 +61,11 @@ acceptance:
       automated: [edges.valid-roundtrip]
   AC02:
     covers: [R02]
-    cases: [missing-source, missing-target]
-    given: An edge whose only defect is the listed absent endpoint.
+    cases: [missing-source, missing-target, additional-relation-missing-source, additional-relation-missing-target]
+    given: An edge whose only defect is the listed absent endpoint; the additional-relation cases use a fixture-registered
+      additional relation rather than a core relation.
     when: The edge set is validated.
-    then: Validation rejects the edge and identifies the missing endpoint.
+    then: Validation rejects the edge and identifies the missing endpoint, for core and additional relations alike.
     verify:
       automated: [edges.missing-endpoint]
   AC03:
@@ -71,7 +78,9 @@ acceptance:
       automated: [edges.endpoint-types]
   AC04:
     covers: [R04]
-    given: An otherwise valid edge set with an exact repeated tuple.
+    cases: [core-relation, additional-relation]
+    given: An otherwise valid edge set with an exact repeated tuple of the listed relation kind; additional-relation
+      repeats a tuple of a fixture-registered additional relation.
     when: The edge set is validated.
     then: Validation rejects the edge set and identifies the duplicate tuple.
     verify:
@@ -176,3 +185,17 @@ acceptance:
       and leaves the active load incomplete, without moving, deleting or rewriting data.
     verify:
       automated: [edges.storage-ownership]
+  AC14:
+    covers: [R01, R10]
+    cases: [core-extra-tuple-key, core-missing-tuple-key, core-non-string-field, core-non-mapping-tuple, core-extra-envelope-key,
+      core-non-array-edges, extension-extra-tuple-key, extension-missing-tuple-key, extension-non-string-field,
+      extension-non-mapping-tuple, extension-extra-envelope-key, extension-non-array-edges, valid-shape-control]
+    given: An otherwise valid project whose core edge file (core- cases) or fixture-registered Extension edge
+      file (extension- cases) has only the listed shape defect; the control has both files in the exact CORE#15/CORE#54
+      shape.
+    when: The shared store loads the edge files and a graph revision is requested.
+    then: The control loads and hashes. Every defective case makes the load incomplete with the file path and
+      cause, leaves every byte unchanged and produces no graph revision; no tuple is projected from the defective
+      document.
+    verify:
+      automated: [edges.stored-shape]

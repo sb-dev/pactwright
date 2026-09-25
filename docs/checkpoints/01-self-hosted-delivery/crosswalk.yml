@@ -50,7 +50,7 @@ entries:
     covered_by: [CP01-S01/R01, CP01-S01/AC01]
   - key: S01.run.2
     text: "Implement one canonical loader for Pactwright configuration, lifecycle configuration, .pactwright/lock.yml, core Project Graph records and typed edges."
-    covered_by: [CP01-S01/R05, CP01-S01/R06, CP01-S01/AC05, CP01-S01/AC06, CP01-S01/AC07, CP01-S01/R09, CP01-S01/AC09, CP01-S01/AC10, CP01-S01/AC11, CP01-S01/AC12, CP01-S03/AC13]
+    covered_by: [CP01-S01/R05, CP01-S01/R06, CP01-S01/AC05, CP01-S01/AC06, CP01-S01/AC07, CP01-S01/R09, CP01-S01/AC09, CP01-S01/AC10, CP01-S01/AC11, CP01-S01/AC12, CP01-S01/R10, CP01-S01/AC13, CP01-S03/AC13]
     note: "The Core section 54 rule for entries inside an enabled owner root needs the Step 2 declaration seam, so it is proven by CP01-S03/AC13 undeclared-entry-in-owner-root rather than at Step 1."
   - key: S01.run.3
     text: "Make the runtime publishable as `pactwright` with the repository's normal build/prepack/verify discipline and a repository-local `pnpm pactwright ...` path using the same built runtime."
@@ -109,7 +109,7 @@ entries:
     covered_by: [CP01-S03/R01, CP01-S03/R03, CP01-S03/AC01, CP01-S03/AC03, CP01-S03/R08, CP01-S03/AC10, CP01-S03/AC11]
   - key: S03.run.2
     text: "Validate endpoint existence/types, duplicate tuples, self-supersession and supersession cycles."
-    covered_by: [CP01-S03/R02, CP01-S03/R03, CP01-S03/R04, CP01-S03/R05, CP01-S03/AC02, CP01-S03/AC03, CP01-S03/AC04, CP01-S03/AC05, CP01-S03/AC10]
+    covered_by: [CP01-S03/R02, CP01-S03/R03, CP01-S03/R04, CP01-S03/R05, CP01-S03/AC02, CP01-S03/AC03, CP01-S03/AC04, CP01-S03/AC05, CP01-S03/AC10, CP01-S03/R10, CP01-S03/AC14]
   - key: S03.run.3
     text: "Keep the registry extensible for later Pactwright Extension relations."
     covered_by: [CP01-S03/R06, CP01-S03/R07, CP01-S03/AC06, CP01-S03/AC07, CP01-S03/AC08, CP01-S03/AC09, CP01-S02/R09, CP01-S02/AC12, CP01-S03/R09, CP01-S03/AC12, CP01-S03/AC13, CP01-S16/R09, CP01-S16/AC10, CP01-S16/AC11]
