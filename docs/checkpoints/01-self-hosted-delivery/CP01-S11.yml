@@ -117,17 +117,15 @@ acceptance:
       automated: [agent-pack.upgrade]
   AC05:
     covers: [R02, R04]
-    cases: [missing-capability, incompatible-runtime, newer-only-outside-constraint, sync-failure, restore-failure]
+    cases: [missing-capability, incompatible-runtime, sync-failure]
     given: 'A fixture pack selected at 1.0.0 under a configured ^1.0.0 constraint and the delegation seam instrumented
-      with the listed condition: the request installs a 1.1.0 with the listed defect; newer-only-outside-constraint
-      offers only an otherwise valid 2.0.0, so the request changes nothing; sync-failure installs a valid 1.1.0
-      and sync fails; restore-failure installs an incomplete 1.1.0 and the restore request fails.'
+      so that the request installs a 1.1.0 with the listed defect; sync-failure installs a valid 1.1.0 and
+      sync fails.'
     when: Agent-pack upgrade runs.
-    then: Nothing is upgraded, and the problem names the missing capability, incompatibility, absent compatible
-      version, sync failure or restore failure. Configuration, lock and generated environment are byte-identical,
-      1.0.0 of the same source remains selected, and the package-manager manifest and lock are byte-identical
-      or restored to their previous bytes through a request for exactly 1.0.0; restore-failure names 1.0.0
-      as the version to restore.
+    then: Nothing is upgraded, and the problem names the missing capability, incompatibility or sync failure.
+      Configuration, lock and generated environment are byte-identical, 1.0.0 of the same source remains selected,
+      and the package-manager manifest and lock are restored to their previous bytes through a request for
+      exactly 1.0.0.
     verify:
       automated: [agent-pack.upgrade-failure]
   AC06:
@@ -171,16 +169,39 @@ acceptance:
       review: [agent-pack.ownership]
   AC10:
     covers: [R01, R08]
-    cases: [installed-no-request, not-installed-delegated, install-failure, ambiguous-package-manager, path-source-no-request]
+    cases: [installed-no-request, unversioned-source-delegated, constrained-source-delegated, install-failure, ambiguous-package-manager,
+      path-source-no-request]
     given: A project with an explicit packageManager declaration and the delegation seam instrumented; ambiguous-package-manager
       has no declaration and two package-manager lockfiles. installed-no-request has the requested pack installed
-      at a satisfying version; not-installed-delegated and install-failure do not; path-source-no-request uses
-      a complete fixture pack by path.
+      at a satisfying version; unversioned-source-delegated, constrained-source-delegated and install-failure
+      do not, and constrained-source-delegated requests <name>@^1.0.0; path-source-no-request uses a complete
+      fixture pack by path.
     when: Agent-pack use runs with the listed source.
-    then: installed-no-request and path-source-no-request select the pack with no request to the seam. not-installed-delegated
-      issues exactly one request naming <source>@<constraint> as a development dependency and selects the pack
-      after the installation the seam performs. install-failure is refused naming the package-manager failure.
-      ambiguous-package-manager is refused before any request, naming the ambiguity. In the refused cases configuration,
-      lock, generated environment and canonical state are byte-identical.
+    then: installed-no-request and path-source-no-request select the pack with no request to the seam. unversioned-source-delegated
+      issues exactly one request naming the bare package name as a development dependency, then resolves the
+      installed pack and records the caret range of its exact version as the constraint. constrained-source-delegated
+      issues exactly one request naming <name>@^1.0.0 and records ^1.0.0. install-failure is refused naming
+      the package-manager failure. ambiguous-package-manager is refused before any request, naming the ambiguity.
+      In the refused cases configuration, lock, generated environment and canonical state are byte-identical.
     verify:
       automated: [agent-pack.package-delegation]
+  AC11:
+    covers: [R04]
+    given: A fixture pack selected at 1.0.0 under a configured ^1.0.0 constraint and the delegation seam instrumented
+      so that only an otherwise valid 2.0.0 is newer, so the request for the configured constraint changes nothing.
+    when: Agent-pack upgrade runs.
+    then: Upgrade succeeds with no problem and reports that nothing changed. Configuration, lock, generated environment
+      and the package-manager manifest and lock are byte-identical, and 1.0.0 of the same source remains selected.
+    verify:
+      automated: [agent-pack.upgrade-no-change]
+  AC12:
+    covers: [R02, R04]
+    given: A fixture pack selected at 1.0.0 under a configured ^1.0.0 constraint and the delegation seam instrumented
+      so that the request installs an incomplete 1.1.0 and the restore request for exactly 1.0.0 then fails.
+    when: Agent-pack upgrade runs.
+    then: Nothing is upgraded, and the problem names the missing capability and the failed restore. Configuration,
+      lock and generated environment are byte-identical and 1.0.0 of the same source remains selected. The
+      package-manager manifest and lock are reported in their residual state, with 1.1.0 installed, and the
+      report names 1.0.0 as the exact version to restore and the restore request that failed.
+    verify:
+      automated: [agent-pack.upgrade-restore-failure]

@@ -29,11 +29,11 @@
 # Stage 3 (Q34-Q40) decisions and check status:
 # ../../research-logs/2026-09-25-cp01-stage-3-b12-agent-pack-format-and-selection.md
 # B12 Q34,Q35,Q36; B13 Q37,Q38; B14 Q39,Q40.
-# Applied clauses: Distribution v4 (sections 5, 15, 21, 24), Core v6 (sections
-# 35, 46, 55) and Checkpoint 1 v28 (Steps 11-13 summaries, Step 24). The
-# section 7 stage exit review is
-# ../../research-logs/2026-09-25-cp01-stage-3-exit-review.md. It added
-# S10/S11 entries to the affects of Q44 and Q46. No question is deleted.
+# Applied clauses: Distribution v4 (sections 5, 8, 15, 21, 24), Core v6
+# (sections 35, 46, 55) and Checkpoint 1 v28 (Steps 11-13 summaries, Step 24).
+# Owner review 5323213273 on PR #50 returned five P2 findings, applied. The
+# section 7 stage exit review is pending. This pass added S10/S11 entries to
+# the affects of Q44 and Q46. No question is deleted.
 #
 # Stage 4 (Q41-Q51) is a T1 conversion drafted against Core v3 and Distribution
 # v2. Its open questions are unresolved inputs to T2 review; no specification
@@ -1279,7 +1279,7 @@ open_questions:
     affects: [CP01-S11/R01, CP01-S11/R09, CP01-S11/AC01, CP01-S11/AC04, CP01-S15/AC07, CP01-S17/AC06]
     question: "Step 11 requires `agent-pack use` to lock exact identity and run sync, but the resolved lock and `environment_lock_hash` arrive with Step 15, adapter rendering with Step 12 and deterministic sync with Step 17. What does Step 11 write to `.pactwright/lock.yml` and run as sync before those steps exist, and must Steps 15 and 17 repeat the selection and upgrade proofs through the real lock and sync?"
   - id: Q35
-    affects: [CP01-S11/R01, CP01-S11/R02, CP01-S11/R04, CP01-S11/R08, CP01-S11/AC01, CP01-S11/AC02, CP01-S11/AC04, CP01-S11/AC05, CP01-S11/AC06, CP01-S11/AC09, CP01-S11/AC10, CP01-S13/R06]
+    affects: [CP01-S11/R01, CP01-S11/R02, CP01-S11/R04, CP01-S11/R08, CP01-S11/AC01, CP01-S11/AC02, CP01-S11/AC04, CP01-S11/AC05, CP01-S11/AC06, CP01-S11/AC09, CP01-S11/AC10, CP01-S11/AC11, CP01-S11/AC12, CP01-S13/R06]
     question: "Which source forms does `agent-pack use <source>` accept (package name, name with version or range, local path or tarball)? Must the package already be installed, as Step 23 installs packed artefacts first, or do `use` and `upgrade` delegate installation to the project package manager under Spec 02 section 15, whose package-manager detection is specified only at Step 19?"
   - id: Q36
     affects: [CP01-S10/R02, CP01-S10/R04, CP01-S10/R07, CP01-S10/R08, CP01-S10/AC01, CP01-S10/AC02, CP01-S10/AC04, CP01-S10/AC05, CP01-S10/AC07, CP01-S11/AC02, CP01-S11/AC05]

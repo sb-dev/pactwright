@@ -376,10 +376,15 @@ Example:
 
 ```yaml
 production_skills:
-  - source: github:sb-dev/narrative-production-skills
-  - source: github:sb-dev/music-production-skills
-  - source: github:sb-dev/video-production-skills
+  narrative-production-skills:
+    source: github:sb-dev/narrative-production-skills
+  music-production-skills:
+    source: github:sb-dev/music-production-skills
+  video-production-skills:
+    source: github:sb-dev/video-production-skills
 ```
+
+The mapping is keyed by family ID, the same key the section 12 lock uses; a list form is not a recognised serialisation.
 
 Multiple Production Skills may contribute to the same capability:
 

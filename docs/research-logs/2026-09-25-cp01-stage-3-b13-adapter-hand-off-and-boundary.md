@@ -13,6 +13,6 @@
 
 **Later owners:** Step 24 (full Delivery through the rendered adapter and hand-off commands on the packed runtime), Checkpoint 2 (a provider-calling invoker for `lifecycle run`, which uses the same result form). Remaining blockers: none for Stage 3.
 
-**Verification:** see the [Stage 3 exit record](./2026-09-25-cp01-stage-3-exit-review.md).
+**Verification:** `pnpm contracts:check` PASS, `pnpm format:check` PASS, `pnpm lint` PASS, `pnpm typecheck` PASS, `pnpm test` PASS 20/20 on the amended tree (Node v22.22.2, pnpm 11.7.0); `pnpm build`/`pnpm verify` FAIL, inherited (no runtime sources, identical on `6b9ee65`). Independent review: the owner's PR #50 review 5323213273 at `32be31b` returned five P2 findings, applied in the next commit and listed in the batch's "Applied changes"; the methodology §7 whole-stage exit review and its fresh independent review are pending and will be recorded in a Stage 3 exit record when they exist.
 
 **CP01 Stage 3 B13 v1**
