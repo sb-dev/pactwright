@@ -125,7 +125,7 @@ acceptance:
     given: 'A packed fixture pack at 1.0.0 as baseline, by package name and exact version or by directory path
       as listed, and a compatible 1.1.0 or a project root with a resolved lock as candidate; uninstalled-version-acquired
       names a baseline version that is not installed and that the delegation seam can supply; incompatible-runtime-baseline
-      names a complete 1.0.0 whose manifest declares an exact older runtime; the unresolvable cases name a
+      names a complete 1.0.0 whose manifest declares an exact older runtime and runs with no invoker; the unresolvable cases name a
       version or project that does not exist, while other versions do.'
     when: Eval --baseline --candidate runs.
     then: Resolvable comparisons record both sides' exact version, content hash and agent, prompt and direct-skill

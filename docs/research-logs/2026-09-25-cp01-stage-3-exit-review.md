@@ -37,6 +37,7 @@ Non-blocking findings, applied:
 | X16 | Core §46 carries the `/capture-intent` always-permitted and `/propose-contracts` records-nothing hand-off semantics that S12/R12 states. |
 | X17 | S10/R08 and S13/R06: the runtime-range finding is reported separably from manifest validity, so selection refuses on it and comparison reports it. |
 | X18 | Distribution §15 and S11/R08: the restore request restores an exact installed version under the previous constraint, matching R02. |
+| X19 | Record count corrected; S13/AC06 `incompatible-runtime-baseline` runs with no invoker; verdict recorded (second fresh review). |
 
 Later-stage follow-ups, owned and non-blocking for Stage 3:
 
@@ -52,9 +53,9 @@ Checks at `3bad48a` confirmed by the reviewers and unchanged by the corrections:
 
 With X1–X11 applied, the corrected tree is consistent with Core v6 and Distribution v4, and no unresolved behaviour needed by Stage 3 steps remains. The corrections were authored by the record's author and so require fresh independent review (methodology §6); the verdict below records that review's result. This is scoped T2 work; it authorises no implementation, harness construction or acceptance.
 
-**Fresh review of the corrections (methodology §6):** a fresh read-only reviewer examined X1–X11 at `fe9394d` and returned CHANGES REQUIRED with two blocking items, the Step 11 summary (X12, already applied by owner review 5323346597) and the exit status of the incompatible-runtime, no-invoker comparison (X13), plus six wording items applied as X14–X18; it confirmed X2, X3, X4, X7, X10, the crosswalk `affects` and the verification table. The reviewer stated it would accept Stage 3 as requirement-ready with those applied. A second fresh reviewer examined X12–X18 at the corrected head; its result is recorded below.
+**Fresh review of the corrections (methodology §6):** a fresh read-only reviewer examined X1–X11 at `fe9394d` and returned CHANGES REQUIRED with two blocking items, the Step 11 summary (X12, already applied by owner review 5323346597) and the exit status of the incompatible-runtime, no-invoker comparison (X13), plus five wording items applied as X14–X18; it confirmed X2, X3, X4, X7, X10, the crosswalk `affects` and the verification table. The reviewer stated it would accept Stage 3 as requirement-ready with those applied. A second fresh reviewer examined X12–X18 at `81bf4c1`: it confirmed each correction present and consistent, re-ran the mechanical output-summary check (12/12) and the repository checks, and returned ACCEPT with three non-blocking clean-ups applied here as X19 (this record's item count, the S13/AC06 `incompatible-runtime-baseline` given now states that it runs with no invoker, and this verdict).
 
-**Verdict:** see the fresh-review paragraph; requirement-ready when the X12–X18 review accepts.
+**Verdict: requirement-ready.** X19 was authored by the record's author after the accepting review; it changes no requirement and adds only a `given` qualifier and record wording, and the owner's PR #50 review is the fresh review of it.
 
 ## Verification
 

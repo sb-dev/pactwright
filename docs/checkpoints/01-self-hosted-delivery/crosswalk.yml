@@ -34,8 +34,9 @@
 # Owner review 5323213273 on PR #50 returned five P2 findings, applied. The
 # section 7 stage exit review is
 # ../../research-logs/2026-09-25-cp01-stage-3-exit-review.md (corrections
-# X1-X11 applied; verdict pending fresh review). This pass added S10/S11
-# entries to the affects of Q43-Q46, Q48 and Q49. No question is deleted.
+# X1-X19 applied; requirement-ready, accepted by fresh review). This pass
+# added S10/S11/S12 entries to the affects of Q43-Q46, Q48 and Q49. No
+# question is deleted.
 #
 # Stage 4 (Q41-Q51) is a T1 conversion drafted against Core v3 and Distribution
 # v2. Its open questions are unresolved inputs to T2 review; no specification
