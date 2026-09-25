@@ -1,6 +1,6 @@
 # Pactwright — Checkpoint 1 — Self-Hosted Delivery
 
-**Version:** 24  
+**Version:** 25  
 **Entry condition:** No installable Pactwright runtime exists.  
 **Release:** `0.0.2` (corrective; `0.0.1` was published against version 14 of this runbook and remains the released baseline)  
 **Exit capability:** Pactwright is installable, upgradeable, can govern one complete Contract-driven Delivery in its own repository and in Kakeibo, can compare an Agent Pack candidate against a released baseline, and requires no manual Project Graph coherence work.
@@ -58,7 +58,7 @@ This runbook defines implementation order, not new Pactwright semantics.
 
 A converted step is defined by its YAML contract in [`01-self-hosted-delivery/`](./01-self-hosted-delivery/), in the format owned by [Spec 00](../specs/00-checkpoint-step-contract-and-delivery-tasks.md). The step section here links the contract and summarises its deliverables; the contract holds the requirements and acceptance criteria. Every contract inherits the settings and shared requirements in [`checkpoint.yml`](./01-self-hosted-delivery/checkpoint.yml), and [`crosswalk.yml`](./01-self-hosted-delivery/crosswalk.yml) records where each obligation of the replaced step prose went: version 17 for Stage 1, version 20 for Stage 2, version 21 for Stage 3, version 22 for Stage 4 and version 23 for Stage 5.
 
-Stages 1–5 are converted. Stage 1 contracts are amended against Core v3 through the Q01–Q20 resolution pass. Stage 2 contracts are drafted against Core v3; their open questions Q21–Q33 await T2 review. Stage 3 contracts are drafted against Core v3 and Distribution v2; their open questions Q34–Q40 await T2 review. Stage 4 contracts are drafted against Core v3 and Distribution v2; their open questions Q41–Q51 await T2 review. Stage 5 contracts are drafted against the Implementation Guide; their open questions Q52–Q56 await T2 review. Later steps retain the version 17 form, with the integration obligations below amended in version 20, until they are converted:
+Stages 1–5 are converted. Stage 1 contracts are amended against Core v4, Distribution v3 and Spec 00 v6 through the Q01–Q20 resolution pass and the Stage 1 T2 pass (Q57–Q88). Stage 2 contracts are drafted against Core v3; their open questions Q21–Q33 await T2 review. Stage 3 contracts are drafted against Core v3 and Distribution v2; their open questions Q34–Q40 await T2 review. Stage 4 contracts are drafted against Core v3 and Distribution v2; their open questions Q41–Q51 await T2 review. Stage 5 contracts are drafted against the Implementation Guide; their open questions Q52–Q56 await T2 review. Later steps retain the version 17 form, with the integration obligations below amended in version 20, until they are converted:
 
 ```text
 Step
@@ -70,7 +70,7 @@ Step
 
 For Pactwright repository/code changes, finish with `pnpm verify` (shared requirement `CP01/R01`).
 
-The Q01–Q20 resolution pass is recorded in six dependency-ordered [batch records](../research-logs/2026-09-23-pr41-b1-loading.md). The crosswalk retains the original questions and replaced-prose quotes; the amended specifications and contracts govern new attempts. These document changes do not establish runtime acceptance or bypass independent review.
+The Q01–Q20 resolution pass is recorded in six dependency-ordered [batch records](../research-logs/2026-09-23-pr41-b1-loading.md). The Stage 1 T2 pass is recorded in batch records B7–B13, starting with [B7](../research-logs/2026-09-25-cp01-s1-t2-b7-checkpoint-obligations.md); [B13](../research-logs/2026-09-25-cp01-s1-t2-b13-integration-and-stage-exit.md) holds its verification, reviews and stage-exit verdict. B7 adds the checkpoint-wide simplicity, graph-boundary, self-hosting (from the acceptance of Step 25) and independent-review requirements to `checkpoint.yml`, together with the review-binding definitions. The crosswalk retains the original questions and replaced-prose quotes; the amended specifications and contracts govern new attempts. These document changes do not establish runtime acceptance or bypass independent review.
 
 Once a deterministic Pactwright responsibility exists, use the runtime rather than asking an agent to emulate it.
 
@@ -137,7 +137,7 @@ Checkpoint 1 must not turn adapter responsibilities such as capture-intent or wr
 **Deliverables**
 
 - `runtime-package` — The pactwright runtime and CLI package, built, tested and packed through the repository's normal build, prepack and verify discipline.
-- `canonical-loader` — One loading path for Pactwright configuration, lifecycle configuration, .pactwright/lock.yml, core Project Graph records and typed edges.
+- `canonical-loader` — One read-only loading path for Pactwright configuration, lifecycle configuration, .pactwright/lock.yml, core Project Graph records and typed edges. Its load result lists every input path examined with its exact bytes or recorded absence, the inventory of each storage directory and the identity of each decoder used, and the categorised problem collection that validate, doctor and mutation guards reuse.
 - `repository-cli` — A repository-local pnpm pactwright path that runs the same built runtime the package publishes.
 
 ### Step 2 — Implement the five durable core Delivery record types
@@ -718,8 +718,9 @@ Checkpoint 1 closes only when:
 - the delivered financial foundation preserves the current `FinancialEntry`, review, movement, goal, split, duplicate, idempotency and history invariants required by the acceptance profile;
 - Kakeibo domain code remains independent of Hono/Neon/Cloudflare/UI/analytics/provider concerns;
 - repeated sync converges and graph coherence is not hand maintained;
+- every accepted step satisfies the shared `checkpoint.yml` requirements, including simplicity, graph boundaries, the self-hosting threshold and independent review;
 - no known blocking failure is carried into Checkpoint 2.
 
 ---
 
-**Pactwright — Checkpoint 1 — Self-Hosted Delivery v24**
+**Pactwright — Checkpoint 1 — Self-Hosted Delivery v25**

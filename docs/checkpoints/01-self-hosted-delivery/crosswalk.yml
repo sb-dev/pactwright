@@ -9,8 +9,14 @@
 # Stage 1 (Q01-Q20) decisions and review/check status:
 # ../../research-logs/2026-09-23-pr41-b1-loading.md
 # B1 Q01-Q04; B2 Q05-Q09,Q18; B3 Q10-Q13,Q19; B4 Q14-Q16; B5 Q17; B6 Q20.
-# Applied clauses: Core v3 / Checkpoint 1 v20. Mandatory checks and independent
-# acceptance remain pending where the batch records say so; no question is deleted.
+# Applied clauses: Core v3 / Checkpoint 1 v20.
+#
+# Stage 1 T2 pass (Q57-Q88, plus the Stage 1 parts of Q21-Q56):
+# ../../research-logs/2026-09-25-cp01-s1-t2-b7-checkpoint-obligations.md
+# B7 Q57-Q60; B8 Q61-Q69,Q42; B9 Q70-Q75; B10 Q76-Q78; B11 Q79-Q82;
+# B12 Q83-Q88; B13 integration and stage exit. Applied clauses: Core v4,
+# Distribution v3, Spec 00 v6, Principles v5 / Checkpoint 1 v25. Review and
+# check status is in the B13 record; no question is deleted.
 #
 # Stage 2 (Q21-Q33) is a T1 conversion drafted against Core v3. Its open
 # questions are unresolved inputs to T2 review; no specification was amended.
