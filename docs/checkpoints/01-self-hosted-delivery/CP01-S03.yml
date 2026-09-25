@@ -7,17 +7,20 @@ requirements:
   R01:
     source: [CORE#15]
     statement: The runtime shall preserve directed source/type/target edge tuples when storing and reloading
-      them.
+      them. Storing new tuples keeps every existing entry in its stored order and appends the new tuples; it
+      never re-sorts existing entries or reformats the existing entries of a block-list file.
   R02:
     source: [CORE#15, CORE#57]
-    statement: The validator shall reject edges with absent active endpoints.
+    statement: The validator shall reject edges with absent active endpoints, for core and registered additional
+      relations alike.
   R03:
     source: [CORE#15, CORE#45, CORE#57]
     statement: The validator shall enforce registered endpoint types, including same-type supersession for
       every core and registered Extension node type.
   R04:
     source: [CORE#15, CORE#57]
-    statement: The validator shall reject duplicate source/type/target tuples.
+    statement: The validator shall reject duplicate source/type/target tuples, for core and registered additional
+      relations alike.
   R05:
     source: [CORE#15, CORE#45, CORE#57]
     statement: Supersession validation shall reject self-links, cycles, branching successors and merging predecessors;
@@ -34,9 +37,10 @@ requirements:
       it.
   R08:
     source: [CORE#15, CORE#45]
-    statement: A proposed-state comparison shall preserve every existing core edge tuple; removing or replacing
-      a core tuple shall be rejected while additions and order-only differences remain permitted subject to
-      other validation.
+    statement: A proposed-state comparison shall preserve every existing tuple in the core edge store (specs/graph/edges.yml);
+      removing or replacing one shall be rejected while additions and order-only differences remain permitted
+      subject to other validation. Tuples in an Extension edge file, including its same-type supersedes tuples,
+      follow that Extension's semantics and DISTRIBUTION#10 authority, not this comparison.
   R09:
     source: [CORE#15, CORE#54]
     statement: 'Active contributions shall have unambiguous storage/type/relation ownership. Unknown active
@@ -55,8 +59,9 @@ acceptance:
       automated: [edges.valid-roundtrip]
   AC02:
     covers: [R02]
-    cases: [missing-source, missing-target]
-    given: An edge whose only defect is the listed absent endpoint.
+    cases: [missing-source, missing-target, additional-relation-missing-source, additional-relation-missing-target]
+    given: An edge whose only defect is the listed absent endpoint; the additional-relation cases use a fixture-registered
+      additional relation.
     when: The edge set is validated.
     then: Validation rejects the edge and identifies the missing endpoint.
     verify:
@@ -71,7 +76,8 @@ acceptance:
       automated: [edges.endpoint-types]
   AC04:
     covers: [R04]
-    given: An otherwise valid edge set with an exact repeated tuple.
+    cases: [core-relation, additional-relation]
+    given: An otherwise valid edge set with an exact repeated tuple of the listed kind of relation.
     when: The edge set is validated.
     then: Validation rejects the edge set and identifies the duplicate tuple.
     verify:
@@ -134,11 +140,12 @@ acceptance:
       automated: [edges.supersession-cardinality]
   AC11:
     covers: [R01, R08]
-    cases: [add-core-edge, remove-core-edge, replace-core-edge, reorder-only]
-    given: A valid stored core edge set and a proposed set with only the listed difference.
+    cases: [add-core-edge, remove-core-edge, replace-core-edge, reorder-only, remove-extension-edge]
+    given: A valid stored core edge set and a proposed set with only the listed difference. remove-extension-edge
+      removes a same-type supersedes tuple from a fixture Extension's edge file.
     when: The proposed-state comparison is run.
-    then: A valid addition and order-only change pass; removing or replacing an old tuple fails and identifies
-      it. The stored set remains untouched.
+    then: A valid addition and order-only change pass; removing or replacing an old core-store tuple fails and
+      identifies it. remove-extension-edge raises no core-tuple violation. The stored set remains untouched.
     verify:
       automated: [edges.immutable-core-tuples]
   AC12:
@@ -167,3 +174,13 @@ acceptance:
       or rewriting data.
     verify:
       automated: [edges.storage-ownership]
+  AC14:
+    covers: [R01]
+    cases: [append-to-block-list, append-to-empty-list]
+    given: A stored core edge file in the listed form; the block list holds three tuples in non-sorted order
+      with a YAML comment.
+    when: The shared store adds one valid tuple.
+    then: Every existing entry and comment keeps its stored order and text, the new tuple follows them, and reloading
+      yields exactly the old tuples plus the new one.
+    verify:
+      automated: [edges.append-preserves-entries]
