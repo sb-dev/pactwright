@@ -32,8 +32,10 @@
 # Applied clauses: Distribution v4 (sections 5, 8, 15, 21, 24), Core v6
 # (sections 35, 46, 55) and Checkpoint 1 v28 (Steps 11-13 summaries, Step 24).
 # Owner review 5323213273 on PR #50 returned five P2 findings, applied. The
-# section 7 stage exit review is pending. This pass added S10/S11 entries to
-# the affects of Q44 and Q46. No question is deleted.
+# section 7 stage exit review is
+# ../../research-logs/2026-09-25-cp01-stage-3-exit-review.md (corrections
+# X1-X11 applied; verdict pending fresh review). This pass added S10/S11
+# entries to the affects of Q43-Q46, Q48 and Q49. No question is deleted.
 #
 # Stage 4 (Q41-Q51) is a T1 conversion drafted against Core v3 and Distribution
 # v2. Its open questions are unresolved inputs to T2 review; no specification
@@ -1303,13 +1305,13 @@ open_questions:
     affects: [CP01-S14/R01, CP01-S14/AC01, CP01-S14/AC02, CP01-S15/R06, CP01-S15/AC06]
     question: "Core section 54 lists `.pactwright/lock.yml` as a required input, and Core section 56 gives no Project Graph revision when a required input fails, but a plain scaffold has no selected pack to resolve. Does plain init write a lock, and with what content? Is a missing lock in an unactivated scaffold an incomplete load, and is the empty scaffold's graph hashable?"
   - id: Q43
-    affects: [CP01-S16/R03, CP01-S16/R06, CP01-S16/AC01, CP01-S16/AC03, CP01-S16/AC07, CP01-S17/AC06]
+    affects: [CP01-S16/R03, CP01-S16/R06, CP01-S16/AC01, CP01-S16/AC03, CP01-S16/AC07, CP01-S17/AC06, CP01-S11/R09]
     question: "Extension add and upgrade must run `pactwright sync`, but deterministic sync is Step 17 and `requires` can name only earlier steps. What does Step 16 run as sync before Step 17 exists, and must Step 17 repeat the Extension add and upgrade proofs through real sync, as CP01-S17/AC06 does for agent-pack use and upgrade?"
   - id: Q44
     affects: [CP01-S16/R12, CP01-S16/AC03, CP01-S19/R02, CP01-S19/AC03, CP01-S11/R08, CP01-S11/AC10]
     question: "Spec 02 section 15 specifies package-manager detection for runtime upgrade, which is Step 19, but Step 16 already delegates Extension installation to the project package manager, and Q35 asks the same for agent-pack use. Which step owns detection, and must Step 16 apply the Step 19 rule?"
   - id: Q45
-    affects: [CP01-S15/R05, CP01-S15/AC01, CP01-S15/AC02, CP01-S15/AC03, CP01-S09/R06, CP01-S09/AC05]
+    affects: [CP01-S15/R05, CP01-S15/AC01, CP01-S15/AC02, CP01-S15/AC03, CP01-S09/R06, CP01-S09/AC05, CP01-S12/R13]
     question: "Spec 02 section 12 requires a deterministic `environment_lock_hash` from the exact resolved lock state but defines no algorithm, canonical form or prefix, unlike pg1 for the graph revision. Which hash protocol does it use, must it be stable across runtime versions and platforms, and does it hash the lock bytes or their parsed meaning, so that a formatting-only lock change does or does not change it?"
   - id: Q46
     affects: [CP01-S15/R07, CP01-S15/AC08, CP01-S17/R06, CP01-S17/AC04, CP01-S18/R03, CP01-S18/AC06, CP01-S10/R07, CP01-S10/R08, CP01-S10/AC05]
@@ -1318,10 +1320,10 @@ open_questions:
     affects: [CP01-S18/R01, CP01-S18/R04, CP01-S18/AC02, CP01-S18/AC04, CP01-S18/AC07, CP01-S06/R04]
     question: "Spec 02 section 16 names three severities but assigns one only to an unavailable repository revision and a required migration. Which severity does each other finding have, such as lock drift, generated drift, a missing capability, preserved inactive data and an available upgrade? What exit status and machine-readable output does doctor have (compare Q30 for validate)?"
   - id: Q48
-    affects: [CP01-S19/R01, CP01-S19/R05, CP01-S19/AC01, CP01-S19/AC05, CP01-S19/AC12, CP01-S06/R04]
+    affects: [CP01-S19/R01, CP01-S19/R05, CP01-S19/AC01, CP01-S19/AC05, CP01-S19/AC12, CP01-S06/R04, CP01-S12/R13, CP01-S10/R08]
     question: "How does the old runtime re-enter the newly installed runtime, and what hand-off state lets the new runtime or `upgrade --to` recover when a step after package replacement fails? Where is the preserved previous package, configuration, lock and graph state kept, and is it committed, ignored or removed after success?"
   - id: Q49
-    affects: [CP01-S19/R10, CP01-S19/AC10, CP01-S06/R04]
+    affects: [CP01-S19/R10, CP01-S19/AC10, CP01-S06/R04, CP01-S10/R08]
     question: "Spec 02 section 15 requires rollback to restore or migrate back to the recognised original format, but defines only the forward `released-0.0.1-to-owned-stores-v1` migration. Does rollback restore preserved original bytes or run a reverse migration, and is rollback to 0.0.1 supported after new canonical records were written in the owner-separated format?"
   - id: Q50
     affects: [CP01-S16/R07, CP01-S16/R08, CP01-S16/AC09, CP01-S16/AC10]

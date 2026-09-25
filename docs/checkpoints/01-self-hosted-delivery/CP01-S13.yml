@@ -48,8 +48,10 @@ requirements:
       also a project root whose resolved lock supplies the environment, and resolve each side to exact identities,
       the pack source, version and content hash and every agent, prompt and direct-skill hash, through the
       Step 11 resolution path, acquiring a package version that is not installed through the Step 11 package-manager
-      delegation seam into an isolated location. An input that cannot be resolved exactly fails explicitly,
-      naming the input, without substituting another version. Both sides are evaluated by this runtime's case
+      delegation seam into an isolated location. Resolution for comparison establishes identity, manifest validity
+      and completeness and does not refuse a side whose declared compatible runtime excludes the running runtime;
+      that mismatch is reported as an incompatible component of the side. An input that cannot be resolved
+      exactly fails explicitly, naming the input, without substituting another version. Both sides are evaluated by this runtime's case
       set with the same invoker and judge.
   R07:
     source: [DISTRIBUTION#24, PRINCIPLES#17]
@@ -58,8 +60,9 @@ requirements:
       and direct-skill components whose identities changed between the sides. An assertion not evaluated on
       either side is reported as not comparable, an assertion that failed on the baseline and passes on the
       candidate as an improvement, and a semantic verdict that differs between the sides as a difference for
-      review, never as a regression. Changed components are reported even when no case was evaluated. No single
-      opaque aggregate score decides the result.
+      review, never as a regression. Changed components are reported even when no case was evaluated. The comparison
+      exits with failure only when it reports a regression or a side cannot be resolved; not-comparable and
+      unjudged results do not fail it. No single opaque aggregate score decides the result.
 acceptance:
   AC01:
     covers: [R01, R02]
@@ -117,16 +120,18 @@ acceptance:
   AC06:
     covers: [R06]
     cases: [pinned-package-baseline, pack-path-baseline, environment-candidate, uninstalled-version-acquired,
-      unresolvable-baseline, unresolvable-candidate]
+      incompatible-runtime-baseline, unresolvable-baseline, unresolvable-candidate]
     given: 'A packed fixture pack at 1.0.0 as baseline, by package name and exact version or by directory path
       as listed, and a compatible 1.1.0 or a project root with a resolved lock as candidate; uninstalled-version-acquired
-      names a baseline version that is not installed and that the delegation seam can supply; the unresolvable
-      cases name a version or project that does not exist, while other versions do.'
+      names a baseline version that is not installed and that the delegation seam can supply; incompatible-runtime-baseline
+      names a complete 1.0.0 whose manifest declares an exact older runtime; the unresolvable cases name a
+      version or project that does not exist, while other versions do.'
     when: Eval --baseline --candidate runs.
     then: Resolvable comparisons record both sides' exact version, content hash and agent, prompt and direct-skill
       identities. uninstalled-version-acquired obtains the version through exactly one delegation request into
-      an isolated location, leaving the project's installed packages, manifest and locks byte-identical. The
-      unresolvable cases fail explicitly, naming the input; no other version is used and no comparison is reported.
+      an isolated location, leaving the project's installed packages, manifest and locks byte-identical. incompatible-runtime-baseline
+      resolves, records its identities, reports the baseline's declared runtime as incompatible with the running
+      runtime, and the comparison proceeds. The unresolvable cases fail explicitly, naming the input; no other version is used and no comparison is reported.
     verify:
       automated: [eval.baseline-resolution]
   AC07:
@@ -140,8 +145,9 @@ acceptance:
     then: Each regression is reported at its affected capability, agent, case and changed prompt, and unaffected
       cases report no regression. improvement is reported as an improvement and semantic-difference as a difference
       for review, neither as a regression. The unchanged candidate reports no regressions and no changed component.
-      not-comparable-without-invoker reports every candidate-dependent assertion as not comparable and still
-      lists the changed prompt. No aggregate score is reported as the result.
+      not-comparable-without-invoker reports every candidate-dependent assertion as not comparable, still
+      lists the changed prompt and exits without failure, while each regression case exits with failure. No
+      aggregate score is reported as the result.
     verify:
       automated: [eval.regression-dimensions]
   AC08:

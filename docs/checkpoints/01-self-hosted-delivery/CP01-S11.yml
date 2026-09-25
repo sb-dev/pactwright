@@ -7,6 +7,10 @@ outputs:
     package manager, and updates configuration and lock only after successful resolution and validation.
   agent-pack-upgrade: A pactwright agent-pack upgrade that upgrades the selected pack within its configured compatibility
     constraints through the project package manager without changing its identity.
+  package-manager-delegation: The runtime's single package-manager delegation seam, detecting the project package
+    manager under the DISTRIBUTION#15 rule and issuing its install, request-at-constraint, exact-restore, removal
+    and isolated-acquisition requests, reused by later steps that need packages.
+
 requirements:
   R01:
     source: [DISTRIBUTION#5]
@@ -20,10 +24,10 @@ requirements:
       and validation succeed.'
   R02:
     source: [DISTRIBUTION#5, DISTRIBUTION#15]
-    statement: If resolution, compatibility, capability validation, locking or sync fails, use and upgrade shall
-      leave the previous configuration, lock, generated environment and canonical state byte-identical, and
-      shall leave the package-manager manifest and lock byte-identical or restored to their previous bytes;
-      when restoration itself fails, the report names the previous exact version to restore.
+    statement: If resolution, compatibility, capability validation, locking or sync fails, use and upgrade shall leave the previous configuration, lock, generated environment and canonical state byte-identical, and
+      shall leave the package-manager manifest and lock at the previous installed version and constraint, restoring
+      them or removing a dependency the command added; when restoration itself fails, the report names the
+      previous exact version to restore.
   R03:
     source: [DISTRIBUTION#3, DISTRIBUTION#5]
     statement: Pactwright shall never silently select or switch a pack. Pack identity changes only through agent-pack
@@ -32,11 +36,12 @@ requirements:
   R04:
     source: [DISTRIBUTION#5, DISTRIBUTION#15]
     statement: Agent-pack upgrade shall request the configured source at its configured constraint from the
-      project package manager, so that the package manager resolves the newest satisfying version and reconciles
-      the package manifest to that constraint, then resolve and validate the installed candidate through the
-      Step 10 check before changing the lock or generated environment. It never changes the source identity.
-      With an exact configured version, or when no newer version satisfies the constraint, it reports that
-      nothing changed.
+      project package manager, so that the package manager resolves the version satisfying it, replacing the installed
+      package when that version differs from the locked one, and reconciles the package manifest to that constraint,
+      then resolve and validate the installed candidate through the Step 10 check before changing the lock or
+      generated environment. It never changes the source identity. When the package manager's resolution of
+      the constraint is the version already locked, which an exact constraint equal to the locked version or
+      a range with no newer satisfying version produces, it reports that nothing changed.
   R05:
     source: [DISTRIBUTION#3, DISTRIBUTION#12]
     statement: Configuration expresses desired constraints and the lock the exact resolved pack. An exact configured
@@ -58,8 +63,10 @@ requirements:
       package manager through the runtime''s single package-manager delegation seam, which detects the package
       manager under the DISTRIBUTION#15 rule: the repository''s packageManager declaration, otherwise unambiguous
       lock state, refusing ambiguous or absent state before any change and never switching package managers.
-      Use requests installation only when no installed package satisfies the request; path sources involve
-      no package manager. Pactwright implements no parallel installer and never copies, fetches or unpacks a
+      The seam''s requests are: install a package as a development dependency, request a source at a constraint,
+      restore an exact version, remove a dependency the command added, and acquire an exact version into an
+      isolated location outside the project. Use requests installation only when no installed package satisfies
+      the request; path sources involve no package manager. Pactwright implements no parallel installer and never copies, fetches or unpacks a
       package. Neither command changes the runtime or an Extension.'
   R09:
     source: [DISTRIBUTION#12, DISTRIBUTION#14]
@@ -106,9 +113,11 @@ acceptance:
       automated: [agent-pack.no-silent-selection]
   AC04:
     covers: [R04, R08, R09]
-    given: A fixture pack selected at 1.0.0 under a configured ^1.0.0 constraint, and the delegation seam instrumented
-      so that a request for the configured source at that constraint installs a compatible complete 1.1.0 of
-      the same source.
+    cases: [range-newer-available, exact-constraint-differs]
+    given: A fixture pack selected and locked at 1.0.0 under a configured ^1.0.0 constraint for range-newer-available,
+      or a configured exact 1.1.0 constraint with 1.0.0 still locked and installed for exact-constraint-differs,
+      and the delegation seam instrumented so that the request for the configured source at that constraint
+      installs a compatible complete 1.1.0 of the same source.
     when: Agent-pack upgrade runs.
     then: The seam received exactly one request naming the configured source and constraint. The lock records
       1.1.0 with the same source, its content hash and agent identities, and sync ran. The configured source
@@ -124,8 +133,8 @@ acceptance:
     when: Agent-pack upgrade runs.
     then: Nothing is upgraded, and the problem names the missing capability, incompatibility or sync failure.
       Configuration, lock and generated environment are byte-identical, 1.0.0 of the same source remains selected,
-      and the package-manager manifest and lock are restored to their previous bytes through a request for
-      exactly 1.0.0.
+      and the package-manager manifest and lock are at the previous installed version and constraint through
+      a restore request for exactly 1.0.0.
     verify:
       automated: [agent-pack.upgrade-failure]
   AC06:
@@ -169,19 +178,20 @@ acceptance:
       review: [agent-pack.ownership]
   AC10:
     covers: [R01, R08]
-    cases: [installed-no-request, unversioned-source-delegated, constrained-source-delegated, install-failure, ambiguous-package-manager,
-      path-source-no-request]
+    cases: [installed-no-request, unversioned-source-delegated, constrained-source-delegated, installed-then-refused,
+      install-failure, ambiguous-package-manager, path-source-no-request]
     given: A project with an explicit packageManager declaration and the delegation seam instrumented; ambiguous-package-manager
       has no declaration and two package-manager lockfiles. installed-no-request has the requested pack installed
-      at a satisfying version; unversioned-source-delegated, constrained-source-delegated and install-failure
-      do not, and constrained-source-delegated requests <name>@^1.0.0; path-source-no-request uses a complete
+      at a satisfying version; unversioned-source-delegated, constrained-source-delegated, installed-then-refused
+      and install-failure do not, installed-then-refused installs a pack that then fails the capability check, and constrained-source-delegated requests <name>@^1.0.0; path-source-no-request uses a complete
       fixture pack by path.
     when: Agent-pack use runs with the listed source.
     then: installed-no-request and path-source-no-request select the pack with no request to the seam. unversioned-source-delegated
       issues exactly one request naming the bare package name as a development dependency, then resolves the
       installed pack and records the caret range of its exact version as the constraint. constrained-source-delegated
-      issues exactly one request naming <name>@^1.0.0 and records ^1.0.0. install-failure is refused naming
-      the package-manager failure. ambiguous-package-manager is refused before any request, naming the ambiguity.
+      issues exactly one request naming <name>@^1.0.0 and records ^1.0.0. installed-then-refused is refused naming
+      the missing capability after exactly one install request and one removal request, leaving the package-manager
+      manifest and lock byte-identical. install-failure is refused naming the package-manager failure. ambiguous-package-manager is refused before any request, naming the ambiguity.
       In the refused cases configuration, lock, generated environment and canonical state are byte-identical.
     verify:
       automated: [agent-pack.package-delegation]

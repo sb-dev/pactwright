@@ -67,13 +67,16 @@ requirements:
   R12:
     source: [CORE#46, CORE#55, DISTRIBUTION#14, PRINCIPLES#11]
     statement: 'A rendered command shall reach the runtime only through the CORE#46 hand-off commands under pactwright
-      lifecycle that the adapter renders: a dispatch command that verifies the responsibility is the permitted
-      next action for the direction, records the dispatch of a Delivery or Review step with the current project_graph_revision
-      in the Brief''s execution state through the Step 6 boundary, and returns the Step 9 context; and a result
-      command that hands the responsibility''s structured result to the runtime. Every capability invocation
-      goes through the Step 8 capability-invocation seam and resolves the agent through the selected pack''s
-      mapping. The hand-off commands are adapter protocol, not a public contract; rendered prompts perform none
-      of their work and never write canonical or execution-state files.'
+      lifecycle that the adapter renders: a dispatch command that verifies the responsibility is permitted (the
+      permitted next action for the direction, or for /capture-intent always, subject to actor policy), resolves
+      the command''s capability to the agent the selected pack maps and returns it with the Step 9 context, and
+      records the dispatch of a Delivery or Review step with the current project_graph_revision in the Brief''s
+      execution state through the Step 6 boundary; and a result command that hands the responsibility''s structured
+      result to the runtime, which applies the permitted mutation or execution-state write and, for /propose-contracts,
+      records nothing. In the adapter path the rendered command delegates the work to the rendered agent; the
+      Step 8 capability-invocation seam is the in-process path lifecycle run and eval use. The hand-off commands
+      are adapter protocol, not a public contract; rendered prompts perform none of the runtime''s work and never
+      write canonical or execution-state files.'
   R13:
     source: [CORE#51, CORE#53, CORE#55]
     statement: A Delivery or Review result shall be accepted only against the canonical state recorded at its
@@ -95,15 +98,16 @@ acceptance:
   AC02:
     covers: [R03, R04, R05, R06, R07, R08, R09, R12]
     cases: [capture-intent, propose-contracts, approve-contract, write-brief, deliver-brief, review, prepare-evidence]
-    given: A complete valid project at the lifecycle position the listed command needs, with an instrumented
-      capability invoker on the Step 8 seam that records every call and returns scripted output.
-    when: The listed command runs through the hand-off commands.
-    then: 'The invoked capability is exactly the command''s: delivery-specification for capture-intent, propose-contracts,
-      approve-contract and write-brief; delivery-execution for deliver-brief and prepare-evidence; delivery-review
-      for review, resolved to the agent the selected pack maps. The canonical change is exactly the command''s
-      permitted mutation: one Intent; none; Decision, Contract and their edges; Brief and its decomposes edge;
-      none; none; Evidence and its evidences edge. deliver-brief and review change execution state only through
-      the result command, and the resulting graph validates.'
+    given: A complete valid project at the lifecycle position the listed command needs, and a scripted structured
+      result for the command handed to the result command.
+    when: The listed command's dispatch command runs, then its result command with the scripted result.
+    then: 'Dispatch names the command''s capability, delivery-specification for capture-intent, propose-contracts,
+      approve-contract and write-brief, delivery-execution for deliver-brief and prepare-evidence, delivery-review
+      for review, and the agent the selected pack maps to it, which the rendered command also names. The canonical
+      change is exactly the command''s permitted mutation: one Intent; none; Decision, Contract and their edges;
+      Brief and its decomposes edge; none; none; Evidence and its evidences edge. deliver-brief and review advance
+      execution state, the delivery sequence, Review outcome and current step, only through the result command,
+      and the resulting graph validates.'
     verify:
       automated: [adapter.permitted-mutations]
   AC03:
@@ -156,9 +160,9 @@ acceptance:
       automated: [adapter.approve-contract-lineage]
   AC07:
     covers: [R03, R04, R05, R06, R07, R08, R09, R12]
-    given: An empty valid project with an allowed actor and fixture capabilities returning scripted output.
+    given: An empty valid project with an allowed actor and a scripted structured result for each command.
     when: /capture-intent, /propose-contracts, /approve-contract (proceed), /write-brief, /deliver-brief, /review
-      and /prepare-evidence run in order through the hand-off commands.
+      and /prepare-evidence run in order through the dispatch and result commands.
     then: The graph validates and the lineage derives done. Only the selected Contract exists, the Evidence
       evidences the current Brief, and the Brief's execution state records one completed Delivery step and
       a closing Review of that delivery sequence with outcome may-progress.
@@ -169,9 +173,9 @@ acceptance:
     cases: [deliver-brief, review]
     given: A delivering lineage whose project also holds a superseded Brief, rejected alternatives and an execution
       transcript.
-    when: The listed command invokes its capability.
-    then: The context the dispatch command returns and the context passed to the capability both equal the
-      Step 9 context assembly for the current Brief and exclude the superseded Brief, alternatives and transcript.
+    when: The listed command's dispatch command runs.
+    then: The context the dispatch command returns, with the mapped agent, equals the Step 9 context assembly
+      for the current Brief and excludes the superseded Brief, alternatives and transcript.
     verify:
       automated: [adapter.context-assembly]
   AC09:
