@@ -10,7 +10,8 @@ requirements:
   R01:
     source: [DISTRIBUTION#3, CORE#54]
     statement: 'Init shall create only the Pactwright-owned core configuration, lifecycle configuration, a version
-      1 lock without an agent_pack entry and the Project Graph structure at the CORE#54 paths. An empty graph is an empty specs/nodes/.gitkeep and specs/graph/edges.yml containing `edges:
+      1 lock holding only `version`, the runtime identity and an empty `extensions` map, and the Project Graph structure
+      at the CORE#54 paths. An empty graph is an empty specs/nodes/.gitkeep and specs/graph/edges.yml containing `edges:
       []`. Init changes no other file.'
   R02:
     source: [DISTRIBUTION#3, DISTRIBUTION#14]
@@ -50,7 +51,8 @@ acceptance:
       a user .github/workflows/ file and an installed @pactwright/standard.
     when: Init runs without a pack choice.
     then: 'Only the CORE#54 scaffold is created, with an empty specs/nodes/.gitkeep and `edges: []`. Configuration
-      has no agent_pack and GitHub disabled. No Pactwright-managed workflow exists and no GitHub request is attempted.
+      has no agent_pack and GitHub disabled. The lock is version 1 with the runtime identity, no Extensions and
+      no agent_pack. No Pactwright-managed workflow exists and no GitHub request is attempted.
       Unrelated files are byte-identical. The result reports an unactivated, incomplete scaffold.'
     verify:
       automated: [init.scaffold]
@@ -59,8 +61,8 @@ acceptance:
     given: A repository initialised by AC01.
     when: The Step 1 canonical loader reads the project.
     then: The loader reads the created configuration, lifecycle configuration, lock, records directory and edges
-      as written, reports a complete load of an empty graph and derives its pg1 revision. The only incompleteness
-      reported is the unselected pack and its unresolved capability environment.
+      as written, reports a complete load of an empty graph and derives its pg1 revision. The load result contains
+      no problem; the unactivated-scaffold report belongs to init (AC01).
     verify:
       automated: [init.loader-roundtrip]
   AC03:

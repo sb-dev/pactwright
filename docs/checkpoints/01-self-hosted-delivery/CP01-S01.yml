@@ -5,8 +5,9 @@ outputs:
   runtime-package: The pactwright runtime and CLI package, built, tested and packed through the repository's
     normal build, prepack and verify discipline.
   canonical-loader: One read-only loading path for Pactwright configuration, lifecycle configuration, .pactwright/lock.yml,
-    core Project Graph records and typed edges. Its load result lists every input read with its exact bytes
-    and decoder, and the categorised problem collection that validate, doctor and mutation guards reuse.
+    core Project Graph records and typed edges. Its load result lists every input path examined with its exact
+    bytes or recorded absence, the inventory of each storage directory and the identity of each decoder used,
+    and the categorised problem collection that validate, doctor and mutation guards reuse.
   repository-cli: A repository-local pnpm pactwright path that runs the same built runtime the package publishes.
 requirements:
   R01:
@@ -31,7 +32,9 @@ requirements:
     source: [CORE#54, DISTRIBUTION#3, DISTRIBUTION#12]
     statement: The canonical loader shall use the CORE#54 paths and serialisations and compose owning decoders
       through one path. It is read-only; the owning command writes a changed input and the loader reads it
-      back. The load result lists every input path read with its exact bytes and the decoder used. Step 1 proves
+      back. The load result lists every input path examined with its exact bytes or recorded absence, the inventory
+      of each storage directory and the identity of each decoder used; a decoder identity changes when its
+      code changes. Step 1 proves
       loading and parse diagnostics; later schemas and integrations extend that path, not duplicate it.
   R06:
     source: [CORE#54, CORE#57]
@@ -40,7 +43,7 @@ requirements:
       disposition under CORE#54 and DISTRIBUTION#12, never an unsupported-version label. Parseable values
       remain diagnostic only when incomplete; no silent default, omission, repair or write may make the result
       appear complete. Each problem names its path, cause and category, and the categories distinguish at least
-      missing or unreadable input, malformed input, unsupported version, migration-required recognised format,
+      missing input, unreadable input, malformed input, unsupported version, migration-required recognised format,
       unexpected storage entry, non-core entry in core storage, inactive component and unavailable enabled
       Extension.
   R07:
@@ -96,13 +99,15 @@ acceptance:
       automated: [cli.repository-path]
   AC05:
     covers: [R05]
-    cases: [configuration, lifecycle, lock, lock-without-agent-pack, core-records, typed-edges]
+    cases: [configuration, lifecycle, lock, lock-without-agent-pack, core-records, typed-edges, absent-optional-extension-store]
     given: A valid core-only repository with the listed input at its canonical path. lock-without-agent-pack
       is a version 1 lock of an unactivated scaffold whose configuration selects no pack (DISTRIBUTION#12).
+      absent-optional-extension-store has no specs/extensions directory.
     when: The canonical loader reads it.
     then: All parsed entries and values are represented without invented defaults; canonical comparison applies
-      only CORE#6 normalisation. The result lists each input path with its exact bytes and decoder and contains
-      no problem. lock-without-agent-pack loads complete; the missing pack is not a load problem.
+      only CORE#6 normalisation. The result lists each input path with its exact bytes or recorded absence,
+      each storage directory inventory and each decoder identity, and contains no problem. lock-without-agent-pack
+      loads complete; the missing pack is not a load problem. The absent optional store is recorded as absent.
     verify:
       automated: [loader.loads-inputs]
   AC06:
@@ -154,7 +159,8 @@ acceptance:
     then: Declarations are retained unchanged. No Extensions and a disabled Extension without implementation
       permit otherwise complete local loading; inactive owner data is reported and preserved without decoding.
       An unavailable enabled Extension is an explicit incomplete-environment error. GitHub-enabled configuration
-      loads complete, with a non-blocking notice that remote operations are unavailable. No component activation,
+      loads complete, with a notice that remote operations are unavailable; the notice is not a load problem.
+      No component activation,
       remote effect or file mutation occurs.
     verify:
       automated: [loader.optional-declarations]
@@ -164,7 +170,8 @@ acceptance:
       non-string-key, yaml11-scalar-stays-string, yaml12-finite-number, quoted-string-key]
     given: A required YAML input with only the listed CORE#6 condition. Each case runs once in each YAML input
       kind (configuration, lifecycle, lock, core-record frontmatter and edges), and each run has its own result.
-      The scalar controls include yes/on/0b101/1_000/timestamps
+      Controls are judged on the decoded value, not on whether the input kind's schema accepts it. The scalar
+      controls include yes/on/0b101/1_000/timestamps
       as strings, finite Core decimal/octal/hex/float forms as numbers, and quoted numeric or boolean keys
       as strings; the non-string-key case uses unquoted numeric and boolean keys.
     when: The shared decoder loads it.
@@ -194,7 +201,8 @@ acceptance:
     covers: [R06]
     cases: [missing-input, unreadable-input, malformed-input, unsupported-version, migration-required, unexpected-entry,
       non-core-entry-in-core-storage, inactive-component, unavailable-enabled-extension]
-    given: A repository whose only defect produces a problem of the listed category.
+    given: A repository whose only defect produces a problem of the listed category. unavailable-enabled-extension
+      has no owner root and no lock entry for the Extension; migration-required uses exactly one legacy input.
     when: The canonical loader reads it.
     then: The load result holds exactly one problem, carrying its path, cause and the listed category. Each
       category is distinguishable from every other, and inactive-component alone leaves the load complete.

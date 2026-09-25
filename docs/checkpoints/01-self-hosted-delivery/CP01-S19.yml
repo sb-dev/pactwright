@@ -115,7 +115,9 @@ acceptance:
       its tuples in specs/graph/edges.yml, configuration version 1, lifecycle version 1 with stages and the unversioned
       lock.
     when: Load, validate and doctor run on the current runtime before upgrade.
-    then: Each reports the native and migration-required dispositions, and no file changes.
+    then: Each reports the native and migration-required dispositions, and no file changes. The Extension records
+      and tuples in core storage are non-core entries naming their resolved owner, a recognised legacy placement
+      that the explicit migration takes as input; they do not stop the source being a complete valid legacy source.
     verify:
       automated: [upgrade.legacy-diagnosis]
   AC07:

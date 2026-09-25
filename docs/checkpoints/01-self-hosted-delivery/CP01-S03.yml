@@ -167,7 +167,8 @@ acceptance:
       is stored in specs/extensions/<relation-owner>/edges.yml. Core records use specs/nodes/; core lineage
       tuples use specs/graph/edges.yml; Extension records remain inside their declared owner root. The core-to-core-edge
       defect uses a core lineage relation, not an Extension-owned additional relation. unexpected-active-extension-entry
-      places an undeclared file inside an active owner root.
+      places an undeclared file inside an active owner root; it is read through the Step 1 canonical loader,
+      reported as an unexpected entry and leaves the load incomplete.
     when: Registration and shared-store validation run without installing a package.
     then: The valid cross-graph control passes through the shared validator. Every invalid placement, duplicate
       Extension ID or foreign-owner claim fails with the paths and owners identified, without moving, deleting

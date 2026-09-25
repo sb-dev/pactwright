@@ -167,7 +167,7 @@ acceptance:
     cases: [valid-additional-node-type, valid-non-node-record, duplicate-node-type, replace-core-type, duplicate-canonical-key,
       malformed-owner-field, endpoint-id-collides-with-core-id, endpoint-id-collides-across-owners, relation-registered-by-two-owners,
       reserved-core-owner, extension-value-outside-json-domain, registry-identity, empty-kind, empty-key, projection-of-unregistered-type,
-      declaration-fails-partway]
+      declaration-fails-partway, registration-order-only]
     given: A valid existing registry and a fixture declaration or record with the listed condition. Collision
       cases retain both claimants; the value-domain case independently exercises an unsafe integer and a lone
       surrogate from an owner decoder. declaration-fails-partway declares several valid items followed by one
@@ -179,6 +179,7 @@ acceptance:
       rule and do not register or hash the value. All failures leave the prior registry unchanged; malformed
       owner data fails its own schema. registry-identity registers the same declarations twice in separate
       processes and once with one declaration changed. The first two identities are equal and the third differs.
+      registration-order-only registers the same declarations in another order and yields the same identity.
     verify:
       automated: [records.extension-registration]
   AC13:
