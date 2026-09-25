@@ -62,7 +62,7 @@ requirements:
       state for the Brief. The latest delivered state is reviewed when the most recent Review completion records
       the current delivery sequence; the closing Review permits closure when that completion is at the shape's
       closing Review step with outcome may-progress; a required Gate is unresolved while the shape declares
-      a Gate before closure whose most recent recorded resolution is not passed. A check after writing Evidence
+      a Gate before closure that is not resolved for progression under CP01-S06/R03, including one passed before a corrective re-entry of a Delivery step preceding it. A check after writing Evidence
       does not satisfy this.
   R10:
     source: [CORE#25, CORE#30, CORE#58]

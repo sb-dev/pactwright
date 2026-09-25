@@ -27,8 +27,10 @@ requirements:
       separate. Policy declares the authority a Gate requires as one or more actor kinds from human, agent and
       automation, enforced kind-only like approve-contract.actor. A Gate resolution supplies its actor in the
       CORE#9 <kind>:<identity> syntax and an outcome, passed or refused, which execution state records unchanged
-      as attribution together with the Gate; the identity is not authenticated. A Gate is resolved for progression
-      only while its most recent recorded resolution is passed. A Gate changes progression authority only;
+      as attribution together with the Gate and the delivery sequence it approved; the identity is not authenticated.
+      A Gate is resolved for progression only while its most recent recorded resolution is passed and no corrective
+      transition has since re-entered a Delivery step before the Gate; after such a re-entry the Gate must be
+      resolved again. A Gate changes progression authority only;
       resolving a Gate or recording an approval never creates a Decision or changes the recorded Contract, and
       changing policy or authority shall not require a different shape.
   R04:
@@ -38,7 +40,8 @@ requirements:
       as Pactwright-owned ordinary repository content, one document per Brief below a runtime-declared path
       under .pactwright/, read through the Step 1 canonical loader with a registered decoder and never stored
       as a canonical record or in a core store. The document declares a format version the loader recognises;
-      an unknown version is an explicit error, and Step 19 owns any later migration. An absent document means
+      an unknown version is an explicit error. Checkpoint 1 defines a single format version, so no Checkpoint
+      1 migration exists; a later format change owns its own migration. An absent document means
       the Brief has not started its shape and is not a validation problem. Broad Delivery state remains
       derived from canonical lineage, and changing execution state alone shall change no canonical record,
       edge or project_graph_revision.
@@ -170,8 +173,9 @@ acceptance:
       loop without an iteration limit, or Review requests a third correction.'
     when: The configuration is resolved and the route requested.
     then: Configuration defects are rejected before any step runs. The undeclared route is refused with the
-      reason and no route is added. With no escalation configured, progression stops at the exhausted limit
-      and no further automatic re-entry occurs.
+      reason and no route is added. With no escalation configured, progression stops at the exhausted limit,
+      no further automatic re-entry occurs and status reports that step as blocking, awaiting required actor
+      human.
     verify:
       automated: [lifecycle.invalid-correction]
   AC07:
@@ -264,3 +268,17 @@ acceptance:
       and cause through the loader, no step runs and nothing is written.
     verify:
       automated: [lifecycle.state-storage]
+  AC14:
+    covers: [R03]
+    cases: [re-entry-before-gate, correction-after-gate]
+    given: 'A fixture shape Delivery, Gate, Delivery, Review with a declared corrective route from Review, and
+      a Gate already resolved passed by an authorised actor: re-entry-before-gate routes correction back to
+      the first Delivery step, before the Gate; correction-after-gate routes it to the second Delivery step,
+      after the Gate.'
+    when: The correction is applied and progression runs until the Gate would next be reached.
+    then: In re-entry-before-gate the Gate is unresolved when reached again, progression stops there, and a new
+      passed resolution recording the new delivery sequence lets it continue. In correction-after-gate the
+      earlier passed resolution still applies and the Gate is not revisited. Neither case writes a canonical
+      file.
+    verify:
+      automated: [lifecycle.gate-re-entry]

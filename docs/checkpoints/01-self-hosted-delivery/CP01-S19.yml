@@ -160,7 +160,7 @@ acceptance:
       automated: [upgrade.rollback]
   AC11:
     covers: [R10]
-    given: The AC06 project with execution provenance recording a sha256 graph revision.
+    given: The AC06 project with a replay-base document, as CP01-S09/R06 defines, recording a sha256 graph revision.
     when: It is migrated as in AC07 and replay validation is requested.
     then: The provenance is byte-identical and still sha256. Replay reports the legacy protocol and needs the recorded
       runtime; it is not reported as a pg1 match.

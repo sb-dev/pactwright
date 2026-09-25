@@ -7,7 +7,8 @@ outputs:
   lifecycle-next: A read-only pactwright lifecycle next that determines the next permitted lifecycle action
     without executing it.
   lifecycle-run: A pactwright lifecycle run that executes automatic responsibilities through the resolved shape
-    and policy until a required Gate, completion, execution failure or validation failure.
+    and policy until a required Gate, a manual responsibility, a blocked Review outcome, completion, execution
+    failure or validation failure.
 requirements:
   R01:
     source: [CORE#27, CORE#44, CORE#46]
@@ -23,12 +24,14 @@ requirements:
       and required actor. Status and next shall be read-only; they write no file, advance no execution state
       and invoke no agent or capability.
   R03:
-    source: [CORE#26, CORE#32, CORE#34, CORE#35, CORE#46, CORE#53, CORE#54, CORE#58, DISTRIBUTION#20]
+    source: [CORE#26, CORE#32, CORE#34, CORE#35, CORE#46, CORE#49, CORE#53, CORE#54, CORE#58, DISTRIBUTION#20]
     statement: Lifecycle run shall execute automatic responsibilities through the resolved shape and policy
       and stop at a required Gate, a manual responsibility, a blocked Review outcome, completion, execution
       failure or validation failure. It runs the selected direction, or every active direction in Intent-ID
-      order with one result per direction. propose-contracts, write-brief, deliver-brief and review are capability-backed;
-      prepare-evidence, and approve-contract when policy delegates it, are runtime-executed responsibilities.
+      order with one result per direction. Every automatic responsibility is capability-backed; the capability
+      supplies content, such as the selected alternative and supplied actor of a delegated approve-contract
+      or the facts of prepare-evidence, and the runtime applies the Step 7 guards and performs any canonical
+      write.
       It dispatches each capability-backed responsibility through the runtime's single capability-invocation
       seam, which Step 8 supplies with an instrumented invoker; invoked without an invoker it stops at the
       first such responsibility with an execution failure naming the missing invoker and simulates nothing.
@@ -47,7 +50,8 @@ requirements:
     statement: After current Evidence no further core fulfilment step shall be offered or run for that Brief.
   R07:
     source: [CORE#44, CORE#54, CORE#55, CORE#57]
-    statement: Under an incomplete load, a lineage defect or a policy-denied recorded Decision, status remains
+    statement: Under an incomplete load, a lineage defect, a policy-denied recorded Decision or a malformed or
+      unknown-version execution-state document, status remains
       diagnostic and still returns each unaffected Intent's exact standalone lineage, Contract and state. Next
       and run shall not bypass complete-state validation, invoke an agent or mutate state while the complete-state
       or actor-kind guard fails.
@@ -104,15 +108,17 @@ acceptance:
       automated: [lifecycle.progress-not-graph]
   AC06:
     covers: [R07]
-    cases: [incomplete-load, defective-and-unaffected-intents, policy-denied-decision]
+    cases: [incomplete-load, defective-and-unaffected-intents, policy-denied-decision, malformed-execution-state]
     given: A project with the listed condition. The defective case holds one Intent with a lineage defect and
       one unaffected Intent, with a standalone control for the unaffected Intent. The policy-denied case holds
-      a structurally valid lineage whose current Decision's actor kind the policy disallows.
+      a structurally valid lineage whose current Decision's actor kind the policy disallows. The malformed-execution-state
+      case holds a delivering Brief whose execution-state document does not decode.
     when: Lifecycle status is invoked, and next and run are requested for the unaffected Intent or, in the
-      policy-denied case, for the denied Intent.
+      policy-denied and malformed-execution-state cases, for the affected Intent.
     then: Status reports the problems and returns the unaffected Intent's lineage, Contract and state equal
       to its standalone control, marked diagnostic when the load is incomplete; for the policy-denied Intent
-      it returns that Intent's own recorded lineage, Contract and state with the actor-kind problem. Next and
+      it returns that Intent's own recorded lineage, Contract and state with the actor-kind problem; for the
+      malformed-execution-state Brief it reports the document's path and cause. Next and
       run refuse with the owning problem, including for the unaffected Intent; neither invokes a capability,
       advances execution state nor writes.
     verify:

@@ -19,9 +19,11 @@
 # B7 Q21,Q24; B8 Q22,Q25,Q31; B9 Q23,Q32; B10 Q26,Q27,Q33; B11 Q28,Q29,Q30.
 # Applied clauses: Core v4 (sections 27, 28, 32, 52, 53, 55, 57) and
 # Checkpoint 1 v26 (section 4, Step 24), approved by the owner. Independent
-# reviews and PR #49 owner reviews are recorded in each batch; fresh review
-# of the Core v4 amendments and the section 7 stage exit are pending. No
-# question is deleted.
+# reviews and PR #49 owner reviews are recorded in each batch. The section 7
+# stage exit review is
+# ../../research-logs/2026-09-25-cp01-stage-2-exit-review.md; it added S06,
+# S08 and S09 entries to the affects of Q37-Q39 and Q45-Q49. No question is
+# deleted.
 #
 # Stage 3 (Q34-Q40) is a T1 conversion drafted against Core v3 and Distribution
 # v2. Its open questions are unresolved inputs to T2 review; no specification
@@ -1277,13 +1279,13 @@ open_questions:
     affects: [CP01-S10/R02, CP01-S10/R04, CP01-S10/AC01, CP01-S10/AC02, CP01-S11/AC02, CP01-S11/AC05]
     question: "Spec 02 section 5 describes Agent Pack content only conceptually. What format declares a pack's capability mappings, agents, prompts, direct skills and evaluation cases, and how does a pack declare its compatible runtime versions, so that the incompatible-runtime and capability-check criteria have a defined input?"
   - id: Q37
-    affects: [CP01-S12/R07, CP01-S12/R08, CP01-S12/AC03]
+    affects: [CP01-S12/R07, CP01-S12/R08, CP01-S12/AC03, CP01-S06/R09, CP01-S12/AC07]
     question: "The agent executing `/deliver-brief` or `/review` has write access to the repository. How does the runtime keep it from mutating the Delivery Graph directly: prevent the write, detect an out-of-band canonical change and refuse progression, or leave the change to `pactwright validate`? CP01-S12/AC03 assumes detection and refusal to advance."
   - id: Q38
-    affects: [CP01-S12/R03, CP01-S12/R05, CP01-S12/R06, CP01-S12/R09, CP01-S12/R11, CP01-S12/AC02, CP01-S12/AC04]
+    affects: [CP01-S12/R03, CP01-S12/R05, CP01-S12/R06, CP01-S12/R09, CP01-S12/R11, CP01-S12/AC02, CP01-S12/AC04, CP01-S06/R09, CP01-S08/R03, CP01-S12/AC03, CP01-S12/AC07]
     question: "Which capability does each adapter command invoke? Core section 35 assigns delivery-specification to Intent, alternatives, selection, Contract and Brief work, but names none for `/prepare-evidence`. How does a Claude Code command reach the runtime mutation API, given that CP01-S08 assumes no separate CLI mutation command and Principles section 11 lists no mutating runtime command for these responsibilities?"
   - id: Q39
-    affects: [CP01-S13/R01, CP01-S13/R05, CP01-S13/AC01, CP01-S13/AC05]
+    affects: [CP01-S13/R01, CP01-S13/R05, CP01-S13/AC01, CP01-S13/AC05, CP01-S08/R03]
     question: "How does `pactwright eval` execute capabilities and semantic judgement: live model calls through the adapter, a runtime-invoked provider, or recorded outputs? Which judge performs semantic assertions, how is it identified and pinned so that baseline and candidate results are comparable, and what does eval need when no model is available, as in CI?"
   - id: Q40
     affects: [CP01-S13/R02, CP01-S13/R06, CP01-S13/R07, CP01-S13/AC06, CP01-S13/AC07, CP01-S28]
@@ -1301,19 +1303,19 @@ open_questions:
     affects: [CP01-S16/R12, CP01-S16/AC03, CP01-S19/R02, CP01-S19/AC03]
     question: "Spec 02 section 15 specifies package-manager detection for runtime upgrade, which is Step 19, but Step 16 already delegates Extension installation to the project package manager, and Q35 asks the same for agent-pack use. Which step owns detection, and must Step 16 apply the Step 19 rule?"
   - id: Q45
-    affects: [CP01-S15/R05, CP01-S15/AC01, CP01-S15/AC02, CP01-S15/AC03]
+    affects: [CP01-S15/R05, CP01-S15/AC01, CP01-S15/AC02, CP01-S15/AC03, CP01-S09/R06, CP01-S09/AC05]
     question: "Spec 02 section 12 requires a deterministic `environment_lock_hash` from the exact resolved lock state but defines no algorithm, canonical form or prefix, unlike pg1 for the graph revision. Which hash protocol does it use, must it be stable across runtime versions and platforms, and does it hash the lock bytes or their parsed meaning, so that a formatting-only lock change does or does not change it?"
   - id: Q46
     affects: [CP01-S15/R07, CP01-S15/AC08, CP01-S17/R06, CP01-S17/AC04, CP01-S18/R03, CP01-S18/AC06]
     question: "Spec 02 sections 5 to 7 do not say how a Checkpoint 1 Agent Pack or configuration declares an external Production Skills import. Which field identifies one, so that Steps 15, 17 and 18 can report it as unsupported? Does an unsupported import block the whole environment, as these contracts assume, or only the capabilities bound to it?"
   - id: Q47
-    affects: [CP01-S18/R01, CP01-S18/R04, CP01-S18/AC02, CP01-S18/AC04, CP01-S18/AC07]
+    affects: [CP01-S18/R01, CP01-S18/R04, CP01-S18/AC02, CP01-S18/AC04, CP01-S18/AC07, CP01-S06/R04]
     question: "Spec 02 section 16 names three severities but assigns one only to an unavailable repository revision and a required migration. Which severity does each other finding have, such as lock drift, generated drift, a missing capability, preserved inactive data and an available upgrade? What exit status and machine-readable output does doctor have (compare Q30 for validate)?"
   - id: Q48
-    affects: [CP01-S19/R01, CP01-S19/R05, CP01-S19/AC01, CP01-S19/AC05, CP01-S19/AC12]
+    affects: [CP01-S19/R01, CP01-S19/R05, CP01-S19/AC01, CP01-S19/AC05, CP01-S19/AC12, CP01-S06/R04]
     question: "How does the old runtime re-enter the newly installed runtime, and what hand-off state lets the new runtime or `upgrade --to` recover when a step after package replacement fails? Where is the preserved previous package, configuration, lock and graph state kept, and is it committed, ignored or removed after success?"
   - id: Q49
-    affects: [CP01-S19/R10, CP01-S19/AC10]
+    affects: [CP01-S19/R10, CP01-S19/AC10, CP01-S06/R04]
     question: "Spec 02 section 15 requires rollback to restore or migrate back to the recognised original format, but defines only the forward `released-0.0.1-to-owned-stores-v1` migration. Does rollback restore preserved original bytes or run a reverse migration, and is rollback to 0.0.1 supported after new canonical records were written in the owner-separated format?"
   - id: Q50
     affects: [CP01-S16/R07, CP01-S16/R08, CP01-S16/AC09, CP01-S16/AC10]
