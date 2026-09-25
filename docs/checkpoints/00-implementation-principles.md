@@ -79,7 +79,7 @@ A later implementation stage must not ignore an already working Pactwright capab
 
 If the ceremony is obstructive, that is product evidence.
 
-A capability becomes mandatory for dogfooding from the acceptance of the step that makes it work in the Pactwright repository. From then on, applicable Pactwright work uses it; non-use needs a recorded, specific reason, and ceremony is not one. Each checkpoint declares its threshold as a shared requirement. For Checkpoint 1 the threshold is the acceptance of Step 25, which initialises the Pactwright repository; every later Checkpoint 1 change to the repository is governed through Pactwright Delivery.
+A capability becomes mandatory for dogfooding from the acceptance of the step that makes it work in the Pactwright repository. From then on, applicable Pactwright work uses it; non-use needs a recorded, specific reason, and ceremony is not one. Each checkpoint declares its threshold as a shared requirement. For Checkpoint 1 the threshold is the acceptance of Step 25, which initialises the Pactwright repository; every later Checkpoint 1 change to the repository, including a corrective re-run of an earlier step, uses the applicable accepted Pactwright operation.
 
 ---
 
@@ -916,7 +916,7 @@ Examples include:
 - GitHub managed-resource identity;
 - automation branch/PR concurrency;
 - exact GitHub check-conclusion mapping;
-- the dogfooding maturity threshold;
+- dogfooding thresholds for checkpoints whose contracts do not yet declare one;
 - Remote Delivery public milestone completion;
 - selection policy for Publications entering feedback.
 

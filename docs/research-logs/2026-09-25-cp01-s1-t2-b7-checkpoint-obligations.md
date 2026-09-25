@@ -2,7 +2,7 @@
 
 **Scope:** full T2 pass on Checkpoint 1 Stage 1 (CP01-S01…S05) on `refactor/pactwright-v2`, starting at `8e7804f`. Inputs: Core v3, Distribution v2, OSS v2, Guide 16, Principles 4, Checkpoint 1 v24, Spec 00 v5, methodology v2, contract format 2. PR #41 resolved Q01–Q20 in B1–B6 ([B1 record](2026-09-23-pr41-b1-loading.md)), and review 5301803981 passed its corrections. This pass keeps those decisions. It inventories residual gaps as new questions from Q57 and dispositions the later questions Q21–Q56 that reach Stage 1.
 
-**Authorisation:** the owner asked for T2 on the Stage 1 steps with questions resolved by the methodology. The owner chose the full Stage 1 pass (fresh review plus new questions) over a stage-exit-only check, and approved the plan. That plan recommends the Step 25 self-hosting threshold. No runtime, harness or verifier implementation is built.
+**Authorisation:** in this session, the owner asked for T2 on the Stage 1 steps with questions resolved by the methodology. The owner then chose the full Stage 1 pass (fresh review plus new questions) over a stage-exit-only check and approved the plan that recommends the Step 25 self-hosting threshold. The PR for this branch records that hand-off; the owner's review of the PR is the approval of the Principles §3 semantic change. No runtime, harness or verifier implementation is built.
 
 **Batch order:** B7 (this record) → B8 loader → B9 records → B10 edges → B11 lineage → B12 revision → B13 integration and stage exit. B8–B12 use the binding definitions defined here. B13 records the verification and review results.
 
@@ -28,19 +28,34 @@ The risks are a definition that the checker accepts while it is unused or mismat
 - **Planted defects:** an unused definition and a method mismatch each produce the specific error.
 - **Stage 1 coverage test:** a test asserts that no checkpoint-wide or S01–S05 criterion uses an undefined binding. Removing one definition made the test fail, and restoring it made it pass (executed locally).
 - **Stage 7 fit:** read Step 25/26 prose. S25 makes Pactwright a valid Pactwright project, and S26 is the first real self-hosted Delivery. R04 therefore applies from S26 onwards.
-- **Cross-document consistency:** grep for other threshold statements. Principles §3 was the only open statement, and it is replaced rather than qualified.
+- **Cross-document consistency:** grep for other threshold statements. The first pass missed the Principles §21 open-gap bullet (review finding M1). It now names only thresholds that checkpoints have not yet declared.
 
 ## Applied changes
 
 - `checkpoint.yml`: source `CONTRACT`; R02–R05 with AC02–AC05; AC01 clarified; `bindings` for 4 checkpoint-wide and 6 Stage 1 review bindings.
 - `contract.schema.json`: `bindings` with review and approval definition shapes; binding ID pattern shared with use sites.
 - `scripts/checkpoint-contracts.ts`: definitions must be used and match method; undefined review/approval uses are reported, not failed.
-- `tests/checkpoint-contracts.test.ts`: two planted defects and the Stage 1 coverage test.
+- `tests/checkpoint-contracts.test.ts`: three planted defects (unused definition, method mismatch, approval definition without effect) and the Stage 1 coverage test.
 - Spec 00 v6 §§2–3 and Principles v5 §3.
 - Crosswalk: Q57–Q60 appended.
+
+## Review corrections
+
+Independent review of `6f08a78` (recorded in B13) accepted with fixes:
+- **M1:** Principles §21 bullet reworded.
+- **M2:** the graph-boundary and self-hosting rubrics now trace commits to the producing runtime or adapter command and to existing execution state or provenance, and forbid a new mutation log (Core §55).
+- **M3:** R04 applies per change after CP01-S25 acceptance, including corrective re-runs and contract-named operations such as S31 Intent capture. AC04 has one case for each.
+- **Minor:**
+  - R03 now cites CORE#54 and uses the "acceptance of CP01-S25" anchor;
+  - the simplicity rubric covers Distribution §25 and test-only helpers;
+  - `review.independent-step` covers inherited criteria and outputs;
+  - GitHub provisioning is scoped to GitHub clients;
+  - CP01-S04/AC05 names fields the runtime writes or reads, per Core §6;
+  - an approval-definition schema test is added.
+- **Not changed:** the Stage 1 "must be defined" rule stays a test, not a checker option. The contracts carry no progress metadata, so the checker cannot know which steps passed T2 (methodology §6).
 
 **Later owners:** R03/R04 bind every later step, and their first real evidence arises at S26. The review bindings of Stages 2–5 (17 uses, listed by `contracts:check`) are defined during those stages' T2.
 
 Verification results and independent review are recorded in B13.
 
-**CP01 Stage 1 T2 B7 v1**
+**CP01 Stage 1 T2 B7 v2**

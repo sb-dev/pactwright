@@ -25,19 +25,21 @@ requirements:
       generic graph concepts not required by an accepted contract, and provider registries, model routers
       or task catalogues are excluded.
   R03:
-    source: [PRINCIPLES#12, CORE#55, CORE#58]
+    source: [PRINCIPLES#12, CORE#54, CORE#55, CORE#58]
     statement: A step candidate shall keep the Principles §12 ownership boundaries. Execution state, provenance,
       reports, adapter output, GitHub state and Extension-owned semantics do not become core Project Graph
-      truth. Once the Pactwright repository is initialised at Step 25, its own canonical Project Graph files
+      truth. From the acceptance of CP01-S25, the Pactwright repository's own canonical Project Graph files
       change only through runtime-authorised mutations, never through hand-written records or edges. Test
       fixtures are not the repository's Project Graph.
   R04:
     source: [PRINCIPLES#3, CONTRACT#6]
-    statement: 'Self-hosting threshold: from the acceptance of CP01-S25, every later CP01 step that changes
-      the Pactwright repository shall be governed through the accepted Pactwright Delivery: its Intent, Decision,
-      Contract, Brief and Evidence records are created by the accepted runtime and adapter, and its lifecycle
-      is driven by the accepted runtime. A step that cannot use an applicable accepted capability records
-      the reason as product evidence; ceremony or convenience is not a reason.'
+    statement: 'Self-hosting threshold: every change to the Pactwright repository made after the acceptance
+      of CP01-S25, including corrective re-runs of earlier steps, shall be made through the applicable accepted
+      Pactwright operation. A product change is a Delivery whose Intent, Decision, Contract, Brief and Evidence
+      the accepted runtime and adapter create and whose lifecycle the runtime drives; a step whose contract
+      names another runtime operation, such as Intent capture, uses that operation. A change that cannot use
+      an applicable accepted capability records the reason as product evidence; ceremony or convenience is
+      not a reason.'
   R05:
     source: [CONTRACT#3, CONTRACT#4]
     statement: Every step candidate shall receive independent review of semantic coverage and test adequacy
@@ -62,19 +64,24 @@ acceptance:
     verify: {review: [checkpoint.simplicity]}
   AC03:
     covers: [R03]
-    given: A step candidate, the canonical stores it reads or writes, and after Step 25 the repository's canonical
-      graph history.
+    given: A step candidate, the canonical stores it reads or writes, and after the acceptance of CP01-S25 the
+      repository's canonical graph history.
     when: An independent reviewer checks state ownership and the path of every canonical graph change.
-    then: No non-Delivery or execution state is stored as core graph truth. After Step 25 every change to
-      the repository's canonical graph files is traced to a runtime-authorised mutation.
+    then: No non-Delivery or execution state is stored as core graph truth. After the acceptance of CP01-S25
+      every change to the repository's canonical graph files is reproduced by the runtime operation named
+      for it.
     verify: {review: [checkpoint.graph-boundary]}
   AC04:
     covers: [R04]
-    given: A CP01 step after CP01-S25 whose candidate changes the Pactwright repository.
-    when: Its Delivery records, execution provenance and repository history are inspected.
-    then: The change is governed by a current Intent, proceeding Decision, Contract, Brief and Evidence created
-      through the accepted runtime and adapter, with its lifecycle driven by the runtime. A step without that
-      use passes only with a recorded, specific reason that is not ceremony or convenience.
+    cases: [product-change, corrective-rerun, contract-named-operation]
+    given: A change to the Pactwright repository made after the acceptance of CP01-S25, of the listed kind; corrective-rerun
+      repeats an earlier step's work, and contract-named-operation is a step such as Intent capture whose contract
+      names a runtime operation.
+    when: Its canonical records, lifecycle execution state, execution provenance and repository history are
+      inspected.
+    then: Product changes and corrective re-runs are Deliveries whose records the accepted runtime and adapter
+      created and whose lifecycle the runtime drove. The contract-named operation was performed by the runtime.
+      A change without that use passes only with a recorded, specific reason that is not ceremony or convenience.
     verify: {review: [checkpoint.self-hosting-use]}
   AC05:
     covers: [R05]
@@ -93,8 +100,10 @@ bindings:
       - Trace each item to the requirement or criterion that needs it, in this step or an accepted earlier
         step.
       - An item needed only for a foreseeable later capability, a generic graph concept not required by an
-        accepted contract, or a provider registry, model router or task catalogue fails.
-      - Test-only fixtures and helpers are in scope only when they are confined to tests.
+        accepted contract, a provider registry, model router or task catalogue, or anything Distribution §25
+        excludes, fails.
+      - Fixtures and helpers confined to tests need no product requirement; any reachable from runtime code
+        or the packed archive does.
     pass: Every listed item traces to a requirement; any untraced item fails with its location.
     evidence: The item list with each traced requirement ID, the candidate revision and the reviewer identity.
   checkpoint.graph-boundary:
@@ -103,18 +112,23 @@ bindings:
     rubric:
       - Check each canonical store the candidate reads or writes against Principles §12 and Core §54 ownership.
       - Execution state, provenance, reports, adapter output and GitHub state live outside the canonical stores.
-      - After Step 25, every commit that changes the repository's specs/nodes, specs/graph or specs/extensions
-        files is traced to a runtime mutation recorded for that change.
+      - After the acceptance of CP01-S25, trace every commit that changes the repository's specs/nodes, specs/graph
+        or specs/extensions files to the runtime or adapter command that produced it and to the lifecycle execution
+        state or execution provenance naming the affected Brief and record IDs.
+      - A canonical-file diff that the named runtime operation does not reproduce fails. No new mutation log
+        may be introduced to satisfy this check (Core §55).
     pass: No ownership violation and no untraced canonical graph change is found.
-    evidence: The stores checked, the canonical-file commits traced with their mutation records, the candidate
-      revision and the reviewer identity.
+    evidence: The stores checked, each canonical-file commit with its producing command and execution-state
+      or provenance reference, the candidate revision and the reviewer identity.
   checkpoint.self-hosting-use:
     method: review
     role: Independent reviewer who did not produce the candidate.
     rubric:
-      - Identify the Intent, proceeding Decision, Contract, Brief and Evidence that govern the change, and
-        confirm the runtime created them.
-      - Confirm lifecycle execution state and provenance show the runtime drove the lifecycle for this change.
+      - For a product change or corrective re-run, identify the Intent, proceeding Decision, Contract, Brief
+        and Evidence that govern it. Their commits trace to runtime or adapter commands as in checkpoint.graph-boundary.
+      - Confirm lifecycle execution state and execution provenance show that the runtime drove the lifecycle.
+        For a contract-named operation such as Intent capture, confirm the runtime performed it.
+      - No new mutation or usage log may be introduced to satisfy this check.
       - An accepted capability that applied but was not used needs a recorded reason; ceremony or convenience
         is not a reason.
     pass: The change is governed through the accepted runtime and adapter, or each non-use has an acceptable
@@ -125,8 +139,9 @@ bindings:
     method: review
     role: Reviewer who did not produce the candidate and did not author its tests or verifiers.
     rubric:
-      - Every requirement is met in meaning, not only mapped by ID.
-      - Every criterion and every listed case has its own current result from the bound verifier.
+      - Every requirement, including inherited CP01 requirements, is met in meaning, not only mapped by ID.
+      - Every own and inherited criterion, every listed case and every declared output has its own current
+        result from the bound verifier.
       - Tests and verifiers would fail for the plausible wrong implementations each criterion rejects; a
         test that passes a no-op or weakened candidate fails the review.
       - The candidate does not weaken the approved contract or edit accepted definitions.
@@ -164,8 +179,8 @@ bindings:
     method: review
     role: Independent reviewer who did not produce the candidate.
     rubric:
-      - No network client, GitHub API call, credential handling or remote reconciliation exists in the source
-        or the packed archive.
+      - No GitHub client, GitHub API call, GitHub credential handling or remote reconciliation exists in the
+        source or the packed archive.
       - A GitHub declaration is read and preserved only; reporting that remote operations are unavailable
         is allowed.
     pass: No provisioning, remote call or reconciliation path is found.

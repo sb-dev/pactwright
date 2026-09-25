@@ -175,6 +175,13 @@ describe("checkpoint contracts", () => {
       to: "approval: [loader.single-path]",
       expect: /approval binding loader.single-path is defined as review/,
     },
+    {
+      name: "approval definition without its effect",
+      file: "checkpoint.yml",
+      from: "bindings:\n",
+      to: "bindings:\n  release.fixture-approval:\n    method: approval\n    authority: Owner.\n    evidence: Record.\n",
+      expect: /schema: \/bindings\/release.fixture-approval/,
+    },
   ];
 
   for (const [i, defect] of defects.entries()) {

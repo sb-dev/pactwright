@@ -80,8 +80,8 @@ acceptance:
     covers: [R05]
     given: Candidate record schemas, stored outputs and derivation call paths.
     when: Independent review checks state ownership and write boundaries.
-    then: No record field or other canonical state stores current lineage, record currency or broad Delivery
-      state; no execution-progress node is stored as canonical truth.
+    then: No field the runtime writes, or reads for derivation, and no other canonical state stores current
+      lineage, record currency or broad Delivery state; no execution-progress node is stored as canonical truth.
     verify:
       review: [lineage.no-stored-derived-state]
   AC06:
