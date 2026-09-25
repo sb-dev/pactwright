@@ -25,9 +25,10 @@ requirements:
     statement: Rule 13 shall check each current Decision's recorded actor kind against the actual lifecycle
       policy, separately from lineage derivation, preserving the supplied identity as attribution. A policy
       change alone shall not invalidate withdrawn historical Decisions. A requested historical policy check
-      is requested as pactwright validate --historical-policy <decision-id> --provenance <path>, naming one
-      stored Decision and the R06 replay-base document; it restores lifecycle configuration from the document's
-      repository_revision and reports unavailable, not unauthorised, when that evidence is absent or unreconstructible.
+      is requested as pactwright validate --historical-policy <decision-id>, naming one stored Decision, with
+      the R06 replay-base document supplied by --provenance <path> when one exists; it restores lifecycle configuration
+      from the document's repository_revision and reports unavailable verification, not unauthorised, when
+      --provenance is omitted or the document's revision cannot be reconstructed.
       An unknown Decision ID is a problem; a current Decision is reported as judged by current policy under
       rule 13, not historically. Its result is a compatibility report, never a validation failure, and it does
       not request rule 17.
@@ -142,7 +143,8 @@ acceptance:
     given: A lineage with the listed actor and policy condition. The historical cases request validate --historical-policy
       for the withdrawn Decision. historically-allowed and historically-denied supply a replay-base document
       whose recorded repository revision restores a lifecycle configuration that allows or denies the Decision's
-      actor kind, while current policy gives the opposite answer; historical-check-unavailable supplies none;
+      actor kind, while current policy gives the opposite answer; historical-check-unavailable invokes --historical-policy
+      without --provenance;
       historical-check-unknown-decision names an ID no stored Decision has; historical-check-current-decision
       names the lineage's current Decision.
     when: Pactwright validate runs.
@@ -238,15 +240,16 @@ acceptance:
   AC11:
     covers: [R07, R11]
     cases: [clean, rule-failure, incomplete-load, unverifiable-replay-base, historical-check-unreconstructible-document,
-      inactive-extension-only, historical-incompatibility-only, missing-lifecycle-configuration]
+      historical-check-without-document, inactive-extension-only, historical-incompatibility-only, missing-lifecycle-configuration]
     given: A project in the listed condition; historical-incompatibility-only is the AC04 historically-denied lineage
       with current policy allowing the kind; historical-check-unreconstructible-document requests only validate --historical-policy
-      with a document whose revision cannot be reconstructed; missing-lifecycle-configuration
+      with a document whose revision cannot be reconstructed and historical-check-without-document invokes
+      it without --provenance; missing-lifecycle-configuration
       has valid canonical state and no lifecycle configuration.
     when: Pactwright validate runs, with replay validation requested for unverifiable-replay-base.
-    then: clean, inactive-extension-only, historical-incompatibility-only and historical-check-unreconstructible-document
-      exit zero, the last three reporting their inactive component, compatibility result or unavailable verification
-      in its category. rule-failure, incomplete-load and unverifiable-replay-base
+    then: clean, inactive-extension-only, historical-incompatibility-only, historical-check-unreconstructible-document
+      and historical-check-without-document exit zero, the last four reporting their inactive component, compatibility
+      result or unavailable verification in its category. rule-failure, incomplete-load and unverifiable-replay-base
       exit non-zero with the failing rule, the load problem or the unavailable verification in its category.
       missing-lifecycle-configuration exits non-zero reporting both the load problem and unavailable execution
       authority, and grants no permission.
