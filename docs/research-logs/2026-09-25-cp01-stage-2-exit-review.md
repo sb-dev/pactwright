@@ -43,9 +43,9 @@ Later-stage follow-ups, owned and non-blocking for Stage 2:
 
 ## Stage-level result (§7)
 
-Checks at `65cbb83` confirmed by the reviewers and unchanged by the corrections: every S06–S09 requirement has an exercising criterion; all verifier bindings across CP01 contracts are unique (225 at `65cbb83`; 227 after adding `lifecycle.gate-re-entry` and `upgrade.legacy-closure-markers`, 49 of them in Stage 2); `requires` are feasible with S06 delivering the serialised boundary that S07 extends; the Stage 2 deliverable summaries equal the contract `outputs`; no requirement, criterion, `covers`, `source` or `verify` entry from `36fb238` was removed; each Q21–Q33 has a supported disposition consistent with Core v4 and Checkpoint 1 v26; later-step allocations have owners or explicit out-of-scope lines; the exit-gate lines on lifecycle commands, execution state, Evidence guards and validation are satisfiable.
+Checks at `65cbb83` confirmed by the reviewers and unchanged by the corrections: every S06–S09 requirement has an exercising criterion; all verifier bindings across CP01 contracts are unique (225 at `65cbb83`; 227 after adding `lifecycle.gate-re-entry` and `upgrade.legacy-closure-markers`, 49 of them in Stage 2); `requires` are feasible with S06 delivering the serialised boundary that S07 extends; the Stage 2 deliverable summaries equal the contract `outputs`; no requirement, criterion, `covers`, `source` or `verify` entry from `36fb238` was removed; each Q21–Q33 has a supported disposition, consistent at `65cbb83` with Core v4 and Checkpoint 1 v26 and, after the corrections, with Core v5 and Checkpoint 1 v27; later-step allocations have owners or explicit out-of-scope lines; the exit-gate lines on lifecycle commands, execution state, Evidence guards and validation are satisfiable.
 
-With X1–X14 applied, no unresolved behaviour needed by Stage 2 steps remains. Verdict: **requirement-ready, subject to fresh independent review of this record's corrections** (methodology §6: they were authored by the record's author). This is scoped T2 work; it authorises no implementation, harness construction or acceptance.
+With X1–X14 applied, the corrected tree is consistent with Core v5 and Checkpoint 1 v27, which govern the Stage 2 contracts, and no unresolved behaviour needed by Stage 2 steps remains. Verdict: **requirement-ready, subject to fresh independent review of this record's corrections** (methodology §6: they were authored by the record's author). This is scoped T2 work; it authorises no implementation, harness construction or acceptance.
 
 ## Verification
 
@@ -62,4 +62,4 @@ Commands on the corrected tree, Node `v22.22.2`, pnpm `11.7.0`:
 
 Schema, citation and mapping checks establish structural consistency only. No verifier binding, runtime or harness was executed.
 
-**Checkpoint 1 Stage 2 exit review v2**
+**Checkpoint 1 Stage 2 exit review v3**
