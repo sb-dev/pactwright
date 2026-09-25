@@ -1,6 +1,6 @@
 # Pactwright — Checkpoint 1 — Self-Hosted Delivery
 
-**Version:** 27  
+**Version:** 28  
 **Entry condition:** No installable Pactwright runtime exists.  
 **Release:** `0.0.2` (corrective; `0.0.1` was published against version 14 of this runbook and remains the released baseline)  
 **Exit capability:** Pactwright is installable, upgradeable, can govern one complete Contract-driven Delivery in its own repository and in Kakeibo, can compare an Agent Pack candidate against a released baseline, and requires no manual Project Graph coherence work.
@@ -58,7 +58,7 @@ This runbook defines implementation order, not new Pactwright semantics.
 
 A converted step is defined by its YAML contract in [`01-self-hosted-delivery/`](./01-self-hosted-delivery/), in the format owned by [Spec 00](../specs/00-checkpoint-step-contract-and-delivery-tasks.md). The step section here links the contract and summarises its deliverables; the contract holds the requirements and acceptance criteria. Every contract inherits the settings and shared requirements in [`checkpoint.yml`](./01-self-hosted-delivery/checkpoint.yml), and [`crosswalk.yml`](./01-self-hosted-delivery/crosswalk.yml) records where each obligation of the replaced step prose went: version 17 for Stage 1, version 20 for Stage 2, version 21 for Stage 3, version 22 for Stage 4 and version 23 for Stage 5.
 
-Stages 1–5 are converted. Stage 1 contracts are amended against Core v3 through the Q01–Q20 resolution pass, accepted by independent review 5298715756 and its correction review 5301803981 at `87bd3eb`, and reviewed as a whole under methodology §7 in [the Stage 1 exit record](../research-logs/2026-09-25-cp01-stage-1-exit-review.md). That record lists the corrections it applied, including the owner-directed Distribution §3 and pg1-fixture decisions, and the remaining non-blocking specification recommendations; independent review 5318255407 accepted those corrections at `f5e75db` and the record states Stage 1 requirement-ready. Stage 2 contracts are amended against Core v5 through the Q21–Q33 resolution pass, recorded in five [batch records](../research-logs/2026-09-25-cp01-stage-2-b7-shapes-and-identity.md) (B7–B11). The owner approved the Core §§27, 28, 32, 52, 53, 55 and 57 clauses, the two §4 scope lines and the Step 24 lifecycle-command obligation, and three further decisions from the stage-level exit review recorded in [the Stage 2 exit record](../research-logs/2026-09-25-cp01-stage-2-exit-review.md); independent review 5322976729 accepted that record's corrections at `ac370f2` and the record states Stage 2 requirement-ready. Stage 3 contracts are drafted against Core v3 and Distribution v2; their open questions Q34–Q40 await T2 review. Stage 4 contracts are drafted against Core v3 and Distribution v2; their open questions Q41–Q51 await T2 review. Stage 5 contracts are drafted against the Implementation Guide; their open questions Q52–Q56 await T2 review. Later steps retain the version 17 form, with the integration obligations below amended in version 20, until they are converted:
+Stages 1–5 are converted. Stage 1 contracts are amended against Core v3 through the Q01–Q20 resolution pass, accepted by independent review 5298715756 and its correction review 5301803981 at `87bd3eb`, and reviewed as a whole under methodology §7 in [the Stage 1 exit record](../research-logs/2026-09-25-cp01-stage-1-exit-review.md). That record lists the corrections it applied, including the owner-directed Distribution §3 and pg1-fixture decisions, and the remaining non-blocking specification recommendations; independent review 5318255407 accepted those corrections at `f5e75db` and the record states Stage 1 requirement-ready. Stage 2 contracts are amended against Core v5 through the Q21–Q33 resolution pass, recorded in five [batch records](../research-logs/2026-09-25-cp01-stage-2-b7-shapes-and-identity.md) (B7–B11). The owner approved the Core §§27, 28, 32, 52, 53, 55 and 57 clauses, the two §4 scope lines and the Step 24 lifecycle-command obligation, and three further decisions from the stage-level exit review recorded in [the Stage 2 exit record](../research-logs/2026-09-25-cp01-stage-2-exit-review.md); independent review 5322976729 accepted that record's corrections at `ac370f2` and the record states Stage 2 requirement-ready. Stage 3 contracts are amended against Core v6 and Distribution v4 through the Q34–Q40 resolution pass, recorded in three [batch records](../research-logs/2026-09-25-cp01-stage-3-b12-agent-pack-format-and-selection.md) (B12–B14); the owning clauses are Distribution §§5, 8, 15, 21, 24 and Core §§35, 46, 55, and this pass added the Step 24 evaluation sentence below. The methodology §7 whole-stage review is recorded in [the Stage 3 exit record](../research-logs/2026-09-25-cp01-stage-3-exit-review.md), whose corrections X1–X19 were accepted by fresh independent review, and the record states Stage 3 requirement-ready. Stage 4 contracts are drafted against Core v3 and Distribution v2; their open questions Q41–Q51 await T2 review. Stage 5 contracts are drafted against the Implementation Guide; their open questions Q52–Q56 await T2 review. Later steps retain the version 17 form, with the integration obligations below amended in version 20, until they are converted:
 
 ```text
 Step
@@ -253,10 +253,11 @@ Step 11 repeats the incomplete-pack proof through `agent-pack use`. Step 22 pack
 
 **Deliverables**
 
-- `agent-pack-use` — A pactwright agent-pack use <source> that explicitly selects one compatible complete Agent Pack, updating configuration and lock only after successful resolution and validation.
-- `agent-pack-upgrade` — A pactwright agent-pack upgrade that upgrades the selected pack within its configured compatibility constraints without changing its identity.
+- `agent-pack-use` — A pactwright agent-pack use <source> that explicitly selects one compatible complete Agent Pack from a package name, optionally versioned, or a pack path, obtains a package it needs through the project package manager, and updates configuration and lock only after successful resolution and validation.
+- `agent-pack-upgrade` — A pactwright agent-pack upgrade that upgrades the selected pack within its configured compatibility constraints through the project package manager without changing its identity.
+- `package-manager-delegation` — The runtime's single package-manager delegation seam, detecting the project package manager under the DISTRIBUTION#15 rule and issuing its install, request-at-constraint, exact-restore, removal and isolated-acquisition requests, reused by later steps that need packages.
 
-Step 15 repeats the configuration proof with the real resolved lock, and Step 14 reuses this selection path for one-shot init.
+Step 15 repeats the configuration proof with the real resolved lock and Step 17 the sync, Step 14 reuses this selection path for one-shot init, and Step 23 runs `agent-pack use` against installed packed artefacts; real package replacement by `agent-pack upgrade` is proven at Checkpoint 2's component-upgrade step.
 
 ### Step 12 — Implement the seven canonical Claude Code adapter commands
 
@@ -266,6 +267,7 @@ Step 15 repeats the configuration proof with the real resolved lock, and Step 14
 
 - `claude-code-adapter` — Deterministic rendering of Pactwright-managed Claude Code agents and the seven canonical commands from the resolved environment into Pactwright-owned files under .claude/.
 - `adapter-commands` — The seven commands /capture-intent, /propose-contracts, /approve-contract, /write-brief, /deliver-brief, /review and /prepare-evidence, each invoking runtime responsibilities and the selected pack's capabilities within runtime-enforced mutation boundaries.
+- `runtime-hand-off` — The Pactwright-owned hand-off commands under pactwright lifecycle through which a rendered command dispatches a responsibility and hands its structured result to the runtime, recording dispatch and completion of Delivery and Review steps in execution state.
 
 The command decomposition does not define lifecycle topology. Step 12 repeats the Step 7 guard, withdrawal and re-authorisation matrix through each mutating command; Step 24 completes a full Delivery through the generated adapter.
 
@@ -279,7 +281,7 @@ The command decomposition does not define lifecycle topology. Step 12 repeats th
 - `core-eval-cases` — Core-owned evaluation cases for Contract fidelity, scope discipline, Brief quality, Review quality and defect detection, Evidence accuracy and lifecycle compliance, plus required output structure and forbidden mutation.
 - `baseline-comparison` — A pactwright eval --baseline --candidate comparison that resolves both sides exactly and reports regressions by capability, agent, case and changed environment component.
 
-Step 13 proves comparison with exact fixture and pinned package inputs. Step 28 resolves the real released `@pactwright/standard@0.0.1` baseline.
+Step 13 proves comparison with exact fixture and pinned package inputs and exercises the cases through scripted invokers and judges; Checkpoint 1 supplies no provider invoker, so the command-line eval reports its cases as not evaluated. Step 28 resolves the real released `@pactwright/standard@0.0.1` baseline.
 
 ## Stage 4 — Implement exact environment resolution and local composition
 
@@ -436,6 +438,8 @@ The full canonical Delivery lineage completes with alternatives/execution transc
 Inspect durable Project Graph state. Require all 17 validation cases, Evidence precondition failures, seven adapter mutation-boundary cases and complete core evaluation dimensions to pass before self-hosting.
 
 Run `pactwright lifecycle status`, `next` and `run` on the fixture consumer at each lineage position. `run` must stop cleanly at manual entries and, for capability-backed automatic responsibilities, with the missing-invoker execution failure; it must not simulate any output. The consumer's lifecycle `version: 1` cannot declare Gates, corrective routes or iteration bounds, so validation rules 10, 11, 14 and 15 are proven by the repository test suite against the built runtime through the Step 6 fixture definitions; the packed consumer proves the other validation rules, and the published package exposes no fixture-definition entry point.
+
+The complete core evaluation dimensions are proven by the repository test suite against the built runtime through scripted invokers and judges; `pnpm pactwright eval` on the fixture consumer reports every case as not evaluated, names no invoker and exits with failure, since Checkpoint 1 supplies no provider invoker, and it simulates no result.
 
 Rerun the strengthened Stage 1 loading, record, edge, lineage and revision cases through the assembled runtime and installed fixture Extension. Include non-node canonical contributions, withdrawal/re-authorisation, actor-policy denial and no-write failure controls. Neither schema validation of these contract files nor their declared verifier IDs count as execution evidence.
 
@@ -726,4 +730,4 @@ Checkpoint 1 closes only when:
 
 ---
 
-**Pactwright — Checkpoint 1 — Self-Hosted Delivery v27**
+**Pactwright — Checkpoint 1 — Self-Hosted Delivery v28**
