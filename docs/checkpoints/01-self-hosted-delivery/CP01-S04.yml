@@ -30,8 +30,11 @@ requirements:
     source: [CORE#15, CORE#44, CORE#45, CORE#57, CORE#58]
     statement: Derivation shall fail explicitly for each affected Intent, returning its problems and no current
       lineage, recorded Contract or broad state, without selecting a winner. Every unaffected Intent shall
-      return exactly its standalone lineage, recorded Contract and broad state. An incomplete load makes all
-      results diagnostic-only; complete-state validation under CORE#55 still governs execution and mutation.
+      return exactly its standalone lineage, recorded Contract and broad state. A stored record reachable
+      from no Intent (a Contract no Decision selects, a Brief decomposing no Contract, Evidence evidencing
+      no Brief or a Decision resolving no Intent) is a graph-level lineage problem that invalidates the complete-state
+      result without changing any Intent's result. An incomplete load makes all results diagnostic-only;
+      complete-state validation under CORE#55 still governs execution and mutation.
 acceptance:
   AC01:
     covers: [R01, R02, R03]
@@ -91,29 +94,44 @@ acceptance:
       two-current-evidence, defer-selecting-contract, decision-resolves-two-intents, brief-decomposes-two-contracts,
       evidence-evidences-two-briefs, cross-intent-decision-supersession, cross-intent-contract-supersession,
       cross-contract-brief-supersession, cross-brief-evidence-supersession, reauthorisation-reselects-withdrawn-contract,
-      replacement-intent-selects-old-contract, other-intent-selects-noncurrent-contract, reauthorisation-without-contract-supersession, contract-change-without-contract-supersession,
-      replacement-intent-without-contract-supersession,
-      historical-two-decisions, historical-two-briefs, historical-two-evidence]
+      replacement-intent-selects-old-contract, other-intent-selects-noncurrent-contract, decision-change-reselects-current-contract,
+      reauthorisation-without-contract-supersession, contract-change-without-contract-supersession,
+      replacement-intent-without-contract-supersession, replacement-intent-decision-supersession,
+      historical-two-decisions, historical-two-briefs, historical-two-evidence, orphan-contract, brief-without-contract,
+      evidence-without-brief, decision-without-intent, incomplete-load]
     given: A lineage with only the listed fault, a separate valid Intent, and a standalone control for that
       valid Intent. Cross-intent supersession defects join unrelated directions, not an explicit Intent-replacement
-      chain. Historical-cardinality cases place the competing heads under a non-current ancestor.
+      chain; replacement-intent-decision-supersession is a replacement Intent's Decision superseding the
+      superseded Intent's Decision along an explicit replacement chain, which CORE#44 confines to one Intent.
+      decision-change-reselects-current-contract supersedes the current proceed Decision with a proceed Decision
+      selecting the same current Contract. Historical-cardinality cases place the competing heads under a
+      non-current ancestor. The orphan cases store a Contract no Decision selects, a Brief with no decomposes
+      edge, Evidence with no evidences edge or a Decision with no resolves edge. incomplete-load supplies
+      an otherwise valid graph from a load that CP01-S01 marked incomplete by one unparseable required input.
     when: Both are derived from the supplied graph and problems.
     then: The affected Intent returns its problems and no current lineage, Contract or broad state. The separate
-      valid Intent lineage, authorised Contract and state equal its standalone control. Any incomplete load
-      makes that result diagnostic and non-executable; no files change.
+      valid Intent lineage, authorised Contract and state equal its standalone control. The orphan cases
+      name the orphan record, leave every Intent equal to its standalone control and invalidate the complete-state
+      result. incomplete-load returns every Intent's standalone result marked diagnostic-only and non-executable.
+      No files change.
     verify:
       automated: [lineage.fails-closed]
   AC07:
     covers: [R01, R02, R03]
-    cases: [proceed-to-reject, proceed-to-defer, defer-to-proceed, reject-to-proceed]
-    given: A previously done lineage and the listed Decision transition with all predecessors retained. Withdrawal
-      writes a reject/defer Decision superseding the proceed Decision and no new Contract or Contract supersession.
-      Re-authorisation after withdrawal creates a new proceed Decision and a new Contract superseding the
-      last Contract of that direction.
+    cases: [proceed-to-reject, proceed-to-defer, defer-to-proceed, reject-to-proceed, initial-defer-to-proceed,
+      initial-reject-to-proceed]
+    given: A previously done lineage and the listed Decision transition with all predecessors retained; the
+      initial cases instead start from an Intent whose first Decision is defer or reject, so no Contract exists
+      in the direction. Withdrawal writes a reject/defer Decision superseding the proceed Decision and no new
+      Contract or Contract supersession. Re-authorisation after withdrawal creates a new proceed Decision
+      superseding the withdrawing Decision and a new Contract superseding the last Contract of that direction;
+      the initial cases create the new Decision and a new Contract with no Contract supersession.
     when: The complete proposed graph is validated and its current lineage derived.
     then: Withdrawal yields rejected/deferred as applicable, with only its current Intent/Decision and no
       authorised Contract. Re-authorisation yields contracted with exactly its current Intent, new Decision
-      and new Contract; old Brief/Evidence remain non-current and the last Contract is superseded.
+      and new Contract; old Brief/Evidence remain non-current and the last Contract is superseded. The initial
+      cases yield contracted with the new Decision and Contract, and the absent Contract supersession is
+      not a lineage problem.
     verify:
       automated: [lineage.withdrawal-and-reauthorisation]
   AC08:
@@ -122,8 +140,8 @@ acceptance:
     given: Identical valid canonical Decisions with syntactically valid actor identities and the listed non-canonical
       policy condition.
     when: Only structural lineage derivation is called.
-    then: All three cases yield exactly the same recorded lineage, Contract and broad state, with no execution
-      permission, invocation or writes.
+    then: All three cases yield exactly the same recorded lineage, Contract and broad state. The result exposes
+      no executability or permission attribute, and no invocation or write occurs.
     verify:
       automated: [lineage.policy-separation]
   AC09:
@@ -143,7 +161,7 @@ acceptance:
       valid direction and its standalone control.
     when: Lineage is derived.
     then: Both sharing directions return problems and no current lineage, Contract or state. The independent
-      direction lineage, authorised Contract and state equal its standalone control. If the load is incomplete
-      that control result is diagnostic-only. No execution permission or file changes result.
+      direction lineage, authorised Contract and state equal its standalone control. The result exposes no
+      executability or permission attribute, and no invocation or write occurs.
     verify:
       automated: [lineage.no-shared-current-contract]

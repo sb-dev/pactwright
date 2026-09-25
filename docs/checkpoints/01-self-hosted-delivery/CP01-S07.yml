@@ -119,10 +119,12 @@ acceptance:
   AC06:
     covers: [R01, R06]
     cases: [changed-graph, changed-configuration, changed-lifecycle, changed-lock, added-input, changed-registry-identity,
-      incomplete-load-at-plan, incomplete-load-before-commit]
+      changed-decoder-identity, incomplete-load-at-plan, incomplete-load-before-commit]
     given: A mutation planned against a stored base, with the listed condition. incomplete-load-at-plan fails
       loading when the plan is made; the other cases change the base after a complete plan and before commit,
-      through another writer's edit, a changed registry identity or a load failure. An unchanged-base control.
+      through another writer's edit, a changed registry identity, changed decoder code or a load failure. changed-decoder-identity
+      replaces decoder code bytes that the CP01-S01/R10 identity covers, with no declaration or version change.
+      An unchanged-base control.
     when: The mutation is planned and committed.
     then: Each listed case is refused as stale or incomplete, nothing is written and any other writer's change
       is preserved byte for byte. The control commits.

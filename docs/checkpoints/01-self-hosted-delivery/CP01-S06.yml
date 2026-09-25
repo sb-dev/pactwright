@@ -145,6 +145,7 @@ acceptance:
     when: Lineage is derived and progression requested.
     then: Both derive the same lineage, recorded Contract and broad state. Under the disallowing policy progression
       is refused with an actor-kind problem and neither execution state nor any file changes; the control progresses.
+      Under both policies project_graph_revision equals the CP01-S05/AC14 actor-kind-denied frozen digest.
     verify:
       automated: [lifecycle.actor-kind-policy]
   AC10:

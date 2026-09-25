@@ -1,6 +1,6 @@
 {
   "protocol": "pg1:sha256",
-  "purpose": "Frozen definition vectors for Core §§6/56. input collections are unsorted canonical projections: sort records by owner/kind/key and edges by source/type/target in unsigned UTF-16 order before RFC 8785 serialization. stored_files, when present, fixes exact UTF-8 graph-file bytes and the expected decoded projection; a runtime fixture supplies otherwise valid required configuration/lifecycle/lock without hashing those files. These fixtures do not establish runtime acceptance.",
+  "purpose": "Frozen definition vectors for Core §§6/56. input collections are unsorted canonical projections: sort records by owner/kind/key and edges by source/type/target in unsigned UTF-16 order before RFC 8785 serialization. stored_files, when present, fixes exact UTF-8 graph-file bytes and the expected decoded projection; a runtime fixture supplies otherwise valid required configuration/lifecycle/lock without hashing those files. collection-order fixes the record/edge collection sort itself: unsigned UTF-16 order places the empty key first, B before a, and U+1F600 (surrogates D83D DE00) before U+E000 (written \\uE000 in its literals), which code-point and locale orders both reverse. These fixtures do not establish runtime acceptance.",
   "vectors": [
     {
       "id": "empty",
@@ -301,6 +301,68 @@
       },
       "canonical_json": "{\"edges\":[{\"source\":\"decision-scalar-bbbb\",\"target\":\"intent-scalar-aaaa\",\"type\":\"resolves\"}],\"format\":1,\"records\":[{\"key\":\"decision-scalar-bbbb\",\"kind\":\"decision\",\"owner\":\"core\",\"value\":{\"body\":\"Reject because the requested change is not justified.\",\"frontmatter\":{\"created\":\"2026-09-24\",\"decided_by\":\"human:fixture\",\"id\":\"decision-scalar-bbbb\",\"outcome\":\"reject\",\"title\":\"Do not proceed\",\"type\":\"decision\"}}},{\"key\":\"intent-scalar-aaaa\",\"kind\":\"intent\",\"owner\":\"core\",\"value\":{\"body\":\"Preserve the scalar value.\\nInternal spacing  stays.\",\"frontmatter\":{\"created\":\"2026-09-24\",\"flag\":\"yes\",\"id\":\"intent-scalar-aaaa\",\"title\":\"Scalar profile\",\"type\":\"intent\"}}}]}",
       "revision": "pg1:sha256:2a21fed3cbf302ddd872a67cd3fc2d4847701899e940f4aec537b22cd95cce45"
+    },
+    {
+      "id": "collection-order",
+      "input": {
+        "format": 1,
+        "records": [
+          {
+            "owner": "fixture",
+            "kind": "order",
+            "key": "😀",
+            "value": 1
+          },
+          {
+            "owner": "fixture",
+            "kind": "order",
+            "key": "B",
+            "value": 2
+          },
+          {
+            "owner": "fixture",
+            "kind": "order",
+            "key": "a",
+            "value": 3
+          },
+          {
+            "owner": "fixture",
+            "kind": "order",
+            "key": "\ue000",
+            "value": 4
+          },
+          {
+            "owner": "fixture",
+            "kind": "order",
+            "key": "",
+            "value": 5
+          }
+        ],
+        "edges": [
+          {
+            "source": "a",
+            "type": "links",
+            "target": "B"
+          },
+          {
+            "source": "B",
+            "type": "links",
+            "target": "a"
+          },
+          {
+            "source": "😀",
+            "type": "links",
+            "target": "\ue000"
+          },
+          {
+            "source": "\ue000",
+            "type": "links",
+            "target": "😀"
+          }
+        ]
+      },
+      "canonical_json": "{\"edges\":[{\"source\":\"B\",\"target\":\"a\",\"type\":\"links\"},{\"source\":\"a\",\"target\":\"B\",\"type\":\"links\"},{\"source\":\"😀\",\"target\":\"\ue000\",\"type\":\"links\"},{\"source\":\"\ue000\",\"target\":\"😀\",\"type\":\"links\"}],\"format\":1,\"records\":[{\"key\":\"\",\"kind\":\"order\",\"owner\":\"fixture\",\"value\":5},{\"key\":\"B\",\"kind\":\"order\",\"owner\":\"fixture\",\"value\":2},{\"key\":\"a\",\"kind\":\"order\",\"owner\":\"fixture\",\"value\":3},{\"key\":\"😀\",\"kind\":\"order\",\"owner\":\"fixture\",\"value\":1},{\"key\":\"\ue000\",\"kind\":\"order\",\"owner\":\"fixture\",\"value\":4}]}",
+      "revision": "pg1:sha256:385b50c45739f48efe28a0428b99273031997259369a6c8721c048e4deda45e0"
     }
   ]
 }

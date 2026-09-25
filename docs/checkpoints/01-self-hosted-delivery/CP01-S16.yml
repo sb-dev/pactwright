@@ -196,8 +196,9 @@ acceptance:
     given: The given of the listed source criterion, CP01-S02/AC12 or CP01-S03/AC06 to AC13, for each of its cases,
       with every declaration and record it registers supplied by an installed packed fixture Extension through the
       Step 16 loader rather than a direct registry call.
-    when: The when of the source criterion runs unchanged, including the store and reload of CP01-S03/AC06 and
-      the comparison of a stored edge set with a proposed set in CP01-S03/AC11.
+    when: The when of the source criterion runs unchanged except that every registration it names comes from the
+      installed package, which replaces the Step 3 clause without installing a package; this includes the store and
+      reload of CP01-S03/AC06 and the comparison of a stored edge set with a proposed set in CP01-S03/AC11.
     then: The then of the source criterion holds, with a separate result for each of its cases.
     verify:
       automated: [extension.installed-contribution-controls]
@@ -214,8 +215,10 @@ acceptance:
   AC13:
     covers: [R09]
     cases: [exact-lineage, unaffected-intent, competing-records, withdrawn-contract]
-    given: A lineage of the listed CP01-S04 case with an installed fixture Extension enabled and its records linked
-      to core records, and the same lineage without the Extension.
+    given: The CP01-S04 fixture named for the listed case, with an installed fixture Extension enabled and its records
+      linked to core records, and the same lineage without the Extension. exact-lineage uses CP01-S04/AC02 contract-change;
+      unaffected-intent uses CP01-S04/AC10 with its independent direction and standalone control; competing-records
+      uses CP01-S04/AC06 two-current-briefs; withdrawn-contract uses CP01-S04/AC07 proceed-to-reject.
     when: Lineage is derived for both.
     then: The derived lineage, authorised Contract and broad state are identical with and without the Extension.
     verify:

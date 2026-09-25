@@ -1,6 +1,6 @@
 # Pactwright — Checkpoint 1 — Self-Hosted Delivery
 
-**Version:** 24  
+**Version:** 25  
 **Entry condition:** No installable Pactwright runtime exists.  
 **Release:** `0.0.2` (corrective; `0.0.1` was published against version 14 of this runbook and remains the released baseline)  
 **Exit capability:** Pactwright is installable, upgradeable, can govern one complete Contract-driven Delivery in its own repository and in Kakeibo, can compare an Agent Pack candidate against a released baseline, and requires no manual Project Graph coherence work.
@@ -58,7 +58,7 @@ This runbook defines implementation order, not new Pactwright semantics.
 
 A converted step is defined by its YAML contract in [`01-self-hosted-delivery/`](./01-self-hosted-delivery/), in the format owned by [Spec 00](../specs/00-checkpoint-step-contract-and-delivery-tasks.md). The step section here links the contract and summarises its deliverables; the contract holds the requirements and acceptance criteria. Every contract inherits the settings and shared requirements in [`checkpoint.yml`](./01-self-hosted-delivery/checkpoint.yml), and [`crosswalk.yml`](./01-self-hosted-delivery/crosswalk.yml) records where each obligation of the replaced step prose went: version 17 for Stage 1, version 20 for Stage 2, version 21 for Stage 3, version 22 for Stage 4 and version 23 for Stage 5.
 
-Stages 1–5 are converted. Stage 1 contracts are amended against Core v3 through the Q01–Q20 resolution pass. Stage 2 contracts are drafted against Core v3; their open questions Q21–Q33 await T2 review. Stage 3 contracts are drafted against Core v3 and Distribution v2; their open questions Q34–Q40 await T2 review. Stage 4 contracts are drafted against Core v3 and Distribution v2; their open questions Q41–Q51 await T2 review. Stage 5 contracts are drafted against the Implementation Guide; their open questions Q52–Q56 await T2 review. Later steps retain the version 17 form, with the integration obligations below amended in version 20, until they are converted:
+Stages 1–5 are converted. Stage 1 contracts are amended against Core v3 through the Q01–Q20 resolution pass, accepted by independent review 5298715756 and its correction review 5301803981 at `87bd3eb`, and reviewed as a whole under methodology §7 in [the Stage 1 exit record](../research-logs/2026-09-25-cp01-stage-1-exit-review.md). That record lists the corrections it applied, including the owner-directed Distribution §3 and pg1-fixture decisions, and the remaining non-blocking specification recommendations; independent review 5318255407 accepted those corrections at `f5e75db` and the record states Stage 1 requirement-ready. Stage 2 contracts are drafted against Core v3; their open questions Q21–Q33 await T2 review. Stage 3 contracts are drafted against Core v3 and Distribution v2; their open questions Q34–Q40 await T2 review. Stage 4 contracts are drafted against Core v3 and Distribution v2; their open questions Q41–Q51 await T2 review. Stage 5 contracts are drafted against the Implementation Guide; their open questions Q52–Q56 await T2 review. Later steps retain the version 17 form, with the integration obligations below amended in version 20, until they are converted:
 
 ```text
 Step
@@ -169,7 +169,7 @@ This step proves relation registration with fixture relations. Installed Extensi
 
 - `lineage-derivation` — Derivation of each Intent's current Delivery lineage, recorded authorised Contract and broad Delivery state from canonical records and typed edges alone.
 
-Gate state and executable policy arrive with Step 6. Step 4 derives exact recorded Decision/Contract lineage, not permission to execute; Steps 7 and 9 enforce and diagnose actor-kind policy compatibility. Attribution is not identity-provider authentication. Approval outside a Decision cannot act as Decision authority.
+Gate state and executable policy arrive with Step 6. Step 4 derives exact recorded Decision/Contract lineage, not permission to execute; Steps 6, 7 and 9 enforce and diagnose actor-kind policy compatibility. Attribution is not identity-provider authentication. Approval outside a Decision cannot act as Decision authority.
 
 ### Step 5 — Implement repository and Project Graph revision identity
 
@@ -722,4 +722,4 @@ Checkpoint 1 closes only when:
 
 ---
 
-**Pactwright — Checkpoint 1 — Self-Hosted Delivery v24**
+**Pactwright — Checkpoint 1 — Self-Hosted Delivery v25**

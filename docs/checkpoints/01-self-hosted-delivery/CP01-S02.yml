@@ -27,8 +27,9 @@ requirements:
   R05:
     source: [CORE#9]
     statement: A Decision shall contain outcome proceed, reject or defer and decided_by as human, agent or
-      automation plus a non-empty actor identity. Its body shall give concise rationale; useful rejected-option
-      summaries are permitted. Parsing actor syntax shall not claim authentication.
+      automation plus a non-empty actor identity containing no CORE#9 whitespace or line-terminator character.
+      Its body shall give concise rationale; useful rejected-option summaries are permitted. Parsing actor
+      syntax shall not claim authentication.
   R06:
     source: [CORE#6, CORE#15, CORE#45]
     statement: Canonical core IDs shall be well formed, unique among active graph-node endpoint identities,
@@ -67,7 +68,8 @@ acceptance:
     covers: [R04, R05, R06]
     cases: [intent, decision, contract, brief, evidence]
     given: A separate fixture for each structural rule of each listed type; each has exactly one missing or
-      malformed required field, invalid date/body/identity, or invalid Decision field.
+      malformed required field, invalid date/body/identity, or invalid Decision field. The body fixtures include
+      a whitespace-only body, which is empty after CORE#6 normalisation.
     when: Records are loaded and validated.
     then: Every defective case is rejected with its specific rule and record; no rule is represented only
       by a generic invalid fixture.
@@ -91,19 +93,23 @@ acceptance:
       automated: [records.non-core-type]
   AC05:
     covers: [R06]
-    cases: [missing-identity, duplicate-identity]
-    given: An otherwise valid record set containing the listed identity defect.
+    cases: [missing-identity, duplicate-identity, malformed-identity, type-prefix-mismatch, filename-mismatch]
+    given: An otherwise valid record set containing the listed identity defect. malformed-identity independently
+      exercises a non-kebab token, an upper-case character and a suffix of fewer than four hexadecimal digits;
+      type-prefix-mismatch has an id whose prefix differs from its type field; filename-mismatch stores a valid
+      record under a name other than <id>.md.
     when: It is loaded and validated.
-    then: The missing or duplicate identity and the affected records/paths are identified; no successful complete
-      record set or replacement identity is produced.
+    then: The identity defect and the affected records/paths are identified; no successful complete record
+      set, replacement identity or renamed file is produced.
     verify:
       automated: [records.identity-defects]
   AC06:
     covers: [R07]
-    cases: [type-changed, content-changed, frontmatter-value-changed, internal-body-whitespace-changed, content-array-reordered,
-      unresolved-intent-changed, unicode-normalisation-difference]
+    cases: [type-changed, content-changed, frontmatter-value-changed, internal-body-whitespace-changed, line-wrapping-changed,
+      content-array-reordered, unresolved-intent-changed, unicode-normalisation-difference, quoted-scalar-type-difference]
     given: A valid stored core graph and a proposed graph with only the listed semantic rewrite under an existing
-      ID.
+      ID; quoted-scalar-type-difference changes a plain CORE#6 number or boolean into the same characters quoted
+      as a string.
     when: The immutable-record comparison is run.
     then: The proposal is rejected and identifies the changed record; the stored graph is unchanged.
     verify:
@@ -137,7 +143,8 @@ acceptance:
     covers: [R04, R07]
     cases: [mapping-key-order, yaml-comments, quoting-style, line-endings, boundary-whitespace]
     given: Two presentations of the same record differing only in the listed CORE#6 normalisation-equivalent
-      form.
+      form. line-endings covers CRLF and lone CR; boundary-whitespace includes at least one non-ASCII member
+      of the String.prototype.trim set; quoting-style quotes a scalar that resolves to the same string value.
     when: The records are parsed and their canonical content compared.
     then: Both are valid and compare equal; the existing identity is preserved. Internal Markdown or array-order
       changes are not included in these equivalence cases.
@@ -169,16 +176,20 @@ acceptance:
       the non-node control has its own key/value without the core envelope. Collisions and duplicate/replacement
       registrations identify both claimants; reserved-owner and invalid-value cases identify the violated
       rule and do not register or hash the value. All failures leave the prior registry unchanged; malformed
-      owner data fails its own schema.
+      owner data fails its own schema. Each successful registration changes the registry identity that the
+      CP01-S01/R10 load result exposes; each failure leaves it unchanged.
     verify:
       automated: [records.extension-registration]
   AC13:
     covers: [R04, R05]
-    cases: [human-identity, agent-identity, automation-identity, kind-only, empty-identity, whitespace-identity,
-      unknown-kind]
-    given: A Decision otherwise valid except for the listed actor representation.
+    cases: [human-identity, agent-identity, automation-identity, identity-with-colon, kind-only, empty-identity,
+      ascii-whitespace-identity, non-ascii-whitespace-identity, line-terminator-identity, unknown-kind]
+    given: A Decision otherwise valid except for the listed actor representation. identity-with-colon is
+      agent:tool:1.2; non-ascii-whitespace-identity contains U+00A0 or U+FEFF; line-terminator-identity contains
+      U+2028.
     when: Its structural fields are validated.
-    then: Human, agent and automation with non-empty identities pass. Kind-only, empty, whitespace-containing
+    then: Human, agent and automation with non-empty identities pass, including identity-with-colon, whose kind
+      is the text before the first colon. Kind-only, empty, whitespace-containing, line-terminator-containing
       and unknown-kind representations fail; the parser makes no authentication claim.
     verify:
       automated: [records.actor-identity]
