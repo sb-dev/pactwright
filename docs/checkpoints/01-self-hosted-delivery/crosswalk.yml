@@ -17,13 +17,11 @@
 # Stage 2 (Q21-Q33) decisions and check status:
 # ../../research-logs/2026-09-25-cp01-stage-2-b7-shapes-and-identity.md
 # B7 Q21,Q24; B8 Q22,Q25,Q31; B9 Q23,Q32; B10 Q26,Q27,Q33; B11 Q28,Q29,Q30.
-# Applied clauses: Core v3 / Checkpoint 1 v25, contract-level pins only; the
-# Core and checkpoint wording amendments each record proposes await the
-# owner's decision; until they are adopted the B7-B11 pins that depend on
-# them are provisional and those batches are not resolved (PR #49 reviews
-# 5322382499 and 5322421252). Three
-# independent reviews returned findings that the records list and the
-# contracts apply; no question is deleted.
+# Applied clauses: Core v4 (sections 27, 28, 32, 52, 53, 55, 57) and
+# Checkpoint 1 v26 (section 4, Step 24), approved by the owner. Independent
+# reviews and PR #49 owner reviews are recorded in each batch; fresh review
+# of the Core v4 amendments and the section 7 stage exit are pending. No
+# question is deleted.
 #
 # Stage 3 (Q34-Q40) is a T1 conversion drafted against Core v3 and Distribution
 # v2. Its open questions are unresolved inputs to T2 review; no specification

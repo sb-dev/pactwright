@@ -12,7 +12,7 @@
 
 **Applied changes:** S06/R03, R08, R09, AC02, AC03, AC05, AC08 and new AC11; S07/R07, R09, R10 restated with the execution-state definitions. Crosswalk `affects` updated.
 
-**Proposals for the owner (not applied):**
+**Proposals for the owner (approved and applied in Core v4 / Checkpoint 1 v26):**
 
 - P-Core-26/27 (Q22): add to Core §27: "A Gate's required authority is declared as actor kinds in the same vocabulary and enforced kind-only; a Gate resolution records its actor as attribution in execution state, never as a graph record." Consequence: places the Gate authority model at its owner instead of by analogy.
 - P-Core-32/52 (Q25): add to Core §32: "The runtime's structured Review result states at least whether the reviewed delivered state may progress, requires correction at a named declared Delivery step, or cannot progress, and which delivered state it evaluated; Review may say more, never less." Consequence: §32's "does not define a formal protocol" then reads as "no richer protocol", removing the tension with S06/R09.
@@ -21,7 +21,7 @@
 
 **Later owners:** Step 12 repeats the closure guards through `/prepare-evidence` (S12/AC10) and the Review-result boundary through `/review` (S12/AC03); Step 24 through the assembled runtime. Out-of-band change detection, if ever required, belongs to Core §53 with the repository-identity profile of §56, not to a checkpoint.
 
-**Batch status: not resolved.** The owner's PR review [5322382499](https://github.com/sb-dev/pactwright/pull/49#pullrequestreview-5322382499) requires the owning-specification clauses to be adopted before the contract pins stand (methodology §§3, 5, 6). The pins for Q22, Q25 and Q31 (P-Core-26/27, P-Core-32/52, P-Core-53, P-Core-27) are therefore provisional: they record the recommended answer and its coverage so the owner can decide, and become the governing text only once the proposed owner clauses are approved and applied, or are removed if the owner decides otherwise.
+**Batch status: owner decisions adopted; fresh review pending.** On 25 September 2026 the owner approved every proposal below in this session and chose option A for Q33. The approved clauses are applied in Core v4 and Checkpoint 1 v26, so the contract pins now rest on owning text. The batch is resolved once fresh independent review accepts these amendments (methodology §6).
 
 **Independent review (read-only, this session):** findings R-B8-1 to R-B8-9 were reported on the first version. Applied: R-1 Gate resolutions carry outcome `passed` or `refused`, a Gate is resolved only while its latest resolution is passed, with S06/AC03 `refused-by-authorised-actor` and S07/R09 restated; R-2 the Review result is recognised by exact form, never inferred, with S06/AC11 `ambiguous-output`; R-3 a blocked Review outcome is a `lifecycle run` stop that leaves the Review step current (S06/R09, AC11; S08/R03, AC02 `blocked-review`); R-4 the human required-actor rule applies to entries without an `actor` and approve-contract reports its declared kind (S06/R08, AC02 `manual-approve-contract-agent-actor`); R-5 S07/AC04 `disallowed-kind-withdrawal`; R-6 the closing Review step is defined in S06/R05; R-7 S07/AC13 `post-review-out-of-band-edit` makes the limitation observable and P-Core-53 is recorded above; R-8 S06/AC03 `second-allowed-kind`; R-9 S08/AC08 wording and this record's challenge claim (2) corrected. The corrections were authored by the record's author and need fresh review under methodology §6.
 

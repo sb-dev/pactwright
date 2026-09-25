@@ -12,14 +12,14 @@
 
 **Applied changes:** S09/R04, R06, R09, R10, new R11, AC01, AC04 (with `historical-check-unknown-decision` and `historical-check-current-decision`), AC05 (with the five document-defect cases), AC08, AC09, new AC11. Crosswalk `affects` updated (Q28 adds S19/AC11).
 
-**Proposals for the owner (not applied):**
+**Proposals for the owner (approved and applied in Core v4 / Checkpoint 1 v26):**
 
 - P-Core-57 (Q28): add to Core §57: "Replay validation (rule 17) and the historical policy check are requested explicitly. A replay-base document records the section 56 tuple as `version: 1`, `repository_revision`, `project_graph_revision` and `environment_lock_hash`, is supplied by path and decoded by the canonical loader; it is validate's input, not a provenance store. Rule 17 requires the document. The historical check names one stored Decision and may omit the document, in which case, or when its recorded revision cannot be reconstructed, it reports unavailable verification without failing validation." Consequence: the new public `validate` inputs have a semantic owner, as the owner's PR review 5322421252 requires.
 - Optional legibility: Core §57 could name the four diagnostic categories in one list; not needed for requirement-readiness.
 
 **Later owners:** Graph Review (Spec 04 §§8/20) writes real execution provenance and reuses the tuple; Step 18 `doctor` owns severity reporting; Step 19 keeps legacy `sha256` provenance readable (S19/AC07).
 
-**Batch status: not resolved.** The owner's PR reviews [5322382499](https://github.com/sb-dev/pactwright/pull/49#pullrequestreview-5322382499) and [5322421252](https://github.com/sb-dev/pactwright/pull/49#pullrequestreview-5322421252) require the new `validate` inputs of Q28 to be adopted at their owner (P-Core-57) before the S09/R04, R06, AC04 and AC05 pins stand; those pins are provisional. Q29 and Q30 need no owner clause.
+**Batch status: owner decisions adopted; fresh review pending.** On 25 September 2026 the owner approved every proposal below in this session and chose option A for Q33. The approved clauses are applied in Core v4 and Checkpoint 1 v26, so the contract pins now rest on owning text. The batch is resolved once fresh independent review accepts these amendments (methodology §6).
 
 **Independent review (read-only, this session):** findings R-B11-1, R-B11-2, R-B11-4, R-B11-5, R-B11-7 and R-B11-8. Applied: R-1 S09/R11 cites CHECKPOINT#exit-gate instead of §3; R-2 the sha256 provenance case is S19/AC11, corrected here and in the crosswalk; R-4 a replay-base document supplied for the historical check alone never changes the exit status, the unavailable-verification category carries either exit status, and S09/AC11 gains `historical-check-unreconstructible-document`; R-5 the document is supplied by path and decoded by a registered decoder, and the recorded lock hash is reported, not verified (S09/R06, AC05 `differing-lock-hash`); R-7 named history is limited to superseded records of the direction's tree with other IDs reported as problems (S09/R09, AC08 `history-outside-direction`); R-8 the provenance grep claim above is corrected. The corrections were authored by the record's author and need fresh review under methodology §6.
 

@@ -11,14 +11,14 @@
 
 **Applied changes:** S06/R04, R07, R11, AC10, AC12, AC13; S07/R06, AC06; S08/R05, AC05, AC10. Crosswalk `affects` updated.
 
-**Proposals for the owner (not applied):**
+**Proposals for the owner (approved and applied in Core v4 / Checkpoint 1 v26):**
 
 - P-Core-28 (Q23): replace in Core §28 "The exact storage path and serialisation are implementation concerns." with "Execution state is Pactwright-owned ordinary repository content below `.pactwright/`, read through the canonical loader (section 54) and written within the mutation boundary (section 55); its exact path and serialisation are implementation concerns. It is excluded from the Project Graph revision and is never a canonical record." Consequence: closes the ignored-versus-committed ambiguity at its owner.
 - P-Core-55 (Q32): add to Core §55: "Execution-state writes use the same serialised boundary, and a plan that reads execution state includes it in its stored base."
 
 **Later owners:** Step 14 `init` needs no change (no directory is pre-created and nothing is ignored); Step 18 `doctor` reports an uncommitted state document through the existing unavailable-repository-revision warning (Distribution §16); Checkpoint 2 owns multi-checkout continuation.
 
-**Batch status: not resolved.** The owner's PR review [5322382499](https://github.com/sb-dev/pactwright/pull/49#pullrequestreview-5322382499) requires the owning-specification clauses to be adopted before the contract pins stand (methodology §§3, 5, 6). The pins for Q23 and Q32 (P-Core-28, P-Core-55) are therefore provisional: they record the recommended answer and its coverage so the owner can decide, and become the governing text only once the proposed owner clauses are approved and applied, or are removed if the owner decides otherwise.
+**Batch status: owner decisions adopted; fresh review pending.** On 25 September 2026 the owner approved every proposal below in this session and chose option A for Q33. The approved clauses are applied in Core v4 and Checkpoint 1 v26, so the contract pins now rest on owning text. The batch is resolved once fresh independent review accepts these amendments (methodology §6).
 
 **Independent review (read-only, this session):** the B7/B9 reviewer accepted Q23 and required changes for Q32. Applied: the boundary ownership correction (S06/R11, see the B7 record R-1), distinct results for S06/AC13's write cases and a recognised format version for the execution-state document with an `unknown-version` case (S06/R04, AC13). The reviewer confirmed all four challenge checks and that no Stage 1 or later contract inventories `.pactwright/` beyond its three named files. The corrections were authored by the record's author and need fresh review under methodology §6.
 
