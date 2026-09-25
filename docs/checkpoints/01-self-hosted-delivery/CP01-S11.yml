@@ -34,8 +34,9 @@ requirements:
       replacing the configured source with another pack.
   R06:
     source: [CORE#54, DISTRIBUTION#3]
-    statement: Use and upgrade shall read and write the released version 1 configuration through the Step 1
-      canonical loader, preserving the adapter, Extension and GitHub declarations. Missing, malformed or unsupported
+    statement: Use and upgrade shall read the released version 1 configuration through the Step 1 canonical
+      loader and write it through their own serialiser, which the loader reads back, preserving the adapter,
+      Extension and GitHub declarations. Missing, malformed or unsupported
       configuration shall be refused without selecting a pack, parsing it another way or replacing the previous
       valid environment.
   R07:
@@ -133,6 +134,7 @@ acceptance:
     given: The candidate agent-pack use and upgrade code.
     when: Independent review traces package, configuration and lock handling.
     then: Package installation or replacement is delegated to the project package manager. Configuration is
-      read and written only through the canonical loader, and neither command changes runtime or Extension identity.
+      read only through the canonical loader and written by the command, and neither command changes runtime or Extension
+      identity.
     verify:
       review: [agent-pack.ownership]

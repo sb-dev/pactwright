@@ -155,11 +155,12 @@ acceptance:
     covers: [R06, R07, R09]
     cases: [extension-record-in-core-store, core-record-in-extension-store, core-lineage-edge-in-extension-store,
       duplicate-extension-id, valid-cross-graph-relation, extension-relation-edge-in-core-store, extension-supersession-edge-in-core-store,
-      foreign-relation-in-extension-edges, extension-record-outside-owner-root]
+      foreign-relation-in-extension-edges, extension-record-outside-owner-root, unexpected-active-extension-entry]
     given: Fixture owners with the listed placement or identity condition. The valid cross-graph relation
       is stored in specs/extensions/<relation-owner>/edges.yml. Core records use specs/nodes/; core lineage
       tuples use specs/graph/edges.yml; Extension records remain inside their declared owner root. The core-to-core-edge
-      defect uses a core lineage relation, not an Extension-owned additional relation.
+      defect uses a core lineage relation, not an Extension-owned additional relation. unexpected-active-extension-entry
+      places an undeclared file inside an active owner root.
     when: Registration and shared-store validation run without installing a package.
     then: The valid cross-graph control passes through the shared validator. Every invalid placement, duplicate
       Extension ID or foreign-owner claim fails with the paths and owners identified, without moving, deleting

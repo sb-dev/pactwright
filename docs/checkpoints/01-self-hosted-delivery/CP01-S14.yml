@@ -9,8 +9,8 @@ outputs:
 requirements:
   R01:
     source: [DISTRIBUTION#3, CORE#54]
-    statement: 'Init shall create only the Pactwright-owned core configuration and Project Graph structure at the
-      CORE#54 paths. An empty graph is an empty specs/nodes/.gitkeep and specs/graph/edges.yml containing `edges:
+    statement: 'Init shall create only the Pactwright-owned core configuration, lifecycle configuration, a version
+      1 lock without an agent_pack entry and the Project Graph structure at the CORE#54 paths. An empty graph is an empty specs/nodes/.gitkeep and specs/graph/edges.yml containing `edges:
       []`. Init changes no other file.'
   R02:
     source: [DISTRIBUTION#3, DISTRIBUTION#14]
@@ -58,9 +58,9 @@ acceptance:
     covers: [R06]
     given: A repository initialised by AC01.
     when: The Step 1 canonical loader reads the project.
-    then: The loader reads the created configuration, lifecycle configuration, records directory and edges as written
-      and reports an empty graph. Any incompleteness it reports concerns only the unselected pack and unresolved
-      environment.
+    then: The loader reads the created configuration, lifecycle configuration, lock, records directory and edges
+      as written, reports a complete load of an empty graph and derives its pg1 revision. The only incompleteness
+      reported is the unselected pack and its unresolved capability environment.
     verify:
       automated: [init.loader-roundtrip]
   AC03:

@@ -48,7 +48,7 @@ entries:
     covered_by: [CP01-S01/R01, CP01-S01/AC01]
   - key: S01.run.2
     text: "Implement one canonical loader for Pactwright configuration, lifecycle configuration, .pactwright/lock.yml, core Project Graph records and typed edges."
-    covered_by: [CP01-S01/R05, CP01-S01/R06, CP01-S01/AC05, CP01-S01/AC06, CP01-S01/AC07, CP01-S01/R09, CP01-S01/AC09, CP01-S01/AC10, CP01-S01/AC11]
+    covered_by: [CP01-S01/R05, CP01-S01/R06, CP01-S01/AC05, CP01-S01/AC06, CP01-S01/AC07, CP01-S01/R09, CP01-S01/AC09, CP01-S01/AC10, CP01-S01/AC11, CP01-S01/AC13]
   - key: S01.run.3
     text: "Make the runtime publishable as `pactwright` with the repository's normal build/prepack/verify discipline and a repository-local `pnpm pactwright ...` path using the same built runtime."
     covered_by: [CP01-S01/R01, CP01-S01/R02, CP01-S01/R03, CP01-S01/R04, CP01-S01/AC01, CP01-S01/AC02, CP01-S01/AC03, CP01-S01/AC04, CP01/R01, CP01/AC01]
@@ -1338,3 +1338,30 @@ open_questions:
   - id: Q60
     affects: [CP01/R05, CP01/AC05]
     question: "Spec 00 section 2 declares a mandatory review policy once per checkpoint, and section 3 requires common independent review even when a step lists only automated bindings. checkpoint.yml has no such policy. How is it declared and verified?"
+  - id: Q61
+    affects: [CP01-S01/R06, CP01-S01/AC13, CP01-S09/R02, CP01-S18/R01]
+    question: "CP01-S09 reuses the \"Step 1 problem collection\" and CP01-S18 derives doctor results from loader results, but CP01-S01 defines no problem output or categories. Core section 57 requires diagnostics that distinguish malformed structure, unsupported or inactive components and unavailable authority. Which problem categories must the load result distinguish, and what must each problem carry?"
+  - id: Q62
+    affects: [CP01-S01/AC09, CP01-S01/AC12]
+    question: "CP01-S01/AC09 only requires a blank or null edge document to give an incomplete result. Core section 54 calls these compatibility tightenings, not malformed old data, and Distribution section 15 says ordinary load reports migration required. Must the loader label them migration-required, or may it call them malformed?"
+  - id: Q63
+    affects: [CP01-S01/AC12, CP01-S03/AC13]
+    question: "Core section 15 makes an unknown type in active storage an error, while Core section 54 treats a released Extension-typed record in specs/nodes/ as a changed format needing migration. Before any Extension is registered, how does the loader label a non-core record type or relation tuple in core storage, and how is a misspelt core type told apart from legacy Extension data?"
+  - id: Q64
+    affects: [CP01-S01/AC09, CP01-S03/AC13]
+    question: "CP01-S01/AC09 case unexpected-active-extension-entry needs an active Extension root with manifest-declared storage, but CP01-S01 has no prerequisites and the registration seam is a CP01-S02 output. Which step owns that case?"
+  - id: Q65
+    affects: [CP01-S01/AC11]
+    question: "CP01-S01/AC11 applies the Core section 6 YAML value profile to \"a required YAML input\". Must every case run in each YAML input kind (configuration, lifecycle, lock, core-record frontmatter and edges), so that a loader cannot use the pinned profile for one kind and parser defaults for another?"
+  - id: Q66
+    affects: [CP01-S01/AC10]
+    question: "For GitHub-enabled configuration, is the local load complete with a notice, or incomplete? Where is the report of unavailable remote operations observed when Step 1 has no remote command?"
+  - id: Q67
+    affects: [CP01-S01/AC04]
+    question: "CP01-S01/AC04 covers built and unbuilt states but not a stale build, where runtime source changed after the last build. May the repository-local CLI silently run stale build output?"
+  - id: Q68
+    affects: [CP01-S01/AC09]
+    question: "Core section 54 forbids following symlinked store ancestors and allows only an empty .gitkeep. CP01-S01/AC09 has no case for a symlinked specs/ or .pactwright/ directory or a non-empty .gitkeep. Must these be tested?"
+  - id: Q69
+    affects: [CP01-S01/R05, CP01-S11/R06, CP01-S07/R06]
+    question: "CP01-S11/R06 has agent-pack use write configuration \"through the Step 1 canonical loader\", but Core section 54 makes loading read-only. CP01-S07/R06 compares the exact bytes of every input plus registry and decoder identities, but no Stage 1 output provides them. Is the loader read-only, and which Stage 1 outputs expose the input inventory, bytes and identities the stale-base check needs?"

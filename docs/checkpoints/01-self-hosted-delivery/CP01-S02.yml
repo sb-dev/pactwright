@@ -52,7 +52,8 @@ requirements:
       domain. Canonical keys are unique within owner/kind; optional node projections have unique endpoint
       IDs and cannot replace a core or another registered node type. Owner core is reserved; type and relation
       names each have one owner. Optional node endpoint IDs are globally unique across core and all active
-      Extension owners; failed registration preserves the previous registry.
+      Extension owners; failed registration preserves the previous registry. The registry exposes a deterministic
+      identity of its active registrations that changes whenever a declaration changes.
 acceptance:
   AC01:
     covers: [R01, R04, R05, R06]
@@ -160,7 +161,7 @@ acceptance:
     covers: [R01, R04, R09]
     cases: [valid-additional-node-type, valid-non-node-record, duplicate-node-type, replace-core-type, duplicate-canonical-key,
       malformed-owner-field, endpoint-id-collides-with-core-id, endpoint-id-collides-across-owners, relation-registered-by-two-owners,
-      reserved-core-owner, extension-value-outside-json-domain]
+      reserved-core-owner, extension-value-outside-json-domain, registry-identity]
     given: A valid existing registry and a fixture declaration or record with the listed condition. Collision
       cases retain both claimants; the value-domain case independently exercises an unsafe integer and a lone
       surrogate from an owner decoder.
@@ -169,7 +170,8 @@ acceptance:
       the non-node control has its own key/value without the core envelope. Collisions and duplicate/replacement
       registrations identify both claimants; reserved-owner and invalid-value cases identify the violated
       rule and do not register or hash the value. All failures leave the prior registry unchanged; malformed
-      owner data fails its own schema.
+      owner data fails its own schema. registry-identity registers the same declarations twice in separate
+      processes and once with one declaration changed. The first two identities are equal and the third differs.
     verify:
       automated: [records.extension-registration]
   AC13:
