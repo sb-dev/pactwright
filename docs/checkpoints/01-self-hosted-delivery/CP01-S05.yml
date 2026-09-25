@@ -25,7 +25,8 @@ requirements:
   R04:
     source: [CORE#5, CORE#54, CORE#56]
     statement: Graph revision shall exclude reports, adapter output, execution state, provenance, GitHub state,
-      derived projections and explicitly inactive Extension stores; unknown active contributions are errors,
+      derived projections, explicitly inactive Extension stores and the contents of the required configuration,
+      lifecycle and lock inputs, which must be valid but are not hashed; unknown active contributions are errors,
       not exclusions.
   R05:
     source: [CORE#6, CORE#56]
@@ -87,8 +88,9 @@ acceptance:
   AC05:
     covers: [R04]
     cases: [generated-report, adapter-output, lifecycle-execution-state, execution-provenance, github-state,
-      derived-projection, inactive-extension-data]
-    given: The same complete active canonical graph while only the listed excluded state differs.
+      derived-projection, inactive-extension-data, configuration-edit, lifecycle-policy-edit, lock-edit]
+    given: The same complete active canonical graph while only the listed excluded state differs. The configuration,
+      lifecycle-policy and lock edits change a value and leave the input valid.
     when: Its revision is derived before and after the difference.
     then: The graph revision is unchanged; inactive Extension bytes are preserved and reported rather than
       parsed into the active graph.
@@ -122,11 +124,13 @@ acceptance:
       automated: [revision.repository-reconstructible]
   AC09:
     covers: [R02, R05]
-    given: Small and large canonical graphs and the frozen fixtures referenced by CORE#56.
+    given: The empty graph, a generated graph of 1,000 core records and 3,000 edges written in two different
+      file and entry orders, and the frozen fixtures referenced by CORE#56, including the UTF-16 ordering and
+      RFC 8785 number vectors.
     when: The implementation derives each revision.
-    then: Every result uses pg1:sha256 and exactly 64 lower-case hexadecimal digest digits. Every frozen vector
-      matches its recorded canonical UTF-8 bytes and digest after the required record/edge sort; stored-byte
-      vectors also match the recorded parsed projection.
+    then: Every result uses pg1:sha256 and exactly 64 lower-case hexadecimal digest digits, and both orderings
+      of the generated graph give one digest. Every frozen vector matches its recorded canonical UTF-8 bytes
+      and digest after the required record/edge sort; stored-byte vectors also match the recorded parsed projection.
     verify:
       automated: [revision.graph-hashed, revision.pg1-vectors]
   AC10:
@@ -144,11 +148,12 @@ acceptance:
     cases: [unstaged-tracked-change, staged-tracked-change, deleted-tracked-input, untracked-file, ignored-generated-output,
       no-git, no-commit, ignored-required-canonical-input, staged-new-canonical-input, ignored-required-configuration,
       ignored-required-lifecycle, ignored-required-lock, untracked-empty-record-directory, tracked-gitkeep-empty-graph,
-      ignored-required-extension-store, nested-project-root, required-submodule-input, required-lfs-input]
+      ignored-required-extension-store, nested-project-root, required-submodule-input, required-lfs-input, required-symlink-input]
     given: A repository or directory with only the listed condition. Every required CORE#54 input (configuration,
       lifecycle, lock, core records directory/edges and active Extension stores) is independently checked
       against the commit, not only git status. The empty-graph control tracks its .gitkeep; nested-root and
-      required-submodule/LFS cases use the CORE#56 unsupported input conditions.
+      required-submodule/LFS/symlink cases use the CORE#56 unsupported input conditions; the symlink case tracks
+      a required input as a symlink to a file outside the repository.
     when: Repository revision is requested without modifying the working tree, index or refs.
     then: Ignored generated output and the tracked-gitkeep empty-graph control retain the correct committed
       identity. All other cases report repository revision unavailable with the specific cause. The tree,
@@ -157,7 +162,8 @@ acceptance:
       automated: [revision.repository-input-boundary]
   AC12:
     covers: [R04, R07]
-    cases: [duplicate-record-id, unknown-record-type, unknown-relation, missing-input, malformed-input, duplicate-edge,
+    cases: [duplicate-record-id, unknown-record-type, unknown-relation, missing-input, malformed-input, unexpected-store-entry,
+      duplicate-edge,
       invalid-extension-record, invalid-encoding, invalid-value-domain, invalid-identity, ownership-error,
       registration-conflict, missing-endpoint, inactive-endpoint, wrong-endpoint-type, self-supersession,
       cyclic-supersession, branching-supersession, merging-supersession, enabled-extension-cannot-register,
@@ -185,10 +191,11 @@ acceptance:
     cases: [two-current-briefs, actor-kind-denied]
     given: A complete load passing CORE#6, CORE#15 and CORE#54. The first case has two current Briefs under
       one Contract; the second has structurally valid Decision attribution denied only by lifecycle policy.
-      Each has a frozen structurally derived expected revision.
-    when: Graph revision and, separately, lineage/policy validation are requested.
-    then: Graph revision equals its expected pg1 digest in both cases. Lineage or policy validation reports
-      the applicable failure and grants no permission to execute; no files change.
+      Each has an expected revision computed independently of the implementation under test.
+    when: Graph revision is requested.
+    then: Graph revision equals its expected pg1 digest in both cases, and no files change. Reporting the
+      lineage failure belongs to CP01-S04 and the policy failure to CP01-S09; revision derivation neither
+      reports nor needs them.
     verify:
       automated: [revision.lineage-policy-independent]
   AC15:

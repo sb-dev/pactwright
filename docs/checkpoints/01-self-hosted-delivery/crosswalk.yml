@@ -1404,3 +1404,21 @@ open_questions:
   - id: Q82
     affects: [CP01-S16/AC13]
     question: "CP01-S16/AC13 names cases exact-lineage, unaffected-intent, competing-records and withdrawn-contract as \"the listed CP01-S04 case\", but no CP01-S04 criterion has cases with those names. Which CP01-S04 scenarios do they denote?"
+  - id: Q83
+    affects: [CP01-S05/AC14]
+    question: "CP01-S05/AC14 case actor-kind-denied requires lineage and policy validation to report their failures, but CP01-S05 requires only CP01-S02 and CP01-S03, and actor-kind policy is enforced and diagnosed at Steps 7 and 9. What may Step 5 assert for that case?"
+  - id: Q84
+    affects: [CP01-S05/R04, CP01-S05/AC05]
+    question: "Core section 56 hashes canonical records and edges only, while configuration, lifecycle policy and lock must be valid but are not hashed. No CP01-S05 case changes those inputs. May an implementation fold lock.yml or lifecycle.yml into the pg1 digest?"
+  - id: Q85
+    affects: [CP01-S05/R05, CP01-S05/AC09]
+    question: "The frozen pg1 vectors use only lower-case ASCII keys, one owner family and the single number 1.25, so locale ordering, code-point ordering and non-RFC 8785 number output all reproduce them. Which vectors distinguish unsigned UTF-16 order, mixed owners and RFC 8785 number serialisation?"
+  - id: Q86
+    affects: [CP01-S05/AC11]
+    question: "Core section 56 makes a required input supplied by a submodule, an LFS pointer, a symlink or other external-only content unavailable for repository revision. CP01-S05/AC11 covers submodule and LFS only. Must a tracked symlink required input be tested?"
+  - id: Q87
+    affects: [CP01-S05/AC09, CP01-S05/AC12]
+    question: "CP01-S05/AC12 has no refusal case whose only defect is an unexpected store entry, which CP01-S01 makes an incomplete load. CP01-S05/AC09's \"large\" graph has no size or purpose. What must these criteria state?"
+  - id: Q88
+    affects: [CP01-S05/AC11, CP01-S01/AC09]
+    question: "Q23, Q28 and Q48 leave open where lifecycle execution state, execution provenance and preserved upgrade state live. Which Stage 1 obligations constrain those answers, so that ordinary progress does not make the repository revision unavailable or add entries to the core stores?"
