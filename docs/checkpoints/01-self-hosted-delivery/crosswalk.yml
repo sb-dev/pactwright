@@ -21,7 +21,8 @@
 # Checkpoint 1 v27 (section 4, Step 24), approved by the owner. Independent
 # reviews and PR #49 owner reviews are recorded in each batch. The section 7
 # stage exit review is
-# ../../research-logs/2026-09-25-cp01-stage-2-exit-review.md; it added S06,
+# ../../research-logs/2026-09-25-cp01-stage-2-exit-review.md (requirement-
+# ready; fresh review 5322976729 accepted at ac370f2); it added S06,
 # S08 and S09 entries to the affects of Q37-Q39 and Q45-Q49. No question is
 # deleted.
 #
