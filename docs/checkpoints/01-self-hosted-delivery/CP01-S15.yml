@@ -5,7 +5,8 @@ outputs:
   environment-lock: Resolution of the exact Pactwright execution environment, covering the runtime, the selected
     Agent Pack and its resolved agents and direct skills, into the version 1 .pactwright/lock.yml.
   lock-agreement: A check that the package-manager lock and .pactwright/lock.yml agree on every runtime and package-backed
-    component version they both identify, applied before a new environment is accepted.
+    component version they both identify, and that configuration and .pactwright/lock.yml agree on the Agent
+    Pack selection, applied before a new environment is accepted.
   environment-lock-hash: A deterministic environment_lock_hash derived from the exact resolved lock state, forming
     the shared replay base with the repository and Project Graph revisions.
 requirements:
@@ -51,6 +52,13 @@ requirements:
     statement: Resolution shall retain an integration point where the Checkpoint 5 external Production Skills resolver
       can later add resolved imports to the environment and lock. This step neither implements that resolution nor
       prescribes the integration mechanism.
+  R09:
+    source: [DISTRIBUTION#3, DISTRIBUTION#12]
+    statement: Desired configuration and .pactwright/lock.yml shall agree on the Agent Pack selection. A lock
+      without agent_pack while configuration selects a pack, an agent_pack entry while configuration selects
+      none, or a locked source differing from the configured source is a configuration/lock disagreement. It
+      is reported as an environment problem that refuses capability execution and environment_lock_hash, leaves
+      the Project Graph load complete and changes no file.
 acceptance:
   AC01:
     covers: [R01, R02, R05]
@@ -145,3 +153,16 @@ acceptance:
       resolution is implemented.
     verify:
       review: [lock.production-skills-seam]
+  AC11:
+    covers: [R09]
+    cases: [selected-pack-missing-from-lock, locked-pack-without-selection, configured-and-locked-source-differ,
+      scaffold-agreement]
+    given: A project whose configuration and .pactwright/lock.yml are each individually valid and differ only
+      as listed; scaffold-agreement is the unactivated scaffold, with no selection in either.
+    when: The environment is checked and capability execution is requested.
+    then: Each disagreement case reports a configuration/lock disagreement naming both values, with no environment_lock_hash
+      and no capability execution; the graph load stays complete and every file is byte-identical. scaffold-agreement
+      reports no disagreement; it still yields no environment_lock_hash and executes no capability, because
+      no pack is selected.
+    verify:
+      automated: [lock.config-agreement]

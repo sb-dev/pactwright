@@ -1435,3 +1435,6 @@ open_questions:
   - id: Q90
     affects: [CP01-S04/AC11, CP01-S04/AC12, CP01-S07/AC15, CP01-S09/AC01]
     question: "CP01-S04/AC11 and AC12 require complete-state validation to refuse execution, but that guard is a CP01-S07 output and the validate command a CP01-S09 output, both depending on CP01-S04. Which steps own the refusal proofs?"
+  - id: Q91
+    affects: [CP01-S15/R09, CP01-S15/AC11]
+    question: "Distribution section 12 assigns a configuration/lock disagreement to the configuration/lock agreement check, but CP01-S15 compares only the package-manager lock with .pactwright/lock.yml. Which step requires detecting a pack selected in configuration but missing from the Pactwright lock, the reverse, or differing sources?"
