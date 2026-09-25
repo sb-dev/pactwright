@@ -20,6 +20,8 @@
 
 **Later owners:** Step 12 (adapter commands invoke capabilities through the same seam, S12/AC02); Step 24 per P-CP-24; Checkpoint 2 for automation-driven `run`.
 
+**Batch status: not resolved.** The owner's PR review [5322382499](https://github.com/sb-dev/pactwright/pull/49#pullrequestreview-5322382499) requires the owning-specification clauses to be adopted before the contract pins stand (methodology §§3, 5, 6). The pins for Q33 (P-CP-24) are therefore provisional: they record the recommended answer and its coverage so the owner can decide, and become the governing text only once the proposed owner clauses are approved and applied, or are removed if the owner decides otherwise.
+
 **Independent review (read-only, this session):** findings R-B10-3, R-B10-6 and R-B10-8 (numbered with the B11 report). Applied: R-3 the two-direction validation case now stops the whole run at the first direction's failing step and leaves the second direction unstarted, consistent with whole-graph complete-state validation (S08/AC09 `validation-failure-in-first-direction`); R-6 S08/R03 names propose-contracts, write-brief, deliver-brief and review as capability-backed and prepare-evidence, plus delegated approve-contract, as runtime-executed (Core §§35, 53); R-8 crosswalk Q33 `affects` adds CP01-S10/R05. The reviewer accepted Q33 as a legitimate later-stage disposition with one caveat, recorded here: option B of P-CP-24 would add a Step 12 adapter capability, so the owner's decision must land before the Stage 3 pass, not merely before Step 24. The corrections were authored by the record's author and need fresh review under methodology §6.
 
 **Verification:** as B7. Independent review: see the section above.

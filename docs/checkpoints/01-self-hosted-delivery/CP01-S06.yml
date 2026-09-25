@@ -9,7 +9,7 @@ outputs:
     topology and Contract authority.
   execution-state: Fine-grained lifecycle execution state for a Brief, held outside the Project Graph, identifying
     the current Brief, resolved shape, current and completed steps, Gate state, iteration counts and execution
-    status.
+    status, written through the runtime's serialised mutation boundary that Step 7 extends to canonical mutations.
 requirements:
   R01:
     source: [CORE#16, CORE#17, CORE#20]
@@ -61,8 +61,9 @@ requirements:
   R07:
     source: [CORE#27, CORE#54]
     statement: Lifecycle configuration, policy and execution state shall be read through the Step 1 canonical
-      loader, where the released version 1 stages mapping is native. Malformed, missing and unsupported-version
-      inputs, including the unreleased version 2 draft, are reported with path and cause; no lifecycle caller
+      loader, where the released version 1 stages mapping is native. Malformed and unsupported-version inputs,
+      including the unreleased version 2 draft, and missing lifecycle configuration are reported with path and
+      cause; an absent execution-state document is not missing input but a Brief not started, per R04; no lifecycle caller
       may add a fallback parser or treat a failed or incomplete load as permission to run.
   R08:
     source: [CORE#9, CORE#25, CORE#26, CORE#27, CORE#46, CORE#57]
@@ -95,8 +96,8 @@ requirements:
   R11:
     source: [CORE#28, CORE#55, GUIDE#filesystem-mutation]
     statement: Every execution-state write, an advance, a Gate resolution or a correction, shall be atomic
-      and serialised in the runtime's single mutation boundary, which this step provides for execution-state
-      writes and Step 7 extends to canonical mutations under CORE#55. A write whose inspected execution state
+      and serialised in the runtime's single mutation boundary, which this step delivers as part of the execution-state
+      output for execution-state writes and Step 7 reuses and extends to canonical mutations under CORE#55. A write whose inspected execution state
       changed before commit is refused without overwriting the other writer's change; no advance is lost and
       no iteration is counted twice.
 acceptance:

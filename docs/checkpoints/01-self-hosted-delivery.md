@@ -192,7 +192,7 @@ This step proves inclusion of Extension-owned canonical records, including non-n
 
 - `lifecycle-shape` — The built-in direct fulfilment shape, Brief → Delivery → Review → Evidence, and shape validation over the domain-neutral delivery, review, gate and transition vocabulary.
 - `execution-policy` — Execution policy loaded from lifecycle configuration through the canonical loader, covering automatic or manual execution, allowed actor kinds, Gate authority and iteration bounds, separate from shape topology and Contract authority.
-- `execution-state` — Fine-grained lifecycle execution state for a Brief, held outside the Project Graph, identifying the current Brief, resolved shape, current and completed steps, Gate state, iteration counts and execution status.
+- `execution-state` — Fine-grained lifecycle execution state for a Brief, held outside the Project Graph, identifying the current Brief, resolved shape, current and completed steps, Gate state, iteration counts and execution status, written through the runtime's serialised mutation boundary that Step 7 extends to canonical mutations.
 
 Contract-crafting responsibilities such as capture-intent and write-brief remain policy entries, not shape steps. Step 8 exposes progression through the lifecycle commands and Step 9 diagnoses shape and policy configuration.
 

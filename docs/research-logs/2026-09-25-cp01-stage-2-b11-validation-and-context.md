@@ -18,6 +18,8 @@
 
 **Later owners:** Graph Review (Spec 04 §§8/20) writes real execution provenance and reuses the tuple; Step 18 `doctor` owns severity reporting; Step 19 keeps legacy `sha256` provenance readable (S19/AC07).
 
+**Batch status: pending fresh review.** No owner clause is needed for Q28–Q30; the owner's PR review 5322382499 required the replay-base document's invocation, version, key and value rules to be pinned, which S09/R06 and AC05 now do (`validate --replay <path>`, `version: 1`, exactly three keys, unknown keys and malformed values reported).
+
 **Independent review (read-only, this session):** findings R-B11-1, R-B11-2, R-B11-4, R-B11-5, R-B11-7 and R-B11-8. Applied: R-1 S09/R11 cites CHECKPOINT#exit-gate instead of §3; R-2 the sha256 provenance case is S19/AC11, corrected here and in the crosswalk; R-4 a replay-base document supplied for the historical check alone never changes the exit status, the unavailable-verification category carries either exit status, and S09/AC11 gains `historical-check-unreconstructible-document`; R-5 the document is supplied by path and decoded by a registered decoder, and the recorded lock hash is reported, not verified (S09/R06, AC05 `differing-lock-hash`); R-7 named history is limited to superseded records of the direction's tree with other IDs reported as problems (S09/R09, AC08 `history-outside-direction`); R-8 the provenance grep claim above is corrected. The corrections were authored by the record's author and need fresh review under methodology §6.
 
 **Verification:** as B7. Independent review: see the section above.
