@@ -1406,7 +1406,7 @@ This is structural derivation from graph records and edges, including the syntac
 
 Canonical truth changes explicitly. Every already stored core record, including an unresolved Intent, is immutable in identity, type and canonical content. Before mutation, compare the complete proposed graph with the completely loaded stored graph the mutation plan validated, not a scan of Git history. Removing an existing core ID is invalid, including removal followed by an addition under another ID. Removing or replacing an existing tuple in the core edge store (`specs/graph/edges.yml`) is invalid. Additions and explicit supersession preserve their predecessors; normalisation-equivalent edits are not semantic mutations.
 
-A single snapshot cannot establish whether a user manually rewrote an earlier snapshot. Normal loading does not claim historical tamper detection. Git remains the history mechanism. Extension-owned data has its owning semantics and the explicit preservation/deletion authority in Spec 02; that cannot authorise rewriting core records or lineage edges.
+A single snapshot cannot establish whether a user manually rewrote an earlier snapshot. Normal loading does not claim historical tamper detection. Git remains the history mechanism. Extension-owned data has its owning semantics and the explicit preservation/deletion authority in Spec 02; that cannot authorise rewriting core records or tuples in the core edge store.
 
 ## Brief changes
 

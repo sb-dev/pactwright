@@ -58,20 +58,22 @@ acceptance:
   AC01:
     covers: [R01, R04, R05, R06]
     cases: [intent, decision-proceed, decision-reject, decision-defer, decision-with-rejected-options, contract,
-      brief, evidence, extra-descriptive-frontmatter]
+      brief, evidence, extra-descriptive-frontmatter, unquoted-created-date]
     given: Valid records for the listed case, including two distinct records of one type alongside other types.
-      extra-descriptive-frontmatter adds non-core frontmatter keys to an otherwise valid record.
+      extra-descriptive-frontmatter adds non-core frontmatter keys to an otherwise valid record; unquoted-created-date
+      writes created as an unquoted plain YYYY-MM-DD scalar.
     when: They are parsed from their stored bytes and validated, then parsed again from the same bytes in a
       separate process. Step 2 writes no record; canonical writes belong to CP01-S07.
     then: Each permitted record remains valid with the same distinct identity and canonical content. Extra
-      frontmatter is accepted, kept in canonical content and grants no lifecycle authority.
+      frontmatter is accepted, kept in canonical content and not interpreted as any core field. The unquoted
+      date stays the same string.
     verify:
       automated: [records.valid-per-type]
   AC02:
     covers: [R04, R05, R06]
     cases: [intent, decision, contract, brief, evidence]
-    given: A separate fixture for each structural rule of each listed type; each has exactly one missing or
-      malformed required field, invalid date/body/identity, or invalid Decision field.
+    given: A separate fixture for each type-specific structural rule of the listed type that AC14 does not
+      list, namely its type name and, for a Decision, outcome and decided_by; each has exactly one such defect.
     when: Records are loaded and validated.
     then: Every defective case is rejected with its specific rule and record; no rule is represented only
       by a generic invalid fixture.
@@ -197,10 +199,12 @@ acceptance:
   AC14:
     covers: [R04, R06]
     cases: [missing-frontmatter, non-mapping-frontmatter, unterminated-frontmatter, missing-id, missing-type, missing-title,
-      blank-title, missing-created, invalid-calendar-date, non-iso-date-form, type-prefix-mismatch, uppercase-slug,
-      short-suffix, non-hex-suffix, filename-mismatch, whitespace-only-body]
+      blank-title, missing-created, invalid-calendar-date, date-with-time-part, type-prefix-mismatch, uppercase-slug,
+      short-suffix, non-hex-suffix, filename-mismatch, whitespace-only-body, blank-id, blank-type, blank-created,
+      non-string-title, missing-slug, uppercase-hex-suffix]
     given: An otherwise valid core record whose only defect is the listed CORE#6 envelope or identity rule;
-      non-iso-date-form is an unquoted YAML timestamp with a time part, and short-suffix has three hex digits.
+      date-with-time-part is an unquoted YAML timestamp with a time part, short-suffix has three hex digits, non-string-title
+      is the number 42 and missing-slug has only a type and suffix.
     when: The record is loaded and validated.
     then: Each case fails with a problem naming its rule and the record path; none is reported only as a generic
       invalid record, and none is repaired.
