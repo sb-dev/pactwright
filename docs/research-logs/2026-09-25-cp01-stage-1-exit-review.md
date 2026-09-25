@@ -73,7 +73,7 @@ Applied in this pass. Each is a coverage or feasibility correction under an exis
 | F-B6-5, F-B6-6 | Checkpoint 1 §3, Step 4 note; crosswalk header | Status text names the passing correction review and this record; Step 6 added to the policy-enforcement note. |
 | D1 (F-B1-2) | Distribution §3 (v3); S01/R06, AC07; S05/AC12 | Extension entries are `source`, `enabled` and optional `version`; configuration, lifecycle and lock documents reject unknown keys with path and cause, as the released decoders did (`207ac08` `src/config/{config,lifecycle,lock}.ts`). Unknown-key cases added per document and as a no-digest disposition. |
 | D2 (F-B2-2) | Core §56 fixtures; S05/AC09 | Frozen `collection-order` vector: keys `""`, `B`, `a`, U+1F600, U+E000 and four edges, computed by an independent Python serializer (UTF-16 code-unit sort, RFC 8785) and reproduced by the repository's separate test serializer; code-point and locale orders both reverse it. AC09 names it. |
-| G1 | S03/R10, AC14 | Stored edge-document shape: envelope with only `edges` as an array; tuples exactly `source`/`type`/`target` strings. Twelve defect cases over core and Extension edge files plus a control; incomplete load, bytes unchanged, no revision. |
+| G1 | S03/R10, AC14 | Stored edge-document shape: envelope with only `edges` as an array; tuples exactly `source`/`type`/`target` strings. Twenty defect cases over core and Extension edge files (missing and non-string variants enumerated per field, per review 5318237186) plus a control; incomplete load, bytes unchanged, no revision. |
 | G2 | (= D2) | Blocking, applied as above. |
 | G3 | S01/R10, AC13; S02/AC12; S07/AC06 | The load result exposes the Core §55 stored-base inputs (bytes and inventory, registry identity, decoder identity covering built core decoder code and Distribution §12 hashes). `decoder-code` case at Step 1; registry identity exercised by S02/AC12; S07/AC06 gains `changed-decoder-identity`. |
 | G4 | S05/AC12 | No-digest cases for every S01 disposition: unreadable, unknown version, migration required, unexpected store entry, released Extension record in a core store, malformed edge shape, unknown key. |
@@ -101,7 +101,7 @@ D1 and D2 were applied after the owner's review 5318111810 directed their resolu
 
 Identity, storage, relationships, authority, failure behaviour and revisions agree across S01–S05, `checkpoint.yml`, the Checkpoint 1 Stage 1 section and the later contracts they rely on; the deliverable summaries equal the contract `outputs`. Every requirement has exercising acceptance coverage; the 60 verifier binding IDs are unique and their methods fit; deferred integration proofs have explicit owners and prerequisites. With the corrections above, including D1, D2 and G1–G6, no unresolved behaviour needed by Stage 1 steps remains. Verdict: **requirement-ready, subject to independent review of the corrections in PR #48.** D3–D8 are recommended wording and legibility improvements that do not block. This is scoped T2 work: it authorises no implementation, harness construction or acceptance.
 
-The corrections in this pass were authored by the reviewer of record and therefore require fresh independent review (methodology §6). The first correction set was reviewed in 5318111810; the second is requested on the same pull request.
+The corrections in this pass were authored by the reviewer of record and therefore require fresh independent review (methodology §6). The first correction set was reviewed in 5318111810 and the second in 5318237186, which left one field-completeness item now applied; a targeted review of that item is requested on the same pull request.
 
 ## Verification
 
@@ -118,4 +118,4 @@ Commands run on the corrected tree, Node `v22.22.2`, pnpm `11.7.0`, `pnpm instal
 
 Schema, citation and mapping checks establish structural consistency only. No verifier binding, runtime or harness was executed.
 
-**Checkpoint 1 Stage 1 exit review v2**
+**Checkpoint 1 Stage 1 exit review v3**

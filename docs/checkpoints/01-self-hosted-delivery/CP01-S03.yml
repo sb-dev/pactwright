@@ -187,12 +187,15 @@ acceptance:
       automated: [edges.storage-ownership]
   AC14:
     covers: [R01, R10]
-    cases: [core-extra-tuple-key, core-missing-tuple-key, core-non-string-field, core-non-mapping-tuple, core-extra-envelope-key,
-      core-non-array-edges, extension-extra-tuple-key, extension-missing-tuple-key, extension-non-string-field,
-      extension-non-mapping-tuple, extension-extra-envelope-key, extension-non-array-edges, valid-shape-control]
+    cases: [core-extra-tuple-key, core-missing-source, core-missing-type, core-missing-target, core-non-string-source,
+      core-non-string-type, core-non-string-target, core-non-mapping-tuple, core-extra-envelope-key, core-non-array-edges,
+      extension-extra-tuple-key, extension-missing-source, extension-missing-type, extension-missing-target,
+      extension-non-string-source, extension-non-string-type, extension-non-string-target, extension-non-mapping-tuple,
+      extension-extra-envelope-key, extension-non-array-edges, valid-shape-control]
     given: An otherwise valid project whose core edge file (core- cases) or fixture-registered Extension edge
-      file (extension- cases) has only the listed shape defect; the control has both files in the exact CORE#15/CORE#54
-      shape.
+      file (extension- cases) has only the listed shape defect. The missing- cases omit exactly the named tuple
+      field and the non-string- cases give exactly the named field a non-string value; the control has both
+      files in the exact CORE#15/CORE#54 shape.
     when: The shared store loads the edge files and a graph revision is requested.
     then: The control loads and hashes. Every defective case makes the load incomplete with the file path and
       cause, leaves every byte unchanged and produces no graph revision; no tuple is projected from the defective
