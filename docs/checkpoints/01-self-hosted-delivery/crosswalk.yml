@@ -139,7 +139,7 @@ entries:
     covered_by: [CP01-S04/R01, CP01-S04/R02, CP01-S04/AC01, CP01-S04/AC02]
   - key: S04.verify.1
     text: "Use proceed/reject/defer, supersession and ambiguous-lineage fixtures; invalid ambiguity fails closed."
-    covered_by: [CP01-S04/R01, CP01-S04/R02, CP01-S04/R06, CP01-S04/AC01, CP01-S04/AC02, CP01-S04/AC06, CP01-S04/AC07, CP01-S04/AC09, CP01-S04/AC10]
+    covered_by: [CP01-S04/R01, CP01-S04/R02, CP01-S04/R06, CP01-S04/AC01, CP01-S04/AC02, CP01-S04/AC06, CP01-S04/AC07, CP01-S04/AC09, CP01-S04/AC10, CP01-S04/AC11, CP01-S04/AC12]
   - key: S05.references
     text: "Spec 01 replay/revision semantics; Implementation Guide replay provenance."
     covered_by: [CP01-S05/R01, CP01-S05/R02, CP01-S05/R03, CP01-S05/R04, CP01-S05/R05, CP01-S05/R06]
@@ -1392,3 +1392,15 @@ open_questions:
   - id: Q78
     affects: [CP01-S03/R01, CP01-S03/AC01]
     question: "CP01-S03/R01 requires tuples to survive storing and reloading but does not say how new tuples are written. May the store re-sort or reformat the whole edge file when it adds a tuple, producing different repository diffs from an appending implementation?"
+  - id: Q79
+    affects: [CP01-S04/R06, CP01-S04/AC11]
+    question: "CP01-S04/AC06 covers records linked to two parents but none linked to no parent: a Contract no Decision selects, a Decision resolving no Intent, a Brief decomposing no Contract or Evidence evidencing no Brief. No Intent reaches such a record. How is it reported, and does it affect any Intent's derivation?"
+  - id: Q80
+    affects: [CP01-S04/R06, CP01-S04/AC12]
+    question: "CP01-S04/R06 makes every result diagnostic-only after an incomplete load, but no case supplies an incomplete load and \"diagnostic-only\" has no observable marker. What must a derived result show, and which case proves it?"
+  - id: Q81
+    affects: [CP01-S04/AC07]
+    question: "Core section 44 requires a new Contract to supersede the direction's last Contract \"when one exists\". CP01-S04/AC07 always starts from a done lineage, so the path where a deferred Intent that never had a Contract is authorised for the first time is untested. Must that path be accepted without a Contract supersession edge?"
+  - id: Q82
+    affects: [CP01-S16/AC13]
+    question: "CP01-S16/AC13 names cases exact-lineage, unaffected-intent, competing-records and withdrawn-contract as \"the listed CP01-S04 case\", but no CP01-S04 criterion has cases with those names. Which CP01-S04 scenarios do they denote?"

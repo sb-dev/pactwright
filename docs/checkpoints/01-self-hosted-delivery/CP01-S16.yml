@@ -214,8 +214,10 @@ acceptance:
   AC13:
     covers: [R09]
     cases: [exact-lineage, unaffected-intent, competing-records, withdrawn-contract]
-    given: A lineage of the listed CP01-S04 case with an installed fixture Extension enabled and its records linked
-      to core records, and the same lineage without the Extension.
+    given: A lineage of the listed CP01-S04 scenario with an installed fixture Extension enabled and its records
+      linked to core records, and the same lineage without the Extension. exact-lineage is CP01-S04/AC01 done,
+      unaffected-intent the CP01-S04/AC06 standalone control, competing-records CP01-S04/AC06 two-current-briefs
+      and withdrawn-contract CP01-S04/AC07 proceed-to-reject.
     when: Lineage is derived for both.
     then: The derived lineage, authorised Contract and broad state are identical with and without the Extension.
     verify:

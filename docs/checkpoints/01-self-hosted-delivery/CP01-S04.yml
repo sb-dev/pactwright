@@ -30,8 +30,10 @@ requirements:
     source: [CORE#15, CORE#44, CORE#45, CORE#57, CORE#58]
     statement: Derivation shall fail explicitly for each affected Intent, returning its problems and no current
       lineage, recorded Contract or broad state, without selecting a winner. Every unaffected Intent shall
-      return exactly its standalone lineage, recorded Contract and broad state. An incomplete load makes all
-      results diagnostic-only; complete-state validation under CORE#55 still governs execution and mutation.
+      return exactly its standalone lineage, recorded Contract and broad state. A stored record that no Intent
+      reaches through its required lineage is reported as missing required lineage, naming the record, and
+      does not change any Intent's result. An incomplete load marks every result diagnostic-only and non-executable;
+      complete-state validation under CORE#55 still governs execution and mutation.
 acceptance:
   AC01:
     covers: [R01, R02, R03]
@@ -108,15 +110,18 @@ acceptance:
       automated: [lineage.fails-closed]
   AC07:
     covers: [R01, R02, R03]
-    cases: [proceed-to-reject, proceed-to-defer, defer-to-proceed, reject-to-proceed]
+    cases: [proceed-to-reject, proceed-to-defer, defer-to-proceed, reject-to-proceed, first-proceed-after-defer]
     given: A previously done lineage and the listed Decision transition with all predecessors retained. Withdrawal
       writes a reject/defer Decision superseding the proceed Decision and no new Contract or Contract supersession.
       Re-authorisation after withdrawal creates a new proceed Decision and a new Contract superseding the
-      last Contract of that direction.
+      last Contract of that direction. first-proceed-after-defer instead starts from an Intent whose only
+      Decision was defer and that never had a Contract; its new proceed Decision supersedes the defer Decision
+      and selects a new Contract with no Contract supersession.
     when: The complete proposed graph is validated and its current lineage derived.
     then: Withdrawal yields rejected/deferred as applicable, with only its current Intent/Decision and no
       authorised Contract. Re-authorisation yields contracted with exactly its current Intent, new Decision
-      and new Contract; old Brief/Evidence remain non-current and the last Contract is superseded.
+      and new Contract; old Brief/Evidence remain non-current and the last Contract is superseded. first-proceed-after-defer
+      yields contracted with no missing-supersession problem.
     verify:
       automated: [lineage.withdrawal-and-reauthorisation]
   AC08:
@@ -150,3 +155,22 @@ acceptance:
       that control result is diagnostic-only. No execution permission or file changes result.
     verify:
       automated: [lineage.no-shared-current-contract]
+  AC11:
+    covers: [R06]
+    cases: [contract-without-decision, decision-without-intent, brief-without-contract, evidence-without-brief]
+    given: A valid Intent direction with its standalone control, plus one stored record of the listed kind that
+      lacks the required lineage edge.
+    when: Lineage is derived.
+    then: The unreachable record is reported as missing required lineage, naming it. The valid Intent's lineage,
+      authorised Contract and state equal its standalone control, and no files change.
+    verify:
+      automated: [lineage.unreachable-records]
+  AC12:
+    covers: [R06]
+    cases: [malformed-lifecycle, missing-lock]
+    given: A valid contracted graph whose load is incomplete only because of the listed non-graph input.
+    when: Lineage is derived from the diagnostic load result.
+    then: Each derived result is marked diagnostic-only and non-executable, and no result is advertised as ready
+      to execute. A complete-load control yields the same lineage values without that marker.
+    verify:
+      automated: [lineage.incomplete-load-diagnostic]
