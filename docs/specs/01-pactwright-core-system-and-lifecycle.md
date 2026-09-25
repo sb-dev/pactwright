@@ -1840,7 +1840,7 @@ Structural graph validation and read-only lineage derivation do not authenticate
 
 Replay validation (the last rule above) and the historical policy check are requested explicitly. A replay-base document records the section 56 tuple as `version: 1`, `repository_revision`, `project_graph_revision` and `environment_lock_hash`; it is supplied by path and decoded by the canonical loader, and it is validation input, not a provenance store. Replay validation requires the document. The historical policy check names one stored Decision and may omit the document; when it is omitted, or its recorded revision cannot be reconstructed, the check reports unavailable verification without failing validation.
 
-The check for Evidence attempted before successful closing Review reads the Brief's execution state (section 28). Current Evidence whose Brief has no execution-state document, such as Evidence written by a runtime that predates execution state, is reported as unavailable verification and does not fail validation; Evidence is immutable, so such history cannot be repaired.
+The check for Evidence attempted before successful closing Review reads the Brief's execution state (section 28). Current Evidence whose Brief has no execution-state document fails the check. Evidence written by a runtime that predates execution state is immutable and cannot be repaired, so the explicit released-format migration (Spec 02 section 15) writes a legacy-closure execution-state document for each such Brief; the check reports a Brief with that document as unavailable verification and does not fail validation. The runtime writes a legacy-closure document only in that migration.
 
 Diagnostic results distinguish malformed structure, unsupported/inactive components and unavailable execution authority rather than claiming that every parsed record is ready to run.
 
@@ -2013,4 +2013,4 @@ No neighbouring specification may redefine the Contract, Delivery Graph or core 
 
 ---
 
-**Pactwright Core System and Lifecycle v4**
+**Pactwright Core System and Lifecycle v5**

@@ -17,8 +17,8 @@
 # Stage 2 (Q21-Q33) decisions and check status:
 # ../../research-logs/2026-09-25-cp01-stage-2-b7-shapes-and-identity.md
 # B7 Q21,Q24; B8 Q22,Q25,Q31; B9 Q23,Q32; B10 Q26,Q27,Q33; B11 Q28,Q29,Q30.
-# Applied clauses: Core v4 (sections 27, 28, 32, 52, 53, 55, 57) and
-# Checkpoint 1 v26 (section 4, Step 24), approved by the owner. Independent
+# Applied clauses: Core v5 (sections 27, 28, 32, 52, 53, 55, 57) and
+# Checkpoint 1 v27 (section 4, Step 24), approved by the owner. Independent
 # reviews and PR #49 owner reviews are recorded in each batch. The section 7
 # stage exit review is
 # ../../research-logs/2026-09-25-cp01-stage-2-exit-review.md; it added S06,

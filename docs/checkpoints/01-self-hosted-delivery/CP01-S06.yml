@@ -42,7 +42,9 @@ requirements:
       as a canonical record or in a core store. The document declares a format version the loader recognises;
       an unknown version is an explicit error. Checkpoint 1 defines a single format version, so no Checkpoint
       1 migration exists; a later format change owns its own migration. An absent document means
-      the Brief has not started its shape and is not a validation problem. Broad Delivery state remains
+      the Brief has not started its shape and, for a Brief without current Evidence, is not a validation problem.
+      A legacy-closure document, recording only its Brief and legacy closure, is written solely by the Step
+      19 released-format migration; no step runs for its Brief. Broad Delivery state remains
       derived from canonical lineage, and changing execution state alone shall change no canonical record,
       edge or project_graph_revision.
   R05:

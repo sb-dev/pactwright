@@ -39,10 +39,9 @@ requirements:
       name (an absent document is not started, not rule 9); rule 10, a shape name the runtime does not provide,
       or a recorded step name the resolved shape does not declare; rule 11, declared steps or routes recorded
       in an order or along a route the shape does not permit; rule 12, current Evidence
-      whose Brief has an execution-state document that records no Review completion at the closing step with
-      outcome may-progress for the current delivery sequence (current Evidence of a Brief with no document,
-      such as Evidence written by a runtime that predates execution state, is reported as unavailable verification
-      and does not fail); rule 14, a Gate resolution recorded for a current Brief whose actor kind the policy
+      whose Brief has no execution-state document, or a document that records no Review completion at the closing
+      step with outcome may-progress for the current delivery sequence (a Brief with the CP01-S06/R04 legacy-closure
+      document is reported as unavailable verification and does not fail); rule 14, a Gate resolution recorded for a current Brief whose actor kind the policy
       does not allow for that Gate; rule 15, a declared corrective loop without an iteration bound. Where version
       1 configuration cannot express a case, the fixture supplies shape and policy definitions through the
       Step 6 definition API, as rule 16 uses a fixture contribution.'
@@ -50,9 +49,11 @@ requirements:
     source: [CORE#56, CORE#57, GUIDE#replay-provenance]
     statement: Rule 17 shall run only when replay validation is requested as pactwright validate --replay --provenance
       <path>, naming a replay-base document outside the CORE#54 required-path table. The document is a YAML
-      mapping with exactly version 1, repository_revision, project_graph_revision and environment_lock_hash,
-      each a non-empty string, decoded by a registered decoder of the canonical loader; an unsupported version,
-      a missing key, an unknown key, or an empty or non-string value is reported with path and cause, rule 17
+      mapping with exactly four keys, version, the integer 1, and repository_revision, project_graph_revision
+      and environment_lock_hash, each a non-empty string whose protocol and grammar checks belong to rule 17.
+      It is decoded by a registered decoder of the canonical loader; a version other than the integer 1 (including
+      the string "1"), a missing key, an unknown key, or an empty or non-string identity value is reported with
+      path and cause, rule 17
       does not run and the replay base is unverifiable. It is Checkpoint 1's validate input and not a universal
       provenance schema; no Checkpoint 1 step writes execution provenance, and later operation owners record
       this tuple in their own provenance. Rule 17 resolves the entire replay base before any execution effect
@@ -96,8 +97,8 @@ requirements:
       status. Unavailable execution authority means the policy needed to authorise
       a current Decision or Gate cannot be determined: lifecycle configuration missing or unloadable, reported
       together with its load problem. A malformed or unknown-version execution-state document is a structure
-      failure for its Brief. Inactive components, unavailable historical checks, current Evidence of a Brief
-      without an execution-state document and historical incompatibility of a withdrawn Decision are reported
+      failure for its Brief. Inactive components, unavailable historical checks, a Brief with a legacy-closure
+      document and historical incompatibility of a withdrawn Decision are reported
       without failing validation.'
 acceptance:
   AC01:
@@ -163,12 +164,14 @@ acceptance:
     covers: [R06]
     cases: [not-requested, matching-sha1-base, matching-sha256-base, pg1-stored-byte-vectors, unknown-protocol,
       malformed-protocol, legacy-protocol, unavailable-base, dirty-base, reconstructed-state-mismatch, differing-lock-hash,
-      unsupported-document-version, missing-document-key, unknown-document-key, malformed-document-value, absent-document-path]
+      unsupported-document-version, string-document-version, missing-document-key, unknown-document-key, empty-identity-value,
+      non-string-identity-value, absent-document-path]
     given: A replay-base document passed to validate --replay --provenance recording a repository revision and
       Project Graph revision under the listed condition; not-requested is ordinary validation, with no --replay,
       of a project whose recorded history cannot be reconstructed; differing-lock-hash is a matching base whose
-      recorded environment_lock_hash differs from the current lock; the four document cases each have one defect,
-      a version other than 1, one of the four keys absent, an extra key, or an empty or non-string value; absent-document-path
+      recorded environment_lock_hash differs from the current lock; the six document cases each have one defect,
+      an integer version other than 1, the string "1" as version, one of the four keys absent, an extra key,
+      an identity value that is the empty string, or an identity value that is a number; absent-document-path
       names a path that does not exist.
     when: Pactwright validate runs, with replay validation requested except for not-requested.
     then: Not-requested attempts no historical reconstruction and raises no replay problem. Matching bases pass
@@ -178,7 +181,7 @@ acceptance:
       prefixed or compared as pg1. Unavailable and dirty bases are refused before any execution effect, with
       no attempt, replay record or restore location, and the working tree, index and refs unchanged. Mismatch
       fails rule 17 naming both revisions. differing-lock-hash passes rule 17 and reports the recorded hash
-      without verifying it. The four document cases and absent-document-path are reported with path and cause,
+      without verifying it. The six document cases and absent-document-path are reported with path and cause,
       rule 17 does not run, no reconstruction is attempted and validate exits non-zero as unverifiable.
     verify:
       automated: [validate.replay]
@@ -242,23 +245,24 @@ acceptance:
   AC11:
     covers: [R07, R11]
     cases: [clean, rule-failure, incomplete-load, unverifiable-replay-base, historical-check-unreconstructible-document,
-      historical-check-without-document, inactive-extension-only, historical-incompatibility-only, legacy-evidence-without-state,
-      gate-policy-changed-for-superseded-brief, malformed-execution-state, missing-lifecycle-configuration]
+      historical-check-without-document, inactive-extension-only, historical-incompatibility-only, migrated-legacy-evidence,
+      deleted-current-state, gate-policy-changed-for-superseded-brief, malformed-execution-state, missing-lifecycle-configuration]
     given: A project in the listed condition; historical-incompatibility-only is the AC04 historically-denied lineage
       with current policy allowing the kind; historical-check-unreconstructible-document requests only validate --historical-policy
       with a document whose revision cannot be reconstructed and historical-check-without-document invokes
-      it without --provenance; legacy-evidence-without-state holds current Evidence whose Brief has no execution-state
-      document, as a 0.0.1 project does; gate-policy-changed-for-superseded-brief holds a superseded Brief whose
+      it without --provenance; migrated-legacy-evidence holds current Evidence whose Brief has the legacy-closure
+      document the Step 19 migration writes; deleted-current-state holds current Evidence whose Brief had a
+      current-format document that was then deleted; gate-policy-changed-for-superseded-brief holds a superseded Brief whose
       recorded Gate resolution's actor kind current policy no longer allows; malformed-execution-state holds
       a current Brief whose execution-state document does not decode; missing-lifecycle-configuration has valid
       canonical state and no lifecycle configuration.
     when: Pactwright validate runs, with replay validation requested for unverifiable-replay-base.
     then: clean, inactive-extension-only, historical-incompatibility-only, historical-check-unreconstructible-document,
-      historical-check-without-document, legacy-evidence-without-state and gate-policy-changed-for-superseded-brief
+      historical-check-without-document, migrated-legacy-evidence and gate-policy-changed-for-superseded-brief
       exit zero, the inactive component, compatibility result or unavailable verification reported in its
-      category, and legacy-evidence-without-state raising no rule 12 failure. rule-failure, incomplete-load
+      category, and migrated-legacy-evidence raising no rule 12 failure. rule-failure, incomplete-load
       and unverifiable-replay-base exit non-zero with the failing rule, the load problem or the unavailable
-      verification in its category; malformed-execution-state exits non-zero with a structure failure naming
+      verification in its category; deleted-current-state exits non-zero failing rule 12 for its Brief; malformed-execution-state exits non-zero with a structure failure naming
       the document.
       missing-lifecycle-configuration exits non-zero reporting both the load problem and unavailable execution
       authority, and grants no permission.
