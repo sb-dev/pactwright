@@ -2,7 +2,7 @@
 
 **Scope and authority:** see [B7](2026-09-25-cp01-s1-t2-b7-checkpoint-obligations.md). Start `8e7804f`; batches B7–B12 follow in dependency order. This record holds cross-stage dispositions, verification results, review references and the methodology §7 verdict.
 
-**Status:** interim. The P2 corrections need fresh review, and the semantic-owner approvals are pending. **No stage-exit verdict yet.**
+**Status:** stage-exit verdict issued below, **conditional on the semantic-owner approvals** listed there.
 
 ## Cross-stage integration
 
@@ -17,7 +17,7 @@
 | Build script filters on `@pactwright/standard` (a CP01-S10 output) while CP01-S01 has no prerequisites | Internal implementation choice constrained by S01/R03 (no skipped or no-op build) and CP01/AC01. T5 must make the S01 build succeed without S10. |
 | 17 review bindings of Stages 2–5 without definitions | Listed by `contracts:check`; defined during those stages' T2. |
 
-## Verification (at `be4f455` plus this record)
+## Verification history (at `be4f455`)
 
 | Command | Result |
 |---|---|
@@ -27,6 +27,18 @@
 | `pnpm test` | Pass, 25/25. |
 | `pnpm build` | **Fail (exit 2), inherited:** "No projects matched the filters" and TS18003 (no `src/`). The diff `8e7804f..HEAD` touches no build input. |
 | `pnpm verify` | **Fail (exit 2)** at the same build step. The mandatory gate is not waived. |
+
+## Verification at `b12c512`
+
+| Command | Result |
+|---|---|
+| `pnpm contracts:check` | Pass, including source-history checks. 17 binding uses in Stages 2–5 are reported as undefined. |
+| `pnpm format:check`, `lint`, `typecheck` | Pass. |
+| `pnpm test` | Pass, 25/25. |
+| `pnpm build` | **Fail, inherited.** `@pactwright/standard` and `src/**/*.ts` do not exist yet. |
+| `pnpm verify` | **Fail** at the same build step. The mandatory CP01/R01 gate is **not passing**; this pass does not waive it. |
+
+The owner's review of this SHA reproduced these results. No runtime acceptance case has run, because the runtime and harness do not exist.
 
 ## Reviews
 
@@ -38,6 +50,7 @@
 | B11, B12 | Independent subagent review of `5b27a83`, `3b3f0ee` | Changes required; corrections in `7c6d556`. |
 | Whole stage (§7) | Independent subagent review of `7c6d556` (session subagent; report summarised below) | Not requirement-ready. Every finding is listed in the table below with its disposition. |
 | Owner review, PR #47 | [Review 5315357320](https://github.com/sb-dev/pactwright/pull/47#pullrequestreview-5315357320) of `7c6d556` | Two P2 findings, fixed in `a3f4ed4`: edge-shape cases (Q89, B10) and refusal proofs moved to S07/S09 (Q90, B11). |
+| Owner fresh review, PR #47 | [Review 5315453958](https://github.com/sb-dev/pactwright/pull/47#pullrequestreview-5315453958) of `b12c512` | Remaining P2 addressed; no new actionable contract findings. |
 | Owner re-review, PR #47 | [Review 5315428569](https://github.com/sb-dev/pactwright/pull/47#pullrequestreview-5315428569) of `886a790` | One P2: M1 was not yet carried by S15. Fixed in the next commit. |
 | Owner re-review, PR #47 | [Review 5315393528](https://github.com/sb-dev/pactwright/pull/47#pullrequestreview-5315393528) of `a3f4ed4` | Two P2 findings: per-field AC15 cases (B10), and recording the whole-stage findings below. Both are applied in the next commit. |
 
@@ -57,4 +70,18 @@
 
 No listed finding remains open. Before a stage-exit verdict, the corrected head needs a fresh whole-stage review, and the semantic-owner approvals (Principles §3, Distribution §12, Core §45) are required.
 
-**CP01 Stage 1 T2 B13 v2 (interim)**
+## Stage-exit verdict (methodology §7)
+
+**Requirement-ready, conditional on semantic-owner approval.** Across CP01-S01…S05 and `checkpoint.yml`, no unresolved behaviour needed by the steps remains. Each obligation has precise acceptance coverage, and deferred integration proofs have named owners and prerequisites (S07, S09, S14–S16, S18–S20). The owner's fresh review of `b12c512` found no remaining actionable contract finding.
+
+The verdict becomes final only when the owner approves these semantic changes:
+1. Principles v5 §3: the CP01 self-hosting threshold is the acceptance of CP01-S25 (B7).
+2. Distribution v3 §12: the scaffold lock without `agent_pack`, and configuration/lock disagreement as an environment problem (B8, B13 M1).
+3. Core v4 §45: immutability covers the core edge store; Extension edge files follow owning semantics (B10).
+
+Limits of this verdict:
+- It is scoped T2 work only. It does not complete T1/T2 for the checkpoint and does not authorise implementation.
+- The repository verification gate stays failing on the inherited build.
+- The 17 review bindings of Stages 2–5 are those stages' T2 work.
+
+**CP01 Stage 1 T2 B13 v3**
