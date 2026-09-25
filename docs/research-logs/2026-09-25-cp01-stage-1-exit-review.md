@@ -99,9 +99,9 @@ D1 and D2 were applied after the owner's review 5318111810 directed their resolu
 
 ## Stage-level result (§7)
 
-Identity, storage, relationships, authority, failure behaviour and revisions agree across S01–S05, `checkpoint.yml`, the Checkpoint 1 Stage 1 section and the later contracts they rely on; the deliverable summaries equal the contract `outputs`. Every requirement has exercising acceptance coverage; the 60 verifier binding IDs are unique and their methods fit; deferred integration proofs have explicit owners and prerequisites. With the corrections above, including D1, D2 and G1–G6, no unresolved behaviour needed by Stage 1 steps remains. Verdict: **requirement-ready, subject to independent review of the corrections in PR #48.** D3–D8 are recommended wording and legibility improvements that do not block. This is scoped T2 work: it authorises no implementation, harness construction or acceptance.
+Identity, storage, relationships, authority, failure behaviour and revisions agree across S01–S05, `checkpoint.yml`, the Checkpoint 1 Stage 1 section and the later contracts they rely on; the deliverable summaries equal the contract `outputs`. Every requirement has exercising acceptance coverage; the 60 verifier binding IDs are unique and their methods fit; deferred integration proofs have explicit owners and prerequisites. With the corrections above, including D1, D2 and G1–G6, no unresolved behaviour needed by Stage 1 steps remains. Verdict: **requirement-ready.** Independent review [5318255407](https://github.com/sb-dev/pactwright/pull/48#pullrequestreview-5318255407) at `f5e75db` found no actionable contract findings remaining and confirmed D1, D2 and G1–G6 resolved. D3–D8 are recommended wording and legibility improvements that do not block. This is scoped T2 work: it authorises no implementation, harness construction or acceptance.
 
-The corrections in this pass were authored by the reviewer of record and therefore require fresh independent review (methodology §6). The first correction set was reviewed in 5318111810 and the second in 5318237186, which left one field-completeness item now applied; a targeted review of that item is requested on the same pull request.
+The corrections in this pass were authored by the reviewer of record and therefore required fresh independent review (methodology §6). That review ran in three rounds on PR #48: 5318111810 at `006d99f` (D1, D2, G1–G6), 5318237186 at `372cf85` (AC14 field completeness) and 5318255407 at `f5e75db` (accepted). The reviewer independently reproduced the `collection-order` canonical bytes and digest and executed the repository checks at each head.
 
 ## Verification
 
@@ -118,4 +118,4 @@ Commands run on the corrected tree, Node `v22.22.2`, pnpm `11.7.0`, `pnpm instal
 
 Schema, citation and mapping checks establish structural consistency only. No verifier binding, runtime or harness was executed.
 
-**Checkpoint 1 Stage 1 exit review v3**
+**Checkpoint 1 Stage 1 exit review v4**
