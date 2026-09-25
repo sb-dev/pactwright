@@ -1326,3 +1326,15 @@ open_questions:
   - id: Q56
     affects: [CP01-S21/R03, CP01-S21/AC07, CP01-S28]
     question: "The npm-release environment's protection rules and each package's npm trusted-publisher configuration live outside the repository. Must each publish have a human approval binding through the environment, and how are the environment and trusted-publisher configuration evidenced for acceptance?"
+  - id: Q57
+    affects: [CP01/R02, CP01/R03, CP01/R04]
+    question: "Spec 00 T2 requires checkpoint-wide simplicity, graph-boundary and self-hosting obligations, but checkpoint.yml declares only the pnpm verify gate, and Principles section 3 leaves the self-hosting threshold open. Which shared requirements carry these obligations, and from which accepted step must Checkpoint 1 work in the Pactwright repository be governed through Pactwright?"
+  - id: Q58
+    affects: [CP01/R01, CP01/AC01]
+    question: "CP01/AC01 requires `pnpm verify` to pass on the candidate revision but does not say where it runs. Must it run from a clean checkout after a frozen-lockfile install, so that the producer's stale build output or dependency directory cannot satisfy it?"
+  - id: Q59
+    affects: [CP01-S01/AC06, CP01-S01/AC08, CP01-S02/AC08, CP01-S02/AC11, CP01-S04/AC05]
+    question: "Spec 00 section 3 requires a review binding to define its independent role, rubric, pass rule and evidence, but the Stage 1 review bindings are only IDs and the format has no place to define them. Where are they defined, what do their rubrics decide where the criteria are unclear (declaration preservation versus implementing Extension semantics; whether CP01-S02 delivers a content-review rubric; whether user-authored status frontmatter breaks the no-stored-derived-state rule), and how are unused or mismatched definitions detected?"
+  - id: Q60
+    affects: [CP01/R05, CP01/AC05]
+    question: "Spec 00 section 2 declares a mandatory review policy once per checkpoint, and section 3 requires common independent review even when a step lists only automated bindings. checkpoint.yml has no such policy. How is it declared and verified?"

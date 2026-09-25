@@ -71,6 +71,19 @@ describe("checkpoint contracts", () => {
     }
   });
 
+  it("defines every checkpoint-wide and Stage 1 review binding", () => {
+    const undefinedBindings: string[] = [];
+    validateCheckpointDir(repoRoot, CP01, {
+      skipSource: true,
+      onUndefinedBinding: (where, binding) => undefinedBindings.push(`${where} ${binding}`),
+    });
+    const stage1Steps = /^CP01(\/|-S0[1-5]\/)/;
+    assert.deepEqual(
+      undefinedBindings.filter((u) => stage1Steps.test(u)),
+      [],
+    );
+  });
+
   it("uses GitHub heading anchors", () => {
     assert.equal(githubSlug("Replay provenance"), "replay-provenance");
     assert.equal(
@@ -147,6 +160,20 @@ describe("checkpoint contracts", () => {
       to: '"Build the Pactwright runtime and CLI package foundation."',
       expect: /text for S01.run.1 is not the verbatim source unit/,
       needs: stage1,
+    },
+    {
+      name: "unused binding definition",
+      file: "CP01-S01.yml",
+      from: "review: [loader.single-path]",
+      to: "review: [loader.other-path]",
+      expect: /binding loader.single-path is defined but never used/,
+    },
+    {
+      name: "binding used with another method",
+      file: "CP01-S01.yml",
+      from: "review: [loader.single-path]",
+      to: "approval: [loader.single-path]",
+      expect: /approval binding loader.single-path is defined as review/,
     },
   ];
 

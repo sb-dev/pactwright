@@ -1,6 +1,6 @@
 # Pactwright — Implementation Principles
 
-**Version:** 4  
+**Version:** 5  
 **Status:** Implementation guidance
 
 ## 1. Purpose
@@ -79,7 +79,7 @@ A later implementation stage must not ignore an already working Pactwright capab
 
 If the ceremony is obstructive, that is product evidence.
 
-The exact acceptance threshold for when a newly implemented capability becomes mandatory for dogfooding remains an open design gap. It must not become an indefinite excuse to bypass a working public mechanism.
+A capability becomes mandatory for dogfooding from the acceptance of the step that makes it work in the Pactwright repository. From then on, applicable Pactwright work uses it; non-use needs a recorded, specific reason, and ceremony is not one. Each checkpoint declares its threshold as a shared requirement. For Checkpoint 1 the threshold is the acceptance of Step 25, which initialises the Pactwright repository; every later Checkpoint 1 change to the repository is governed through Pactwright Delivery.
 
 ---
 
@@ -1019,4 +1019,4 @@ build everything
 
 ---
 
-**Pactwright — Implementation Principles v4**
+**Pactwright — Implementation Principles v5**

@@ -2,7 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://github.com/sb-dev/pactwright/blob/main/docs/checkpoints/contract.schema.json",
   "title": "Checkpoint contract (format 2)",
-  "description": "Minimal format schema for checkpoint contract files: checkpoint.yml (declares format) or one step contract per file. Owned by docs/specs/00-checkpoint-step-contract-and-delivery-tasks.md §§2–3. Cross-file rules (declared source keys, requirement coverage, step references) are checked by the harness, not this schema.",
+  "description": "Minimal format schema for checkpoint contract files: checkpoint.yml (declares format) or one step contract per file. Owned by docs/specs/00-checkpoint-step-contract-and-delivery-tasks.md §§2–3. Cross-file rules (declared source keys, requirement coverage, step references, binding-definition use) are checked by the harness, not this schema.",
   "if": { "type": "object", "required": ["format"] },
   "then": { "$ref": "#/$defs/checkpoint" },
   "else": { "$ref": "#/$defs/step" },
@@ -22,7 +22,13 @@
           "additionalProperties": { "$ref": "#/$defs/text" }
         },
         "requirements": { "$ref": "#/$defs/requirements" },
-        "acceptance": { "$ref": "#/$defs/acceptance" }
+        "acceptance": { "$ref": "#/$defs/acceptance" },
+        "bindings": {
+          "type": "object",
+          "minProperties": 1,
+          "propertyNames": { "$ref": "#/$defs/bindingId" },
+          "additionalProperties": { "$ref": "#/$defs/bindingDefinition" }
+        }
       },
       "dependentRequired": {
         "requirements": ["acceptance"],
@@ -126,10 +132,38 @@
       "type": "array",
       "minItems": 1,
       "uniqueItems": true,
-      "items": {
-        "type": "string",
-        "pattern": "^[a-z0-9]+(-[a-z0-9]+)*(\\.[a-z0-9]+(-[a-z0-9]+)*)+$"
-      }
+      "items": { "$ref": "#/$defs/bindingId" }
+    },
+    "bindingId": {
+      "type": "string",
+      "pattern": "^[a-z0-9]+(-[a-z0-9]+)*(\\.[a-z0-9]+(-[a-z0-9]+)*)+$"
+    },
+    "bindingDefinition": {
+      "oneOf": [
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["method", "role", "rubric", "pass", "evidence"],
+          "properties": {
+            "method": { "const": "review" },
+            "role": { "$ref": "#/$defs/text" },
+            "rubric": { "type": "array", "minItems": 1, "items": { "$ref": "#/$defs/text" } },
+            "pass": { "$ref": "#/$defs/text" },
+            "evidence": { "$ref": "#/$defs/text" }
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["method", "authority", "effect", "evidence"],
+          "properties": {
+            "method": { "const": "approval" },
+            "authority": { "$ref": "#/$defs/text" },
+            "effect": { "$ref": "#/$defs/text" },
+            "evidence": { "$ref": "#/$defs/text" }
+          }
+        }
+      ]
     },
     "stepId": { "type": "string", "pattern": "^CP[0-9]{2}-S[0-9]{2}$" },
     "outputRef": {

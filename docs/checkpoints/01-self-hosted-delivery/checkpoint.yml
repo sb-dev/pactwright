@@ -1,11 +1,13 @@
 # Checkpoint 1 — Self-Hosted Delivery: settings and requirements every step
 # contract in this directory inherits. Goal, scope and step order live in
-# ../01-self-hosted-delivery.md.
+# ../01-self-hosted-delivery.md. Review and approval bindings used by the step
+# contracts are defined once under `bindings` (Spec 00 §3).
 format: 2
 checkpoint: CP01
 run_model: software-bootstrap
 sources:
   CHECKPOINT: ../01-self-hosted-delivery.md
+  CONTRACT: ../../specs/00-checkpoint-step-contract-and-delivery-tasks.md
   CORE: ../../specs/01-pactwright-core-system-and-lifecycle.md
   DISTRIBUTION: ../../specs/02-distribution-agent-packs-extensions-and-evaluation.md
   OSS: ../../specs/08-open-source-project-organisation.md
@@ -16,10 +18,193 @@ requirements:
   R01:
     source: [GUIDE#verification]
     statement: A step that changes files in the Pactwright repository shall leave its root `pnpm verify` gate passing.
+  R02:
+    source: [PRINCIPLES#20, DISTRIBUTION#25]
+    statement: A step candidate shall add only the capabilities, graph concepts, configuration, dependencies
+      and extension points its contract or an accepted earlier contract requires. Speculative future capability,
+      generic graph concepts not required by an accepted contract, and provider registries, model routers
+      or task catalogues are excluded.
+  R03:
+    source: [PRINCIPLES#12, CORE#55, CORE#58]
+    statement: A step candidate shall keep the Principles §12 ownership boundaries. Execution state, provenance,
+      reports, adapter output, GitHub state and Extension-owned semantics do not become core Project Graph
+      truth. Once the Pactwright repository is initialised at Step 25, its own canonical Project Graph files
+      change only through runtime-authorised mutations, never through hand-written records or edges. Test
+      fixtures are not the repository's Project Graph.
+  R04:
+    source: [PRINCIPLES#3, CONTRACT#6]
+    statement: 'Self-hosting threshold: from the acceptance of CP01-S25, every later CP01 step that changes
+      the Pactwright repository shall be governed through the accepted Pactwright Delivery: its Intent, Decision,
+      Contract, Brief and Evidence records are created by the accepted runtime and adapter, and its lifecycle
+      is driven by the accepted runtime. A step that cannot use an applicable accepted capability records
+      the reason as product evidence; ceremony or convenience is not a reason.'
+  R05:
+    source: [CONTRACT#3, CONTRACT#4]
+    statement: Every step candidate shall receive independent review of semantic coverage and test adequacy
+      by a reviewer that did not produce it, in addition to the bindings its criteria list. A producer's completion
+      claim, a generated test or a successful process exit alone does not satisfy acceptance.
 acceptance:
   AC01:
     covers: [R01]
-    given: A step candidate that changes files in the Pactwright repository.
-    when: The candidate revision is verified.
-    then: "`pnpm verify` completes successfully at the Pactwright repository root on the candidate revision."
+    given: A step candidate revision that changes files in the Pactwright repository.
+    when: A fresh checkout of exactly that revision, outside the producer's workspace, runs `pnpm install --frozen-lockfile`
+      and then `pnpm verify` at the repository root.
+    then: Both commands complete successfully. No build output, dependency directory or other untracked file
+      from an earlier run participates.
     verify: {automated: [repo.verify]}
+  AC02:
+    covers: [R02]
+    given: A step candidate, its contract and the accepted earlier contracts.
+    when: An independent reviewer traces every added capability, concept, dependency and extension point to
+      a requirement.
+    then: Each addition is required by an accepted contract; any addition without such a requirement fails
+      the review.
+    verify: {review: [checkpoint.simplicity]}
+  AC03:
+    covers: [R03]
+    given: A step candidate, the canonical stores it reads or writes, and after Step 25 the repository's canonical
+      graph history.
+    when: An independent reviewer checks state ownership and the path of every canonical graph change.
+    then: No non-Delivery or execution state is stored as core graph truth. After Step 25 every change to
+      the repository's canonical graph files is traced to a runtime-authorised mutation.
+    verify: {review: [checkpoint.graph-boundary]}
+  AC04:
+    covers: [R04]
+    given: A CP01 step after CP01-S25 whose candidate changes the Pactwright repository.
+    when: Its Delivery records, execution provenance and repository history are inspected.
+    then: The change is governed by a current Intent, proceeding Decision, Contract, Brief and Evidence created
+      through the accepted runtime and adapter, with its lifecycle driven by the runtime. A step without that
+      use passes only with a recorded, specific reason that is not ceremony or convenience.
+    verify: {review: [checkpoint.self-hosting-use]}
+  AC05:
+    covers: [R05]
+    given: Any step candidate together with its listed verification results.
+    when: The step is considered for acceptance.
+    then: A reviewer who did not produce the candidate has recorded a pass for semantic coverage and test adequacy
+      against the approved contract. Without that record the step does not advance.
+    verify: {review: [review.independent-step]}
+bindings:
+  checkpoint.simplicity:
+    method: review
+    role: Independent reviewer who did not produce the candidate.
+    rubric:
+      - List every added command, module export, record or relation type, configuration field, dependency
+        and extension point.
+      - Trace each item to the requirement or criterion that needs it, in this step or an accepted earlier
+        step.
+      - An item needed only for a foreseeable later capability, a generic graph concept not required by an
+        accepted contract, or a provider registry, model router or task catalogue fails.
+      - Test-only fixtures and helpers are in scope only when they are confined to tests.
+    pass: Every listed item traces to a requirement; any untraced item fails with its location.
+    evidence: The item list with each traced requirement ID, the candidate revision and the reviewer identity.
+  checkpoint.graph-boundary:
+    method: review
+    role: Independent reviewer who did not produce the candidate.
+    rubric:
+      - Check each canonical store the candidate reads or writes against Principles §12 and Core §54 ownership.
+      - Execution state, provenance, reports, adapter output and GitHub state live outside the canonical stores.
+      - After Step 25, every commit that changes the repository's specs/nodes, specs/graph or specs/extensions
+        files is traced to a runtime mutation recorded for that change.
+    pass: No ownership violation and no untraced canonical graph change is found.
+    evidence: The stores checked, the canonical-file commits traced with their mutation records, the candidate
+      revision and the reviewer identity.
+  checkpoint.self-hosting-use:
+    method: review
+    role: Independent reviewer who did not produce the candidate.
+    rubric:
+      - Identify the Intent, proceeding Decision, Contract, Brief and Evidence that govern the change, and
+        confirm the runtime created them.
+      - Confirm lifecycle execution state and provenance show the runtime drove the lifecycle for this change.
+      - An accepted capability that applied but was not used needs a recorded reason; ceremony or convenience
+        is not a reason.
+    pass: The change is governed through the accepted runtime and adapter, or each non-use has an acceptable
+      recorded reason.
+    evidence: The record IDs, provenance references, any recorded non-use reasons, the candidate revision
+      and the reviewer identity.
+  review.independent-step:
+    method: review
+    role: Reviewer who did not produce the candidate and did not author its tests or verifiers.
+    rubric:
+      - Every requirement is met in meaning, not only mapped by ID.
+      - Every criterion and every listed case has its own current result from the bound verifier.
+      - Tests and verifiers would fail for the plausible wrong implementations each criterion rejects; a
+        test that passes a no-op or weakened candidate fails the review.
+      - The candidate does not weaken the approved contract or edit accepted definitions.
+    pass: All rubric items hold for the candidate revision; any specific failure returns the step to correction.
+    evidence: Per-criterion and per-case findings with cited files, the candidate and contract revisions and
+      the reviewer identity.
+  loader.single-path:
+    method: review
+    role: Independent code reviewer who did not produce the candidate.
+    rubric:
+      - Enumerate every runtime read of .pactwright/config.yml, .pactwright/lifecycle.yml, .pactwright/lock.yml,
+        specs/nodes, specs/graph and specs/extensions, starting from each CLI command and exported entry
+        point.
+      - Each read reaches the canonical loader and its registered decoders. No call site parses these inputs
+        itself, uses another YAML parser or profile, or reads an undocumented path.
+      - No call site catches, discards or downgrades a loader problem without returning it.
+      - Test code may build inputs directly; runtime code may not bypass the loader.
+    pass: Every enumerated read meets every rubric item; any violation fails with its file and line.
+    evidence: The call-site list with file and line and the decoder each reaches, the candidate revision and
+      the reviewer identity.
+  scope.no-extension-semantics:
+    method: review
+    role: Independent reviewer who did not produce the candidate.
+    rubric:
+      - No Project Intelligence, Graph Review, Assets/Publication or Operations record type, relation, command,
+        schema or behaviour exists in the source or the packed archive.
+      - Allowed are preserving Extension declarations, inventorying inactive Extension roots, the generic
+        registration seam and test-only fixture registrations.
+      - Decoding a named Extension's own configuration fields, activating an Extension or registering a named
+        Extension's types is implementing its semantics and fails.
+    pass: No item of implemented Extension semantics is found.
+    evidence: The source and archive paths inspected, any findings with file and line, the candidate revision
+      and the reviewer identity.
+  scope.no-github-provisioning:
+    method: review
+    role: Independent reviewer who did not produce the candidate.
+    rubric:
+      - No network client, GitHub API call, credential handling or remote reconciliation exists in the source
+        or the packed archive.
+      - A GitHub declaration is read and preserved only; reporting that remote operations are unavailable
+        is allowed.
+    pass: No provisioning, remote call or reconciliation path is found.
+    evidence: The source and archive paths inspected, any findings with file and line, the candidate revision
+      and the reviewer identity.
+  records.no-transient-state:
+    method: review
+    role: Independent reviewer who did not produce the candidate.
+    rubric:
+      - Inspect every core record schema, every field the runtime writes and every supported record output.
+      - No type, field or status holds a Contract alternative, an unselected Contract candidate, a Delivery
+        or Review attempt, a retry or a transcript as core truth.
+      - Concise rejected-option summaries in a Decision body remain permitted.
+    pass: No transient state is represented as core truth.
+    evidence: The schemas and outputs inspected, any findings with file and line, the candidate revision and
+      the reviewer identity.
+  records.content-rubric:
+    method: review
+    role: Independent content reviewer who did not write the fixture records. The run model supplies the
+      reviewer; CP01-S02 delivers no rubric artefact.
+    rubric:
+      - Apply each Core §6 content-review item to each listed record case with its governing context and
+        evidence.
+      - Check each applicable ownership item and the exclusions of Core §§7, 9, 10, 11 and 14.
+      - Check upstream non-duplication, Contract completeness, Brief fidelity and factual Evidence.
+      - An omitted conditional item passes only with an explicit, defensible not-applicable judgement.
+      - Cite the relevant record text for every judgement.
+    pass: Each listed case reaches the outcome its criterion states, with cited reasons.
+    evidence: Per-case judgements with cited text, the fixture and contract revisions and the reviewer identity.
+  lineage.no-stored-derived-state:
+    method: review
+    role: Independent reviewer who did not produce the candidate.
+    rubric:
+      - Inspect every record schema, every field the runtime writes and every derivation call path.
+      - The runtime neither writes nor reads any record field as current lineage, record currency or broad
+        Delivery state.
+      - User-authored extra frontmatter, such as a status field, is allowed canonical content with no authority
+        (Core §6); derivation must ignore it.
+      - No execution-progress record is stored as canonical truth.
+    pass: Derivation uses only canonical records and typed edges, and the runtime stores no derived state.
+    evidence: The schemas, written fields and call paths inspected, any findings with file and line, the
+      candidate revision and the reviewer identity.

@@ -25,6 +25,7 @@ type Contract = {
   requires?: string[];
   requirements?: Record<string, Requirement>;
   acceptance?: Record<string, Criterion>;
+  bindings?: Record<string, { method: string }>;
   [key: string]: unknown;
 };
 type CrosswalkEntry = {
@@ -56,6 +57,12 @@ export type ValidateOptions = {
   onSkippedSource?: (source: string) => void;
   /** Git working tree used to read the crosswalk source revisions. */
   gitDir?: string;
+  /**
+   * Called with each review or approval binding that a criterion uses but
+   * checkpoint.yml does not define. Undefined bindings are reported, not
+   * errors: they are T2 findings for steps not yet reviewed.
+   */
+  onUndefinedBinding?: (where: string, binding: string) => void;
 };
 
 const git = (cwd: string, args: string[]): string =>
@@ -288,7 +295,13 @@ export function validateCheckpointDir(
     if (!sequential("AC", Object.keys(acc))) errors.push(`${where}: criterion IDs not sequential`);
     for (const k of Object.keys(reqs)) ids.add(`${where}/${k}`);
     for (const k of Object.keys(acc)) ids.add(`${where}/${k}`);
+    for (const [aid, criterion] of Object.entries(acc)) {
+      for (const [method, bindings] of Object.entries(criterion.verify ?? {})) {
+        for (const binding of bindings) used.push({ where: `${where}/${aid}`, method, binding });
+      }
+    }
   };
+  const used: { where: string; method: string; binding: string }[] = [];
 
   if (checkpoint.requirements) {
     checkRefs(cpid, checkpoint.requirements);
@@ -332,6 +345,25 @@ export function validateCheckpointDir(
     }
     checkRefs(sid, doc.requirements ?? {});
     checkCoverage(sid, doc);
+  }
+
+  // Review and approval bindings are defined once in checkpoint.yml (Spec 00 §3).
+  const definitions = checkpoint.bindings ?? {};
+  for (const [binding, definition] of Object.entries(definitions)) {
+    const uses = used.filter((u) => u.binding === binding);
+    if (uses.length === 0) errors.push(`${cpid}: binding ${binding} is defined but never used`);
+    for (const u of uses) {
+      if (u.method !== definition.method) {
+        errors.push(
+          `${u.where}: ${u.method} binding ${binding} is defined as ${definition.method}`,
+        );
+      }
+    }
+  }
+  for (const u of used) {
+    if (u.method !== "automated" && !(u.binding in definitions)) {
+      options.onUndefinedBinding?.(u.where, u.binding);
+    }
   }
 
   const crosswalkFile = join(dir, "crosswalk.yml");
@@ -443,12 +475,20 @@ function main(argv: string[]): number {
   const dirs = argv.filter((a) => !a.startsWith("--"));
   let failed = 0;
   for (const dir of dirs.length > 0 ? dirs : checkpointDirs(repoRoot)) {
+    const undefinedBindings: string[] = [];
     const errors = validateCheckpointDir(repoRoot, dir, {
       skipSource,
       skipUnavailableSources,
       onSkippedSource: (source) =>
         console.warn(`${dir}: ${source} is not in this shallow clone; its quotes were not checked`),
+      onUndefinedBinding: (where, binding) => undefinedBindings.push(`${where} ${binding}`),
     });
+    if (undefinedBindings.length > 0) {
+      console.warn(
+        `${dir}: ${undefinedBindings.length} review/approval binding use(s) without a definition:`,
+      );
+      for (const u of undefinedBindings) console.warn(`  ${u}`);
+    }
     for (const e of errors) console.error(`${dir}: ${e}`);
     console.log(`${dir}: ${errors.length === 0 ? "ok" : `${errors.length} error(s)`}`);
     failed += errors.length;

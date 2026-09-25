@@ -1,7 +1,7 @@
 # Pactwright — Checkpoint Step Contract and Delivery Tasks
 
-**Version:** 5  
-**Date:** 24 September 2026  
+**Version:** 6  
+**Date:** 25 September 2026  
 **Purpose:** Replace checkpoint prompts with requirements and acceptance criteria, then execute them through progressively self-hosted run models.
 
 ## 1. Execution model
@@ -51,11 +51,11 @@ sources:
 
 `software-bootstrap` is a proposed model identifier. Source paths are relative to `checkpoint.yml`. `CORE#15` identifies numbered section 15; a heading without a section number, in any source, is cited by its GitHub heading anchor, such as `GUIDE#replay-provenance`. The harness resolves and pins the actual source revisions for each run.
 
-Shared requirements, mandatory review policy and checkpoint exit criteria are declared once and inherited. Shared requirements live in `checkpoint.yml`; their IDs take the checkpoint prefix, such as `CP01/R01`. Do not maintain a second hand-written plan or acceptance registry duplicating these contracts; generate indexes and coverage views from the contract files.
+Shared requirements, mandatory review policy and checkpoint exit criteria are declared once and inherited. Shared requirements live in `checkpoint.yml`; their IDs take the checkpoint prefix, such as `CP01/R01`. The mandatory review policy is a shared requirement with its own review binding. `checkpoint.yml` also defines, under `bindings`, every review and approval binding its step contracts use. Do not maintain a second hand-written plan or acceptance registry duplicating these contracts; generate indexes and coverage views from the contract files.
 
 While a checkpoint is converted, `crosswalk.yml` records where each obligation of the replaced prose went, quoting it verbatim. Its `sources` list names, for each set of converted steps, the checkpoint revision whose prose they replaced, so stages converted at different revisions each quote their own text. It is conversion evidence for T1 and T2 review, not a plan to maintain.
 
-`pnpm contracts:check` validates every checkpoint directory that has a `checkpoint.yml`. It checks the format schema, step identity, key order, requirement coverage, `requires` targets and source citations. It also checks the crosswalk's IDs and, reading each step's replaced text from its source revision in Git history, its verbatim quotes. `pnpm test` runs the same checks.
+`pnpm contracts:check` validates every checkpoint directory that has a `checkpoint.yml`. It checks the format schema, step identity, key order, requirement coverage, `requires` targets, source citations and binding definitions: each definition must be used, and with its declared method. It lists, without failing, review and approval bindings that have no definition yet. It also checks the crosswalk's IDs and, reading each step's replaced text from its source revision in Git history, its verbatim quotes. `pnpm test` runs the same checks.
 
 ## 3. Compact step format
 
@@ -172,7 +172,7 @@ This step proves the registration mechanism. Installed Extension composition mus
 
 ### Verification and ownership rules
 
-An **automated** binding defines executable assertions and required observations. A **review** binding defines its independent role, rubric, pass rule and evidence. An **approval** binding identifies the authority and exact output/effect being authorised. Common independent review is required by the run model even when the step lists only automated bindings.
+An **automated** binding defines executable assertions and required observations; the criterion's `given`, `when`, `then` and `cases` state them. A **review** binding defines its independent role, rubric, pass rule and evidence in `checkpoint.yml` as `{method: review, role, rubric, pass, evidence}`. An **approval** binding identifies the authority and exact output/effect being authorised there as `{method: approval, authority, effect, evidence}`. T2 review of a step requires a definition for each of its review and approval bindings. Common independent review is required by the run model even when the step lists only automated bindings.
 
 Repository, branch, permitted writes, model/skill versions, credentials and execution budgets belong to validated run configuration. They must be resolved before dispatch, not guessed by an agent. Verifier implementations can be delivered alongside a capability, but an unresolved or untested binding cannot satisfy acceptance.
 
@@ -218,10 +218,10 @@ Step definitions remain project plans. Pactwright owns authorised graph mutation
 
 ## Source basis
 
-Version 2 edited the supplied v1 proposal; version 3 moves each step contract into its own file. Neither re-audits the repository or claims that any task above has run. The original example and capability boundaries were grounded in `sb-dev/pactwright` at `19c66d5f2368932ff05306db1fae8da8ec5810dd`:
+Version 2 edited the supplied v1 proposal; version 3 moves each step contract into its own file; version 6 defines review and approval bindings in `checkpoint.yml`. None re-audits the repository or claims that any task above has run. The original example and capability boundaries were grounded in `sb-dev/pactwright` at `19c66d5f2368932ff05306db1fae8da8ec5810dd`:
 
 - [Checkpoint 1](https://github.com/sb-dev/pactwright/blob/19c66d5f2368932ff05306db1fae8da8ec5810dd/docs/checkpoints/01-self-hosted-delivery.md), particularly Step 3 and the exit gate.
 - [Core specification](https://github.com/sb-dev/pactwright/blob/19c66d5f2368932ff05306db1fae8da8ec5810dd/docs/specs/01-pactwright-core-system-and-lifecycle.md), especially §§15, 34–38 and 53–57.
 - [Implementation Principles](https://github.com/sb-dev/pactwright/blob/19c66d5f2368932ff05306db1fae8da8ec5810dd/docs/checkpoints/00-implementation-principles.md), §§3–6.
 
-**Pactwright — Checkpoint Step Contract and Delivery Tasks v5**
+**Pactwright — Checkpoint Step Contract and Delivery Tasks v6**
