@@ -6,7 +6,8 @@ outputs:
     detected project package manager, re-enter through the new runtime and leave the environment valid at the target
     or recoverable to the previous one.
   released-format-migration: The named released-0.0.1-to-owned-stores-v1 migration, which moves a complete released
-    0.0.1 project to owner-separated stores and the version 1 lock without partial moves.
+    0.0.1 project to owner-separated stores and the version 1 lock without partial moves, and writes a legacy-closure
+    execution-state document for each Brief with current Evidence and no execution-state document.
 requirements:
   R01:
     source: [DISTRIBUTION#15]
@@ -65,6 +66,11 @@ requirements:
       an older runtime can read new-format stores. Historical sha256 graph provenance is preserved unchanged and
       never relabelled pg1; the migrated graph may record a new pg1 identity, and no result recorded under the old
       protocol or definition is presented as a result for the migrated state.
+  R11:
+    source: [CORE#28, CORE#57, DISTRIBUTION#15]
+    statement: The released-format migration shall write, within its atomic change set, a CP01-S06/R04 legacy-closure
+      execution-state document for each Brief that has current Evidence and no execution-state document, and
+      for no other Brief. No other runtime path writes a legacy-closure document.
 acceptance:
   AC01:
     covers: [R01, R04]
@@ -160,7 +166,7 @@ acceptance:
       automated: [upgrade.rollback]
   AC11:
     covers: [R10]
-    given: The AC06 project with execution provenance recording a sha256 graph revision.
+    given: The AC06 project with a replay-base document, as CP01-S09/R06 defines, recording a sha256 graph revision.
     when: It is migrated as in AC07 and replay validation is requested.
     then: The provenance is byte-identical and still sha256. Replay reports the legacy protocol and needs the recorded
       runtime; it is not reported as a pg1 match.
@@ -174,3 +180,15 @@ acceptance:
       newly installed runtime. Upgrade code changes no Agent Pack or Extension identity.
     verify:
       review: [upgrade.ownership]
+  AC13:
+    covers: [R11]
+    cases: [done-lineage, delivering-lineage, already-has-state]
+    given: The AC06 project extended with the listed Brief; done-lineage has current Evidence and no execution-state
+      document, delivering-lineage has no Evidence and no document, and already-has-state has current Evidence
+      and a current-format document.
+    when: Pactwright upgrade runs to the current runtime.
+    then: done-lineage gains exactly one legacy-closure document for its Brief and validate reports it as unavailable
+      verification without failing rule 12. delivering-lineage and already-has-state gain no legacy-closure
+      document, and the existing document keeps its bytes.
+    verify:
+      automated: [upgrade.legacy-closure-markers]

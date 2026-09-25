@@ -14,8 +14,17 @@
 # 87bd3eb) closed the batch reviews. The stage-level exit review is
 # ../../research-logs/2026-09-25-cp01-stage-1-exit-review.md; no question is deleted.
 #
-# Stage 2 (Q21-Q33) is a T1 conversion drafted against Core v3. Its open
-# questions are unresolved inputs to T2 review; no specification was amended.
+# Stage 2 (Q21-Q33) decisions and check status:
+# ../../research-logs/2026-09-25-cp01-stage-2-b7-shapes-and-identity.md
+# B7 Q21,Q24; B8 Q22,Q25,Q31; B9 Q23,Q32; B10 Q26,Q27,Q33; B11 Q28,Q29,Q30.
+# Applied clauses: Core v5 (sections 27, 28, 32, 52, 53, 55, 57) and
+# Checkpoint 1 v27 (section 4, Step 24), approved by the owner. Independent
+# reviews and PR #49 owner reviews are recorded in each batch. The section 7
+# stage exit review is
+# ../../research-logs/2026-09-25-cp01-stage-2-exit-review.md (requirement-
+# ready; fresh review 5322976729 accepted at ac370f2); it added S06,
+# S08 and S09 entries to the affects of Q37-Q39 and Q45-Q49. No question is
+# deleted.
 #
 # Stage 3 (Q34-Q40) is a T1 conversion drafted against Core v3 and Distribution
 # v2. Its open questions are unresolved inputs to T2 review; no specification
@@ -1219,46 +1228,47 @@ open_questions:
     affects: [CP01-S01/R05, CP01-S02/R07, CP01-S03/R06, CP01-S04/R01]
     question: "Should the later contracts carry these obligations, which v17 does not state at the named steps: Step 7 mutations refuse in-place rewrites through the Step 2 check; Step 16 re-runs CP01-S03/AC06 to AC09 and exercises Step 4 derivation through the fixture Extension loader, beyond the graph contribution registration and core-redefinition failure its v17 text already requires; Steps 6, 11, 14 and 15 load their real formats through the Step 1 loader?"
   - id: Q21
-    affects: [CP01-S06/R02, CP01-S06/R05, CP01-S06/R07, CP01-S06/AC03, CP01-S06/AC04, CP01-S06/AC05, CP01-S06/AC06,
-      CP01-S06/AC07, CP01-S07/AC03, CP01-S07/AC12, CP01-S08/AC01, CP01-S08/AC02, CP01-S08/AC03, CP01-S08/AC08,
-      CP01-S09/R05]
+    affects: [CP01-S06/R02, CP01-S06/R05, CP01-S06/R07, CP01-S06/R10, CP01-S06/AC03, CP01-S06/AC04, CP01-S06/AC05,
+      CP01-S06/AC06, CP01-S06/AC07, CP01-S06/AC08, CP01-S06/AC10, CP01-S07/AC03, CP01-S07/AC12, CP01-S08/AC01,
+      CP01-S08/AC02, CP01-S08/AC03, CP01-S08/AC08, CP01-S09/R05, CP01-S09/AC01]
     question: "Core §27 recognises only the released lifecycle `version: 1` / `stages` policy format and treats an unreleased `version: 2` draft as unsupported, and the built-in direct shape (Core §20) has no Gate or corrective route. Where and in what format does Checkpoint 1 declare lifecycle shapes, Gates, corrective transitions, iteration limits and any escalation at an exhausted limit, so that the Gate, corrective-route and bounded-loop criteria of Steps 6-8 and validation rules 9-11 and 15 have configuration to exercise: built-in shapes only, test-only fixture shapes, or a new explicitly versioned lifecycle schema with its migration?"
   - id: Q22
     affects: [CP01-S06/R03, CP01-S06/R08, CP01-S06/AC03, CP01-S06/AC04, CP01-S06/AC07, CP01-S07/R09, CP01-S07/AC03,
-      CP01-S07/AC12, CP01-S08/AC01, CP01-S08/AC02, CP01-S08/AC08, CP01-S09/R05]
+      CP01-S07/AC12, CP01-S08/AC01, CP01-S08/AC02, CP01-S08/AC08, CP01-S09/R05, CP01-S09/AC01]
     question: "How does lifecycle policy declare the authority a Gate requires, and how are a Gate resolution and its actor recorded in execution state? Does a Gate resolution use the Decision actor syntax `<kind>:<identity>` with kind-only authorisation, or another authority model?"
   - id: Q23
-    affects: [CP01-S06/R04, CP01-S06/AC07, CP01-S08/R05]
+    affects: [CP01-S06/R04, CP01-S06/R07, CP01-S06/AC07, CP01-S06/AC10, CP01-S06/AC13, CP01-S08/R05, CP01-S08/AC05]
     question: "Core §28 leaves the storage path of lifecycle execution state to the implementation, but Core §56 makes the repository revision unavailable while non-ignored untracked files exist and requires written provenance to be committed before the next pinned run. Must execution state be ignored, committed or kept outside the repository so that ordinary lifecycle progress does not make the repository revision unavailable?"
   - id: Q24
-    affects: [CP01-S06/R06, CP01-S09/R05]
+    affects: [CP01-S06/R06, CP01-S06/AC01, CP01-S06/AC10, CP01-S09/R05, CP01-S09/AC01]
     question: "Core §§23 and 28 leave the resolved-shape identity mechanism unresolved. What must execution state record to identify the resolved direct shape, and what do validation rules 9 (missing lifecycle shape) and 10 (unresolved or incompatible shape identity) check in Checkpoint 1?"
   - id: Q25
-    affects: [CP01-S07/R09, CP01-S07/R10, CP01-S07/AC12, CP01-S09/R05]
+    affects: [CP01-S06/R09, CP01-S06/AC05, CP01-S06/AC11, CP01-S07/R09, CP01-S07/R10, CP01-S07/AC12, CP01-S09/R05]
     question: "How does the runtime identify the latest delivered state and detect a delivery change after Review (for example by repository revision, working-tree content or an execution-state counter), and where is the closing Review outcome recorded so that the closure guard can read it? Core §§32 and 52 fix no Review-result vocabulary."
   - id: Q26
-    affects: [CP01-S08/R02, CP01-S08/R03, CP01-S08/AC01, CP01-S08/AC02]
+    affects: [CP01-S08/R01, CP01-S08/R02, CP01-S08/R03, CP01-S08/AC01, CP01-S08/AC02]
     question: "Step 8 precedes Agent Pack capabilities (Step 10) and adapter commands (Step 12). What may `lifecycle run` dispatch at Step 8, and through which invocation seam? Do `status` and `next` name the Contract-crafting responsibilities (capture-intent, propose-contracts, approve-contract, write-brief) as lifecycle actions alongside shape steps, given that they are policy entries but not shape steps?"
   - id: Q27
-    affects: [CP01-S08/R01, CP01-S08/R02, CP01-S08/R07]
+    affects: [CP01-S08/R01, CP01-S08/R02, CP01-S08/R03, CP01-S08/R07, CP01-S08/AC09]
     question: "Do `lifecycle status`, `next` and `run` operate on one selected Intent or Brief, or across every active direction? What is reported and run when several independent Intent directions are active at once?"
   - id: Q28
-    affects: [CP01-S09/R04, CP01-S09/R06, CP01-S09/AC04, CP01-S09/AC05]
+    affects: [CP01-S09/R04, CP01-S09/R06, CP01-S09/AC04, CP01-S09/AC05, CP01-S19/AC11]
     question: "Which execution-provenance record, location and format do rule 17 and the historical policy check read? No Checkpoint 1 step before Step 9 writes execution provenance: do Step 9 fixtures define it, or does a later step own it? For a read-only `validate` of recorded provenance, what do a dirty input base and refusing without an attempt or replay record mean, given that validate performs no execution?"
   - id: Q29
     affects: [CP01-S09/R09, CP01-S09/R10, CP01-S09/AC08, CP01-S09/AC09]
     question: "Which records make up the default Delivery context's current relevant Contract/Brief lineage (for example the Intent, the current Decision and its rationale, or earlier Evidence)? How does a caller explicitly require excluded history, and how is included non-current history distinguished from current lineage? What namespace, ordering and size rules apply to Extension context contributions?"
   - id: Q30
-    affects: [CP01-S09/R01, CP01-S09/R04, CP01-S09/R07, CP01-S09/AC04, CP01-S09/AC06]
+    affects: [CP01-S09/R01, CP01-S09/R04, CP01-S09/R07, CP01-S09/R11, CP01-S09/AC04, CP01-S09/AC06, CP01-S09/AC11]
     question: "What exit status and output contract does `pactwright validate` have: how are errors, warnings, inactive or unsupported components and unavailable verification (such as a historical policy or replay check) distinguished, and is machine-readable output required? Is a historical actor-kind incompatibility of a withdrawn Decision a validation failure or only a reported compatibility result? Core §57 names unavailable execution authority as a distinct diagnostic category: what makes authority unavailable, as distinct from an incomplete load of the lifecycle configuration?"
   - id: Q31
-    affects: [CP01-S06/R08, CP01-S06/AC02, CP01-S07/R07, CP01-S07/AC04, CP01-S08/R01, CP01-S08/AC02]
+    affects: [CP01-S06/R08, CP01-S06/AC02, CP01-S06/AC08, CP01-S07/R07, CP01-S07/AC04, CP01-S08/R01, CP01-S08/AC02]
     question: "Lifecycle `version: 1` defines `actor` only for approve-contract. What does `execution: manual` mean for deliver-brief, review and prepare-evidence, and what required actor does `lifecycle status` report for them? Do reject and defer Decisions use the approve-contract entry, as CP01-S07/AC04 assumes?"
   - id: Q32
-    affects: [CP01-S06/R04, CP01-S08/R03]
+    affects: [CP01-S06/R04, CP01-S06/R11, CP01-S06/AC12, CP01-S07/R06, CP01-S07/AC06, CP01-S08/R03, CP01-S08/R05,
+      CP01-S08/AC10]
     question: "Core §55 serialises canonical mutations only. How are writes to lifecycle execution state serialised when two `lifecycle run` invocations or Gate resolutions for the same Brief race, so that neither loses the other's progress or double-counts an iteration?"
   - id: Q33
-    affects: [CP01-S08/R03, CP01-S09/R09, CP01-S12, CP01-S24]
+    affects: [CP01-S08/R03, CP01-S09/R09, CP01-S10/R05, CP01-S12, CP01-S24]
     question: "Should the later contracts carry these obligations, which their version 20 prose does not state: Step 24 (or another later step) runs real Agent Pack capabilities through `lifecycle run`, beyond Step 8's instrumented invoker; and Agent Packs (Step 10) and the adapter (Step 12) consume the Step 9 context-assembly API rather than assembling context themselves?"
   - id: Q34
     affects: [CP01-S11/R01, CP01-S11/AC01, CP01-S11/AC04, CP01-S15/AC07, CP01-S17/AC06]
@@ -1270,13 +1280,13 @@ open_questions:
     affects: [CP01-S10/R02, CP01-S10/R04, CP01-S10/AC01, CP01-S10/AC02, CP01-S11/AC02, CP01-S11/AC05]
     question: "Spec 02 section 5 describes Agent Pack content only conceptually. What format declares a pack's capability mappings, agents, prompts, direct skills and evaluation cases, and how does a pack declare its compatible runtime versions, so that the incompatible-runtime and capability-check criteria have a defined input?"
   - id: Q37
-    affects: [CP01-S12/R07, CP01-S12/R08, CP01-S12/AC03]
+    affects: [CP01-S12/R07, CP01-S12/R08, CP01-S12/AC03, CP01-S06/R09, CP01-S12/AC07]
     question: "The agent executing `/deliver-brief` or `/review` has write access to the repository. How does the runtime keep it from mutating the Delivery Graph directly: prevent the write, detect an out-of-band canonical change and refuse progression, or leave the change to `pactwright validate`? CP01-S12/AC03 assumes detection and refusal to advance."
   - id: Q38
-    affects: [CP01-S12/R03, CP01-S12/R05, CP01-S12/R06, CP01-S12/R09, CP01-S12/R11, CP01-S12/AC02, CP01-S12/AC04]
+    affects: [CP01-S12/R03, CP01-S12/R05, CP01-S12/R06, CP01-S12/R09, CP01-S12/R11, CP01-S12/AC02, CP01-S12/AC04, CP01-S06/R09, CP01-S08/R03, CP01-S12/AC03, CP01-S12/AC07]
     question: "Which capability does each adapter command invoke? Core section 35 assigns delivery-specification to Intent, alternatives, selection, Contract and Brief work, but names none for `/prepare-evidence`. How does a Claude Code command reach the runtime mutation API, given that CP01-S08 assumes no separate CLI mutation command and Principles section 11 lists no mutating runtime command for these responsibilities?"
   - id: Q39
-    affects: [CP01-S13/R01, CP01-S13/R05, CP01-S13/AC01, CP01-S13/AC05]
+    affects: [CP01-S13/R01, CP01-S13/R05, CP01-S13/AC01, CP01-S13/AC05, CP01-S08/R03]
     question: "How does `pactwright eval` execute capabilities and semantic judgement: live model calls through the adapter, a runtime-invoked provider, or recorded outputs? Which judge performs semantic assertions, how is it identified and pinned so that baseline and candidate results are comparable, and what does eval need when no model is available, as in CI?"
   - id: Q40
     affects: [CP01-S13/R02, CP01-S13/R06, CP01-S13/R07, CP01-S13/AC06, CP01-S13/AC07, CP01-S28]
@@ -1294,19 +1304,19 @@ open_questions:
     affects: [CP01-S16/R12, CP01-S16/AC03, CP01-S19/R02, CP01-S19/AC03]
     question: "Spec 02 section 15 specifies package-manager detection for runtime upgrade, which is Step 19, but Step 16 already delegates Extension installation to the project package manager, and Q35 asks the same for agent-pack use. Which step owns detection, and must Step 16 apply the Step 19 rule?"
   - id: Q45
-    affects: [CP01-S15/R05, CP01-S15/AC01, CP01-S15/AC02, CP01-S15/AC03]
+    affects: [CP01-S15/R05, CP01-S15/AC01, CP01-S15/AC02, CP01-S15/AC03, CP01-S09/R06, CP01-S09/AC05]
     question: "Spec 02 section 12 requires a deterministic `environment_lock_hash` from the exact resolved lock state but defines no algorithm, canonical form or prefix, unlike pg1 for the graph revision. Which hash protocol does it use, must it be stable across runtime versions and platforms, and does it hash the lock bytes or their parsed meaning, so that a formatting-only lock change does or does not change it?"
   - id: Q46
     affects: [CP01-S15/R07, CP01-S15/AC08, CP01-S17/R06, CP01-S17/AC04, CP01-S18/R03, CP01-S18/AC06]
     question: "Spec 02 sections 5 to 7 do not say how a Checkpoint 1 Agent Pack or configuration declares an external Production Skills import. Which field identifies one, so that Steps 15, 17 and 18 can report it as unsupported? Does an unsupported import block the whole environment, as these contracts assume, or only the capabilities bound to it?"
   - id: Q47
-    affects: [CP01-S18/R01, CP01-S18/R04, CP01-S18/AC02, CP01-S18/AC04, CP01-S18/AC07]
+    affects: [CP01-S18/R01, CP01-S18/R04, CP01-S18/AC02, CP01-S18/AC04, CP01-S18/AC07, CP01-S06/R04]
     question: "Spec 02 section 16 names three severities but assigns one only to an unavailable repository revision and a required migration. Which severity does each other finding have, such as lock drift, generated drift, a missing capability, preserved inactive data and an available upgrade? What exit status and machine-readable output does doctor have (compare Q30 for validate)?"
   - id: Q48
-    affects: [CP01-S19/R01, CP01-S19/R05, CP01-S19/AC01, CP01-S19/AC05, CP01-S19/AC12]
+    affects: [CP01-S19/R01, CP01-S19/R05, CP01-S19/AC01, CP01-S19/AC05, CP01-S19/AC12, CP01-S06/R04]
     question: "How does the old runtime re-enter the newly installed runtime, and what hand-off state lets the new runtime or `upgrade --to` recover when a step after package replacement fails? Where is the preserved previous package, configuration, lock and graph state kept, and is it committed, ignored or removed after success?"
   - id: Q49
-    affects: [CP01-S19/R10, CP01-S19/AC10]
+    affects: [CP01-S19/R10, CP01-S19/AC10, CP01-S06/R04]
     question: "Spec 02 section 15 requires rollback to restore or migrate back to the recognised original format, but defines only the forward `released-0.0.1-to-owned-stores-v1` migration. Does rollback restore preserved original bytes or run a reverse migration, and is rollback to 0.0.1 supported after new canonical records were written in the owner-separated format?"
   - id: Q50
     affects: [CP01-S16/R07, CP01-S16/R08, CP01-S16/AC09, CP01-S16/AC10]

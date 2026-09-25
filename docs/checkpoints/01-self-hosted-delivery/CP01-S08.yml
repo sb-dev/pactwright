@@ -7,20 +7,34 @@ outputs:
   lifecycle-next: A read-only pactwright lifecycle next that determines the next permitted lifecycle action
     without executing it.
   lifecycle-run: A pactwright lifecycle run that executes automatic responsibilities through the resolved shape
-    and policy until a required Gate, completion, execution failure or validation failure.
+    and policy until a required Gate, a manual responsibility, a blocked Review outcome, completion, execution
+    failure or validation failure.
 requirements:
   R01:
-    source: [CORE#46]
+    source: [CORE#27, CORE#44, CORE#46]
     statement: Lifecycle status shall report current and completed steps, the blocking step, the required actor,
-      validation problems and current lineage.
+      validation problems and current lineage. Its position spans both lifecycle regions, the Contract-crafting
+      responsibilities derived from broad lineage state and the resolved shape's steps read from execution
+      state. It covers every Intent direction in Intent-ID order by default, or one selected Intent, and reports
+      an unknown selected Intent as a problem.
   R02:
-    source: [CORE#46, CORE#54]
-    statement: Lifecycle next shall determine the next permitted lifecycle action without executing it. Status
-      and next shall be read-only; they write no file, advance no execution state and invoke no agent or capability.
+    source: [CORE#27, CORE#46, CORE#54]
+    statement: Lifecycle next shall determine the next permitted lifecycle action for each covered direction
+      without executing it, naming a Contract-crafting responsibility or a shape step with its execution mode
+      and required actor. Status and next shall be read-only; they write no file, advance no execution state
+      and invoke no agent or capability.
   R03:
-    source: [CORE#26, CORE#32, CORE#34, CORE#46, CORE#58]
+    source: [CORE#26, CORE#32, CORE#34, CORE#35, CORE#46, CORE#49, CORE#53, CORE#54, CORE#58, DISTRIBUTION#20]
     statement: Lifecycle run shall execute automatic responsibilities through the resolved shape and policy
-      and stop at a required Gate, a manual responsibility, completion, execution failure or validation failure.
+      and stop at a required Gate, a manual responsibility, a blocked Review outcome, completion, execution
+      failure or validation failure. It runs the selected direction, or every active direction in Intent-ID
+      order with one result per direction. Every automatic responsibility is capability-backed; the capability
+      supplies content, such as the selected alternative and supplied actor of a delegated approve-contract
+      or the facts of prepare-evidence, and the runtime applies the Step 7 guards and performs any canonical
+      write.
+      It dispatches each capability-backed responsibility through the runtime's single capability-invocation
+      seam, which Step 8 supplies with an instrumented invoker; invoked without an invoker it stops at the
+      first such responsibility with an execution failure naming the missing invoker and simulates nothing.
       It shall not skip a Gate, take an undeclared transition or exceed an iteration bound.
   R04:
     source: [CORE#53, CORE#55]
@@ -29,13 +43,15 @@ requirements:
   R05:
     source: [CORE#28, CORE#44, CORE#54]
     statement: Progression shall be derived from current Contract/Brief lineage, resolved shape, policy, Gate
-      state and repository state, and execution progress stays outside the Delivery Graph.
+      state and repository state, and execution progress stays outside the Delivery Graph in the Step 6 execution-state
+      documents, written through the Step 6 serialised boundary.
   R06:
     source: [CORE#44, CORE#58]
     statement: After current Evidence no further core fulfilment step shall be offered or run for that Brief.
   R07:
     source: [CORE#44, CORE#54, CORE#55, CORE#57]
-    statement: Under an incomplete load, a lineage defect or a policy-denied recorded Decision, status remains
+    statement: Under an incomplete load, a lineage defect, a policy-denied recorded Decision or a malformed or
+      unknown-version execution-state document, status remains
       diagnostic and still returns each unaffected Intent's exact standalone lineage, Contract and state. Next
       and run shall not bypass complete-state validation, invoke an agent or mutate state while the complete-state
       or actor-kind guard fails.
@@ -47,18 +63,21 @@ acceptance:
       that records every call.
     when: Lifecycle status and lifecycle next are run.
     then: Status reports the expected current and completed steps, blocking step, required actor, no problems
-      and the current lineage; next names the expected permitted action. Neither writes a file, advances execution
-      state or invokes a capability.
+      and the current lineage; next names the expected permitted action, propose-contracts or approve-contract
+      for open, write-brief for contracted, the shape step otherwise and none for done. Neither writes a file,
+      advances execution state or invokes a capability.
     verify:
       automated: [lifecycle.status-next]
   AC02:
     covers: [R03, R04, R05]
-    cases: [required-gate, manual-step, completion, execution-failure, validation-failure]
+    cases: [required-gate, manual-step, blocked-review, completion, execution-failure, validation-failure, no-invoker]
     given: A project whose run reaches the listed stopping condition; manual-step reaches a responsibility whose
-      policy is manual.
+      policy is manual; blocked-review receives a blocked Review outcome; no-invoker runs an automatic capability-backed
+      responsibility with no invoker supplied.
     when: Lifecycle run is invoked.
     then: Run executes automatic responsibilities in declared order, stops at the listed condition and reports
-      it; it never executes the manual responsibility itself. It performs no step beyond that point, and every
+      it; it never executes the manual responsibility itself, blocked-review stops with the Review step still
+      current, and no-invoker stops as an execution failure naming the missing invoker with no simulated output. It performs no step beyond that point, and every
       canonical change it made went through the mutation API.
     verify:
       automated: [lifecycle.run-stops]
@@ -84,20 +103,22 @@ acceptance:
     covers: [R05]
     given: A run that advances one Brief's execution state from its Delivery step to its Review step.
     when: Canonical records, broad state and project_graph_revision are compared before and after.
-    then: They are identical and the broad state stays delivering; only execution state changed.
+    then: They are identical and the broad state stays delivering; only the Brief's execution-state document changed.
     verify:
       automated: [lifecycle.progress-not-graph]
   AC06:
     covers: [R07]
-    cases: [incomplete-load, defective-and-unaffected-intents, policy-denied-decision]
+    cases: [incomplete-load, defective-and-unaffected-intents, policy-denied-decision, malformed-execution-state]
     given: A project with the listed condition. The defective case holds one Intent with a lineage defect and
       one unaffected Intent, with a standalone control for the unaffected Intent. The policy-denied case holds
-      a structurally valid lineage whose current Decision's actor kind the policy disallows.
+      a structurally valid lineage whose current Decision's actor kind the policy disallows. The malformed-execution-state
+      case holds a delivering Brief whose execution-state document does not decode.
     when: Lifecycle status is invoked, and next and run are requested for the unaffected Intent or, in the
-      policy-denied case, for the denied Intent.
+      policy-denied and malformed-execution-state cases, for the affected Intent.
     then: Status reports the problems and returns the unaffected Intent's lineage, Contract and state equal
       to its standalone control, marked diagnostic when the load is incomplete; for the policy-denied Intent
-      it returns that Intent's own recorded lineage, Contract and state with the actor-kind problem. Next and
+      it returns that Intent's own recorded lineage, Contract and state with the actor-kind problem; for the
+      malformed-execution-state Brief it reports the document's path and cause. Next and
       run refuse with the owning problem, including for the unaffected Intent; neither invokes a capability,
       advances execution state nor writes.
     verify:
@@ -120,7 +141,7 @@ acceptance:
     given: 'A run toward Evidence closure with only the listed failure, and a control with every precondition
       met. In superseded-brief, unreviewed-delivery-change and blocking-closing-review, execution state records
       closure as the next step and the dispatched closure responsibility supplies an Evidence mutation through
-      the runtime API: for a Brief superseded before run started, for a delivered state changed after its closing
+      the runtime API: for a Brief superseded before run started, for a Delivery step completed after its closing
       Review, or despite a closing Review that does not permit closure. pending-gate leaves a required Gate
       before closure unresolved; invalid-lineage holds a lineage defect in the graph.'
     when: Run is invoked.
@@ -130,3 +151,29 @@ acceptance:
       validation refuses invalid-lineage before any step runs. The control closes with Evidence.'
     verify:
       automated: [lifecycle.run-closure-guards]
+  AC09:
+    covers: [R01, R02, R03]
+    cases: [all-directions, selected-intent, unknown-intent, validation-failure-in-first-direction]
+    given: A project with two independent active Intent directions at different positions and an instrumented
+      invoker; validation-failure-in-first-direction makes a step of the first direction leave the graph failing
+      complete-state validation.
+    when: Status, next and run are invoked without a selection, with the first Intent selected, or with an
+      unknown Intent ID, as listed.
+    then: 'all-directions reports and runs both directions in Intent-ID order with one result each, each stopping
+      at its own condition; selected-intent reports and runs only the selected direction and leaves the other''s
+      execution state unchanged; unknown-intent is refused as a problem with no write or invocation. validation-failure-in-first-direction
+      stops the whole run there: the first direction''s result records its executed steps and the validation
+      failure, the second direction is not started and its execution state is unchanged.'
+    verify:
+      automated: [lifecycle.direction-selection]
+  AC10:
+    covers: [R05]
+    cases: [concurrent-runs, run-during-gate-resolution]
+    given: Two runtime processes acting on the same Brief concurrently, as listed, each having inspected the
+      same execution state; a single-process control.
+    when: Both attempt to write execution state.
+    then: Exactly one write commits and the other run stops reporting a stale execution state without overwriting
+      it; the resulting state records the committed advance or Gate resolution once and remains loadable.
+      The control commits.
+    verify:
+      automated: [lifecycle.run-race]

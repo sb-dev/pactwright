@@ -925,7 +925,9 @@ stages:
     execution: automatic
 ```
 
-The released `version: 1` / `stages` mapping is a recognised native policy format. Its seven named responsibilities are policy entries, not lifecycle-shape stages. `approve-contract.actor` authorises one of `human`, `agent` or `automation`; it does not authorise named identities. The initial `direct` fulfilment shape uses the delivery/review/closure policy entries without turning Contract-crafting responsibilities into shape topology. Read-only loading preserves these declarations. Any later incompatible lifecycle representation needs an explicitly versioned schema and migration; an unreleased `version: 2` draft is not implicitly a supported released format.
+The released `version: 1` / `stages` mapping is a recognised native policy format. Its seven named responsibilities are policy entries, not lifecycle-shape stages. `approve-contract.actor` authorises one of `human`, `agent` or `automation`; it does not authorise named identities. It authorises the kind of every Decision outcome, `proceed`, `reject` and `defer`, including withdrawal and re-authorisation. An entry with `execution: manual` is never dispatched by the runtime; lifecycle status reports it as the blocking step, with required actor `human` when the entry declares no `actor` and with its declared kind for `approve-contract`.
+
+A Gate's required authority is declared as one or more actor kinds from the same vocabulary and enforced by kind only. A Gate resolution supplies its actor in the section 9 `<kind>:<identity>` syntax and an outcome, `passed` or `refused`; execution state records both unchanged as attribution, with the delivered state the resolution approved, never as a graph record. The Gate permits progression only while its most recent resolution is `passed` and no corrective transition has since returned to a Delivery step before the Gate; after such a return the Gate must be resolved again. The initial `direct` fulfilment shape uses the delivery/review/closure policy entries without turning Contract-crafting responsibilities into shape topology. Read-only loading preserves these declarations. Any later incompatible lifecycle representation needs an explicitly versioned schema and migration; an unreleased `version: 2` draft is not implicitly a supported released format.
 
 The redesigned model should preserve these policy concerns while allowing the Brief-to-Evidence portion to be governed by a lifecycle shape.
 
@@ -963,7 +965,7 @@ execution status
 
 The exact representation of `resolved shape identity`, including whether it uses a version or hash, remains part of the lifecycle-shape storage and locking design.
 
-The exact storage path and serialisation are implementation concerns.
+Execution state is Pactwright-owned ordinary repository content below `.pactwright/`, one versioned document per Brief, read through the canonical loader (section 54) and written within the serialised mutation boundary (section 55). It is excluded from the Project Graph revision (section 56) and is never a canonical record. Like other provenance Pactwright writes, it is committed with the work it accompanies. Its exact path and serialisation are implementation concerns.
 
 The semantic requirement is:
 
@@ -1062,7 +1064,7 @@ NO
 
 Review may identify that work can continue, requires correction, or cannot currently progress.
 
-Pactwright needs enough structured Review output for the runtime to choose among declared transitions, but this specification does not define a formal `pass | revise | blocked` protocol.
+Pactwright needs enough structured Review output for the runtime to choose among declared transitions. The runtime's structured Review result states at least which delivered state it evaluated and one of three outcomes: the state may progress, it requires correction at a named declared Delivery step, or it cannot currently progress. The runtime recognises the result by its declared form and never infers it from free text; output that does not map to it is an execution failure, never a transition. Review may report more, never less; this specification defines no richer protocol.
 
 When correction is required, Review may identify the relevant Delivery step or responsibility. The runtime validates that the requested corrective route exists in the selected shape.
 
@@ -1593,7 +1595,7 @@ It:
 - cannot invent transitions;
 - does not create Evidence directly.
 
-The exact Review-result vocabulary is not fixed by this specification.
+Section 32 fixes the minimum structured Review result; any richer Review-result vocabulary is not fixed by this specification.
 
 The runtime validates and applies the next permitted lifecycle transition.
 
@@ -1612,6 +1614,8 @@ Before mutation, Pactwright must verify that:
 - the closing Review permits successful Evidence closure;
 - no required Gate remains unresolved;
 - the Contract and Brief lineage is valid.
+
+The latest delivered state is the state the most recent Delivery step produced; a Delivery step completed after the latest Review is a delivery change that requires Review. Changes made outside a Delivery step are not delivered state.
 
 Canonical mutation:
 
@@ -1717,7 +1721,7 @@ runtime
 
 This prevents prompts and model behaviour from becoming an implicit state machine.
 
-Every public mutation entry point, including CLI, API and adapter-driven calls, uses the same plan, complete-state validation, section 45 immutability check and authority guards. The stored base is the exact bytes and existence/inventory of all required configuration, lifecycle, lock and active canonical-storage inputs used by the plan, together with the resolved registry/decoder identities. It is not just `project_graph_revision`; a concurrent policy edit or newly added input makes the plan stale even if pg1 is unchanged. Recheck that complete base and perform the write/result validation in one serialised mutation boundary, indivisible with respect to other Pactwright mutations. A stale base or failed guard leaves records, edges and unrelated files unchanged; do not overwrite a concurrent input change. The locking/transaction implementation is internal, not a second state database. Validate the resulting state before reporting success. A prompt instruction or an early fixture does not substitute for this integrated guard.
+Every public mutation entry point, including CLI, API and adapter-driven calls, uses the same plan, complete-state validation, section 45 immutability check and authority guards. The stored base is the exact bytes and existence/inventory of all required configuration, lifecycle, lock and active canonical-storage inputs used by the plan, together with the resolved registry/decoder identities. It is not just `project_graph_revision`; a concurrent policy edit or newly added input makes the plan stale even if pg1 is unchanged. Recheck that complete base and perform the write/result validation in one serialised mutation boundary, indivisible with respect to other Pactwright mutations. A stale base or failed guard leaves records, edges and unrelated files unchanged; do not overwrite a concurrent input change. The locking/transaction implementation is internal, not a second state database. Lifecycle execution-state writes (section 28) use the same serialised boundary, and a plan that reads execution state includes it in its stored base. Validate the resulting state before reporting success. A prompt instruction or an early fixture does not substitute for this integrated guard.
 
 ---
 
@@ -1832,7 +1836,13 @@ Pactwright validation must detect at least:
 
 Validation should fail before canonical mutation where possible.
 
-Structural graph validation and read-only lineage derivation do not authenticate actors. Integrated validation checks current Decisions' recorded actor kinds against the applicable lifecycle policy and reports unauthorised Decisions; mutation and execution guards enforce that policy before effects. A changed current policy does not retroactively invalidate withdrawn historical Decisions solely because their actors are no longer allowed. Historical attribution remains stored; a requested historical policy check must name the recorded repository revision from execution provenance and read lifecycle policy from that revision. Missing revision/policy means unavailable verification, not failure of the old actor under today's rules; no separate policy-history store is introduced. Such a check establishes kind-policy compatibility, not identity authentication. A missing policy or incomplete load cannot grant permission. Diagnostic results distinguish malformed structure, unsupported/inactive components and unavailable execution authority rather than claiming that every parsed record is ready to run.
+Structural graph validation and read-only lineage derivation do not authenticate actors. Integrated validation checks current Decisions' recorded actor kinds against the applicable lifecycle policy and reports unauthorised Decisions; mutation and execution guards enforce that policy before effects. A changed current policy does not retroactively invalidate withdrawn historical Decisions solely because their actors are no longer allowed. Historical attribution remains stored; a requested historical policy check reads the recorded repository revision from its replay-base document and reads lifecycle policy from that revision. Missing revision/policy means unavailable verification, not failure of the old actor under today's rules; no separate policy-history store is introduced. Such a check establishes kind-policy compatibility, not identity authentication. A missing policy or incomplete load cannot grant permission.
+
+Replay validation (the last rule above) and the historical policy check are requested explicitly. A replay-base document records the section 56 tuple as `version: 1`, `repository_revision`, `project_graph_revision` and `environment_lock_hash`; it is supplied by path and decoded by the canonical loader, and it is validation input, not a provenance store. Replay validation requires the document. The historical policy check names one stored Decision and may omit the document; when it is omitted, or its recorded revision cannot be reconstructed, the check reports unavailable verification without failing validation.
+
+The check for Evidence attempted before successful closing Review reads the Brief's execution state (section 28). Current Evidence whose Brief has no execution-state document fails the check. Evidence written by a runtime that predates execution state is immutable and cannot be repaired, so the explicit released-format migration (Spec 02 section 15) writes a legacy-closure execution-state document for each such Brief; the check reports a Brief with that document as unavailable verification and does not fail validation. The runtime writes a legacy-closure document only in that migration.
+
+Diagnostic results distinguish malformed structure, unsupported/inactive components and unavailable execution authority rather than claiming that every parsed record is ready to run.
 
 ---
 
@@ -2003,4 +2013,4 @@ No neighbouring specification may redefine the Contract, Delivery Graph or core 
 
 ---
 
-**Pactwright Core System and Lifecycle v3**
+**Pactwright Core System and Lifecycle v5**

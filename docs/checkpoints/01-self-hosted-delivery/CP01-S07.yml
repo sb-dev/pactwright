@@ -35,17 +35,18 @@ requirements:
       including an unresolved Intent, deleting it, removing it and adding another ID, and replacing or removing
       a core edge tuple shall be refused.
   R06:
-    source: [CORE#54, CORE#55]
+    source: [CORE#28, CORE#54, CORE#55]
     statement: The API shall recheck the exact stored base (the bytes and inventory of configuration, lifecycle,
-      lock and active canonical-storage inputs, with registry and decoder identities) and write within one boundary
-      serialised against other Pactwright mutations. A changed base or incomplete load is refused without
-      overwriting a concurrent change.
+      lock and active canonical-storage inputs, with registry and decoder identities, and every Step 6 execution-state
+      document the plan read) and write within one boundary serialised against other Pactwright mutations
+      and execution-state writes. A changed base or incomplete load is refused without overwriting a concurrent
+      change.
   R07:
     source: [CORE#9, CORE#27, CORE#57]
     statement: The supplied actor is attribution, not identity-provider authentication. Before committing a
-      Decision the guard shall require valid actor syntax and a kind the actual lifecycle policy allows, and
-      record the full decided_by value unchanged. Denial rests only on a disallowed kind or invalid syntax, never
-      on a Git identity or identity allow-list.
+      Decision of any outcome, proceed, reject or defer, the guard shall require valid actor syntax and a kind
+      the actual lifecycle policy's approve-contract.actor allows, and record the full decided_by value unchanged.
+      Denial rests only on a disallowed kind or invalid syntax, never on a Git identity or identity allow-list.
   R08:
     source: [CORE#44, CORE#45]
     statement: A reject or defer Decision may supersede a current proceed Decision without writing a Contract
@@ -57,12 +58,16 @@ requirements:
     source: [CORE#14, CORE#25, CORE#53, CORE#58]
     statement: Before creating Evidence or its evidences edge, a runtime guard shall require that the Brief is
       current, the latest delivered state has been reviewed, the closing Review permits successful closure,
-      no required Gate is unresolved and the Contract and Brief lineage is valid. A check after writing Evidence
+      no required Gate is unresolved and the Contract and Brief lineage is valid, reading the Step 6 execution
+      state for the Brief. The latest delivered state is reviewed when the most recent Review completion records
+      the current delivery sequence; the closing Review permits closure when that completion is at the shape's
+      closing Review step with outcome may-progress; a required Gate is unresolved while the shape declares
+      a Gate before closure that is not resolved for progression under CP01-S06/R03, including one passed before a corrective re-entry of a Delivery step preceding it. A check after writing Evidence
       does not satisfy this.
   R10:
     source: [CORE#25, CORE#30, CORE#58]
-    statement: A delivery change after Review shall require Review of the new delivered state before Evidence
-      closure.
+    statement: A delivery change after Review, a Delivery step completed after the latest Review so that the
+      delivery sequence has advanced, shall require Review of the new delivered state before Evidence closure.
 acceptance:
   AC01:
     covers: [R01, R02, R04]
@@ -94,15 +99,17 @@ acceptance:
   AC04:
     covers: [R07]
     cases: [allowed-kind, second-identity-same-kind, disallowed-kind-proceed, disallowed-kind-reject, disallowed-kind-defer,
-      invalid-syntax]
+      disallowed-kind-withdrawal, invalid-syntax]
     given: An open Intent, the project's real .pactwright/lifecycle.yml allowing one actor kind for approve-contract,
       and a Decision request supplied with the listed actor and outcome (proceed unless named);
-      second-identity-same-kind uses a different well-formed identity of the allowed kind. In every case the
+      second-identity-same-kind uses a different well-formed identity of the allowed kind; disallowed-kind-withdrawal
+      instead requests a reject Decision superseding a done lineage's current proceed Decision with a disallowed
+      kind. In every case the
       repository's configured Git user identity matches neither supplied identity.
     when: The Decision mutation is applied.
     then: The allowed-kind and second-identity requests commit and record the supplied decided_by value byte
-      for byte, never the Git identity. The disallowed-kind and invalid-syntax requests are refused; no Decision,
-      Contract or edge is written, and unrelated files and execution state keep their prior bytes.
+      for byte, never the Git identity. The disallowed-kind requests, withdrawal included, and invalid-syntax
+      are refused; no Decision, Contract or edge is written, and unrelated files and execution state keep their prior bytes.
     verify:
       automated: [mutation.actor-policy]
   AC05:
@@ -118,13 +125,14 @@ acceptance:
       automated: [mutation.immutability]
   AC06:
     covers: [R01, R06]
-    cases: [changed-graph, changed-configuration, changed-lifecycle, changed-lock, added-input, changed-registry-identity,
-      changed-decoder-identity, incomplete-load-at-plan, incomplete-load-before-commit]
+    cases: [changed-graph, changed-configuration, changed-lifecycle, changed-lock, changed-execution-state, added-input,
+      changed-registry-identity, changed-decoder-identity, incomplete-load-at-plan, incomplete-load-before-commit]
     given: A mutation planned against a stored base, with the listed condition. incomplete-load-at-plan fails
       loading when the plan is made; the other cases change the base after a complete plan and before commit,
       through another writer's edit, a changed registry identity, changed decoder code or a load failure. changed-decoder-identity
       replaces decoder code bytes that the CP01-S01/R10 identity covers, with no declaration or version change.
-      An unchanged-base control.
+      changed-execution-state plans an Evidence closure that read the Brief's Review outcome and then changes
+      that execution-state document before commit. An unchanged-base control.
     when: The mutation is planned and committed.
     then: Each listed case is refused as stale or incomplete, nothing is written and any other writer's change
       is preserved byte for byte. The control commits.
@@ -193,11 +201,14 @@ acceptance:
       automated: [evidence.closure-guards]
   AC13:
     covers: [R09, R10]
-    given: A delivering lineage changed after its first Review and then reviewed again, whose closing Review
-      of that latest state permits closure, with no pending Gate and valid lineage.
+    cases: [latest-state-closure, post-review-out-of-band-edit]
+    given: A delivering lineage changed by a second Delivery step after its first Review and then reviewed again,
+      whose closing Review of that latest state permits closure, with no pending Gate and valid lineage; post-review-out-of-band-edit
+      then edits a delivered file outside any Delivery step before closure is requested.
     when: Evidence creation is requested.
-    then: Exactly one Evidence record and its evidences edge are written atomically, the resulting graph validates
-      and the lineage derives done.
+    then: In both cases exactly one Evidence record and its evidences edge are written atomically, the resulting
+      graph validates and the lineage derives done; the out-of-band edit is not delivered state under CP01-S06/R09
+      and is the recorded Checkpoint 1 limitation.
     verify:
       automated: [evidence.successful-closure]
   AC14:

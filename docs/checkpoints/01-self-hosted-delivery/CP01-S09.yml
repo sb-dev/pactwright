@@ -25,20 +25,45 @@ requirements:
     statement: Rule 13 shall check each current Decision's recorded actor kind against the actual lifecycle
       policy, separately from lineage derivation, preserving the supplied identity as attribution. A policy
       change alone shall not invalidate withdrawn historical Decisions. A requested historical policy check
-      restores lifecycle configuration from the recorded repository revision in execution provenance and reports
-      unavailable, not unauthorised, when that evidence is absent or unreconstructible.
+      is requested as pactwright validate --historical-policy <decision-id>, naming one stored Decision, with
+      the R06 replay-base document supplied by --provenance <path> when one exists; it restores lifecycle configuration
+      from the document's repository_revision and reports unavailable verification, not unauthorised, when
+      --provenance is omitted or the document's revision cannot be reconstructed.
+      An unknown Decision ID is a problem; a current Decision is reported as judged by current policy under
+      rule 13, not historically. Its result is a compatibility report, never a validation failure, and it does
+      not request rule 17.
   R05:
     source: [CORE#23, CORE#25, CORE#28, CORE#34, CORE#57]
-    statement: 'Rules 9–12, 14 and 15 shall check lifecycle configuration and execution state: a missing shape,
-      unresolved or incompatible shape identity, impossible transitions, Evidence before successful closing
-      Review, Gate progression without its configured authority and unbounded corrective loops.'
+    statement: 'Rules 9–12, 14 and 15 shall check lifecycle configuration and the Step 6 execution-state documents:
+      rule 9, a current Brief whose otherwise decodable execution-state document has an absent or empty shape
+      name (an absent document is not started, not rule 9); rule 10, a shape name the runtime does not provide,
+      or a recorded step name the resolved shape does not declare; rule 11, declared steps or routes recorded
+      in an order or along a route the shape does not permit; rule 12, current Evidence
+      whose Brief has no execution-state document, or a document that records no Review completion at the closing
+      step with outcome may-progress for the current delivery sequence (a Brief with the CP01-S06/R04 legacy-closure
+      document is reported as unavailable verification and does not fail); rule 14, a Gate resolution recorded for a current Brief whose actor kind the policy
+      does not allow for that Gate; rule 15, a declared corrective loop without an iteration bound. Where version
+      1 configuration cannot express a case, the fixture supplies shape and policy definitions through the
+      Step 6 definition API, as rule 16 uses a fixture contribution.'
   R06:
     source: [CORE#56, CORE#57, GUIDE#replay-provenance]
-    statement: Rule 17 shall run only when replay validation is requested. It resolves the entire replay base
-      before any execution effect and verifies the typed Git repository identity and pg1 revision. Unknown
-      or malformed revision protocols fail; a recognised legacy sha256 identity is reported unavailable without
-      its legacy implementation, never reinterpreted. Unavailable or dirty input bases and reconstructed-state
-      mismatch are reported, and unavailable identity is refused without creating an attempt or replay record.
+    statement: Rule 17 shall run only when replay validation is requested as pactwright validate --replay --provenance
+      <path>, naming a replay-base document outside the CORE#54 required-path table. The document is a YAML
+      mapping with exactly four keys, version, the integer 1, and repository_revision, project_graph_revision
+      and environment_lock_hash, each a non-empty string whose protocol and grammar checks belong to rule 17.
+      It is decoded by a registered decoder of the canonical loader; a version other than the integer 1 (including
+      the string "1"), a missing key, an unknown key, or an empty or non-string identity value is reported with
+      path and cause, rule 17
+      does not run and the replay base is unverifiable. It is Checkpoint 1's validate input and not a universal
+      provenance schema; no Checkpoint 1 step writes execution provenance, and later operation owners record
+      this tuple in their own provenance. Rule 17 resolves the entire replay base before any execution effect
+      and verifies the typed Git repository identity against the CORE#56 grammar and the pg1 revision. Unknown
+      or malformed revision protocols fail rule 17; a recognised legacy sha256 identity is reported unavailable
+      without its legacy implementation, never reinterpreted. Unavailable or dirty input bases and reconstructed-state
+      mismatch are reported. The environment_lock_hash is reported without verification, whose protocol Step
+      15 owns and whose verification belongs to the later pinned-replay operation owners. For read-only validate,
+      refusing without an attempt or replay record means it reports the refusal, leaves the working tree, index
+      and refs untouched and creates no restore location, attempt or provenance artefact.
   R07:
     source: [CORE#54, CORE#56, CORE#57]
     statement: A partial load shall never produce a whole-graph pass, and diagnostics distinguish malformed
@@ -51,13 +76,30 @@ requirements:
   R09:
     source: [CORE#3, CORE#8, CORE#13, CORE#39]
     statement: The context-assembly API consumed by Agent Packs and adapters shall provide the current relevant
-      Contract/Brief lineage by default and exclude rejected alternatives, superseded state, execution transcripts
-      and unrelated history unless a caller explicitly requires them. Contributing context does not transfer
-      semantic ownership.
+      Contract/Brief lineage by default, the direction's current Intent, Decision, Contract and Brief as complete
+      records in lineage order, and exclude rejected alternatives, superseded records, other directions' records,
+      execution transcripts and execution-state detail. A caller requires excluded history by naming superseded
+      record IDs of the requested direction's tree; those records are returned in a separate history section,
+      each marked with the record that supersedes it, and are never merged into the current lineage. A named
+      ID that is unknown, not superseded or outside the direction is reported as a problem. Contributing context does not transfer semantic ownership.
   R10:
     source: [CORE#39, PRINCIPLES#11]
-    statement: Context assembly shall keep a namespaced context-contribution seam for later Extensions and shall
-      not introduce pactwright context as a required public CLI contract.
+    statement: Context assembly shall keep a namespaced context-contribution seam for later Extensions, keyed
+      by Extension ID under the CORE#54 grammar with core reserved and ordered by Extension ID, and shall not
+      introduce pactwright context as a required public CLI contract.
+  R11:
+    source: [CORE#54, CORE#57, CHECKPOINT#exit-gate]
+    statement: 'Validate shall exit non-zero when any minimum rule fails, the load is incomplete or, only when
+      rule 17 is requested, the replay base cannot be verified, and zero otherwise; a replay-base document supplied
+      for the historical policy check alone never changes the exit status. Its report gives each problem a category, structure
+      failure, unsupported or inactive component, unavailable verification or unavailable execution authority,
+      with the rule and affected records; the unavailable-verification category therefore carries either exit
+      status. Unavailable execution authority means the policy needed to authorise
+      a current Decision or Gate cannot be determined: lifecycle configuration missing or unloadable, reported
+      together with its load problem. A malformed or unknown-version execution-state document is a structure
+      failure for its Brief. Inactive components, unavailable historical checks, a Brief with a legacy-closure
+      document and historical incompatibility of a withdrawn Decision are reported
+      without failing validation.'
 acceptance:
   AC01:
     covers: [R01, R05, R08]
@@ -67,8 +109,10 @@ acceptance:
       evidence-before-closing-review, unauthorised-decision, unauthorised-gate-progression, unbounded-corrective-loop,
       extension-redefines-core, replay-revision-mismatch]
     given: A valid control project and a copy whose only defect is the failing fixture for the listed rule
-      (rule 10 has one case for an unresolved and one for an incompatible shape identity); the replay case
-      requests replay validation.
+      (rule 10 has one case for an unresolved and one for an incompatible shape identity); rule 9 uses an
+      otherwise decodable execution-state document with an empty shape name; rules 10, 11, 14 and 15 supply
+      fixture shape and policy definitions through the Step 6 definition API where version 1 cannot express
+      the defect; the replay case supplies a replay-base document.
     when: Pactwright validate runs on both.
     then: The control passes with no problems. The copy fails with a problem mapped to the listed rule that identifies
       the affected records, inputs or provenance.
@@ -98,34 +142,47 @@ acceptance:
   AC04:
     covers: [R04]
     cases: [allowed-current-kind, disallowed-current-kind, policy-changed-for-withdrawn-decision, historically-allowed,
-      historically-denied, historical-check-unavailable]
-    given: A lineage with the listed actor and policy condition. The historical cases request a historical policy
-      check for a withdrawn Decision. historically-allowed and historically-denied have execution provenance
+      historically-denied, historical-check-unavailable, historical-check-unknown-decision, historical-check-current-decision]
+    given: A lineage with the listed actor and policy condition. The historical cases request validate --historical-policy
+      for the withdrawn Decision. historically-allowed and historically-denied supply a replay-base document
       whose recorded repository revision restores a lifecycle configuration that allows or denies the Decision's
-      actor kind, while current policy gives the opposite answer; historical-check-unavailable has no such
-      provenance.
+      actor kind, while current policy gives the opposite answer; historical-check-unavailable invokes --historical-policy
+      without --provenance;
+      historical-check-unknown-decision names an ID no stored Decision has; historical-check-current-decision
+      names the lineage's current Decision.
     when: Pactwright validate runs.
     then: The allowed kind passes. The disallowed current kind fails rule 13 and the decided_by value is unchanged.
       A policy change alone raises no problem for the withdrawn Decision. historically-allowed reports the Decision's
       actor kind as compatible and historically-denied as incompatible, each judged by the restored configuration
-      rather than current policy; historical-check-unavailable reports unavailable verification, not an unauthorised
-      Decision. Lineage derivation output and project_graph_revision, which equals the CP01-S05/AC14 actor-kind-denied
+      rather than current policy, and neither historical result fails validation; historical-check-unavailable
+      reports unavailable verification, not an unauthorised Decision; the unknown ID is reported as a problem
+      and the current Decision as judged by current policy, with no historical result. Lineage derivation output and project_graph_revision, which equals the CP01-S05/AC14 actor-kind-denied
       frozen digest for disallowed-current-kind, are unchanged by the policy condition.
     verify:
       automated: [validate.actor-policy]
   AC05:
     covers: [R06]
     cases: [not-requested, matching-sha1-base, matching-sha256-base, pg1-stored-byte-vectors, unknown-protocol,
-      malformed-protocol, legacy-protocol, unavailable-base, dirty-base, reconstructed-state-mismatch]
-    given: Execution provenance recording a repository revision and Project Graph revision under the listed
-      condition; not-requested is ordinary validation of a project whose recorded history cannot be reconstructed.
+      malformed-protocol, legacy-protocol, unavailable-base, dirty-base, reconstructed-state-mismatch, differing-lock-hash,
+      unsupported-document-version, string-document-version, missing-document-key, unknown-document-key, empty-identity-value,
+      non-string-identity-value, absent-document-path]
+    given: A replay-base document passed to validate --replay --provenance recording a repository revision and
+      Project Graph revision under the listed condition; not-requested is ordinary validation, with no --replay,
+      of a project whose recorded history cannot be reconstructed; differing-lock-hash is a matching base whose
+      recorded environment_lock_hash differs from the current lock; the six document cases each have one defect,
+      an integer version other than 1, the string "1" as version, one of the four keys absent, an extra key,
+      an identity value that is the empty string, or an identity value that is a number; absent-document-path
+      names a path that does not exist.
     when: Pactwright validate runs, with replay validation requested except for not-requested.
     then: Not-requested attempts no historical reconstruction and raises no replay problem. Matching bases pass
       and the pg1 vectors reproduce their fixed bytes and digests. Unknown and malformed protocols fail rule
       17. A legacy
       sha256 identity is reported as unavailable replay verification without its legacy implementation, never
       prefixed or compared as pg1. Unavailable and dirty bases are refused before any execution effect, with
-      no attempt or replay record. Mismatch fails rule 17 naming both revisions.
+      no attempt, replay record or restore location, and the working tree, index and refs unchanged. Mismatch
+      fails rule 17 naming both revisions. differing-lock-hash passes rule 17 and reports the recorded hash
+      without verifying it. The six document cases and absent-document-path are reported with path and cause,
+      rule 17 does not run, no reconstruction is attempted and validate exits non-zero as unverifiable.
     verify:
       automated: [validate.replay]
   AC06:
@@ -153,12 +210,16 @@ acceptance:
       automated: [validate.extension-core-protection]
   AC08:
     covers: [R09]
-    cases: [rejected-alternatives, superseded-records, execution-transcripts, unrelated-history, explicitly-required-history]
+    cases: [rejected-alternatives, superseded-records, execution-transcripts, unrelated-history, explicitly-required-history,
+      history-outside-direction]
     given: A delivering lineage whose project also holds the listed material, and a Delivery context request
-      for its current Brief; explicitly-required-history names a superseded Brief the caller requires.
+      for its current Brief; explicitly-required-history names a superseded Brief of the direction the caller
+      requires; history-outside-direction names a current record of another direction.
     when: Delivery context is assembled.
-    then: The context contains the current Contract/Brief lineage and excludes the listed material, except that
-      explicitly required history is included. Assembly writes nothing.
+    then: The context contains exactly the direction's current Intent, Decision, Contract and Brief in lineage
+      order and excludes the listed material, except that the explicitly required Brief appears in the history
+      section marked with its superseding record and not in the current lineage; history-outside-direction
+      is reported as a problem and the record is not included. Assembly writes nothing.
     verify:
       automated: [context.bounded-lineage]
   AC09:
@@ -168,8 +229,8 @@ acceptance:
       their own namespaces, one of which restates the governing Contract differently; the other cases have
       a contribution claiming the core namespace or another contributor's namespace.
     when: Delivery context is assembled.
-    then: In separate-namespaces each contribution appears under its own namespace, and neither replaces nor
-      edits the governing Contract/Brief content. A contribution claiming the core or another owner's namespace
+    then: In separate-namespaces each contribution appears under its own namespace in Extension-ID order, and
+      neither replaces nor edits the governing Contract/Brief content. A contribution claiming the core or another owner's namespace
       does not appear under that namespace, and the governing content is unchanged.
     verify:
       automated: [context.namespaced-contributions]
@@ -181,3 +242,29 @@ acceptance:
       repair path, and no pactwright context command is required.
     verify:
       review: [validate.shared-mechanics]
+  AC11:
+    covers: [R07, R11]
+    cases: [clean, rule-failure, incomplete-load, unverifiable-replay-base, historical-check-unreconstructible-document,
+      historical-check-without-document, inactive-extension-only, historical-incompatibility-only, migrated-legacy-evidence,
+      deleted-current-state, gate-policy-changed-for-superseded-brief, malformed-execution-state, missing-lifecycle-configuration]
+    given: A project in the listed condition; historical-incompatibility-only is the AC04 historically-denied lineage
+      with current policy allowing the kind; historical-check-unreconstructible-document requests only validate --historical-policy
+      with a document whose revision cannot be reconstructed and historical-check-without-document invokes
+      it without --provenance; migrated-legacy-evidence holds current Evidence whose Brief has the legacy-closure
+      document the Step 19 migration writes; deleted-current-state holds current Evidence whose Brief had a
+      current-format document that was then deleted; gate-policy-changed-for-superseded-brief holds a superseded Brief whose
+      recorded Gate resolution's actor kind current policy no longer allows; malformed-execution-state holds
+      a current Brief whose execution-state document does not decode; missing-lifecycle-configuration has valid
+      canonical state and no lifecycle configuration.
+    when: Pactwright validate runs, with replay validation requested for unverifiable-replay-base.
+    then: clean, inactive-extension-only, historical-incompatibility-only, historical-check-unreconstructible-document,
+      historical-check-without-document, migrated-legacy-evidence and gate-policy-changed-for-superseded-brief
+      exit zero, the inactive component, compatibility result or unavailable verification reported in its
+      category, and migrated-legacy-evidence raising no rule 12 failure. rule-failure, incomplete-load
+      and unverifiable-replay-base exit non-zero with the failing rule, the load problem or the unavailable
+      verification in its category; deleted-current-state exits non-zero failing rule 12 for its Brief; malformed-execution-state exits non-zero with a structure failure naming
+      the document.
+      missing-lifecycle-configuration exits non-zero reporting both the load problem and unavailable execution
+      authority, and grants no permission.
+    verify:
+      automated: [validate.exit-status]
