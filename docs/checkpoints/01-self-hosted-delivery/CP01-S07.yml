@@ -35,17 +35,18 @@ requirements:
       including an unresolved Intent, deleting it, removing it and adding another ID, and replacing or removing
       a core edge tuple shall be refused.
   R06:
-    source: [CORE#54, CORE#55]
+    source: [CORE#28, CORE#54, CORE#55]
     statement: The API shall recheck the exact stored base (the bytes and inventory of configuration, lifecycle,
-      lock and active canonical-storage inputs, with registry and decoder identities) and write within one boundary
-      serialised against other Pactwright mutations. A changed base or incomplete load is refused without
-      overwriting a concurrent change.
+      lock and active canonical-storage inputs, with registry and decoder identities, and every Step 6 execution-state
+      document the plan read) and write within one boundary serialised against other Pactwright mutations
+      and execution-state writes. A changed base or incomplete load is refused without overwriting a concurrent
+      change.
   R07:
     source: [CORE#9, CORE#27, CORE#57]
     statement: The supplied actor is attribution, not identity-provider authentication. Before committing a
-      Decision the guard shall require valid actor syntax and a kind the actual lifecycle policy allows, and
-      record the full decided_by value unchanged. Denial rests only on a disallowed kind or invalid syntax, never
-      on a Git identity or identity allow-list.
+      Decision of any outcome, proceed, reject or defer, the guard shall require valid actor syntax and a kind
+      the actual lifecycle policy's approve-contract.actor allows, and record the full decided_by value unchanged.
+      Denial rests only on a disallowed kind or invalid syntax, never on a Git identity or identity allow-list.
   R08:
     source: [CORE#44, CORE#45]
     statement: A reject or defer Decision may supersede a current proceed Decision without writing a Contract
@@ -57,12 +58,16 @@ requirements:
     source: [CORE#14, CORE#25, CORE#53, CORE#58]
     statement: Before creating Evidence or its evidences edge, a runtime guard shall require that the Brief is
       current, the latest delivered state has been reviewed, the closing Review permits successful closure,
-      no required Gate is unresolved and the Contract and Brief lineage is valid. A check after writing Evidence
+      no required Gate is unresolved and the Contract and Brief lineage is valid, reading the Step 6 execution
+      state for the Brief. The latest delivered state is reviewed when the most recent Review completion records
+      the current delivery sequence; the closing Review permits closure when that completion is at the shape's
+      closing Review step with outcome may-progress; a required Gate is unresolved while the shape declares
+      a Gate before closure that execution state does not record as resolved. A check after writing Evidence
       does not satisfy this.
   R10:
     source: [CORE#25, CORE#30, CORE#58]
-    statement: A delivery change after Review shall require Review of the new delivered state before Evidence
-      closure.
+    statement: A delivery change after Review, a Delivery step completed after the latest Review so that the
+      delivery sequence has advanced, shall require Review of the new delivered state before Evidence closure.
 acceptance:
   AC01:
     covers: [R01, R02, R04]
@@ -118,13 +123,14 @@ acceptance:
       automated: [mutation.immutability]
   AC06:
     covers: [R01, R06]
-    cases: [changed-graph, changed-configuration, changed-lifecycle, changed-lock, added-input, changed-registry-identity,
-      changed-decoder-identity, incomplete-load-at-plan, incomplete-load-before-commit]
+    cases: [changed-graph, changed-configuration, changed-lifecycle, changed-lock, changed-execution-state, added-input,
+      changed-registry-identity, changed-decoder-identity, incomplete-load-at-plan, incomplete-load-before-commit]
     given: A mutation planned against a stored base, with the listed condition. incomplete-load-at-plan fails
       loading when the plan is made; the other cases change the base after a complete plan and before commit,
       through another writer's edit, a changed registry identity, changed decoder code or a load failure. changed-decoder-identity
       replaces decoder code bytes that the CP01-S01/R10 identity covers, with no declaration or version change.
-      An unchanged-base control.
+      changed-execution-state plans an Evidence closure that read the Brief's Review outcome and then changes
+      that execution-state document before commit. An unchanged-base control.
     when: The mutation is planned and committed.
     then: Each listed case is refused as stale or incomplete, nothing is written and any other writer's change
       is preserved byte for byte. The control commits.

@@ -10,17 +10,26 @@ outputs:
     and policy until a required Gate, completion, execution failure or validation failure.
 requirements:
   R01:
-    source: [CORE#46]
+    source: [CORE#27, CORE#44, CORE#46]
     statement: Lifecycle status shall report current and completed steps, the blocking step, the required actor,
-      validation problems and current lineage.
+      validation problems and current lineage. Its position spans both lifecycle regions, the Contract-crafting
+      responsibilities derived from broad lineage state and the resolved shape's steps read from execution
+      state. It covers every Intent direction in Intent-ID order by default, or one selected Intent, and reports
+      an unknown selected Intent as a problem.
   R02:
-    source: [CORE#46, CORE#54]
-    statement: Lifecycle next shall determine the next permitted lifecycle action without executing it. Status
-      and next shall be read-only; they write no file, advance no execution state and invoke no agent or capability.
+    source: [CORE#27, CORE#46, CORE#54]
+    statement: Lifecycle next shall determine the next permitted lifecycle action for each covered direction
+      without executing it, naming a Contract-crafting responsibility or a shape step with its execution mode
+      and required actor. Status and next shall be read-only; they write no file, advance no execution state
+      and invoke no agent or capability.
   R03:
-    source: [CORE#26, CORE#32, CORE#34, CORE#46, CORE#58]
+    source: [CORE#26, CORE#32, CORE#34, CORE#46, CORE#54, CORE#58, DISTRIBUTION#20]
     statement: Lifecycle run shall execute automatic responsibilities through the resolved shape and policy
       and stop at a required Gate, a manual responsibility, completion, execution failure or validation failure.
+      It runs the selected direction, or every active direction in Intent-ID order with one result per direction.
+      It dispatches each capability-backed responsibility through the runtime's single capability-invocation
+      seam, which Step 8 supplies with an instrumented invoker; invoked without an invoker it stops at the
+      first such responsibility with an execution failure naming the missing invoker and simulates nothing.
       It shall not skip a Gate, take an undeclared transition or exceed an iteration bound.
   R04:
     source: [CORE#53, CORE#55]
@@ -29,7 +38,8 @@ requirements:
   R05:
     source: [CORE#28, CORE#44, CORE#54]
     statement: Progression shall be derived from current Contract/Brief lineage, resolved shape, policy, Gate
-      state and repository state, and execution progress stays outside the Delivery Graph.
+      state and repository state, and execution progress stays outside the Delivery Graph in the Step 6 execution-state
+      documents, written through the Step 6 serialised boundary.
   R06:
     source: [CORE#44, CORE#58]
     statement: After current Evidence no further core fulfilment step shall be offered or run for that Brief.
@@ -47,18 +57,20 @@ acceptance:
       that records every call.
     when: Lifecycle status and lifecycle next are run.
     then: Status reports the expected current and completed steps, blocking step, required actor, no problems
-      and the current lineage; next names the expected permitted action. Neither writes a file, advances execution
-      state or invokes a capability.
+      and the current lineage; next names the expected permitted action, propose-contracts or approve-contract
+      for open, write-brief for contracted, the shape step otherwise and none for done. Neither writes a file,
+      advances execution state or invokes a capability.
     verify:
       automated: [lifecycle.status-next]
   AC02:
     covers: [R03, R04, R05]
-    cases: [required-gate, manual-step, completion, execution-failure, validation-failure]
+    cases: [required-gate, manual-step, completion, execution-failure, validation-failure, no-invoker]
     given: A project whose run reaches the listed stopping condition; manual-step reaches a responsibility whose
-      policy is manual.
+      policy is manual; no-invoker runs an automatic capability-backed responsibility with no invoker supplied.
     when: Lifecycle run is invoked.
     then: Run executes automatic responsibilities in declared order, stops at the listed condition and reports
-      it; it never executes the manual responsibility itself. It performs no step beyond that point, and every
+      it; it never executes the manual responsibility itself, and no-invoker stops as an execution failure
+      naming the missing invoker with no simulated output. It performs no step beyond that point, and every
       canonical change it made went through the mutation API.
     verify:
       automated: [lifecycle.run-stops]
@@ -84,7 +96,7 @@ acceptance:
     covers: [R05]
     given: A run that advances one Brief's execution state from its Delivery step to its Review step.
     when: Canonical records, broad state and project_graph_revision are compared before and after.
-    then: They are identical and the broad state stays delivering; only execution state changed.
+    then: They are identical and the broad state stays delivering; only the Brief's execution-state document changed.
     verify:
       automated: [lifecycle.progress-not-graph]
   AC06:
@@ -130,3 +142,28 @@ acceptance:
       validation refuses invalid-lineage before any step runs. The control closes with Evidence.'
     verify:
       automated: [lifecycle.run-closure-guards]
+  AC09:
+    covers: [R01, R02, R03]
+    cases: [all-directions, selected-intent, unknown-intent, validation-failure-in-second-direction]
+    given: A project with two independent active Intent directions at different positions and an instrumented
+      invoker; validation-failure-in-second-direction makes the first direction's run leave a graph the second
+      direction cannot validate.
+    when: Status, next and run are invoked without a selection, with the first Intent selected, or with an
+      unknown Intent ID, as listed.
+    then: all-directions reports and runs both directions in Intent-ID order with one result each, each stopping
+      at its own condition; selected-intent reports and runs only the selected direction and leaves the other's
+      execution state unchanged; unknown-intent is refused as a problem with no write or invocation. validation-failure-in-second-direction
+      stops the whole run at the validation failure and reports it for the second direction.
+    verify:
+      automated: [lifecycle.direction-selection]
+  AC10:
+    covers: [R05]
+    cases: [concurrent-runs, run-during-gate-resolution]
+    given: Two runtime processes acting on the same Brief concurrently, as listed, each having inspected the
+      same execution state; a single-process control.
+    when: Both attempt to write execution state.
+    then: Exactly one write commits and the other run stops reporting a stale execution state without overwriting
+      it; the resulting state records the committed advance or Gate resolution once and remains loadable.
+      The control commits.
+    verify:
+      automated: [lifecycle.run-race]
