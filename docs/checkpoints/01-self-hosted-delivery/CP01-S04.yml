@@ -30,9 +30,11 @@ requirements:
     source: [CORE#15, CORE#44, CORE#45, CORE#57, CORE#58]
     statement: Derivation shall fail explicitly for each affected Intent, returning its problems and no current
       lineage, recorded Contract or broad state, without selecting a winner. Every unaffected Intent shall
-      return exactly its standalone lineage, recorded Contract and broad state. A stored record that no Intent
-      reaches through its required lineage is reported as missing required lineage, naming the record, and
-      does not change any Intent's result. An incomplete load marks every result diagnostic-only and non-executable;
+      return exactly its standalone lineage, recorded Contract and broad state. A stored record lacking its
+      required upstream edge and linked by no core edge to any Intent direction is reported as missing required
+      lineage in one problem, which names it and any records reached only through it; it changes no Intent's
+      result, and complete-state validation fails. A record lacking its required edge but linked by supersession
+      into a direction makes that direction affected. An incomplete load marks every result diagnostic-only and non-executable;
       complete-state validation under CORE#55 still governs execution and mutation.
 acceptance:
   AC01:
@@ -115,8 +117,8 @@ acceptance:
       writes a reject/defer Decision superseding the proceed Decision and no new Contract or Contract supersession.
       Re-authorisation after withdrawal creates a new proceed Decision and a new Contract superseding the
       last Contract of that direction. first-proceed-after-defer instead starts from an Intent whose only
-      Decision was defer and that never had a Contract; its new proceed Decision supersedes the defer Decision
-      and selects a new Contract with no Contract supersession.
+      Decision was defer and whose Intent direction, including predecessors, has no Contract; its new proceed
+      Decision supersedes the defer Decision and selects a new Contract with no Contract supersession.
     when: The complete proposed graph is validated and its current lineage derived.
     then: Withdrawal yields rejected/deferred as applicable, with only its current Intent/Decision and no
       authorised Contract. Re-authorisation yields contracted with exactly its current Intent, new Decision
@@ -159,18 +161,21 @@ acceptance:
     covers: [R06]
     cases: [contract-without-decision, decision-without-intent, brief-without-contract, evidence-without-brief]
     given: A valid Intent direction with its standalone control, plus one stored record of the listed kind that
-      lacks the required lineage edge.
-    when: Lineage is derived.
-    then: The unreachable record is reported as missing required lineage, naming it. The valid Intent's lineage,
-      authorised Contract and state equal its standalone control, and no files change.
+      lacks its required upstream edge and has no core edge to or from any other record; decision-without-intent
+      is a reject Decision.
+    when: Lineage is derived and complete-state validation is run.
+    then: Exactly one missing-required-lineage problem names the unreachable record. The valid Intent's lineage,
+      authorised Contract and state equal its standalone control. Complete-state validation (CORE#55) fails,
+      no execution permission results and no files change.
     verify:
       automated: [lineage.unreachable-records]
   AC12:
     covers: [R06]
-    cases: [malformed-lifecycle, missing-lock]
-    given: A valid contracted graph whose load is incomplete only because of the listed non-graph input.
-    when: Lineage is derived from the diagnostic load result.
-    then: Each derived result is marked diagnostic-only and non-executable, and no result is advertised as ready
-      to execute. A complete-load control yields the same lineage values without that marker.
+    cases: [malformed-lifecycle, missing-lock, unexpected-record-file]
+    given: A valid contracted graph whose load is incomplete only because of the listed input defect.
+    when: Lineage is derived from the diagnostic load result, then complete-state validation is run.
+    then: Each derivation result exposes a diagnostic-only, non-executable indicator the verifier reads, and
+      complete-state validation refuses execution. A complete-load control yields the same lineage values without
+      the indicator.
     verify:
       automated: [lineage.incomplete-load-diagnostic]

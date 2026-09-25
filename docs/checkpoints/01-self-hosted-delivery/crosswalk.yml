@@ -1428,3 +1428,4 @@ open_questions:
   - id: Q88
     affects: [CP01-S05/AC11, CP01-S01/AC09]
     question: "Q23, Q28 and Q48 leave open where lifecycle execution state, execution provenance and preserved upgrade state live. Which Stage 1 obligations constrain those answers, so that ordinary progress does not make the repository revision unavailable or add entries to the core stores?"
+    note: "Constraint adopted in B12: Q23/Q48 state may be ignored, external or committed; Q28 provenance is committed before the next pinned run (Core section 56); none may be placed in an active canonical store, core or enabled Extension."

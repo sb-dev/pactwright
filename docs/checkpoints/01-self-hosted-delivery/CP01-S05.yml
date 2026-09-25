@@ -124,8 +124,9 @@ acceptance:
       automated: [revision.repository-reconstructible]
   AC09:
     covers: [R02, R05]
-    given: The empty graph, a generated graph of 1,000 core records and 3,000 edges written in two different
-      file and entry orders, and the frozen fixtures referenced by CORE#56, including the UTF-16 ordering and
+    given: The empty graph, a generated graph of 1,000 core records forming lineage-valid done directions with
+      supersession chains plus 1,000 additional-relation edges of a fixture relation permitting many links,
+      written in two different file and entry orders, and the frozen fixtures referenced by CORE#56, including the UTF-16 ordering and
       RFC 8785 number vectors.
     when: The implementation derives each revision.
     then: Every result uses pg1:sha256 and exactly 64 lower-case hexadecimal digest digits, and both orderings
@@ -191,7 +192,8 @@ acceptance:
     cases: [two-current-briefs, actor-kind-denied]
     given: A complete load passing CORE#6, CORE#15 and CORE#54. The first case has two current Briefs under
       one Contract; the second has structurally valid Decision attribution denied only by lifecycle policy.
-      Each has an expected revision computed independently of the implementation under test.
+      Each has an expected revision frozen in a test fixture that is computed independently of, and never
+      regenerated from, the implementation under test.
     when: Graph revision is requested.
     then: Graph revision equals its expected pg1 digest in both cases, and no files change. Reporting the
       lineage failure belongs to CP01-S04 and the policy failure to CP01-S09; revision derivation neither
