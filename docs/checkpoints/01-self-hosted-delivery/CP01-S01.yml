@@ -202,9 +202,20 @@ acceptance:
     cases: [missing-input, unreadable-input, malformed-input, unsupported-version, migration-required, unexpected-entry,
       non-core-entry-in-core-storage, inactive-component, unavailable-enabled-extension]
     given: A repository whose only defect produces a problem of the listed category. unavailable-enabled-extension
-      has no owner root and no lock entry for the Extension; migration-required uses exactly one legacy input.
+      has a lock entry for the Extension but no installed implementation and no owner root, so configuration
+      and lock agree; migration-required uses exactly one legacy input.
     when: The canonical loader reads it.
     then: The load result holds exactly one problem, carrying its path, cause and the listed category. Each
       category is distinguishable from every other, and inactive-component alone leaves the load complete.
     verify:
       automated: [loader.problem-categories]
+  AC14:
+    covers: [R05]
+    cases: [same-build, decoder-code-changed]
+    given: Two builds of the runtime; same-build rebuilds identical source, and decoder-code-changed alters one
+      decoder's code without changing its name or version.
+    when: Each build loads the same repository.
+    then: same-build reports identical decoder identities. decoder-code-changed reports a different identity
+      for the changed decoder only.
+    verify:
+      automated: [loader.decoder-identity]

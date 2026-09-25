@@ -127,8 +127,8 @@ describe("checkpoint contracts", () => {
     {
       name: "invalid case name",
       file: "CP01-S02.yml",
-      from: "cases: [intent, decision, contract, brief, evidence]",
-      to: "cases: [Intent, decision, contract, brief, evidence]",
+      from: "cases: [missing-outcome, unknown-outcome,",
+      to: "cases: [Missing-outcome, unknown-outcome,",
       expect: /schema: \/acceptance\/AC02\/cases\/0/,
     },
     {

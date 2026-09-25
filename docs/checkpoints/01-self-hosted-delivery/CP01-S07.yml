@@ -33,7 +33,7 @@ requirements:
     statement: Before writing, the API shall apply the Step 2 record and Step 3 core-edge immutability checks
       against the completely loaded stored graph the plan validated. Rewriting any stored core record in place,
       including an unresolved Intent, deleting it, removing it and adding another ID, and replacing or removing
-      a core edge tuple shall be refused.
+      a tuple in the core edge store shall be refused.
   R06:
     source: [CORE#54, CORE#55]
     statement: The API shall recheck the exact stored base (the bytes and inventory of configuration, lifecycle,

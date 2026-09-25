@@ -159,12 +159,15 @@ acceptance:
       automated: [lineage.no-shared-current-contract]
   AC11:
     covers: [R06]
-    cases: [contract-without-decision, decision-without-intent, brief-without-contract, evidence-without-brief]
+    cases: [contract-without-decision, decision-without-intent, brief-without-contract, evidence-without-brief,
+      proceed-decision-without-intent-and-its-contract]
     given: A valid Intent direction with its standalone control, plus one stored record of the listed kind that
       lacks its required upstream edge and has no core edge to or from any other record; decision-without-intent
-      is a reject Decision.
+      is a reject Decision. The last case is a proceed Decision with no resolves edge that selects a Contract
+      reached only through it.
     when: Lineage is derived.
-    then: Exactly one missing-required-lineage problem names the unreachable record. The valid Intent's lineage,
+    then: Exactly one missing-required-lineage problem names the unreachable record, and in the last case also
+      the Contract reached only through it. The valid Intent's lineage,
       authorised Contract and state equal its standalone control, and no files change.
     verify:
       automated: [lineage.unreachable-records]

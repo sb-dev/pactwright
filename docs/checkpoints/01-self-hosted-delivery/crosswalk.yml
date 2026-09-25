@@ -54,7 +54,7 @@ entries:
     covered_by: [CP01-S01/R01, CP01-S01/AC01]
   - key: S01.run.2
     text: "Implement one canonical loader for Pactwright configuration, lifecycle configuration, .pactwright/lock.yml, core Project Graph records and typed edges."
-    covered_by: [CP01-S01/R05, CP01-S01/R06, CP01-S01/AC05, CP01-S01/AC06, CP01-S01/AC07, CP01-S01/R09, CP01-S01/AC09, CP01-S01/AC10, CP01-S01/AC11, CP01-S01/AC13]
+    covered_by: [CP01-S01/R05, CP01-S01/R06, CP01-S01/AC05, CP01-S01/AC06, CP01-S01/AC07, CP01-S01/R09, CP01-S01/AC09, CP01-S01/AC10, CP01-S01/AC11, CP01-S01/AC13, CP01-S01/AC14]
   - key: S01.run.3
     text: "Make the runtime publishable as `pactwright` with the repository's normal build/prepack/verify discipline and a repository-local `pnpm pactwright ...` path using the same built runtime."
     covered_by: [CP01-S01/R01, CP01-S01/R02, CP01-S01/R03, CP01-S01/R04, CP01-S01/AC01, CP01-S01/AC02, CP01-S01/AC03, CP01-S01/AC04, CP01/R01, CP01/AC01]

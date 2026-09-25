@@ -164,7 +164,8 @@ acceptance:
   AC12:
     covers: [R04, R07]
     cases: [duplicate-record-id, unknown-record-type, unknown-relation, missing-input, malformed-input, unexpected-store-entry,
-      malformed-edge-shape, duplicate-edge,
+      malformed-edge-shape, migration-required-input, unsupported-version, unreadable-input, non-core-entry-in-core-storage,
+      duplicate-edge,
       invalid-extension-record, invalid-encoding, invalid-value-domain, invalid-identity, ownership-error,
       registration-conflict, missing-endpoint, inactive-endpoint, wrong-endpoint-type, self-supersession,
       cyclic-supersession, branching-supersession, merging-supersession, enabled-extension-cannot-register,

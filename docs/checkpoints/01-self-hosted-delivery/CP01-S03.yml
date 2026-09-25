@@ -9,8 +9,9 @@ requirements:
     statement: The runtime shall preserve directed source/type/target edge tuples when storing and reloading
       them. Storing new tuples appends them as block-sequence entries in request order. For a block list, the
       file's bytes up to the end of its last existing entry, including comments, are unchanged, and trailing
-      comments stay after the new entries. An empty or flow list becomes a block list keeping its existing
-      entries in stored order. Existing entries are never re-sorted.
+      comments stay after the new entries. New entries use the indentation of the existing entries. An empty
+      or flow list becomes a block list indented two spaces, keeping its existing entries in stored order. Existing
+      entries are never re-sorted.
   R02:
     source: [CORE#15, CORE#57]
     statement: The validator shall reject edges with absent active endpoints, for core and registered additional
@@ -202,10 +203,11 @@ acceptance:
       automated: [edges.append-preserves-entries]
   AC15:
     covers: [R10]
-    cases: [valid-core-envelope, valid-extension-envelope, extra-tuple-field, missing-tuple-field, non-string-field,
-      non-mapping-tuple, extra-envelope-key, non-array-edges]
+    cases: [valid-core-envelope, valid-extension-envelope, extra-tuple-field, missing-source, missing-type, missing-target,
+      non-string-source, non-string-type, non-string-target, non-mapping-tuple, extra-envelope-key, non-array-edges]
     given: The listed edge-file shape, run once in specs/graph/edges.yml and once in a registered fixture Extension
-      edge file; all other inputs are valid. The negative cases are otherwise valid YAML.
+      edge file, and each run has its own result; all other inputs are valid. The negative cases are otherwise
+      valid YAML.
     when: The canonical loader and shared validator read the project and a graph revision is requested.
     then: The valid controls load complete and hash. Each negative case yields an incomplete or error result
       naming the file and the violated shape rule, no graph revision, and unchanged stored bytes.

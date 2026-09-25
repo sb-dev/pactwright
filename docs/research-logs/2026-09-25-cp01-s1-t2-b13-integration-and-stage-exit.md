@@ -36,7 +36,24 @@
 | B8 | Independent subagent review of `572cad5` | Accepted with fixes; corrections in `d520b76`. |
 | B9, B10 | Independent subagent review of `939f2b5`, `5c871d0` | Accepted with fixes; corrections in `be4f455`. |
 | B11, B12 | Independent subagent review of `5b27a83`, `3b3f0ee` | Changes required; corrections in `7c6d556`. |
-| Whole stage (§7) | Independent subagent review of `7c6d556` | Not requirement-ready: CP01-S04/AC11–AC12 depended on Step 7. Its other findings (M1, M2, L1–L6) are recorded, not yet applied. |
-| Owner review, PR #47 | Review 5315357320 of `7c6d556` | Two P2 findings, both addressed in the next commit: edge-shape cases (Q89, B10) and moving the refusal proofs to S07/S09 (Q90, B11). |
+| Whole stage (§7) | Independent subagent review of `7c6d556` (session subagent; report summarised below) | Not requirement-ready. Every finding is listed in the table below with its disposition. |
+| Owner review, PR #47 | [Review 5315357320](https://github.com/sb-dev/pactwright/pull/47#pullrequestreview-5315357320) of `7c6d556` | Two P2 findings, fixed in `a3f4ed4`: edge-shape cases (Q89, B10) and refusal proofs moved to S07/S09 (Q90, B11). |
+| Owner re-review, PR #47 | [Review 5315393528](https://github.com/sb-dev/pactwright/pull/47#pullrequestreview-5315393528) of `a3f4ed4` | Two P2 findings: per-field AC15 cases (B10), and recording the whole-stage findings below. Both are applied in the next commit. |
 
-**CP01 Stage 1 T2 B13 v0 (interim)**
+## Whole-stage review findings (review of `7c6d556`)
+
+| ID | Severity | Finding | Affected | Disposition |
+|---|---|---|---|---|
+| H1 | Blocking | S04/AC11–AC12 required complete-state refusal, which S07/S09 deliver. | CP01-S04 R06, AC11, AC12 | Applied in `a3f4ed4` (Q90). |
+| M1 | Major | Distribution §12's "configuration/lock disagreement" had no category. The S01/AC13 `unavailable-enabled-extension` fixture (no lock entry) could therefore report two problems. | Distribution §12; CP01-S01/AC13 | Applied. The disagreement is an environment problem from the configuration/lock agreement check (S15). It does not make the graph load incomplete, and it refuses capability execution and `environment_lock_hash`. The AC13 fixture keeps a lock entry, so configuration and lock agree. |
+| M2 | Major | The S01/R05 decoder identity was untested. | CP01-S01/R05 | Applied: new S01/AC14 (`same-build`, `decoder-code-changed`). S07/AC06 `changed-registry-identity` remains the consumer. |
+| L1 | Minor | S05/AC12 lacked refusal cases for migration-required, unsupported-version, unreadable and non-core-entry loads. | CP01-S05/AC12 | Applied: four cases added. |
+| L2 | Minor | No case covered records reached only through an unreachable record. | CP01-S04/AC11 | Applied: `proceed-decision-without-intent-and-its-contract`; one problem names both records. |
+| L3 | Minor | CP01-S07/R05 still said "a core edge tuple". | CP01-S07/R05 | Applied: "a tuple in the core edge store" (Core v4 §45). |
+| L4 | Minor | A misspelt core type could be labelled either an S02 schema problem or an S01 non-core entry. | CP01-S02 AC02, AC14 | Applied. AC02 is limited to the Decision `outcome`/`decided_by` rules and states that an unknown type is S01's non-core-entry problem. AC14 runs once per core type. |
+| L5 | Minor | The format of appended edge entries was not pinned. | CP01-S03/R01 | Applied: new entries use the existing indentation, and empty or flow lists become two-space block lists. |
+| L6 | Minor | This record was stale. | B13 | Applied in this version. |
+
+No listed finding remains open. Before a stage-exit verdict, the corrected head needs a fresh whole-stage review, and the semantic-owner approvals (Principles §3, Distribution §12, Core §45) are required.
+
+**CP01 Stage 1 T2 B13 v1 (interim)**

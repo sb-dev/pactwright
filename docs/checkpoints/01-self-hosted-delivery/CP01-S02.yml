@@ -71,9 +71,10 @@ acceptance:
       automated: [records.valid-per-type]
   AC02:
     covers: [R04, R05, R06]
-    cases: [intent, decision, contract, brief, evidence]
-    given: A separate fixture for each type-specific structural rule of the listed type that AC14 does not
-      list, namely its type name and, for a Decision, outcome and decided_by; each has exactly one such defect.
+    cases: [missing-outcome, unknown-outcome, non-string-outcome, missing-decided-by, non-string-decided-by]
+    given: A Decision whose only defect is the listed type-specific structural rule; actor syntax is AC13's.
+      The other core types have no structural rule beyond AC14. A type name outside the five core types is
+      the CP01-S01 non-core-entry problem (AC12), not a record-schema problem.
     when: Records are loaded and validated.
     then: Every defective case is rejected with its specific rule and record; no rule is represented only
       by a generic invalid fixture.
@@ -202,7 +203,8 @@ acceptance:
       blank-title, missing-created, invalid-calendar-date, date-with-time-part, type-prefix-mismatch, uppercase-slug,
       short-suffix, non-hex-suffix, filename-mismatch, whitespace-only-body, blank-id, blank-type, blank-created,
       non-string-title, missing-slug, uppercase-hex-suffix]
-    given: An otherwise valid core record whose only defect is the listed CORE#6 envelope or identity rule;
+    given: An otherwise valid core record whose only defect is the listed CORE#6 envelope or identity rule,
+      run once for each of the five core types with its own result;
       date-with-time-part is an unquoted YAML timestamp with a time part, short-suffix has three hex digits, non-string-title
       is the number 42 and missing-slug has only a type and suffix.
     when: The record is loaded and validated.
