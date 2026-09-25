@@ -18,6 +18,8 @@
 
 **Later owners:** Step 14 `init` needs no change (no directory is pre-created and nothing is ignored); Step 18 `doctor` reports an uncommitted state document through the existing unavailable-repository-revision warning (Distribution §16); Checkpoint 2 owns multi-checkout continuation.
 
-**Verification:** as B7. Independent review: pending.
+**Independent review (read-only, this session):** the B7/B9 reviewer accepted Q23 and required changes for Q32. Applied: the boundary ownership correction (S06/R11, see the B7 record R-1), distinct results for S06/AC13's write cases and a recognised format version for the execution-state document with an `unknown-version` case (S06/R04, AC13). The reviewer confirmed all four challenge checks and that no Stage 1 or later contract inventories `.pactwright/` beyond its three named files. The corrections were authored by the record's author and need fresh review under methodology §6.
+
+**Verification:** as B7. Independent review: see the section above.
 
 **CP01 Stage 2 B9 v1**

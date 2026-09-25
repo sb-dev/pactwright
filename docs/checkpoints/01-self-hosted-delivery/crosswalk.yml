@@ -19,8 +19,9 @@
 # B7 Q21,Q24; B8 Q22,Q25,Q31; B9 Q23,Q32; B10 Q26,Q27,Q33; B11 Q28,Q29,Q30.
 # Applied clauses: Core v3 / Checkpoint 1 v25, contract-level pins only; the
 # Core and checkpoint wording amendments each record proposes await the
-# owner's decision. Independent review of the batches is pending; no question
-# is deleted.
+# owner's decision. Three independent reviews (one per batch pair) returned
+# findings that the records list and the contracts apply; no question is
+# deleted.
 #
 # Stage 3 (Q34-Q40) is a T1 conversion drafted against Core v3 and Distribution
 # v2. Its open questions are unresolved inputs to T2 review; no specification
@@ -1248,7 +1249,7 @@ open_questions:
     affects: [CP01-S08/R01, CP01-S08/R02, CP01-S08/R03, CP01-S08/R07, CP01-S08/AC09]
     question: "Do `lifecycle status`, `next` and `run` operate on one selected Intent or Brief, or across every active direction? What is reported and run when several independent Intent directions are active at once?"
   - id: Q28
-    affects: [CP01-S09/R04, CP01-S09/R06, CP01-S09/AC04, CP01-S09/AC05, CP01-S19/AC07]
+    affects: [CP01-S09/R04, CP01-S09/R06, CP01-S09/AC04, CP01-S09/AC05, CP01-S19/AC11]
     question: "Which execution-provenance record, location and format do rule 17 and the historical policy check read? No Checkpoint 1 step before Step 9 writes execution provenance: do Step 9 fixtures define it, or does a later step own it? For a read-only `validate` of recorded provenance, what do a dirty input base and refusing without an attempt or replay record mean, given that validate performs no execution?"
   - id: Q29
     affects: [CP01-S09/R09, CP01-S09/R10, CP01-S09/AC08, CP01-S09/AC09]
@@ -1264,7 +1265,7 @@ open_questions:
       CP01-S08/AC10]
     question: "Core §55 serialises canonical mutations only. How are writes to lifecycle execution state serialised when two `lifecycle run` invocations or Gate resolutions for the same Brief race, so that neither loses the other's progress or double-counts an iteration?"
   - id: Q33
-    affects: [CP01-S08/R03, CP01-S09/R09, CP01-S12, CP01-S24]
+    affects: [CP01-S08/R03, CP01-S09/R09, CP01-S10/R05, CP01-S12, CP01-S24]
     question: "Should the later contracts carry these obligations, which their version 20 prose does not state: Step 24 (or another later step) runs real Agent Pack capabilities through `lifecycle run`, beyond Step 8's instrumented invoker; and Agent Packs (Step 10) and the adapter (Step 12) consume the Step 9 context-assembly API rather than assembling context themselves?"
   - id: Q34
     affects: [CP01-S11/R01, CP01-S11/AC01, CP01-S11/AC04, CP01-S15/AC07, CP01-S17/AC06]

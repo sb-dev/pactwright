@@ -23,10 +23,12 @@ requirements:
       and required actor. Status and next shall be read-only; they write no file, advance no execution state
       and invoke no agent or capability.
   R03:
-    source: [CORE#26, CORE#32, CORE#34, CORE#46, CORE#54, CORE#58, DISTRIBUTION#20]
+    source: [CORE#26, CORE#32, CORE#34, CORE#35, CORE#46, CORE#53, CORE#54, CORE#58, DISTRIBUTION#20]
     statement: Lifecycle run shall execute automatic responsibilities through the resolved shape and policy
-      and stop at a required Gate, a manual responsibility, completion, execution failure or validation failure.
-      It runs the selected direction, or every active direction in Intent-ID order with one result per direction.
+      and stop at a required Gate, a manual responsibility, a blocked Review outcome, completion, execution
+      failure or validation failure. It runs the selected direction, or every active direction in Intent-ID
+      order with one result per direction. propose-contracts, write-brief, deliver-brief and review are capability-backed;
+      prepare-evidence, and approve-contract when policy delegates it, are runtime-executed responsibilities.
       It dispatches each capability-backed responsibility through the runtime's single capability-invocation
       seam, which Step 8 supplies with an instrumented invoker; invoked without an invoker it stops at the
       first such responsibility with an execution failure naming the missing invoker and simulates nothing.
@@ -64,13 +66,14 @@ acceptance:
       automated: [lifecycle.status-next]
   AC02:
     covers: [R03, R04, R05]
-    cases: [required-gate, manual-step, completion, execution-failure, validation-failure, no-invoker]
+    cases: [required-gate, manual-step, blocked-review, completion, execution-failure, validation-failure, no-invoker]
     given: A project whose run reaches the listed stopping condition; manual-step reaches a responsibility whose
-      policy is manual; no-invoker runs an automatic capability-backed responsibility with no invoker supplied.
+      policy is manual; blocked-review receives a blocked Review outcome; no-invoker runs an automatic capability-backed
+      responsibility with no invoker supplied.
     when: Lifecycle run is invoked.
     then: Run executes automatic responsibilities in declared order, stops at the listed condition and reports
-      it; it never executes the manual responsibility itself, and no-invoker stops as an execution failure
-      naming the missing invoker with no simulated output. It performs no step beyond that point, and every
+      it; it never executes the manual responsibility itself, blocked-review stops with the Review step still
+      current, and no-invoker stops as an execution failure naming the missing invoker with no simulated output. It performs no step beyond that point, and every
       canonical change it made went through the mutation API.
     verify:
       automated: [lifecycle.run-stops]
@@ -132,7 +135,7 @@ acceptance:
     given: 'A run toward Evidence closure with only the listed failure, and a control with every precondition
       met. In superseded-brief, unreviewed-delivery-change and blocking-closing-review, execution state records
       closure as the next step and the dispatched closure responsibility supplies an Evidence mutation through
-      the runtime API: for a Brief superseded before run started, for a delivered state changed after its closing
+      the runtime API: for a Brief superseded before run started, for a Delivery step completed after its closing
       Review, or despite a closing Review that does not permit closure. pending-gate leaves a required Gate
       before closure unresolved; invalid-lineage holds a lineage defect in the graph.'
     when: Run is invoked.
@@ -144,16 +147,17 @@ acceptance:
       automated: [lifecycle.run-closure-guards]
   AC09:
     covers: [R01, R02, R03]
-    cases: [all-directions, selected-intent, unknown-intent, validation-failure-in-second-direction]
+    cases: [all-directions, selected-intent, unknown-intent, validation-failure-in-first-direction]
     given: A project with two independent active Intent directions at different positions and an instrumented
-      invoker; validation-failure-in-second-direction makes the first direction's run leave a graph the second
-      direction cannot validate.
+      invoker; validation-failure-in-first-direction makes a step of the first direction leave the graph failing
+      complete-state validation.
     when: Status, next and run are invoked without a selection, with the first Intent selected, or with an
       unknown Intent ID, as listed.
-    then: all-directions reports and runs both directions in Intent-ID order with one result each, each stopping
-      at its own condition; selected-intent reports and runs only the selected direction and leaves the other's
-      execution state unchanged; unknown-intent is refused as a problem with no write or invocation. validation-failure-in-second-direction
-      stops the whole run at the validation failure and reports it for the second direction.
+    then: 'all-directions reports and runs both directions in Intent-ID order with one result each, each stopping
+      at its own condition; selected-intent reports and runs only the selected direction and leaves the other''s
+      execution state unchanged; unknown-intent is refused as a problem with no write or invocation. validation-failure-in-first-direction
+      stops the whole run there: the first direction''s result records its executed steps and the validation
+      failure, the second direction is not started and its execution state is unchanged.'
     verify:
       automated: [lifecycle.direction-selection]
   AC10:

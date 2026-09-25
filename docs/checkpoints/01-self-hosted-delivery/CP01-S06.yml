@@ -26,8 +26,9 @@ requirements:
     statement: Contract/Decision authority, shape topology, execution policy and execution state shall remain
       separate. Policy declares the authority a Gate requires as one or more actor kinds from human, agent and
       automation, enforced kind-only like approve-contract.actor. A Gate resolution supplies its actor in the
-      CORE#9 <kind>:<identity> syntax, which execution state records unchanged as attribution together with
-      the Gate and its outcome; the identity is not authenticated. A Gate changes progression authority only;
+      CORE#9 <kind>:<identity> syntax and an outcome, passed or refused, which execution state records unchanged
+      as attribution together with the Gate; the identity is not authenticated. A Gate is resolved for progression
+      only while its most recent recorded resolution is passed. A Gate changes progression authority only;
       resolving a Gate or recording an approval never creates a Decision or changes the recorded Contract, and
       changing policy or authority shall not require a different shape.
   R04:
@@ -35,8 +36,10 @@ requirements:
     statement: Execution state shall identify the current Brief, resolved shape, current and completed steps,
       Gate state, iteration counts where applicable and execution status. It is held outside the Delivery Graph
       as Pactwright-owned ordinary repository content, one document per Brief below a runtime-declared path
-      under .pactwright/, read through the Step 1 canonical loader and never stored as a canonical record or
-      in a core store. An absent document means the Brief has not started its shape. Broad Delivery state remains
+      under .pactwright/, read through the Step 1 canonical loader with a registered decoder and never stored
+      as a canonical record or in a core store. The document declares a format version the loader recognises;
+      an unknown version is an explicit error, and Step 19 owns any later migration. An absent document means
+      the Brief has not started its shape and is not a validation problem. Broad Delivery state remains
       derived from canonical lineage, and changing execution state alone shall change no canonical record,
       edge or project_graph_revision.
   R05:
@@ -45,7 +48,10 @@ requirements:
       to a prior Delivery step; policy shall bound the automatic iterations of every loop it creates. Configuration
       with an undeclared corrective route or one that does not return to a prior Delivery step, an unbounded
       loop, a Gate without policy authority, or a successful path that skips Review of the latest delivered
-      state or never reaches Evidence shall be rejected before execution. AI output cannot add a route.
+      state or never reaches Evidence shall be rejected before execution. The closing Review step of a shape
+      is the Review step from which the successful path reaches Evidence closure. In Checkpoint 1 an exhausted
+      iteration bound stops progression and status reports that step as blocking, awaiting human; no configured
+      escalation exists. AI output cannot add a route.
   R06:
     source: [CORE#11, CORE#23, CORE#28, CHECKPOINT#4]
     statement: Execution state shall identify the resolved shape by the shape name the runtime provides, direct
@@ -62,8 +68,9 @@ requirements:
     source: [CORE#9, CORE#25, CORE#26, CORE#27, CORE#46, CORE#57]
     statement: Policy shall decide automatic or manual execution, the actor kinds allowed to decide, and the
       authority each Gate requires. A version 1 entry with execution manual is never dispatched by lifecycle
-      run; status reports it as the blocking step with required actor human, the released semantics, and the
-      runtime records and checks no actor for responsibilities that leave no Decision. approve-contract.actor
+      run; status reports it as the blocking step with required actor human for an entry that declares no
+      actor, the released semantics, and with its declared actor kind for approve-contract. The runtime records
+      and checks no actor for responsibilities that leave no Decision. approve-contract.actor
       authorises the kind of every Decision outcome, proceed, reject and defer, including withdrawal and re-authorisation.
       A structurally valid lineage whose recorded Decision actor kind the policy disallows remains inspectable
       through derivation but shall not progress.
@@ -72,7 +79,8 @@ requirements:
     statement: Execution state shall record, per Brief, a delivery sequence that increments when a Delivery
       step completes, and for each completed Review step the delivery sequence it evaluated and its outcome
       from the runtime's structured Review result, may-progress, correction-required naming a Delivery step,
-      or blocked. The latest delivered state is the state at the current delivery sequence; a delivery change
+      or blocked, recognised by its declared field or token exactly and never inferred from free text; after
+      blocked the Review step stays current and may run again. The latest delivered state is the state at the current delivery sequence; a delivery change
       after Review is a Delivery step completed after the latest Review. Capability output that does not map
       to this result is an execution failure, never a transition. Changes made outside a Delivery step are
       not delivered state; detecting them is not a Checkpoint 1 closure obligation.
@@ -81,15 +89,16 @@ requirements:
     statement: Checkpoint 1 declares no persisted lifecycle-shape or extended-policy configuration format. A
       project's version 1 configuration resolves only the built-in direct shape, whose Delivery, Review and
       closure steps take their execution mode from the deliver-brief, review and prepare-evidence entries.
-      Gates, corrective routes, iteration bounds and escalation are exercised through the runtime's shape-and-policy
+      Gates, corrective routes and iteration bounds are exercised through the runtime's shape-and-policy
       definition API with test-only fixture definitions validated by the same resolution rules; no fixture
       definition is loadable from a project's lifecycle configuration, and using one writes no configuration.
   R11:
     source: [CORE#28, CORE#55, GUIDE#filesystem-mutation]
     statement: Every execution-state write, an advance, a Gate resolution or a correction, shall be atomic
-      and serialised in the Step 7 mutation boundary against other execution-state writes and canonical mutations.
-      A write whose inspected execution state changed before commit is refused without overwriting the other
-      writer's change; no advance is lost and no iteration is counted twice.
+      and serialised in the runtime's single mutation boundary, which this step provides for execution-state
+      writes and Step 7 extends to canonical mutations under CORE#55. A write whose inspected execution state
+      changed before commit is refused without overwriting the other writer's change; no advance is lost and
+      no iteration is counted twice.
 acceptance:
   AC01:
     covers: [R01, R04, R06]
@@ -104,25 +113,32 @@ acceptance:
       automated: [lifecycle.direct-shape]
   AC02:
     covers: [R03, R08]
-    cases: [automatic, manual]
-    given: The direct shape with its Delivery step configured by the listed execution policy.
+    cases: [automatic, manual, manual-approve-contract-agent-actor]
+    given: The direct shape with its Delivery step configured by the listed execution policy; manual-approve-contract-agent-actor
+      instead evaluates an open Intent under the released-valid entry approve-contract with execution manual
+      and actor agent.
     when: Progression is evaluated at that step.
     then: An automatic step is eligible to run without an actor; a manual step is not executed automatically
-      and is reported as the blocking step awaiting required actor human. Neither case changes the resolved
-      shape or any canonical record.
+      and is reported as the blocking step awaiting required actor human; the manual approve-contract entry
+      is reported as blocking with required actor agent. No case changes the resolved shape or any canonical
+      record.
     verify:
       automated: [lifecycle.execution-policy]
   AC03:
     covers: [R03, R08]
-    cases: [authorised-actor, second-identity-same-kind, unauthorised-kind, invalid-actor-syntax]
+    cases: [authorised-actor, second-identity-same-kind, second-allowed-kind, refused-by-authorised-actor, unauthorised-kind,
+      invalid-actor-syntax]
     given: A fixture shape with a Gate between two Delivery steps, a policy requiring one actor kind for that
-      Gate, and a Gate resolution supplied by the listed actor; second-identity-same-kind uses a different well-formed
-      identity of the required kind.
+      Gate, and a passed Gate resolution supplied by the listed actor; second-identity-same-kind uses a different
+      well-formed identity of the required kind; second-allowed-kind configures two allowed kinds and resolves
+      with the second; refused-by-authorised-actor supplies outcome refused from an allowed kind.
     when: The Gate resolution is applied.
-    then: The authorised-actor and second-identity requests resolve the Gate, the next declared step becomes
-      current, and execution state records the supplied actor byte for byte with the Gate and outcome. The
-      unauthorised-kind and invalid-syntax requests leave Gate state and the current step unchanged with an
-      explicit authority or syntax problem. No case creates a Decision, Contract or other canonical record.
+    then: The authorised-actor, second-identity and second-allowed-kind requests resolve the Gate, the next
+      declared step becomes current, and execution state records the supplied actor byte for byte with the
+      Gate and outcome passed. refused-by-authorised-actor records the actor and outcome refused, the Gate stays
+      unresolved for progression and the current step is unchanged. The unauthorised-kind and invalid-syntax
+      requests leave Gate state and the current step unchanged with an explicit authority or syntax problem.
+      No case creates a Decision, Contract or other canonical record.
     verify:
       automated: [lifecycle.gate-authority]
   AC04:
@@ -205,15 +221,16 @@ acceptance:
       review: [lifecycle.separation-of-concerns]
   AC11:
     covers: [R09]
-    cases: [may-progress, correction-required, blocked, unmapped-output, out-of-band-change]
+    cases: [may-progress, correction-required, blocked, unmapped-output, ambiguous-output, out-of-band-change]
     given: A Brief at the Review step of the AC05 fixture shape after one Delivery completion, with the Review
-      capability returning the listed result; unmapped-output returns text naming no runtime outcome; out-of-band-change
-      edits a delivered file after Delivery completed and before Review.
+      capability returning the listed result; unmapped-output returns text naming no runtime outcome and ambiguous-output
+      free text naming two outcomes without the declared form; out-of-band-change edits a delivered file after
+      Delivery completed and before Review and returns may-progress.
     when: The Review step completes and the runtime applies the result.
     then: may-progress records delivery sequence one as reviewed with that outcome and makes the next declared
       step current; correction-required records the outcome with its declared Delivery step and re-enters
-      it; blocked records the outcome and stops. unmapped-output is an execution failure that records no Review
-      completion and changes no step. out-of-band-change is reviewed as delivery sequence one, which stays
+      it; blocked records the outcome, stops and leaves the Review step current. unmapped-output and ambiguous-output
+      are execution failures that record no Review completion and change no step. out-of-band-change is reviewed as delivery sequence one, which stays
       the latest delivered state. No case writes a canonical file.
     verify:
       automated: [lifecycle.review-outcomes]
@@ -230,15 +247,19 @@ acceptance:
       automated: [lifecycle.state-serialisation]
   AC13:
     covers: [R04, R07]
-    cases: [advance, gate-resolution, correction, absent-document, malformed-document]
-    given: A delivering lineage in a Git repository with a clean tree whose required inputs are committed; absent-document
-      has no execution-state document for the Brief and malformed-document has one that does not decode.
-    when: The listed execution-state write is applied, or for the last two cases the Brief's shape is resolved
+    cases: [advance, gate-resolution, correction, absent-document, malformed-document, unknown-version]
+    given: A delivering lineage in a Git repository with a clean tree whose required inputs are committed, under
+      the AC07 fixture shape; absent-document has no execution-state document for the Brief, malformed-document
+      has one that does not decode and unknown-version one declaring a format version the loader does not
+      recognise.
+    when: The listed execution-state write is applied, or for the last three cases the Brief's shape is resolved
       and progression requested.
-    then: The write creates or changes exactly one Pactwright-owned document below .pactwright/ that no init-written
-      ignore rule excludes; nothing under specs/ changes and project_graph_revision is unchanged. Before commit
-      the repository revision is unavailable naming that document; after committing it the revision resolves.
-      absent-document initialises the shape at its first step; malformed-document is reported with path and
-      cause through the loader, no step runs and nothing is written.
+    then: Each write creates or changes exactly one Pactwright-owned document below .pactwright/, not ignored
+      by Git; nothing under specs/ changes and project_graph_revision is unchanged. Before commit the repository
+      revision is unavailable naming that document; after committing it the revision resolves. advance makes
+      the next declared step current; gate-resolution records the resolving actor and outcome; correction re-enters
+      the declared Delivery step and increments the iteration count. absent-document initialises the shape
+      at its first step and raises no problem; malformed-document and unknown-version are reported with path
+      and cause through the loader, no step runs and nothing is written.
     verify:
       automated: [lifecycle.state-storage]

@@ -31,10 +31,10 @@ requirements:
   R05:
     source: [CORE#23, CORE#25, CORE#28, CORE#34, CORE#57]
     statement: 'Rules 9–12, 14 and 15 shall check lifecycle configuration and the Step 6 execution-state documents:
-      rule 9, a current Brief whose execution state names no shape or whose lifecycle configuration resolves
-      no shape; rule 10, an execution-state shape name the runtime does not provide, or a resolved shape that
-      does not declare the recorded current or completed steps; rule 11, recorded completed steps, a current
-      step or a corrective route that the resolved shape does not permit in that order; rule 12, current Evidence
+      rule 9, a current Brief whose otherwise decodable execution-state document has an absent or empty shape
+      name (an absent document is not started, not rule 9); rule 10, a shape name the runtime does not provide,
+      or a recorded step name the resolved shape does not declare; rule 11, declared steps or routes recorded
+      in an order or along a route the shape does not permit; rule 12, current Evidence
       whose Brief''s execution state records no Review completion at the closing step with outcome may-progress
       for the current delivery sequence; rule 14, a recorded Gate resolution whose actor kind the policy does
       not allow for that Gate; rule 15, a declared corrective loop without an iteration bound. Where version
@@ -42,11 +42,12 @@ requirements:
       Step 6 definition API, as rule 16 uses a fixture contribution.'
   R06:
     source: [CORE#56, CORE#57, GUIDE#replay-provenance]
-    statement: Rule 17 shall run only when replay validation is requested by supplying a replay-base document,
-      a YAML mapping of repository_revision, project_graph_revision and environment_lock_hash read through
-      the canonical loader, which is Checkpoint 1's validate input and not a universal provenance schema; no
-      Checkpoint 1 step writes execution provenance, and later operation owners record this tuple in their
-      own provenance. It resolves the entire replay base before any execution effect and verifies the typed
+    statement: Rule 17 shall run only when replay validation is requested by supplying the path of a replay-base
+      document, a YAML mapping of repository_revision, project_graph_revision and environment_lock_hash decoded
+      by a registered decoder of the canonical loader, which is Checkpoint 1's validate input and not a universal
+      provenance schema; no Checkpoint 1 step writes execution provenance, and later operation owners record
+      this tuple in their own provenance. Validate reports the recorded environment_lock_hash and does not verify
+      it against the current lock; Step 15 owns lock identity. It resolves the entire replay base before any execution effect and verifies the typed
       Git repository identity and pg1 revision. Unknown or malformed revision protocols fail; a recognised
       legacy sha256 identity is reported unavailable without its legacy implementation, never reinterpreted.
       Unavailable or dirty input bases and reconstructed-state mismatch are reported. For read-only validate,
@@ -66,20 +67,23 @@ requirements:
     statement: The context-assembly API consumed by Agent Packs and adapters shall provide the current relevant
       Contract/Brief lineage by default, the direction's current Intent, Decision, Contract and Brief as complete
       records in lineage order, and exclude rejected alternatives, superseded records, other directions' records,
-      execution transcripts and execution-state detail. A caller requires excluded history by naming record
-      IDs; those records are returned in a separate history section, each marked with the record that supersedes
-      it, and are never merged into the current lineage. Contributing context does not transfer semantic ownership.
+      execution transcripts and execution-state detail. A caller requires excluded history by naming superseded
+      record IDs of the requested direction's tree; those records are returned in a separate history section,
+      each marked with the record that supersedes it, and are never merged into the current lineage. A named
+      ID that is unknown, not superseded or outside the direction is reported as a problem. Contributing context does not transfer semantic ownership.
   R10:
     source: [CORE#39, PRINCIPLES#11]
     statement: Context assembly shall keep a namespaced context-contribution seam for later Extensions, keyed
       by Extension ID under the CORE#54 grammar with core reserved and ordered by Extension ID, and shall not
       introduce pactwright context as a required public CLI contract.
   R11:
-    source: [CORE#54, CORE#57, CHECKPOINT#3]
-    statement: 'Validate shall exit non-zero when any minimum rule fails, the load is incomplete or a requested
-      replay base cannot be verified, and zero otherwise. Its report gives each problem a category, structure
+    source: [CORE#54, CORE#57, CHECKPOINT#exit-gate]
+    statement: 'Validate shall exit non-zero when any minimum rule fails, the load is incomplete or, only when
+      rule 17 is requested, the replay base cannot be verified, and zero otherwise; a replay-base document supplied
+      for the historical policy check alone never changes the exit status. Its report gives each problem a category, structure
       failure, unsupported or inactive component, unavailable verification or unavailable execution authority,
-      with the rule and affected records. Unavailable execution authority means the policy needed to authorise
+      with the rule and affected records; the unavailable-verification category therefore carries either exit
+      status. Unavailable execution authority means the policy needed to authorise
       a current Decision or Gate cannot be determined: lifecycle configuration missing or unloadable, reported
       together with its load problem, or a historical policy check without a reconstructible revision. Inactive
       components, unavailable historical checks and historical incompatibility of a withdrawn Decision are reported
@@ -93,9 +97,10 @@ acceptance:
       evidence-before-closing-review, unauthorised-decision, unauthorised-gate-progression, unbounded-corrective-loop,
       extension-redefines-core, replay-revision-mismatch]
     given: A valid control project and a copy whose only defect is the failing fixture for the listed rule
-      (rule 10 has one case for an unresolved and one for an incompatible shape identity); rules 10, 11, 14
-      and 15 supply fixture shape and policy definitions through the Step 6 definition API where version 1
-      cannot express the defect; the replay case supplies a replay-base document.
+      (rule 10 has one case for an unresolved and one for an incompatible shape identity); rule 9 uses an
+      otherwise decodable execution-state document with an empty shape name; rules 10, 11, 14 and 15 supply
+      fixture shape and policy definitions through the Step 6 definition API where version 1 cannot express
+      the defect; the replay case supplies a replay-base document.
     when: Pactwright validate runs on both.
     then: The control passes with no problems. The copy fails with a problem mapped to the listed rule that identifies
       the affected records, inputs or provenance.
@@ -142,10 +147,11 @@ acceptance:
   AC05:
     covers: [R06]
     cases: [not-requested, matching-sha1-base, matching-sha256-base, pg1-stored-byte-vectors, unknown-protocol,
-      malformed-protocol, legacy-protocol, unavailable-base, dirty-base, reconstructed-state-mismatch]
+      malformed-protocol, legacy-protocol, unavailable-base, dirty-base, reconstructed-state-mismatch, differing-lock-hash]
     given: A replay-base document recording a repository revision and Project Graph revision under the listed
       condition; not-requested is ordinary validation, with no document supplied, of a project whose recorded
-      history cannot be reconstructed.
+      history cannot be reconstructed; differing-lock-hash is a matching base whose recorded environment_lock_hash
+      differs from the current lock.
     when: Pactwright validate runs, with replay validation requested except for not-requested.
     then: Not-requested attempts no historical reconstruction and raises no replay problem. Matching bases pass
       and the pg1 vectors reproduce their fixed bytes and digests. Unknown and malformed protocols fail rule
@@ -153,7 +159,8 @@ acceptance:
       sha256 identity is reported as unavailable replay verification without its legacy implementation, never
       prefixed or compared as pg1. Unavailable and dirty bases are refused before any execution effect, with
       no attempt, replay record or restore location, and the working tree, index and refs unchanged. Mismatch
-      fails rule 17 naming both revisions.
+      fails rule 17 naming both revisions. differing-lock-hash passes rule 17 and reports the recorded hash
+      without verifying it.
     verify:
       automated: [validate.replay]
   AC06:
@@ -181,13 +188,16 @@ acceptance:
       automated: [validate.extension-core-protection]
   AC08:
     covers: [R09]
-    cases: [rejected-alternatives, superseded-records, execution-transcripts, unrelated-history, explicitly-required-history]
+    cases: [rejected-alternatives, superseded-records, execution-transcripts, unrelated-history, explicitly-required-history,
+      history-outside-direction]
     given: A delivering lineage whose project also holds the listed material, and a Delivery context request
-      for its current Brief; explicitly-required-history names a superseded Brief the caller requires.
+      for its current Brief; explicitly-required-history names a superseded Brief of the direction the caller
+      requires; history-outside-direction names a current record of another direction.
     when: Delivery context is assembled.
     then: The context contains exactly the direction's current Intent, Decision, Contract and Brief in lineage
       order and excludes the listed material, except that the explicitly required Brief appears in the history
-      section marked with its superseding record and not in the current lineage. Assembly writes nothing.
+      section marked with its superseding record and not in the current lineage; history-outside-direction
+      is reported as a problem and the record is not included. Assembly writes nothing.
     verify:
       automated: [context.bounded-lineage]
   AC09:
@@ -212,14 +222,16 @@ acceptance:
       review: [validate.shared-mechanics]
   AC11:
     covers: [R07, R11]
-    cases: [clean, rule-failure, incomplete-load, unverifiable-replay-base, inactive-extension-only, historical-incompatibility-only,
-      missing-lifecycle-configuration]
+    cases: [clean, rule-failure, incomplete-load, unverifiable-replay-base, historical-check-unreconstructible-document,
+      inactive-extension-only, historical-incompatibility-only, missing-lifecycle-configuration]
     given: A project in the listed condition; historical-incompatibility-only is the AC04 historically-denied lineage
-      with current policy allowing the kind; missing-lifecycle-configuration has valid canonical state and no
-      lifecycle configuration.
+      with current policy allowing the kind; historical-check-unreconstructible-document requests only the historical
+      policy check with a document whose revision cannot be reconstructed; missing-lifecycle-configuration
+      has valid canonical state and no lifecycle configuration.
     when: Pactwright validate runs, with replay validation requested for unverifiable-replay-base.
-    then: clean, inactive-extension-only and historical-incompatibility-only exit zero, the last two reporting
-      their inactive component or compatibility result in its category. rule-failure, incomplete-load and unverifiable-replay-base
+    then: clean, inactive-extension-only, historical-incompatibility-only and historical-check-unreconstructible-document
+      exit zero, the last three reporting their inactive component, compatibility result or unavailable verification
+      in its category. rule-failure, incomplete-load and unverifiable-replay-base
       exit non-zero with the failing rule, the load problem or the unavailable verification in its category.
       missing-lifecycle-configuration exits non-zero reporting both the load problem and unavailable execution
       authority, and grants no permission.

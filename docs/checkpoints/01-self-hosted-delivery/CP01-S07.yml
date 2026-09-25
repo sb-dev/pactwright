@@ -62,7 +62,7 @@ requirements:
       state for the Brief. The latest delivered state is reviewed when the most recent Review completion records
       the current delivery sequence; the closing Review permits closure when that completion is at the shape's
       closing Review step with outcome may-progress; a required Gate is unresolved while the shape declares
-      a Gate before closure that execution state does not record as resolved. A check after writing Evidence
+      a Gate before closure whose most recent recorded resolution is not passed. A check after writing Evidence
       does not satisfy this.
   R10:
     source: [CORE#25, CORE#30, CORE#58]
@@ -99,15 +99,17 @@ acceptance:
   AC04:
     covers: [R07]
     cases: [allowed-kind, second-identity-same-kind, disallowed-kind-proceed, disallowed-kind-reject, disallowed-kind-defer,
-      invalid-syntax]
+      disallowed-kind-withdrawal, invalid-syntax]
     given: An open Intent, the project's real .pactwright/lifecycle.yml allowing one actor kind for approve-contract,
       and a Decision request supplied with the listed actor and outcome (proceed unless named);
-      second-identity-same-kind uses a different well-formed identity of the allowed kind. In every case the
+      second-identity-same-kind uses a different well-formed identity of the allowed kind; disallowed-kind-withdrawal
+      instead requests a reject Decision superseding a done lineage's current proceed Decision with a disallowed
+      kind. In every case the
       repository's configured Git user identity matches neither supplied identity.
     when: The Decision mutation is applied.
     then: The allowed-kind and second-identity requests commit and record the supplied decided_by value byte
-      for byte, never the Git identity. The disallowed-kind and invalid-syntax requests are refused; no Decision,
-      Contract or edge is written, and unrelated files and execution state keep their prior bytes.
+      for byte, never the Git identity. The disallowed-kind requests, withdrawal included, and invalid-syntax
+      are refused; no Decision, Contract or edge is written, and unrelated files and execution state keep their prior bytes.
     verify:
       automated: [mutation.actor-policy]
   AC05:
@@ -199,11 +201,14 @@ acceptance:
       automated: [evidence.closure-guards]
   AC13:
     covers: [R09, R10]
-    given: A delivering lineage changed after its first Review and then reviewed again, whose closing Review
-      of that latest state permits closure, with no pending Gate and valid lineage.
+    cases: [latest-state-closure, post-review-out-of-band-edit]
+    given: A delivering lineage changed by a second Delivery step after its first Review and then reviewed again,
+      whose closing Review of that latest state permits closure, with no pending Gate and valid lineage; post-review-out-of-band-edit
+      then edits a delivered file outside any Delivery step before closure is requested.
     when: Evidence creation is requested.
-    then: Exactly one Evidence record and its evidences edge are written atomically, the resulting graph validates
-      and the lineage derives done.
+    then: In both cases exactly one Evidence record and its evidences edge are written atomically, the resulting
+      graph validates and the lineage derives done; the out-of-band edit is not delivered state under CP01-S06/R09
+      and is the recorded Checkpoint 1 limitation.
     verify:
       automated: [evidence.successful-closure]
   AC14:
