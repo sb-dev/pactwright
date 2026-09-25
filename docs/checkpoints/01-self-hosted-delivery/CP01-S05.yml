@@ -1,6 +1,6 @@
 # CP01 Step 5 — Implement repository and Project Graph revision identity
 id: CP01-S05
-requires: [CP01-S02, CP01-S03]
+requires: [CP01-S02, CP01-S03, CP01-S04]
 outputs:
   repository-revision: A runtime-provided repository revision identifying the exact committed repository state
     used as the reconstructible execution input base.
@@ -116,8 +116,9 @@ acceptance:
     given: A recorded committed input and its graph revision, followed by a newer canonical commit.
     when: The recorded old commit is restored with existing repository mechanisms in an isolated different
       path and its graph revision is derived.
-    then: The old inputs derive the recorded graph revision without using current branch contents or altering
-      the working project.
+    then: The restored inputs derive exactly the recorded graph revision, which differs from the digest of
+      the newer commit. The working project's HEAD, refs, index staged content and working tree are unchanged
+      before and after the restore, and the restore location lies outside the working project's tree.
     verify:
       automated: [revision.repository-reconstructible]
   AC09:
@@ -131,12 +132,14 @@ acceptance:
       automated: [revision.graph-hashed, revision.pg1-vectors]
   AC10:
     covers: [R02, R03, R05]
-    cases: [internal-body-whitespace, content-array-order, metadata-value, unicode-normalisation-difference]
+    cases: [internal-body-whitespace, line-wrapping, content-array-order, frontmatter-value, unicode-normalisation-difference,
+      quoted-scalar-type-difference]
     given: Two valid graph snapshots differing only in the listed significant content, with otherwise identical
-      IDs and structure.
+      IDs and structure; quoted-scalar-type-difference changes a plain CORE#6 number or boolean into the same
+      characters quoted as a string.
     when: Their revisions are derived.
-    then: The digests differ; array order, internal body whitespace, metadata values and distinct Unicode
-      strings are not normalised away.
+    then: The digests differ; array order, internal body whitespace, line wrapping, frontmatter values, scalar
+      types and distinct Unicode strings are not normalised away.
     verify:
       automated: [revision.significant-content]
   AC11:
@@ -144,15 +147,20 @@ acceptance:
     cases: [unstaged-tracked-change, staged-tracked-change, deleted-tracked-input, untracked-file, ignored-generated-output,
       no-git, no-commit, ignored-required-canonical-input, staged-new-canonical-input, ignored-required-configuration,
       ignored-required-lifecycle, ignored-required-lock, untracked-empty-record-directory, tracked-gitkeep-empty-graph,
-      ignored-required-extension-store, nested-project-root, required-submodule-input, required-lfs-input]
+      ignored-required-extension-store, nested-project-root, required-submodule-input, required-lfs-input,
+      required-symlink-input, absent-required-input]
     given: A repository or directory with only the listed condition. Every required CORE#54 input (configuration,
       lifecycle, lock, core records directory/edges and active Extension stores) is independently checked
       against the commit, not only git status. The empty-graph control tracks its .gitkeep; nested-root and
-      required-submodule/LFS cases use the CORE#56 unsupported input conditions.
+      required-submodule/LFS/symlink cases use the CORE#56 unsupported input conditions, the symlink case
+      committing a required configuration, lifecycle or lock file as a symbolic-link entry whose target holds
+      valid content. absent-required-input has a required input that was never created, with git status clean.
     when: Repository revision is requested without modifying the working tree, index or refs.
     then: Ignored generated output and the tracked-gitkeep empty-graph control retain the correct committed
-      identity. All other cases report repository revision unavailable with the specific cause. The tree,
-      index and refs remain unchanged; no commit, stash, reset, add or deletion occurs.
+      identity. All other cases report repository revision unavailable with the specific cause, absent-required-input
+      naming the missing input although git status is clean. The working tree, HEAD, refs and the index's
+      staged content (paths, modes and object identities) are unchanged; a stat-cache refresh of the index
+      is not a change. No commit, stash, reset, add or deletion occurs.
     verify:
       automated: [revision.repository-input-boundary]
   AC12:
@@ -164,7 +172,8 @@ acceptance:
       malformed-configuration, malformed-lifecycle, missing-lock, malformed-lock]
     given: A CORE#54 required input, active registration, record or edge with only the listed structural/completeness
       defect; all other inputs pass. Relational cases are passed to the shared validator so another failure
-      does not mask the required cause.
+      does not mask the required cause; inactive-endpoint fails as an unresolvable active endpoint, and naming
+      the inactive store is permitted, not required.
     when: A complete graph revision is requested.
     then: It fails explicitly with no successful digest and no file mutation; parseable remainder or inactive-data
       exclusion is not used to hide the active defect.
@@ -186,18 +195,25 @@ acceptance:
     given: A complete load passing CORE#6, CORE#15 and CORE#54. The first case has two current Briefs under
       one Contract; the second has structurally valid Decision attribution denied only by lifecycle policy.
       Each has a frozen structurally derived expected revision.
-    when: Graph revision and, separately, lineage/policy validation are requested.
-    then: Graph revision equals its expected pg1 digest in both cases. Lineage or policy validation reports
-      the applicable failure and grants no permission to execute; no files change.
+    when: Graph revision is derived and, separately, current lineage is derived through CP01-S04.
+    then: Graph revision equals its expected pg1 digest in both cases and no files change. two-current-briefs
+      returns the CP01-S04 lineage problem. actor-kind-denied derives its lineage and recorded Contract unchanged;
+      its policy refusal is proven at CP01-S06/AC09 and CP01-S09/AC04, which use this frozen digest as their
+      unchanged-revision control.
     verify:
       automated: [revision.lineage-policy-independent]
   AC15:
     covers: [R01]
-    cases: [sha1-commit, sha256-commit, abbreviated-id, ref-name, malformed-typed-id, tree-object, unknown-object-format]
+    cases: [sha1-commit, sha256-commit, abbreviated-id, ref-name, upper-case-digits, format-length-mismatch,
+      malformed-typed-id, nonexistent-object, tree-object, tag-object, unknown-object-format]
     given: A recorded repository identity with the listed grammar/object condition and existing Git objects
-      for the valid controls.
+      for the valid controls. format-length-mismatch pairs sha1 with 64 digits and sha256 with 40; nonexistent-object
+      is a well-formed identity absent from the repository; tag-object is an annotated tag whose peeled target
+      is a commit.
     when: The repository identity validator checks its syntax and resolved object type.
-    then: Full lower-case typed SHA-1 and SHA-256 commit identities pass. Abbreviations, ref names, malformed
-      values, tree objects and unknown object formats fail explicitly with no substitutions or writes.
+    then: Full lower-case typed SHA-1 and SHA-256 commit identities pass. Upper-case digits, a length that
+      does not match the object format, abbreviations, ref names, other malformed values, identities that
+      resolve to no object, tree or tag objects and unknown object formats fail explicitly with no case folding,
+      peeling, substitution or write.
     verify:
       automated: [revision.repository-identity-grammar]

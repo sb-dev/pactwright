@@ -72,8 +72,10 @@ acceptance:
       automated: [package.archive-contents]
   AC03:
     covers: [R03]
-    cases: [format-violation, lint-violation, type-error, failing-test, build-failure]
-    given: An otherwise passing candidate whose only defect is the listed fault in the runtime package.
+    cases: [format-violation, lint-violation, type-error, failing-test, build-failure, missing-runtime-input]
+    given: An otherwise passing candidate whose only defect is the listed fault in the runtime package; missing-runtime-input
+      removes the runtime build's source inputs or a declared entry target so that a tolerant build tool could
+      succeed with nothing to build.
     when: The root pnpm verify gate is run.
     then: The gate fails at the affected mandatory check; missing runtime input is not converted into a successful
       no-op.
@@ -126,24 +128,29 @@ acceptance:
     covers: [R05, R06]
     cases: [valid-core-layout, explicit-empty-graph, missing-config, missing-lifecycle, missing-lock, missing-record-directory,
       missing-edge-file, unreadable-file, empty-edge-document, unexpected-record-file, nested-record-directory,
-      canonical-symlink, unsupported-version, null-edge-document, unexpected-graph-file, nested-graph-directory,
+      canonical-symlink, null-edge-document, unexpected-graph-file, nested-graph-directory, non-empty-gitkeep,
       unexpected-extension-root-file, invalid-extension-root-name, symlinked-record-directory, symlinked-graph-directory,
-      symlinked-extension-root, unexpected-active-extension-entry]
-    given: The CORE#54 layout with only the listed condition.
+      symlinked-extension-root]
+    given: The CORE#54 layout with only the listed condition; non-empty-gitkeep places content in a .gitkeep of
+      one of the three stores. Unknown document versions are AC12 cases. Entries inside an enabled owner root
+      need the Step 2 declaration seam and are CP01-S03/AC13 cases.
     when: The canonical loader reads it.
-    then: The valid-layout and explicit-empty-graph controls load successfully. Every missing, unreadable,
-      unsupported or unexpected input is identified and leaves an incomplete result without writes; an empty
+    then: The valid-layout and explicit-empty-graph controls load successfully. Every missing, unreadable
+      or unexpected input is identified and leaves an incomplete result without writes; an empty
       edge document is not silently an empty graph.
     verify:
       automated: [loader.storage-profile]
   AC10:
     covers: [R07, R08, R09]
-    cases: [no-extensions, unavailable-enabled-extension, github-enabled, disabled-extension-without-implementation]
+    cases: [no-extensions, unavailable-enabled-extension, github-enabled, disabled-extension-without-implementation,
+      undeclared-extension-directory]
     given: Valid configuration with the listed optional-feature declaration and no available Extension/GitHub
-      implementation.
+      implementation; undeclared-extension-directory has a valid-ID directory under specs/extensions/ that
+      no configuration entry declares.
     when: Local loading is requested.
-    then: Declarations are retained unchanged. No Extensions and a disabled Extension without implementation
-      permit otherwise complete local loading; inactive owner data is reported and preserved without decoding.
+    then: Declarations are retained unchanged. No Extensions, a disabled Extension without implementation and
+      an undeclared Extension directory permit otherwise complete local loading; inactive owner data, declared
+      or not, is reported and preserved without decoding.
       An unavailable enabled Extension is an explicit incomplete-environment error. GitHub-enabled configuration
       remains locally inspectable while unsupported remote operations are reported. No component activation,
       remote effect or file mutation occurs.

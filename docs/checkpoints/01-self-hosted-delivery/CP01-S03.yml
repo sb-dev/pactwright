@@ -95,7 +95,8 @@ acceptance:
     covers: [R06]
     cases: [replace-endpoints, reuse-core-name, relax-endpoint-existence, relax-duplicates, relax-same-type,
       relax-acyclicity, relax-cardinality]
-    given: A fixture attempts the listed change to core relation registration.
+    given: A fixture attempts the listed change to core relation registration; reuse-core-name declares a core
+      relation name under a non-core owner with an equivalent definition.
     when: Registration processes the declaration.
     then: Registration refuses it; the original core definition remains effective, including valid controls
       and rejection of the affected violation.
@@ -147,22 +148,31 @@ acceptance:
     given: Fixture registrations/stores with the listed condition and otherwise valid active core state.
     when: The shared loader and validator inspect the contribution set.
     then: Unknown active relations/types and active links to inactive records fail without a complete active
-      graph result. An inactive store is listed, byte-preserved and excluded; it is not parsed into active
-      authority or automatically repaired.
+      graph result; an active edge to a record of an inactive store fails as an unresolvable active endpoint,
+      and naming the inactive store is permitted, not required, because inactive contents are never decoded.
+      An inactive store is listed, byte-preserved and excluded; it is not parsed into active authority or
+      automatically repaired.
     verify:
       automated: [edges.active-registration-boundary]
   AC13:
     covers: [R06, R07, R09]
     cases: [extension-record-in-core-store, core-record-in-extension-store, core-lineage-edge-in-extension-store,
       duplicate-extension-id, valid-cross-graph-relation, extension-relation-edge-in-core-store, extension-supersession-edge-in-core-store,
-      foreign-relation-in-extension-edges, extension-record-outside-owner-root]
-    given: Fixture owners with the listed placement or identity condition. The valid cross-graph relation
-      is stored in specs/extensions/<relation-owner>/edges.yml. Core records use specs/nodes/; core lineage
-      tuples use specs/graph/edges.yml; Extension records remain inside their declared owner root. The core-to-core-edge
-      defect uses a core lineage relation, not an Extension-owned additional relation.
+      foreign-relation-in-extension-edges, extension-record-outside-owner-root, undeclared-entry-in-owner-root]
+    given: Fixture owners with the listed placement or identity condition, declared through the Step 2 seam
+      and a current-format version 1 lock, so legacy placement here is an ownership error while the released
+      0.0.1 migration-required disposition is CP01-S01/AC12 and CP01-S19/AC06. The valid cross-graph relation
+      is an Extension-owned relation whose source and target are both core records, stored in specs/extensions/<relation-owner>/edges.yml,
+      so relation ownership rather than source-endpoint ownership determines placement; extension-relation-edge-in-core-store
+      places that same tuple in specs/graph/edges.yml; foreign-relation-in-extension-edges stores a tuple of
+      another owner's relation whose source is a record of the storing Extension. Core records use specs/nodes/;
+      core lineage tuples use specs/graph/edges.yml; Extension records remain inside their declared owner root.
+      The core-to-core-edge defect uses a core lineage relation, not an Extension-owned additional relation.
+      undeclared-entry-in-owner-root adds a file and a subdirectory inside an enabled owner root that its
+      declarations do not name.
     when: Registration and shared-store validation run without installing a package.
     then: The valid cross-graph control passes through the shared validator. Every invalid placement, duplicate
-      Extension ID or foreign-owner claim fails with the paths and owners identified, without moving, deleting
-      or rewriting data.
+      Extension ID, foreign-owner claim or undeclared owner-root entry fails with the paths and owners identified
+      and leaves the active load incomplete, without moving, deleting or rewriting data.
     verify:
       automated: [edges.storage-ownership]

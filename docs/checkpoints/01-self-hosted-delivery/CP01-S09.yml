@@ -109,8 +109,8 @@ acceptance:
       A policy change alone raises no problem for the withdrawn Decision. historically-allowed reports the Decision's
       actor kind as compatible and historically-denied as incompatible, each judged by the restored configuration
       rather than current policy; historical-check-unavailable reports unavailable verification, not an unauthorised
-      Decision. Lineage derivation output is unchanged
-      by the policy condition.
+      Decision. Lineage derivation output and project_graph_revision, which equals the CP01-S05/AC14 actor-kind-denied
+      frozen digest for disallowed-current-kind, are unchanged by the policy condition.
     verify:
       automated: [validate.actor-policy]
   AC05:

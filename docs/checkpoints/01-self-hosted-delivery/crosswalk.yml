@@ -9,8 +9,10 @@
 # Stage 1 (Q01-Q20) decisions and review/check status:
 # ../../research-logs/2026-09-23-pr41-b1-loading.md
 # B1 Q01-Q04; B2 Q05-Q09,Q18; B3 Q10-Q13,Q19; B4 Q14-Q16; B5 Q17; B6 Q20.
-# Applied clauses: Core v3 / Checkpoint 1 v20. Mandatory checks and independent
-# acceptance remain pending where the batch records say so; no question is deleted.
+# Applied clauses: Core v3 / Checkpoint 1 v20. Independent review 5298715756
+# (changes required at 1bcd2ea) and correction review 5301803981 (passed at
+# 87bd3eb) closed the batch reviews. The stage-level exit review is
+# ../../research-logs/2026-09-25-cp01-stage-1-exit-review.md; no question is deleted.
 #
 # Stage 2 (Q21-Q33) is a T1 conversion drafted against Core v3. Its open
 # questions are unresolved inputs to T2 review; no specification was amended.
@@ -48,7 +50,8 @@ entries:
     covered_by: [CP01-S01/R01, CP01-S01/AC01]
   - key: S01.run.2
     text: "Implement one canonical loader for Pactwright configuration, lifecycle configuration, .pactwright/lock.yml, core Project Graph records and typed edges."
-    covered_by: [CP01-S01/R05, CP01-S01/R06, CP01-S01/AC05, CP01-S01/AC06, CP01-S01/AC07, CP01-S01/R09, CP01-S01/AC09, CP01-S01/AC10, CP01-S01/AC11]
+    covered_by: [CP01-S01/R05, CP01-S01/R06, CP01-S01/AC05, CP01-S01/AC06, CP01-S01/AC07, CP01-S01/R09, CP01-S01/AC09, CP01-S01/AC10, CP01-S01/AC11, CP01-S01/AC12, CP01-S03/AC13]
+    note: "The Core section 54 rule for entries inside an enabled owner root needs the Step 2 declaration seam, so it is proven by CP01-S03/AC13 undeclared-entry-in-owner-root rather than at Step 1."
   - key: S01.run.3
     text: "Make the runtime publishable as `pactwright` with the repository's normal build/prepack/verify discipline and a repository-local `pnpm pactwright ...` path using the same built runtime."
     covered_by: [CP01-S01/R01, CP01-S01/R02, CP01-S01/R03, CP01-S01/R04, CP01-S01/AC01, CP01-S01/AC02, CP01-S01/AC03, CP01-S01/AC04, CP01/R01, CP01/AC01]
@@ -1162,7 +1165,7 @@ open_questions:
     affects: [CP01-S01/R06, CP01-S02/AC05, CP01-S05/R02]
     question: "When an input cannot be parsed, does loading fail as a whole or return the parseable remainder with problems for validate (Step 9) and doctor (Step 18) to report? How are absent inputs and unrecognised files in graph storage treated?"
   - id: Q03
-    affects: [CP01-S01/R05, CP01-S01/R07, CP01-S01/R08]
+    affects: [CP01-S01/R05, CP01-S01/R07, CP01-S01/R08, CP01-S01/R09, CP01-S01/AC10]
     question: "Should the Step 1 loader accept configuration that declares Extensions or enables GitHub as inert data, reject it, or report it as unsupported?"
   - id: Q04
     affects: [CP01-S01/R01]
