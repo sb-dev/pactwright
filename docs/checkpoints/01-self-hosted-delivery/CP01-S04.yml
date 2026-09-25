@@ -59,11 +59,14 @@ acceptance:
       automated: [lineage.supersession]
   AC03:
     covers: [R02, R04]
-    cases: [no-decision, defer]
+    cases: [no-decision, defer, authority-frontmatter]
     given: An Intent with the listed Decision state, a separate valid contracted Intent, and non-canonical
       content recording a passed Gate and human approval of the other Intent Contract for the listed Intent.
+      authority-frontmatter has no Decision; instead the listed Intent and the other Intent's Contract carry
+      extra frontmatter fields approved_by and gate that record a human approval and a passed Gate.
     when: Contract authority is derived.
-    then: The listed Intent remains open or deferred as applicable, with no authorised Contract. The other
+    then: The listed Intent remains open or deferred as applicable, with no authorised Contract; authority-frontmatter
+      remains open. The other
       Contract is authorised only for its own Intent, whose lineage and state are unchanged.
     verify:
       automated: [authority.gate-not-decision]

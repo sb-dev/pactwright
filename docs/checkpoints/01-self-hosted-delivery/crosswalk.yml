@@ -84,7 +84,7 @@ entries:
     covered_by: [CP01-S02/R01, CP01-S02/R04, CP01-S02/AC01, CP01-S02/AC02]
   - key: S02.run.7
     text: "Enforce canonical identity, immutability and type-specific validation."
-    covered_by: [CP01-S02/R04, CP01-S02/R06, CP01-S02/R07, CP01-S02/AC01, CP01-S02/AC02, CP01-S02/AC05, CP01-S02/AC06, CP01-S02/AC07, CP01-S02/R08, CP01-S02/AC09, CP01-S02/AC10, CP01-S02/AC11]
+    covered_by: [CP01-S02/R04, CP01-S02/R06, CP01-S02/R07, CP01-S02/AC01, CP01-S02/AC02, CP01-S02/AC05, CP01-S02/AC06, CP01-S02/AC07, CP01-S02/R08, CP01-S02/AC09, CP01-S02/AC10, CP01-S02/AC11, CP01-S02/AC14]
   - key: S02.run.8
     text: "Contract alternatives remain transient."
     covered_by: [CP01-S02/R02, CP01-S02/AC03, CP01-S02/AC04, CP01-S02/AC08]
@@ -96,7 +96,7 @@ entries:
     covered_by: [CP01-S02/R01, CP01-S02/R03, CP01-S02/R04, CP01-S02/AC01, CP01-S02/AC02, CP01-S02/AC03, CP01-S02/AC04, CP01-S02/AC08]
   - key: S02.verify.1
     text: "Add positive/negative fixtures for every record type and identity mutation."
-    covered_by: [CP01-S02/R04, CP01-S02/R06, CP01-S02/R07, CP01-S02/AC01, CP01-S02/AC02, CP01-S02/AC05, CP01-S02/AC06, CP01-S02/AC07, CP01-S02/AC09, CP01-S02/AC10, CP01-S02/AC11, CP01-S02/AC13]
+    covered_by: [CP01-S02/R04, CP01-S02/R06, CP01-S02/R07, CP01-S02/AC01, CP01-S02/AC02, CP01-S02/AC05, CP01-S02/AC06, CP01-S02/AC07, CP01-S02/AC09, CP01-S02/AC10, CP01-S02/AC11, CP01-S02/AC13, CP01-S02/AC14]
     note: "Q05-Q08 are applied in Core sections 6/45 and B2: AC05 rejects identity defects, AC06 in-place rewrites, AC09 removal/rename-plus-add, AC10 tests canonical normalisation and AC11 applies the content-review rubric. Step 7 integrates the proposed-state comparison."
   - key: S03.references
     text: "Spec 01 relationships and supersession."
@@ -1365,3 +1365,21 @@ open_questions:
   - id: Q69
     affects: [CP01-S01/R05, CP01-S11/R06, CP01-S07/R06]
     question: "CP01-S11/R06 has agent-pack use write configuration \"through the Step 1 canonical loader\", but Core section 54 makes loading read-only. CP01-S07/R06 compares the exact bytes of every input plus registry and decoder identities, but no Stage 1 output provides them. Is the loader read-only, and which Stage 1 outputs expose the input inventory, bytes and identities the stale-base check needs?"
+  - id: Q70
+    affects: [CP01-S02/AC01, CP01-S02/AC06]
+    question: "Core section 6 allows extra descriptive frontmatter, includes it in canonical content and gives it no lifecycle authority. No Stage 1 case exercises it. May a record schema reject unknown frontmatter keys, and may the immutability comparison ignore them?"
+  - id: Q71
+    affects: [CP01-S02/AC02, CP01-S02/AC14]
+    question: "CP01-S02/AC02 requires a fixture for \"each structural rule\" without listing the rules, so each verifier chooses its own set. Which Core section 6 envelope and identity rules must each have their own negative case (frontmatter form, required fields, date form, identity grammar, filename, whitespace-only body)?"
+  - id: Q72
+    affects: [CP01-S02/AC05]
+    question: "CP01-S02/AC05 duplicate-identity requires an \"otherwise valid record set\", but two files cannot share an ID without one failing the filename rule. What must a duplicate identity report?"
+  - id: Q73
+    affects: [CP01-S02/AC01]
+    question: "CP01-S02/AC01 says records are \"stored and reloaded\", which implies a Step 2 writer, while Core section 55 gives canonical writes to the mutation boundary (CP01-S07) and Distribution section 15 forbids rewriting conforming files. Does Step 2 serialise records?"
+  - id: Q74
+    affects: [CP01-S02/AC07, CP01-S02/AC12, CP01-S02/AC13]
+    question: "Registration and actor-identity cases leave gaps: empty kind or key, a node projection of an unregistered type, a declaration that fails partway, an identity containing a colon or non-ASCII characters, and non-ASCII ECMAScript whitespace such as U+FEFF or U+2028. CP01-S02/AC07's \"without weakening later lineage or authority validation\" cannot be observed at Step 2. Which cases and wording are required?"
+  - id: Q75
+    affects: [CP01-S04/AC03]
+    question: "CP01-S04/AC03 places Gate and approval claims only in non-canonical content. Must it also show that extra canonical frontmatter such as an approved_by field on an Intent or Contract grants no Contract authority?"

@@ -58,10 +58,13 @@ acceptance:
   AC01:
     covers: [R01, R04, R05, R06]
     cases: [intent, decision-proceed, decision-reject, decision-defer, decision-with-rejected-options, contract,
-      brief, evidence]
+      brief, evidence, extra-descriptive-frontmatter]
     given: Valid records for the listed case, including two distinct records of one type alongside other types.
-    when: They are loaded, validated, stored and reloaded.
-    then: Each permitted record remains valid with the same distinct identity and canonical content.
+      extra-descriptive-frontmatter adds non-core frontmatter keys to an otherwise valid record.
+    when: They are parsed from their stored bytes and validated, then parsed again from the same bytes in a
+      separate process. Step 2 writes no record; canonical writes belong to CP01-S07.
+    then: Each permitted record remains valid with the same distinct identity and canonical content. Extra
+      frontmatter is accepted, kept in canonical content and grants no lifecycle authority.
     verify:
       automated: [records.valid-per-type]
   AC02:
@@ -93,16 +96,18 @@ acceptance:
   AC05:
     covers: [R06]
     cases: [missing-identity, duplicate-identity]
-    given: An otherwise valid record set containing the listed identity defect.
+    given: A record set whose only defect is the listed identity defect. duplicate-identity holds two record
+      files whose frontmatter carries the same ID, so one of them also has the filename mismatch that a duplicate
+      unavoidably causes.
     when: It is loaded and validated.
-    then: The missing or duplicate identity and the affected records/paths are identified; no successful complete
-      record set or replacement identity is produced.
+    then: The missing identity, or a duplicate-identity problem naming both paths, is identified alongside any
+      filename-mismatch problem. No successful complete record set or replacement identity is produced.
     verify:
       automated: [records.identity-defects]
   AC06:
     covers: [R07]
     cases: [type-changed, content-changed, frontmatter-value-changed, internal-body-whitespace-changed, content-array-reordered,
-      unresolved-intent-changed, unicode-normalisation-difference]
+      unresolved-intent-changed, unicode-normalisation-difference, extra-frontmatter-added, extra-frontmatter-changed]
     given: A valid stored core graph and a proposed graph with only the listed semantic rewrite under an existing
       ID.
     when: The immutable-record comparison is run.
@@ -114,7 +119,7 @@ acceptance:
     given: A valid stored graph and a proposed graph that preserves every stored record and adds valid distinct
       records.
     when: The immutable-record comparison is run.
-    then: The additive proposal passes the comparison without weakening later lineage or authority validation.
+    then: The additive proposal passes the comparison and no stored record is reported as changed.
     verify:
       automated: [records.additive-change]
   AC08:
@@ -161,10 +166,12 @@ acceptance:
     covers: [R01, R04, R09]
     cases: [valid-additional-node-type, valid-non-node-record, duplicate-node-type, replace-core-type, duplicate-canonical-key,
       malformed-owner-field, endpoint-id-collides-with-core-id, endpoint-id-collides-across-owners, relation-registered-by-two-owners,
-      reserved-core-owner, extension-value-outside-json-domain, registry-identity]
+      reserved-core-owner, extension-value-outside-json-domain, registry-identity, empty-kind, empty-key, projection-of-unregistered-type,
+      declaration-fails-partway]
     given: A valid existing registry and a fixture declaration or record with the listed condition. Collision
       cases retain both claimants; the value-domain case independently exercises an unsafe integer and a lone
-      surrogate from an owner decoder.
+      surrogate from an owner decoder. declaration-fails-partway declares several valid items followed by one
+      invalid item.
     when: The record-model seam registers and validates it.
     then: Valid additional nodes and non-node records pass owner validation while the core set stays at five;
       the non-node control has its own key/value without the core envelope. Collisions and duplicate/replacement
@@ -176,11 +183,25 @@ acceptance:
       automated: [records.extension-registration]
   AC13:
     covers: [R04, R05]
-    cases: [human-identity, agent-identity, automation-identity, kind-only, empty-identity, whitespace-identity,
-      unknown-kind]
-    given: A Decision otherwise valid except for the listed actor representation.
+    cases: [human-identity, agent-identity, automation-identity, colon-in-identity, non-ascii-identity, kind-only,
+      empty-identity, whitespace-identity, byte-order-mark-in-identity, line-separator-in-identity, unknown-kind]
+    given: A Decision otherwise valid except for the listed actor representation. colon-in-identity is `human:team:alice`;
+      the byte-order-mark and line-separator cases contain U+FEFF and U+2028.
     when: Its structural fields are validated.
-    then: Human, agent and automation with non-empty identities pass. Kind-only, empty, whitespace-containing
-      and unknown-kind representations fail; the parser makes no authentication claim.
+    then: Human, agent and automation with non-empty identities pass, as do an identity containing a colon
+      (the kind ends at the first colon) and a non-ASCII identity. Kind-only, empty, whitespace-containing,
+      U+FEFF, U+2028 and unknown-kind representations fail; the parser makes no authentication claim.
     verify:
       automated: [records.actor-identity]
+  AC14:
+    covers: [R04, R06]
+    cases: [missing-frontmatter, non-mapping-frontmatter, unterminated-frontmatter, missing-id, missing-type, missing-title,
+      blank-title, missing-created, invalid-calendar-date, non-iso-date-form, type-prefix-mismatch, uppercase-slug,
+      short-suffix, non-hex-suffix, filename-mismatch, whitespace-only-body]
+    given: An otherwise valid core record whose only defect is the listed CORE#6 envelope or identity rule;
+      non-iso-date-form is an unquoted YAML timestamp with a time part, and short-suffix has three hex digits.
+    when: The record is loaded and validated.
+    then: Each case fails with a problem naming its rule and the record path; none is reported only as a generic
+      invalid record, and none is repaired.
+    verify:
+      automated: [records.envelope-rules]
