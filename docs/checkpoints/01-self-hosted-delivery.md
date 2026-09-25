@@ -255,6 +255,7 @@ Step 11 repeats the incomplete-pack proof through `agent-pack use`. Step 22 pack
 
 - `agent-pack-use` — A pactwright agent-pack use <source> that explicitly selects one compatible complete Agent Pack from a package name, optionally versioned, or a pack path, obtains a package it needs through the project package manager, and updates configuration and lock only after successful resolution and validation.
 - `agent-pack-upgrade` — A pactwright agent-pack upgrade that upgrades the selected pack within its configured compatibility constraints through the project package manager without changing its identity.
+- `package-manager-delegation` — The runtime's single package-manager delegation seam, detecting the project package manager under the DISTRIBUTION#15 rule and issuing its install, request-at-constraint, exact-restore, removal and isolated-acquisition requests, reused by later steps that need packages.
 
 Step 15 repeats the configuration proof with the real resolved lock and Step 17 the sync, Step 14 reuses this selection path for one-shot init, and Step 23 runs `agent-pack use` against installed packed artefacts; real package replacement by `agent-pack upgrade` is proven at Checkpoint 2's component-upgrade step.
 

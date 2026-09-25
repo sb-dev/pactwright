@@ -30,6 +30,7 @@ Non-blocking findings, applied:
 | X9 | S11/R02, AC05 and Distribution §15: restoration is to the previous installed version and constraint, or removal of a dependency `use` added, not byte identity of the package manifest. |
 | X10 | S12/R12 states the hand-off semantics of the direction-less `/capture-intent` and the mutation-less `/propose-contracts`. |
 | X11 | Distribution §5: a pack declaring any `production_skills` entry is not accepted by that release, matching S10/AC05 and constraining Q46. |
+| X12 | Checkpoint 1 Step 11 deliverable summary lists `package-manager-delegation` with the contract's wording (owner review 5323346597). |
 
 Later-stage follow-ups, owned and non-blocking for Stage 3:
 
@@ -41,11 +42,11 @@ Later-stage follow-ups, owned and non-blocking for Stage 3:
 
 ## Stage-level result (§7)
 
-Checks at `3bad48a` confirmed by the reviewers and unchanged by the corrections: every S10–S13 requirement has an exercising criterion; verifier bindings across CP01 are unique; `requires` are feasible in step order (Step 11 precedes Steps 12, 15 and 17; Step 13 precedes Step 28); the Stage 3 deliverable summaries equal the contract `outputs`; no requirement, criterion, `covers`, `source` or `verify` entry from `6b9ee65` was removed without explanation; Q34–Q40 each have a supported disposition; the Stage 1–2 clauses S06/R04, R09, R11, S07/R01, R09, S08/R03, S09/R09, R10 and the Stage 4–5 clauses S14/R04, S15/R01, R05–R07, AC07, S16/R03, R12, S17/AC06, S19/R02 are consistent; Steps 22–28 and Checkpoint 2 lines 106 and 449 remain valid under the source grammar and delegation; Distribution §§7, 12 keys agree with the family-ID mapping.
+Checks at `3bad48a` confirmed by the reviewers and unchanged by the corrections: every S10–S13 requirement has an exercising criterion; verifier bindings across CP01 are unique; `requires` are feasible in step order (Step 11 precedes Steps 12, 15 and 17; Step 13 precedes Step 28); the Stage 3 deliverable summaries equal the contract `outputs` (re-checked after X8 added the `package-manager-delegation` output, whose Step 11 summary owner review 5323346597 found missing and this pass added, X12); no requirement, criterion, `covers`, `source` or `verify` entry from `6b9ee65` was removed without explanation; Q34–Q40 each have a supported disposition; the Stage 1–2 clauses S06/R04, R09, R11, S07/R01, R09, S08/R03, S09/R09, R10 and the Stage 4–5 clauses S14/R04, S15/R01, R05–R07, AC07, S16/R03, R12, S17/AC06, S19/R02 are consistent; Steps 22–28 and Checkpoint 2 lines 106 and 449 remain valid under the source grammar and delegation; Distribution §§7, 12 keys agree with the family-ID mapping.
 
 With X1–X11 applied, the corrected tree is consistent with Core v6 and Distribution v4, and no unresolved behaviour needed by Stage 3 steps remains. The corrections were authored by the record's author and so require fresh independent review (methodology §6); the verdict below records that review's result. This is scoped T2 work; it authorises no implementation, harness construction or acceptance.
 
-**Verdict:** pending fresh review of X1–X11.
+**Verdict:** pending fresh review of X1–X12.
 
 ## Verification
 
