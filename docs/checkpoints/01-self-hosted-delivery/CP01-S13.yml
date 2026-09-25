@@ -11,15 +11,21 @@ outputs:
     and reports regressions by capability, agent, case and changed environment component.
 requirements:
   R01:
-    source: [DISTRIBUTION#21, DISTRIBUTION#23]
+    source: [CHECKPOINT#4, DISTRIBUTION#21, DISTRIBUTION#23]
     statement: Pactwright eval shall run core responsibility cases for Contract fidelity, scope discipline, Brief
       quality, Review quality and defect detection, Evidence accuracy and lifecycle compliance, plus required
       output structure and forbidden mutation, against the resolved environment and independently of a real
-      Delivery.
+      Delivery, invoking each case's capability through the Step 8 capability-invocation seam with the invoker
+      supplied to the runner. Without an invoker, every result that depends on the candidate's behaviour is
+      reported as not evaluated and nothing is replayed as the pack's result. Checkpoint 1 supplies no provider
+      invoker, so the command-line eval reports its cases as not evaluated, while the repository tests exercise
+      every case through scripted invokers.
   R02:
-    source: [DISTRIBUTION#23, DISTRIBUTION#26]
+    source: [DISTRIBUTION#23, DISTRIBUTION#24, DISTRIBUTION#26]
     statement: Core cases shall be owned and versioned by the core runtime. Evaluation results are generated artefacts,
-      not Project Graph records; eval writes no canonical state, configuration or lock.
+      not Project Graph records; eval writes no canonical state, configuration or lock, and writes a report
+      only to standard output or an explicitly named path, never below .pactwright/, a canonical store or generated
+      adapter output.
   R03:
     source: [DISTRIBUTION#23]
     statement: Evidence accuracy cases shall compare the claimed delivered work and verification with the actual
@@ -29,27 +35,41 @@ requirements:
     statement: Lifecycle compliance cases shall cover authority, Gate stopping, valid transitions and successful
       closing Review before Evidence.
   R05:
-    source: [DISTRIBUTION#23, PRINCIPLES#17]
-    statement: Deterministic assertions and semantic judgement shall be evaluated and reported separately; deterministic
-      validation is used wherever it can decide the result.
+    source: [DISTRIBUTION#21, DISTRIBUTION#23, PRINCIPLES#17]
+    statement: Deterministic assertions and semantic judgement shall be evaluated and reported separately. Semantic
+      dimensions are judged only through the judge seam with the judge supplied to the runner and are reported
+      unjudged otherwise; the report names the invoker and judge identities used, or their absence. Deterministic
+      validation decides wherever it can, and the exit status is failure when any evaluated deterministic
+      assertion fails or any case was not evaluated, and is never affected by semantic results.
   R06:
     source: [DISTRIBUTION#12, DISTRIBUTION#24]
     statement: Eval --baseline <released-pack-or-baseline> --candidate <candidate-pack-or-environment> shall
-      resolve each side to exact identities, including pack version and content hash and agent, prompt and
-      direct-skill identities. An input that cannot be resolved exactly fails explicitly without substituting
-      another version.
+      accept for each side a pack as <package-name>@<exact-version> or a pack directory path, and for the candidate
+      also a project root whose resolved lock supplies the environment, and resolve each side to exact identities,
+      the pack source, version and content hash and every agent, prompt and direct-skill hash, through the
+      Step 11 resolution path, acquiring a package version that is not installed through the Step 11 package-manager
+      delegation seam into an isolated location. An input that cannot be resolved exactly fails explicitly,
+      naming the input, without substituting another version. Both sides are evaluated by this runtime's case
+      set with the same invoker and judge.
   R07:
     source: [DISTRIBUTION#24, PRINCIPLES#17]
-    statement: The comparison shall report regressions by capability, agent, evaluation case and changed pack,
-      prompt or direct-skill component. No single opaque aggregate score decides the result.
+    statement: The comparison shall report as a regression each deterministic assertion that passed on the baseline
+      and fails on the candidate, at its capability, agent and evaluation case, together with the pack, prompt
+      and direct-skill components whose identities changed between the sides. An assertion not evaluated on
+      either side is reported as not comparable, an assertion that failed on the baseline and passes on the
+      candidate as an improvement, and a semantic verdict that differs between the sides as a difference for
+      review, never as a regression. Changed components are reported even when no case was evaluated. No single
+      opaque aggregate score decides the result.
 acceptance:
   AC01:
     covers: [R01, R02]
-    given: A project with a complete fixture pack whose agents return scripted outputs, selected and resolved.
+    given: A project with a complete fixture pack selected and resolved, and a scripted invoker supplied through
+      the Step 8 seam that returns compliant outputs for the pack's agents.
     when: Pactwright eval runs the core cases.
     then: Every core case reports a result under its dimension, naming capability, agent and case, and all eight
-      dimensions have at least one case. Canonical files, configuration and lock are byte-identical, and results
-      exist only as generated artefacts outside the Project Graph.
+      dimensions have at least one case. The report names the invoker. Canonical files, configuration and
+      lock are byte-identical, nothing is written below .pactwright/, and results exist only on standard output
+      or at the named path.
     verify:
       automated: [eval.core-run]
   AC02:
@@ -82,41 +102,54 @@ acceptance:
     verify:
       automated: [eval.structure-and-mutation]
   AC05:
-    covers: [R05]
-    given: A case with both a deterministic assertion and a semantic assertion, run once with the deterministic
-      assertion failing and once with the semantic judgement failing.
+    covers: [R01, R05]
+    cases: [deterministic-failing, semantic-failing, no-judge, no-invoker]
+    given: A case with both a deterministic assertion and a semantic dimension, a scripted invoker and, except
+      in no-judge, a scripted judge; deterministic-failing scripts the assertion to fail, semantic-failing
+      scripts the judge to fail the dimension, and no-invoker runs the command-line eval with no invoker.
     when: Eval runs.
-    then: Each result is labelled deterministic or semantic and reported separately. One kind failing leaves
-      the other's result unchanged.
+    then: Each result is labelled deterministic or semantic and reported separately, and one kind failing leaves
+      the other's result unchanged. no-judge reports the dimension unjudged, names no judge and exits as the
+      deterministic result alone decides. no-invoker reports every candidate-dependent result as not evaluated,
+      replays nothing, names no invoker and exits with failure.
     verify:
       automated: [eval.assertion-kinds]
   AC06:
     covers: [R06]
-    cases: [pinned-package-baseline, environment-candidate, unresolvable-baseline, unresolvable-candidate]
-    given: A packed fixture pack at 1.0.0 as baseline and a compatible 1.1.0 or a resolved environment as candidate;
-      the unresolvable cases name a version or environment that does not exist, while other versions do.
+    cases: [pinned-package-baseline, pack-path-baseline, environment-candidate, uninstalled-version-acquired,
+      unresolvable-baseline, unresolvable-candidate]
+    given: 'A packed fixture pack at 1.0.0 as baseline, by package name and exact version or by directory path
+      as listed, and a compatible 1.1.0 or a project root with a resolved lock as candidate; uninstalled-version-acquired
+      names a baseline version that is not installed and that the delegation seam can supply; the unresolvable
+      cases name a version or project that does not exist, while other versions do.'
     when: Eval --baseline --candidate runs.
     then: Resolvable comparisons record both sides' exact version, content hash and agent, prompt and direct-skill
-      identities. The unresolvable cases fail explicitly, naming the input; no other version is used and no
-      comparison is reported.
+      identities. uninstalled-version-acquired obtains the version through exactly one delegation request into
+      an isolated location, leaving the project's installed packages, manifest and locks byte-identical. The
+      unresolvable cases fail explicitly, naming the input; no other version is used and no comparison is reported.
     verify:
       automated: [eval.baseline-resolution]
   AC07:
     covers: [R07]
-    cases: [evidence-accuracy-regression, lifecycle-compliance-regression, unchanged-candidate]
-    given: A baseline and a compatible candidate that differ only by a known regression in one agent's prompt
-      affecting the listed dimension, or not at all for unchanged-candidate.
+    cases: [evidence-accuracy-regression, lifecycle-compliance-regression, improvement, semantic-difference, unchanged-candidate,
+      not-comparable-without-invoker]
+    given: 'A baseline and a compatible candidate that differ only by a known change in one agent''s prompt: a
+      regression in the listed dimension, an improvement, or a scripted judge verdict that differs; unchanged-candidate
+      differs in nothing; not-comparable-without-invoker compares two packs with no invoker.'
     when: Eval --baseline --candidate runs.
     then: Each regression is reported at its affected capability, agent, case and changed prompt, and unaffected
-      cases report no regression. The unchanged candidate reports no regressions. No aggregate score is reported
-      as the result.
+      cases report no regression. improvement is reported as an improvement and semantic-difference as a difference
+      for review, neither as a regression. The unchanged candidate reports no regressions and no changed component.
+      not-comparable-without-invoker reports every candidate-dependent assertion as not comparable and still
+      lists the changed prompt. No aggregate score is reported as the result.
     verify:
       automated: [eval.regression-dimensions]
   AC08:
-    covers: [R02, R07]
+    covers: [R02, R05, R07]
     given: The candidate eval code, core cases and a comparison report.
     when: Independent review inspects case ownership, result storage and the report format.
-    then: Core cases are versioned with the runtime and results stay generated artefacts. The report makes each
-      regression reviewable by dimension without relying on an aggregate score.
+    then: Core cases are versioned with the runtime and results stay generated artefacts written only where
+      requested. The report names the runtime, case-set version, exact pack identities, invoker and judge,
+      and makes each regression reviewable by dimension without relying on an aggregate score.
     verify:
       review: [eval.report-review]

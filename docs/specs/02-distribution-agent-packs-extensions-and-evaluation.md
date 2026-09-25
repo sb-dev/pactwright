@@ -219,6 +219,10 @@ capabilities:
 
 Agent identity is not capability identity.
 
+## Recognised Agent Pack manifest
+
+The current pack manifest is `pack.yml` at the pack root, in the released `0.0.1` shape: `name`, the npm package name that is the pack's source identity; `version`, an exact `x.y.z`; `pactwright`, the compatible runtime as an exact version or a `^x.y.z` caret range; `capabilities`, capability → agent key, each value naming an entry of `agents`; and `agents`, agent key → `prompt`, a relative file inside the pack, and optional `skills`, direct skill names each resolving to `skills/<name>.md` inside the pack. Every prompt and skill file must exist and be non-empty. A pack distributed as a package exposes `pack.yml` and `package.json` through its `exports`, and its manifest `name` and `version` equal the package's; a path-sourced pack has no package to agree with. An optional `production_skills` mapping, keyed by Production Skills family ID with at least a `source` string per entry, declares external Production Skills imports; it is a compatible addition within this shape, and until external Production Skills resolution is implemented the runtime reports each entry as unsupported by that release, resolving or dropping none. Unknown keys are rejected with path and cause, as for the other Pactwright documents. The manifest declares no evaluation cases and no adapter content; those remain later compatible additions. A later incompatible manifest change needs an explicit format version and migration, not silent reinterpretation.
+
 A project selects **one Agent Pack**.
 
 Agent Pack composition is not required because one Agent Pack may already compose multiple Production Skills families.
@@ -228,6 +232,8 @@ The supported selection interface is:
 ```text
 pactwright agent-pack use <source>
 ```
+
+`<source>` is either a package name, optionally followed by `@` and an exact version or `^x.y.z` caret range that becomes the configured version constraint (without one, the caret range of the resolved exact version is recorded), or a relative (`./`, `../`) or absolute filesystem path to a pack directory, recorded as the source with no version constraint. A package source resolves from the project's installed packages, then from the runtime's own dependencies, which is how `@pactwright/standard` is found after the runtime is installed; when no installed package satisfies the request, the detected project package manager (section 15) installs it as a development dependency before resolution. Pactwright never copies, fetches or unpacks packages itself.
 
 The operation must:
 
@@ -868,6 +874,8 @@ It must validate the complete required capability set before changing the curren
 
 `pactwright agent-pack use <source>` remains the explicit operation for changing Agent Pack identity.
 
+Both commands obtain packages only through the detected project package manager, under the detection rule above: `use` installs a package source that is not already installed at a satisfying version, and `upgrade` requests the configured source at its configured constraint, so the package manager resolves the newest satisfying version and reconciles the package manifest to that constraint. Path sources involve no package manager. Validation of the installed candidate precedes any change to `.pactwright/lock.yml` or generated output. A candidate that fails validation is not locked, and the package-manager manifest and lock are restored to their previous state; when restoration itself fails, the report names the previous exact version to restore. With an exact configured version, or when no newer version satisfies the constraint, `upgrade` reports that nothing changed.
+
 ## Extension upgrade
 
 `pactwright extension upgrade <id>` must:
@@ -1053,6 +1061,8 @@ Production Skills
 
 Core evaluation should cover Contract fidelity, scope discipline, Brief quality, Review quality, Evidence accuracy and lifecycle compliance.
 
+Evaluation invokes each case's capability through the runtime's single capability-invocation seam, the one `pactwright lifecycle run` dispatches through, and judges semantic dimensions through a judge seam. Neither seam is a provider: an invoker and a judge are supplied to the runner, and a report names the invoker and judge identities it used. Without an invoker, every result that depends on the candidate's behaviour is reported as not evaluated, never replayed from a scripted stand-in as the pack's result; without a judge, semantic dimensions are reported unjudged. Deterministic assertions alone decide the exit status, which is failure when any evaluated assertion fails or any case was not evaluated; unjudged and not-evaluated results are neither pass nor fail.
+
 Extension evaluations cover the responsibilities owned by each Extension.
 
 Production-domain quality remains owned by Production Skills benchmarks.
@@ -1135,6 +1145,8 @@ model adaptation
 Do not rely on one opaque aggregate score to decide whether a candidate is better.
 
 A regression report must make the affected capability/case visible so a release decision is reviewable.
+
+`--baseline` and `--candidate` each accept a pack as `<package-name>@<exact-version>` or a filesystem path to a pack directory; `--candidate` also accepts a project root, whose resolved lock supplies the candidate environment. Each side resolves to exact identities, the pack source, version and content hash and every agent, prompt and direct-skill hash, through the same resolution as selection, acquiring a package version that is not installed through the project's package manager into an isolated location; an input that cannot be resolved exactly fails the comparison, naming the input, without substituting another version. Both sides are evaluated by the running runtime's case set with the same invoker and judge. A regression is a deterministic assertion that passed on the baseline and fails on the candidate, reported at its capability, agent and case together with the pack, prompt and direct-skill components whose identities changed between the sides. An assertion not evaluated on either side is reported as not comparable, not as a regression, and a semantic verdict that differs between the sides is reported as a difference for review, never as a regression, since judgement varies between runs. Changed components are reported even when no case was evaluated. Reports are written to standard output or an explicitly named path, never below `.pactwright/`, a canonical store or generated adapter output; whether a project commits a report is its own choice, outside Pactwright semantics.
 
 ---
 
@@ -1318,4 +1330,4 @@ Production-specific semantics remain in independent Production Skills repositori
 
 ---
 
-**Pactwright Distribution, Agent Packs, Extensions and Evaluation v3**
+**Pactwright Distribution, Agent Packs, Extensions and Evaluation v4**

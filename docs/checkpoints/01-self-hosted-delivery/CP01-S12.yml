@@ -7,6 +7,9 @@ outputs:
   adapter-commands: The seven commands /capture-intent, /propose-contracts, /approve-contract, /write-brief,
     /deliver-brief, /review and /prepare-evidence, each invoking runtime responsibilities and the selected
     pack's capabilities within runtime-enforced mutation boundaries.
+  runtime-hand-off: The Pactwright-owned hand-off commands under pactwright lifecycle through which a rendered
+    command dispatches a responsibility and hands its structured result to the runtime, recording dispatch
+    and completion of Delivery and Review steps in execution state.
 requirements:
   R01:
     source: [CORE#46, DISTRIBUTION#14]
@@ -17,37 +20,42 @@ requirements:
     statement: Rendering from identical locked inputs shall produce byte-identical output. It writes only files
       or managed regions Pactwright owns and leaves user-authored files untouched.
   R03:
-    source: [CORE#47, CORE#55]
-    statement: /capture-intent shall create one Intent through the runtime mutation API.
+    source: [CORE#35, CORE#46, CORE#47, CORE#55]
+    statement: /capture-intent shall invoke delivery-specification to shape the requested outcome and create
+      one Intent through the runtime mutation API.
   R04:
-    source: [CORE#8, CORE#48]
-    statement: /propose-contracts shall be graph-read-only. Its alternatives remain transient and are never
-      written as records.
+    source: [CORE#8, CORE#35, CORE#46, CORE#48]
+    statement: /propose-contracts shall invoke delivery-specification and be graph-read-only. Its alternatives
+      remain transient and are never written as records.
   R05:
-    source: [CORE#9, CORE#27, CORE#49, CORE#55]
-    statement: /approve-contract shall apply normal Decision authority through the Step 7 mutation API. For
-      proceed it creates the Decision, the selected Contract and their resolves and selects edges; reject,
-      defer, withdrawal and re-authorisation follow Step 7. The actor on whose behalf the adapter acts is recorded
-      unchanged as attribution, and its kind is checked against lifecycle policy.
+    source: [CORE#9, CORE#27, CORE#35, CORE#46, CORE#49, CORE#55]
+    statement: /approve-contract shall invoke delivery-specification to produce the canonical Contract from
+      the selected alternative and apply normal Decision authority through the Step 7 mutation API. For proceed
+      it creates the Decision, the selected Contract and their resolves and selects edges; reject, defer, withdrawal
+      and re-authorisation follow Step 7. The actor on whose behalf the adapter acts is recorded unchanged as
+      attribution, and its kind is checked against lifecycle policy.
   R06:
-    source: [CORE#50]
-    statement: /write-brief shall inspect current state, resolve delivery context and create the Brief with
-      its decomposes edge under the current canonical Contract.
+    source: [CORE#35, CORE#46, CORE#50]
+    statement: /write-brief shall invoke delivery-specification to inspect current state, resolve delivery
+      context and create the Brief with its decomposes edge under the current canonical Contract.
   R07:
-    source: [CORE#39, CORE#51]
+    source: [CORE#28, CORE#39, CORE#46, CORE#51, CORE#55]
     statement: /deliver-brief shall read execution state, determine the active Delivery step and invoke delivery-execution
-      with Contract, Brief and project context from the Step 9 context-assembly API. It shall not mutate the
-      Delivery Graph or choose the next transition.
+      with Contract, Brief and project context from the Step 9 context-assembly API, then hand its structured
+      execution result to the runtime, which records the Delivery step's completion, incrementing the delivery
+      sequence, in the Step 6 execution state. It shall not mutate the Delivery Graph or choose the next transition.
   R08:
-    source: [CORE#39, CORE#52]
+    source: [CORE#32, CORE#39, CORE#46, CORE#52, CORE#55]
     statement: /review shall evaluate the latest delivered state through delivery-review, with context from
-      the Step 9 context-assembly API, and report whether progression may continue or correction is required.
-      It shall not create Evidence or invent transitions; the runtime validates and applies the next permitted
-      transition.
+      the Step 9 context-assembly API, and hand the runtime's structured Review result, the delivered state
+      evaluated and one of may-progress, correction-required naming a Delivery step or blocked, to the runtime,
+      which records it under CP01-S06/R09 and validates and applies the next permitted transition. Output that
+      does not map to that form is an execution failure, never a transition; after blocked the Review step
+      stays current. It shall not create Evidence or invent transitions.
   R09:
-    source: [CORE#53]
-    statement: /prepare-evidence shall invoke every Step 7 closure precondition before creating Evidence and
-      its evidences edge.
+    source: [CORE#35, CORE#46, CORE#53]
+    statement: /prepare-evidence shall invoke delivery-execution to state the delivered work and verification
+      facts and shall invoke every Step 7 closure precondition before creating Evidence and its evidences edge.
   R10:
     source: [CORE#46, CORE#58, DISTRIBUTION#14, PRINCIPLES#11]
     statement: The command decomposition shall not define lifecycle topology. Rendered prompts shall not duplicate
@@ -56,6 +64,24 @@ requirements:
     source: [CORE#55, CORE#58]
     statement: Every canonical write by a command shall go through the Step 7 mutation API with its guards. No
       public API or adapter path may bypass them.
+  R12:
+    source: [CORE#46, CORE#55, DISTRIBUTION#14, PRINCIPLES#11]
+    statement: 'A rendered command shall reach the runtime only through the CORE#46 hand-off commands under pactwright
+      lifecycle that the adapter renders: a dispatch command that verifies the responsibility is the permitted
+      next action for the direction, records the dispatch of a Delivery or Review step with the current project_graph_revision
+      in the Brief''s execution state through the Step 6 boundary, and returns the Step 9 context; and a result
+      command that hands the responsibility''s structured result to the runtime. Every capability invocation
+      goes through the Step 8 capability-invocation seam and resolves the agent through the selected pack''s
+      mapping. The hand-off commands are adapter protocol, not a public contract; rendered prompts perform none
+      of their work and never write canonical or execution-state files.'
+  R13:
+    source: [CORE#51, CORE#53, CORE#55]
+    statement: A Delivery or Review result shall be accepted only against the canonical state recorded at its
+      dispatch. When the project_graph_revision differs at the result command, or canonical loading is then
+      incomplete, the result is refused as an execution failure reporting that canonical state changed since
+      dispatch; execution state does not advance, the step stays current for a fresh dispatch, and the change
+      is reported and not reverted. A result with no recorded dispatch is refused, and a fresh dispatch replaces
+      an earlier dispatch's recorded base.
 acceptance:
   AC01:
     covers: [R01, R02]
@@ -67,27 +93,33 @@ acceptance:
     verify:
       automated: [adapter.render-deterministic]
   AC02:
-    covers: [R03, R04, R05, R06, R07, R08, R09]
+    covers: [R03, R04, R05, R06, R07, R08, R09, R12]
     cases: [capture-intent, propose-contracts, approve-contract, write-brief, deliver-brief, review, prepare-evidence]
     given: A complete valid project at the lifecycle position the listed command needs, with an instrumented
-      capability invoker that records every call and returns scripted output.
-    when: The listed command runs.
-    then: 'The canonical change is exactly the command''s permitted mutation: one Intent; none; Decision, Contract
-      and their edges; Brief and its decomposes edge; none; none; Evidence and its evidences edge. Any capability
-      invoked is resolved through the selected pack''s mapping, and the resulting graph validates.'
+      capability invoker on the Step 8 seam that records every call and returns scripted output.
+    when: The listed command runs through the hand-off commands.
+    then: 'The invoked capability is exactly the command''s: delivery-specification for capture-intent, propose-contracts,
+      approve-contract and write-brief; delivery-execution for deliver-brief and prepare-evidence; delivery-review
+      for review, resolved to the agent the selected pack maps. The canonical change is exactly the command''s
+      permitted mutation: one Intent; none; Decision, Contract and their edges; Brief and its decomposes edge;
+      none; none; Evidence and its evidences edge. deliver-brief and review change execution state only through
+      the result command, and the resulting graph validates.'
     verify:
       automated: [adapter.permitted-mutations]
   AC03:
-    covers: [R04, R07, R08, R09, R10]
+    covers: [R04, R07, R08, R09, R10, R13]
     cases: [propose-writes-alternative, deliver-writes-graph, deliver-chooses-transition, review-requests-evidence,
-      review-invents-transition, premature-prepare-evidence]
+      review-invents-transition, unmapped-review-output, premature-prepare-evidence]
     given: 'A valid project and scripted capability output attempting the listed forbidden action: writing an
-      alternative or graph file, naming a next transition, requesting Evidence or naming an undeclared route.
-      premature-prepare-evidence runs before a successful closing Review.'
+      alternative or graph file, naming a next transition, requesting Evidence, naming an undeclared route or
+      returning Review output that maps to no declared result. premature-prepare-evidence runs before a successful
+      closing Review.'
     when: The command runs.
     then: No canonical record or edge is committed and no alternative becomes a record. Execution state advances
-      only along declared transitions. A direct write to canonical storage is reported and does not advance
-      execution state. Premature prepare-evidence is refused, naming the failed precondition.
+      only along declared transitions. deliver-writes-graph is refused at the result command because canonical
+      state changed since dispatch, the written file is reported and left in place, and execution state does
+      not advance. unmapped-review-output is an execution failure with the Review step still current. Premature
+      prepare-evidence is refused, naming the failed precondition.
     verify:
       automated: [adapter.forbidden-mutations]
   AC04:
@@ -123,30 +155,33 @@ acceptance:
     verify:
       automated: [adapter.approve-contract-lineage]
   AC07:
-    covers: [R03, R04, R05, R06, R07, R08, R09]
+    covers: [R03, R04, R05, R06, R07, R08, R09, R12]
     given: An empty valid project with an allowed actor and fixture capabilities returning scripted output.
     when: /capture-intent, /propose-contracts, /approve-contract (proceed), /write-brief, /deliver-brief, /review
-      and /prepare-evidence run in order.
-    then: The graph validates and the lineage derives done. Only the selected Contract exists, and the Evidence
-      evidences the current Brief.
+      and /prepare-evidence run in order through the hand-off commands.
+    then: The graph validates and the lineage derives done. Only the selected Contract exists, the Evidence
+      evidences the current Brief, and the Brief's execution state records one completed Delivery step and
+      a closing Review of that delivery sequence with outcome may-progress.
     verify:
       automated: [adapter.valid-lineage]
   AC08:
-    covers: [R07, R08]
+    covers: [R07, R08, R12]
     cases: [deliver-brief, review]
     given: A delivering lineage whose project also holds a superseded Brief, rejected alternatives and an execution
       transcript.
     when: The listed command invokes its capability.
-    then: The context passed to the capability equals the Step 9 context assembly for the current Brief and
-      excludes the superseded Brief, alternatives and transcript.
+    then: The context the dispatch command returns and the context passed to the capability both equal the
+      Step 9 context assembly for the current Brief and exclude the superseded Brief, alternatives and transcript.
     verify:
       automated: [adapter.context-assembly]
   AC09:
-    covers: [R10, R11]
+    covers: [R10, R11, R12]
     given: The candidate adapter code and rendered agents and commands.
-    when: Independent review traces each command from prompt to runtime call to write.
+    when: Independent review traces each command from prompt to hand-off command to runtime call to write.
     then: Prompts contain no transition or authority rules the runtime owns, and the command set is not treated
-      as lifecycle topology. Every canonical write passes through the Step 7 mutation API; no bypass exists.
+      as lifecycle topology. Each rendered command reaches the runtime only through the hand-off commands, performs
+      none of their work itself and writes no canonical or execution-state file. Every canonical write passes
+      through the Step 7 mutation API; no bypass exists.
     verify:
       review: [adapter.semantic-boundary]
   AC10:
@@ -164,3 +199,23 @@ acceptance:
       evidences edge atomically, and the lineage derives done.
     verify:
       automated: [adapter.prepare-evidence-guards]
+  AC11:
+    covers: [R07, R08, R12, R13]
+    cases: [delivery-completion, review-may-progress, review-correction-required, review-blocked, canonical-change-by-other,
+      result-without-dispatch, redispatch-after-abandoned-dispatch]
+    given: 'A delivering lineage at the position the listed case needs, with scripted results: review-correction-required
+      uses a Step 6 fixture shape declaring a corrective route to its Delivery step and names that step; canonical-change-by-other
+      creates a valid Intent of another direction through the runtime API between the dispatch and the result
+      of /deliver-brief; result-without-dispatch hands a Delivery result with no recorded dispatch; redispatch-after-abandoned-dispatch
+      dispatches /deliver-brief twice with no result in between.'
+    when: The listed command runs through the hand-off commands.
+    then: delivery-completion increments the Brief's delivery sequence by exactly one. review-may-progress records
+      the sequence evaluated and may-progress and the runtime advances to the closure step; review-correction-required
+      records it and returns execution state to the named Delivery step; review-blocked records blocked and
+      the Review step stays current. canonical-change-by-other refuses the result reporting that canonical
+      state changed since dispatch, leaves the Delivery step current and the other direction's Intent in place.
+      result-without-dispatch is refused. redispatch-after-abandoned-dispatch records the second dispatch's
+      base and its result completes the step. No canonical record changes in any case, and every execution-state
+      write goes through the Step 6 boundary.
+    verify:
+      automated: [adapter.execution-state-hand-off]

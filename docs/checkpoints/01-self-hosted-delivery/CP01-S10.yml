@@ -26,7 +26,9 @@ requirements:
   R04:
     source: [DISTRIBUTION#5, OSS#6]
     statement: '@pactwright/standard shall be a separate publishable package under packages/standard/, versioned
-      independently of the runtime, that maps each core capability to its own agents, prompts and direct skills.'
+      independently of the runtime, that maps each core capability to its own agents, prompts and direct skills.
+      Its manifest name and version equal its package name and version, and its package exports expose pack.yml
+      and package.json.'
   R05:
     source: [CORE#39, CORE#54, CORE#58, DISTRIBUTION#5, DISTRIBUTION#18]
     statement: Pack content shall not own graph or lifecycle semantics. It declares no record types, relations,
@@ -39,12 +41,23 @@ requirements:
       and resolved by the same rules, and the runtime has no behaviour keyed on @pactwright/standard or its agent
       names.
   R07:
-    source: [CHECKPOINT#4, DISTRIBUTION#12]
-    statement: A pack that declares external Production Skills imports shall be reported as unsupported by this
-      release, naming each import. The runtime neither resolves nor silently drops the imports.
+    source: [CHECKPOINT#4, DISTRIBUTION#5, DISTRIBUTION#12]
+    statement: A pack that declares external Production Skills imports through the recognised manifest's production_skills
+      mapping shall be reported as unsupported by this release, naming each entry's family ID and source. The
+      key is recognised, not reported as unknown, and the runtime neither resolves nor silently drops the imports.
+  R08:
+    source: [CORE#54, DISTRIBUTION#5, DISTRIBUTION#12]
+    statement: 'Pack loading shall read the recognised manifest, pack.yml at the pack root with name, version,
+      pactwright, capabilities and agents, through a registered decoder of the canonical loader. An unknown key,
+      a missing required key, an invalid value, a capability naming an undeclared agent, a prompt or skill path
+      outside the pack, an absent or empty prompt or skill file and, for a package source, a manifest name or
+      version differing from the package''s package.json are each reported with path and cause; a path-sourced
+      pack has no package to agree with. The pactwright field declares the compatible runtime as an exact version
+      or a ^x.y.z caret range with npm semantics; a runtime outside it is an incompatible-runtime problem naming
+      the declared range and the runtime version. The version of the pack is its manifest version.'
 acceptance:
   AC01:
-    covers: [R01, R02]
+    covers: [R01, R02, R08]
     cases: [standard-pack, complete-fixture-pack]
     given: The listed pack, complete for the core capabilities.
     when: The pack is loaded and the capability check runs.
@@ -76,17 +89,19 @@ acceptance:
     covers: [R04]
     given: The Pactwright repository workspace.
     when: '@pactwright/standard and the runtime are built and packed separately.'
-    then: The standard archive has its own package name and version, contains mappings for the three core capabilities
+    then: The standard archive has its own package name and version, equal to its manifest name and version,
+      exposes pack.yml and package.json through its exports, contains mappings for the three core capabilities
       with every agent, prompt and direct skill they reference, and does not contain the runtime. The runtime
       archive does not contain the pack.
     verify:
       automated: [standard.package]
   AC05:
     covers: [R07]
-    given: A fixture pack that is complete except that it declares one external Production Skills import.
+    given: A fixture pack that is complete except that its production_skills mapping declares one entry with
+      a family ID and a source.
     when: The pack is loaded and checked.
-    then: The pack is not accepted. The problem names the import as unsupported by this release, and nothing
-      is fetched or resolved for it.
+    then: The pack is not accepted. The problem names the entry's family ID and source as unsupported by this
+      release, the key is not reported as unknown, and nothing is fetched or resolved for it.
     verify:
       automated: [capabilities.unsupported-import]
   AC06:
@@ -97,3 +112,17 @@ acceptance:
       and canonical writes to the runtime. The runtime has no special case for the standard pack's identity.
     verify:
       review: [capabilities.semantic-boundary]
+  AC07:
+    covers: [R03, R08]
+    cases: [unknown-key, missing-required-key, invalid-runtime-range, incompatible-runtime, prompt-outside-pack,
+      empty-prompt-file, package-name-mismatch, package-version-mismatch, path-source-without-package]
+    given: A project with valid configuration, lock, generated environment and canonical state, and a fixture
+      pack whose only defect is the listed one; path-source-without-package is a complete pack in a directory
+      that is not a package, loaded by path.
+    when: The pack is loaded as a candidate.
+    then: Each defect is refused with path and cause naming the key, value or file; incompatible-runtime names
+      the declared range and the runtime version. path-source-without-package loads and passes the check with
+      no package agreement problem. In every case configuration, lock, generated environment and canonical
+      state are byte-identical afterwards.
+    verify:
+      automated: [capabilities.manifest-format]

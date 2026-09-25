@@ -2,21 +2,28 @@
 id: CP01-S11
 requires: [CP01-S01, CP01-S10]
 outputs:
-  agent-pack-use: A pactwright agent-pack use <source> that explicitly selects one compatible complete Agent Pack,
-    updating configuration and lock only after successful resolution and validation.
+  agent-pack-use: A pactwright agent-pack use <source> that explicitly selects one compatible complete Agent Pack
+    from a package name, optionally versioned, or a pack path, obtains a package it needs through the project
+    package manager, and updates configuration and lock only after successful resolution and validation.
   agent-pack-upgrade: A pactwright agent-pack upgrade that upgrades the selected pack within its configured compatibility
-    constraints without changing its identity.
+    constraints through the project package manager without changing its identity.
 requirements:
   R01:
     source: [DISTRIBUTION#5]
-    statement: 'Agent-pack use shall, in order: resolve a compatible complete pack from the explicit source, validate
-      it against the required capabilities, update configuration, record the exact pack and agent identities
-      in the lock, run sync and report GitHub reconciliation needs. Configuration and lock change only after
-      resolution and validation succeed.'
+    statement: 'Agent-pack use shall accept the source grammar: a package name, optionally followed by @ and an
+      exact version or ^x.y.z caret range recorded as the configured constraint, with the caret range of the
+      resolved exact version recorded when none is given; or a ./, ../ or absolute path to a pack directory,
+      recorded as the source with no constraint. In order it shall: resolve the pack from the project''s installed
+      packages, then the runtime''s own dependencies, or from the path; validate it against the required capabilities
+      through the Step 10 check; update configuration; record the exact pack and agent identities in the lock;
+      run sync; and report GitHub reconciliation needs. Configuration and lock change only after resolution
+      and validation succeed.'
   R02:
     source: [DISTRIBUTION#5, DISTRIBUTION#15]
     statement: If resolution, compatibility, capability validation, locking or sync fails, use and upgrade shall
-      leave the previous configuration, lock, generated environment and canonical state byte-identical.
+      leave the previous configuration, lock, generated environment and canonical state byte-identical, and
+      shall leave the package-manager manifest and lock byte-identical or restored to their previous bytes;
+      when restoration itself fails, the report names the previous exact version to restore.
   R03:
     source: [DISTRIBUTION#3, DISTRIBUTION#5]
     statement: Pactwright shall never silently select or switch a pack. Pack identity changes only through agent-pack
@@ -24,9 +31,12 @@ requirements:
       @pactwright/standard. Pactwright may recommend a compatible pack without selecting it.
   R04:
     source: [DISTRIBUTION#5, DISTRIBUTION#15]
-    statement: Agent-pack upgrade shall upgrade the currently selected pack within its configured compatibility
-      constraints without changing its source identity. It validates the complete required capability set before
-      changing the lock or generated environment.
+    statement: Agent-pack upgrade shall request the configured source at its configured constraint from the
+      project package manager, so that the package manager resolves the newest satisfying version and reconciles
+      the package manifest to that constraint, then resolve and validate the installed candidate through the
+      Step 10 check before changing the lock or generated environment. It never changes the source identity.
+      With an exact configured version, or when no newer version satisfies the constraint, it reports that
+      nothing changed.
   R05:
     source: [DISTRIBUTION#3, DISTRIBUTION#12]
     statement: Configuration expresses desired constraints and the lock the exact resolved pack. An exact configured
@@ -43,20 +53,36 @@ requirements:
     statement: The GitHub report shall state what remote reconciliation, owned by pactwright github sync, the
       change needs, or that none is needed. Neither command contacts or mutates GitHub.
   R08:
-    source: [DISTRIBUTION#15, GUIDE#command-ownership]
-    statement: Package installation or replacement that use or upgrade needs shall be delegated to the project
-      package manager; Pactwright implements no parallel installer. Neither command changes the runtime or
-      an Extension.
+    source: [DISTRIBUTION#15, DISTRIBUTION#25, GUIDE#command-ownership]
+    statement: 'Package installation or replacement that use or upgrade needs shall be delegated to the project
+      package manager through the runtime''s single package-manager delegation seam, which detects the package
+      manager under the DISTRIBUTION#15 rule: the repository''s packageManager declaration, otherwise unambiguous
+      lock state, refusing ambiguous or absent state before any change and never switching package managers.
+      Use requests installation only when no installed package satisfies the request; path sources involve
+      no package manager. Pactwright implements no parallel installer and never copies, fetches or unpacks a
+      package. Neither command changes the runtime or an Extension.'
+  R09:
+    source: [DISTRIBUTION#12, DISTRIBUTION#14]
+    statement: 'The lock written by use and upgrade shall be the DISTRIBUTION#12 version 1 document: version
+      1, runtime.version, agent_pack with the configured source, exact version and content hash, agents and
+      skills maps with the content hash of each direct prompt and skill, and existing extensions entries preserved,
+      written through the one resolution path that Step 15 completes with lock agreement and environment_lock_hash,
+      neither of which Step 11 derives. Sync is the runtime''s single sync entry point, which at Step 11 loads
+      configuration and lock, validates the composition and assembles agents and skills; its rendering is a
+      seam that writes no file until Step 12 supplies the adapter, and Step 17 proves determinism and convergence.'
 acceptance:
   AC01:
-    covers: [R01, R03]
-    cases: [select-standard-from-scaffold, switch-to-compatible-fixture]
+    covers: [R01, R03, R09]
+    cases: [select-standard-from-scaffold, switch-to-compatible-fixture, versioned-source, path-source]
     given: 'An initial scaffold with no selected pack for select-standard-from-scaffold, or a project with @pactwright/standard
-      selected for switch-to-compatible-fixture, and the listed pack available: @pactwright/standard or a complete
-      compatible fixture pack.'
+      selected otherwise, and the listed pack installed: @pactwright/standard, a complete compatible fixture
+      pack, that fixture requested as <name>@^1.0.0, or that fixture by relative path.'
     when: Agent-pack use runs with that pack's explicit source.
-    then: Configuration names the explicit source. The lock records the exact pack version, content hash and
-      agent identities. Sync runs and the report states the GitHub reconciliation need.
+    then: Configuration names the explicit source with the given constraint, the caret range of the resolved
+      exact version when none was given, or no constraint for the path. The lock is the version 1 document
+      recording the runtime version, the configured source, the exact pack version and content hash, each agent
+      and skill hash and the existing extensions entries, and no environment_lock_hash. Sync ran through the
+      single entry point, and the report states the GitHub reconciliation need.
     verify:
       automated: [agent-pack.use]
   AC02:
@@ -66,7 +92,8 @@ acceptance:
       source with the listed defect; sync-failure injects a failure into sync after validation passes.
     when: Agent-pack use runs with the candidate source.
     then: It is refused with a problem naming the defect. Configuration, lock, generated environment and canonical
-      files are byte-identical afterwards, and @pactwright/standard remains selected.
+      files are byte-identical afterwards, the package-manager manifest and lock are byte-identical or restored,
+      and @pactwright/standard remains selected.
     verify:
       automated: [agent-pack.use-failure]
   AC03:
@@ -78,33 +105,38 @@ acceptance:
     verify:
       automated: [agent-pack.no-silent-selection]
   AC04:
-    covers: [R04, R08]
-    given: A fixture pack selected at 1.0.0 under a configured ^1.0.0 constraint, and a compatible complete
-      1.1.0 of the same source available.
+    covers: [R04, R08, R09]
+    given: A fixture pack selected at 1.0.0 under a configured ^1.0.0 constraint, and the delegation seam instrumented
+      so that a request for the configured source at that constraint installs a compatible complete 1.1.0 of
+      the same source.
     when: Agent-pack upgrade runs.
-    then: The lock records 1.1.0 with the same source, its content hash and agent identities, and sync runs.
-      The configured source and constraint are unchanged, and the runtime and Extension identities in configuration
-      and lock are unchanged.
+    then: The seam received exactly one request naming the configured source and constraint. The lock records
+      1.1.0 with the same source, its content hash and agent identities, and sync ran. The configured source
+      and constraint, and the runtime and Extension identities in configuration and lock, are unchanged.
     verify:
       automated: [agent-pack.upgrade]
   AC05:
     covers: [R02, R04]
-    cases: [missing-capability, incompatible-runtime, newer-only-outside-constraint, sync-failure]
-    given: 'A fixture pack selected at 1.0.0 under a configured ^1.0.0 constraint, and a newer version with the
-      listed condition: newer-only-outside-constraint offers only an otherwise valid 2.0.0.'
+    cases: [missing-capability, incompatible-runtime, newer-only-outside-constraint, sync-failure, restore-failure]
+    given: 'A fixture pack selected at 1.0.0 under a configured ^1.0.0 constraint and the delegation seam instrumented
+      with the listed condition: the request installs a 1.1.0 with the listed defect; newer-only-outside-constraint
+      offers only an otherwise valid 2.0.0, so the request changes nothing; sync-failure installs a valid 1.1.0
+      and sync fails; restore-failure installs an incomplete 1.1.0 and the restore request fails.'
     when: Agent-pack upgrade runs.
     then: Nothing is upgraded, and the problem names the missing capability, incompatibility, absent compatible
-      version or sync failure. Configuration, lock and generated environment are byte-identical, and 1.0.0
-      of the same source remains selected.
+      version, sync failure or restore failure. Configuration, lock and generated environment are byte-identical,
+      1.0.0 of the same source remains selected, and the package-manager manifest and lock are byte-identical
+      or restored to their previous bytes through a request for exactly 1.0.0; restore-failure names 1.0.0
+      as the version to restore.
     verify:
       automated: [agent-pack.upgrade-failure]
   AC06:
     covers: [R05]
     given: Configuration selecting a fixture pack at exactly 1.0.0, with a compatible 1.1.0 of the same source
-      and a different complete pack both available.
+      and a different complete pack both available to the delegation seam.
     when: Agent-pack use is re-applied with the configured source and agent-pack upgrade runs.
-    then: The lock still records 1.0.0 of the configured source. Upgrade reports no upgrade within the exact
-      constraint, and the other pack is never selected.
+    then: Any request names exactly 1.0.0, the lock still records 1.0.0 of the configured source, upgrade reports
+      that nothing changed within the exact constraint, and the other pack is never selected.
     verify:
       automated: [agent-pack.exact-target]
   AC07:
@@ -132,7 +164,23 @@ acceptance:
     covers: [R06, R08]
     given: The candidate agent-pack use and upgrade code.
     when: Independent review traces package, configuration and lock handling.
-    then: Package installation or replacement is delegated to the project package manager. Configuration is
-      read and written only through the canonical loader, and neither command changes runtime or Extension identity.
+    then: Package installation or replacement is delegated only through the package-manager delegation seam,
+      and the runtime copies, fetches and unpacks nothing. Configuration is read and written only through the
+      canonical loader, and neither command changes runtime or Extension identity.
     verify:
       review: [agent-pack.ownership]
+  AC10:
+    covers: [R01, R08]
+    cases: [installed-no-request, not-installed-delegated, install-failure, ambiguous-package-manager, path-source-no-request]
+    given: A project with an explicit packageManager declaration and the delegation seam instrumented; ambiguous-package-manager
+      has no declaration and two package-manager lockfiles. installed-no-request has the requested pack installed
+      at a satisfying version; not-installed-delegated and install-failure do not; path-source-no-request uses
+      a complete fixture pack by path.
+    when: Agent-pack use runs with the listed source.
+    then: installed-no-request and path-source-no-request select the pack with no request to the seam. not-installed-delegated
+      issues exactly one request naming <source>@<constraint> as a development dependency and selects the pack
+      after the installation the seam performs. install-failure is refused naming the package-manager failure.
+      ambiguous-package-manager is refused before any request, naming the ambiguity. In the refused cases configuration,
+      lock, generated environment and canonical state are byte-identical.
+    verify:
+      automated: [agent-pack.package-delegation]
