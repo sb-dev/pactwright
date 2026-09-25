@@ -38,9 +38,9 @@ requirements:
     source: [DISTRIBUTION#21, DISTRIBUTION#23, PRINCIPLES#17]
     statement: Deterministic assertions and semantic judgement shall be evaluated and reported separately. Semantic
       dimensions are judged only through the judge seam with the judge supplied to the runner and are reported
-      unjudged otherwise; the report names the invoker and judge identities used, or their absence. Deterministic
-      validation decides wherever it can, and the exit status is failure when any evaluated deterministic
-      assertion fails or any case was not evaluated, and is never affected by semantic results.
+      unjudged otherwise; the report names the invoker and judge identities used, or their absence. Deterministic validation decides wherever it can. In a run without --baseline the exit status is failure
+      when any evaluated deterministic assertion fails or any case was not evaluated; a comparison follows R07;
+      neither is ever affected by semantic results.
   R06:
     source: [DISTRIBUTION#12, DISTRIBUTION#24]
     statement: Eval --baseline <released-pack-or-baseline> --candidate <candidate-pack-or-environment> shall
@@ -49,8 +49,9 @@ requirements:
       the pack source, version and content hash and every agent, prompt and direct-skill hash, through the
       Step 11 resolution path, acquiring a package version that is not installed through the Step 11 package-manager
       delegation seam into an isolated location. Resolution for comparison establishes identity, manifest validity
-      and completeness and does not refuse a side whose declared compatible runtime excludes the running runtime;
-      that mismatch is reported as an incompatible component of the side. An input that cannot be resolved
+      and completeness; the Step 10 runtime-range finding is reported separably from manifest validity, so
+      selection refuses on it while comparison does not refuse a side whose declared compatible runtime excludes
+      the running runtime and reports the mismatch as an incompatible component of the side. An input that cannot be resolved
       exactly fails explicitly, naming the input, without substituting another version. Both sides are evaluated by this runtime's case
       set with the same invoker and judge.
   R07:
@@ -131,7 +132,7 @@ acceptance:
       identities. uninstalled-version-acquired obtains the version through exactly one delegation request into
       an isolated location, leaving the project's installed packages, manifest and locks byte-identical. incompatible-runtime-baseline
       resolves, records its identities, reports the baseline's declared runtime as incompatible with the running
-      runtime, and the comparison proceeds. The unresolvable cases fail explicitly, naming the input; no other version is used and no comparison is reported.
+      runtime, and the comparison proceeds and exits without failure. The unresolvable cases fail explicitly, naming the input; no other version is used and no comparison is reported.
     verify:
       automated: [eval.baseline-resolution]
   AC07:

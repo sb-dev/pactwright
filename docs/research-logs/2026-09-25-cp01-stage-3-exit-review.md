@@ -31,10 +31,16 @@ Non-blocking findings, applied:
 | X10 | S12/R12 states the hand-off semantics of the direction-less `/capture-intent` and the mutation-less `/propose-contracts`. |
 | X11 | Distribution §5: a pack declaring any `production_skills` entry is not accepted by that release, matching S10/AC05 and constraining Q46. |
 | X12 | Checkpoint 1 Step 11 deliverable summary lists `package-manager-delegation` with the contract's wording (owner review 5323346597). |
+| X13 | S13/AC06 `incompatible-runtime-baseline` exits without failure, so the Step 28 comparison (incompatible-runtime baseline, no invoker) has a pinned exit status (fresh review, blocking). |
+| X14 | Distribution §21 and S13/R05 scope the not-evaluated failure rule to a run without `--baseline`; a comparison follows §24 / R07. |
+| X15 | Core §55: configuration, lifecycle and lock changes are not detected across the dispatch gap; the result is planned and validated against the state current at result time. |
+| X16 | Core §46 carries the `/capture-intent` always-permitted and `/propose-contracts` records-nothing hand-off semantics that S12/R12 states. |
+| X17 | S10/R08 and S13/R06: the runtime-range finding is reported separably from manifest validity, so selection refuses on it and comparison reports it. |
+| X18 | Distribution §15 and S11/R08: the restore request restores an exact installed version under the previous constraint, matching R02. |
 
 Later-stage follow-ups, owned and non-blocking for Stage 3:
 
-- **Q46 (Stage 4, Step 18):** S18/R03's "configured external Production Skills import" should read "declared by the selected pack", since the declaration lives only in the pack manifest.
+- **Q46 (Stage 4, Steps 15 and 18):** S15/R07's "selected pack that declares one" is now a defensive path, since Distribution §5 refuses such a pack at selection. S18/R03's "configured external Production Skills import" should read "declared by the selected pack", since the declaration lives only in the pack manifest.
 - **Q48 / Q49 (Stage 4, Step 19):** a `0.0.1` project upgrading its runtime holds a pack declaring `pactwright: 0.0.1` exactly; the runtime-upgrade sequence (Checkpoint 2 line 106 runs the runtime upgrade first) must state how that intermediate environment is treated before `agent-pack upgrade` runs.
 - **Checkpoint 2:** the first provider invoker owns judge identity and whether an incompatible-runtime baseline's cases are evaluated.
 - **Step 28 prose (unconverted):** its expected result should say that without an invoker every assertion is not comparable and the changed components are listed.
@@ -46,7 +52,9 @@ Checks at `3bad48a` confirmed by the reviewers and unchanged by the corrections:
 
 With X1–X11 applied, the corrected tree is consistent with Core v6 and Distribution v4, and no unresolved behaviour needed by Stage 3 steps remains. The corrections were authored by the record's author and so require fresh independent review (methodology §6); the verdict below records that review's result. This is scoped T2 work; it authorises no implementation, harness construction or acceptance.
 
-**Verdict:** pending fresh review of X1–X12.
+**Fresh review of the corrections (methodology §6):** a fresh read-only reviewer examined X1–X11 at `fe9394d` and returned CHANGES REQUIRED with two blocking items, the Step 11 summary (X12, already applied by owner review 5323346597) and the exit status of the incompatible-runtime, no-invoker comparison (X13), plus six wording items applied as X14–X18; it confirmed X2, X3, X4, X7, X10, the crosswalk `affects` and the verification table. The reviewer stated it would accept Stage 3 as requirement-ready with those applied. A second fresh reviewer examined X12–X18 at the corrected head; its result is recorded below.
+
+**Verdict:** see the fresh-review paragraph; requirement-ready when the X12–X18 review accepts.
 
 ## Verification
 

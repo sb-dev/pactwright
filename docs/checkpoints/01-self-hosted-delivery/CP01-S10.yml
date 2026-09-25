@@ -53,8 +53,9 @@ requirements:
       outside the pack, an absent or empty prompt or skill file and, for a package source, a manifest name or
       version differing from the package''s package.json are each reported with path and cause; a path-sourced
       pack has no package to agree with. The pactwright field declares the compatible runtime as an exact version
-      or a ^x.y.z caret range with npm semantics; a runtime outside it is an incompatible-runtime problem naming
-      the declared range and the runtime version. The version of the pack is its manifest version.'
+      or a ^x.y.z caret range with npm semantics; a runtime outside it is an incompatible-runtime problem naming the declared range and the runtime version,
+      reported separably from manifest validity so that a consumer other than selection can report rather than
+      refuse it. The version of the pack is its manifest version.'
 acceptance:
   AC01:
     covers: [R01, R02, R08]

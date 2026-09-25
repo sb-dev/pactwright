@@ -64,8 +64,8 @@ requirements:
       manager under the DISTRIBUTION#15 rule: the repository''s packageManager declaration, otherwise unambiguous
       lock state, refusing ambiguous or absent state before any change and never switching package managers.
       The seam''s requests are: install a package as a development dependency, request a source at a constraint,
-      restore an exact version, remove a dependency the command added, and acquire an exact version into an
-      isolated location outside the project. Use requests installation only when no installed package satisfies
+      restore an exact installed version under the previous constraint, remove a dependency the command added,
+      and acquire an exact version into an isolated location outside the project. Use requests installation only when no installed package satisfies
       the request; path sources involve no package manager. Pactwright implements no parallel installer and never copies, fetches or unpacks a
       package. Neither command changes the runtime or an Extension.'
   R09:
