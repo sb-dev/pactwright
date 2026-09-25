@@ -109,7 +109,7 @@ entries:
     covered_by: [CP01-S03/R01, CP01-S03/R02, CP01-S03/R03, CP01-S03/R04, CP01-S03/R05, CP01-S03/R06, CP01-S03/R07]
   - key: S03.run.1
     text: "Implement the shared typed-edge registry/store for core lineage and same-type supersession."
-    covered_by: [CP01-S03/R01, CP01-S03/R03, CP01-S03/AC01, CP01-S03/AC03, CP01-S03/R08, CP01-S03/AC10, CP01-S03/AC11, CP01-S03/AC14]
+    covered_by: [CP01-S03/R01, CP01-S03/R03, CP01-S03/AC01, CP01-S03/AC03, CP01-S03/R08, CP01-S03/AC10, CP01-S03/AC11, CP01-S03/AC14, CP01-S03/R10, CP01-S03/AC15]
   - key: S03.run.2
     text: "Validate endpoint existence/types, duplicate tuples, self-supersession and supersession cycles."
     covered_by: [CP01-S03/R02, CP01-S03/R03, CP01-S03/R04, CP01-S03/R05, CP01-S03/AC02, CP01-S03/AC03, CP01-S03/AC04, CP01-S03/AC05, CP01-S03/AC10]
@@ -1429,3 +1429,9 @@ open_questions:
     affects: [CP01-S05/AC11, CP01-S01/AC09]
     question: "Q23, Q28 and Q48 leave open where lifecycle execution state, execution provenance and preserved upgrade state live. Which Stage 1 obligations constrain those answers, so that ordinary progress does not make the repository revision unavailable or add entries to the core stores?"
     note: "Constraint adopted in B12: Q23/Q48 state may be ignored, external or committed; Q28 provenance is committed before the next pinned run (Core section 56); none may be placed in an active canonical store, core or enabled Extension."
+  - id: Q89
+    affects: [CP01-S03/R10, CP01-S03/AC15, CP01-S05/AC12]
+    question: "Core section 15 requires stored tuples with exactly the string fields source, type and target, and Core section 54 an envelope containing only an edges array. No CP01-S01 or CP01-S03 case rejects parseable data with extra or missing tuple keys, non-string fields, an extra envelope key or a non-array edges value. Must those be rejected, with no graph revision, for core and Extension edge files?"
+  - id: Q90
+    affects: [CP01-S04/AC11, CP01-S04/AC12, CP01-S07/AC15, CP01-S09/AC01]
+    question: "CP01-S04/AC11 and AC12 require complete-state validation to refuse execution, but that guard is a CP01-S07 output and the validate command a CP01-S09 output, both depending on CP01-S04. Which steps own the refusal proofs?"

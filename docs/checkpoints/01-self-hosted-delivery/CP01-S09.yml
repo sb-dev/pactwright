@@ -65,10 +65,10 @@ acceptance:
       multiple-current-decisions-or-contracts, invalid-brief-contract-lineage, invalid-evidence-brief-lineage,
       illegal-supersession, missing-lifecycle-shape, unresolved-shape-identity, incompatible-shape-identity, impossible-shape-transition,
       evidence-before-closing-review, unauthorised-decision, unauthorised-gate-progression, unbounded-corrective-loop,
-      extension-redefines-core, replay-revision-mismatch]
+      extension-redefines-core, replay-revision-mismatch, unreachable-record]
     given: A valid control project and a copy whose only defect is the failing fixture for the listed rule
       (rule 10 has one case for an unresolved and one for an incompatible shape identity); the replay case
-      requests replay validation.
+      requests replay validation; unreachable-record uses a CP01-S04/AC11 fixture under rule 3.
     when: Pactwright validate runs on both.
     then: The control passes with no problems. The copy fails with a problem mapped to the listed rule that identifies
       the affected records, inputs or provenance.

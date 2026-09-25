@@ -2,7 +2,7 @@
 
 **Scope and authority:** see [B7](2026-09-25-cp01-s1-t2-b7-checkpoint-obligations.md). Start `8e7804f`; batches B7–B12 follow in dependency order. This record holds cross-stage dispositions, verification results, review references and the methodology §7 verdict.
 
-**Status:** interim. B11/B12 independent review and the whole-stage review are pending. **No stage-exit verdict yet.**
+**Status:** interim. The P2 corrections need fresh review, and the semantic-owner approvals are pending. **No stage-exit verdict yet.**
 
 ## Cross-stage integration
 
@@ -35,7 +35,8 @@
 | B7 | Independent subagent review of `6f08a78` | Accepted with fixes; corrections in `7e9776e`. |
 | B8 | Independent subagent review of `572cad5` | Accepted with fixes; corrections in `d520b76`. |
 | B9, B10 | Independent subagent review of `939f2b5`, `5c871d0` | Accepted with fixes; corrections in `be4f455`. |
-| B11, B12 | Pending | — |
-| Whole stage (§7) | Pending; also serves as a fresh review of all corrections. | — |
+| B11, B12 | Independent subagent review of `5b27a83`, `3b3f0ee` | Changes required; corrections in `7c6d556`. |
+| Whole stage (§7) | Independent subagent review of `7c6d556` | Not requirement-ready: CP01-S04/AC11–AC12 depended on Step 7. Its other findings (M1, M2, L1–L6) are recorded, not yet applied. |
+| Owner review, PR #47 | Review 5315357320 of `7c6d556` | Two P2 findings, both addressed in the next commit: edge-shape cases (Q89, B10) and moving the refusal proofs to S07/S09 (Q90, B11). |
 
 **CP01 Stage 1 T2 B13 v0 (interim)**

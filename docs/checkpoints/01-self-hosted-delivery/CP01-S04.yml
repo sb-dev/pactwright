@@ -33,7 +33,7 @@ requirements:
       return exactly its standalone lineage, recorded Contract and broad state. A stored record lacking its
       required upstream edge and linked by no core edge to any Intent direction is reported as missing required
       lineage in one problem, which names it and any records reached only through it; it changes no Intent's
-      result, and complete-state validation fails. A record lacking its required edge but linked by supersession
+      result. Refusing execution or mutation on such a graph belongs to CP01-S07 and CP01-S09. A record lacking its required edge but linked by supersession
       into a direction makes that direction affected. An incomplete load marks every result diagnostic-only and non-executable;
       complete-state validation under CORE#55 still governs execution and mutation.
 acceptance:
@@ -163,19 +163,17 @@ acceptance:
     given: A valid Intent direction with its standalone control, plus one stored record of the listed kind that
       lacks its required upstream edge and has no core edge to or from any other record; decision-without-intent
       is a reject Decision.
-    when: Lineage is derived and complete-state validation is run.
+    when: Lineage is derived.
     then: Exactly one missing-required-lineage problem names the unreachable record. The valid Intent's lineage,
-      authorised Contract and state equal its standalone control. Complete-state validation (CORE#55) fails,
-      no execution permission results and no files change.
+      authorised Contract and state equal its standalone control, and no files change.
     verify:
       automated: [lineage.unreachable-records]
   AC12:
     covers: [R06]
     cases: [malformed-lifecycle, missing-lock, unexpected-record-file]
     given: A valid contracted graph whose load is incomplete only because of the listed input defect.
-    when: Lineage is derived from the diagnostic load result, then complete-state validation is run.
-    then: Each derivation result exposes a diagnostic-only, non-executable indicator the verifier reads, and
-      complete-state validation refuses execution. A complete-load control yields the same lineage values without
-      the indicator.
+    when: Lineage is derived from the diagnostic load result.
+    then: Each derivation result exposes a diagnostic-only, non-executable indicator the verifier reads. A complete-load
+      control yields the same lineage values without the indicator.
     verify:
       automated: [lineage.incomplete-load-diagnostic]

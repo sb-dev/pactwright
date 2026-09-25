@@ -50,6 +50,12 @@ requirements:
       data shall fail closed; inactive Extension stores shall be reported, preserved and excluded, not mistaken
       for valid active contributions. Physical ownership follows CORE#54: only core lineage tuples in specs/graph/edges.yml;
       Extension relation tuples and its same-type node supersession in specs/extensions/<id>/edges.yml.'
+  R10:
+    source: [CORE#15, CORE#54, CORE#56]
+    statement: A core or Extension edge file shall be a mapping containing only an `edges` array whose items
+      are mappings with exactly the string fields source, type and target. Any other shape leaves the load
+      incomplete with the file identified, preserves its bytes and yields no graph revision; no loader projects
+      the three fields and discards the rest.
 acceptance:
   AC01:
     covers: [R01, R03]
@@ -194,3 +200,14 @@ acceptance:
       plus the new ones.
     verify:
       automated: [edges.append-preserves-entries]
+  AC15:
+    covers: [R10]
+    cases: [valid-core-envelope, valid-extension-envelope, extra-tuple-field, missing-tuple-field, non-string-field,
+      non-mapping-tuple, extra-envelope-key, non-array-edges]
+    given: The listed edge-file shape, run once in specs/graph/edges.yml and once in a registered fixture Extension
+      edge file; all other inputs are valid. The negative cases are otherwise valid YAML.
+    when: The canonical loader and shared validator read the project and a graph revision is requested.
+    then: The valid controls load complete and hash. Each negative case yields an incomplete or error result
+      naming the file and the violated shape rule, no graph revision, and unchanged stored bytes.
+    verify:
+      automated: [edges.stored-shape]

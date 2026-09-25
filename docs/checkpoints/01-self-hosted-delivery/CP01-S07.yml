@@ -206,3 +206,13 @@ acceptance:
       before writing. There is no alternative writer, post-write-only guard or prompt-only enforcement.
     verify:
       review: [mutation.single-entry-point]
+  AC15:
+    covers: [R01]
+    cases: [unreachable-record-in-stored-base, unreachable-record-in-proposal]
+    given: A mutation request whose stored base, or whose proposed state, holds a CP01-S04/AC11 unreachable
+      record and is otherwise valid; a control request without it.
+    when: The mutation is applied.
+    then: Complete-state validation refuses both listed cases with the missing-required-lineage problem and
+      writes nothing. The control commits.
+    verify:
+      automated: [mutation.complete-state-lineage]
