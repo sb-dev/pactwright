@@ -14,7 +14,7 @@
 
 **Proposals for the owner (not applied):**
 
-- P-Core-57 (Q28): add to Core §57: "Replay validation (rule 17) and the historical policy check are requested explicitly, with a replay-base document that records the section 56 tuple as `version: 1`, `repository_revision`, `project_graph_revision` and `environment_lock_hash`, supplied by path and decoded by the canonical loader; the historical check names one stored Decision. The document is validate's input, not a provenance store." Consequence: the new public `validate` inputs have a semantic owner, as the owner's PR review 5322421252 requires.
+- P-Core-57 (Q28): add to Core §57: "Replay validation (rule 17) and the historical policy check are requested explicitly. A replay-base document records the section 56 tuple as `version: 1`, `repository_revision`, `project_graph_revision` and `environment_lock_hash`, is supplied by path and decoded by the canonical loader; it is validate's input, not a provenance store. Rule 17 requires the document. The historical check names one stored Decision and may omit the document, in which case, or when its recorded revision cannot be reconstructed, it reports unavailable verification without failing validation." Consequence: the new public `validate` inputs have a semantic owner, as the owner's PR review 5322421252 requires.
 - Optional legibility: Core §57 could name the four diagnostic categories in one list; not needed for requirement-readiness.
 
 **Later owners:** Graph Review (Spec 04 §§8/20) writes real execution provenance and reuses the tuple; Step 18 `doctor` owns severity reporting; Step 19 keeps legacy `sha256` provenance readable (S19/AC07).
