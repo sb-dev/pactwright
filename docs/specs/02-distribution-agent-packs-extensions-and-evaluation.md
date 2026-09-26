@@ -147,6 +147,10 @@ pactwright init --with project-intelligence --github
 
 must compose normal initialisation, Extension installation and GitHub synchronisation.
 
+The explicit Agent Pack choice is supplied to `init` through `--agent-pack <source>`, where `<source>` uses the `agent-pack use` grammar of section 5. This option is the documented init selection input; every one-shot option reuses it. `pactwright init --agent-pack <source>` composes plain initialisation and `agent-pack use <source>`, so it ends with the configuration, lock and generated output that the two commands produce in sequence, and `--with <extension>` additionally composes `extension add`. An init that names a pack or an Extension validates the complete requested composition before it keeps any of it: a `--with` without a selection, an incompatible or unresolvable selection, or an Extension that cannot be installed is refused with the repository byte-identical, a package dependency the attempt added removed and no scaffold left behind. `init` never prompts for a choice and never selects a pack that was not named.
+
+A plain `pactwright init` with no selection creates the Core section 54 scaffold: configuration with no `agent_pack` and GitHub disabled, lifecycle configuration, the empty core stores (an empty `specs/nodes/.gitkeep` and `edges: []`) and the section 12 lock recording the runtime version and no pack. The scaffold is a complete load: every required input exists, its empty graph has a Project Graph revision, and `validate`, `doctor` and read-only lifecycle inspection run on it. It is not an executable environment: `sync`, `lifecycle run` and every capability invocation refuse it naming the missing selection, and `doctor` reports it as action required. `init` in an initialised repository preserves every existing file, including an explicit pack choice; a selection named on such an init is applied through `agent-pack use` when no pack is selected and refused when it differs from the selected pack. `init` stages and commits nothing.
+
 ---
 
 # 4. Pactwright Capabilities
@@ -512,6 +516,7 @@ The supported management interfaces are:
 
 ```text
 pactwright extension add <id-or-package>
+pactwright extension disable <id>
 pactwright extension remove <id>
 pactwright extension upgrade <id>
 ```
@@ -536,13 +541,15 @@ Dependency installation uses the same compatibility, locking, capability-validat
 
 Installation fails before canonical Project Graph mutation if the complete environment is incompatible.
 
-## Removal
+## Removal and disablement
+
+`pactwright extension disable <id>` deactivates an Extension: its configuration entry stays with `enabled: false`, its lock entry is removed, its package stays installed, and its owned root below `specs/extensions/<id>/` is preserved byte-for-byte and inventoried as inactive. `pactwright extension remove <id>` additionally deletes the configuration entry and requests removal of the package dependency through the package manager (section 15); it preserves the owned root the same way. `pactwright extension add <id>` re-enables a disabled configured Extension through the normal installation path, registering and fully validating the preserved state before activation, and adds a removed Extension again the same way. Both commands run `pactwright sync` after configuration and lock change.
 
 Removing or disabling an Extension must preserve user-authored Extension graph data unless the user separately chooses to delete it.
 
 Only generated local or remote state exclusively owned by that Extension may be removed automatically.
 
-An Extension cannot be disabled or removed while another enabled Extension still depends on it unless the dependent Extension is disabled or removed in the same operation.
+An Extension cannot be disabled or removed while another enabled Extension still depends on it unless the dependent Extension is disabled or removed in the same operation: one invocation names every Extension it disables or removes, dependents included.
 
 If ownership of generated or remote state is ambiguous, Pactwright must preserve it and report the ambiguity rather than delete user state.
 
@@ -580,12 +587,15 @@ The package-root manifest remains `extension.yml`. Its existing `graph.node_type
 | `graph.format_version` | Positive integer identifying the owner's stored schema and projection contract; independent of package version. |
 | `graph.registration` | Package-relative module export, written `./path/to/module.js#export`, supplying the named read-only decoders, schema validators, canonical projections and optional node projections. |
 | `graph.storage` | List of declarations, each with a root-relative `path`, `kind`, `decoder`, `schema` and `projection` identifier. Optional `node_projection` names the endpoint projection. |
+| `graph.migrations` | Optional list of declared format migrations, each with `from`, `to` and `migration`: `from` and `to` are format versions, either of which may instead be the literal `released-0.0.1` for the section 15 released-format migration and its reverse; `migration` names an export of the registration module. |
 
 Each storage `path` is a literal file or directory relative to `specs/extensions/<id>/`, not an absolute path, glob or path containing `..`; directory declarations enumerate their supported file forms through the named decoder. Paths must be disjoint, cannot claim `edges.yml`, generated output or another owner's data, and cannot follow symlinks. Decoder/validator/projection identifiers must resolve uniquely in the declared registration export. An absent or unknown identifier, duplicate paths within an owner, conflicting type/relation ownership or incompatible `format_version` fails registration before activation. A format without canonical records need not declare storage; an Extension with relation types still uses its owner `edges.yml` under Core section 54.
 
 A decoder receives the declared input bytes and returns decoded values or path-specific problems. Its schema validator checks the owning semantic format. The canonical projection emits Core section 54 `(kind, key, value)` contributions; an optional node projection additionally supplies globally unique endpoint ID and a registered node type. All projected values obey Core section 6. The registration also supplies endpoint constraints for each declared additional relation, without replacing core rules. These are deterministic, read-only package functions: loading cannot install dependencies, write files, make network requests or use undeclared project inputs. Their private implementation layout is not prescribed.
 
-Installed packages and fixtures use this same interface and record/edge validation path. A package cannot supply an installed-only hash or validation shortcut. Changing the decoder, schema or projection semantics requires a new `graph.format_version` with explicit compatibility or migration under section 15; a package version change alone does not authorise reinterpreting stored bytes.
+Installed packages and fixtures use this same interface and record/edge validation path. A package cannot supply an installed-only hash or validation shortcut. Changing the decoder, schema or projection semantics requires a new `graph.format_version` with a declared migration under section 15; a package version change alone does not authorise reinterpreting stored bytes.
+
+A migration is a deterministic, read-only package function like the others: it receives the owner's decoded source records and tuples and returns the target records and tuples, or path-specific problems, and the runtime performs every write within the section 15 atomic change set. An upgrade whose target `graph.format_version` differs from the locked one requires a declared migration, or a chain of declared migrations, from the locked version to the target, applied in order within one change set; without one the upgrade fails before any change. The declaration is part of `graph.declaration_hash` and the migration code of `graph.implementation_hash` (section 12), so no separate migration identity is locked. A reverse migration, declared with the older version as `to`, is optional; explicit rollback under section 15 uses it and fails before any write when it is absent.
 
 At runtime:
 
@@ -688,7 +698,7 @@ Configuration expresses intent. The locks record exact resolved state at their r
 
 ## Recognised lock formats and graph implementation identity
 
-The current resolved lock has top-level `version: 1`. It retains the runtime, Extension, selected Agent Pack, agent/direct-skill and applicable Production Skills identities described above. `agent_pack.source` is the configured source identity, not an implicitly chosen package. `agents` and `skills` maps retain the resolved content hashes for direct pack content. A recognised released `0.0.1` lock has **no top-level version key**, has `runtime.version`, `agent_pack.name/version/hash`, `agents`, `skills` and `extensions`, and is labelled **migration required**, not unsupported. Its `agent_pack.name` is matched to the explicitly configured source during section 15 migration; missing or conflicting identity blocks migration instead of inventing a source or choosing a newer component. A document with an unknown explicit version is unsupported. Missing, malformed and unsupported documents are distinct diagnoses.
+The current resolved lock has top-level `version: 1`. It retains the runtime, Extension, selected Agent Pack, agent/direct-skill and applicable Production Skills identities described above. `runtime.version` and `extensions` (an empty mapping when no Extension is enabled) are always present; `agent_pack`, `agents` and `skills` are present exactly when a pack is selected, so the lock of an unactivated scaffold (section 3) records the runtime alone. Only an enabled Extension has a lock entry. `agent_pack.source` is the configured source identity, not an implicitly chosen package. `agents` and `skills` maps retain the resolved content hashes for direct pack content. A recognised released `0.0.1` lock has **no top-level version key**, has `runtime.version`, `agent_pack.name/version/hash`, `agents`, `skills` and `extensions`, and is labelled **migration required**, not unsupported. Its `agent_pack.name` is matched to the explicitly configured source during section 15 migration; missing or conflicting identity blocks migration instead of inventing a source or choosing a newer component. A document with an unknown explicit version is unsupported. Missing, malformed and unsupported documents are distinct diagnoses.
 
 Each enabled Extension lock entry includes its package/source, exact version, package content hash, resolved dependencies and the graph declaration's `format_version`. `graph.declaration_hash` covers the canonical manifest graph declaration; `graph.implementation_hash` covers the registration module and every package file it imports or reads to decode, validate or project canonical data. Implementation identity includes executable code and schema resources, not just declared names. Exact immutable dependency identities are included when those functions use package dependencies. These identities participate in `environment_lock_hash`; changing a decoder's bytes while retaining its version must be detected before activation. There is no separate code archive: use normal package hashes and exact dependency resolution, and fail when the declared closure cannot be verified.
 
@@ -705,6 +715,8 @@ environment_lock_hash
 ```
 
 The same locked environment must produce the same `environment_lock_hash`.
+
+The protocol is `env1:sha256:<digest>`, with exactly 64 lower-case hexadecimal digest digits: SHA-256 over the UTF-8 [RFC 8785 JSON Canonicalization Scheme](https://www.rfc-editor.org/rfc/rfc8785.html) serialization, without a trailing newline, of the complete decoded lock mapping, whose values are JSON-compatible under Core section 6. It hashes the lock's meaning, not its bytes: mapping-key order, quoting, comments and line endings do not change it, and any change to a recorded identity does. A runtime or platform change must preserve this protocol's digest for the same lock; an incompatible change needs a new protocol identifier and explicit replay handling, and an unknown protocol fails pinned replay, as for Core section 56's `pg1`. The hash is derived from any lock that decodes completely as `version: 1`, including the lock of an unactivated scaffold; a missing, malformed, unsupported or migration-required lock yields none. Frozen input, canonical-byte and digest examples are retained in [the env1 protocol vectors](./fixtures/environment-lock-env1.json); they are definition fixtures, not evidence that a runtime verifier has executed.
 
 The hash identifies the resolved environment used by replayable execution provenance; it does not replace the lock contents or package/source locations needed to reconstruct that environment.
 
@@ -848,9 +860,15 @@ After package replacement, migration, lock regeneration, synchronisation and val
 
 A runtime upgrade must not silently major-upgrade Extensions, Agent Packs, Production Skills or Production Extension Packs. Their configured constraints remain authoritative unless the user explicitly upgrades those components.
 
-If the target runtime has no compatible complete environment, the operation must fail clearly rather than silently substitute components or reinterpret canonical state.
+`pactwright upgrade` resolves its target as the newest `pactwright` release the registry offers, obtained through the package manager's version listing (the delegation seam below), that is newer than the installed runtime and inside the declared `pactwright` range of the selected Agent Pack and of every enabled Extension; when none exists it reports that and changes nothing. `--to <version>` names the target directly. Before any change, the old runtime detects the package manager and writes the upgrade recovery record; ambiguous detection or a record that cannot be written refuses the upgrade.
 
-Canonical Project Graph state must never be left partially migrated. Upgrade implementation must preserve enough previous package/configuration/lock state to restore or explicitly target the previous runtime when an upgrade cannot complete safely.
+The upgrade recovery record is Pactwright-owned ordinary repository content at a runtime-declared path below `.pactwright/`, written before package replacement and removed when the upgrade completes or is rolled back. It holds the attempt (source and target runtime versions, package manager and stage reached) and the exact previous bytes of the package manifest, the package-manager lock, `.pactwright/config.yml`, `.pactwright/lifecycle.yml` and `.pactwright/lock.yml`. The runtime never commits it. While it exists the project is an interrupted upgrade: ordinary mutation and execution refuse, and `doctor` reports action required with `pactwright upgrade --to <previous version>` as the remediation. Migrations write within Core section 55's atomic boundary, so canonical stores need no copy in the record.
+
+Re-entry is a child process. After the package manager replaces the package, the old runtime invokes the runtime now installed in the project, resolved from the project's installed package and never from its own module, and hands it the recovery record; from then on only the new runtime reads or writes project state. The new runtime validates the complete environment, runs required migrations, writes the lock, runs `sync` and `validate`, then removes the record. When a step after replacement fails, the new runtime restores the recorded configuration, lifecycle and lock bytes, requests restoration of the previous exact runtime version through the package manager and removes the record; when that restoration itself fails, the record stays and the report names `pactwright upgrade --to <previous version>`, which completes the recovery.
+
+A selected Agent Pack or enabled Extension whose declared `pactwright` range excludes the target is neither a reason to refuse the runtime upgrade nor something the upgrade may change: the runtime is replaced, migrations that do not need that component's registration run, the lock records the new runtime with the component's identity unchanged, `sync` and `validate` are not run, and the upgrade completes with exit status zero, reporting each such component as action required with its owning upgrade command as the remediation. This runtime-ahead state is how a project whose components pin an exact runtime moves between releases; the component upgrades that follow restore an executable environment and run `sync`. Every other defect of the target environment, including a migration that needs an incompatible Extension's registration, a missing capability, lock disagreement or a failed step, fails the upgrade with the recovery above rather than silently substituting components or reinterpreting canonical state.
+
+Canonical Project Graph state must never be left partially migrated. The recovery record is how an upgrade preserves enough previous package/configuration/lock state to restore or explicitly target the previous runtime when it cannot complete safely.
 
 ## Released-format migration boundary
 
@@ -870,7 +888,7 @@ The new runtime first reads all source inputs with their recognised source decod
 
 The Extension relocation, empty/null-edge normalisation and newly reported non-Markdown entries are intentional compatibility changes. A legacy scalar whose released decoder produced a different value from Core section 6's pinned YAML profile also needs explicit value-preserving migration or a named prerequisite; re-parsing identical bytes into different truth is not migration. Recognising the source format is not a promise to accept every previously tolerated input under the target format.
 
-Source and target graph-revision protocols remain distinct: a released `sha256:` graph revision is not a `pg1:` revision. Preserve prior execution evidence and its protocol; replay needs the recorded runtime/protocol, otherwise fails explicitly. A migration may record the newly derived identity of the migrated graph but never rewrite historical provenance or relabel an old digest. Rollback must restore or migrate back to the recognised original format under an explicit supported path; an older runtime must not be pointed at new stores and allowed to ignore them.
+Source and target graph-revision protocols remain distinct: a released `sha256:` graph revision is not a `pg1:` revision. Preserve prior execution evidence and its protocol; replay needs the recorded runtime/protocol, otherwise fails explicitly. A migration may record the newly derived identity of the migrated graph but never rewrite historical provenance or relabel an old digest. Rollback to a runtime that predates owner-separated stores, `pactwright upgrade --to 0.0.1`, runs the paired reverse migration `owned-stores-v1-to-released-0.0.1` under the current runtime **before** package replacement, because the target runtime cannot run migrations; this is the one exception to post-install work by the newly installed runtime. It moves each enabled owner's records and tuples back into `specs/nodes/` and `specs/graph/edges.yml` through the owner's declared reverse migration (section 11), writes the released unversioned lock from the current one and validates the result with the released decoders. Core records are unchanged, `edges: []` stays, and execution-state and legacy-closure documents stay in place, unread by the target and reported as such. A record that no declared reverse migration can express in the released format, an inactive or ambiguous owner's data, and an interrupted upgrade block the rollback before any write, naming the prerequisite. The recovery record is written first as for any upgrade; a package replacement that fails after the reverse migration leaves released-format stores that the still-installed runtime reads as migration required, and the record names `pactwright upgrade --to <current version>` as the recovery. Rollback after new canonical work is supported when every record can be expressed; it is never a restore of pre-migration copies, so none are retained. An older runtime must not be pointed at new stores and allowed to ignore them.
 
 ## Agent Pack upgrade
 
@@ -880,7 +898,7 @@ It must validate the complete required capability set before changing the curren
 
 `pactwright agent-pack use <source>` remains the explicit operation for changing Agent Pack identity.
 
-Both commands obtain packages only through the detected project package manager, under the detection rule above, through one runtime delegation seam whose requests are: install a package as a development dependency, request a source at a constraint, restore an exact installed version under the previous constraint, remove a dependency the command added, and acquire an exact version into an isolated location outside the project (used by evaluation baselines, section 24). `use` installs a package source that is not already installed at a satisfying version, and `upgrade` requests the configured source at its configured constraint, so the package manager resolves the version that satisfies it, replacing the installed package when that version differs from the locked one, and reconciles the package manifest to that constraint. Path sources involve no package manager. Validation of the installed candidate precedes any change to `.pactwright/lock.yml` or generated output. A candidate that fails validation is not locked, and the package-manager manifest and lock are restored to the previous installed version and constraint, or a dependency `use` added is removed; when restoration itself fails, the report names the previous exact version to restore. When the package manager's resolution of the configured constraint is the version already locked, which an exact constraint equal to the locked version or a range with no newer satisfying version produces, `upgrade` reports that nothing changed.
+Both commands obtain packages only through the detected project package manager, under the detection rule above, through one runtime delegation seam whose requests are: install a package as a development dependency, request a source at a constraint, restore an exact installed version under the previous constraint, remove a dependency the command added, acquire an exact version into an isolated location outside the project (used by evaluation baselines, section 24), and list the versions of a package the registry offers (used by runtime-upgrade target resolution and `doctor`). `extension remove` requests removal of the Extension's package dependency through the same seam. `use` installs a package source that is not already installed at a satisfying version, and `upgrade` requests the configured source at its configured constraint, so the package manager resolves the version that satisfies it, replacing the installed package when that version differs from the locked one, and reconciles the package manifest to that constraint. Path sources involve no package manager. Validation of the installed candidate precedes any change to `.pactwright/lock.yml` or generated output. A candidate that fails validation is not locked, and the package-manager manifest and lock are restored to the previous installed version and constraint, or a dependency `use` added is removed; when restoration itself fails, the report names the previous exact version to restore. When the package manager's resolution of the configured constraint is the version already locked, which an exact constraint equal to the locked version or a range with no newer satisfying version produces, `upgrade` reports that nothing changed.
 
 ## Extension upgrade
 
@@ -940,6 +958,8 @@ action required
 
 without inventing a separate health-state subsystem.
 
+Severity follows one rule. **Action required** marks a finding that stops the environment from being activated or executed as configured, or that a target-runtime activation needs resolved: an invalid, unsupported or missing required input; a recognised legacy format needing migration; no selected Agent Pack; package-manager lock ↔ `.pactwright/lock.yml` drift; content whose hash does not match its locked identity; runtime ↔ Extension or Agent Pack incompatibility; a missing required capability; an enabled Extension that cannot register; an unsupported Production Skills import; generated adapter/integration drift; an interrupted upgrade (section 15); and a validation failure of the active graph. **Warning** marks a finding that leaves the environment executable now but a supported operation unavailable or stale: an ambiguous or contradicted package-manager declaration, and an unavailable repository revision during ordinary diagnosis, including one caused by an uncommitted execution-state or provenance document. Items with no severity are reported as information: installed versions, the detected package manager, an available runtime upgrade together with `pactwright upgrade`, that upgrade availability cannot be determined, and inventoried inactive Extension data. The overall result is the highest severity present and healthy when none is.
+
 An unavailable repository revision is a warning during ordinary graph/environment diagnosis when local graph loading and hashing are otherwise valid. It becomes action required when diagnosing a requested pinned execution or replay. Report the missing commit/input, dirty tree, unsupported repository-input transport or migration prerequisite; do not auto-commit or label a partial load healthy. A recognised legacy format needing migration is action required for target-runtime activation, not an unknown-version error.
 
 `doctor` must provide concrete remediation commands where the correction is deterministic, for example:
@@ -952,7 +972,9 @@ pactwright sync
 pactwright validate
 ```
 
-It must not automatically execute those mutations.
+It must not automatically execute those mutations. The deterministic remediations are `pactwright sync` for generated drift; `pactwright upgrade` or `pactwright upgrade --to <version>` for a migration-required source and for an interrupted upgrade, naming the recorded previous version; `pactwright validate` for a validation failure of the active graph; and the component's owning upgrade command for a component that is incompatible with the runtime or drifted from the package-manager lock. Other findings name no command.
+
+`doctor` exits zero when the result is healthy or warning and non-zero when it is action required. `pactwright doctor --json` emits the same result as a JSON document: the overall result and every finding with its severity, code, message, path where applicable and remediation.
 
 GitHub remote-health diagnosis remains owned by the GitHub Integration surface rather than making `doctor` a second GitHub reconciler.
 
@@ -1266,6 +1288,7 @@ pactwright upgrade
 pactwright doctor
 
 pactwright extension add
+pactwright extension disable
 pactwright extension remove
 pactwright extension upgrade
 
@@ -1336,4 +1359,4 @@ Production-specific semantics remain in independent Production Skills repositori
 
 ---
 
-**Pactwright Distribution, Agent Packs, Extensions and Evaluation v4**
+**Pactwright Distribution, Agent Packs, Extensions and Evaluation v5**

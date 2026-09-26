@@ -60,8 +60,9 @@ requirements:
       and verifies the typed Git repository identity against the CORE#56 grammar and the pg1 revision. Unknown
       or malformed revision protocols fail rule 17; a recognised legacy sha256 identity is reported unavailable
       without its legacy implementation, never reinterpreted. Unavailable or dirty input bases and reconstructed-state
-      mismatch are reported. The environment_lock_hash is reported without verification, whose protocol Step
-      15 owns and whose verification belongs to the later pinned-replay operation owners. For read-only validate,
+      mismatch are reported. The environment_lock_hash must match the DISTRIBUTION#12 env1 grammar, which rule
+      17 checks like the other protocols, and is otherwise reported without verification, which belongs to the later
+      pinned-replay operation owners. For read-only validate,
       refusing without an attempt or replay record means it reports the refusal, leaves the working tree, index
       and refs untouched and creates no restore location, attempt or provenance artefact.
   R07:
@@ -165,14 +166,15 @@ acceptance:
     cases: [not-requested, matching-sha1-base, matching-sha256-base, pg1-stored-byte-vectors, unknown-protocol,
       malformed-protocol, legacy-protocol, unavailable-base, dirty-base, reconstructed-state-mismatch, differing-lock-hash,
       unsupported-document-version, string-document-version, missing-document-key, unknown-document-key, empty-identity-value,
-      non-string-identity-value, absent-document-path]
+      non-string-identity-value, absent-document-path, malformed-lock-hash-protocol]
     given: A replay-base document passed to validate --replay --provenance recording a repository revision and
       Project Graph revision under the listed condition; not-requested is ordinary validation, with no --replay,
       of a project whose recorded history cannot be reconstructed; differing-lock-hash is a matching base whose
       recorded environment_lock_hash differs from the current lock; the six document cases each have one defect,
       an integer version other than 1, the string "1" as version, one of the four keys absent, an extra key,
       an identity value that is the empty string, or an identity value that is a number; absent-document-path
-      names a path that does not exist.
+      names a path that does not exist; malformed-lock-hash-protocol is a matching base whose recorded environment_lock_hash
+      does not match the env1 grammar.
     when: Pactwright validate runs, with replay validation requested except for not-requested.
     then: Not-requested attempts no historical reconstruction and raises no replay problem. Matching bases pass
       and the pg1 vectors reproduce their fixed bytes and digests. Unknown and malformed protocols fail rule
@@ -181,7 +183,8 @@ acceptance:
       prefixed or compared as pg1. Unavailable and dirty bases are refused before any execution effect, with
       no attempt, replay record or restore location, and the working tree, index and refs unchanged. Mismatch
       fails rule 17 naming both revisions. differing-lock-hash passes rule 17 and reports the recorded hash
-      without verifying it. The six document cases and absent-document-path are reported with path and cause,
+      without verifying it; malformed-lock-hash-protocol fails rule 17 naming the unrecognised lock-hash protocol.
+      The six document cases and absent-document-path are reported with path and cause,
       rule 17 does not run, no reconstruction is attempted and validate exits non-zero as unverifiable.
     verify:
       automated: [validate.replay]

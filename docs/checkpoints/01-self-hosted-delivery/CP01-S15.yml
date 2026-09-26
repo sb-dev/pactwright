@@ -11,10 +11,10 @@ outputs:
 requirements:
   R01:
     source: [DISTRIBUTION#12]
-    statement: Resolution shall write the version 1 lock with the exact runtime version, the configured pack source,
-      its exact version and content hash, and agents and skills maps with the content hash of each direct agent
-      and skill. Package-backed components record their exact package or source, version, content identity and
-      resolved dependencies as applicable.
+    statement: Resolution shall write the version 1 lock with the exact runtime version and the extensions mapping
+      always present and, exactly when a pack is selected, the configured pack source, its exact version and content
+      hash, and agents and skills maps with the content hash of each direct agent and skill. Package-backed components
+      record their exact package or source, version, content identity and resolved dependencies as applicable.
   R02:
     source: [DISTRIBUTION#3, DISTRIBUTION#12]
     statement: Configuration records desired constraints, the package-manager manifest and lock record installed
@@ -31,10 +31,12 @@ requirements:
       environment byte-identical.
   R05:
     source: [DISTRIBUTION#12, GUIDE#replay-provenance]
-    statement: The environment_lock_hash shall be derived deterministically from the exact resolved lock state.
-      Identical exact environments produce identical lock bytes and hash; a change to any resolved identity changes
-      the hash. It is distinct from the repository and Project Graph revisions, and the three form the shared replay
-      base repository_revision + project_graph_revision + environment_lock_hash.
+    statement: 'The environment_lock_hash shall be the DISTRIBUTION#12 env1 protocol: `env1:sha256:<64 lower-case hex
+      digits>`, SHA-256 over the UTF-8 RFC 8785 JCS serialization, without a trailing newline, of the complete decoded
+      version 1 lock mapping. Identical exact environments produce identical lock bytes and hash; a change to any
+      resolved identity changes the hash; mapping-key order, quoting, comments and line endings do not. The runtime
+      reproduces the frozen env1 vectors. The hash is distinct from the repository and Project Graph revisions, and
+      the three form the shared replay base repository_revision + project_graph_revision + environment_lock_hash.'
   R06:
     source: [CORE#54, DISTRIBUTION#12]
     statement: The lock and configuration shall be read through the Step 1 canonical loader. A missing, malformed
@@ -43,9 +45,10 @@ requirements:
       state.
   R07:
     source: [DISTRIBUTION#6, DISTRIBUTION#12]
-    statement: Resolution shall not resolve external Production Skills imports. A selected pack that declares one
-      is reported as unsupported by this release. No Production Skills entry is recorded and no environment_lock_hash
-      is produced for that environment.
+    statement: Resolution shall not resolve external Production Skills imports. A pack whose installed manifest declares
+      one, which DISTRIBUTION#5 refuses at selection and which can therefore reach resolution only through a manifest
+      changed since selection, is reported as unsupported by this release. No Production Skills entry is recorded and
+      no environment_lock_hash is produced for that environment.
   R08:
     source: [DISTRIBUTION#6, DISTRIBUTION#12]
     statement: Resolution shall retain an integration point where the Checkpoint 5 external Production Skills resolver
@@ -68,7 +71,7 @@ acceptance:
     cases: [runtime-version, pack-version, pack-content-hash, agent-content, direct-skill-content]
     given: Two resolved environments that differ only in the listed identity.
     when: Each environment_lock_hash is derived.
-    then: The two hashes differ.
+    then: The two hashes differ, and each matches the env1 grammar.
     verify:
       automated: [lock.hash-sensitivity]
   AC03:
@@ -145,3 +148,15 @@ acceptance:
       resolution is implemented.
     verify:
       review: [lock.production-skills-seam]
+  AC11:
+    covers: [R05]
+    cases: [frozen-vectors, key-order, quoting, comments, crlf, unactivated-scaffold]
+    given: The DISTRIBUTION#12 env1 protocol vectors; a resolved lock rewritten with only the listed formatting change
+      for key-order, quoting, comments and crlf; and, for unactivated-scaffold, the lock of a plain init scaffold beside
+      the same project after a pack is selected.
+    when: The environment_lock_hash is derived from each.
+    then: frozen-vectors reproduces each vector's canonical bytes and hash, including every stored_files form. The four
+      formatting cases yield the hash of the unchanged lock. unactivated-scaffold yields a hash for the scaffold lock that
+      differs from the activated lock's hash.
+    verify:
+      automated: [lock.hash-canonical-form]
