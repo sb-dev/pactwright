@@ -213,8 +213,8 @@ acceptance:
       injects a filesystem failure into the restoration that follows a validation failure, then retries; each records the package manifest and package-manager lock bytes after the package-manager step.
     when: The published 0.0.1 CLI's validate is invoked and passes on the project; then the current runtime is installed
       through the package manager and upgrade --to its version runs under it, the released runtime having no upgrade
-      command. The interrupted cases then run doctor and upgrade --to the installed version; completion-other-target-refused
-      instead runs upgrade --to 0.0.1 and upgrade without --to.
+      command. The interrupted cases then run doctor and upgrade --to the installed version; completion-other-target-refused instead runs upgrade --to 0.0.1 and upgrade without --to; completion-restoration-failure
+      runs doctor, upgrade --to 0.0.1 and then upgrade --to the installed version.
     then: completion-migration-failure and completion-validation-failure fail clearly naming the injected step. In the
       interrupted cases doctor reports an interrupted upgrade naming upgrade --to the installed version, and that command
       writes no new record and requests no package change. Every failure case and the three interrupted cases end with every .pactwright/
