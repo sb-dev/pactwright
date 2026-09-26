@@ -1,8 +1,8 @@
 # Pactwright — Checkpoint 3 — Project Intelligence
 
-**Version:** 13  
+**Version:** 14  
 **Entry condition:** Checkpoint 2 is accepted.  
-**Release:** `0.0.3`  
+**Release:** `0.0.4`  
 **Exit capability:** Project Intelligence can cold-start Pactwright and Kakeibo, govern durable project knowledge, contribute bounded context, compose into the established GitHub integration and derive one dependency-aware Intent roadmap without automatically creating Delivery work.
 
 ## 1. Goal
@@ -114,7 +114,7 @@ PI GitHub profile/workflow/checks/views
 PI evaluation cases
 Pactwright corpus ingestion
 public-content readiness gates
-exact real 0.0.2 → 0.0.3 runtime/Agent Pack + PI installation
+exact real 0.0.3 → 0.0.4 runtime/Agent Pack + PI installation
 Kakeibo cold start
 ```
 
@@ -980,28 +980,28 @@ Project Intelligence both governs the project and explains itself from governed 
 
 Public claims agree with accepted PI Knowledge, the example runs in CI where practical, resulting Sources remain traceable and challenged/superseded/retracted relied-on Knowledge before approval requires re-grounding rather than silent continuation.
 
-## Stage 8 — Release `0.0.3`
+## Stage 8 — Release `0.0.4`
 
-### Step 23 — Publish the `0.0.3` package family
+### Step 23 — Publish the `0.0.4` package family
 
 **References:** Implementation Guide npm release model; Checkpoint 2 exact-version upgrade acceptance.
 
-Before release, fixture-prove the exact `0.0.2 → 0.0.3` runtime, selected Agent Pack and new PI sequence from Step 24. Verify compatibility after each operation and exact desired-version targeting even with a newer compatible pack available. Do not publish an acceptance path that requires bypassing normal component ownership or running through an incompatible intermediate environment.
+Before release, fixture-prove the exact `0.0.3 → 0.0.4` runtime, selected Agent Pack and new PI sequence from Step 24. Verify compatibility after each operation and exact desired-version targeting even with a newer compatible pack available. Do not publish an acceptance path that requires bypassing normal component ownership or running through an incompatible intermediate environment.
 
 Use the normal release PR path.
 
 The new first-publication package is:
 
 ```text
-@pactwright/project-intelligence@0.0.3
+@pactwright/project-intelligence@0.0.4
 ```
 
-Bootstrap trusted publishing only for that new package, then tag accepted source `v0.0.3` so trusted publishing releases the full compatible family:
+Bootstrap trusted publishing only for that new package, then tag accepted source `v0.0.4` so trusted publishing releases the full compatible family:
 
 ```text
-pactwright@0.0.3
-@pactwright/standard@0.0.3
-@pactwright/project-intelligence@0.0.3
+pactwright@0.0.4
+@pactwright/standard@0.0.4
+@pactwright/project-intelligence@0.0.4
 ```
 
 **Verify before continuing**
@@ -1010,30 +1010,30 @@ All three versions resolve, trusted-publisher/provenance expectations hold and t
 
 ## Stage 9 — Cold-start Kakeibo
 
-### Step 24 — Upgrade Kakeibo from accepted `0.0.2` and install exact `0.0.3` through owning paths
+### Step 24 — Upgrade Kakeibo from accepted `0.0.3` and install exact `0.0.4` through owning paths
 
 **References:** Spec 02 upgrade/Extension installation ownership; Checkpoint 2 exact-version upgrade acceptance.
 
 **Run**
 
-Start from the accepted Checkpoint 2 Kakeibo environment and record its installed/configuration/lock state. Use the fixture-proven sequence from Step 23. Do not preinstall `0.0.3` packages or edit installed package/lock state manually.
+Start from the accepted Checkpoint 2 Kakeibo environment and record its installed/configuration/lock state. Use the fixture-proven sequence from Step 23. Do not preinstall `0.0.4` packages or edit installed package/lock state manually.
 
 ```bash
-pnpm pactwright upgrade --to 0.0.3
+pnpm pactwright upgrade --to 0.0.4
 pnpm pactwright validate
 ```
 
-Verify runtime `0.0.3` and compatibility with the still-selected pack. Set only the selected `@pactwright/standard` Agent Pack's desired version constraint to exact `0.0.3` through existing configuration, preserving its source, then:
+Verify runtime `0.0.4` and compatibility with the still-selected pack. Set only the selected `@pactwright/standard` Agent Pack's desired version constraint to exact `0.0.4` through existing configuration, preserving its source, then:
 
 ```bash
 pnpm pactwright agent-pack upgrade
 pnpm pactwright validate
 ```
 
-Verify installed pack and both locks identify `@pactwright/standard@0.0.3`, not a floating later release. Install the new Extension through its exact package reference:
+Verify installed pack and both locks identify `@pactwright/standard@0.0.4`, not a floating later release. Install the new Extension through its exact package reference:
 
 ```bash
-pnpm pactwright extension add @pactwright/project-intelligence@0.0.3
+pnpm pactwright extension add @pactwright/project-intelligence@0.0.4
 pnpm pactwright intelligence validate
 pnpm pactwright sync
 ```
@@ -1052,11 +1052,11 @@ Each owning command must complete its compatible transition before the next begi
 
 **Expected result**
 
-Kakeibo moves from the real published `0.0.2` environment to the exact Checkpoint 3 family without bypassing upgrade ownership or implicitly choosing a different Agent Pack.
+Kakeibo moves from the real published `0.0.3` environment to the exact Checkpoint 3 family without bypassing upgrade ownership or implicitly choosing a different Agent Pack.
 
 **Verify before continuing**
 
-Record compatibility and package-manager/Pactwright lock agreement after each operation. Final state identifies `pactwright@0.0.3`, `@pactwright/standard@0.0.3` and `@pactwright/project-intelligence@0.0.3`. Require new-runtime migration/validation provenance, one shared GitHub integration, a converged second dry-run and preserved user-owned workflows/remote state.
+Record compatibility and package-manager/Pactwright lock agreement after each operation. Final state identifies `pactwright@0.0.4`, `@pactwright/standard@0.0.4` and `@pactwright/project-intelligence@0.0.4`. Require new-runtime migration/validation provenance, one shared GitHub integration, a converged second dry-run and preserved user-owned workflows/remote state.
 
 ### Step 25 — Ingest the complete Kakeibo authority set and preserve maturity/ownership
 
@@ -1296,15 +1296,15 @@ Checkpoint 3 closes only when:
 - Pactwright delivers and satisfies one real roadmap candidate only after explicit Intent capture;
 - every applicable Spec 08 public-content domain is Covered before the PI learning path is approved, and relied-on claims are accepted/in-horizon/Source-traceable;
 - the PI public learning path is grounded in accepted current Knowledge and its executable example is validated;
-- the `0.0.3` family is registry verified;
-- Kakeibo performs an exact `0.0.2 → 0.0.3` runtime/Agent Pack upgrade and PI installation through explicit desired constraints and owning commands, verifying every compatible intermediate state rather than preinstalling or accepting later versions;
+- the `0.0.4` family is registry verified;
+- Kakeibo performs an exact `0.0.3 → 0.0.4` runtime/Agent Pack upgrade and PI installation through explicit desired constraints and owning commands, verifying every compatible intermediate state rather than preinstalling or accepting later versions;
 - Kakeibo is cold-started from its current canonical specification corpus and completes one cross-domain Delivery;
 - checkpoint findings flow through PI itself;
-- Kakeibo is installed from the published `0.0.3`, its authority index plus all seven numbered canonical specs are ingested as separate Sources, and their ownership, maturity and conflict-resolution distinctions are preserved rather than flattened;
+- Kakeibo is installed from the published `0.0.4`, its authority index plus all seven numbered canonical specs are ingested as separate Sources, and their ownership, maturity and conflict-resolution distinctions are preserved rather than flattened;
 - Kakeibo delivers one real bounded cross-owner slice with bounded PI context drawn principally from its `01`/`02`/`05`/`06` owners, preserving the preparation-versus-reviewed-truth boundary;
 - checkpoint findings are captured through Project Intelligence itself as traceable Sources, Knowledge and roadmap candidates, with no automatically created Intents;
 - no known blocking failure is carried into Checkpoint 4.
 
 ---
 
-**Pactwright — Checkpoint 3 — Project Intelligence v13**
+**Pactwright — Checkpoint 3 — Project Intelligence v14**

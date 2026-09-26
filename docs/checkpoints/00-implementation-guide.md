@@ -1,6 +1,6 @@
 # Pactwright — Implementation Guide
 
-**Version:** 17  
+**Version:** 18  
 **Status:** Checkpoint index, engineering standard and release model
 
 ## Purpose
@@ -207,6 +207,8 @@ All Pactwright-owned workflows:
 - use appropriate concurrency controls for superseded validation runs;
 - never place credentials or sensitive payloads in workflow files or logs.
 
+The repository verification workflow runs on pull requests and on pushes to the default branch, and on no other event. Superseded pull-request runs are cancelled; default-branch runs complete, so every default-branch commit keeps a result. It reports one stable check context, `CI / Verify`, that succeeds only when every Node-major job has succeeded. Requiring that context before merge is repository configuration owned by the repository owner, outside the committed files and outside Pactwright ownership: it is recorded in the run configuration, Pactwright never enables or removes it, and managed reconciliation preserves it as user-owned repository configuration (GitHub Integration §34).
+
 Generated Pactwright workflows remain thin execution/projection surfaces. Lifecycle, Project Graph, Extension and authority semantics stay in the Pactwright runtime and owning specifications.
 
 GitHub Projects, checks, summaries and views are derived projections. Editing projected GitHub fields does not create or mutate canonical Pactwright graph state, including Experiment state.
@@ -222,7 +224,7 @@ Every publishable package has:
 - valid entry points / `bin` / exports as applicable;
 - a normal `prepack` build.
 
-Do not claim compatibility that CI or package smoke tests do not exercise.
+Do not claim compatibility that CI does not exercise. The repository verification workflow carries the whole Node claim: one job per Node major that any publishable package's engines range admits, and no other Node version, on the GitHub-hosted Linux runner. Packed-consumer smoke tests prove packaging on the runtime they run under, not the range. Publishable packages declare no `os` or `cpu` restriction; claiming another operating system needs a CI job that exercises it.
 
 ### Canonical gap discipline
 
@@ -310,16 +312,17 @@ Pactwright does not wait until the end of implementation to document or explain 
 Each checkpoint advances the smallest public surface set needed by the newly usable capability:
 
 ```text
-0.0.1  README Quick Start + Getting Started + core Delivery example
-0.0.2  website foundation + GitHub guide + remote Delivery example
-0.0.3  PI docs/onboarding/example/Academy + public-content knowledge foundation
-0.0.4  Graph Review docs/example/Academy + public-corpus review
-0.0.5  Production Skills + Assets / Publication guide/example/Academy + first grounded Asset/Publication
-0.0.6  Operations docs/example/Academy + production-feedback content + controlled Experiment explanation
-0.0.7  Publication-feedback guide + evidence-driven superseding revision of a real Publication
-0.0.8  full operating guide/example + Experiments projection + advanced Academy + ecosystem/Extension catalogue
-0.0.9  permanent regression hardening + case study + contribution/launch material + public-surface completion
-0.1.0  first supported public release of the accepted 0.0.9 capability line
+0.0.1  README Quick Start + Getting Started + core Delivery example (released against Checkpoint 1 v14)
+0.0.2  Checkpoint 1's corrective release of the same content set
+0.0.3  website foundation + GitHub guide + remote Delivery example
+0.0.4  PI docs/onboarding/example/Academy + public-content knowledge foundation
+0.0.5  Graph Review docs/example/Academy + public-corpus review
+0.0.6  Production Skills + Assets / Publication guide/example/Academy + first grounded Asset/Publication
+0.0.7  Operations docs/example/Academy + production-feedback content + controlled Experiment explanation
+0.0.8  Publication-feedback guide + evidence-driven superseding revision of a real Publication
+0.0.9  full operating guide/example + Experiments projection + advanced Academy + ecosystem/Extension catalogue
+0.0.10 permanent regression hardening + case study + contribution/launch material + public-surface completion
+0.1.0  first supported public release of the accepted 0.0.10 capability line
 ```
 
 Use the strongest Pactwright capability already available.
@@ -408,23 +411,25 @@ Approved Assets and Publications remain immutable. Later analytics, Operations O
 
 ## npm release model
 
-The checkpoint number remains internal. Public package versions are normal SemVer development releases:
+The checkpoint number remains internal. Public package versions are normal SemVer development releases: each checkpoint publishes the next unused `0.0.x`, a corrective release consumes a number, and the checkpoint file's Release line names the version it publishes.
 
 ```text
-Checkpoint 1 → 0.0.1
-Checkpoint 2 → 0.0.2
-Checkpoint 3 → 0.0.3
-Checkpoint 4 → 0.0.4
-Checkpoint 5 → 0.0.5
-Checkpoint 6 → 0.0.6
-Checkpoint 7 → 0.0.7
-Checkpoint 8 → 0.0.8
-Checkpoint 9 → 0.0.9
+Checkpoint 1 → 0.0.1 (released against Checkpoint 1 v14) and the corrective 0.0.2
+Checkpoint 2 → 0.0.3
+Checkpoint 3 → 0.0.4
+Checkpoint 4 → 0.0.5
+Checkpoint 5 → 0.0.6
+Checkpoint 6 → 0.0.7
+Checkpoint 7 → 0.0.8
+Checkpoint 8 → 0.0.9
+Checkpoint 9 → 0.0.10
 
 first supported public release after Checkpoint 9 acceptance → 0.1.0
 ```
 
 `0.0.x` publishes under `next`; `0.1.0` publishes under `latest`.
+
+npm gives a package's first publication `latest` whatever tag was requested, so `latest` points at the interactively bootstrapped version until `0.1.0`. No `0.0.x` release moves `latest`, the release workflow writes only the tag the version line selects, and public `0.0.x` instructions install an exact version.
 
 Graduation is not another Pactwright package version. It proves the supported system can extend Kakeibo through the existing ingestion abstraction after the Checkpoint 9 / `0.1.0` acceptance line.
 
@@ -441,6 +446,8 @@ verify
 → all later versions publish from CI with OIDC
 ```
 
+The interactive publish uses the npm tag the version line selects; npm also sets `latest` on a first publication. The trusted-publisher entry it configures is evidenced by that package's first workflow publish, not by the bootstrap.
+
 Target first-party package introduction points are:
 
 ```text
@@ -448,16 +455,16 @@ Target first-party package introduction points are:
   pactwright
   @pactwright/standard
 
-0.0.3
+0.0.4
   @pactwright/project-intelligence
 
-0.0.4
+0.0.5
   @pactwright/graph-review
 
-0.0.5
+0.0.6
   @pactwright/assets-publication
 
-0.0.6
+0.0.7
   @pactwright/operations
 ```
 
@@ -485,7 +492,7 @@ tag
 → pnpm verify
 → tag/version/default-branch assertions
 → publish dry-run
-→ npm trusted publish
+→ per package: registry presence check → npm trusted publish
 → registry verification
 ```
 
@@ -499,7 +506,11 @@ permissions:
 
 and the `npm-release` GitHub environment.
 
-Release builds do not depend on a cached `node_modules` tree.
+Release builds do not depend on a cached `node_modules` tree. Release runs execute one at a time under a concurrency group that retains every pending run (`queue: max`, which the platform bounds at 100 pending runs) and cancels no run; the platform's default single pending slot, which cancels an older pending run when a newer one arrives, is a defect. The platform starts retained runs in the order they began waiting, not the order their tags were pushed, and guarantees no order, so the workflow does not assume one: before publishing it asserts that the expected npm tag does not already point at a higher version. A release that runs after a higher version has published is refused as superseded before any publish, whatever the platform's order, publishes nothing further, is not rerun, and its version number is consumed; its content ships in the next version. Releases therefore only ever move a dist-tag forward.
+
+The workflow publishes each package with its own publish command, after checking the registry that the package's tagged version is absent. A version already present, such as one published by the interactive bootstrap, is skipped and reported; the workflow never relies on the package manager's implicit skipping of published versions. Trusted publishing needs npm CLI 11.5.1 or later and generates provenance attestations automatically; the workflow leaves that enabled, and registry verification checks that each version the run published carries an attestation naming this repository and workflow. That attestation, not the bootstrap, is the evidence that a package's trusted-publisher entry works.
+
+The `npm-release` environment admits deployments from version tags only and requires no reviewer: the owner's push of a version tag to accepted default-branch source is the publish authority, and a reviewer gate would add the same person's second click and gate every rerun. A ruleset restricts creating version tags to the repository owner. The environment rules, the tag ruleset and each package's trusted-publisher entry are repository and registry configuration outside the committed files. The repository owner configures them as an approved prerequisite of the release workflow's review; they are read back into the run configuration before the workflow is reviewed or run, and a release run is evidenced by its `npm-release` deployment record and the published provenance.
 
 ### Preparing a development release
 
@@ -542,14 +553,14 @@ The tag triggers the trusted release workflow.
 
 ### Preparing the first supported release
 
-Checkpoint 9 owns the `0.1.0` promotion after `0.0.9` has passed the full generic failure matrix and Kakeibo hardened acceptance.
+Checkpoint 9 owns the `0.1.0` promotion after `0.0.10` has passed the full generic failure matrix and Kakeibo hardened acceptance.
 
-`0.1.0` is a new immutable SemVer version of the accepted supported line, not a dist-tag-only promotion of `0.0.9`.
+`0.1.0` is a new immutable SemVer version of the accepted supported line, not a dist-tag-only promotion of `0.0.10`.
 
 Before `latest` moves to `0.1.0`:
 
 ```text
-0.0.9 accepted under next
+0.0.10 accepted under next
 → Pactwright failure drills pass
 → Kakeibo seven-owner regression review passes
 → Kakeibo production Kei regression lifecycle passes
@@ -564,7 +575,8 @@ Published npm versions are immutable.
 
 - Do not overwrite or routinely unpublish a released version.
 - If the release workflow fails before publication, fix the cause and rerun safely.
-- Recursive publishing may resume only where the package manager/registry behaviour has been verified to skip already published immutable versions safely.
+- A rerun publishes only the packages whose tagged version the registry does not hold, through the workflow's own per-package registry check; it never re-publishes or overwrites a version and never relies on the package manager's implicit skipping.
+- A release refused as superseded, because a higher version already holds the expected npm tag, is not rerun; a package it left unpublished ships in the next version, which the owner tags.
 - If a published release is defective, fix forward with the next version.
 - Do not promote a known-defective `0.0.x` line to `latest`.
 - Moving a dist-tag to a previously published known-good version is an emergency recovery action and must be recorded as a Decision.
@@ -631,4 +643,4 @@ A non-blocking open design gap may cross a checkpoint only when:
 
 ---
 
-**Pactwright — Implementation Guide v17**
+**Pactwright — Implementation Guide v18**

@@ -1,8 +1,8 @@
 # Pactwright — Checkpoint 5 — Production Skills + Assets / Publication
 
-**Version:** 13  
+**Version:** 14  
 **Entry condition:** Checkpoint 4 is accepted.  
-**Release:** `0.0.5`  
+**Release:** `0.0.6`  
 **Exit capability:** Pactwright and Kakeibo can resolve exact external Production Skills and Production Extension Packs through the selected Agent Pack during normal Delivery, then turn successful Delivery Evidence into exact human-approved Assets and real Publications without introducing a second production lifecycle.
 
 ## 1. Goal
@@ -154,7 +154,7 @@ real Pactwright Production Skills use
 real Pactwright Asset + Publication
 real Kakeibo Production Skills use
 real Kakeibo Asset + Publication where appropriate
-exact real 0.0.4 → 0.0.5 ownership-specific upgrade/install path
+exact real 0.0.5 → 0.0.6 ownership-specific upgrade/install path
 ```
 
 ### Explicitly removed
@@ -1009,23 +1009,23 @@ Users can reproduce specialised production and durable publication without confl
 
 Run examples and Graph Review over the new public material. Triage all Findings through PI and resolve blocking inconsistencies through normal Delivery. Public claims and supported automation guidance must match actual checkpoint acceptance.
 
-## Stage 8 — Release `0.0.5`
+## Stage 8 — Release `0.0.6`
 
-### Step 22 — Publish the `0.0.5` family
+### Step 22 — Publish the `0.0.6` family
 
 **References:** Implementation Guide npm release model; Checkpoint 2 exact-version upgrade acceptance.
 
 **Run**
 
-Prepare release from accepted Evidence. Before publication, fixture-prove Step 23's exact transition from `0.0.4`: runtime, selected standard pack, PI, Graph Review and new Assets / Publication. Verify the old Graph Review remains compatible during its PI dependency upgrade, then verify the full target environment. An incompatible intermediate sequence or ignored target constraint is a blocker, not grounds to bypass component owners.
+Prepare release from accepted Evidence. Before publication, fixture-prove Step 23's exact transition from `0.0.5`: runtime, selected standard pack, PI, Graph Review and new Assets / Publication. Verify the old Graph Review remains compatible during its PI dependency upgrade, then verify the full target environment. An incompatible intermediate sequence or ignored target constraint is a blocker, not grounds to bypass component owners.
 
 The new first-party package is:
 
 ```text
-@pactwright/assets-publication@0.0.5
+@pactwright/assets-publication@0.0.6
 ```
 
-Existing compatible first-party packages also release as `0.0.5`:
+Existing compatible first-party packages also release as `0.0.6`:
 
 ```text
 pactwright
@@ -1040,43 +1040,43 @@ Use the normal release PR/tag flow and bootstrap trusted publishing only for the
 
 **Expected result**
 
-The compatible `0.0.5` family is available under `next` with provenance, exact external dependencies and a verified consumer upgrade sequence.
+The compatible `0.0.6` family is available under `next` with provenance, exact external dependencies and a verified consumer upgrade sequence.
 
 **Verify before continuing**
 
 ```bash
-pnpm view pactwright@0.0.5 version
-pnpm view @pactwright/standard@0.0.5 version
-pnpm view @pactwright/project-intelligence@0.0.5 version
-pnpm view @pactwright/graph-review@0.0.5 version
-pnpm view @pactwright/assets-publication@0.0.5 version
+pnpm view pactwright@0.0.6 version
+pnpm view @pactwright/standard@0.0.6 version
+pnpm view @pactwright/project-intelligence@0.0.6 version
+pnpm view @pactwright/graph-review@0.0.6 version
+pnpm view @pactwright/assets-publication@0.0.6 version
 ```
 
-Every command returns `0.0.5`. Require exact-target fixtures, Step 16 environment/replay conformance and all blocking acceptance fixes before real consumer upgrade.
+Every command returns `0.0.6`. Require exact-target fixtures, Step 16 environment/replay conformance and all blocking acceptance fixes before real consumer upgrade.
 
 ## Stage 9 — Prove specialised production and publication in Kakeibo
 
-### Step 23 — Upgrade Kakeibo from accepted `0.0.4` through exact ownership-specific paths
+### Step 23 — Upgrade Kakeibo from accepted `0.0.5` through exact ownership-specific paths
 
 **References:** Spec 02 upgrades; current Kakeibo specs; Checkpoint 2 exact-version upgrade acceptance.
 
 **Run**
 
-Record the accepted `0.0.4` installed/configuration/lock state and use the compatible sequence proven in Step 22. Do not preinstall target packages or edit either lock manually.
+Record the accepted `0.0.5` installed/configuration/lock state and use the compatible sequence proven in Step 22. Do not preinstall target packages or edit either lock manually.
 
 ```bash
-pnpm pactwright upgrade --to 0.0.5
+pnpm pactwright upgrade --to 0.0.6
 pnpm pactwright validate
 ```
 
-Verify runtime `0.0.5`, new-runtime migration and compatibility with existing components. Set only the selected `@pactwright/standard` desired version to exact `0.0.5` through its existing configuration, preserving identity:
+Verify runtime `0.0.6`, new-runtime migration and compatibility with existing components. Set only the selected `@pactwright/standard` desired version to exact `0.0.6` through its existing configuration, preserving identity:
 
 ```bash
 pnpm pactwright agent-pack upgrade
 pnpm pactwright validate
 ```
 
-Verify exact pack and external dependency identities. Next set only PI's desired version constraint to exact `0.0.5` through its supported Extension configuration:
+Verify exact pack and external dependency identities. Next set only PI's desired version constraint to exact `0.0.6` through its supported Extension configuration:
 
 ```bash
 pnpm pactwright extension upgrade project-intelligence
@@ -1084,7 +1084,7 @@ pnpm pactwright intelligence validate
 pnpm pactwright validate
 ```
 
-Verify exact PI and compatibility with the still-enabled Graph Review. Set only Graph Review's desired version constraint to exact `0.0.5`:
+Verify exact PI and compatibility with the still-enabled Graph Review. Set only Graph Review's desired version constraint to exact `0.0.6`:
 
 ```bash
 pnpm pactwright extension upgrade graph-review
@@ -1095,7 +1095,7 @@ pnpm pactwright validate
 Verify exact Graph Review/dependency locks before installing the new Extension:
 
 ```bash
-pnpm pactwright extension add @pactwright/assets-publication@0.0.5
+pnpm pactwright extension add @pactwright/assets-publication@0.0.6
 pnpm pactwright assets validate
 pnpm pactwright sync
 ```
@@ -1114,11 +1114,11 @@ After each owning command, record actual installed versions, both locks and comp
 
 **Expected result**
 
-Kakeibo moves from the real `0.0.4` environment to the exact `0.0.5` family without bypassing installation/upgrade ownership.
+Kakeibo moves from the real `0.0.5` environment to the exact `0.0.6` family without bypassing installation/upgrade ownership.
 
 **Verify before continuing**
 
-Verify intermediate and final package/lock agreement, exact `0.0.5` runtime/standard/PI/Graph Review/Assets packages, recorded external identities, unchanged pack identity, new-runtime migration/validation, preserved historical replay provenance and unrelated user state, and converged remote integration.
+Verify intermediate and final package/lock agreement, exact `0.0.6` runtime/standard/PI/Graph Review/Assets packages, recorded external identities, unchanged pack identity, new-runtime migration/validation, preserved historical replay provenance and unrelated user state, and converged remote integration.
 
 ### Step 24 — Resolve skills for one real Kakeibo outcome through the selected Agent Pack
 
@@ -1256,12 +1256,12 @@ Checkpoint 5 closes only when:
 - disabling the Extension removes only owned generated integration and preserves canonical records and other profiles;
 - public readiness is enforced and Pactwright produces its first grounded approved public Asset and real Publication;
 - Pactwright completes real specialised cross-domain Delivery with external skills;
-- Kakeibo performs the exact 0.0.4 → 0.0.5 transition using explicit desired constraints and owning commands, with compatible intermediate states, then proves production/publication on a materially different outcome;
+- Kakeibo performs the exact 0.0.5 → 0.0.6 transition using explicit desired constraints and owning commands, with compatible intermediate states, then proves production/publication on a materially different outcome;
 - no Creative Delivery, provider registry, Generation Guidance, creative Agent Pack, DAM/CMS or Extension-owned report subsystem has been recreated;
-- the exact 0.0.5 first-party family is registry verified;
+- the exact 0.0.6 first-party family is registry verified;
 - every blocking failure has a correction and passing re-verification; only non-blocking findings remain future candidates;
 - no known blocking failure is carried into Checkpoint 6.
 
 ---
 
-**Pactwright — Checkpoint 5 — Production Skills + Assets / Publication v13**
+**Pactwright — Checkpoint 5 — Production Skills + Assets / Publication v14**

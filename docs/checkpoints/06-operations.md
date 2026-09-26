@@ -1,8 +1,8 @@
 # Pactwright — Checkpoint 6 — Operations
 
-**Version:** 15  
+**Version:** 16  
 **Entry condition:** Checkpoint 5 is accepted.  
-**Release:** `0.0.6`  
+**Release:** `0.0.7`  
 **Exit capability:** Pactwright and Kakeibo can record real software exposure, predeclare controlled comparisons as immutable Experiments, collect bounded operational evidence, create durable Observations, route every canonical Observation through Project Intelligence, and prove governed corrective candidates without turning Operations into a telemetry store or second roadmap.
 
 ## 1. Goal
@@ -104,7 +104,7 @@ pnpm build
 
 After Checkpoint 2, coherent changes land through pull requests and required checks. Dynamic source, execution, Deployment, Observation, Source and candidate identifiers consumed later must be printed or resolved by earlier steps.
 
-Use [Checkpoint 2 — Exact-version upgrade acceptance](./02-remote-delivery.md#exact-version-upgrade-acceptance) for the `0.0.5 → 0.0.6` consumer transition. Prove exact targets and compatible intermediate states before release; do not preinstall target packages, edit either lock or invent component upgrade flags.
+Use [Checkpoint 2 — Exact-version upgrade acceptance](./02-remote-delivery.md#exact-version-upgrade-acceptance) for the `0.0.6 → 0.0.7` consumer transition. Prove exact targets and compatible intermediate states before release; do not preinstall target packages, edit either lock or invent component upgrade flags.
 
 Use the same GitHub prerequisite handling established in Checkpoint 2: land a new managed workflow on the default branch before enabling required checks it must produce. Incomplete activation must be reported, not treated as convergence.
 
@@ -132,7 +132,7 @@ pactwright-operations.yml and shared Project contributions
 real Pactwright software exposure feedback and one real controlled Kakeibo Kei Experiment
 positive governed consequence-path acceptance
 Operations public learning path under existing PI readiness gates
-exact published 0.0.5 → 0.0.6 upgrade and installation
+exact published 0.0.6 → 0.0.7 upgrade and installation
 ```
 
 ### Open gaps that remain open
@@ -915,7 +915,7 @@ Users can reproduce the shipped Operations behaviour from governed learning mate
 
 Execute the example in a clean supported environment and in CI where practical; separately verify the actual website update and applicable readiness/claim provenance. Run Graph Review over the resulting public material, triage every Finding through PI and correct blocking issues. Prose review does not replace executing the example.
 
-## Stage 9 — Release `0.0.6`
+## Stage 9 — Release `0.0.7`
 
 ### Step 21 — Publish the compatible family after exact-upgrade fixture acceptance
 
@@ -923,15 +923,15 @@ Execute the example in a clean supported environment and in CI where practical; 
 
 **Run**
 
-Before publication, test the `0.0.5 → 0.0.6` transition in isolated consumers using built/packed target packages through the normal owning upgrade/install mechanisms. Prove compatibility after every operation, including upgrading PI while Graph Review remains enabled and retaining selected Production Skills/packs. A resolver fixture with a newer available version must still honour exact `0.0.6` desired targets.
+Before publication, test the `0.0.6 → 0.0.7` transition in isolated consumers using built/packed target packages through the normal owning upgrade/install mechanisms. Prove compatibility after every operation, including upgrading PI while Graph Review remains enabled and retaining selected Production Skills/packs. A resolver fixture with a newer available version must still honour exact `0.0.7` desired targets.
 
 Prepare the normal release PR from accepted source/Evidence. Publish the compatible family under the Implementation Guide release/tag/trusted-publisher flow. Bootstrap only the new package's first publication/trusted publisher:
 
 ```text
-@pactwright/operations@0.0.6
+@pactwright/operations@0.0.7
 ```
 
-Existing first-party packages also release as compatible `0.0.6`, including `@pactwright/standard` with `operations-analysis`. External Production Skills remain independently versioned and are not republished as Pactwright packages.
+Existing first-party packages also release as compatible `0.0.7`, including `@pactwright/standard` with `operations-analysis`. External Production Skills remain independently versioned and are not republished as Pactwright packages.
 
 **Expected result**
 
@@ -940,49 +940,49 @@ The exact compatible family is published under `next` with the required provenan
 **Verify before continuing**
 
 ```bash
-pnpm view pactwright@0.0.6 version
-pnpm view @pactwright/standard@0.0.6 version
-pnpm view @pactwright/project-intelligence@0.0.6 version
-pnpm view @pactwright/graph-review@0.0.6 version
-pnpm view @pactwright/assets-publication@0.0.6 version
-pnpm view @pactwright/operations@0.0.6 version
+pnpm view pactwright@0.0.7 version
+pnpm view @pactwright/standard@0.0.7 version
+pnpm view @pactwright/project-intelligence@0.0.7 version
+pnpm view @pactwright/graph-review@0.0.7 version
+pnpm view @pactwright/assets-publication@0.0.7 version
+pnpm view @pactwright/operations@0.0.7 version
 ```
 
-All return `0.0.6`. Verify release workflow/provenance and the exact-target/intermediate-compatibility fixtures. A package lookup alone does not prove safe upgrade behaviour.
+All return `0.0.7`. Verify release workflow/provenance and the exact-target/intermediate-compatibility fixtures. A package lookup alone does not prove safe upgrade behaviour.
 
 ## Stage 10 — Prove Operations on Kakeibo
 
-### Step 22 — Upgrade from accepted `0.0.5` and install exact Operations `0.0.6`
+### Step 22 — Upgrade from accepted `0.0.6` and install exact Operations `0.0.7`
 
 **References:** Spec 02 upgrade ownership; Checkpoint 2 exact-version upgrade acceptance; current Kakeibo configuration.
 
 **Run**
 
-Start from the real accepted Checkpoint 5 Kakeibo environment. Record installed packages, configuration, both locks and selected external dependency identities. Do not preinstall `0.0.6` packages or silently replace the selected Agent Pack. Use Step 20's proven compatible sequence and the shared exact-version procedure.
+Start from the real accepted Checkpoint 5 Kakeibo environment. Record installed packages, configuration, both locks and selected external dependency identities. Do not preinstall `0.0.7` packages or silently replace the selected Agent Pack. Use Step 20's proven compatible sequence and the shared exact-version procedure.
 
 Upgrade the runtime first:
 
 ```bash
-pnpm pactwright upgrade --to 0.0.6
+pnpm pactwright upgrade --to 0.0.7
 pnpm pactwright validate
 ```
 
-Verify new-runtime re-entry, required migrations and compatibility with still-installed components. Immediately before each following component upgrade, set only that component's desired version constraint to exact `0.0.6` through existing supported configuration, preserving its source/identity. Do not edit either lock or run these as an untargeted bulk upgrade:
+Verify new-runtime re-entry, required migrations and compatibility with still-installed components. Immediately before each following component upgrade, set only that component's desired version constraint to exact `0.0.7` through existing supported configuration, preserving its source/identity. Do not edit either lock or run these as an untargeted bulk upgrade:
 
 ```text
-set selected Agent Pack desired version to 0.0.6
+set selected Agent Pack desired version to 0.0.7
 → pnpm pactwright agent-pack upgrade
 → verify package/lock agreement and complete environment
 
-set project-intelligence desired version to 0.0.6
+set project-intelligence desired version to 0.0.7
 → pnpm pactwright extension upgrade project-intelligence
 → verify all enabled dependants remain compatible
 
-set graph-review desired version to 0.0.6
+set graph-review desired version to 0.0.7
 → pnpm pactwright extension upgrade graph-review
 → verify package/lock agreement and complete environment
 
-set assets-publication desired version to 0.0.6
+set assets-publication desired version to 0.0.7
 → pnpm pactwright extension upgrade assets-publication
 → verify package/lock agreement and complete environment
 ```
@@ -992,7 +992,7 @@ Use the implementation's existing configuration fields for those version changes
 Install the new Extension through its owning path:
 
 ```bash
-pnpm pactwright extension add @pactwright/operations@0.0.6
+pnpm pactwright extension add @pactwright/operations@0.0.7
 pnpm pactwright sync
 pnpm pactwright operations validate
 pnpm pactwright doctor
@@ -1010,11 +1010,11 @@ pnpm pactwright validate
 
 **Expected result**
 
-Kakeibo moves from the real published `0.0.5` environment to exact `0.0.6` through ownership-specific operations and safe workflow activation.
+Kakeibo moves from the real published `0.0.6` environment to exact `0.0.7` through ownership-specific operations and safe workflow activation.
 
 **Verify before continuing**
 
-Verify all six first-party package versions are `0.0.6` in installed state and both locks, selected identities are unchanged, PI remains the Operations dependency, and the selected pack supplies the complete capability set. Verify external skill/pack resolution follows the selected pack's declared constraints without silent unrelated changes.
+Verify all six first-party package versions are `0.0.7` in installed state and both locks, selected identities are unchanged, PI remains the Operations dependency, and the selected pack supplies the complete capability set. Verify external skill/pack resolution follows the selected pack's declared constraints without silent unrelated changes.
 
 Record compatibility after each operation and new-runtime migration/sync/validation provenance. Preserve existing Delivery, PI, Asset/Publication and Graph Review history. Confirm one shared Project, functioning Operations checks/projections, unchanged user-owned state and clean second local sync/remote dry-run. Do not pass by preinstallation, partial migration or a later resolved version.
 
@@ -1311,12 +1311,12 @@ Checkpoint 6 closes only when:
 - Kakeibo demonstrates a smallest-layer rollback drill and core financial workflows remain usable without Kei;
 - no Kakeibo-specific release artefact is promoted into a Pactwright graph type;
 - public Operations work passes applicable Covered-domain readiness, its executable example runs, and the website/Academy/docs milestone reflects shipped behaviour;
-- all six exact 0.0.6 first-party packages are registry/provenance verified;
-- Kakeibo performs the real 0.0.5 → 0.0.6 transition using exact desired constraints and owning commands with compatible intermediate environments and no target preinstallation;
+- all six exact 0.0.7 first-party packages are registry/provenance verified;
+- Kakeibo performs the real 0.0.6 → 0.0.7 transition using exact desired constraints and owning commands with compatible intermediate environments and no target preinstallation;
 - Publication-specific exposure conformance/feedback remains in Checkpoint 7;
 - Deployment/Observation identity, external-evidence retention, ingest→observe lifetime and pinned-roadmap CLI gaps remain explicit without new platform abstractions;
 - every blocking failure has a correction and passing re-verification; no known blocking failure enters Checkpoint 7.
 
 ---
 
-**Pactwright — Checkpoint 6 — Operations v15**
+**Pactwright — Checkpoint 6 — Operations v16**
