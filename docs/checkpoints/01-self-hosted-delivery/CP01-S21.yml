@@ -8,33 +8,35 @@ requirements:
   R01:
     source: [GUIDE#trusted-release-workflow, GUIDE#verification]
     statement: The workflow shall run only on version tags. It checks out the exact tagged source on a clean GitHub-hosted
-      runner, on a Node major the engines range admits, installs with `pnpm install --frozen-lockfile` and runs
-      `pnpm verify`, without a cached node_modules tree. Before any publish, it asserts that the checked-out commit
-      is the commit the triggering tag points to.
+      runner, on a Node major that the engines range of any publishable package admits, installs with `pnpm install
+      --frozen-lockfile` and runs `pnpm verify`, without a cached node_modules tree. Before any publish, it asserts
+      that the checked-out commit is the commit the triggering tag points to.
   R02:
     source: [GUIDE#trusted-release-workflow, GUIDE#npm-release-model]
     statement: Before any publish, the workflow shall assert that the tag names the version of every package it
-      publishes and that the tagged commit is on the default branch. A v0.0.x tag publishes under the npm tag
-      next and a v0.1.0 or later tag under latest. The workflow writes no other npm tag and never moves latest
-      for a v0.0.x tag.
+      publishes, that the tagged commit is on the default branch, that the npm CLI in the job meets the trusted-publishing
+      minimum version, and that the expected npm tag does not already point at a higher version than the tagged
+      one. A v0.0.x tag publishes under the npm tag next and a v0.1.0 or later tag under latest. The workflow
+      writes no other npm tag and never moves latest for a v0.0.x tag.
   R03:
     source: [GUIDE#trusted-release-workflow, GUIDE#first-publication-of-a-package]
     statement: The workflow shall run a publish dry-run and then publish through npm trusted publishing with OIDC,
-      using an npm CLI that supports it, in the npm-release GitHub environment, with permissions `contents` read
-      and `id-token` write only, with provenance generation left enabled. No npm publish token is stored in GitHub
-      or referenced by the workflow. First publication of a new package stays the interactive bootstrap outside
-      the workflow, and the trusted-publisher configuration it creates is evidenced by the first workflow publish
-      of that package, not by the bootstrap.
+      in the npm-release GitHub environment, with permissions `contents` read and `id-token` write only, with
+      provenance generation left enabled. No npm publish token is stored in GitHub or referenced by the workflow.
+      First publication of a new package stays the interactive bootstrap outside the workflow, and the trusted-publisher
+      configuration it creates is evidenced by the first workflow publish of that package, not by the bootstrap.
   R04:
     source: [GUIDE#trusted-release-workflow]
     statement: After publishing, the workflow shall verify from the registry that each published package resolves
       at the exact tagged version under the expected npm tag and that each version this run published carries
       a provenance attestation naming this repository and workflow.
   R05:
-    source: [GUIDE#github-actions]
+    source: [GUIDE#github-actions, GUIDE#trusted-release-workflow]
     statement: The workflow shall pin every third-party action to a full commit SHA, check out with `persist-credentials`
       false, bound every job with a timeout, not use `pull_request_target` and place no credential or sensitive
-      payload in the workflow file or its logs. Release runs queue behind one another and are never cancelled.
+      payload in the workflow file or its logs. Release runs execute one at a time in arrival order under a concurrency
+      group that retains every pending run up to the platform's queue bound and cancels no run, not the platform's
+      default single pending slot.
   R06:
     source: [GUIDE#release-failure]
     statement: A failure before publication shall publish nothing and allow a safe rerun. The workflow publishes
@@ -45,32 +47,36 @@ requirements:
   R07:
     source: [GUIDE#trusted-release-workflow, CHECKPOINT#explicitly-out-of-scope]
     statement: The workflow shall be repository-owned release infrastructure, not a Pactwright-generated product
-      workflow. The npm-release environment's protection rules, the tag ruleset and each package's trusted-publisher
-      entry are repository and registry configuration owned by the repository owner, resolved and recorded in
-      the run configuration before a release runs; the owner's push of a version tag to accepted default-branch
-      source is the publish authority, and the environment requires no further reviewer.
+      workflow. The npm-release environment's protection rules, the ruleset restricting version-tag creation and
+      each package's trusted-publisher entry are repository and registry configuration owned by the repository
+      owner, who configures them before this step's review as an approved prerequisite; they are read back into
+      the run configuration before the workflow is reviewed or run. The owner's push of a version tag to accepted
+      default-branch source is the publish authority, and the environment requires no further reviewer.
 acceptance:
   AC01:
     covers: [R01, R02, R03, R05, R06]
     given: The candidate .github/workflows/release.yml.
     when: The release workflow check parses it.
-    then: The workflow is syntactically valid, triggers only on version tags, never cancels a run and runs in the
-      npm-release environment with permissions `contents` read and `id-token` write only. It checks out the triggering
-      tag's commit without persisted credentials, installs from the frozen lockfile without a node_modules cache
-      on an admitted Node major and runs `pnpm verify`, the release assertions, a publish dry-run, one registry
-      presence check and one trusted publish per publishable package, and registry verification, in that order.
-      Every third-party action is pinned to a full commit SHA, every job has a timeout, provenance is not disabled,
-      no dist-tag command runs and no npm token or other secret is referenced.
+    then: The workflow is syntactically valid, triggers only on version tags, declares a concurrency group that retains
+      pending runs and cancels none, and runs in the npm-release environment with permissions `contents` read
+      and `id-token` write only. It checks out the triggering tag's commit without persisted credentials, installs
+      from the frozen lockfile without a node_modules cache on an admitted Node major and runs, in this order,
+      `pnpm verify`, the release assertions including the npm CLI version and dist-tag assertions, a publish dry-run
+      (which may be recursive, since it writes nothing), then for each publishable package its registry presence
+      check followed by its own trusted publish, then registry verification. Every third-party action is pinned
+      to a full commit SHA, every job has a timeout, provenance is not disabled, no dist-tag command runs and no
+      npm token or other secret is referenced.
     verify:
       automated: [release.workflow-structure]
   AC02:
     covers: [R01, R02, R03, R05, R06]
     cases: [branch-trigger, pull-request-target, wrong-checkout-ref, write-contents, missing-id-token, missing-environment,
       token-reference, unpinned-action, persisted-credentials, node-modules-cache, node-outside-engines, publish-before-verify,
-      cancel-in-progress, recursive-publish, publish-without-presence-check, provenance-disabled, dist-tag-write]
-    given: A copy of the candidate workflow whose only defect is the listed one, including a single recursive publish
-      of all packages, a package publish not preceded by its registry presence check, provenance disabled by
-      option or environment, or a step that writes a dist-tag.
+      cancel-in-progress, default-queue, recursive-publish, publish-without-presence-check, provenance-disabled, dist-tag-write]
+    given: A copy of the candidate workflow whose only defect is the listed one, including a concurrency group that
+      cancels in-progress runs, one that keeps the platform's default single pending slot, a single recursive
+      publish that is not a dry-run, a package publish not preceded by its registry presence check, provenance
+      disabled by option or environment, or a step that writes a dist-tag.
     when: The release workflow check parses it.
     then: The check fails and names the defect.
     verify:
@@ -79,16 +85,20 @@ acceptance:
     covers: [R02]
     cases: [development-line, supported-line]
     given: A fixture repository whose default branch contains a tagged commit, both packages at the tagged version,
-      and a v0.0.N tag for development-line or a v0.1.0 tag for supported-line.
+      an npm CLI at or above the trusted-publishing minimum, recorded registry responses in which the expected
+      npm tag points at no higher version, and a v0.0.N tag for development-line or a v0.1.0 tag for supported-line.
     when: The release assertions run.
     then: The assertions pass and select the npm tag next for development-line and latest for supported-line.
     verify:
       automated: [release.assertions-pass]
   AC04:
     covers: [R01, R02, R06]
-    cases: [tag-version-mismatch, package-version-disagreement, not-on-default-branch, malformed-tag, checkout-not-tagged-commit]
+    cases: [tag-version-mismatch, package-version-disagreement, not-on-default-branch, malformed-tag, checkout-not-tagged-commit,
+      npm-too-old, dist-tag-ahead]
     given: The AC03 fixture with only the listed defect. For checkout-not-tagged-commit, the default branch has a
       later commit with the same package versions, and that commit is checked out instead of the tagged one.
+      For npm-too-old, the job's npm CLI is older than the trusted-publishing minimum. For dist-tag-ahead, the
+      recorded registry responses show the expected npm tag already at a higher version than the tagged one.
     when: The release assertions run.
     then: The assertions fail, naming the defect, before any dry-run or publish command runs.
     verify:
@@ -107,26 +117,34 @@ acceptance:
     verify:
       automated: [release.registry-verification]
   AC06:
-    covers: [R06]
-    given: The candidate workflow and the publish commands it runs.
-    when: Independent review traces a failure before publication, a failure after one package published, and a
-      rerun of each.
+    covers: [R05, R06]
+    given: The candidate workflow, the publish commands it runs and the platform's documented concurrency queue
+      semantics.
+    when: Independent review traces a failure before publication, a failure after one package published, a rerun
+      of each, and three version tags pushed while a release runs.
     then: No path overwrites or unpublishes a version or moves a dist-tag to an earlier version. A failure before
       publication publishes nothing. A rerun publishes exactly the packages whose tagged version the registry
       lacks, through the workflow's own presence check, and leaves the expected npm tag at the tagged version
-      for every package it publishes or skips.
+      for every package it publishes or skips. The three pending releases are all retained and run one at a time
+      in arrival order, none is cancelled, and the review states the platform's queue bound beyond which a further
+      pending release would be cancelled.
     verify:
       review: [release.failure-safety]
   AC07:
     covers: [R03, R05, R07]
-    given: The candidate workflow, and the npm-release environment and tag ruleset read from the repository configuration
+    given: The candidate workflow, the run configuration's record of the npm-release environment, the version-tag
+      ruleset and both trusted-publisher entries, and the environment and ruleset read from the repository configuration
       at review time.
-    when: Independent review inspects its permissions, credentials, environment and ownership.
+    when: The repository owner approves the configured environment and ruleset as the release authority controls,
+      and independent review inspects the workflow's permissions, credentials, environment and ownership against
+      them.
     then: The only elevated permission is `id-token` write for trusted publishing, no npm token or sensitive payload
-      is stored or exposed, publishing is bound to the npm-release environment, that environment admits only
-      version tags and names no required reviewer, the tag ruleset restricts creating version tags to the repository
-      owner, and the workflow is repository-owned and free of Pactwright product semantics.
+      is stored or exposed, publishing is bound to the npm-release environment, the environment as read admits
+      deployments from version tags only and names no required reviewer, the ruleset as read restricts creating
+      version tags to the repository owner, both match the run configuration's record, and the workflow is repository-owned
+      and free of Pactwright product semantics.
     verify:
+      approval: [release.authority-configuration]
       review: [release.hardening-review]
   AC08:
     covers: [R06]

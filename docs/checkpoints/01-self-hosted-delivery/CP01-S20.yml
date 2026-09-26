@@ -40,48 +40,50 @@ requirements:
       and shall report one stable check context, `CI / Verify`, that succeeds only when every Node-major job has
       succeeded and fails when any is failed, cancelled or skipped. Requiring that context before merge is repository
       configuration owned by the repository owner, outside the committed files and outside Pactwright ownership,
-      recorded in the run configuration and preserved by Checkpoint 2's managed rulesets.
+      and recorded in the run configuration.
 acceptance:
   AC01:
     covers: [R01, R05, R07]
-    given: A candidate revision pushed to the repository as a pull request and as a default-branch push, and the
-      Node major versions that the engines range of each publishable package admits.
-    when: The CI workflow runs on GitHub-hosted runners for each event.
+    given: A candidate revision pushed to the repository as a pull request, and the Node major versions that the
+      engines range of each publishable package admits. The default-branch push trigger is proven statically
+      by AC03; its first real run is Step 25's self-hosting commit, since the workflow cannot reach the default
+      branch before this step is accepted.
+    when: The CI workflow runs on GitHub-hosted runners for the pull request.
     then: For each admitted Node major, a Linux job checks out the candidate clean, installs from the committed
-      lockfile without changing it, runs `pnpm verify` and succeeds. No job runs another Node version. The `CI
-      / Verify` context reports success for each run, and the run is recorded by its identity and result.
+      lockfile without changing it, runs `pnpm verify` and succeeds. No job runs the verify gate on another Node
+      version. The `CI / Verify` context reports success, and the run is recorded by its identity and result.
     verify:
       automated: [ci.run-passes]
   AC02:
     covers: [R01, R07]
     cases: [failing-check, lockfile-drift]
-    given: A candidate branch whose only defect is the listed one, either a check that `pnpm verify` runs failing
-      or a package manifest change without the matching lockfile update.
+    given: A candidate pull request whose only defect is the listed one, either a check that `pnpm verify` runs
+      failing or a package manifest change without the matching lockfile update.
     when: The CI workflow runs.
-    then: The run fails at the defect, the `CI / Verify` context reports failure and no context reports success.
+    then: The run fails at the defect, its conclusion is failure and the `CI / Verify` context reports failure.
     verify:
       automated: [ci.fails-closed]
   AC03:
     covers: [R02, R03, R05, R07]
-    given: The candidate .github/workflows/ci.yml and the engines ranges of the publishable packages.
+    given: The candidate .github/workflows/ci.yml and the manifests of the publishable packages.
     when: The workflow hardening check parses them.
     then: The workflow is syntactically valid, triggers only on pull requests and default-branch pushes, declares
       explicit read-only token permissions, pins every third-party action to a full commit SHA, checks out with
       `persist-credentials` false, sets a timeout on every job, declares a concurrency group that cancels superseded
       pull-request runs only, has no `pull_request_target` trigger, references no secret, runs its Node matrix on
       exactly the majors the engines ranges admit and defines the `CI / Verify` job that depends on every matrix
-      job and runs whatever their result.
+      job and runs whatever their result. No publishable manifest declares `os` or `cpu`.
     verify:
       automated: [ci.workflow-hardening]
   AC04:
     covers: [R02, R03, R05, R07]
     cases: [write-permission, unpinned-action, persisted-credentials, missing-timeout, missing-concurrency, cancel-default-branch,
-      pull-request-target, extra-trigger, missing-trigger, secret-reference, missing-major, unclaimed-major, missing-aggregate-check,
-      aggregate-skips-on-failure]
-    given: A copy of the candidate workflow whose only defect is the listed one, including a cancelled default-branch
-      run, a trigger other than pull requests and default-branch pushes, a missing one of those two, a Node matrix
-      missing an admitted major or running an unadmitted one, no `CI / Verify` job, or one that does not run when
-      a matrix job fails.
+      pull-request-target, extra-trigger, missing-trigger, secret-reference, missing-major, unclaimed-major, os-or-cpu-restriction,
+      missing-aggregate-check, aggregate-skips-on-failure]
+    given: A copy of the candidate workflow, or of a publishable manifest, whose only defect is the listed one, including
+      a cancelled default-branch run, a trigger other than pull requests and default-branch pushes, a missing
+      one of those two, a Node matrix missing an admitted major or running an unadmitted one, a manifest declaring
+      an `os` or `cpu` field, no `CI / Verify` job, or one that does not run when a matrix job fails.
     when: The workflow hardening check parses it.
     then: The check fails and names the defect.
     verify:
@@ -101,6 +103,7 @@ acceptance:
     when: Independent review inspects the workflow hardening and ownership.
     then: The token permissions are the least the jobs need, no credential or sensitive payload is exposed, the
       workflow is repository-owned, outside Pactwright-generated paths and free of Pactwright product semantics,
-      and `CI / Verify` is the only context the run configuration names as required, when it names one.
+      and the required context recorded for the verification workflow, if any, is `CI / Verify` and not a per-Node-major
+      context.
     verify:
       review: [ci.hardening-review]

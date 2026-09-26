@@ -371,7 +371,7 @@ Step 25 requires this CI to pass for the self-hosted repository. `pactwright syn
 
 - `release-workflow` — A repository-owned .github/workflows/release.yml that publishes the accepted tagged source of pactwright and @pactwright/standard through npm trusted publishing and verifies the registry result.
 
-Step 21 validates the workflow without publishing. Step 28 runs it on the `v0.0.2` tag and verifies the registry; that run is the first publish through trusted publishing, since both `0.0.1` versions were published interactively and the `v0.0.1` run skipped them, so its provenance attestations are the first evidence of the trusted-publisher entries.
+Step 21 validates the workflow without publishing. Step 28 runs it on the `v0.0.2` tag, the first publish through trusted publishing, and verifies the registry.
 
 ## Stage 6 — Prove packed consumer behaviour
 
@@ -527,9 +527,12 @@ pactwright@0.0.2
 @pactwright/standard@0.0.2
 ```
 
-The npm trusted-publisher bootstrap was completed for `0.0.1`, so `release.yml`
-already publishes both packages without a token. Tag accepted source as
-`v0.0.2` and verify the tag workflow.
+Both `0.0.1` versions were published interactively on 2026-09-01 and the
+`v0.0.1` run of `release.yml` published nothing, so the `v0.0.2` run is the
+first publish through trusted publishing and its provenance attestations are
+the first evidence of the trusted-publisher entries. Tag accepted source as
+`v0.0.2` and verify the tag workflow, its `npm-release` deployment record and
+each published version's provenance attestation (CP01-S21/R04).
 
 **Verify before continuing**
 

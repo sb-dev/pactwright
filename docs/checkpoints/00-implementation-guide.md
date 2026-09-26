@@ -207,7 +207,7 @@ All Pactwright-owned workflows:
 - use appropriate concurrency controls for superseded validation runs;
 - never place credentials or sensitive payloads in workflow files or logs.
 
-The repository verification workflow runs on pull requests and on pushes to the default branch, and on no other event. Superseded pull-request runs are cancelled; default-branch runs complete, so every default-branch commit keeps a result. It reports one stable check context, `CI / Verify`, that succeeds only when every Node-major job has succeeded. Requiring that context before merge is repository configuration owned by the repository owner, outside the committed files and outside Pactwright ownership: it is recorded in the run configuration, Pactwright never enables or removes it, and Checkpoint 2's managed rulesets preserve it.
+The repository verification workflow runs on pull requests and on pushes to the default branch, and on no other event. Superseded pull-request runs are cancelled; default-branch runs complete, so every default-branch commit keeps a result. It reports one stable check context, `CI / Verify`, that succeeds only when every Node-major job has succeeded. Requiring that context before merge is repository configuration owned by the repository owner, outside the committed files and outside Pactwright ownership: it is recorded in the run configuration, Pactwright never enables or removes it, and managed reconciliation preserves it as user-owned repository configuration (GitHub Integration §34).
 
 Generated Pactwright workflows remain thin execution/projection surfaces. Lifecycle, Project Graph, Extension and authority semantics stay in the Pactwright runtime and owning specifications.
 
@@ -224,7 +224,7 @@ Every publishable package has:
 - valid entry points / `bin` / exports as applicable;
 - a normal `prepack` build.
 
-Do not claim compatibility that CI or package smoke tests do not exercise. The repository verification workflow carries the whole Node claim: one job per Node major that any publishable package's engines range admits, and no other Node version, on the GitHub-hosted Linux runner. Packed-consumer smoke tests prove packaging on the runtime they run under, not the range. Publishable packages declare no `os` or `cpu` restriction; claiming another operating system needs a CI job that exercises it.
+Do not claim compatibility that CI does not exercise. The repository verification workflow carries the whole Node claim: one job per Node major that any publishable package's engines range admits, and no other Node version, on the GitHub-hosted Linux runner. Packed-consumer smoke tests prove packaging on the runtime they run under, not the range. Publishable packages declare no `os` or `cpu` restriction; claiming another operating system needs a CI job that exercises it.
 
 ### Canonical gap discipline
 
@@ -445,6 +445,8 @@ verify
 → all later versions publish from CI with OIDC
 ```
 
+The interactive publish uses the npm tag the version line selects; npm also sets `latest` on a first publication. The trusted-publisher entry it configures is evidenced by that package's first workflow publish, not by the bootstrap.
+
 Target first-party package introduction points are:
 
 ```text
@@ -489,7 +491,7 @@ tag
 → pnpm verify
 → tag/version/default-branch assertions
 → publish dry-run
-→ npm trusted publish
+→ per package: registry presence check → npm trusted publish
 → registry verification
 ```
 
@@ -503,11 +505,11 @@ permissions:
 
 and the `npm-release` GitHub environment.
 
-Release builds do not depend on a cached `node_modules` tree. Release runs queue behind one another and are never cancelled.
+Release builds do not depend on a cached `node_modules` tree. Release runs execute one at a time in arrival order under a concurrency group that retains every pending run (`queue: max`, which the platform bounds at 100 pending runs) and cancels no run; the platform's default single pending slot, which cancels an older pending run when a newer one arrives, is a defect. Before publishing, the workflow also asserts that the expected npm tag does not already point at a higher version, so an out-of-order or late release cannot move a dist-tag backwards.
 
 The workflow publishes each package with its own publish command, after checking the registry that the package's tagged version is absent. A version already present, such as one published by the interactive bootstrap, is skipped and reported; the workflow never relies on the package manager's implicit skipping of published versions. Trusted publishing needs npm CLI 11.5.1 or later and generates provenance attestations automatically; the workflow leaves that enabled, and registry verification checks that each version the run published carries an attestation naming this repository and workflow. That attestation, not the bootstrap, is the evidence that a package's trusted-publisher entry works.
 
-The `npm-release` environment admits deployments from version tags only and requires no reviewer: the owner's push of a version tag to accepted default-branch source is the publish authority, and a reviewer gate would add the same person's second click while blocking a safe rerun. A ruleset restricts creating version tags to the repository owner. The environment rules, the tag ruleset and each package's trusted-publisher entry are repository and registry configuration outside the committed files; they are resolved and recorded in the run configuration before a release runs, and a release run is evidenced by its `npm-release` deployment record and the published provenance.
+The `npm-release` environment admits deployments from version tags only and requires no reviewer: the owner's push of a version tag to accepted default-branch source is the publish authority, and a reviewer gate would add the same person's second click and gate every rerun. A ruleset restricts creating version tags to the repository owner. The environment rules, the tag ruleset and each package's trusted-publisher entry are repository and registry configuration outside the committed files. The repository owner configures them as an approved prerequisite of the release workflow's review; they are read back into the run configuration before the workflow is reviewed or run, and a release run is evidenced by its `npm-release` deployment record and the published provenance.
 
 ### Preparing a development release
 

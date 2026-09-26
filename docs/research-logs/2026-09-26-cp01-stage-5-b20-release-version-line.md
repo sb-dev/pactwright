@@ -12,7 +12,7 @@
 
 **Applied changes:** Guide v18 §npm release model (`latest` paragraph). S21/R02, AC01, AC02 (`dist-tag-write`, B21). Crosswalk `affects` for Q54. The version-table and Checkpoint 2–9 renumbering is recorded here as the recommended decision and is not applied.
 
-**Later owners:** the owner authorises the renumbering; Checkpoint 2's conversion pass applies it to Checkpoint 2 at the latest, since Step 16 there cannot publish `0.0.2`; Step 28 publishes `v0.0.2` unchanged. Remaining blockers: owner authorisation for the renumbering, which blocks no Stage 5 step.
+**Later owners:** Step 27's conversion owns the exact-version instruction in the public material, and the current `README.md` install line `pnpm add -D pactwright` is floating and will resolve `latest` = `0.0.1` after `0.0.2` publishes under `next`, so it changes at Step 26 or 27; the owner authorises the renumbering; Checkpoint 2's conversion pass applies it to Checkpoint 2 at the latest, since Step 16 there cannot publish `0.0.2`; Step 28 publishes `v0.0.2` unchanged. Remaining blockers: owner authorisation for the renumbering, which blocks no Stage 5 step.
 
 **Verification:** see the [Stage 5 exit record](./2026-09-26-cp01-stage-5-exit-review.md).
 

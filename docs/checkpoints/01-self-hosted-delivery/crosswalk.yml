@@ -74,7 +74,7 @@ entries:
     text: "Specs 01–02; Implementation Guide engineering baseline."
     covered_by: [CP01-S01/R01, CP01-S01/R02, CP01-S01/R03, CP01-S01/R05, CP01-S20/R05, CP01-S20/AC01]
     allocated_to: CP01-S23
-    note: "The package-metadata rule against claiming compatibility that CI or package smoke tests do not exercise is proven by CP01-S20/AC01, which runs verify on each claimed Node major, and the Step 22-23 packed consumers. How the two share the claim is Q52."
+    note: "The package-metadata rule against claiming compatibility that CI does not exercise is proven by CP01-S20/AC01, which runs verify on each admitted Node major; the Step 22-23 packed consumers prove packaging only and carry no part of the claim (Q52, B19)."
   - key: S01.run.1
     text: "Create the Pactwright runtime and CLI package foundation."
     covered_by: [CP01-S01/R01, CP01-S01/AC01]
