@@ -505,7 +505,7 @@ permissions:
 
 and the `npm-release` GitHub environment.
 
-Release builds do not depend on a cached `node_modules` tree. Release runs execute one at a time in arrival order under a concurrency group that retains every pending run (`queue: max`, which the platform bounds at 100 pending runs) and cancels no run; the platform's default single pending slot, which cancels an older pending run when a newer one arrives, is a defect. Before publishing, the workflow also asserts that the expected npm tag does not already point at a higher version, so an out-of-order or late release cannot move a dist-tag backwards.
+Release builds do not depend on a cached `node_modules` tree. Release runs execute one at a time under a concurrency group that retains every pending run (`queue: max`, which the platform bounds at 100 pending runs) and cancels no run; the platform's default single pending slot, which cancels an older pending run when a newer one arrives, is a defect. The platform starts retained runs in the order they began waiting, not the order their tags were pushed, and guarantees no order, so the workflow does not assume one: before publishing it asserts that the expected npm tag does not already point at a higher version. A release that runs after a higher version has published is refused as superseded before any publish, whatever the platform's order, publishes nothing further, is not rerun, and its version number is consumed; its content ships in the next version. Versions therefore only ever move a dist-tag forward.
 
 The workflow publishes each package with its own publish command, after checking the registry that the package's tagged version is absent. A version already present, such as one published by the interactive bootstrap, is skipped and reported; the workflow never relies on the package manager's implicit skipping of published versions. Trusted publishing needs npm CLI 11.5.1 or later and generates provenance attestations automatically; the workflow leaves that enabled, and registry verification checks that each version the run published carries an attestation naming this repository and workflow. That attestation, not the bootstrap, is the evidence that a package's trusted-publisher entry works.
 
@@ -575,6 +575,7 @@ Published npm versions are immutable.
 - Do not overwrite or routinely unpublish a released version.
 - If the release workflow fails before publication, fix the cause and rerun safely.
 - A rerun publishes only the packages whose tagged version the registry does not hold, through the workflow's own per-package registry check; it never re-publishes or overwrites a version and never relies on the package manager's implicit skipping.
+- A release refused as superseded, because a higher version already holds the expected npm tag, is not rerun; a package it left unpublished ships in the next version, which the owner tags.
 - If a published release is defective, fix forward with the next version.
 - Do not promote a known-defective `0.0.x` line to `latest`.
 - Moving a dist-tag to a previously published known-good version is an emergency recovery action and must be recorded as a Decision.

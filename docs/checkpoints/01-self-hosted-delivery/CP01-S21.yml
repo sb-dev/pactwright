@@ -34,16 +34,19 @@ requirements:
     source: [GUIDE#github-actions, GUIDE#trusted-release-workflow]
     statement: The workflow shall pin every third-party action to a full commit SHA, check out with `persist-credentials`
       false, bound every job with a timeout, not use `pull_request_target` and place no credential or sensitive
-      payload in the workflow file or its logs. Release runs execute one at a time in arrival order under a concurrency
-      group that retains every pending run up to the platform's queue bound and cancels no run, not the platform's
-      default single pending slot.
+      payload in the workflow file or its logs. Release runs execute one at a time under a concurrency group that
+      retains every pending run up to the platform's queue bound and cancels no run, not the platform's default
+      single pending slot. The workflow assumes no start order among retained runs, since the platform starts
+      them by the time they began waiting and guarantees none.
   R06:
     source: [GUIDE#release-failure]
     statement: A failure before publication shall publish nothing and allow a safe rerun. The workflow publishes
       each package with its own publish command only after checking the registry that the tagged version of that
       package is absent, skips and reports a version already present, and does not rely on the package manager's
       implicit skipping of published versions. It shall not overwrite or unpublish a released version or move
-      a dist-tag to an earlier version.
+      a dist-tag to an earlier version. A release that runs after a higher version has published is refused as
+      superseded before any publish, publishes nothing further and is not rerun; a package it left unpublished
+      ships in the next version.
   R07:
     source: [GUIDE#trusted-release-workflow, CHECKPOINT#explicitly-out-of-scope]
     statement: The workflow shall be repository-owned release infrastructure, not a Pactwright-generated product
@@ -94,13 +97,18 @@ acceptance:
   AC04:
     covers: [R01, R02, R06]
     cases: [tag-version-mismatch, package-version-disagreement, not-on-default-branch, malformed-tag, checkout-not-tagged-commit,
-      npm-too-old, dist-tag-ahead]
+      npm-too-old, dist-tag-ahead, partial-then-superseded]
     given: The AC03 fixture with only the listed defect. For checkout-not-tagged-commit, the default branch has a
       later commit with the same package versions, and that commit is checked out instead of the tagged one.
-      For npm-too-old, the job's npm CLI is older than the trusted-publishing minimum. For dist-tag-ahead, the
-      recorded registry responses show the expected npm tag already at a higher version than the tagged one.
+      For npm-too-old, the job's npm CLI is older than the trusted-publishing minimum. For dist-tag-ahead, a later
+      tag's run started before this one and published, so the recorded registry responses show the expected npm
+      tag already at a higher version than the tagged one. For partial-then-superseded, this tag's earlier run
+      published one package and failed, a later tag's run then published both packages, and this is the rerun:
+      the responses show one package present at the tagged version and the expected npm tag at the higher version.
     when: The release assertions run.
-    then: The assertions fail, naming the defect, before any dry-run or publish command runs.
+    then: The assertions fail, naming the defect, before any dry-run or publish command runs. For dist-tag-ahead
+      and partial-then-superseded the refusal names the release as superseded by the higher version, and no
+      publish or dist-tag command runs for the present or the absent package.
     verify:
       automated: [release.assertions-refuse]
   AC05:
@@ -121,13 +129,17 @@ acceptance:
     given: The candidate workflow, the publish commands it runs and the platform's documented concurrency queue
       semantics.
     when: Independent review traces a failure before publication, a failure after one package published, a rerun
-      of each, and three version tags pushed while a release runs.
+      of each, and three version tags pushed while a release runs whose retained runs start in an order that
+      differs from the order the tags were pushed.
     then: No path overwrites or unpublishes a version or moves a dist-tag to an earlier version. A failure before
       publication publishes nothing. A rerun publishes exactly the packages whose tagged version the registry
       lacks, through the workflow's own presence check, and leaves the expected npm tag at the tagged version
-      for every package it publishes or skips. The three pending releases are all retained and run one at a time
-      in arrival order, none is cancelled, and the review states the platform's queue bound beyond which a further
-      pending release would be cancelled.
+      for every package it publishes or skips. The three pending releases are all retained and run one at a time,
+      none is cancelled, and whatever order they start in, each either publishes, when its version is above
+      the expected npm tag, or is refused as superseded before any publish, so no order moves a dist-tag backwards
+      and every published version is above every version that tag held before. The review states the platform's
+      queue bound beyond which a further pending release would be cancelled, and names the next version as the
+      recovery for a superseded release.
     verify:
       review: [release.failure-safety]
   AC07:
