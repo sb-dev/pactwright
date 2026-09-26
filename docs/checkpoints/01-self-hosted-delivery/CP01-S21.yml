@@ -103,7 +103,7 @@ acceptance:
       For npm-too-old, the job's npm CLI is older than the trusted-publishing minimum. For dist-tag-ahead, a later
       tag's run started before this one and published, so the recorded registry responses show the expected npm
       tag already at a higher version than the tagged one. For partial-then-superseded, this tag's earlier run
-      published one package and failed, a later tag's run then published both packages, and this is the rerun:
+      published one package and failed, a later tag's run then published both packages, and this is the rerun, so
       the responses show one package present at the tagged version and the expected npm tag at the higher version.
     when: The release assertions run.
     then: The assertions fail, naming the defect, before any dry-run or publish command runs. For dist-tag-ahead
