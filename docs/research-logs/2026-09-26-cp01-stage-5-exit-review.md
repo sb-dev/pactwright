@@ -33,13 +33,13 @@ Non-blocking findings, applied:
 | X14 | Guide §Package metadata replaces "CI or package smoke tests" with "CI", instead of qualifying it (reviewer 1). |
 | X15 | Guide: a reviewer gate "would gate every rerun", not block it (reviewer 1). |
 | X16 | Step 28 prose no longer claims that `release.yml` already publishes without a token: both `0.0.1` versions were published interactively and the `v0.0.1` run published nothing, so `v0.0.2` is the first trusted publish, and Step 28 verifies the deployment record and attestations; the Step 21 summary is shortened accordingly (reviewer 1; reviewer 2 N2). |
-| X17 | S21/R01 and AC01 name "the engines range of any publishable package", matching S20/R05 (reviewer 1). |
+| X17 | S21/R01 names "the engines range of any publishable package", matching S20/R05; AC01's "admitted Node major" is defined by R01 (reviewer 1). |
 | X18 | B20 names Step 27's conversion as the owner of the exact-version instruction and records that the current README install line is floating (reviewer 2 N1). |
 | X19 | S20/AC06 requires that the recorded required context for the verification workflow, if any, is `CI / Verify` and not a per-Node-major context, so managed or unrelated required checks added later do not fail the rubric (reviewer 2 N3). |
 
 Findings confirmed and not changed: the Q54 hold (both reviewers: the Guide table's `Checkpoint 2 → 0.0.2` against Checkpoint 1's `0.0.2` is pre-existing at `f47af29`, no Stage 5 requirement depends on the mapping, and amending the Guide table alone would create a fresh Guide-to-Checkpoint 2 contradiction); the run configuration as a concept rather than a document (reviewer 2 N9).
 
-**Fresh review of X1–X19 (methodology §6):** pending; recorded here when the fresh read-only reviewer has examined the correction commit.
+**Fresh review of X1–X19 (methodology §6):** a fresh read-only reviewer examined `d693a13`, confirmed all nineteen corrections present and consistent, re-checked binding uniqueness, requirement coverage and the later owners, re-ran the contract, format, lint, typecheck and test checks, verified the platform's `concurrency.queue` semantics against the workflow-syntax documentation, and returned ACCEPT with five record-wording nits, applied here as X20: B21's Q56 row distinguishes the Step 28 publish approval from Step 21's control approval and its affected IDs list R02, AC03 and AC04; B19's Q53 row uses the X19 wording of AC06; the crosswalk header names the Step 28 prose; X17 above describes AC01 accurately.
 
 ## Owner decision held open
 
@@ -64,6 +64,6 @@ Identity, storage, relationships and authority are not Stage 5 concerns; its sha
 | Batch challenge plans | executed as recorded in B19–B21; B21 check 6 (rulesets endpoint `[]`, concurrency queue documentation) added after the owner's review |
 | External reads | npm registry for both packages; GitHub Actions run 33495980356 and its jobs; npm trusted-publishing and pnpm publish documentation; GitHub concurrency documentation; repository rulesets endpoint. The `npm-release` environment endpoint was not reachable through this session's proxy; its state is as the owner's review reports |
 
-Stage 5 is requirement-ready in the methodology §7 sense once the fresh review above accepts X1–X19: no unresolved behaviour needed by Steps 20 and 21 remains, each obligation has acceptance coverage, and the deferred proofs have owners (Step 25's default-branch run, Step 28's first trusted publish and approval, Step 27's exact-version instruction). Two items stay open and are not requirement gaps: the owner's configuration of the `npm-release` environment and version-tag ruleset before Step 21's review (an approved execution prerequisite, S21/AC07), and the owner's authorisation of the Q54 renumbering. This result is scoped T2 work and does not declare T1/T2 complete for Checkpoint 1, build the harness or authorise implementation.
+Stage 5 is requirement-ready in the methodology §7 sense, the fresh review having accepted X1–X19: no unresolved behaviour needed by Steps 20 and 21 remains, each obligation has acceptance coverage, and the deferred proofs have owners (Step 25's default-branch run, Step 28's first trusted publish and approval, Step 27's exact-version instruction). Two items stay open and are not requirement gaps: the owner's configuration of the `npm-release` environment and version-tag ruleset before Step 21's review (an approved execution prerequisite, S21/AC07), and the owner's authorisation of the Q54 renumbering. This result is scoped T2 work and does not declare T1/T2 complete for Checkpoint 1, build the harness or authorise implementation.
 
 **CP01 Stage 5 exit review v1**
