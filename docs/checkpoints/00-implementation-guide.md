@@ -1,6 +1,6 @@
 # Pactwright — Implementation Guide
 
-**Version:** 16  
+**Version:** 17  
 **Status:** Checkpoint index, engineering standard and release model
 
 ## Purpose
@@ -270,6 +270,7 @@ pactwright lifecycle ...
 pactwright agent-pack use <source>
 pactwright agent-pack upgrade
 pactwright extension add <id-or-package>
+pactwright extension disable <id>
 pactwright extension remove <id>
 pactwright extension upgrade <id>
 pactwright github sync
@@ -630,4 +631,4 @@ A non-blocking open design gap may cross a checkpoint only when:
 
 ---
 
-**Pactwright — Implementation Guide v16**
+**Pactwright — Implementation Guide v17**

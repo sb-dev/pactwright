@@ -1,6 +1,8 @@
 # CP01 Step 18 — Implement `pactwright doctor`
 id: CP01-S18
 requires: [CP01-S05, CP01-S09, CP01-S15, CP01-S16, CP01-S17]
+inputs:
+  package-manager-delegation: CP01-S11/package-manager-delegation
 outputs:
   doctor-command: A read-only pactwright doctor that diagnoses runtime, package-manager, configuration, lock, capability,
     migration, generated-drift and validation problems as healthy, warning or action required, with deterministic
@@ -14,19 +16,38 @@ requirements:
       migrations; generated adapter and integration drift; and validation failures affecting the resolved environment.'
   R02:
     source: [DISTRIBUTION#16]
-    statement: Doctor shall report an available runtime upgrade where it can determine one, and state when it cannot.
+    statement: Doctor shall report an available runtime upgrade where it can determine one through the delegation
+      seam's version listing, and state when it cannot; availability carries no severity.
   R03:
     source: [DISTRIBUTION#6, DISTRIBUTION#16]
-    statement: Doctor shall identify a configured external Production Skills import as unsupported by this release,
-      and shall not claim the full Production Skills dependency diagnostics that arrive in Checkpoint 5.
+    statement: Doctor shall identify an external Production Skills import declared by the selected pack's installed
+      manifest as unsupported by this release, and shall not claim the full Production Skills dependency diagnostics
+      that arrive in Checkpoint 5.
   R04:
     source: [DISTRIBUTION#16]
-    statement: Doctor shall classify its result as healthy, warning or action required, without a separate health-state
-      subsystem.
+    statement: 'Doctor shall classify each finding by the DISTRIBUTION#16 severity rule: action required for a finding
+      that stops the environment from being activated or executed as configured or that target-runtime activation
+      needs resolved, including an invalid or missing required input, a migration-required format, no selected Agent
+      Pack, lock drift, content whose hash does not match its locked identity, runtime incompatibility of a component,
+      a missing capability, an Extension that cannot register, an unsupported Production Skills import, generated drift,
+      an interrupted upgrade, a configuration and lock disagreement about an Extension''s enabled state and a validation
+      failure of the active graph; warning for an ambiguous or contradicted
+      package-manager declaration and for an unavailable repository revision during ordinary diagnosis; and no severity
+      for informational items. The overall result is the highest severity present, healthy when none, without a separate
+      health-state subsystem. Doctor exits zero for healthy or warning and non-zero for action required, and --json emits
+      the result and every finding with severity, code, message, path where applicable and remediation.'
   R05:
     source: [DISTRIBUTION#16]
-    statement: Doctor shall give a concrete remediation command only where the correction is supported and deterministic,
-      and never runs it.
+    statement: 'Doctor shall give a concrete remediation command only where the correction is supported and deterministic,
+      and never runs it: pactwright sync for generated drift; for a migration-required source, pactwright upgrade --to
+      <installed version> when the installed runtime already is the target and pactwright upgrade otherwise; pactwright upgrade --to naming the record''s designated recovery target for an interrupted or failed-restoration
+      upgrade, <previous version> for a record written before replacement and <installed version> for a CP01-S19/R01
+      completion-path record, the only upgrade command named while a recovery record exists; pactwright extension disable <id> for an Extension whose configuration disables it while its lock entry
+      remains and extension add <id> for one whose configuration enables it while its lock entry is absent; pactwright
+      validate for a validation failure of the active graph; pactwright upgrade --to <installed version> for a lock whose
+      runtime version is behind the installed runtime; the owning upgrade command for a component drifted from the
+      package-manager lock; and, for a component whose declared range excludes the runtime, the constraint change it
+      needs followed by its owning upgrade command. Other findings name no command.'
   R06:
     source: [DISTRIBUTION#16, CORE#56]
     statement: Doctor shall perform no write, Git mutation, replay record or GitHub request, and no repair, and
@@ -35,8 +56,8 @@ requirements:
     source: [DISTRIBUTION#16, CORE#56]
     statement: An unavailable repository revision shall be a warning for ordinary inspection when local graph loading
       and hashing are otherwise valid, and action required for a requested pinned execution or replay. Doctor names
-      the cause, such as a missing commit or input, a dirty tree, an unsupported input transport or a migration
-      prerequisite.
+      the cause, such as a missing commit or input, a dirty tree, including one caused by an uncommitted execution-state
+      or provenance document, an unsupported input transport or a migration prerequisite.
   R08:
     source: [CORE#54, DISTRIBUTION#16]
     statement: Doctor shall report load problems with path and cause. An incomplete active load or a required migration
@@ -53,11 +74,20 @@ acceptance:
   AC02:
     covers: [R01, R04, R05]
     cases: [package-manager-declaration-mismatch, invalid-configuration, lock-drift, incompatible-extension, incompatible-pack,
-      missing-capability, generated-drift, validation-failure]
-    given: The AC01 project with only the listed defect.
+      missing-capability, generated-drift, validation-failure, no-pack-selected, disabled-in-configuration-only,
+      runtime-behind-installed]
+    given: The AC01 project with only the listed defect; lock-drift changes the fixture Extension's installed version
+      in the package-manager lock, incompatible-pack has a selected pack whose exact constraint pins a runtime older
+      than the installed one, no-pack-selected is a plain init scaffold, disabled-in-configuration-only has the fixture
+      Extension's configuration entry hand-edited to enabled false with its lock entry remaining, and runtime-behind-installed
+      has a newer packed runtime installed through the package manager while the lock records the older one.
     when: Doctor runs.
-    then: The result is not healthy and names the defect. A remediation command is given exactly when the correction
-      is deterministic, such as pactwright sync for generated-drift.
+    then: package-manager-declaration-mismatch is a warning with no command. Every other case is action required naming
+      the defect, with exactly the listed remediation, pactwright sync for generated-drift, pactwright validate for
+      validation-failure, pactwright extension upgrade <id> for lock-drift, the constraint change naming the pack and its
+      current constraint followed by pactwright agent-pack upgrade for incompatible-pack, the same form with pactwright
+      extension upgrade <id> for incompatible-extension, pactwright extension disable <id> for disabled-in-configuration-only,
+      pactwright upgrade --to <installed version> for runtime-behind-installed, and none for the rest.
     verify:
       automated: [doctor.problems]
   AC03:
@@ -79,16 +109,18 @@ acceptance:
       automated: [doctor.inactive-extension]
   AC05:
     covers: [R07]
-    cases: [ordinary-no-commit, ordinary-dirty-tree, pinned-no-commit, pinned-dirty-tree]
-    given: A project with a valid complete graph whose repository revision is unavailable for the listed cause; the
-      pinned cases diagnose a requested pinned execution.
+    cases: [ordinary-no-commit, ordinary-dirty-tree, ordinary-uncommitted-state-document, pinned-no-commit, pinned-dirty-tree]
+    given: A project with a valid complete graph whose repository revision is unavailable for the listed cause, an
+      uncommitted execution-state document for ordinary-uncommitted-state-document; the pinned cases diagnose a requested
+      pinned execution.
     when: Doctor runs.
     then: The ordinary cases report a warning and the pinned cases action required, each naming the cause.
     verify:
       automated: [doctor.repository-revision]
   AC06:
     covers: [R03]
-    given: The AC01 project whose selected fixture pack declares an external Production Skills import.
+    given: The AC01 project whose selected fixture pack's installed manifest has, since selection, gained a production_skills
+      entry.
     when: Doctor runs.
     then: The import is identified as unsupported by this release, and no Production Skills dependency is reported
       as resolved or checked.
@@ -101,7 +133,7 @@ acceptance:
       source, as listed.
     when: Doctor runs.
     then: It reports the available version with pactwright upgrade, that none is available, or that availability
-      cannot be determined.
+      cannot be determined, and the result stays healthy in all three cases.
     verify:
       automated: [doctor.runtime-upgrade]
   AC08:
@@ -120,3 +152,14 @@ acceptance:
       command and implements no GitHub reconciliation.
     verify:
       review: [doctor.boundaries]
+  AC10:
+    covers: [R04]
+    cases: [healthy-exit, warning-exit, action-required-exit, json-output]
+    given: The AC01 project, the AC05 ordinary-dirty-tree project, the AC02 generated-drift project, and the AC02
+      lock-drift project for json-output.
+    when: Doctor runs, with --json for json-output.
+    then: healthy-exit and warning-exit exit zero; action-required-exit exits non-zero. json-output emits a JSON document
+      whose overall result is action required and whose findings include the lock-drift finding with its severity, code,
+      message, path and remediation, matching the plain report.
+    verify:
+      automated: [doctor.exit-status]

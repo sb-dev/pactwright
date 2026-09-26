@@ -29,8 +29,9 @@ requirements:
       GitHub.
   R06:
     source: [DISTRIBUTION#6, DISTRIBUTION#14]
-    statement: Sync shall report a configured external Production Skills import as unsupported by this release
-      and fail without resolving or silently dropping it.
+    statement: Sync shall report an external Production Skills import declared by the selected pack's installed manifest
+      as unsupported by this release and fail without resolving or silently dropping it. An unactivated scaffold with
+      no selected pack is refused naming the missing selection.
 acceptance:
   AC01:
     covers: [R01, R02]
@@ -53,17 +54,22 @@ acceptance:
       automated: [sync.owned-files-only]
   AC03:
     covers: [R01, R03]
-    cases: [lock-mismatch, missing-capability, incompatible-extension, tampered-content]
-    given: A synced project with unrelated user files, and the listed defect in the locked composition.
+    cases: [lock-mismatch, missing-capability, incompatible-extension, incompatible-pack, tampered-content, unactivated-scaffold]
+    given: A synced project with unrelated user files, and the listed defect in the locked composition; incompatible-pack
+      is a CP01-S19/R12 runtime-ahead lock whose selected pack declares an older runtime exactly, and unactivated-scaffold
+      is instead a plain init scaffold with unrelated files and @pactwright/standard installed.
     when: Sync runs.
-    then: Sync fails with a problem naming the defect. Generated files and unrelated files are byte-identical.
+    then: Sync fails with a problem naming the defect or the missing selection. Generated files and unrelated files
+      are byte-identical, and unactivated-scaffold writes no file and selects nothing.
     verify:
       automated: [sync.validation-failure]
   AC04:
     covers: [R06]
-    given: A synced project whose selected fixture pack declares an external Production Skills import.
+    given: A synced project whose selected fixture pack's installed manifest has, since selection, gained a production_skills
+      entry.
     when: Sync runs.
-    then: Sync fails, naming the import as unsupported by this release. Generated files are byte-identical.
+    then: Sync fails, naming the import as unsupported by this release, whatever else it reports about the changed
+      content. Generated files are byte-identical.
     verify:
       automated: [sync.unsupported-import]
   AC05:
@@ -77,9 +83,11 @@ acceptance:
       automated: [sync.no-github]
   AC06:
     covers: [R01, R02]
-    cases: [adapter-render, agent-pack-use, agent-pack-upgrade]
+    cases: [adapter-render, agent-pack-use, agent-pack-upgrade, extension-add, extension-upgrade, extension-disable,
+      extension-remove, init-agent-pack, one-shot-init]
     given: A project with a real resolved lock; agent-pack-use and agent-pack-upgrade also have a compatible fixture
-      pack for the listed command.
+      pack, the extension cases a packed fixture Extension with a compatible newer version, and init-agent-pack and
+      one-shot-init start from a clean repository with a compatible fixture pack and packed fixture Extension.
     when: adapter-render repeats CP01-S12/AC01 through sync; the other cases run the listed command, then sync
       again.
     then: Rendering is byte-identical across runs. After each command the follow-up sync changes nothing, so the
