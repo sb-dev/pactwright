@@ -38,9 +38,15 @@
 # added S10/S11/S12 entries to the affects of Q43-Q46, Q48 and Q49. No
 # question is deleted.
 #
-# Stage 4 (Q41-Q51) is a T1 conversion drafted against Core v3 and Distribution
-# v2. Its open questions are unresolved inputs to T2 review; no specification
-# was amended.
+# Stage 4 (Q41-Q51) decisions and check status:
+# ../../research-logs/2026-09-26-cp01-stage-4-b15-init-and-scaffold.md
+# B15 Q41,Q42; B16 Q43,Q44,Q50,Q51; B17 Q45,Q46; B18 Q47,Q48,Q49.
+# Applied clauses: Distribution v5 (sections 3, 10, 11, 12, 15, 16, 27),
+# Implementation Guide v17 (command ownership) and Checkpoint 1 v29 (Steps
+# 14, 16, 19 summaries, Step 29). The section 7 stage exit review is
+# ../../research-logs/2026-09-26-cp01-stage-4-exit-review.md. This pass added
+# S09/AC05 and S11/R08 entries to the affects of Q45 and Q44. No question is
+# deleted.
 #
 # Stage 5 (Q52-Q56) is a T1 conversion drafted against the Implementation Guide.
 # Its open questions are unresolved inputs to T2 review; no specification was
@@ -1300,37 +1306,37 @@ open_questions:
     affects: [CP01-S13/R02, CP01-S13/R06, CP01-S13/R07, CP01-S13/AC01, CP01-S13/AC06, CP01-S13/AC07, CP01-S13/AC08, CP01-S28]
     question: "What do `--baseline <released-pack-or-baseline>` and `--candidate <candidate-pack-or-environment>` accept (a package specifier, a stored evaluation result or a resolved lock/environment)? When is a case a regression, particularly for semantic results that vary between runs? Where are evaluation results written, and are they committed?"
   - id: Q41
-    affects: [CP01-S14/R04, CP01-S14/AC03, CP01-S14/AC04, CP01-S14/AC08, CP01-S16/R10, CP01-S16/AC14, CP01-S16/AC15]
+    affects: [CP01-S14/R04, CP01-S14/R05, CP01-S14/R08, CP01-S14/AC03, CP01-S14/AC04, CP01-S14/AC05, CP01-S14/AC08, CP01-S16/R10, CP01-S16/AC14, CP01-S16/AC15, CP01-S17/AC06]
     question: "Step 14 requires a documented init selection input but forbids the runbook from inventing a canonical CLI flag, and Spec 02 section 3 names only `--with` and `--github`. Which document owns the input's form? Before Step 16 delivers Extension installation, which compositional init does Step 14's explicit selection during one-shot init exercise? When one-shot init is refused for a missing or incompatible choice, does the plain scaffold remain or is the repository left unchanged?"
   - id: Q42
-    affects: [CP01-S14/R01, CP01-S14/AC01, CP01-S14/AC02, CP01-S15/R06, CP01-S15/AC06]
+    affects: [CP01-S14/R01, CP01-S14/R03, CP01-S14/AC01, CP01-S14/AC02, CP01-S15/R01, CP01-S15/R06, CP01-S15/AC06, CP01-S15/AC11, CP01-S17/R06, CP01-S17/AC03, CP01-S18/R04, CP01-S18/AC02]
     question: "Core section 54 lists `.pactwright/lock.yml` as a required input, and Core section 56 gives no Project Graph revision when a required input fails, but a plain scaffold has no selected pack to resolve. Does plain init write a lock, and with what content? Is a missing lock in an unactivated scaffold an incomplete load, and is the empty scaffold's graph hashable?"
   - id: Q43
     affects: [CP01-S16/R03, CP01-S16/R06, CP01-S16/AC01, CP01-S16/AC03, CP01-S16/AC07, CP01-S17/AC06, CP01-S11/R09]
     question: "Extension add and upgrade must run `pactwright sync`, but deterministic sync is Step 17 and `requires` can name only earlier steps. What does Step 16 run as sync before Step 17 exists, and must Step 17 repeat the Extension add and upgrade proofs through real sync, as CP01-S17/AC06 does for agent-pack use and upgrade?"
   - id: Q44
-    affects: [CP01-S16/R12, CP01-S16/AC03, CP01-S19/R02, CP01-S19/AC03, CP01-S11/R08, CP01-S11/AC10]
+    affects: [CP01-S16/R12, CP01-S16/AC03, CP01-S16/AC06, CP01-S19/R02, CP01-S19/AC03, CP01-S11/R08, CP01-S11/AC10]
     question: "Spec 02 section 15 specifies package-manager detection for runtime upgrade, which is Step 19, but Step 16 already delegates Extension installation to the project package manager, and Q35 asks the same for agent-pack use. Which step owns detection, and must Step 16 apply the Step 19 rule?"
   - id: Q45
-    affects: [CP01-S15/R05, CP01-S15/AC01, CP01-S15/AC02, CP01-S15/AC03, CP01-S09/R06, CP01-S09/AC05, CP01-S12/R13]
+    affects: [CP01-S15/R05, CP01-S15/AC01, CP01-S15/AC02, CP01-S15/AC03, CP01-S15/AC11, CP01-S09/R06, CP01-S09/AC05, CP01-S12/R13]
     question: "Spec 02 section 12 requires a deterministic `environment_lock_hash` from the exact resolved lock state but defines no algorithm, canonical form or prefix, unlike pg1 for the graph revision. Which hash protocol does it use, must it be stable across runtime versions and platforms, and does it hash the lock bytes or their parsed meaning, so that a formatting-only lock change does or does not change it?"
   - id: Q46
     affects: [CP01-S15/R07, CP01-S15/AC08, CP01-S17/R06, CP01-S17/AC04, CP01-S18/R03, CP01-S18/AC06, CP01-S10/R07, CP01-S10/R08, CP01-S10/AC05]
     question: "Spec 02 sections 5 to 7 do not say how a Checkpoint 1 Agent Pack or configuration declares an external Production Skills import. Which field identifies one, so that Steps 15, 17 and 18 can report it as unsupported? Does an unsupported import block the whole environment, as these contracts assume, or only the capabilities bound to it?"
   - id: Q47
-    affects: [CP01-S18/R01, CP01-S18/R04, CP01-S18/AC02, CP01-S18/AC04, CP01-S18/AC07, CP01-S06/R04]
+    affects: [CP01-S18/R01, CP01-S18/R02, CP01-S18/R04, CP01-S18/R05, CP01-S18/R07, CP01-S18/AC02, CP01-S18/AC04, CP01-S18/AC05, CP01-S18/AC07, CP01-S18/AC10, CP01-S06/R04]
     question: "Spec 02 section 16 names three severities but assigns one only to an unavailable repository revision and a required migration. Which severity does each other finding have, such as lock drift, generated drift, a missing capability, preserved inactive data and an available upgrade? What exit status and machine-readable output does doctor have (compare Q30 for validate)?"
   - id: Q48
-    affects: [CP01-S19/R01, CP01-S19/R05, CP01-S19/AC01, CP01-S19/AC05, CP01-S19/AC12, CP01-S06/R04, CP01-S12/R13, CP01-S10/R08]
+    affects: [CP01-S19/R01, CP01-S19/R05, CP01-S19/R12, CP01-S19/AC01, CP01-S19/AC05, CP01-S19/AC12, CP01-S19/AC14, CP01-S18/AC02, CP01-S06/R04, CP01-S12/R13, CP01-S10/R08]
     question: "How does the old runtime re-enter the newly installed runtime, and what hand-off state lets the new runtime or `upgrade --to` recover when a step after package replacement fails? Where is the preserved previous package, configuration, lock and graph state kept, and is it committed, ignored or removed after success?"
   - id: Q49
     affects: [CP01-S19/R10, CP01-S19/AC10, CP01-S06/R04, CP01-S10/R08]
     question: "Spec 02 section 15 requires rollback to restore or migrate back to the recognised original format, but defines only the forward `released-0.0.1-to-owned-stores-v1` migration. Does rollback restore preserved original bytes or run a reverse migration, and is rollback to 0.0.1 supported after new canonical records were written in the owner-separated format?"
   - id: Q50
-    affects: [CP01-S16/R07, CP01-S16/R08, CP01-S16/AC09, CP01-S16/AC10]
+    affects: [CP01-S16/R07, CP01-S16/R08, CP01-S16/AC09, CP01-S16/AC10, CP01-S17/AC06]
     question: "Spec 02 section 3 keeps an enabled or disabled state for each configured Extension, and section 10 requires disable to preserve data, but the command surface lists only `extension add`, `remove` and `upgrade`. Which command disables and re-enables an Extension, and how do disable and remove differ in configuration, lock and package state?"
   - id: Q51
-    affects: [CP01-S16/R06, CP01-S16/AC07, CP01-S19/R07]
+    affects: [CP01-S16/R06, CP01-S16/AC07, CP01-S16/AC08, CP01-S19/R07, CP01-S19/R10]
     question: "Spec 02 section 11 requires a new `graph.format_version` with explicit compatibility or migration, and section 15 an owner's declared source-to-target format migration, but neither defines how an Extension package declares a migration. Which manifest field and registration export declare it, and how is a migration's identity locked?"
   - id: Q52
     affects: [CP01-S20/R05, CP01-S20/AC01, CP01-S01/R02]

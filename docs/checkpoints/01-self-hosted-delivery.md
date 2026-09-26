@@ -1,6 +1,6 @@
 # Pactwright — Checkpoint 1 — Self-Hosted Delivery
 
-**Version:** 28  
+**Version:** 29  
 **Entry condition:** No installable Pactwright runtime exists.  
 **Release:** `0.0.2` (corrective; `0.0.1` was published against version 14 of this runbook and remains the released baseline)  
 **Exit capability:** Pactwright is installable, upgradeable, can govern one complete Contract-driven Delivery in its own repository and in Kakeibo, can compare an Agent Pack candidate against a released baseline, and requires no manual Project Graph coherence work.
@@ -58,7 +58,7 @@ This runbook defines implementation order, not new Pactwright semantics.
 
 A converted step is defined by its YAML contract in [`01-self-hosted-delivery/`](./01-self-hosted-delivery/), in the format owned by [Spec 00](../specs/00-checkpoint-step-contract-and-delivery-tasks.md). The step section here links the contract and summarises its deliverables; the contract holds the requirements and acceptance criteria. Every contract inherits the settings and shared requirements in [`checkpoint.yml`](./01-self-hosted-delivery/checkpoint.yml), and [`crosswalk.yml`](./01-self-hosted-delivery/crosswalk.yml) records where each obligation of the replaced step prose went: version 17 for Stage 1, version 20 for Stage 2, version 21 for Stage 3, version 22 for Stage 4 and version 23 for Stage 5.
 
-Stages 1–5 are converted. Stage 1 contracts are amended against Core v3 through the Q01–Q20 resolution pass, accepted by independent review 5298715756 and its correction review 5301803981 at `87bd3eb`, and reviewed as a whole under methodology §7 in [the Stage 1 exit record](../research-logs/2026-09-25-cp01-stage-1-exit-review.md). That record lists the corrections it applied, including the owner-directed Distribution §3 and pg1-fixture decisions, and the remaining non-blocking specification recommendations; independent review 5318255407 accepted those corrections at `f5e75db` and the record states Stage 1 requirement-ready. Stage 2 contracts are amended against Core v5 through the Q21–Q33 resolution pass, recorded in five [batch records](../research-logs/2026-09-25-cp01-stage-2-b7-shapes-and-identity.md) (B7–B11). The owner approved the Core §§27, 28, 32, 52, 53, 55 and 57 clauses, the two §4 scope lines and the Step 24 lifecycle-command obligation, and three further decisions from the stage-level exit review recorded in [the Stage 2 exit record](../research-logs/2026-09-25-cp01-stage-2-exit-review.md); independent review 5322976729 accepted that record's corrections at `ac370f2` and the record states Stage 2 requirement-ready. Stage 3 contracts are amended against Core v6 and Distribution v4 through the Q34–Q40 resolution pass, recorded in three [batch records](../research-logs/2026-09-25-cp01-stage-3-b12-agent-pack-format-and-selection.md) (B12–B14); the owning clauses are Distribution §§5, 8, 15, 21, 24 and Core §§35, 46, 55, and this pass added the Step 24 evaluation sentence below. The methodology §7 whole-stage review is recorded in [the Stage 3 exit record](../research-logs/2026-09-25-cp01-stage-3-exit-review.md), whose corrections X1–X19 were accepted by fresh independent review, and the record states Stage 3 requirement-ready. Stage 4 contracts are drafted against Core v3 and Distribution v2; their open questions Q41–Q51 await T2 review. Stage 5 contracts are drafted against the Implementation Guide; their open questions Q52–Q56 await T2 review. Later steps retain the version 17 form, with the integration obligations below amended in version 20, until they are converted:
+Stages 1–5 are converted. Stage 1 contracts are amended against Core v3 through the Q01–Q20 resolution pass, accepted by independent review 5298715756 and its correction review 5301803981 at `87bd3eb`, and reviewed as a whole under methodology §7 in [the Stage 1 exit record](../research-logs/2026-09-25-cp01-stage-1-exit-review.md). That record lists the corrections it applied, including the owner-directed Distribution §3 and pg1-fixture decisions, and the remaining non-blocking specification recommendations; independent review 5318255407 accepted those corrections at `f5e75db` and the record states Stage 1 requirement-ready. Stage 2 contracts are amended against Core v5 through the Q21–Q33 resolution pass, recorded in five [batch records](../research-logs/2026-09-25-cp01-stage-2-b7-shapes-and-identity.md) (B7–B11). The owner approved the Core §§27, 28, 32, 52, 53, 55 and 57 clauses, the two §4 scope lines and the Step 24 lifecycle-command obligation, and three further decisions from the stage-level exit review recorded in [the Stage 2 exit record](../research-logs/2026-09-25-cp01-stage-2-exit-review.md); independent review 5322976729 accepted that record's corrections at `ac370f2` and the record states Stage 2 requirement-ready. Stage 3 contracts are amended against Core v6 and Distribution v4 through the Q34–Q40 resolution pass, recorded in three [batch records](../research-logs/2026-09-25-cp01-stage-3-b12-agent-pack-format-and-selection.md) (B12–B14); the owning clauses are Distribution §§5, 8, 15, 21, 24 and Core §§35, 46, 55, and this pass added the Step 24 evaluation sentence below. The methodology §7 whole-stage review is recorded in [the Stage 3 exit record](../research-logs/2026-09-25-cp01-stage-3-exit-review.md), whose corrections X1–X19 were accepted by fresh independent review, and the record states Stage 3 requirement-ready. Stage 4 contracts are amended against Distribution v5 through the Q41–Q51 resolution pass, recorded in four [batch records](../research-logs/2026-09-26-cp01-stage-4-b15-init-and-scaffold.md) (B15–B18); the owning clauses are Distribution §§3, 10, 11, 12, 15, 16 and 27 and Implementation Guide command ownership, and this pass added the Step 29 selection command below and the env1 lock-hash grammar to CP01-S09/R06 and the version-listing request to CP01-S11/R08. The methodology §7 whole-stage review is recorded in [the Stage 4 exit record](../research-logs/2026-09-26-cp01-stage-4-exit-review.md). Stage 5 contracts are drafted against the Implementation Guide; their open questions Q52–Q56 await T2 review. Later steps retain the version 17 form, with the integration obligations below amended in version 20, until they are converted:
 
 ```text
 Step
@@ -292,7 +292,7 @@ Step 13 proves comparison with exact fixture and pinned package inputs and exerc
 **Deliverables**
 
 - `init-command` — A pactwright init that gives a repository only Pactwright-owned core configuration and Project Graph structure, reported as an incomplete scaffold until an Agent Pack is explicitly selected.
-- `init-pack-selection` — A documented init selection input through which initialisation obtains an explicit compatible Agent Pack choice, resolved and validated through the agent-pack use selection path rather than a second resolver.
+- `init-pack-selection` — The init --agent-pack <source> option, through which initialisation obtains an explicit compatible Agent Pack choice in the agent-pack use source grammar, resolved and validated through the agent-pack use selection path rather than a second resolver.
 
 Step 16 reuses the selection input for one-shot init with a fixture Extension, and Step 23 repeats it with packed artefacts.
 
@@ -315,8 +315,8 @@ Step 16 adds package-backed fixture Extensions to the lock and repeats the agree
 **Deliverables**
 
 - `extension-loading` — Loading of installed fixture Extension packages through the Distribution §11 manifest, covering graph.format_version, the registration export, declared storage, decoders, schemas and projections, graph contribution registration, command namespaces, capability contribution and GitHub profile metadata.
-- `extension-commands` — pactwright extension add, remove and upgrade, which install, remove and upgrade fixture Extensions and their dependencies transactionally, with exact locking, versioned migrations and preserved user-authored data.
-- `one-shot-init` — A pactwright init --with <extension> that composes normal init, explicit Agent Pack selection, normal Extension installation and sync, producing the same state as the equivalent separate operations.
+- `extension-commands` — pactwright extension add, disable, remove and upgrade, which install, deactivate, remove and upgrade fixture Extensions and their dependencies transactionally, with exact locking, declared versioned migrations and preserved user-authored data.
+- `one-shot-init` — A pactwright init --with <extension> that composes normal init, explicit Agent Pack selection through --agent-pack, normal Extension installation and sync, producing the same state as the equivalent separate operations.
 
 Step 16 repeats the Step 2 to 5 and Step 9 proofs through the installed fixture Extension loader. First-party Extensions and `--github` reuse this composition in later checkpoints. Step 23 repeats one-shot init with packed artefacts.
 
@@ -346,7 +346,7 @@ Step 19 relies on doctor to report released `0.0.1` projects as migration requir
 
 **Deliverables**
 
-- `runtime-upgrade` — pactwright upgrade and pactwright upgrade --to <version>, which replace the runtime through the detected project package manager, re-enter through the new runtime and leave the environment valid at the target or recoverable to the previous one.
+- `runtime-upgrade` — pactwright upgrade and pactwright upgrade --to <version>, which replace the runtime through the detected project package manager, re-enter through the new runtime as a child process and, through the upgrade recovery record, leave the environment valid at the target, runtime-ahead of components that pin an older runtime, or recoverable to the previous runtime.
 - `released-format-migration` — The named released-0.0.1-to-owned-stores-v1 migration, which moves a complete released 0.0.1 project to owner-separated stores and the version 1 lock without partial moves, and writes a legacy-closure execution-state document for each Brief with current Evidence and no execution-state document.
 
 Step 19 proves upgrade with packed fixture runtimes. Step 28 publishes the corrective `0.0.2` release.
@@ -582,6 +582,7 @@ fi
 
 pnpm add -D pactwright@0.0.2
 pnpm pactwright init
+pnpm pactwright agent-pack use @pactwright/standard
 pnpm pactwright sync
 pnpm pactwright validate
 pnpm pactwright lifecycle status
@@ -730,4 +731,4 @@ Checkpoint 1 closes only when:
 
 ---
 
-**Pactwright — Checkpoint 1 — Self-Hosted Delivery v28**
+**Pactwright — Checkpoint 1 — Self-Hosted Delivery v29**

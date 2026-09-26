@@ -1,20 +1,27 @@
 # CP01 Step 19 — Implement Pactwright runtime upgrade and rollback-safe failure
 id: CP01-S19
 requires: [CP01-S09, CP01-S15, CP01-S16, CP01-S17, CP01-S18]
+inputs:
+  package-manager-delegation: CP01-S11/package-manager-delegation
 outputs:
   runtime-upgrade: pactwright upgrade and pactwright upgrade --to <version>, which replace the runtime through the
-    detected project package manager, re-enter through the new runtime and leave the environment valid at the target
-    or recoverable to the previous one.
+    detected project package manager, re-enter through the new runtime as a child process and, through the upgrade
+    recovery record, leave the environment valid at the target, runtime-ahead of components that pin an older runtime,
+    or recoverable to the previous runtime.
   released-format-migration: The named released-0.0.1-to-owned-stores-v1 migration, which moves a complete released
     0.0.1 project to owner-separated stores and the version 1 lock without partial moves, and writes a legacy-closure
     execution-state document for each Brief with current Evidence and no execution-state document.
 requirements:
   R01:
     source: [DISTRIBUTION#15]
-    statement: 'The runtime upgrade shall, in order: detect the project package manager; resolve the target release;
-      delegate package replacement to that package manager; re-enter through the newly installed runtime; and, in
-      the new runtime, validate the complete environment, run required explicit versioned migrations, update .pactwright/lock.yml,
-      and run sync and validate.'
+    statement: 'The runtime upgrade shall, in order: detect the project package manager; resolve the target release,
+      which without --to is the newest pactwright release listed through the delegation seam that is newer than the
+      installed runtime and inside the declared pactwright range of the selected pack and of every enabled Extension,
+      reporting no change when none exists; write the upgrade recovery record; delegate package replacement to that
+      package manager; re-enter by invoking the runtime now installed in the project, resolved from the project''s
+      installed package and never from its own module, as a child process handed the record; and, in the new runtime,
+      validate the complete environment, run required declared migrations, update .pactwright/lock.yml, run sync and
+      validate, and remove the record.'
   R02:
     source: [DISTRIBUTION#15]
     statement: Package-manager detection shall prefer the repository's explicit packageManager declaration and otherwise
@@ -31,10 +38,15 @@ requirements:
       release for forward upgrade or rollback.
   R05:
     source: [DISTRIBUTION#15, GUIDE#filesystem-mutation]
-    statement: When the target has no compatible complete environment or any step fails, the upgrade shall fail
-      clearly without substituting components or reinterpreting canonical state. Canonical Project Graph state is
-      never left partially migrated, and enough previous package, configuration, lock and graph state remains to
-      restore or explicitly target the previous runtime.
+    statement: When a required migration cannot run, a capability is missing, the locks disagree or any step fails,
+      the upgrade shall fail clearly without substituting components or reinterpreting canonical state. Canonical
+      Project Graph state is never left partially migrated. The upgrade recovery record, Pactwright-owned content at
+      a runtime-declared path below .pactwright/ written before package replacement, holds the attempt and the exact
+      previous package manifest, package-manager lock, configuration, lifecycle and lock bytes; a failure after replacement
+      restores those bytes and requests the previous exact runtime through the seam, then removes the record; when
+      that restoration fails the record stays and the report names upgrade --to <previous version>, which completes
+      the recovery. While the record exists, ordinary mutation and execution refuse. The runtime never commits the
+      record.
   R06:
     source: [CORE#54, DISTRIBUTION#12, DISTRIBUTION#15]
     statement: A released 0.0.1 project shall be recognised as migration required. Before explicit upgrade, ordinary
@@ -56,29 +68,47 @@ requirements:
       no partial graph move and the complete source environment recoverable.
   R09:
     source: [CORE#6, DISTRIBUTION#15]
-    statement: 'The migration shall replace an empty edge document or `edges: null` with `edges: []` only after validating
-      that the legacy edge set is empty. It preserves non-Markdown core-store entries, such as .DS_Store, and blocks
+    statement: 'The migration shall move each owner''s legacy records and tuples through that owner''s declared DISTRIBUTION#11
+      graph.migrations entry from released-0.0.1 and replace an empty edge document or `edges: null` with `edges: []`
+      only after validating that the legacy edge set is empty. It preserves non-Markdown core-store entries, such as .DS_Store, and blocks
       on them until the owner moves or removes them. A legacy scalar whose released value differs under the pinned
       YAML profile needs value-preserving migration or a named prerequisite.'
   R10:
     source: [CORE#56, DISTRIBUTION#15]
-    statement: Explicit rollback shall restore the recognised original layout and lock, or fail recoverably, before
-      an older runtime can read new-format stores. Historical sha256 graph provenance is preserved unchanged and
-      never relabelled pg1; the migrated graph may record a new pg1 identity, and no result recorded under the old
-      protocol or definition is presented as a result for the migrated state.
+    statement: Explicit rollback to 0.0.1 shall run the paired reverse migration owned-stores-v1-to-released-0.0.1
+      under the current runtime before package replacement, moving each enabled owner's records and tuples back through
+      its declared reverse migration, writing the released unversioned lock and validating with the released decoders,
+      and leaving execution-state and legacy-closure documents in place and reported as unread by the target. A record
+      no declared reverse migration can express, inactive or ambiguous owner data and an interrupted upgrade block it
+      before any write. Rollback after new canonical work is supported when every record can be expressed and never
+      restores pre-migration copies. An older runtime never reads new-format stores. Historical sha256 graph provenance
+      is preserved unchanged and never relabelled pg1; the migrated graph may record a new pg1 identity, and no result
+      recorded under the old protocol or definition is presented as a result for the migrated state.
   R11:
     source: [CORE#28, CORE#57, DISTRIBUTION#15]
     statement: The released-format migration shall write, within its atomic change set, a CP01-S06/R04 legacy-closure
       execution-state document for each Brief that has current Evidence and no execution-state document, and
       for no other Brief. No other runtime path writes a legacy-closure document.
+  R12:
+    source: [DISTRIBUTION#15]
+    statement: A selected pack or enabled Extension whose declared pactwright range excludes the target shall neither
+      refuse the runtime upgrade nor be upgraded or substituted. The runtime is replaced, migrations that do not need
+      that component's registration run, the lock records the new runtime with the component's identity unchanged,
+      sync and validate are not run, and the upgrade exits zero reporting each such component as action required with
+      its owning upgrade command. The component upgrades that follow restore an executable environment and run sync.
 acceptance:
   AC01:
     covers: [R01, R04]
-    given: A project on packed fixture runtime 1.0.0 with compatible packed 1.1.0 available and an instrumented
-      runtime that records the version running each flow step.
+    cases: [compatible-newer, no-newer-release, newer-only-incompatible]
+    given: A project on packed fixture runtime 1.0.0 with the delegation seam instrumented and an instrumented runtime
+      that records the version and process running each flow step; compatible-newer lists packed 1.1.0 inside the
+      selected pack's range, no-newer-release lists nothing newer, and newer-only-incompatible lists packed 1.1.0
+      outside the pack's declared range.
     when: Pactwright upgrade runs.
-    then: The package manager installs 1.1.0. Validation, migration, lock update, sync and validate are recorded
-      by 1.1.0, and the lock records runtime 1.1.0.
+    then: compatible-newer writes the recovery record, has the package manager install 1.1.0, re-enters 1.1.0 as
+      a child process resolved from the project's installed package, records validation, migration, lock update, sync
+      and validate by that process, locks runtime 1.1.0 and removes the record. The other two cases report that no
+      compatible newer release exists and change nothing.
     verify:
       automated: [upgrade.latest-compatible]
   AC02:
@@ -108,11 +138,17 @@ acceptance:
       automated: [upgrade.component-identity]
   AC05:
     covers: [R05]
-    cases: [no-compatible-environment, package-replacement-failure, migration-failure, sync-failure, validation-failure]
-    given: A valid project on packed runtime 1.0.0, and a target 1.1.0 with the listed defect or injected failure.
-    when: Pactwright upgrade runs.
-    then: It fails clearly. The graph, configuration and lock are byte-identical to before or restored to it, and
-      upgrade --to 1.0.0 returns to a valid environment.
+    cases: [missing-capability, package-replacement-failure, migration-failure, sync-failure, validation-failure,
+      restoration-failure, interrupted-after-replacement]
+    given: A valid project on packed runtime 1.0.0 with the delegation seam instrumented, and a target 1.1.0 with the
+      listed defect or injected failure; restoration-failure injects a failure into the seam's restore request after
+      a validation failure, and interrupted-after-replacement stops the process between package replacement and re-entry.
+    when: Pactwright upgrade runs to 1.1.0.
+    then: The first five cases fail clearly, restore configuration, lifecycle, lock and package state from the recovery
+      record, request the previous exact runtime through the seam, remove the record and leave the graph byte-identical.
+      restoration-failure leaves the record, names upgrade --to 1.0.0, and that command completes the recovery. interrupted-after-replacement
+      leaves the record; doctor reports an interrupted upgrade, ordinary mutation and execution refuse, and upgrade
+      --to 1.0.0 recovers a valid environment and removes the record.
     verify:
       automated: [upgrade.failure-recovery]
   AC06:
@@ -156,12 +192,18 @@ acceptance:
       automated: [upgrade.compatibility-tightenings]
   AC10:
     covers: [R10]
-    cases: [rollback-restores, rollback-fails]
-    given: A project migrated by AC07; rollback-fails injects a failure into the implementation's selected rollback
-      or restoration path.
+    cases: [rollback-restores, rollback-after-new-records, rollback-blocked, rollback-fails]
+    given: A project migrated by AC07 whose fixture Extension declares a reverse migration to released-0.0.1; rollback-after-new-records
+      first writes a new core record and a new Extension record in the owner-separated format; rollback-blocked holds
+      an Extension record the reverse migration cannot express; rollback-fails injects a failure into the package
+      replacement after the reverse migration.
     when: Upgrade --to 0.0.1 runs.
-    then: rollback-restores restores the recognised original layout and lock. rollback-fails fails recoverably.
-      In both cases the 0.0.1 runtime never runs against the new-format stores.
+    then: rollback-restores and rollback-after-new-records reverse-migrate under the current runtime before replacement,
+      leaving the recognised released layout, every record including the new ones readable by 0.0.1, the unversioned
+      lock, and execution-state documents in place; rollback-restores yields core files byte-identical to the AC06
+      source. rollback-blocked names the record and writes nothing. rollback-fails leaves released-format stores that
+      the still-installed runtime reports as migration required, the record naming upgrade --to the current version,
+      which recovers. In every case the 0.0.1 runtime never runs against new-format stores.
     verify:
       automated: [upgrade.rollback]
   AC11:
@@ -176,8 +218,10 @@ acceptance:
     covers: [R01, R03]
     given: The candidate upgrade code.
     when: Independent review traces package replacement and re-entry.
-    then: Packages change only through the detected package manager, and every step after replacement runs in the
-      newly installed runtime. Upgrade code changes no Agent Pack or Extension identity.
+    then: Packages change only through the detected package manager, every step after replacement runs in the newly
+      installed runtime invoked as a child process, except the reverse migration of R10 which runs before replacement,
+      and the recovery record is written before replacement and never committed by the runtime. Upgrade code changes
+      no Agent Pack or Extension identity.
     verify:
       review: [upgrade.ownership]
   AC13:
@@ -192,3 +236,18 @@ acceptance:
       document, and the existing document keeps its bytes.
     verify:
       automated: [upgrade.legacy-closure-markers]
+  AC14:
+    covers: [R12]
+    cases: [pack-pins-source-runtime, extension-pins-source-runtime, component-upgrade-restores]
+    given: A project on packed runtime 1.0.0 whose selected fixture pack, or enabled fixture Extension, declares pactwright
+      1.0.0 exactly, with packed 1.1.0 and a compatible 1.1.0 version of that component available; component-upgrade-restores
+      continues pack-pins-source-runtime.
+    when: Upgrade --to 1.1.0 runs; component-upgrade-restores then sets the pack's constraint to the compatible version
+      and runs agent-pack upgrade.
+    then: The first two cases install and re-enter 1.1.0, lock runtime 1.1.0 with the component's source, version
+      and hash unchanged, leave generated files byte-identical, exit zero naming the component as action required
+      with its owning upgrade command, and doctor then reports action required for it. Without --to, upgrade reports
+      no compatible newer release. component-upgrade-restores locks the new pack version, runs sync, and doctor reports
+      healthy.
+    verify:
+      automated: [upgrade.runtime-ahead]
