@@ -42,8 +42,10 @@ requirements:
       and never runs it: pactwright sync for generated drift; pactwright upgrade, or upgrade --to naming the record''s
       recovery target, for a migration-required source and an interrupted upgrade; pactwright extension disable <id>
       or extension add <id> for a configuration and lock disagreement about an Extension''s enabled state; pactwright
-      validate for a validation failure of the active graph; and the owning upgrade command for a component incompatible
-      with the runtime or drifted from the package-manager lock. Other findings name no command.'
+      validate for a validation failure of the active graph; pactwright upgrade --to <installed version> for a lock whose
+      runtime version is behind the installed runtime; the owning upgrade command for a component drifted from the
+      package-manager lock; and, for a component whose declared range excludes the runtime, the constraint change it
+      needs followed by its owning upgrade command. Other findings name no command.'
   R06:
     source: [DISTRIBUTION#16, CORE#56]
     statement: Doctor shall perform no write, Git mutation, replay record or GitHub request, and no repair, and
@@ -70,16 +72,20 @@ acceptance:
   AC02:
     covers: [R01, R04, R05]
     cases: [package-manager-declaration-mismatch, invalid-configuration, lock-drift, incompatible-extension, incompatible-pack,
-      missing-capability, generated-drift, validation-failure, no-pack-selected, disabled-in-configuration-only]
+      missing-capability, generated-drift, validation-failure, no-pack-selected, disabled-in-configuration-only,
+      runtime-behind-installed]
     given: The AC01 project with only the listed defect; lock-drift changes the fixture Extension's installed version
-      in the package-manager lock, no-pack-selected is a plain init scaffold, and disabled-in-configuration-only has
-      the fixture Extension's configuration entry hand-edited to enabled false with its lock entry remaining.
+      in the package-manager lock, incompatible-pack has a selected pack whose exact constraint pins a runtime older
+      than the installed one, no-pack-selected is a plain init scaffold, disabled-in-configuration-only has the fixture
+      Extension's configuration entry hand-edited to enabled false with its lock entry remaining, and runtime-behind-installed
+      has a newer packed runtime installed through the package manager while the lock records the older one.
     when: Doctor runs.
     then: package-manager-declaration-mismatch is a warning with no command. Every other case is action required naming
       the defect, with exactly the listed remediation, pactwright sync for generated-drift, pactwright validate for
-      validation-failure, pactwright extension upgrade <id> for incompatible-extension and for lock-drift, pactwright
-      agent-pack upgrade for incompatible-pack, pactwright extension disable <id> for disabled-in-configuration-only,
-      and none for the rest.
+      validation-failure, pactwright extension upgrade <id> for lock-drift, the constraint change naming the pack and its
+      current constraint followed by pactwright agent-pack upgrade for incompatible-pack, the same form with pactwright
+      extension upgrade <id> for incompatible-extension, pactwright extension disable <id> for disabled-in-configuration-only,
+      pactwright upgrade --to <installed version> for runtime-behind-installed, and none for the rest.
     verify:
       automated: [doctor.problems]
   AC03:
