@@ -1327,7 +1327,7 @@ open_questions:
     affects: [CP01-S18/R01, CP01-S18/R02, CP01-S18/R04, CP01-S18/R05, CP01-S18/R07, CP01-S18/AC02, CP01-S18/AC04, CP01-S18/AC05, CP01-S18/AC07, CP01-S18/AC10, CP01-S17/AC03, CP01-S06/R04]
     question: "Spec 02 section 16 names three severities but assigns one only to an unavailable repository revision and a required migration. Which severity does each other finding have, such as lock drift, generated drift, a missing capability, preserved inactive data and an available upgrade? What exit status and machine-readable output does doctor have (compare Q30 for validate)?"
   - id: Q48
-    affects: [CP01-S19/R01, CP01-S19/R05, CP01-S19/R12, CP01-S19/AC01, CP01-S19/AC05, CP01-S19/AC12, CP01-S19/AC14, CP01-S18/AC02, CP01-S06/R04, CP01-S12/R13, CP01-S10/R08]
+    affects: [CP01-S19/R01, CP01-S19/R05, CP01-S19/R06, CP01-S19/R12, CP01-S19/AC01, CP01-S19/AC05, CP01-S19/AC07, CP01-S19/AC12, CP01-S19/AC14, CP01-S18/R05, CP01-S18/AC02, CP01-S11/R04, CP01-S16/R06, CP01-S06/R04, CP01-S12/R13, CP01-S10/R08]
     question: "How does the old runtime re-enter the newly installed runtime, and what hand-off state lets the new runtime or `upgrade --to` recover when a step after package replacement fails? Where is the preserved previous package, configuration, lock and graph state kept, and is it committed, ignored or removed after success?"
   - id: Q49
     affects: [CP01-S19/R10, CP01-S19/AC10, CP01-S06/R04, CP01-S10/R08]

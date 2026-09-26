@@ -54,7 +54,9 @@ requirements:
       that differs from the locked one requires a DISTRIBUTION#11 graph.migrations migration, or chain of migrations,
       from the locked version to the target, each a read-only registration export applied in order within one atomic
       change set; without one the upgrade fails before any change. It updates package, configuration and lock only
-      after the target environment is valid, then runs sync and reports GitHub reconciliation needs.
+      after the target environment is valid, then runs sync and reports GitHub reconciliation needs; in the DISTRIBUTION#15
+      runtime-ahead state it validates the candidate against the other components as recorded and defers sync until
+      no component remains runtime-incompatible (CP01-S19/AC14).
   R07:
     source: [DISTRIBUTION#10, CORE#54]
     statement: Extension disable shall keep the configuration entry with enabled false, remove the lock entry and leave
