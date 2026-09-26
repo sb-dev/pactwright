@@ -59,10 +59,10 @@ requirements:
       its type and each root with whether it exists, of every core store and owner root the plan touches or creates; a failure after replacement,
       including a sync or validate failure after a completed migration, restores every recorded byte and the recorded
       inventory, removing every file, directory and other entry the migration created, requests the previous exact runtime through the seam, except that a completion-path record requests no package
-      change as R01 narrows, verifies the restored environment loads under its recorded format and removes the record; when that restoration fails the
-      record stays and the report names upgrade --to <previous version>. While the record exists, ordinary mutation and execution refuse, and upgrade accepts only --to naming the record''s
+      change as R01 narrows, verifies the restored environment loads under its recorded format and removes the record; when that restoration fails the record stays and the report names upgrade --to with the record's designated recovery
+      target; retrying it performs the same restoration and removes the record once it succeeds. While the record exists, ordinary mutation and execution refuse, and upgrade accepts only --to naming the record's
       designated recovery target, the previous runtime for a record written before replacement and the installed runtime
-      for a completion-path record, writes no new record, performs the restoration the record''s path requires and
+      for a completion-path record, writes no new record, performs the restoration the record's path requires and
       removes it; any other invocation is refused naming the record. The runtime never commits
       the record.
   R06:
@@ -102,9 +102,9 @@ requirements:
       unversioned lock, validates with the released decoders, removes the record and requests package replacement last,
       leaving execution-state and legacy-closure documents in place and reported as unread by the target; afterwards
       the released runtime's own validate passes on the project. A record no declared reverse migration can express,
-      inactive or ambiguous owner data, no selected pack and an interrupted upgrade block it before any write; a package
-      replacement that fails afterwards leaves a released-format project with no record that the still-installed
-      runtime reads as migration required. Rollback after new canonical work is supported when every record can be
+      inactive or ambiguous owner data, no selected pack and an interrupted upgrade block it before any write; a released-decoder validation failure after the reverse migration restores the reverse-migrated bytes and inventory
+      from the record and removes it, and a package replacement that fails afterwards leaves a released-format project
+      with no record that the still-installed runtime reads as migration required. Rollback after new canonical work is supported when every record can be
       expressed and never restores pre-migration copies. An older runtime never reads new-format stores. Historical sha256 graph provenance
       is preserved unchanged and never relabelled pg1; the migrated graph may record a new pg1 identity, and no result
       recorded under the old protocol or definition is presented as a result for the migrated state.
@@ -185,8 +185,8 @@ acceptance:
       the migration created survives, and leave the 1.0.0 runtime loading the project
       completely under the old format. interrupted-after-migration, interrupted-after-lock-write and interrupted-after-replacement leave the record;
       doctor reports an interrupted upgrade with upgrade --to 1.0.0 as the remediation, ordinary mutation and execution
-      refuse, and upgrade --to 1.0.0 writes no new record, restores the recorded bytes and inventory including the migrated files, recovers a valid environment and removes
-      the record. restoration-failure leaves the record, names upgrade --to
+      refuse, and upgrade --to 1.0.0 writes no new record, restores the recorded bytes and inventory including the migrated files,
+      requests the previous exact runtime through the seam, recovers a valid environment and removes the record. restoration-failure leaves the record, names upgrade --to
       1.0.0, and that command completes the recovery. other-target-refused is refused both times naming the record,
       with everything byte-identical.
     verify:
@@ -204,26 +204,30 @@ acceptance:
   AC07:
     covers: [R06, R07]
     cases: [migrates, completion-migration-failure, completion-validation-failure, completion-interrupted-after-record,
-      completion-interrupted-after-migration, completion-interrupted-after-lock-write, completion-other-target-refused]
+      completion-interrupted-after-migration, completion-interrupted-after-lock-write, completion-other-target-refused,
+      completion-restoration-failure]
     given: The AC06 project with the published 0.0.1 artefact installed and the current runtime packed; completion-migration-failure
       injects a write failure inside the migration, completion-validation-failure a validation failure after it,
       and the three interrupted cases stop the process just after the record is written, after the completed migration
-      and after the lock write; completion-other-target-refused continues completion-interrupted-after-migration;
-      each records the package manifest and package-manager lock bytes after the package-manager step.
+      and after the lock write; completion-other-target-refused continues completion-interrupted-after-migration; completion-restoration-failure
+      injects a filesystem failure into the restoration that follows a validation failure, then retries; each records the package manifest and package-manager lock bytes after the package-manager step.
     when: The published 0.0.1 CLI's validate is invoked and passes on the project; then the current runtime is installed
       through the package manager and upgrade --to its version runs under it, the released runtime having no upgrade
       command. The interrupted cases then run doctor and upgrade --to the installed version; completion-other-target-refused
       instead runs upgrade --to 0.0.1 and upgrade without --to.
     then: completion-migration-failure and completion-validation-failure fail clearly naming the injected step. In the
       interrupted cases doctor reports an interrupted upgrade naming upgrade --to the installed version, and that command
-      writes no new record and requests no package change. Every failure and interrupted case ends with every .pactwright/
+      writes no new record and requests no package change. Every failure case and the three interrupted cases end with every .pactwright/
       file, core store and owner root byte-identical in content and path inventory to the AC06 source, no entry the
       migration created surviving, the package manifest and package-manager lock byte-identical to their recorded
       post-replacement bytes, no record, and the installed current runtime reading the project as migration required;
       completion-interrupted-after-lock-write then completes the migration on a fresh upgrade --to the installed version.
-      completion-other-target-refused is refused both times naming the record, with everything byte-identical. migrates
+      completion-other-target-refused is refused both times naming the record, with everything byte-identical. completion-restoration-failure
+      leaves the record after the failed restoration, doctor names upgrade --to the installed version, upgrade --to
+      0.0.1 is refused naming the record, and the retry requests no package change, restores exact bytes and path inventory
+      and removes the record. migrates
       writes the record first, with 0.0.1 as its source version and the post-replacement package files as its baseline,
-      makes no package request and runs released-0.0.1-to-owned-stores-v1. Core files are unchanged, Extension records
+      makes no package request, runs released-0.0.1-to-owned-stores-v1 and leaves no record. Core files are unchanged, Extension records
       and tuples are in the owner's storage with identities and tuples preserved, configuration and lifecycle keep their
       settings, the lock is an exact version 1 lock and validate passes.
     verify:
@@ -325,7 +329,7 @@ acceptance:
       In pack-then-extension, extension-then-pack and dependent-extensions-pinned the first command locks its component,
       runs no sync, exits zero and reports the remaining component as pending with its constraint change and owning
       command, doctor stays action required and lifecycle run stays refused; the last command runs sync, and doctor
-      reports healthy. released-migration-with-pinned-pack runs released-0.0.1-to-owned-stores-v1, writes the version 1 lock
-      with the pack unchanged, exits zero and reports the pack as action required with pactwright agent-pack upgrade.
+      reports healthy. released-migration-with-pinned-pack runs released-0.0.1-to-owned-stores-v1, writes the version 1 lock with the pack
+      unchanged, leaves no record, exits zero and reports the pack as action required with pactwright agent-pack upgrade.
     verify:
       automated: [upgrade.runtime-ahead]
