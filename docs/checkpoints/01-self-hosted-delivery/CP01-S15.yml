@@ -24,7 +24,9 @@ requirements:
     source: [DISTRIBUTION#12, DISTRIBUTION#13]
     statement: The two locks shall agree on every runtime and package-backed component version they both identify.
       A disagreement, a component whose installed content does not match its recorded identity, or an incompatible
-      resolution is rejected before a new environment is accepted or generated integration is replaced.
+      resolution is rejected before a new environment is accepted or generated integration is replaced. The DISTRIBUTION#15
+      runtime-ahead lock is the one exception, recording an incompatible selected pack or enabled Extension unchanged
+      and is not an accepted executable environment.
   R04:
     source: [DISTRIBUTION#11, GUIDE#filesystem-mutation]
     statement: Failed resolution or validation shall leave the previous valid configuration, lock and generated
@@ -136,7 +138,8 @@ acceptance:
     given: The candidate resolution and lock-agreement code.
     when: Independent review traces configuration, package-manager and lock handling.
     then: Package-manager state is only read, configuration and lock are read only through the canonical loader,
-      and the lock is written only after agreement and validation succeed.
+      and the lock is written only after agreement and validation succeed, except that the CP01-S19/R12 runtime-ahead
+      lock records an incompatible component unchanged.
     verify:
       review: [lock.ownership]
   AC10:

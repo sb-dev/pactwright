@@ -1,6 +1,8 @@
 # CP01 Step 18 — Implement `pactwright doctor`
 id: CP01-S18
 requires: [CP01-S05, CP01-S09, CP01-S15, CP01-S16, CP01-S17]
+inputs:
+  package-manager-delegation: CP01-S11/package-manager-delegation
 outputs:
   doctor-command: A read-only pactwright doctor that diagnoses runtime, package-manager, configuration, lock, capability,
     migration, generated-drift and validation problems as healthy, warning or action required, with deterministic
@@ -28,7 +30,8 @@ requirements:
       needs resolved, including an invalid or missing required input, a migration-required format, no selected Agent
       Pack, lock drift, content whose hash does not match its locked identity, runtime incompatibility of a component,
       a missing capability, an Extension that cannot register, an unsupported Production Skills import, generated drift,
-      an interrupted upgrade and a validation failure of the active graph; warning for an ambiguous or contradicted
+      an interrupted upgrade, a configuration and lock disagreement about an Extension''s enabled state and a validation
+      failure of the active graph; warning for an ambiguous or contradicted
       package-manager declaration and for an unavailable repository revision during ordinary diagnosis; and no severity
       for informational items. The overall result is the highest severity present, healthy when none, without a separate
       health-state subsystem. Doctor exits zero for healthy or warning and non-zero for action required, and --json emits
@@ -36,10 +39,11 @@ requirements:
   R05:
     source: [DISTRIBUTION#16]
     statement: 'Doctor shall give a concrete remediation command only where the correction is supported and deterministic,
-      and never runs it: pactwright sync for generated drift; pactwright upgrade, or upgrade --to naming the recorded
-      previous version, for a migration-required source and an interrupted upgrade; pactwright validate for a validation
-      failure of the active graph; and the owning upgrade command for a component incompatible with the runtime or
-      drifted from the package-manager lock. Other findings name no command.'
+      and never runs it: pactwright sync for generated drift; pactwright upgrade, or upgrade --to naming the record''s
+      recovery target, for a migration-required source and an interrupted upgrade; pactwright extension disable <id>
+      or extension add <id> for a configuration and lock disagreement about an Extension''s enabled state; pactwright
+      validate for a validation failure of the active graph; and the owning upgrade command for a component incompatible
+      with the runtime or drifted from the package-manager lock. Other findings name no command.'
   R06:
     source: [DISTRIBUTION#16, CORE#56]
     statement: Doctor shall perform no write, Git mutation, replay record or GitHub request, and no repair, and
@@ -66,15 +70,16 @@ acceptance:
   AC02:
     covers: [R01, R04, R05]
     cases: [package-manager-declaration-mismatch, invalid-configuration, lock-drift, incompatible-extension, incompatible-pack,
-      missing-capability, generated-drift, validation-failure, no-pack-selected, interrupted-upgrade]
-    given: The AC01 project with only the listed defect; no-pack-selected is a plain init scaffold, and interrupted-upgrade
-      holds a CP01-S19 upgrade recovery record naming previous runtime 1.0.0.
+      missing-capability, generated-drift, validation-failure, no-pack-selected, disabled-in-configuration-only]
+    given: The AC01 project with only the listed defect; lock-drift changes the fixture Extension's installed version
+      in the package-manager lock, no-pack-selected is a plain init scaffold, and disabled-in-configuration-only has
+      the fixture Extension's configuration entry hand-edited to enabled false with its lock entry remaining.
     when: Doctor runs.
     then: package-manager-declaration-mismatch is a warning with no command. Every other case is action required naming
       the defect, with exactly the listed remediation, pactwright sync for generated-drift, pactwright validate for
-      validation-failure, pactwright extension upgrade <id> for incompatible-extension, pactwright agent-pack upgrade
-      for incompatible-pack, the drifted component's owning upgrade command for lock-drift, pactwright upgrade --to
-      1.0.0 for interrupted-upgrade, and none for the rest.
+      validation-failure, pactwright extension upgrade <id> for incompatible-extension and for lock-drift, pactwright
+      agent-pack upgrade for incompatible-pack, pactwright extension disable <id> for disabled-in-configuration-only,
+      and none for the rest.
     verify:
       automated: [doctor.problems]
   AC03:
