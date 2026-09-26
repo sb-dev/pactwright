@@ -25,8 +25,9 @@ requirements:
     statement: The two locks shall agree on every runtime and package-backed component version they both identify.
       A disagreement, a component whose installed content does not match its recorded identity, or an incompatible
       resolution is rejected before a new environment is accepted or generated integration is replaced. The DISTRIBUTION#15
-      runtime-ahead lock is the one exception, recording an incompatible selected pack or enabled Extension unchanged
-      and is not an accepted executable environment.
+      runtime-ahead lock is the one exception; it records an incompatible selected pack or enabled Extension unchanged,
+      and it is not an accepted executable environment, so lifecycle run and every capability invocation refuse it
+      naming the component.
   R04:
     source: [DISTRIBUTION#11, GUIDE#filesystem-mutation]
     statement: Failed resolution or validation shall leave the previous valid configuration, lock and generated

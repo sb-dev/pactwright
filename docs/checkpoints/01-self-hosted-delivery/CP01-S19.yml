@@ -22,8 +22,10 @@ requirements:
       installed package and never from its own module, as a child process handed the record; and, in the new runtime,
       validate the complete environment, run required declared migrations, update .pactwright/lock.yml, run sync and
       validate, and remove the record. When the installed runtime already is the target and the lock records an older
-      runtime, upgrade --to <installed version> performs the post-replacement steps itself, writing the record first
-      and making no package request; this is the entry from the released 0.0.1 runtime, which has no upgrade command.'
+      runtime, upgrade --to <installed version> performs the post-replacement steps itself, writing the record first with
+      the lock''s runtime.version as its source version and making no package request, and a failure on that path
+      restores the recorded bytes and removes the record without any package change; this is the entry from the released
+      0.0.1 runtime, which has no upgrade command.'
   R02:
     source: [DISTRIBUTION#15]
     statement: Package-manager detection shall prefer the repository's explicit packageManager declaration and otherwise
@@ -160,8 +162,8 @@ acceptance:
       restoration-failure,
       interrupted-after-replacement, other-target-refused]
     given: A valid project on packed runtime 1.0.0 with the delegation seam instrumented, and a target 1.1.0 with the
-      listed defect or injected failure; the three migration-then cases enable a fixture Extension with stored records
-      whose target version declares a format-changing migration that completes before the injected sync or validate
+      listed defect or injected failure; the three migration-then cases use a packed 1.1.0 runtime that declares a format-changing
+      migration of a core store, which completes before the injected sync or validate
       failure or the process stop, interrupted-after-lock-write stopping after the new lock is written and before sync; restoration-failure injects a failure into the seam's restore request after a
       validation failure; interrupted-after-replacement stops the process between package replacement and re-entry;
       other-target-refused continues it with packed 1.2.0 also available.
@@ -190,11 +192,15 @@ acceptance:
       automated: [upgrade.legacy-diagnosis]
   AC07:
     covers: [R06, R07]
-    given: The AC06 project with the published 0.0.1 artefact installed and the current runtime packed.
+    cases: [migrates, completion-failure]
+    given: The AC06 project with the published 0.0.1 artefact installed and the current runtime packed; completion-failure
+      injects a validation failure after the migration.
     when: The published 0.0.1 CLI's validate is invoked and passes on the project; then the current runtime is installed
       through the package manager and upgrade --to its version runs under it, the released runtime having no upgrade
       command.
-    then: The upgrade writes the record first, makes no package request and runs released-0.0.1-to-owned-stores-v1. Core files are unchanged, Extension records and
+    then: completion-failure restores every recorded byte, removes the record, requests no package change, and the
+      installed current runtime reads the project as migration required. migrates writes the record first, with 0.0.1
+      as its source version, makes no package request and runs released-0.0.1-to-owned-stores-v1. Core files are unchanged, Extension records and
       tuples are in the owner's storage with identities and tuples preserved, configuration and lifecycle keep their
       settings, the lock is an exact version 1 lock and validate passes.
     verify:
@@ -222,17 +228,19 @@ acceptance:
       automated: [upgrade.compatibility-tightenings]
   AC10:
     covers: [R10]
-    cases: [rollback-restores, rollback-after-new-records, rollback-blocked, rollback-fails]
+    cases: [rollback-restores, rollback-after-new-records, rollback-blocked, rollback-validation-fails, rollback-fails]
     given: A project migrated by AC07 whose fixture Extension declares a reverse migration to released-0.0.1, with
       the published 0.0.1 artefact available through the seam; rollback-after-new-records first writes a new core record
       and a new Extension record in the owner-separated format; rollback-blocked holds an Extension record the reverse
-      migration cannot express; rollback-fails injects a failure into the package replacement after the reverse migration.
+      migration cannot express; rollback-validation-fails injects a released-decoder validation failure after the
+      reverse migration; rollback-fails injects a failure into the package replacement after the reverse migration.
     when: Upgrade --to 0.0.1 runs.
     then: rollback-restores and rollback-after-new-records reverse-migrate, write the released lock, validate with the
       released decoders and remove the record under the current runtime, then replace the package last, leaving the
       recognised released layout, every record including the new ones readable by 0.0.1, and execution-state documents
       in place; the published 0.0.1 runtime's validate and lifecycle status then pass on the project, and rollback-restores
-      yields core files byte-identical to the AC06 source. rollback-blocked names the record and writes nothing. rollback-fails
+      yields core files byte-identical to the AC06 source. rollback-blocked names the record and writes nothing. rollback-validation-fails restores the reverse-migrated
+      bytes from the record, removes it and leaves the current runtime and stores byte-identical. rollback-fails
       leaves a released-format project with no record, which the still-installed runtime reports as migration required
       and upgrade --to the current version migrates forward again. In every case the 0.0.1 runtime never runs against
       new-format stores.
@@ -276,8 +284,8 @@ acceptance:
     given: A project on packed runtime 1.0.0 whose selected fixture pack, or enabled fixture Extension, or both, declare
       pactwright 1.0.0 exactly, with packed 1.1.0 and compatible 1.1.0 versions of those components available; component-upgrade-restores
       and unchanged-pin-no-op continue pack-pins-source-runtime; pack-then-extension and extension-then-pack have both
-      components pinned; dependent-extensions-pinned has two pinned Extensions, one depending on the other, and the
-      pack compatible; released-migration-with-pinned-pack is the AC06 project whose pack declares pactwright 0.0.1
+      components pinned; dependent-extensions-pinned has two pinned Extensions, one depending on the other with a declared dependency
+      range admitting both versions, and the pack compatible; released-migration-with-pinned-pack is the AC06 project whose pack declares pactwright 0.0.1
       exactly, with the current runtime installed through the package manager.
     when: Upgrade --to 1.1.0 runs, or --to the installed current version for released-migration-with-pinned-pack. component-upgrade-restores
       then sets the pack's constraint to the compatible version and runs agent-pack upgrade; unchanged-pin-no-op runs
