@@ -15,8 +15,8 @@ requirements:
     source: [GUIDE#trusted-release-workflow, GUIDE#npm-release-model]
     statement: Before any publish, the workflow shall assert that the tag names the version of every package it
       publishes, that the tagged commit is on the default branch, that the npm CLI in the job meets the trusted-publishing
-      minimum version, and that the expected npm tag does not already point at a higher version than the tagged
-      one. A v0.0.x tag publishes under the npm tag next and a v0.1.0 or later tag under latest. The workflow
+      minimum version, and that for no package the expected npm tag already points at a higher version than
+      the tagged one. A v0.0.x tag publishes under the npm tag next and a v0.1.0 or later tag under latest. The workflow
       writes no other npm tag and never moves latest for a v0.0.x tag.
   R03:
     source: [GUIDE#trusted-release-workflow, GUIDE#first-publication-of-a-package]
@@ -36,8 +36,7 @@ requirements:
       false, bound every job with a timeout, not use `pull_request_target` and place no credential or sensitive
       payload in the workflow file or its logs. Release runs execute one at a time under a concurrency group that
       retains every pending run up to the platform's queue bound and cancels no run, not the platform's default
-      single pending slot. The workflow assumes no start order among retained runs, since the platform starts
-      them by the time they began waiting and guarantees none.
+      single pending slot. The workflow assumes no start order among retained runs.
   R06:
     source: [GUIDE#release-failure]
     statement: A failure before publication shall publish nothing and allow a safe rerun. The workflow publishes
