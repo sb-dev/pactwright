@@ -48,9 +48,16 @@
 # S15/AC11 and S16/AC06 entries to the affects of Q45 and Q44. No question is
 # deleted.
 #
-# Stage 5 (Q52-Q56) is a T1 conversion drafted against the Implementation Guide.
-# Its open questions are unresolved inputs to T2 review; no specification was
-# amended.
+# Stage 5 (Q52-Q56) decisions and check status:
+# ../../research-logs/2026-09-26-cp01-stage-5-b19-ci-coverage-and-triggers.md
+# B19 Q52,Q53; B20 Q54; B21 Q55,Q56.
+# Applied clauses: Implementation Guide v18 (GitHub Actions, package metadata,
+# npm release model, trusted release workflow, release failure) and
+# Checkpoint 1 v30 (section 3, Step 21 summary). Q54's version-line
+# renumbering of the Guide table and Checkpoints 2-9 awaits owner
+# authorisation and is not a Stage 5 dependency. The section 7 stage exit
+# review is ../../research-logs/2026-09-26-cp01-stage-5-exit-review.md. No
+# question is deleted.
 sources:
   - source: docs/checkpoints/01-self-hosted-delivery.md@26ea12a
     steps: [CP01-S01, CP01-S02, CP01-S03, CP01-S04, CP01-S05]
@@ -1339,17 +1346,17 @@ open_questions:
     affects: [CP01-S16/R06, CP01-S16/AC07, CP01-S16/AC08, CP01-S19/R07, CP01-S19/R10]
     question: "Spec 02 section 11 requires a new `graph.format_version` with explicit compatibility or migration, and section 15 an owner's declared source-to-target format migration, but neither defines how an Extension package declares a migration. Which manifest field and registration export declare it, and how is a migration's identity locked?"
   - id: Q52
-    affects: [CP01-S20/R05, CP01-S20/AC01, CP01-S01/R02]
+    affects: [CP01-S20/R05, CP01-S20/AC01, CP01-S20/AC03, CP01-S20/AC04, CP01-S01/R02]
     question: "The Implementation Guide forbids claiming compatibility that CI or package smoke tests do not exercise, and the runtime's engines range claims Node 22 and 24. Must CI run `pnpm verify` on every claimed Node major, or may the Step 22-23 packed-consumer smoke tests carry part of the claim? Which operating systems must CI cover?"
   - id: Q53
-    affects: [CP01-S20/R01, CP01-S20/AC01, CP01-S25]
+    affects: [CP01-S20/R01, CP01-S20/R02, CP01-S20/R07, CP01-S20/AC01, CP01-S20/AC02, CP01-S20/AC03, CP01-S20/AC04, CP01-S20/AC06, CP01-S25]
     question: "Which events trigger ci.yml (pull requests, pushes to the default branch, a merge queue)? Must it be a required status check before merge? Branch protection is repository configuration outside the committed files; who configures it and how is it evidenced?"
   - id: Q54
-    affects: [CP01-S21/R02, CP01-S28]
+    affects: [CP01-S21/R02, CP01-S21/AC01, CP01-S21/AC02, CP01-S28]
     question: "The Implementation Guide maps Checkpoint 1 to 0.0.1 and Checkpoint 2 to 0.0.2, but this checkpoint publishes the corrective 0.0.2. Which version does Checkpoint 2 publish, and should the Guide's mapping be amended?"
   - id: Q55
-    affects: [CP01-S21/R06, CP01-S21/AC06, CP01-S28]
+    affects: [CP01-S21/R05, CP01-S21/R06, CP01-S21/AC01, CP01-S21/AC02, CP01-S21/AC05, CP01-S21/AC06, CP01-S21/AC08, CP01-S28]
     question: "The Guide allows recursive publishing to resume only where skipping already published immutable versions has been verified safe. Does `pnpm publish -r` skip them safely under trusted publishing, and must Step 21 prove that with a fixture registry, or is review sufficient until the Step 28 release?"
   - id: Q56
-    affects: [CP01-S21/R03, CP01-S21/AC07, CP01-S28]
+    affects: [CP01-S21/R03, CP01-S21/R04, CP01-S21/R07, CP01-S21/AC05, CP01-S21/AC07, CP01-S28]
     question: "The npm-release environment's protection rules and each package's npm trusted-publisher configuration live outside the repository. Must each publish have a human approval binding through the environment, and how are the environment and trusted-publisher configuration evidenced for acceptance?"
