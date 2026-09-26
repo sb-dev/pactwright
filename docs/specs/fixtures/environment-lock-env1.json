@@ -1,0 +1,113 @@
+{
+  "protocol": "env1:sha256",
+  "purpose": "Frozen definition vectors for Distribution section 12's environment_lock_hash. input is the decoded .pactwright/lock.yml mapping; canonical_json is its RFC 8785 serialization (members in unsigned UTF-16 key order, no whitespace, no trailing newline); environment_lock_hash is SHA-256 over those UTF-8 bytes. stored_files, when present, fixes lock bytes that decode to the same mapping and so yield the same hash: key order, quoting, comments and CRLF line endings do not change it. unactivated-scaffold-other-runtime differs from unactivated-scaffold only in runtime.version and has a different hash. The hashes inside the inputs are placeholders, not real package or content hashes. These fixtures do not establish runtime acceptance.",
+  "vectors": [
+    {
+      "id": "unactivated-scaffold",
+      "input": {
+        "version": 1,
+        "runtime": {
+          "version": "0.0.2"
+        },
+        "extensions": {}
+      },
+      "canonical_json": "{\"extensions\":{},\"runtime\":{\"version\":\"0.0.2\"},\"version\":1}",
+      "environment_lock_hash": "env1:sha256:7a667e09dcdf9d972e990b6f580112ad868988537caa2451fb37c2602a748386",
+      "stored_files": {
+        "canonical": "version: 1\nruntime:\n  version: 0.0.2\nextensions: {}\n",
+        "reordered-and-quoted": "extensions: {}\nruntime:\n  version: \"0.0.2\"\nversion: 1\n",
+        "comments-and-crlf": "# resolved by pactwright\r\nversion: 1\r\nruntime:\r\n  version: 0.0.2 # runtime\r\nextensions: {}\r\n"
+      }
+    },
+    {
+      "id": "standard-pack",
+      "input": {
+        "version": 1,
+        "runtime": {
+          "version": "0.0.2"
+        },
+        "agent_pack": {
+          "source": "@pactwright/standard",
+          "version": "0.0.2",
+          "hash": "sha256:4862f447f2c7f272fa2f4aaf89dadb3b1ac09105bd5864f8d1a0c9452bb0a226"
+        },
+        "agents": {
+          "implementer": "sha256:d3d7ca6ce0ae2ceb8c67aa18d1f3f56f34006b316b0189ad23a3534c2d18f3e2",
+          "reviewer": "sha256:2d70999ae1805e4bcef9b4ab3a4b827f578c61740f30076fcdc35c7ae7f586b3",
+          "spec": "sha256:d4f02eaafd1a9e9de7d10972ca8e47fa7a985825c3c9c1e249c72683cb3e4f19"
+        },
+        "skills": {
+          "contract-writing": "sha256:a44a5c069038f2e2ceb7d3c42b0cfc1a5fca0a30a898f9cf906c8ed31aef319a",
+          "implementation-review": "sha256:ee02693ade1c0f12929578e6b7c7737bb12fe94a12cfca744f026d4d929f7a52",
+          "repository-analysis": "sha256:15ed414db3e1dc83c8dd7a136536359acf1ddc03b1279ff1b349f27b951dbd4c"
+        },
+        "extensions": {}
+      },
+      "canonical_json": "{\"agent_pack\":{\"hash\":\"sha256:4862f447f2c7f272fa2f4aaf89dadb3b1ac09105bd5864f8d1a0c9452bb0a226\",\"source\":\"@pactwright/standard\",\"version\":\"0.0.2\"},\"agents\":{\"implementer\":\"sha256:d3d7ca6ce0ae2ceb8c67aa18d1f3f56f34006b316b0189ad23a3534c2d18f3e2\",\"reviewer\":\"sha256:2d70999ae1805e4bcef9b4ab3a4b827f578c61740f30076fcdc35c7ae7f586b3\",\"spec\":\"sha256:d4f02eaafd1a9e9de7d10972ca8e47fa7a985825c3c9c1e249c72683cb3e4f19\"},\"extensions\":{},\"runtime\":{\"version\":\"0.0.2\"},\"skills\":{\"contract-writing\":\"sha256:a44a5c069038f2e2ceb7d3c42b0cfc1a5fca0a30a898f9cf906c8ed31aef319a\",\"implementation-review\":\"sha256:ee02693ade1c0f12929578e6b7c7737bb12fe94a12cfca744f026d4d929f7a52\",\"repository-analysis\":\"sha256:15ed414db3e1dc83c8dd7a136536359acf1ddc03b1279ff1b349f27b951dbd4c\"},\"version\":1}",
+      "environment_lock_hash": "env1:sha256:4eebccd64b0c86296506ba8ab8b6d3f2dae94c3361d74667a154df056b382077"
+    },
+    {
+      "id": "with-extensions",
+      "input": {
+        "version": 1,
+        "runtime": {
+          "version": "0.0.2"
+        },
+        "agent_pack": {
+          "source": "@pactwright/standard",
+          "version": "0.0.2",
+          "hash": "sha256:4862f447f2c7f272fa2f4aaf89dadb3b1ac09105bd5864f8d1a0c9452bb0a226"
+        },
+        "agents": {
+          "implementer": "sha256:d3d7ca6ce0ae2ceb8c67aa18d1f3f56f34006b316b0189ad23a3534c2d18f3e2",
+          "reviewer": "sha256:2d70999ae1805e4bcef9b4ab3a4b827f578c61740f30076fcdc35c7ae7f586b3",
+          "spec": "sha256:d4f02eaafd1a9e9de7d10972ca8e47fa7a985825c3c9c1e249c72683cb3e4f19"
+        },
+        "skills": {
+          "contract-writing": "sha256:a44a5c069038f2e2ceb7d3c42b0cfc1a5fca0a30a898f9cf906c8ed31aef319a",
+          "implementation-review": "sha256:ee02693ade1c0f12929578e6b7c7737bb12fe94a12cfca744f026d4d929f7a52",
+          "repository-analysis": "sha256:15ed414db3e1dc83c8dd7a136536359acf1ddc03b1279ff1b349f27b951dbd4c"
+        },
+        "extensions": {
+          "fixture-graph": {
+            "package": "@pactwright-fixtures/graph",
+            "version": "1.2.0",
+            "hash": "sha256:dc46d5077d6851f37dacf5ae40505c39c571bd7d8d7f6c483576ff963cc36400",
+            "dependencies": {
+              "fixture-base": "2.0.0"
+            },
+            "graph": {
+              "format_version": 2,
+              "declaration_hash": "sha256:3ba23714dc723ddf86a956e5e8a17c2eb3236e61e4e258d6387f7d2fc7480b0f",
+              "implementation_hash": "sha256:ced2128f3bc92a5720f7abd73b8babcc1515866551349b15db52736553e30f8f"
+            }
+          },
+          "fixture-base": {
+            "package": "@pactwright-fixtures/base",
+            "version": "2.0.0",
+            "hash": "sha256:ccea83f7cd7f1a1d92ac2fd0396a6916882a506234ab468a92d09621f6e95b87",
+            "graph": {
+              "format_version": 1,
+              "declaration_hash": "sha256:7262cfe67f82458bd3e9024c7bbddfc743ca93bb8ef9fec0b670df1ec21b262e",
+              "implementation_hash": "sha256:7746cbff20c1a05d479a3592c9dcdd180c7f4f23d5bcbf7d7a4cf5a149e6e94e"
+            }
+          }
+        }
+      },
+      "canonical_json": "{\"agent_pack\":{\"hash\":\"sha256:4862f447f2c7f272fa2f4aaf89dadb3b1ac09105bd5864f8d1a0c9452bb0a226\",\"source\":\"@pactwright/standard\",\"version\":\"0.0.2\"},\"agents\":{\"implementer\":\"sha256:d3d7ca6ce0ae2ceb8c67aa18d1f3f56f34006b316b0189ad23a3534c2d18f3e2\",\"reviewer\":\"sha256:2d70999ae1805e4bcef9b4ab3a4b827f578c61740f30076fcdc35c7ae7f586b3\",\"spec\":\"sha256:d4f02eaafd1a9e9de7d10972ca8e47fa7a985825c3c9c1e249c72683cb3e4f19\"},\"extensions\":{\"fixture-base\":{\"graph\":{\"declaration_hash\":\"sha256:7262cfe67f82458bd3e9024c7bbddfc743ca93bb8ef9fec0b670df1ec21b262e\",\"format_version\":1,\"implementation_hash\":\"sha256:7746cbff20c1a05d479a3592c9dcdd180c7f4f23d5bcbf7d7a4cf5a149e6e94e\"},\"hash\":\"sha256:ccea83f7cd7f1a1d92ac2fd0396a6916882a506234ab468a92d09621f6e95b87\",\"package\":\"@pactwright-fixtures/base\",\"version\":\"2.0.0\"},\"fixture-graph\":{\"dependencies\":{\"fixture-base\":\"2.0.0\"},\"graph\":{\"declaration_hash\":\"sha256:3ba23714dc723ddf86a956e5e8a17c2eb3236e61e4e258d6387f7d2fc7480b0f\",\"format_version\":2,\"implementation_hash\":\"sha256:ced2128f3bc92a5720f7abd73b8babcc1515866551349b15db52736553e30f8f\"},\"hash\":\"sha256:dc46d5077d6851f37dacf5ae40505c39c571bd7d8d7f6c483576ff963cc36400\",\"package\":\"@pactwright-fixtures/graph\",\"version\":\"1.2.0\"}},\"runtime\":{\"version\":\"0.0.2\"},\"skills\":{\"contract-writing\":\"sha256:a44a5c069038f2e2ceb7d3c42b0cfc1a5fca0a30a898f9cf906c8ed31aef319a\",\"implementation-review\":\"sha256:ee02693ade1c0f12929578e6b7c7737bb12fe94a12cfca744f026d4d929f7a52\",\"repository-analysis\":\"sha256:15ed414db3e1dc83c8dd7a136536359acf1ddc03b1279ff1b349f27b951dbd4c\"},\"version\":1}",
+      "environment_lock_hash": "env1:sha256:e2ea98d678699879cad65fb96e6e9a219d46d405ff4cd1b02b8e8acf129b1f6a"
+    },
+    {
+      "id": "unactivated-scaffold-other-runtime",
+      "input": {
+        "version": 1,
+        "runtime": {
+          "version": "0.0.3"
+        },
+        "extensions": {}
+      },
+      "canonical_json": "{\"extensions\":{},\"runtime\":{\"version\":\"0.0.3\"},\"version\":1}",
+      "environment_lock_hash": "env1:sha256:0f4348fe97d954bbd9a4599f372f4761c0069adce1c21e41d6a984acdfc823f8"
+    }
+  ]
+}
