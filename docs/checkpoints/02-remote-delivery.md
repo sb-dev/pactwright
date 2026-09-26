@@ -1,8 +1,8 @@
 # Pactwright — Checkpoint 2 — Remote Delivery
 
-**Version:** 17  
+**Version:** 18  
 **Entry condition:** Checkpoint 1 is accepted and Pactwright can self-host core Delivery.  
-**Release:** `0.0.2`  
+**Release:** `0.0.3`  
 **Exit capability:** Pactwright and Kakeibo can initialise, execute, evaluate and project Contract-driven Delivery through GitHub using one deterministic profile-composition/reconciliation model while repository canonical state remains authoritative.
 
 ## 1. Goal
@@ -135,7 +135,7 @@ shared locked interactive/Actions environment
 runtime replay provenance in remote execution/projection
 GitHub Integration evaluation cases
 remote drift reconciliation
-exact real 0.0.1 → 0.0.2 runtime/Agent Pack upgrade
+exact real 0.0.2 → 0.0.3 runtime/Agent Pack upgrade
 ```
 
 GitHub remains:
@@ -623,19 +623,19 @@ Users can discover and reproduce Remote Delivery without depending on later Exte
 
 Follow the guide against the real Pactwright GitHub setup and a clean test repository. Run the Remote Delivery example in CI where practical.
 
-## Stage 6 — Release `0.0.2`
+## Stage 6 — Release `0.0.3`
 
-### Step 16 — Prepare and tag `0.0.2`
+### Step 16 — Prepare and tag `0.0.3`
 
 **References:** Implementation Guide npm release model; section 3 exact-version upgrade acceptance.
 
-Before release, prove in isolated consumer fixtures that the intended `0.0.1 → 0.0.2` runtime-then-pack transition leaves a compatible environment after each owning command. Include a newer available pack in a resolver fixture to prove the exact configured target is honoured rather than a floating latest release.
+Before release, prove in isolated consumer fixtures that the intended `0.0.2 → 0.0.3` runtime-then-pack transition leaves a compatible environment after each owning command. Include a newer available pack in a resolver fixture to prove the exact configured target is honoured rather than a floating latest release.
 
-Use the standard release PR path, update CHANGELOG from accepted Evidence, tag the merged release commit `v0.0.2`, and let trusted publishing release:
+Use the standard release PR path, update CHANGELOG from accepted Evidence, tag the merged release commit `v0.0.3`, and let trusted publishing release:
 
 ```text
-pactwright@0.0.2
-@pactwright/standard@0.0.2
+pactwright@0.0.3
+@pactwright/standard@0.0.3
 ```
 
 **Verify before continuing**
@@ -644,7 +644,7 @@ Both registry versions resolve, the trusted release workflow succeeds and the up
 
 ## Stage 7 — Prove published upgrade and Remote Delivery in Kakeibo
 
-### Step 17 — Upgrade Kakeibo from `0.0.1` to exact `0.0.2` through ownership-specific commands
+### Step 17 — Upgrade Kakeibo from `0.0.2` to exact `0.0.3` through ownership-specific commands
 
 **References:** Spec 02 upgrade model; Checkpoint 1 upgrade capability; section 3 exact-version upgrade acceptance.
 
@@ -653,20 +653,20 @@ Both registry versions resolve, the trusted release workflow succeeds and the up
 Begin with Kakeibo running the exact published Checkpoint 1 family:
 
 ```text
-pactwright@0.0.1
-@pactwright/standard@0.0.1
+pactwright@0.0.2
+@pactwright/standard@0.0.2
 ```
 
-Record the initial installed/configuration/lock state and confirm the fixture-proven compatible sequence from Step 16. Do **not** preinstall `0.0.2` with `pnpm add`.
+Record the initial installed/configuration/lock state and confirm the fixture-proven compatible sequence from Step 16. Do **not** preinstall `0.0.3` with `pnpm add`.
 
 Upgrade the runtime first:
 
 ```bash
-pnpm pactwright upgrade --to 0.0.2
+pnpm pactwright upgrade --to 0.0.3
 pnpm pactwright validate
 ```
 
-Verify runtime `0.0.2` with the still-compatible selected pack and new-runtime migration/validation provenance. Then set the selected `@pactwright/standard` Agent Pack's desired `version` constraint to exact `0.0.2` through the existing configuration, preserving its source. Do not edit installed packages or either lock.
+Verify runtime `0.0.3` with the still-compatible selected pack and new-runtime migration/validation provenance. Then set the selected `@pactwright/standard` Agent Pack's desired `version` constraint to exact `0.0.3` through the existing configuration, preserving its source. Do not edit installed packages or either lock.
 
 ```bash
 pnpm pactwright agent-pack upgrade
@@ -675,7 +675,7 @@ pnpm pactwright sync
 pnpm pactwright validate
 ```
 
-Verify the pack upgrade resolved `0.0.2` exactly and both locks agree. Recover a failed operation before continuing; do not pass by resolving a newer compatible pack.
+Verify the pack upgrade resolved `0.0.3` exactly and both locks agree. Recover a failed operation before continuing; do not pass by resolving a newer compatible pack.
 
 Then explicitly enable the owning GitHub configuration (`github.enabled: true`) while preserving the selected pack and run:
 
@@ -693,11 +693,11 @@ pnpm pactwright github sync --dry-run
 
 **Expected result**
 
-Kakeibo proves a real, exact published `0.0.1 → 0.0.2` runtime/Agent Pack upgrade and gains GitHub integration without losing user-authored local or remote state.
+Kakeibo proves a real, exact published `0.0.2 → 0.0.3` runtime/Agent Pack upgrade and gains GitHub integration without losing user-authored local or remote state.
 
 **Verify before continuing**
 
-Record compatibility and package/lock agreement after each upgrade. Final manifest/package-manager lock/`.pactwright/lock.yml` identify the expected `0.0.2` runtime and Agent Pack. Second GitHub dry-run converges. Pre-existing user workflow hashes and unmanaged remote resources remain unchanged.
+Record compatibility and package/lock agreement after each upgrade. Final manifest/package-manager lock/`.pactwright/lock.yml` identify the expected `0.0.3` runtime and Agent Pack. Second GitHub dry-run converges. Pre-existing user workflow hashes and unmanaged remote resources remain unchanged.
 
 ### Step 18 — Establish the minimum Kakeibo ingestion/application infrastructure
 
@@ -887,9 +887,9 @@ Checkpoint 2 closes only when:
 - GitHub metadata cannot create Decisions, satisfy Gates or mutate canonical Project Graph state;
 - Pactwright completes one real GitHub-operated Delivery;
 - public Remote Delivery guidance matches the implemented surface;
-- `pactwright@0.0.2` and `@pactwright/standard@0.0.2` are registry verified;
+- `pactwright@0.0.3` and `@pactwright/standard@0.0.3` are registry verified;
 - exact-version targeting and compatible intermediate upgrade states are fixture-proven before consumer mutation;
-- Kakeibo proves the exact published `0.0.1 → 0.0.2` runtime/Agent Pack upgrade through explicit desired constraints and owning commands, without preinstalling targets or silently selecting later versions;
+- Kakeibo proves the exact published `0.0.2 → 0.0.3` runtime/Agent Pack upgrade through explicit desired constraints and owning commands, without preinstalling targets or silently selecting later versions;
 - Kakeibo completes one real Remote Delivery from its current canonical specs;
 - unmanaged local/remote GitHub state is preserved;
 - local generated ownership, remote structural ownership, Actions projection ownership and Kakeibo application-data ownership are proven separately;
@@ -915,4 +915,4 @@ The Kakeibo acceptance additionally requires:
 
 ---
 
-**Pactwright — Checkpoint 2 — Remote Delivery v17**
+**Pactwright — Checkpoint 2 — Remote Delivery v18**

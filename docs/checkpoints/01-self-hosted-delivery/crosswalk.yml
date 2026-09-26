@@ -54,8 +54,8 @@
 # Applied clauses: Implementation Guide v18 (GitHub Actions, package metadata,
 # npm release model, trusted release workflow, release failure) and
 # Checkpoint 1 v30 (section 3, Step 21 summary, Step 28 prose). Q54's version-line
-# renumbering of the Guide table and Checkpoints 2-9 awaits owner
-# authorisation and is not a Stage 5 dependency. The section 7 stage exit
+# renumbering (Guide tables; Checkpoints 2-9, each bumped one version) was
+# authorised by the owner and applied in the same pass. The section 7 stage exit
 # review is ../../research-logs/2026-09-26-cp01-stage-5-exit-review.md. No
 # question is deleted.
 sources:

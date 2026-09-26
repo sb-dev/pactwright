@@ -1,8 +1,8 @@
 # Pactwright — Checkpoint 4 — Graph Review
 
-**Version:** 14  
+**Version:** 15  
 **Entry condition:** Checkpoint 3 is accepted.  
-**Release:** `0.0.4`  
+**Release:** `0.0.5`  
 **Exit capability:** Pactwright and Kakeibo can run reproducible specialist Graph Reviews over registered Project Graph state, retain immutable Review Execution provenance, route every successful Finding through Project Intelligence, and turn accepted Project Intelligence consequences motivated by Findings into normal governed Delivery.
 
 ## 1. Goal
@@ -132,7 +132,7 @@ real Pactwright Graph Reviews
 real Kakeibo Graph Reviews
 review-driven corrective Delivery
 Graph Review public learning path under existing PI readiness gates
-exact real 0.0.3 → 0.0.4 ownership-specific upgrade/install path
+exact real 0.0.4 → 0.0.5 ownership-specific upgrade/install path
 ```
 
 ### Explicitly removed from the checkpoint
@@ -848,23 +848,23 @@ Users can distinguish Delivery Review from Graph Review and execute a review fro
 
 Run the executable example in CI where practical, then a fresh Graph Review against public Pactwright material and triage every resulting Finding through PI. Missing applicable readiness blocks approval; challenged/superseded/retracted relied-on Knowledge before approval requires re-grounding.
 
-## Stage 8 — Release `0.0.4`
+## Stage 8 — Release `0.0.5`
 
-### Step 18 — Publish the `0.0.4` family
+### Step 18 — Publish the `0.0.5` family
 
 **References:** Implementation Guide npm release model; Checkpoint 2 exact-version upgrade acceptance.
 
 **Run**
 
-Prepare the release from accepted Checkpoint 4 Evidence. First fixture-prove Step 19's exact `0.0.3 → 0.0.4` runtime, standard pack, PI and new Graph Review transition, including compatibility after each operation. Verify desired constraints prevent accidentally resolving newer compatible component versions and the pack supplies `graph-review` before new Extension activation.
+Prepare the release from accepted Checkpoint 4 Evidence. First fixture-prove Step 19's exact `0.0.4 → 0.0.5` runtime, standard pack, PI and new Graph Review transition, including compatibility after each operation. Verify desired constraints prevent accidentally resolving newer compatible component versions and the pack supplies `graph-review` before new Extension activation.
 
 The new package is:
 
 ```text
-@pactwright/graph-review@0.0.4
+@pactwright/graph-review@0.0.5
 ```
 
-Existing family members also release as compatible `0.0.4`, including `@pactwright/standard` with the new capability.
+Existing family members also release as compatible `0.0.5`, including `@pactwright/standard` with the new capability.
 
 Use the Implementation Guide release PR/tag flow. Bootstrap only the new Graph Review package's first npm publication/trusted publisher; do not interactively republish existing packages.
 
@@ -875,37 +875,37 @@ The compatible family is published under `next` with provenance and a fixture-pr
 **Verify before continuing**
 
 ```bash
-pnpm view pactwright@0.0.4 version
-pnpm view @pactwright/standard@0.0.4 version
-pnpm view @pactwright/project-intelligence@0.0.4 version
-pnpm view @pactwright/graph-review@0.0.4 version
+pnpm view pactwright@0.0.5 version
+pnpm view @pactwright/standard@0.0.5 version
+pnpm view @pactwright/project-intelligence@0.0.5 version
+pnpm view @pactwright/graph-review@0.0.5 version
 ```
 
-Every command returns `0.0.4`; the complete transition fixtures pass before real consumer upgrade.
+Every command returns `0.0.5`; the complete transition fixtures pass before real consumer upgrade.
 
 ## Stage 9 — Prove Graph Review on Kakeibo
 
-### Step 19 — Upgrade Kakeibo from accepted `0.0.3` through exact ownership-specific targets
+### Step 19 — Upgrade Kakeibo from accepted `0.0.4` through exact ownership-specific targets
 
 **References:** Spec 02 upgrades/Extension dependencies; current Kakeibo canonical specs; Checkpoint 2 exact-version upgrade acceptance.
 
 **Run**
 
-Record the accepted Checkpoint 3 Kakeibo `0.0.3` installed/configuration/lock state and use the fixture-proven compatible sequence. Do not preinstall `0.0.4` packages or edit either lock manually.
+Record the accepted Checkpoint 3 Kakeibo `0.0.4` installed/configuration/lock state and use the fixture-proven compatible sequence. Do not preinstall `0.0.5` packages or edit either lock manually.
 
 ```bash
-pnpm pactwright upgrade --to 0.0.4
+pnpm pactwright upgrade --to 0.0.5
 pnpm pactwright validate
 ```
 
-Verify runtime `0.0.4`, new-runtime migration provenance and compatibility with the existing selected pack/PI. Set only the selected `@pactwright/standard` desired version to exact `0.0.4` through existing configuration, preserving its identity:
+Verify runtime `0.0.5`, new-runtime migration provenance and compatibility with the existing selected pack/PI. Set only the selected `@pactwright/standard` desired version to exact `0.0.5` through existing configuration, preserving its identity:
 
 ```bash
 pnpm pactwright agent-pack upgrade
 pnpm pactwright validate
 ```
 
-Verify exact pack/lock identity and the `graph-review` capability. Then set only the existing PI Extension's desired version constraint to exact `0.0.4` through its supported configuration:
+Verify exact pack/lock identity and the `graph-review` capability. Then set only the existing PI Extension's desired version constraint to exact `0.0.5` through its supported configuration:
 
 ```bash
 pnpm pactwright extension upgrade project-intelligence
@@ -916,7 +916,7 @@ pnpm pactwright validate
 Verify exact PI package/version/hash and compatible dependency state before installing Graph Review:
 
 ```bash
-pnpm pactwright extension add @pactwright/graph-review@0.0.4
+pnpm pactwright extension add @pactwright/graph-review@0.0.5
 pnpm pactwright graph-review validate
 pnpm pactwright sync
 ```
@@ -935,7 +935,7 @@ Each owning command must finish in a valid environment before the next begins. R
 
 **Expected result**
 
-Kakeibo moves from the real published `0.0.3` environment to the exact compatible `0.0.4` family through the respective component owners.
+Kakeibo moves from the real published `0.0.4` environment to the exact compatible `0.0.5` family through the respective component owners.
 
 **Verify before continuing**
 
@@ -944,10 +944,10 @@ Verify package-manager state and `.pactwright/lock.yml` identify:
 Choose one supported, accepted cross-owner finding from Step 23. The Delivery must update the owning specification(s) and, when required, dependent integration wording without creating a second source of truth.
 
 ```text
-pactwright@0.0.4
-@pactwright/standard@0.0.4
-@pactwright/project-intelligence@0.0.4
-@pactwright/graph-review@0.0.4
+pactwright@0.0.5
+@pactwright/standard@0.0.5
+@pactwright/project-intelligence@0.0.5
+@pactwright/graph-review@0.0.5
 ```
 
 Also require compatibility/lock agreement after every operation, preserved identities and historical provenance, new-runtime migration/validation, PI as the recorded Graph Review dependency, the existing shared Project, a converged final dry-run and unchanged user-owned workflows/remote state.
@@ -1116,12 +1116,12 @@ Checkpoint 4 closes only when:
 - Pactwright and Kakeibo each complete one Finding → PI → explicit Delivery correction path;
 - the Kakeibo review covers the authority index plus specs `01`–`07` through the required cross-owner matrix, and keeps financial/review truth, Kei authority, prompt-injection, privacy and maturity failure classes in explicit reviewer attention;
 - the public learning path satisfies existing PI readiness and matches shipped behaviour;
-- the `0.0.4` family including `@pactwright/graph-review` is registry verified;
-- Kakeibo proves the exact published `0.0.3 → 0.0.4` transition with explicit desired component constraints and compatible verified intermediate environments;
+- the `0.0.5` family including `@pactwright/graph-review` is registry verified;
+- Kakeibo proves the exact published `0.0.4 → 0.0.5` transition with explicit desired component constraints and compatible verified intermediate environments;
 - historical-package/external-evidence retention mechanisms remain explicit open implementation concerns, not invented infrastructure;
 - every blocking failure has a correction and passing re-verification; only non-blocking findings may remain future candidates;
 - no known blocking failure is carried into Checkpoint 5.
 
 ---
 
-**Pactwright — Checkpoint 4 — Graph Review v14**
+**Pactwright — Checkpoint 4 — Graph Review v15**

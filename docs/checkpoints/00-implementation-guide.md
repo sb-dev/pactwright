@@ -312,16 +312,17 @@ Pactwright does not wait until the end of implementation to document or explain 
 Each checkpoint advances the smallest public surface set needed by the newly usable capability:
 
 ```text
-0.0.1  README Quick Start + Getting Started + core Delivery example
-0.0.2  website foundation + GitHub guide + remote Delivery example
-0.0.3  PI docs/onboarding/example/Academy + public-content knowledge foundation
-0.0.4  Graph Review docs/example/Academy + public-corpus review
-0.0.5  Production Skills + Assets / Publication guide/example/Academy + first grounded Asset/Publication
-0.0.6  Operations docs/example/Academy + production-feedback content + controlled Experiment explanation
-0.0.7  Publication-feedback guide + evidence-driven superseding revision of a real Publication
-0.0.8  full operating guide/example + Experiments projection + advanced Academy + ecosystem/Extension catalogue
-0.0.9  permanent regression hardening + case study + contribution/launch material + public-surface completion
-0.1.0  first supported public release of the accepted 0.0.9 capability line
+0.0.1  README Quick Start + Getting Started + core Delivery example (released against Checkpoint 1 v14)
+0.0.2  Checkpoint 1's corrective release of the same content set
+0.0.3  website foundation + GitHub guide + remote Delivery example
+0.0.4  PI docs/onboarding/example/Academy + public-content knowledge foundation
+0.0.5  Graph Review docs/example/Academy + public-corpus review
+0.0.6  Production Skills + Assets / Publication guide/example/Academy + first grounded Asset/Publication
+0.0.7  Operations docs/example/Academy + production-feedback content + controlled Experiment explanation
+0.0.8  Publication-feedback guide + evidence-driven superseding revision of a real Publication
+0.0.9  full operating guide/example + Experiments projection + advanced Academy + ecosystem/Extension catalogue
+0.0.10 permanent regression hardening + case study + contribution/launch material + public-surface completion
+0.1.0  first supported public release of the accepted 0.0.10 capability line
 ```
 
 Use the strongest Pactwright capability already available.
@@ -410,18 +411,18 @@ Approved Assets and Publications remain immutable. Later analytics, Operations O
 
 ## npm release model
 
-The checkpoint number remains internal. Public package versions are normal SemVer development releases:
+The checkpoint number remains internal. Public package versions are normal SemVer development releases: each checkpoint publishes the next unused `0.0.x`, a corrective release consumes a number, and the checkpoint file's Release line names the version it publishes.
 
 ```text
-Checkpoint 1 → 0.0.1
-Checkpoint 2 → 0.0.2
-Checkpoint 3 → 0.0.3
-Checkpoint 4 → 0.0.4
-Checkpoint 5 → 0.0.5
-Checkpoint 6 → 0.0.6
-Checkpoint 7 → 0.0.7
-Checkpoint 8 → 0.0.8
-Checkpoint 9 → 0.0.9
+Checkpoint 1 → 0.0.1 (released against Checkpoint 1 v14) and the corrective 0.0.2
+Checkpoint 2 → 0.0.3
+Checkpoint 3 → 0.0.4
+Checkpoint 4 → 0.0.5
+Checkpoint 5 → 0.0.6
+Checkpoint 6 → 0.0.7
+Checkpoint 7 → 0.0.8
+Checkpoint 8 → 0.0.9
+Checkpoint 9 → 0.0.10
 
 first supported public release after Checkpoint 9 acceptance → 0.1.0
 ```
@@ -454,16 +455,16 @@ Target first-party package introduction points are:
   pactwright
   @pactwright/standard
 
-0.0.3
+0.0.4
   @pactwright/project-intelligence
 
-0.0.4
+0.0.5
   @pactwright/graph-review
 
-0.0.5
+0.0.6
   @pactwright/assets-publication
 
-0.0.6
+0.0.7
   @pactwright/operations
 ```
 
@@ -552,14 +553,14 @@ The tag triggers the trusted release workflow.
 
 ### Preparing the first supported release
 
-Checkpoint 9 owns the `0.1.0` promotion after `0.0.9` has passed the full generic failure matrix and Kakeibo hardened acceptance.
+Checkpoint 9 owns the `0.1.0` promotion after `0.0.10` has passed the full generic failure matrix and Kakeibo hardened acceptance.
 
-`0.1.0` is a new immutable SemVer version of the accepted supported line, not a dist-tag-only promotion of `0.0.9`.
+`0.1.0` is a new immutable SemVer version of the accepted supported line, not a dist-tag-only promotion of `0.0.10`.
 
 Before `latest` moves to `0.1.0`:
 
 ```text
-0.0.9 accepted under next
+0.0.10 accepted under next
 → Pactwright failure drills pass
 → Kakeibo seven-owner regression review passes
 → Kakeibo production Kei regression lifecycle passes

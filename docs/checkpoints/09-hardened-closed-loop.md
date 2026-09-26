@@ -1,8 +1,8 @@
 # Pactwright — Checkpoint 9 — Hardened Closed Loop
 
-**Version:** 11  
+**Version:** 12  
 **Entry condition:** Checkpoint 8 is accepted.  
-**Release:** `0.0.9`  
+**Release:** `0.0.10`  
 **Exit capability:** The complete first-party Pactwright system is evaluated, failure-hardened, publicly documented and repeatedly proven in closed loops on Pactwright and Kakeibo, including permanent Experiment regression coverage and a production Kei defect learning loop, without expanding semantics beyond observed need.
 
 ## 1. Goal
@@ -265,11 +265,11 @@ Per-capability/per-case results exist across all Pactwright responsibilities.
 
 **Run**
 
-If hardening changes `@pactwright/standard` AI behaviour, build the candidate and compare it against the compatible `0.0.8` baseline using:
+If hardening changes `@pactwright/standard` AI behaviour, build the candidate and compare it against the compatible `0.0.9` baseline using:
 
 ```bash
 pnpm pactwright eval \
-  --baseline @pactwright/standard@0.0.8 \
+  --baseline @pactwright/standard@0.0.9 \
   --candidate <candidate-pack-or-environment>
 ```
 
@@ -539,11 +539,11 @@ Run this stage from the Kakeibo repository root unless explicitly stated otherwi
 
 ```bash
 pnpm add -D \
-  pactwright@0.0.9 \
-  @pactwright/project-intelligence@0.0.9 \
-  @pactwright/review-creative@0.0.9 \
-  @pactwright/creative@0.0.9 \
-  @pactwright/operations@0.0.9
+  pactwright@0.0.10 \
+  @pactwright/project-intelligence@0.0.10 \
+  @pactwright/review-creative@0.0.10 \
+  @pactwright/creative@0.0.10 \
+  @pactwright/operations@0.0.10
 
 pnpm pactwright extension upgrade project-intelligence
 pnpm pactwright extension upgrade review-creative
@@ -846,7 +846,7 @@ Checkpoint 9 closes only when:
 - no single aggregate Experiment or agent score decides acceptance, and deterministic assertions outrank model judgement where applicable;
 - Distribution/GitHub regressions prove Experiment projections cannot fabricate promotion, leak raw evidence, survive Operations disablement incorrectly or become canonical through UI edits;
 - the final generic failure matrix includes at least one end-to-end Experiment failure drill and every drill preserves unrelated canonical state;
-- `0.0.9` is published under `next` with verified provenance before Kakeibo hardened acceptance;
+- `0.0.10` is published under `next` with verified provenance before Kakeibo hardened acceptance;
 - Kakeibo runs a regression Review across all seven current canonical owners, explicitly checking financial/review truth, architecture/privacy separation, bounded Kei authority, source prompt injection, release/model-route identity, Git-owned behaviour, safe experiments and private/public trace boundaries;
 - at least one real or clearly labelled safely simulated confirmed Kei defect completes `failure → minimum reproduction → sanitised/synthetic permanent benchmark case → candidate fix → new immutable KeiRelease → deterministic/offline gates → staging/shadow where required → controlled promotion or rejection`;
 - the previous KeiRelease remains immutable and addressable, production behaviour changes never silently reuse its release identity, and behavioural release identity remains distinct from model route;
@@ -859,4 +859,4 @@ Checkpoint 9 closes only when:
 
 ---
 
-**Pactwright — Checkpoint 9 — Hardened Closed Loop v11**
+**Pactwright — Checkpoint 9 — Hardened Closed Loop v12**

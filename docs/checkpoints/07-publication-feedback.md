@@ -1,8 +1,8 @@
 # Pactwright — Checkpoint 7 — Publication Feedback
 
-**Version:** 12  
+**Version:** 13  
 **Entry condition:** Checkpoint 6 is accepted.  
-**Release:** `0.0.7`  
+**Release:** `0.0.8`  
 **Exit capability:** Operations observes canonical Publications through the registered exposure contract, and Pactwright completes a real evidence-supported corrective Delivery, human-approved revised Asset and actual new Publication while preserving every subsystem's ownership and historical records.
 
 ## 1. Goal
@@ -111,7 +111,7 @@ pnpm build
 
 Land coherent changes through pull requests and required checks. Use the public/runtime paths already established for work Pactwright can represent; do not maintain canonical graph relationships by hand.
 
-Use [Checkpoint 2 — Exact-version upgrade acceptance](./02-remote-delivery.md#exact-version-upgrade-acceptance) for the `0.0.6 → 0.0.7` transition. Prove exact desired targets and compatible intermediate states before release. Do not preinstall target packages, edit either lock, silently switch Agent Packs or invent component upgrade flags.
+Use [Checkpoint 2 — Exact-version upgrade acceptance](./02-remote-delivery.md#exact-version-upgrade-acceptance) for the `0.0.7 → 0.0.8` transition. Prove exact desired targets and compatible intermediate states before release. Do not preinstall target packages, edit either lock, silently switch Agent Packs or invent component upgrade flags.
 
 Use the existing GitHub activation rules. Land the workflow version capable of producing configured checks before enforcing unavailable checks. Report incomplete activation rather than claiming convergence; use normal reconciliation after authorised workflow landing.
 
@@ -147,7 +147,7 @@ real Pactwright workspace activation of the changed composition
 bounded live Publication evidence and governed PI consequences
 one real Pactwright corrective Delivery, revised Asset and actual new Publication
 governed feedback guide and traceable real case material
-exact published 0.0.6 → 0.0.7 upgrade
+exact published 0.0.7 → 0.0.8 upgrade
 real Kakeibo Publication feedback acceptance with honest outcome reporting
 ```
 
@@ -607,32 +607,32 @@ Run Graph Review over the material, triage every Finding through PI and resolve 
 
 ## Stage 6 — Release and Kakeibo proof
 
-### Step 13 — Publish `0.0.7` after exact-upgrade conformance
+### Step 13 — Publish `0.0.8` after exact-upgrade conformance
 
 **References:** Spec 02 upgrades/locking; Implementation Guide release model; Checkpoint 2 exact-version upgrade acceptance.
 
 **Run**
 
-Before publication, prove the `0.0.6 → 0.0.7` consumer transition in isolated fixtures through the normal owning operations using built/packed targets. Include populated Asset, Publication, Deployment, Observation, PI and execution history, selected external skills/packs, and a resolver fixture with a newer available version. Exact desired targets must win over floating latest resolution and every intermediate environment must remain compatible.
+Before publication, prove the `0.0.7 → 0.0.8` consumer transition in isolated fixtures through the normal owning operations using built/packed targets. Include populated Asset, Publication, Deployment, Observation, PI and execution history, selected external skills/packs, and a resolver fixture with a newer available version. Exact desired targets must win over floating latest resolution and every intermediate environment must remain compatible.
 
 No new first-party package is introduced. Prepare the normal release PR from accepted source/Evidence and use the existing release/tag/trusted-publisher flow for the complete compatible family. Do not bootstrap or interactively republish existing packages. External Production Skills remain independently versioned.
 
 **Expected result**
 
-The exact compatible `0.0.7` family is available under the established release channel with provenance and a proven safe consumer-upgrade sequence.
+The exact compatible `0.0.8` family is available under the established release channel with provenance and a proven safe consumer-upgrade sequence.
 
 **Verify before continuing**
 
 ```bash
-pnpm view pactwright@0.0.7 version
-pnpm view @pactwright/standard@0.0.7 version
-pnpm view @pactwright/project-intelligence@0.0.7 version
-pnpm view @pactwright/graph-review@0.0.7 version
-pnpm view @pactwright/assets-publication@0.0.7 version
-pnpm view @pactwright/operations@0.0.7 version
+pnpm view pactwright@0.0.8 version
+pnpm view @pactwright/standard@0.0.8 version
+pnpm view @pactwright/project-intelligence@0.0.8 version
+pnpm view @pactwright/graph-review@0.0.8 version
+pnpm view @pactwright/assets-publication@0.0.8 version
+pnpm view @pactwright/operations@0.0.8 version
 ```
 
-All return `0.0.7`. Verify trusted-release/provenance results and passing exact-target/intermediate-compatibility fixtures. Existing Publications must resolve as exposures without being re-recorded, and unchanged historical records must retain their identities/hashes. Registry lookups alone do not prove this transition.
+All return `0.0.8`. Verify trusted-release/provenance results and passing exact-target/intermediate-compatibility fixtures. Existing Publications must resolve as exposures without being re-recorded, and unchanged historical records must retain their identities/hashes. Registry lookups alone do not prove this transition.
 
 ### Step 14 — Upgrade Kakeibo exactly and exercise a real Publication
 
@@ -640,12 +640,12 @@ All return `0.0.7`. Verify trusted-release/provenance results and passing exact-
 
 **Run**
 
-Start from the real accepted `0.0.6` environment. Record installed packages, desired configuration, both locks, selected Agent Pack/external dependencies and existing canonical/execution history. Use Step 13's fixture-proven compatible sequence. No target preinstallation, manual lock changes or implicit pack switching is allowed.
+Start from the real accepted `0.0.7` environment. Record installed packages, desired configuration, both locks, selected Agent Pack/external dependencies and existing canonical/execution history. Use Step 13's fixture-proven compatible sequence. No target preinstallation, manual lock changes or implicit pack switching is allowed.
 
 Upgrade the runtime and verify the new runtime performed migration/sync/validation:
 
 ```bash
-pnpm pactwright upgrade --to 0.0.7
+pnpm pactwright upgrade --to 0.0.8
 pnpm pactwright validate
 ```
 
@@ -698,7 +698,7 @@ Kakeibo completes the exact safe published upgrade and exercises Publication fee
 
 **Verify before continuing**
 
-Verify installed runtime and enabled first-party Extension versions are exactly `0.0.7`, the selected pack's explicit target/identity is honoured, and package-manager/Pactwright locks agree after each operation. Preserve earlier record hashes and replay information; activation of exposure metadata must not rewrite or duplicate historical releases.
+Verify installed runtime and enabled first-party Extension versions are exactly `0.0.8`, the selected pack's explicit target/identity is honoured, and package-manager/Pactwright locks agree after each operation. Preserve earlier record hashes and replay information; activation of exposure metadata must not rewrite or duplicate historical releases.
 
 Require converged local/remote state, the same shared Project, preserved unrelated workflows and passing owning/Kakeibo repository checks. Retain actual Publication/source/window/collection/analysis evidence. Every created/matched Observation must retain exact release provenance and a valid Source or a resolved hand-off retry before live hand-off is claimed. A live no-finding result must be labelled as such and is not a substitute for Pactwright's mandatory Step 11 revision.
 
@@ -749,8 +749,8 @@ Checkpoint 7 closes only when:
 - original Evidence, approved Asset content, Publications and Observations remain unchanged; corrections use applicable Asset supersession, never Publication-to-Publication supersession or withdrawal;
 - fixtures and live no-finding outcomes are not substituted for the required real Pactwright revision, and later performance improvement is not claimed without evidence;
 - public guide/case claims are traceable to live provenance and any executable example is run rather than only prose-reviewed;
-- all six `0.0.7` first-party package versions and trusted-release provenance are verified;
-- Kakeibo upgrades from accepted `0.0.6` through exact desired constraints and owning commands with compatible intermediate environments and preserved historical identities;
+- all six `0.0.8` first-party package versions and trusted-release provenance are verified;
+- Kakeibo upgrades from accepted `0.0.7` through exact desired constraints and owning commands with compatible intermediate environments and preserved historical identities;
 - one real Kakeibo Publication exercises live feedback with accurate created/matched/no-Observation reporting and governed hand-off for every actual Observation;
 - no new Publication Feedback validator/workflow/package, independent roadmap, creative lifecycle, provider layer, automatic selection policy or archive/scheduler platform has been introduced;
 - declared identity, evidence durability and CLI gaps remain explicit without blocking any claimed acceptance;
@@ -758,4 +758,4 @@ Checkpoint 7 closes only when:
 
 ---
 
-**Pactwright — Checkpoint 7 — Publication Feedback v12**
+**Pactwright — Checkpoint 7 — Publication Feedback v13**
