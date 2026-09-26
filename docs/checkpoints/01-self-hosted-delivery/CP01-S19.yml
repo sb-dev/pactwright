@@ -156,12 +156,13 @@ acceptance:
   AC05:
     covers: [R05]
     cases: [missing-capability, package-replacement-failure, migration-failure, sync-failure, validation-failure,
-      migration-then-sync-failure, migration-then-validation-failure, interrupted-after-migration, restoration-failure,
+      migration-then-sync-failure, migration-then-validation-failure, interrupted-after-migration, interrupted-after-lock-write,
+      restoration-failure,
       interrupted-after-replacement, other-target-refused]
     given: A valid project on packed runtime 1.0.0 with the delegation seam instrumented, and a target 1.1.0 with the
       listed defect or injected failure; the three migration-then cases enable a fixture Extension with stored records
       whose target version declares a format-changing migration that completes before the injected sync or validate
-      failure or the process stop; restoration-failure injects a failure into the seam's restore request after a
+      failure or the process stop, interrupted-after-lock-write stopping after the new lock is written and before sync; restoration-failure injects a failure into the seam's restore request after a
       validation failure; interrupted-after-replacement stops the process between package replacement and re-entry;
       other-target-refused continues it with packed 1.2.0 also available.
     when: Pactwright upgrade runs to 1.1.0; other-target-refused then runs upgrade --to 1.2.0 and upgrade without --to.
@@ -169,7 +170,7 @@ acceptance:
       record, request the previous exact runtime through the seam, remove the record and leave the graph byte-identical.
       migration-then-sync-failure and migration-then-validation-failure additionally restore every canonical file the
       migration changed byte-identically, remove the files it created and leave the 1.0.0 runtime loading the project
-      completely under the old format. interrupted-after-migration and interrupted-after-replacement leave the record;
+      completely under the old format. interrupted-after-migration, interrupted-after-lock-write and interrupted-after-replacement leave the record;
       doctor reports an interrupted upgrade with upgrade --to 1.0.0 as the remediation, ordinary mutation and execution
       refuse, and upgrade --to 1.0.0 writes no new record, restores the recorded bytes including the migrated files,
       recovers a valid environment and removes the record. restoration-failure leaves the record, names upgrade --to
@@ -190,8 +191,9 @@ acceptance:
   AC07:
     covers: [R06, R07]
     given: The AC06 project with the published 0.0.1 artefact installed and the current runtime packed.
-    when: The current runtime is installed through the package manager and upgrade --to its version runs under it,
-      the released runtime having no upgrade command.
+    when: The published 0.0.1 CLI's validate is invoked and passes on the project; then the current runtime is installed
+      through the package manager and upgrade --to its version runs under it, the released runtime having no upgrade
+      command.
     then: The upgrade writes the record first, makes no package request and runs released-0.0.1-to-owned-stores-v1. Core files are unchanged, Extension records and
       tuples are in the owner's storage with identities and tuples preserved, configuration and lifecycle keep their
       settings, the lock is an exact version 1 lock and validate passes.
