@@ -44,9 +44,10 @@ requirements:
       a runtime-declared path below .pactwright/ written before package replacement, holds the attempt and the exact
       previous package manifest, package-manager lock, configuration, lifecycle and lock bytes; a failure after replacement
       restores those bytes and requests the previous exact runtime through the seam, then removes the record; when
-      that restoration fails the record stays and the report names upgrade --to <previous version>, which completes
-      the recovery. While the record exists, ordinary mutation and execution refuse. The runtime never commits the
-      record.
+      that restoration fails the record stays and the report names upgrade --to <previous version>. While the record
+      exists, ordinary mutation and execution refuse, and upgrade accepts only --to naming the record's recovery target,
+      writes no new record, performs the recovery the record's stage requires and removes it; any other invocation
+      is refused naming the record. The runtime never commits the record.
   R06:
     source: [CORE#54, DISTRIBUTION#12, DISTRIBUTION#15]
     statement: A released 0.0.1 project shall be recognised as migration required. Before explicit upgrade, ordinary
@@ -139,16 +140,18 @@ acceptance:
   AC05:
     covers: [R05]
     cases: [missing-capability, package-replacement-failure, migration-failure, sync-failure, validation-failure,
-      restoration-failure, interrupted-after-replacement]
+      restoration-failure, interrupted-after-replacement, other-target-refused]
     given: A valid project on packed runtime 1.0.0 with the delegation seam instrumented, and a target 1.1.0 with the
       listed defect or injected failure; restoration-failure injects a failure into the seam's restore request after
-      a validation failure, and interrupted-after-replacement stops the process between package replacement and re-entry.
-    when: Pactwright upgrade runs to 1.1.0.
+      a validation failure, interrupted-after-replacement stops the process between package replacement and re-entry, and other-target-refused
+      continues it with packed 1.2.0 also available.
+    when: Pactwright upgrade runs to 1.1.0; other-target-refused then runs upgrade --to 1.2.0 and upgrade without --to.
     then: The first five cases fail clearly, restore configuration, lifecycle, lock and package state from the recovery
       record, request the previous exact runtime through the seam, remove the record and leave the graph byte-identical.
       restoration-failure leaves the record, names upgrade --to 1.0.0, and that command completes the recovery. interrupted-after-replacement
-      leaves the record; doctor reports an interrupted upgrade, ordinary mutation and execution refuse, and upgrade
-      --to 1.0.0 recovers a valid environment and removes the record.
+      leaves the record; doctor reports an interrupted upgrade with upgrade --to 1.0.0 as the remediation, ordinary
+      mutation and execution refuse, and upgrade --to 1.0.0 writes no new record, recovers a valid environment and
+      removes the record. other-target-refused is refused both times naming the record, with everything byte-identical.
     verify:
       automated: [upgrade.failure-recovery]
   AC06:
@@ -238,16 +241,18 @@ acceptance:
       automated: [upgrade.legacy-closure-markers]
   AC14:
     covers: [R12]
-    cases: [pack-pins-source-runtime, extension-pins-source-runtime, component-upgrade-restores]
+    cases: [pack-pins-source-runtime, extension-pins-source-runtime, component-upgrade-restores, released-migration-with-pinned-pack]
     given: A project on packed runtime 1.0.0 whose selected fixture pack, or enabled fixture Extension, declares pactwright
       1.0.0 exactly, with packed 1.1.0 and a compatible 1.1.0 version of that component available; component-upgrade-restores
-      continues pack-pins-source-runtime.
-    when: Upgrade --to 1.1.0 runs; component-upgrade-restores then sets the pack's constraint to the compatible version
-      and runs agent-pack upgrade.
+      continues pack-pins-source-runtime; released-migration-with-pinned-pack is the AC06 project whose pack declares
+      pactwright 0.0.1 exactly, with the current runtime packed.
+    when: Upgrade --to 1.1.0 runs, or to the current runtime for released-migration-with-pinned-pack; component-upgrade-restores
+      then sets the pack's constraint to the compatible version and runs agent-pack upgrade.
     then: The first two cases install and re-enter 1.1.0, lock runtime 1.1.0 with the component's source, version
       and hash unchanged, leave generated files byte-identical, exit zero naming the component as action required
       with its owning upgrade command, and doctor then reports action required for it. Without --to, upgrade reports
       no compatible newer release. component-upgrade-restores locks the new pack version, runs sync, and doctor reports
-      healthy.
+      healthy. released-migration-with-pinned-pack runs released-0.0.1-to-owned-stores-v1, writes the version 1 lock
+      with the pack unchanged, exits zero and reports the pack as action required with pactwright agent-pack upgrade.
     verify:
       automated: [upgrade.runtime-ahead]

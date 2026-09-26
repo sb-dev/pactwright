@@ -45,7 +45,7 @@
 # Implementation Guide v17 (command ownership) and Checkpoint 1 v29 (Steps
 # 14, 16, 19 summaries, Step 29). The section 7 stage exit review is
 # ../../research-logs/2026-09-26-cp01-stage-4-exit-review.md. This pass added
-# S09/AC05 and S11/R08 entries to the affects of Q45 and Q44. No question is
+# S15/AC11 and S16/AC06 entries to the affects of Q45 and Q44. No question is
 # deleted.
 #
 # Stage 5 (Q52-Q56) is a T1 conversion drafted against the Implementation Guide.
@@ -1324,7 +1324,7 @@ open_questions:
     affects: [CP01-S15/R07, CP01-S15/AC08, CP01-S17/R06, CP01-S17/AC04, CP01-S18/R03, CP01-S18/AC06, CP01-S10/R07, CP01-S10/R08, CP01-S10/AC05]
     question: "Spec 02 sections 5 to 7 do not say how a Checkpoint 1 Agent Pack or configuration declares an external Production Skills import. Which field identifies one, so that Steps 15, 17 and 18 can report it as unsupported? Does an unsupported import block the whole environment, as these contracts assume, or only the capabilities bound to it?"
   - id: Q47
-    affects: [CP01-S18/R01, CP01-S18/R02, CP01-S18/R04, CP01-S18/R05, CP01-S18/R07, CP01-S18/AC02, CP01-S18/AC04, CP01-S18/AC05, CP01-S18/AC07, CP01-S18/AC10, CP01-S06/R04]
+    affects: [CP01-S18/R01, CP01-S18/R02, CP01-S18/R04, CP01-S18/R05, CP01-S18/R07, CP01-S18/AC02, CP01-S18/AC04, CP01-S18/AC05, CP01-S18/AC07, CP01-S18/AC10, CP01-S17/AC03, CP01-S06/R04]
     question: "Spec 02 section 16 names three severities but assigns one only to an unavailable repository revision and a required migration. Which severity does each other finding have, such as lock drift, generated drift, a missing capability, preserved inactive data and an available upgrade? What exit status and machine-readable output does doctor have (compare Q30 for validate)?"
   - id: Q48
     affects: [CP01-S19/R01, CP01-S19/R05, CP01-S19/R12, CP01-S19/AC01, CP01-S19/AC05, CP01-S19/AC12, CP01-S19/AC14, CP01-S18/AC02, CP01-S06/R04, CP01-S12/R13, CP01-S10/R08]

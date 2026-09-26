@@ -54,8 +54,9 @@ acceptance:
       automated: [sync.owned-files-only]
   AC03:
     covers: [R01, R03]
-    cases: [lock-mismatch, missing-capability, incompatible-extension, tampered-content, unactivated-scaffold]
-    given: A synced project with unrelated user files, and the listed defect in the locked composition; unactivated-scaffold
+    cases: [lock-mismatch, missing-capability, incompatible-extension, incompatible-pack, tampered-content, unactivated-scaffold]
+    given: A synced project with unrelated user files, and the listed defect in the locked composition; incompatible-pack
+      is a CP01-S19/R12 runtime-ahead lock whose selected pack declares an older runtime exactly, and unactivated-scaffold
       is instead a plain init scaffold with unrelated files and @pactwright/standard installed.
     when: Sync runs.
     then: Sync fails with a problem naming the defect or the missing selection. Generated files and unrelated files

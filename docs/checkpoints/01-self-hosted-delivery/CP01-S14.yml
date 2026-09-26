@@ -12,8 +12,8 @@ requirements:
     source: [DISTRIBUTION#3, CORE#54]
     statement: 'Init shall create only the Pactwright-owned core configuration and Project Graph structure at the
       CORE#54 paths, including a DISTRIBUTION#12 version 1 lock that records the runtime version and, without a selection,
-      no pack. An empty graph is an empty specs/nodes/.gitkeep and specs/graph/edges.yml containing `edges: []`. Init
-      changes no other file and creates no generated directory.'
+      no pack. An empty graph is an empty specs/nodes/.gitkeep and specs/graph/edges.yml containing `edges: []`. Plain
+      init changes no other file and creates no generated directory.'
   R02:
     source: [DISTRIBUTION#3, DISTRIBUTION#14]
     statement: In Checkpoint 1, init shall write configuration with GitHub disabled, create no Pactwright-managed
@@ -22,8 +22,9 @@ requirements:
     source: [DISTRIBUTION#3, DISTRIBUTION#5]
     statement: Init without an explicit pack choice shall select no Agent Pack, including an installed @pactwright/standard,
       and never prompts for one. It reports the result as an unactivated scaffold, not as a complete or healthy executable
-      environment. The scaffold is a complete load whose empty graph has a Project Graph revision and whose lock yields
-      an environment_lock_hash; sync, lifecycle run and every capability invocation refuse it naming the missing selection.
+      environment. The scaffold is a complete load whose empty graph has a Project Graph revision, which validate reports valid,
+      and whose lock yields an environment_lock_hash once Step 15 derives it (CP01-S15/AC11); sync, lifecycle run and
+      every capability invocation refuse it naming the missing selection.
   R04:
     source: [DISTRIBUTION#3, DISTRIBUTION#5]
     statement: Init shall accept an explicit pack source and target version through --agent-pack <source>, the DISTRIBUTION#3
@@ -65,14 +66,14 @@ acceptance:
       automated: [init.scaffold]
   AC02:
     covers: [R03, R06]
-    cases: [loader-roundtrip, empty-graph-revision, sync-refused, lifecycle-run-refused]
+    cases: [loader-roundtrip, empty-graph-revision, validate-passes, sync-refused, lifecycle-run-refused]
     given: A repository initialised by AC01, with @pactwright/standard installed.
-    when: The Step 1 canonical loader reads the project; the Project Graph revision and environment_lock_hash are derived;
-      sync and lifecycle run are invoked, as listed.
+    when: The Step 1 canonical loader reads the project; the Project Graph revision is derived; validate, sync and lifecycle
+      run are invoked, as listed.
     then: The loader reads the created configuration, lifecycle configuration, lock, records directory and edges as written
-      and reports a complete load with an empty graph and no selected pack. The revision is the pg1 empty-graph digest
-      and the lock yields an environment_lock_hash. sync and lifecycle run are refused naming the missing selection,
-      select nothing and write no file.
+      and reports a complete load with an empty graph and no selected pack. The revision is the pg1 empty-graph digest.
+      validate exits zero with no rule failure. sync and lifecycle run are refused naming the missing selection, select
+      nothing and write no file.
     verify:
       automated: [init.loader-roundtrip]
   AC03:
