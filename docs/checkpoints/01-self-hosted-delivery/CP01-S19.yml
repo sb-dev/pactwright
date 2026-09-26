@@ -24,11 +24,15 @@ requirements:
       validate, and remove the record. When the installed runtime already is the target and the lock records an older
       runtime, upgrade --to <installed version> performs the post-replacement steps itself, writing the record first with
       the lock''s runtime.version as its source version and the post-replacement package files as its package baseline,
-      and making no package request; a failure on that path restores the recorded configuration, lifecycle, lock and
-      canonical bytes and inventory, leaving the project byte-identical to its source in everything but the two package
-      files, removes the record and requests no package change, the source package state having been replaced outside
-      Pactwright before any record could capture it; this is the entry from the released
-      0.0.1 runtime, which has no upgrade command.'
+      and making no package request; the record''s attempt identifies this path and designates the installed runtime
+      as its recovery target. A failure on that path, and upgrade --to <installed version> run while such a record exists
+      after an interruption at record creation, after the completed migration or after the lock write, restores the
+      recorded configuration, lifecycle, lock and canonical bytes and inventory, requests no package change and removes
+      the record, the source package state having been replaced outside Pactwright before any record could capture
+      it: the package manifest and package-manager lock equal their recorded post-replacement bytes, every .pactwright/
+      file, core store and owner root equals its source bytes and inventory, no record remains, the installed runtime
+      reads the project as migration required and a fresh upgrade --to <installed version> starts a new attempt. This
+      is the entry from the released 0.0.1 runtime, which has no upgrade command.'
   R02:
     source: [DISTRIBUTION#15]
     statement: Package-manager detection shall prefer the repository's explicit packageManager declaration and otherwise
@@ -48,17 +52,17 @@ requirements:
     statement: When a required migration cannot run, a capability is missing, the locks disagree or any step fails,
       the upgrade shall fail clearly without substituting components or reinterpreting canonical state. Canonical
       Project Graph state is never left partially migrated. The upgrade recovery record, Pactwright-owned content at
-      a runtime-declared path below .pactwright/ written before package replacement, holds the attempt, the exact
-      previous package manifest, package-manager lock, configuration, lifecycle and lock bytes and, before a migration
-      runs, the previous bytes of every canonical file its plan changes or removes and the exact previous path inventory,
-      entries and entry types, of every core store and owner root the plan touches; a failure after replacement,
+      a runtime-declared path below .pactwright/ written before package replacement, holds the attempt, the exact previous package manifest, package-manager lock, configuration, lifecycle and lock
+      bytes (on the R01 completion path, the post-replacement package files) and, before a migration runs, the previous
+      bytes of every canonical file its plan changes or removes and the exact previous path inventory, each entry with
+      its type and each root with whether it exists, of every core store and owner root the plan touches or creates; a failure after replacement,
       including a sync or validate failure after a completed migration, restores every recorded byte and the recorded
-      inventory, removing every file, directory and other entry the migration created, requests the previous exact
-      runtime through the seam, verifies the restored environment loads under its recorded format and removes the
-      record; when that restoration fails the
-      record stays and the report names upgrade --to <previous version>. While the record exists, ordinary mutation
-      and execution refuse, and upgrade accepts only --to naming the previous runtime, writes no new record, performs
-      that restoration and removes it; any other invocation is refused naming the record. The runtime never commits
+      inventory, removing every file, directory and other entry the migration created, requests the previous exact runtime through the seam, except that a completion-path record requests no package
+      change as R01 narrows, verifies the restored environment loads under its recorded format and removes the record; when that restoration fails the
+      record stays and the report names upgrade --to <previous version>. While the record exists, ordinary mutation and execution refuse, and upgrade accepts only --to naming the record''s
+      designated recovery target, the previous runtime for a record written before replacement and the installed runtime
+      for a completion-path record, writes no new record, performs the restoration the record''s path requires and
+      removes it; any other invocation is refused naming the record. The runtime never commits
       the record.
   R06:
     source: [CORE#54, DISTRIBUTION#12, DISTRIBUTION#15]
@@ -180,8 +184,8 @@ acceptance:
       the migration created survives, and leave the 1.0.0 runtime loading the project
       completely under the old format. interrupted-after-migration, interrupted-after-lock-write and interrupted-after-replacement leave the record;
       doctor reports an interrupted upgrade with upgrade --to 1.0.0 as the remediation, ordinary mutation and execution
-      refuse, and upgrade --to 1.0.0 writes no new record, restores the recorded bytes including the migrated files,
-      recovers a valid environment and removes the record. restoration-failure leaves the record, names upgrade --to
+      refuse, and upgrade --to 1.0.0 writes no new record, restores the recorded bytes and inventory including the migrated files, recovers a valid environment and removes
+      the record. restoration-failure leaves the record, names upgrade --to
       1.0.0, and that command completes the recovery. other-target-refused is refused both times naming the record,
       with everything byte-identical.
     verify:
@@ -198,21 +202,28 @@ acceptance:
       automated: [upgrade.legacy-diagnosis]
   AC07:
     covers: [R06, R07]
-    cases: [migrates, completion-migration-failure, completion-validation-failure, completion-interrupted]
+    cases: [migrates, completion-migration-failure, completion-validation-failure, completion-interrupted-after-record,
+      completion-interrupted-after-migration, completion-interrupted-after-lock-write, completion-other-target-refused]
     given: The AC06 project with the published 0.0.1 artefact installed and the current runtime packed; completion-migration-failure
-      injects a write failure inside the migration, completion-validation-failure a validation failure after it, and
-      completion-interrupted stops the process after the migration and before the lock write; each records the package
-      manifest and package-manager lock bytes after the package-manager step.
+      injects a write failure inside the migration, completion-validation-failure a validation failure after it,
+      and the three interrupted cases stop the process just after the record is written, after the completed migration
+      and after the lock write; completion-other-target-refused continues completion-interrupted-after-migration;
+      each records the package manifest and package-manager lock bytes after the package-manager step.
     when: The published 0.0.1 CLI's validate is invoked and passes on the project; then the current runtime is installed
       through the package manager and upgrade --to its version runs under it, the released runtime having no upgrade
-      command.
-    then: The three failure cases leave every file and directory outside the two package files byte-identical to the
-      AC06 source, with no entry the migration created surviving, the record removed (after upgrade --to 0.0.1 for
-      completion-interrupted, which doctor first reports as an interrupted upgrade), the package manifest and package-manager
-      lock byte-identical to their recorded post-replacement bytes, and the installed current runtime reading the project
-      as migration required. migrates writes the record first, with 0.0.1 as its source version and the post-replacement
-      package files as its baseline, makes no package request and runs released-0.0.1-to-owned-stores-v1. Core files are unchanged, Extension records and
-      tuples are in the owner's storage with identities and tuples preserved, configuration and lifecycle keep their
+      command. The interrupted cases then run doctor and upgrade --to the installed version; completion-other-target-refused
+      instead runs upgrade --to 0.0.1 and upgrade without --to.
+    then: completion-migration-failure and completion-validation-failure fail clearly naming the injected step. In the
+      interrupted cases doctor reports an interrupted upgrade naming upgrade --to the installed version, and that command
+      writes no new record and requests no package change. Every failure and interrupted case ends with every .pactwright/
+      file, core store and owner root byte-identical in content and path inventory to the AC06 source, no entry the
+      migration created surviving, the package manifest and package-manager lock byte-identical to their recorded
+      post-replacement bytes, no record, and the installed current runtime reading the project as migration required;
+      completion-interrupted-after-lock-write then completes the migration on a fresh upgrade --to the installed version.
+      completion-other-target-refused is refused both times naming the record, with everything byte-identical. migrates
+      writes the record first, with 0.0.1 as its source version and the post-replacement package files as its baseline,
+      makes no package request and runs released-0.0.1-to-owned-stores-v1. Core files are unchanged, Extension records
+      and tuples are in the owner's storage with identities and tuples preserved, configuration and lifecycle keep their
       settings, the lock is an exact version 1 lock and validate passes.
     verify:
       automated: [upgrade.released-migration]
@@ -273,8 +284,8 @@ acceptance:
     then: Packages change only through the detected package manager, every step after replacement runs in the newly
       installed runtime invoked as a child process, except the reverse migration of R10 which runs before replacement,
       the recovery record is written before replacement, holds the pre-migration bytes and path inventory its plan needs
-      and is never committed by the runtime, and the completion path from an already-installed target makes no package
-      request and records the post-replacement package files as its baseline. Upgrade code
+      and is never committed by the runtime, and the completion path from an already-installed target makes no package request, records the post-replacement
+      package files as its baseline, marks the record as its own and recovers from it without a package request. Upgrade code
       changes no Agent Pack or Extension identity.
     verify:
       review: [upgrade.ownership]

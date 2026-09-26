@@ -40,9 +40,8 @@ requirements:
     source: [DISTRIBUTION#16]
     statement: 'Doctor shall give a concrete remediation command only where the correction is supported and deterministic,
       and never runs it: pactwright sync for generated drift; for a migration-required source, pactwright upgrade --to
-      <installed version> when the installed runtime already is the target and pactwright upgrade otherwise; pactwright
-      upgrade --to <previous version> for an interrupted upgrade, the only upgrade command named while a recovery record
-      exists; pactwright extension disable <id> for an Extension whose configuration disables it while its lock entry
+      <installed version> when the installed runtime already is the target and pactwright upgrade otherwise; pactwright upgrade --to <previous version> for an interrupted upgrade, or --to <installed version> when the record
+      was written on the CP01-S19/R01 completion path, the only upgrade command named while a recovery record exists; pactwright extension disable <id> for an Extension whose configuration disables it while its lock entry
       remains and extension add <id> for one whose configuration enables it while its lock entry is absent; pactwright
       validate for a validation failure of the active graph; pactwright upgrade --to <installed version> for a lock whose
       runtime version is behind the installed runtime; the owning upgrade command for a component drifted from the
