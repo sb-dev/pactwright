@@ -4,7 +4,7 @@
 
 Corrective development release, published under the npm dist-tag `next`:
 `pactwright` (runtime and CLI) and `@pactwright/standard` (default agent
-pack). `0.0.1` was published against version 14 of the Checkpoint 1 runbook
+pack). `0.0.1` was published against version 12 of the Checkpoint 1 runbook
 and remains on the registry as the released baseline.
 
 **Lifecycle.** The seven adapter commands are no longer the lifecycle's

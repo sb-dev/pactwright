@@ -1,6 +1,6 @@
 # Pactwright — Implementation Guide
 
-**Version:** 18  
+**Version:** 19  
 **Status:** Checkpoint index, engineering standard and release model
 
 ## Purpose
@@ -312,7 +312,7 @@ Pactwright does not wait until the end of implementation to document or explain 
 Each checkpoint advances the smallest public surface set needed by the newly usable capability:
 
 ```text
-0.0.1  README Quick Start + Getting Started + core Delivery example (released against Checkpoint 1 v14)
+0.0.1  README Quick Start + Getting Started + core Delivery example (released against Checkpoint 1 v12)
 0.0.2  Checkpoint 1's corrective release of the same content set
 0.0.3  website foundation + GitHub guide + remote Delivery example
 0.0.4  PI docs/onboarding/example/Academy + public-content knowledge foundation
@@ -414,7 +414,7 @@ Approved Assets and Publications remain immutable. Later analytics, Operations O
 The checkpoint number remains internal. Public package versions are normal SemVer development releases: each checkpoint publishes the next unused `0.0.x`, a corrective release consumes a number, and the checkpoint file's Release line names the version it publishes.
 
 ```text
-Checkpoint 1 → 0.0.1 (released against Checkpoint 1 v14) and the corrective 0.0.2
+Checkpoint 1 → 0.0.1 (released against Checkpoint 1 v12) and the corrective 0.0.2
 Checkpoint 2 → 0.0.3
 Checkpoint 3 → 0.0.4
 Checkpoint 4 → 0.0.5
@@ -514,7 +514,7 @@ The `npm-release` environment admits deployments from version tags only and requ
 
 ### Preparing a development release
 
-From Checkpoint 2 onwards, create a release PR:
+From the `0.0.2` corrective release onwards, create a release PR. Before Checkpoint 2 activates GitHub, the pull request is merged by the repository owner with `CI / Verify` passing; the required-check state is repository configuration recorded in the run configuration. Update `CHANGELOG.md` first, from accepted work only, and date the entry: self-hosted work cites its accepted Evidence in the source that will be tagged, work accepted up to and including the acceptance of the self-hosting step is described from its accepted step or criterion results, and the entry cites no Evidence outside that source's Project Graph.
 
 ```bash
 VERSION=0.0.N
@@ -574,10 +574,10 @@ Before `latest` moves to `0.1.0`:
 Published npm versions are immutable.
 
 - Do not overwrite or routinely unpublish a released version.
-- If the release workflow fails before publication, fix the cause and rerun safely.
+- If the release workflow fails before publication, fix the cause and rerun safely; a tag that published nothing may be deleted and recreated by the repository owner on the corrected commit.
 - A rerun publishes only the packages whose tagged version the registry does not hold, through the workflow's own per-package registry check; it never re-publishes or overwrites a version and never relies on the package manager's implicit skipping.
 - A release refused as superseded, because a higher version already holds the expected npm tag, is not rerun; a package it left unpublished ships in the next version, which the owner tags.
-- If a published release is defective, fix forward with the next version.
+- If a published release is defective, fix forward with the next version: the defective number is consumed, the next unused `0.0.x` becomes a corrective release, and the owner amends the checkpoint's Release line, this guide's version tables and every later checkpoint's Release line accordingly, as the Checkpoint 1 corrective `0.0.2` did (npm release model).
 - Do not promote a known-defective `0.0.x` line to `latest`.
 - Moving a dist-tag to a previously published known-good version is an emergency recovery action and must be recorded as a Decision.
 
@@ -628,6 +628,8 @@ implementation verified
 → blocking feedback captured through Project Intelligence
 ```
 
+Before Project Intelligence exists, blocking failures are fixed within the checkpoint and material findings are captured as open Intents through normal Delivery (Implementation Principles §§14, 16).
+
 Checkpoint 9 additionally closes only after the generic failure matrix, Kakeibo seven-owner regression/Kei-defect lifecycle, `0.1.0` supported release, clean Quick Start smoke test and Kakeibo supported-family upgrade all pass.
 
 Graduation closes only after connected banking is proven through the existing Kakeibo ingestion abstraction without changing downstream financial, review or Kei semantics.
@@ -643,4 +645,4 @@ A non-blocking open design gap may cross a checkpoint only when:
 
 ---
 
-**Pactwright — Implementation Guide v18**
+**Pactwright — Implementation Guide v19**

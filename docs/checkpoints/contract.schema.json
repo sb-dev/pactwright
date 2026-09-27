@@ -2,7 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://github.com/sb-dev/pactwright/blob/main/docs/checkpoints/contract.schema.json",
   "title": "Checkpoint contract (format 2)",
-  "description": "Minimal format schema for checkpoint contract files: checkpoint.yml (declares format) or one step contract per file. Owned by docs/specs/00-checkpoint-step-contract-and-delivery-tasks.md §§2–3. Cross-file rules (declared source keys, requirement coverage, step references) are checked by the harness, not this schema.",
+  "description": "Minimal format schema for checkpoint contract files: checkpoint.yml (declares format) or one step contract per file. Owned by docs/specs/00-checkpoint-step-contract-and-delivery-tasks.md §§2–3. Cross-file rules (declared source keys, requirement coverage, step references, prose-step hashes) are checked by the harness, not this schema.",
   "if": { "type": "object", "required": ["format"] },
   "then": { "$ref": "#/$defs/checkpoint" },
   "else": { "$ref": "#/$defs/step" },
@@ -20,6 +20,12 @@
           "minProperties": 1,
           "propertyNames": { "pattern": "^[A-Z][A-Z0-9_]*$" },
           "additionalProperties": { "$ref": "#/$defs/text" }
+        },
+        "prose_steps": {
+          "type": "object",
+          "minProperties": 1,
+          "propertyNames": { "$ref": "#/$defs/stepId" },
+          "additionalProperties": { "type": "string", "pattern": "^sha256:[0-9a-f]{64}$" }
         },
         "requirements": { "$ref": "#/$defs/requirements" },
         "acceptance": { "$ref": "#/$defs/acceptance" }

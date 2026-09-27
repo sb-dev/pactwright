@@ -12,6 +12,9 @@ import {
   checkpointDirs,
   githubSlug,
   isShallowRepository,
+  proseHash,
+  splitUnits,
+  stepSections,
   validateCheckpointDir,
   type ValidateOptions,
 } from "../scripts/checkpoint-contracts.js";
@@ -141,6 +144,69 @@ describe("checkpoint contracts", () => {
       options: { skipUnavailableSources: false },
     },
     {
+      name: "step with neither a contract nor a prose entry",
+      file: "checkpoint.yml",
+      from: "  CP01-S31: sha256:",
+      to: "  # CP01-S31: sha256:",
+      expect: /Step 31 has neither a contract nor a prose_steps entry/,
+    },
+    {
+      name: "prose step edited after review",
+      file: "../01-self-hosted-delivery.md",
+      from: "Review the execution of Stages 1–10,",
+      to: "Review the execution of Stages 1–9,",
+      expect: /prose step CP01-S31 differs from its reviewed text/,
+    },
+    {
+      name: "stage introduction edited after review",
+      file: "../01-self-hosted-delivery.md",
+      from: "The Kakeibo owner authorises writes to the Kakeibo repository and every commit to its default branch in Steps 29 and 30. ",
+      to: "",
+      expect: /prose step CP01-S29 differs from its reviewed text/,
+    },
+    {
+      name: "prose entry without a step heading",
+      file: "checkpoint.yml",
+      from: "prose_steps:\n",
+      to: "prose_steps:\n  CP01-S32: sha256:" + "0".repeat(64) + "\n",
+      expect: /prose step CP01-S32 has no step heading/,
+    },
+    {
+      name: "repeated step heading",
+      file: "../01-self-hosted-delivery.md",
+      from: "## Exit gate\n",
+      to: "### Step 31 — Repeated\n\n## Exit gate\n",
+      expect: /Step 31 has more than one heading/,
+    },
+    {
+      name: "converted step whose source differs from its reviewed prose",
+      file: "crosswalk.yml",
+      from: "    steps: [CP01-S20, CP01-S21]\n",
+      to:
+        "    steps: [CP01-S20, CP01-S21]\n    reviewed:\n      CP01-S21: sha256:" +
+        "0".repeat(64) +
+        "\n",
+      expect: /prose for CP01-S21 differs from its reviewed hash/,
+      needs: revisionOf("CP01-S21"),
+    },
+    {
+      name: "reviewed hash for a step its source does not list",
+      file: "crosswalk.yml",
+      from: "    steps: [CP01-S20, CP01-S21]\n",
+      to:
+        "    steps: [CP01-S20, CP01-S21]\n    reviewed:\n      CP01-S05: sha256:" +
+        "0".repeat(64) +
+        "\n",
+      expect: /has a reviewed hash for unlisted CP01-S05/,
+    },
+    {
+      name: "prose entry for a converted step",
+      file: "checkpoint.yml",
+      from: "prose_steps:\n",
+      to: "prose_steps:\n  CP01-S21: sha256:" + "0".repeat(64) + "\n",
+      expect: /CP01-S21 has both a contract and a prose_steps entry/,
+    },
+    {
       name: "non-verbatim crosswalk quote",
       file: "crosswalk.yml",
       from: '"Create the Pactwright runtime and CLI package foundation."',
@@ -168,6 +234,90 @@ describe("checkpoint contracts", () => {
       );
     });
   }
+
+  it("accepts a conversion whose source is its reviewed prose", (t) => {
+    const rev = revisionOf("CP01-S21");
+    if (!hasCommit(rev)) {
+      t.skip(`${rev} not in this shallow clone`);
+      return;
+    }
+    // Step 21's text at its crosswalk source, hashed as prose_steps would record it.
+    const reviewed = "sha256:07f39f3450cf3beb9c0ba30b9f0fbcaabf8eedfb42b37762140166857d8f07d9";
+    const root = plant("reviewed", "crosswalk.yml", [
+      [
+        "    steps: [CP01-S20, CP01-S21]\n",
+        `    steps: [CP01-S20, CP01-S21]\n    reviewed:\n      CP01-S21: ${reviewed}\n`,
+      ],
+    ]);
+    const errors = validateCheckpointDir(root, CP01, {
+      skipUnavailableSources: shallow,
+      gitDir: repoRoot,
+    });
+    assert.deepEqual(errors, []);
+  });
+
+  it("ignores trailing whitespace in prose steps", () => {
+    const root = plant("whitespace", "../01-self-hosted-delivery.md", [
+      [
+        "any deviation between specification and implementation.\n",
+        "any deviation between specification and implementation.  \t\n",
+      ],
+    ]);
+    const errors = validateCheckpointDir(root, CP01, {
+      skipUnavailableSources: shallow,
+      gitDir: repoRoot,
+    });
+    assert.deepEqual(errors, []);
+  });
+
+  it("starts a step's intro at the last ## heading before it", () => {
+    const markdown = "## A\n\nText a.\n\n## Stage B\n\nText b.\n\n### Step 1 — One\n\nBody.\n";
+    const section = stepSections(markdown).get(1);
+    assert.deepEqual(section?.intro, ["## Stage B", "", "Text b.", ""]);
+    assert.equal(
+      proseHash(section!),
+      proseHash({ ...section!, intro: ["## Stage B  ", "", "Text b.", ""] }),
+    );
+  });
+
+  it("quotes a stage introduction as the first step's intro units", () => {
+    const markdown = readFileSync(join(repoRoot, `${CP01}.md`), "utf8");
+    const intro = splitUnits(markdown).S29?.units.filter((u) => u.key.startsWith("S29.intro."));
+    assert.ok(
+      intro?.some((u) => u.text.startsWith("The Kakeibo owner authorises writes")),
+      "Stage 10's authority sentence is an S29 intro unit",
+    );
+    assert.deepEqual(
+      splitUnits(markdown).S23?.units.filter((u) => u.key.includes(".intro.")),
+      [],
+    );
+  });
+
+  it("quotes step prose before its first label as body units", () => {
+    const markdown = readFileSync(join(repoRoot, `${CP01}.md`), "utf8");
+    const units = splitUnits(markdown).S28?.units ?? [];
+    assert.ok(
+      units.some(
+        (u) =>
+          u.key.startsWith("S28.body.") &&
+          u.text.startsWith("The owner's push of `v0.0.2` to the merged release commit"),
+      ),
+      "Step 28's publish authority is an S28 body unit",
+    );
+  });
+
+  it("treats labels inside a stage introduction as intro text", () => {
+    const markdown =
+      "## Stage 1 — S\n\n**References:** Intro refs.\n\n**Run**\n\nIntro text.\n\n" +
+      "### Step 1 — One\n\n**References:** Step refs.\n\n**Run**\n\nDo it.\n";
+    assert.deepEqual(splitUnits(markdown).S01?.units, [
+      { key: "S01.intro.1", text: "**References:** Intro refs." },
+      { key: "S01.intro.2", text: "**Run**" },
+      { key: "S01.intro.3", text: "Intro text." },
+      { key: "S01.references", text: "Step refs." },
+      { key: "S01.run.1", text: "Do it." },
+    ]);
+  });
 
   it("skips only the unavailable source when allowed", (t) => {
     if (!hasCommit(stage1)) {

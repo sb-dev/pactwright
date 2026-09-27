@@ -1,5 +1,6 @@
 // Validates checkpoint contract directories (Spec 00 §§2–3): the format schema,
-// cross-file references, source citations and the conversion crosswalk.
+// cross-file references, source citations, the conversion crosswalk and the
+// reviewed prose of unconverted steps.
 //
 // Usage: pnpm contracts:check [--skip-source] [checkpoint-dir ...]
 // With no directory, every docs/checkpoints/* directory holding a
@@ -9,6 +10,7 @@
 // full clone an unavailable source revision is an error.
 
 import { execFileSync } from "node:child_process";
+import { createHash } from "node:crypto";
 import { existsSync, readdirSync, readFileSync } from "node:fs";
 import { basename, dirname, join, normalize, relative } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
@@ -22,6 +24,7 @@ type Contract = {
   id?: string;
   checkpoint?: string;
   sources?: Record<string, string>;
+  prose_steps?: Record<string, string>;
   requires?: string[];
   requirements?: Record<string, Requirement>;
   acceptance?: Record<string, Criterion>;
@@ -33,7 +36,7 @@ type CrosswalkEntry = {
   covered_by?: string[];
   allocated_to?: string;
 };
-type CrosswalkSource = { source?: string; steps?: string[] };
+type CrosswalkSource = { source?: string; steps?: string[]; reviewed?: Record<string, string> };
 type Crosswalk = {
   sources?: CrosswalkSource[];
   entries?: CrosswalkEntry[];
@@ -96,31 +99,69 @@ const splitSentences = (line: string): string[] =>
     .map(norm)
     .filter(Boolean);
 
-/** Splits prompt-style step prose (References/Run/Expected/Verify) into keyed units. */
-export function splitUnits(markdown: string): StepUnits {
-  const sections = new Map<number, { title: string; lines: string[] }>();
+type Section = { intro: string[]; heading: string; title: string; lines: string[] };
+
+const STEP_HEADING = /^### Step (\d+) — (.*)$/;
+
+/** Step numbers in heading order, repeats included. */
+export function stepHeadings(markdown: string): number[] {
+  return markdown
+    .split("\n")
+    .map((line) => STEP_HEADING.exec(line))
+    .filter((m) => m !== null)
+    .map((m) => Number(m[1]));
+}
+
+/**
+ * Each step section: its `### Step N — title` heading and the lines up to the
+ * next step or `##` heading. The first step after a `##` heading also carries
+ * that heading and the lines before the step as its intro, such as a stage's
+ * introduction.
+ */
+export function stepSections(markdown: string): Map<number, Section> {
+  const sections = new Map<number, Section>();
   let current: number | undefined;
+  let intro: string[] = [];
   for (const line of markdown.split("\n")) {
-    const heading = /^### Step (\d+) — (.*)$/.exec(line);
+    const heading = STEP_HEADING.exec(line);
     if (heading) {
       current = Number(heading[1]);
-      sections.set(current, { title: heading[2] ?? "", lines: [] });
+      sections.set(current, { intro, heading: line, title: heading[2] ?? "", lines: [] });
+      intro = [];
       continue;
     }
     if (line.startsWith("## ")) {
       current = undefined;
+      intro = [line];
       continue;
     }
     if (current !== undefined) sections.get(current)?.lines.push(line);
+    else if (intro.length > 0) intro.push(line);
   }
+  return sections;
+}
 
+/**
+ * SHA-256, as recorded in `prose_steps` (Spec 00 §2), of a step's intro,
+ * heading and lines: UTF-8, each line without trailing whitespace, trailing
+ * blank lines removed, joined by LF with no final newline.
+ */
+export function proseHash(section: Section): string {
+  const lines = [...section.intro, section.heading, ...section.lines].map((l) => l.trimEnd());
+  while (lines.length > 0 && lines[lines.length - 1] === "") lines.pop();
+  return `sha256:${createHash("sha256").update(lines.join("\n"), "utf8").digest("hex")}`;
+}
+
+/** Splits prompt-style step prose (References/Run/Expected/Verify) into keyed units. */
+export function splitUnits(markdown: string): StepUnits {
   const result: StepUnits = {};
-  for (const [num, section] of sections) {
+  for (const [num, section] of stepSections(markdown)) {
     const sid = `S${String(num).padStart(2, "0")}`;
     const units: Unit[] = [];
     const counters = new Map<string, number>();
     let part: string | undefined;
     let inCode = false;
+    let inIntro = false;
     let para: string[] = [];
     const emit = (p: string, text: string): void => {
       const n = (counters.get(p) ?? 0) + 1;
@@ -134,41 +175,53 @@ export function splitUnits(markdown: string): StepUnits {
       }
       para = [];
     };
-    for (const raw of section.lines) {
+    const feed = (raw: string): void => {
       const line = raw.trimEnd();
       if (line.startsWith("```")) {
         flush();
         inCode = !inCode;
-        continue;
+        return;
       }
       if (inCode) {
         if (line.trim() && part) emit(part, norm(line));
-        continue;
+        return;
       }
-      const refs = /^\*\*References:\*\*\s*(.*)$/.exec(line);
+      // Inside a stage introduction, labels are plain text.
+      const refs = inIntro ? null : /^\*\*References:\*\*\s*(.*)$/.exec(line);
       if (refs) {
         flush();
         units.push({ key: `${sid}.references`, text: norm(refs[1] ?? "") });
-        continue;
+        return;
       }
-      const label = LABELS[line.trim()];
+      const label = inIntro ? undefined : LABELS[line.trim()];
       if (label) {
         flush();
         part = label;
-        continue;
+        return;
       }
       if (!line.trim()) {
         flush();
-        continue;
+        return;
       }
       if (/^\s*[-*] /.test(line) || /^\s*\d+\. /.test(line)) {
         flush();
         const p = part;
         if (p) splitSentences(line.replace(/^\s*([-*]|\d+\.) /, "")).forEach((s) => emit(p, s));
-        continue;
+        return;
       }
       para.push(line);
-    }
+    };
+    // A stage introduction before the step (its lines after the `##` heading)
+    // becomes `intro` units, so a conversion must quote it (Spec 00 §2).
+    part = "intro";
+    inIntro = true;
+    section.intro.slice(1).forEach(feed);
+    flush();
+    // Step prose before its first Run/Expected/Verify label becomes `body` units.
+    part = "body";
+    inIntro = false;
+    inCode = false;
+    section.lines.forEach(feed);
     flush();
     result[sid] = { title: section.title, units };
   }
@@ -334,6 +387,28 @@ export function validateCheckpointDir(
     checkCoverage(sid, doc);
   }
 
+  // Every step is either converted to a contract or kept as reviewed prose (Spec 00 §2).
+  const headings = stepHeadings(markdown);
+  for (const num of new Set(headings.filter((n, i) => headings.indexOf(n) !== i))) {
+    errors.push(`Step ${num} has more than one heading`);
+  }
+  const sections = stepSections(markdown);
+  const prose = checkpoint.prose_steps ?? {};
+  for (const [sid, hash] of Object.entries(prose)) {
+    const section = sid.startsWith(`${cpid}-S`) ? sections.get(Number(sid.slice(-2))) : undefined;
+    if (steps.includes(sid)) errors.push(`${sid} has both a contract and a prose_steps entry`);
+    else if (!section) errors.push(`prose step ${sid} has no step heading in ${rel(`${dir}.md`)}`);
+    else if (proseHash(section) !== hash) {
+      errors.push(`prose step ${sid} differs from its reviewed text (${proseHash(section)})`);
+    }
+  }
+  for (const num of sections.keys()) {
+    const sid = `${cpid}-S${String(num).padStart(2, "0")}`;
+    if (!steps.includes(sid) && !(sid in prose)) {
+      errors.push(`Step ${num} has neither a contract nor a prose_steps entry`);
+    }
+  }
+
   const crosswalkFile = join(dir, "crosswalk.yml");
   if (!existsSync(crosswalkFile)) {
     if (steps.length > 0) errors.push(`${rel(dir)}: crosswalk.yml missing`);
@@ -343,7 +418,13 @@ export function validateCheckpointDir(
 
   // Each converted step quotes the checkpoint revision whose prose it replaced.
   const sourceOf = new Map<string, string>();
-  for (const { source = "", steps: listed = [] } of crosswalk.sources ?? []) {
+  const reviewedOf = new Map<string, string>();
+  for (const { source = "", steps: listed = [], reviewed = {} } of crosswalk.sources ?? []) {
+    for (const [sid, hash] of Object.entries(reviewed)) {
+      if (!listed.includes(sid))
+        errors.push(`crosswalk: ${source} has a reviewed hash for unlisted ${sid}`);
+      reviewedOf.set(sid, hash);
+    }
     for (const sid of listed) {
       if (sourceOf.has(sid)) {
         errors.push(`crosswalk: ${sid} is listed in more than one source`);
@@ -363,6 +444,7 @@ export function validateCheckpointDir(
   if (!options.skipSource) {
     units = new Map();
     const parsed = new Map<string, StepUnits | null>();
+    const texts = new Map<string, string>();
     for (const [sid, source] of sourceOf) {
       if (!parsed.has(source)) {
         const [sourcePath, rev = ""] = source.split("@");
@@ -372,7 +454,9 @@ export function validateCheckpointDir(
           parsed.set(source, null);
         } else {
           try {
-            parsed.set(source, splitUnits(git(cwd, ["show", `${rev}:${sourcePath}`])));
+            const text = git(cwd, ["show", `${rev}:${sourcePath}`]);
+            texts.set(source, text);
+            parsed.set(source, splitUnits(text));
           } catch {
             errors.push(`crosswalk: cannot read source ${source || "(none)"} from Git`);
             parsed.set(source, null);
@@ -384,6 +468,14 @@ export function validateCheckpointDir(
       const stepUnits = text === null ? null : (text?.[step]?.units ?? []);
       if (stepUnits?.length === 0) errors.push(`crosswalk: ${source} has no prose for ${sid}`);
       units.set(step, stepUnits ?? null);
+      // A converted step that was reviewed as prose replaced exactly that prose.
+      const reviewed = reviewedOf.get(sid);
+      const sourceText = texts.get(source);
+      const section =
+        sourceText === undefined ? undefined : stepSections(sourceText).get(Number(sid.slice(-2)));
+      if (reviewed && section && proseHash(section) !== reviewed) {
+        errors.push(`crosswalk: ${source} prose for ${sid} differs from its reviewed hash`);
+      }
     }
   }
 

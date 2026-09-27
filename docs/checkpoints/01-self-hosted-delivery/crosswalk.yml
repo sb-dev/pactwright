@@ -58,6 +58,23 @@
 # authorised by the owner and applied in the same pass. The section 7 stage exit
 # review is ../../research-logs/2026-09-26-cp01-stage-5-exit-review.md. No
 # question is deleted.
+#
+# Stages 6-11 (Q57-Q67) are unconverted steps (Spec 00 v6 section 2): they keep
+# their prose form by the owner's decision, checkpoint.yml records their
+# reviewed hashes under prose_steps, and they have no contracts, sources or
+# entries here until converted. Their T2 review and decisions:
+# ../../research-logs/2026-09-27-cp01-stages-6-11-b22-packed-consumer-proofs.md
+# B22 Q57,Q58,Q59; B23 Q60; B24 Q61; B25 Q62; B26 Q63,Q64; B27 Q65,Q66;
+# B28 Q67 (Spec 00 v6, schema and checker).
+# Applied clauses: Implementation Guide v19 (Preparing a development release,
+# Release failure, Transition rule), Checkpoint 1 v31 (sections 1, 2 and 3,
+# Stage 8, 9 and 10 text, Steps 22-31 prose, exit gate) and checkpoint.yml
+# (CP01/R02-R05, prose_steps). The owner approved the Q60, Q61, Q62/Q65 and Q64
+# decisions in the producing session on 2026-09-27, directed that Steps 22-31
+# stay in prose (Q67), and confirmed Spec 00 v6's convert-before-run boundary
+# in review 5331122570 (exit record). The section 7 review is
+# ../../research-logs/2026-09-27-cp01-stages-6-11-exit-review.md. No question
+# is deleted.
 sources:
   - source: docs/checkpoints/01-self-hosted-delivery.md@26ea12a
     steps: [CP01-S01, CP01-S02, CP01-S03, CP01-S04, CP01-S05]
@@ -387,7 +404,7 @@ entries:
     text: "`run` executes automatic responsibilities through the resolved shape/policy until a required Gate, completion, execution failure or validation failure."
     covered_by: [CP01-S08/R03, CP01-S08/AC02]
     allocated_to: CP01-S24
-    note: "Step 8 proves dispatch with an instrumented capability invoker (AC02, AC07). Step 24's version 20 prose completes the Delivery through the adapter and does not yet run real Agent Pack capabilities through lifecycle run; that pending later-step amendment is Q33. What Step 8 may dispatch is Q26."
+    note: "Step 8 proves dispatch with an instrumented capability invoker (AC02, AC07). Step 24's version 20 prose completes the Delivery through the adapter and does not yet run real Agent Pack capabilities through lifecycle run; that later-step amendment was Q33, resolved in Stage 2 by option A (Step 24 runs status, next and run on the consumer with the missing-invoker stop). What Step 8 may dispatch is Q26."
   - key: S08.run.9
     text: "It cannot skip Gates, invent transitions or create Evidence before the Step 7 closure guards pass."
     covered_by: [CP01-S08/R03, CP01-S08/R04, CP01-S08/AC03, CP01-S08/AC08]
@@ -495,7 +512,7 @@ entries:
     text: "Implement the runtime context-assembly API consumed by Agent Packs/adapters."
     covered_by: [CP01-S09/R09, CP01-S09/AC08, CP01-S12/R07, CP01-S12/R08, CP01-S12/AC08]
     allocated_to: CP01-S24
-    note: "Step 9 proves the API directly (AC08-AC09). The Stage 3 conversion requires the adapter to consume it (CP01-S12/AC08) and pack prompts to rely on runtime-supplied context (CP01-S10/R05). Whether Step 24 must run real Agent Pack capabilities through lifecycle run remains Q33."
+    note: "Step 9 proves the API directly (AC08-AC09). The Stage 3 conversion requires the adapter to consume it (CP01-S12/AC08) and pack prompts to rely on runtime-supplied context (CP01-S10/R05). Q33 (Stage 2, option A) does not require Step 24 to run real Agent Pack capabilities through lifecycle run; Step 24 re-executes CP01-S12/AC08 on the packed revision (Q59)."
   - key: S09.run.22
     text: "Default Delivery context contains current relevant Contract/Brief lineage and excludes rejected alternatives, superseded state, execution transcripts and unrelated history unless explicitly required."
     covered_by: [CP01-S09/R09, CP01-S09/AC08]
@@ -1360,3 +1377,36 @@ open_questions:
   - id: Q56
     affects: [CP01-S21/R03, CP01-S21/R04, CP01-S21/R07, CP01-S21/AC05, CP01-S21/AC07, CP01-S28]
     question: "The npm-release environment's protection rules and each package's npm trusted-publisher configuration live outside the repository. Must each publish have a human approval binding through the environment, and how are the environment and trusted-publisher configuration evidenced for acceptance?"
+  - id: Q57
+    affects: [CP01-S22, CP01-S23, CP01-S26, CP01-S27, CP01-S28]
+    question: "Step 22 says only \"Inspect both archives\" and \"Real consumer artefacts exist for both components\". What must the inspection establish, how are the archives identified so that later steps install exactly the same bytes, which later steps must repack their own revision, and in what form does the packed runtime manifest pin its dependency on @pactwright/standard once pnpm rewrites the workspace protocol?"
+  - id: Q58
+    affects: [CP01-S23, CP01-S24]
+    question: "Before Step 28 publishes, the runtime archive's exact dependency on @pactwright/standard cannot resolve from the registry. Which override supplies the standard archive, is it the fixture's only deviation from a published consumer, what negative cases prove that installation is not selection, and where do the packed fixture Extension for one-shot init and the defective Extension for rule 16 come from when the published archives expose no fixture entry point?"
+  - id: Q59
+    affects: [CP01-S24, CP01-S12/AC03, CP01-S12/AC08, CP01-S12/AC10, CP01-S08/R03]
+    question: "Step 24 is the first step in which real Agent Pack agents execute. Who runs the seven commands and how are provider, model and pack identities recorded; who authorises the fixture Contract under the released manual human policy; which accepted criteria does \"the complete core invariant suite through the assembled runtime\" re-execute, on which revision; where exactly does lifecycle run stop at each position under the released policy; and which validation rules, closure guards and mutation boundaries can the packed consumer itself exercise?"
+  - id: Q60
+    affects: [CP01-S25, CP01/R02, CP01/AC02, CP01-S19/R07, CP01-S15/R03]
+    question: "The candidate branch holds no Pactwright project state while the default branch holds self-hosted state in the unversioned lock format. Does Step 25 start from a fresh init or migrate that state through Step 19's released-format migration; how does lock agreement treat the pack installed as a workspace link and a later edit to it; what is \"the repository process available before Checkpoint 2\" and who lands the self-hosting state; and from which acceptance does the checkpoint's self-hosting obligation apply?"
+  - id: Q61
+    affects: [CP01-S26, CP01-S27]
+    question: "Who is the human actor whose Decision authorises the public-content Contracts of Steps 26 and 27; what makes \"behaviour proven in this checkpoint\" and \"only document proven behaviour\" verifiable; which core distribution commands must the learning material cover; must install instructions name the exact version before 0.0.2 is published; and what do the headings \"Complete the 0.0.1 public learning path\" and \"Publish 0.0.1\" and Step 27's \"install/execute/upgrade 0.0.1\" mean when the release is 0.0.2?"
+  - id: Q62
+    affects: [CP01-S28, CP01-S13/AC06, CP01-S13/AC07, CP01-S21/R06]
+    question: "Step 28 has no release-preparation instructions and the Guide's release-PR procedure starts \"From Checkpoint 2 onwards\". Which procedure prepares 0.0.2, what governs the CHANGELOG entry, what must the baseline comparison report without an invoker, is a registry-installed consumer smoke test required before Kakeibo, and how is a defect found after publication handled when 0.0.3 belongs to Checkpoint 2?"
+  - id: Q63
+    affects: [CP01-S29, CP01-S30]
+    question: "Stage 10 permits only the pnpm package/workspace root as pre-Pactwright bootstrap, while Kakeibo Acceptance Profile section 5 also asks to establish or verify README, LICENSE, SECURITY.md, CONTRIBUTING.md, the canonical specs, deterministic tests and synthetic fixtures. Which step establishes that foundation and how; who authorises writes to the Kakeibo repository; and which Kakeibo specification revisions govern Stage 10?"
+  - id: Q64
+    affects: [CP01-S30]
+    question: "Who decides the Kakeibo Contract; what happens when the checkpoint's invariant list and the current Kakeibo financial-domain specification differ; how are explicit numeric assertions, the domain-package dependency boundary, determinism and the no-research-target rule verified rather than asserted; and how is preservation of every invariant through Contract, Brief, Review and Evidence checked?"
+  - id: Q65
+    affects: [CP01-S31]
+    question: "Step 31 requires every material finding to become an open Intent and every blocking failure to be fixed, but defines neither term. What makes a finding material or blocking, which takes precedence, where does the findings inventory live if it is not a graph record, and where are the T5 observations on execution friction, code quality, graph behaviour and model and skill effectiveness captured?"
+  - id: Q66
+    affects: [CP01/R02, CP01/R03, CP01/R04, CP01/R05, CP01/AC02, CP01/AC03, CP01/AC04, CP01/AC05]
+    question: "Spec 00 T2 requires checkpoint-wide simplicity, graph-boundary and self-hosting obligations, and the exit gate lists thirty-one closing conditions with no named owners. What are those obligations, where are they declared and inherited, and how is each exit-gate line bound to what proves it without maintaining a second acceptance registry?"
+  - id: Q67
+    affects: [CP01-S22, CP01-S23, CP01-S24, CP01-S25, CP01-S26, CP01-S27, CP01-S28, CP01-S29, CP01-S30, CP01-S31]
+    question: "Spec 00 section 2 replaces every step's prose with a YAML contract, and T2 reviews the converted contract. By the owner's decision Steps 22-31 keep their prose form. How does Spec 00 admit a step kept in prose, how do pnpm contracts:check and the harness detect such a step rather than miss it, how is its reviewed prose protected from unreviewed edits, and when is it converted so that it can run?"
