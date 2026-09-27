@@ -12,6 +12,7 @@ export default tseslint.config(
       "packages/*/dist/",
       "build/",
       "coverage/",
+      ".turbo/",
       ".claude/",
       ".pnpm-store/",
       ".tmp-pactwright-test-*/",

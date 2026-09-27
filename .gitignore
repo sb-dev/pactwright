@@ -45,3 +45,6 @@ venv/
 
 # Docs
 drafts
+
+# Turborepo
+.turbo/
