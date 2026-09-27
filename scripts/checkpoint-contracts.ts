@@ -36,7 +36,7 @@ type CrosswalkEntry = {
   covered_by?: string[];
   allocated_to?: string;
 };
-type CrosswalkSource = { source?: string; steps?: string[] };
+type CrosswalkSource = { source?: string; steps?: string[]; reviewed?: Record<string, string> };
 type Crosswalk = {
   sources?: CrosswalkSource[];
   entries?: CrosswalkEntry[];
@@ -99,37 +99,57 @@ const splitSentences = (line: string): string[] =>
     .map(norm)
     .filter(Boolean);
 
-type Section = { heading: string; title: string; lines: string[] };
+type Section = { intro: string[]; heading: string; title: string; lines: string[] };
 
-/** Each step section: its `### Step N — title` heading and the lines up to the next step or `##` heading. */
+const STEP_HEADING = /^### Step (\d+) — (.*)$/;
+
+/** Step numbers in heading order, repeats included. */
+export function stepHeadings(markdown: string): number[] {
+  return markdown
+    .split("\n")
+    .map((line) => STEP_HEADING.exec(line))
+    .filter((m) => m !== null)
+    .map((m) => Number(m[1]));
+}
+
+/**
+ * Each step section: its `### Step N — title` heading and the lines up to the
+ * next step or `##` heading. The first step after a `##` heading also carries
+ * that heading and the lines before the step as its intro, such as a stage's
+ * introduction.
+ */
 export function stepSections(markdown: string): Map<number, Section> {
   const sections = new Map<number, Section>();
   let current: number | undefined;
+  let intro: string[] = [];
   for (const line of markdown.split("\n")) {
-    const heading = /^### Step (\d+) — (.*)$/.exec(line);
+    const heading = STEP_HEADING.exec(line);
     if (heading) {
       current = Number(heading[1]);
-      sections.set(current, { heading: line, title: heading[2] ?? "", lines: [] });
+      sections.set(current, { intro, heading: line, title: heading[2] ?? "", lines: [] });
+      intro = [];
       continue;
     }
     if (line.startsWith("## ")) {
       current = undefined;
+      intro = [line];
       continue;
     }
     if (current !== undefined) sections.get(current)?.lines.push(line);
+    else if (intro.length > 0) intro.push(line);
   }
   return sections;
 }
 
 /**
- * SHA-256 of a step section as recorded in `prose_steps`: the heading and its
- * lines joined by newlines, without trailing whitespace on any line or trailing
- * blank lines.
+ * SHA-256, as recorded in `prose_steps` (Spec 00 §2), of a step's intro,
+ * heading and lines: UTF-8, each line without trailing whitespace, trailing
+ * blank lines removed, joined by LF with no final newline.
  */
 export function proseHash(section: Section): string {
-  const lines = [section.heading, ...section.lines].map((l) => l.trimEnd());
+  const lines = [...section.intro, section.heading, ...section.lines].map((l) => l.trimEnd());
   while (lines.length > 0 && lines[lines.length - 1] === "") lines.pop();
-  return `sha256:${createHash("sha256").update(lines.join("\n")).digest("hex")}`;
+  return `sha256:${createHash("sha256").update(lines.join("\n"), "utf8").digest("hex")}`;
 }
 
 /** Splits prompt-style step prose (References/Run/Expected/Verify) into keyed units. */
@@ -355,6 +375,10 @@ export function validateCheckpointDir(
   }
 
   // Every step is either converted to a contract or kept as reviewed prose (Spec 00 §2).
+  const headings = stepHeadings(markdown);
+  for (const num of new Set(headings.filter((n, i) => headings.indexOf(n) !== i))) {
+    errors.push(`Step ${num} has more than one heading`);
+  }
   const sections = stepSections(markdown);
   const prose = checkpoint.prose_steps ?? {};
   for (const [sid, hash] of Object.entries(prose)) {
@@ -381,7 +405,13 @@ export function validateCheckpointDir(
 
   // Each converted step quotes the checkpoint revision whose prose it replaced.
   const sourceOf = new Map<string, string>();
-  for (const { source = "", steps: listed = [] } of crosswalk.sources ?? []) {
+  const reviewedOf = new Map<string, string>();
+  for (const { source = "", steps: listed = [], reviewed = {} } of crosswalk.sources ?? []) {
+    for (const [sid, hash] of Object.entries(reviewed)) {
+      if (!listed.includes(sid))
+        errors.push(`crosswalk: ${source} has a reviewed hash for unlisted ${sid}`);
+      reviewedOf.set(sid, hash);
+    }
     for (const sid of listed) {
       if (sourceOf.has(sid)) {
         errors.push(`crosswalk: ${sid} is listed in more than one source`);
@@ -401,6 +431,7 @@ export function validateCheckpointDir(
   if (!options.skipSource) {
     units = new Map();
     const parsed = new Map<string, StepUnits | null>();
+    const texts = new Map<string, string>();
     for (const [sid, source] of sourceOf) {
       if (!parsed.has(source)) {
         const [sourcePath, rev = ""] = source.split("@");
@@ -410,7 +441,9 @@ export function validateCheckpointDir(
           parsed.set(source, null);
         } else {
           try {
-            parsed.set(source, splitUnits(git(cwd, ["show", `${rev}:${sourcePath}`])));
+            const text = git(cwd, ["show", `${rev}:${sourcePath}`]);
+            texts.set(source, text);
+            parsed.set(source, splitUnits(text));
           } catch {
             errors.push(`crosswalk: cannot read source ${source || "(none)"} from Git`);
             parsed.set(source, null);
@@ -422,6 +455,14 @@ export function validateCheckpointDir(
       const stepUnits = text === null ? null : (text?.[step]?.units ?? []);
       if (stepUnits?.length === 0) errors.push(`crosswalk: ${source} has no prose for ${sid}`);
       units.set(step, stepUnits ?? null);
+      // A converted step that was reviewed as prose replaced exactly that prose.
+      const reviewed = reviewedOf.get(sid);
+      const sourceText = texts.get(source);
+      const section =
+        sourceText === undefined ? undefined : stepSections(sourceText).get(Number(sid.slice(-2)));
+      if (reviewed && section && proseHash(section) !== reviewed) {
+        errors.push(`crosswalk: ${source} prose for ${sid} differs from its reviewed hash`);
+      }
     }
   }
 

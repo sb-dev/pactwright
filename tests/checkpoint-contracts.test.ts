@@ -155,6 +155,38 @@ describe("checkpoint contracts", () => {
       expect: /prose step CP01-S31 differs from its reviewed text/,
     },
     {
+      name: "stage introduction edited after review",
+      file: "../01-self-hosted-delivery.md",
+      from: "The Kakeibo owner authorises writes to the Kakeibo repository and every commit to its default branch in Steps 29 and 30. ",
+      to: "",
+      expect: /prose step CP01-S29 differs from its reviewed text/,
+    },
+    {
+      name: "prose entry without a step heading",
+      file: "checkpoint.yml",
+      from: "prose_steps:\n",
+      to: "prose_steps:\n  CP01-S32: sha256:" + "0".repeat(64) + "\n",
+      expect: /prose step CP01-S32 has no step heading/,
+    },
+    {
+      name: "repeated step heading",
+      file: "../01-self-hosted-delivery.md",
+      from: "## Exit gate\n",
+      to: "### Step 31 — Repeated\n\n## Exit gate\n",
+      expect: /Step 31 has more than one heading/,
+    },
+    {
+      name: "converted step whose source differs from its reviewed prose",
+      file: "crosswalk.yml",
+      from: "    steps: [CP01-S20, CP01-S21]\n",
+      to:
+        "    steps: [CP01-S20, CP01-S21]\n    reviewed:\n      CP01-S21: sha256:" +
+        "0".repeat(64) +
+        "\n",
+      expect: /prose for CP01-S21 differs from its reviewed hash/,
+      needs: revisionOf("CP01-S21"),
+    },
+    {
       name: "prose entry for a converted step",
       file: "checkpoint.yml",
       from: "prose_steps:\n",
