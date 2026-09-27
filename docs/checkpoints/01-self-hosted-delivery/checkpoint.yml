@@ -48,8 +48,9 @@ requirements:
       have been read back. Evidence is current when it was produced on the revision it names and no later change affects
       the obligation it proves. The revision is the one each step names for its evidence (for Steps 22 to 24, the
       revision Step 22 packed), the tagged release commit for the publication, registry and tagged-source lines,
-      the Kakeibo revision for the Kakeibo lines, and the final default-branch revision for the self-hosted graph
-      and feedback lines.
+      the Kakeibo revision for the Kakeibo lines, and the final default-branch revision for the graph-convergence
+      and coherence line and the Step 31 line, where only validate and lifecycle status of the self-hosted graph
+      are re-run. Evidence of the self-hosted Delivery lines stays on the revisions Steps 26 and 27 name.
 acceptance:
   AC01:
     covers: [R01]
@@ -70,7 +71,7 @@ acceptance:
     covers: [R03]
     given: A step candidate, the built runtime's registered types and relations, and the self-hosted and Kakeibo graphs
       where they exist.
-    when: The registry, workspace packages and graphs are inspected.
+    when: The registry and graphs are inspected.
     then: The runtime registers exactly the five core record types and the core relations, every graph holds only
       core types and relations, and independent
       review confirms that no excluded concept entered canonical state and that execution state, reports, transcripts,
@@ -79,8 +80,8 @@ acceptance:
   AC04:
     covers: [R04]
     given: A step candidate's diff and its contract or runbook step.
-    when: The candidate's public commands, configuration and lock keys, persisted formats, dependencies and top-level
-      modules are inventoried.
+    when: The candidate's public commands, configuration and lock keys, persisted formats, dependencies, workspace
+      packages and top-level modules are inventoried.
     then: The built CLI exposes exactly the commands the accepted contracts, CORE#46 and DISTRIBUTION#27 name, no
       workspace package other than pactwright and @pactwright/standard exists, and independent review traces every added
       command, key, format, dependency and module to a requirement of the step, finds no parallel loader, validator,

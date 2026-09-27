@@ -2,7 +2,7 @@
 
 **Version:** 31  
 **Entry condition:** No installable Pactwright runtime exists.  
-**Release:** `0.0.2` (corrective; `0.0.1` was published against version 14 of this runbook and remains the released baseline)  
+**Release:** `0.0.2` (corrective; `0.0.1` was published against version 12 of this runbook, the version tagged `v0.0.1`, and remains the released baseline)  
 **Exit capability:** Pactwright is installable, upgradeable, can govern one complete Contract-driven Delivery in its own repository and in Kakeibo, can compare an Agent Pack candidate against a released baseline, and requires no manual Project Graph coherence work.
 
 ## 1. Goal
@@ -398,9 +398,9 @@ Real consumer artefacts exist for both components, packed from one recorded revi
 
 **Verify before continuing**
 
-Inspect both archives:
+Inspect the four archives:
 
-- each archive's manifest names its package and version, and both carry the same version;
+- each archive's manifest names its package and version, and the two published archives carry the same version;
 - every declared `main`, `types`, `bin` and `exports` target resolves inside its archive;
 - the runtime archive holds only the built runtime, its manifest, `LICENSE` and `README.md`; the pack archive holds only `dist`, `pack.yml`, `agents`, `skills`, its manifest, `LICENSE` and `README.md`; neither holds a test, fixture, checkpoint contract, Project Graph record, configuration, execution-state or source file;
 - the runtime manifest depends on `@pactwright/standard` at the exact version of the pack archive, rewritten from `workspace:*`, never a range, dist-tag or workspace reference;
@@ -477,7 +477,7 @@ Inspect durable Project Graph state. Require all 17 validation cases, Evidence p
 
 Run `pactwright lifecycle status`, `next` and `run` on the fixture consumer at each lineage position. `run` must stop cleanly at manual entries and, for capability-backed automatic responsibilities, with the missing-invoker execution failure; it must not simulate any output. The consumer's lifecycle `version: 1` cannot declare Gates, corrective routes or iteration bounds, so validation rules 10, 11, 14 and 15 are proven by the repository test suite against the built runtime through the Step 6 fixture definitions; the packed consumer proves the other validation rules, and the published package exposes no fixture-definition entry point.
 
-Under the released policy the positions and stops are: with no lineage, `run` stops at the manual `capture-intent`; at open, contracted, the Delivery step, the Review step and the closure step after a closing Review with outcome may-progress, it stops with the missing-invoker execution failure at `propose-contracts`, `write-brief`, `deliver-brief`, `review` and `prepare-evidence` respectively; at done it performs no step. At each position `status` and `next` report what CP01-S08/AC01 defines for it. No position changes a canonical file.
+Under the released policy the positions and stops are: with no lineage, `run` stops at the manual `capture-intent`; at open, contracted, the Delivery step, the Review step and the closure step after a closing Review with outcome may-progress, it stops with the missing-invoker execution failure at `propose-contracts`, `write-brief`, `deliver-brief`, `review` and `prepare-evidence` respectively; at done it performs no step. With no lineage, `status` reports what the Step 23 verify states and `next` names `capture-intent` with required actor human; at every other position `status` and `next` report what CP01-S08/AC01 defines, the closure position being its shape-step case. No position changes a canonical file.
 
 The packed consumer proves validation rules 1–9, 12, 13, 16 and 17 through the installed CLI, each on a copy of the fixture whose only defect is that rule's; rule 16 uses the defective fixture Extension archive Step 22 recorded and rule 17 a replay-base document. The seven mutation-boundary cases are the cases of CP01-S12/AC03, and the Evidence precondition failures are the cases of CP01-S12/AC10 other than `pending-gate`, which version 1 policy cannot express; each runs through the installed CLI's hand-off commands with scripted results.
 
@@ -540,7 +540,7 @@ Second sync is clean and repository CI passes.
 Use Pactwright itself to improve the Quick Start based only on behaviour proven in this checkpoint.
 Before PI exists, identity/positioning/product choices required by this public work must be authorised through Decision + Contract rather than invented.
 
-Run the seven commands through the adapter in the self-hosted project. The repository owner is the approving human: the Decision selects a Contract that states the claims, positioning and proven behaviour the Quick Start may use, and a claim the Contract does not authorise is a Review failure. Proven behaviour is a command or behaviour with an accepted Checkpoint 1 criterion result, Step 23 or 24 packed-consumer evidence, or this step's own clean-fixture execution below. The install instruction names `pactwright@0.0.2` exactly, because `latest` stays at `0.0.1` until `0.1.0` (Implementation Guide — npm release model). The Quick Start documents no Extension, GitHub integration, Project Intelligence or provider-invoking `lifecycle run` as available. The change lands through a pull request the owner merges with `CI / Verify` passing.
+Run the seven commands through the adapter in the self-hosted project. The repository owner is the approving human: the Decision selects a Contract that states the claims, positioning and proven behaviour the Quick Start may use, and a claim the Contract does not authorise is a Review failure. Proven behaviour is a command or behaviour with an accepted Checkpoint 1 criterion result or Step 23 or 24 packed-consumer evidence; this step's own clean-fixture execution below confirms that proven set on this revision and adds nothing to it. The install instruction names `pactwright@0.0.2` exactly, because `latest` stays at `0.0.1` until `0.1.0` (Implementation Guide — npm release model). The Quick Start documents no Extension, GitHub integration, Project Intelligence or provider-invoking `lifecycle run` as available. The change lands through a pull request the owner merges with `CI / Verify` passing.
 
 **Expected result**
 
@@ -586,8 +586,8 @@ Each lineage validates and derives done with the owner recorded as decider, and 
 
 **References:** Implementation Guide — npm release model, Preparing a development release, Trusted release workflow, Release failure; Spec 02 §§15, 24 (baseline evaluation)
 
-`0.0.1` was published on 2026-09-01 against version 14 of this runbook, before
-the corrections version 15 introduced. npm reserves a version number
+`0.0.1` was published on 2026-09-01 against version 12 of this runbook, the
+version tagged `v0.0.1`, before the corrections later versions introduced. npm reserves a version number
 permanently once used, so `0.0.1` cannot be re-cut; it stays on the registry
 as the released baseline, which is what the comparison below needs.
 
@@ -605,7 +605,7 @@ the first evidence of the trusted-publisher entries. Tag accepted source as
 `v0.0.2` and verify the tag workflow, its `npm-release` deployment record and
 each published version's provenance attestation (CP01-S21/R04).
 
-Prepare the release through a release pull request (Implementation Guide — Preparing a development release): every publishable version at `0.0.2`, the lockfile refreshed, `pnpm verify` and the publish dry-run passing, and the `CHANGELOG.md` entry dated and written from accepted work only: work delivered after Step 25 cites its Evidence in the source that will be tagged, and work accepted before self-hosting is described from its accepted step results; the entry cites no Evidence outside the tagged Project Graph. The pull request changes nothing else and the owner merges it with `CI / Verify` passing. The owner's push of `v0.0.2` to the merged release commit is the publish authority. The tagged tree holds the README Quick Start, `docs/getting-started.md`, `examples/core-delivery/README.md` and the Step 26 and 27 Evidence records. Nothing is published interactively.
+Prepare the release through a release pull request (Implementation Guide — Preparing a development release): every publishable version at `0.0.2`, the lockfile refreshed, `pnpm verify` and the publish dry-run passing, and the `CHANGELOG.md` entry dated and written from accepted work only: work delivered after Step 25 cites its Evidence in the source that will be tagged, and work accepted before Step 25's acceptance is described from its accepted step or criterion results; the entry cites no Evidence outside the tagged Project Graph. The pull request changes nothing else and the owner merges it with `CI / Verify` passing. The owner's push of `v0.0.2` to the merged release commit is the publish authority. The tagged tree holds the README Quick Start, `docs/getting-started.md`, `examples/core-delivery/README.md` and the Step 26 and 27 Evidence records. Nothing is published interactively.
 
 Before any publication, a failed run is fixed and rerun, and a tag that published nothing may be deleted and recreated by the owner on the corrected commit. After a publication the version is consumed: a defect in the published `0.0.2` is fixed forward with the next unused `0.0.x` under an owner-approved amendment of this checkpoint's Release line, the Implementation Guide's version tables and later checkpoints' Release lines (Implementation Guide — Release failure), never by unpublishing, overwriting or moving `latest`.
 
@@ -639,7 +639,7 @@ The Kakeibo owner authorises writes to the Kakeibo repository and every commit t
 
 ### Step 29 — Establish the minimum Kakeibo consumer root and install `0.0.2`
 
-**References:** Distribution §§2–3, 5, 14, 16; Kakeibo Acceptance Profile §§2, 4, 5; current Kakeibo 05 package/layer boundary; Implementation Guide — Kakeibo acceptance model, Execution location
+**References:** Distribution §§2–3, 5, 14, 16; Kakeibo Acceptance Profile §§2, 4, 5; current Kakeibo 05 package/layer boundary; current Kakeibo 07 §§20, 35, 37, 49; Implementation Guide — Kakeibo acceptance model, Execution location
 
 **Run**
 
@@ -680,7 +680,7 @@ This step must not create application packages, Hono services, database code, R2
 
 `pnpm add -D -w pactwright@0.0.2` installs from the registry with no override; `agent-pack use` resolves the pack from the runtime's dependencies at exactly `0.0.2`. An existing `pnpm-workspace.yaml` stays byte-identical. An existing `package.json` keeps all its content apart from the development-dependency and `packageManager` fields the package manager writes. If `.gitignore` has no rule for `node_modules/`, add one.
 
-Record, without creating any of them, whether the starting revision holds each public-repository foundation item of Kakeibo Acceptance Profile §5 and Kakeibo 07 (§§20, 35, 37, 49): `README.md`, a `LICENSE` with the Apache-2.0 text, `SECURITY.md` with a private disclosure route, `CONTRIBUTING.md`, the canonical `docs/specs/` authority set, working deterministic tests and safe synthetic financial fixtures. If the canonical `docs/specs/` authority set is absent, Stage 10 pauses: specifications are the authority for Step 30, not its output. Step 30 delivers every other absent item.
+Record, without creating any of them, whether the starting revision holds each of the following public-repository foundation items, which Kakeibo Acceptance Profile §5 lists and Kakeibo 07 §§20, 35, 37 and 49 require; the other 07 §49 items, such as CI and Kei assets, belong to later checkpoints: `README.md`, a `LICENSE` with the Apache-2.0 text, `SECURITY.md` with a private disclosure route, `CONTRIBUTING.md`, the canonical `docs/specs/` authority set, working deterministic tests and safe synthetic financial fixtures. If the canonical `docs/specs/` authority set is absent, Stage 10 pauses: specifications are the authority for Step 30, not its output. Step 30 delivers every other absent item.
 
 **Expected result**
 
@@ -698,7 +698,7 @@ Kakeibo has the minimum consumer package root required by its future pnpm/Turbor
 
 ### Step 30 — Deliver the deterministic Kakeibo financial-domain foundation
 
-**References:** Kakeibo Acceptance Profile §§3–5; current Kakeibo `02-financial-domain-model-spec.md`; current Kakeibo `05-system-architecture-and-data-spec.md` package/layer boundary; current Kakeibo `06-engineering-delivery-and-operations-spec.md` deterministic test expectations; Delivery Graph §19
+**References:** Kakeibo Acceptance Profile §§3–5; current Kakeibo `02-financial-domain-model-spec.md`; current Kakeibo `05-system-architecture-and-data-spec.md` package/layer boundary; current Kakeibo `06-engineering-delivery-and-operations-spec.md` deterministic test expectations; current Kakeibo `07-open-source-project-organisation-spec.md` §§20, 35, 37, 42 repository foundation; Delivery Graph §19
 
 **Run**
 
@@ -723,7 +723,7 @@ pnpm pactwright lifecycle status
 
 Run the Kakeibo repository-defined deterministic domain tests as part of the same acceptance step.
 
-The commands run through the adapter session the run configuration names, and the Kakeibo owner is the approving human. The Kakeibo specifications at the revisions Step 29 recorded govern: 02 for financial-domain semantics, 05 for the package and layer boundary only, 06 for deterministic test expectations only and 07 for the repository foundation only. The Contract cites the specification sections it implements. The invariant set below is Kakeibo 02 §14 at revision `75443233c474a2a4072348078c22d72d15573645` (02 v1.1). If the 02 revision Step 29 records differs, the set is re-derived from that revision's §14 through an amendment of this step, reviewed like this one, before Step 30 runs; no invariant is deferred to Step 31.
+The commands run through the adapter session the run configuration names, and the Kakeibo owner is the approving human. The Kakeibo specifications at the revisions Step 29 recorded govern: 02 for financial-domain semantics, 05 for the package and layer boundary only, 06 for deterministic test expectations only and 07 for the repository foundation only. The Contract cites the specification sections it implements. The invariant set below is Kakeibo 02 §14 at revision `75443233c474a2a4072348078c22d72d15573645` (02 v1.1). If 02 §14 at the revision Step 29 records differs from the block below, the set is re-derived from that revision's §14 through an amendment of this step, reviewed like this one, before Step 30 runs; no invariant is deferred to Step 31.
 
 Before this step is accepted, deliver each foundation item Step 29 recorded absent through a Kakeibo Delivery lineage approved by the Kakeibo owner: the deterministic tests and synthetic fixtures through this step's domain lineage, and each other item except the specifications through its own lineage. Synthetic fixtures contain no real personal financial export (Kakeibo 07 §20), and no private financial or review engine is required for the delivered slice (07 §42). Do not scaffold Academy, Blog, marketplace, registry, parallel self-hosting architecture or speculative package directories.
 
@@ -767,7 +767,7 @@ user-selected targets remain distinct from calculated consequences
 one amount must not be counted twice across spending, transfer and goal aggregates
 ```
 
-These include the invariants the Kakeibo Acceptance Profile §4 lists, among them credit-card settlement not double-counting tracked purchases (02 §9) and goal allocation remaining distinct from reviewed goal contribution (02 §6.3).
+In addition to §14, the slice preserves the Kakeibo Acceptance Profile §4 invariants §14 does not state in these words: credit-card settlement does not double-count tracked purchases (02 §9), and goal allocation remains distinct from reviewed goal contribution (02 §§6.2, 6.3, 11).
 
 The package remains deterministic and independent of application/API/storage/UI/provider concerns.
 

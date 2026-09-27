@@ -10,7 +10,7 @@ The review covered the five T2 checks for each step: canonical fidelity against 
 
 ## Owner decisions this pass needs
 
-The owner approved all four semantic decisions in the producing session on 2026-09-27, answering direct questions (the owner had asked to be asked directly rather than through the PR). Each question and its answer, verbatim in substance: Step 25 start state (fresh `init`; `main`'s self-hosted records stay Git history, not migrated): "Approve"; Implementation Guide v19 clauses (release-PR procedure from `0.0.2` with an owner-merged pull request; CHANGELOG from accepted work only; an unpublished tag may be recreated; a published defect consumes the version number and renumbers later versions; before Project Intelligence, findings become open Intents): "Approve"; Step 30 invariant set (Kakeibo 02 §14 verbatim at `75443233` plus the credit-card and goal-contribution invariants, re-derived through a reviewed amendment if the recorded revision differs, nothing deferred to Step 31): "Approve"; `0.0.2` wording in §1 and the Stage 8 and 9 headings: "Approve". The PR carries a comment recording these answers. The Kakeibo write authority is different: it is an execution prerequisite for Steps 29 and 30, granted by the Kakeibo owner at execution, not by this review.
+The owner approved all four semantic decisions in the producing session on 2026-09-27, answering direct questions (the owner had asked to be asked directly rather than through the PR). Each question, summarised, and its answer: Step 25 start state (fresh `init`; `main`'s self-hosted records stay Git history, not migrated): "Approve"; Implementation Guide v19 clauses (release-PR procedure from `0.0.2` with an owner-merged pull request; CHANGELOG from accepted work only; an unpublished tag may be recreated; a published defect consumes the version number and renumbers later versions; before Project Intelligence, findings become open Intents): "Approve"; Step 30 invariant set (Kakeibo 02 §14 verbatim at `75443233` plus the credit-card and goal-contribution invariants, re-derived through a reviewed amendment if the recorded revision differs, nothing deferred to Step 31): "Approve"; `0.0.2` wording in §1 and the Stage 8 and 9 headings: "Approve". The PR carries a comment recording these answers. The Kakeibo write authority is different: it is an execution prerequisite for Steps 29 and 30, granted by the Kakeibo owner at execution, not by this review.
 
 | Decision | Where | Effect |
 |---|---|---|
@@ -18,8 +18,7 @@ The owner approved all four semantic decisions in the producing session on 2026-
 | Project-state boundary for self-hosting (Q60) | Step 25 Run | Step 25 starts from a candidate with no Pactwright project state; `main`'s self-hosted records stay Git history. B23 records why migration is infeasible under the accepted Stage 4 contracts. |
 | Guide v19 clauses (Q62, Q65) | Guide §Preparing a development release, §Release failure, §Transition rule | Release-PR procedure from `0.0.2` with the owner-merged pull request as pre-Checkpoint-2 landing; CHANGELOG from accepted work only (Evidence for self-hosted work, checkpoint results for earlier work, nothing outside the tagged graph); unpublished tag may be recreated; a published defect consumes a number and renumbers the version line; findings before Project Intelligence become open Intents. |
 | Step 30 invariant set (Q64) | Step 30 | Kakeibo 02 §14 at `75443233`, re-derived through a reviewed amendment if the recorded revision differs; no invariant deferred to Step 31. |
-| Kakeibo write authority (Q63) | Stage 10 intro | Writes to the Kakeibo repository and its default-branch commits in Steps 29 and 30. |
-| `0.0.2` wording (Q61) | Checkpoint 1 §1, Stage 8 and 9 headings, Step 27 | The release is `0.0.2`; `0.0.1` names the content set. |
+| `0.0.2` wording (Q61) | Checkpoint 1 §1, Stage 8 and 9 headings | The release is `0.0.2`; `0.0.1` names the content set. Step 27's `0.0.2` wording follows from the approved headings. |
 
 ## Exit-gate ownership (T2 evidence, not a maintained registry)
 
@@ -123,6 +122,23 @@ Owner review [5330105036](https://github.com/sb-dev/pactwright/pull/53#pullreque
 | F15 | The owner-decisions table omitted the consequence of keeping the prose form. | Applied: first row of that table. |
 
 The fresh reviewer confirmed that `pnpm contracts:check` and `pnpm test` pass, every cited criterion ID and case name exists with the claimed meaning, X1–X23 match the amended text, and Guide v19 changes only its three stated sections. These corrections were authored by this record's author and need fresh review (methodology §6); the owner's next review of the PR is requested as that review.
+
+**Second fresh review** of the corrections at `da4b4f3` (read-only, this session) confirmed that O1–O4 and F1–F15 are present, that Step 30's block is byte-identical to 02 §14 at `75443233`, that the Kakeibo citations support their sentences, and that `pnpm add -D -w` succeeds where `pnpm add -D` fails. It returned one blocking and eleven non-blocking findings:
+
+| ID | Finding | Disposition |
+|---|---|---|
+| G1 | Blocking: the crosswalk header attached the owner's approval to every applied clause, not the four decisions asked; the Q61 row named Step 27, which the question did not. | Applied: the header names Q60, Q61, Q62/Q65 and Q64; the Q61 row says Step 27 follows from the headings. |
+| G2 | Step 30's "These include" sentence pointed at §14, which holds neither profile invariant; allocation is 02 §6.2, not §6.3. | Applied: "In addition to §14 …" with 02 §§6.2, 6.3, 11. |
+| G3 | `CP01/R05` revision groups overlapped for the self-hosted Delivery lines. | Applied: final revision only for the convergence and coherence line and Step 31, re-running only `validate` and `lifecycle status`. |
+| G4 | Step 30's re-derivation trigger fired on any Kakeibo commit. | Applied: fires only if 02 §14 differs from the block. |
+| G5 | Step 29's 07 citation implied CI and Kei assets; neither References line cited 07. | Applied: the listed items only, later 07 §49 items excluded; 07 in both References lines. |
+| G6 | The Guide said "checkpoint results" for a checkpoint not yet accepted; Step 25's own work fell between the two CHANGELOG rules. | Applied: "step or criterion results" in both; the boundary is Step 25's acceptance. |
+| G7 | Step 26's proven set became circular. | Applied: the fixture confirms the proven set and adds nothing to it. |
+| G8 | Step 24 deferred `status`/`next` to S08/AC01, which has no no-lineage case. | Applied: no-lineage behaviour stated; closure is S08/AC01's shape-step case. |
+| G9 | `CP01/AC03` still inspected workspace packages; `AC04` did not inventory them. | Applied. |
+| G10 | Step 22's verify header said "both archives". | Applied: four archives; same version for the two published ones. |
+| G11 | Checkpoint 1 (header, Step 28) and Guide v19 (§Public-product progression, §npm release model) say `0.0.1` was published against runbook version 14; the `v0.0.1` tag `207ac08` carries version 12, and version 14 first appears in `84e32cd` on 2026-09-07. | Applied with the owner's approval, given in answer to a direct question on 2026-09-27 ("Correct to v12"): the four mentions now say version 12, the version tagged `v0.0.1`. |
+| G12 | The owner-decisions table listed the Kakeibo write authority; "verbatim in substance" was self-contradictory. | Applied: row removed; "summarised". |
 
 ## Checkpoint-level result (§7)
 

@@ -312,7 +312,7 @@ Pactwright does not wait until the end of implementation to document or explain 
 Each checkpoint advances the smallest public surface set needed by the newly usable capability:
 
 ```text
-0.0.1  README Quick Start + Getting Started + core Delivery example (released against Checkpoint 1 v14)
+0.0.1  README Quick Start + Getting Started + core Delivery example (released against Checkpoint 1 v12)
 0.0.2  Checkpoint 1's corrective release of the same content set
 0.0.3  website foundation + GitHub guide + remote Delivery example
 0.0.4  PI docs/onboarding/example/Academy + public-content knowledge foundation
@@ -414,7 +414,7 @@ Approved Assets and Publications remain immutable. Later analytics, Operations O
 The checkpoint number remains internal. Public package versions are normal SemVer development releases: each checkpoint publishes the next unused `0.0.x`, a corrective release consumes a number, and the checkpoint file's Release line names the version it publishes.
 
 ```text
-Checkpoint 1 → 0.0.1 (released against Checkpoint 1 v14) and the corrective 0.0.2
+Checkpoint 1 → 0.0.1 (released against Checkpoint 1 v12) and the corrective 0.0.2
 Checkpoint 2 → 0.0.3
 Checkpoint 3 → 0.0.4
 Checkpoint 4 → 0.0.5
@@ -514,7 +514,7 @@ The `npm-release` environment admits deployments from version tags only and requ
 
 ### Preparing a development release
 
-From the `0.0.2` corrective release onwards, create a release PR. Before Checkpoint 2 activates GitHub, the pull request is merged by the repository owner with `CI / Verify` passing; the required-check state is repository configuration recorded in the run configuration. Update `CHANGELOG.md` first, from accepted work only, and date the entry: self-hosted work cites its accepted Evidence in the source that will be tagged, work accepted before the repository self-hosted is described from its accepted checkpoint results, and the entry cites no Evidence outside that source's Project Graph.
+From the `0.0.2` corrective release onwards, create a release PR. Before Checkpoint 2 activates GitHub, the pull request is merged by the repository owner with `CI / Verify` passing; the required-check state is repository configuration recorded in the run configuration. Update `CHANGELOG.md` first, from accepted work only, and date the entry: self-hosted work cites its accepted Evidence in the source that will be tagged, work accepted before the repository self-hosted is described from its accepted step or criterion results, and the entry cites no Evidence outside that source's Project Graph.
 
 ```bash
 VERSION=0.0.N
