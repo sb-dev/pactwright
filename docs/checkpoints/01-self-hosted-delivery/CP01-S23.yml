@@ -1,0 +1,106 @@
+# CP01 Step 23 — Install and initialise clean consumer fixtures
+id: CP01-S23
+requires: [CP01-S08, CP01-S09, CP01-S11, CP01-S14, CP01-S16, CP01-S17, CP01-S18, CP01-S22]
+inputs:
+  packed-archives: CP01-S22/packed-archives
+outputs:
+  consumer-fixtures: Two clean repositories outside the workspace that become valid Pactwright consumers from the
+    packed archives alone, one through the explicit path init, agent-pack use, sync, doctor, validate and lifecycle
+    status, and one through one-shot init with a packed fixture Extension and the same explicit pack selection,
+    with the explicit-path fixture retained in its recorded state as the starting point of Step 24.
+requirements:
+  R01:
+    source: [DISTRIBUTION#3, GUIDE#test-layers, GUIDE#execution-location]
+    statement: Each fixture shall be a fresh Git repository in a temporary directory outside the Pactwright workspace,
+      with a package manifest created by pnpm init, no workspace link, path dependency or global installation that
+      reaches the source repository, and the runtime archive installed as a development dependency through pnpm.
+      The standard archive is supplied only through a local-package override that satisfies the runtime's exact
+      dependency, because that version is not on the registry before Step 28; the override is the fixture's only
+      deviation from a published consumer, it is recorded, and Step 28 proves the same path without it.
+  R02:
+    source: [DISTRIBUTION#3, DISTRIBUTION#5, DISTRIBUTION#14, DISTRIBUTION#16]
+    statement: 'The explicit path shall run, in order, pnpm pactwright init, agent-pack use @pactwright/standard,
+      sync, doctor, validate and lifecycle status through the installed package: init creates the scaffold and reports
+      it unactivated; agent-pack use resolves the pack from the runtime''s own dependencies with no package-manager
+      request and locks its exact version and content hash; sync renders the adapter; doctor exits zero with the
+      result healthy; validate exits zero; lifecycle status reports no lineage, blocked at capture-intent with required
+      actor human.'
+  R03:
+    source: [DISTRIBUTION#3, DISTRIBUTION#10, DISTRIBUTION#11]
+    statement: The one-shot fixture shall run pnpm pactwright init --with <fixture-extension-id> --agent-pack @pactwright/standard@<exact
+      version>, naming the archive version, with a packed fixture Extension package installed through the same
+      override mechanism, and shall end with configuration, lock, canonical stores and generated files byte-identical
+      to a third fixture built by the explicit operations init, agent-pack use with the same source and version,
+      extension add and sync. The fixture Extension is a test asset packed from the repository test suite by the
+      Step 22 procedure, not content of either published archive.
+  R04:
+    source: [DISTRIBUTION#3, DISTRIBUTION#5]
+    statement: Pack installation alone shall not be pack selection. A plain init in a fixture where the runtime and
+      pack are installed selects nothing, reports an unactivated scaffold, and sync and lifecycle run refuse naming
+      the missing selection; init --with without --agent-pack is refused and leaves the fixture byte-identical.
+  R05:
+    source: [DISTRIBUTION#14]
+    statement: A second sync in each fixture shall change no file and report that nothing changed.
+  R06:
+    source: [PRINCIPLES#9, PRINCIPLES#10, OSS#16]
+    statement: Every command in the fixtures shall run the installed package's built entry point from the fixture's
+      node_modules, never the source repository's build output or sources, so that the fixtures prove packed consumer
+      behaviour and nothing else.
+  R07:
+    source: [SPEC00#3, SPEC00#4]
+    statement: The run's evidence shall record, for each fixture, the archive identities installed, the Node and
+      pnpm versions, the resulting .pactwright/lock.yml and environment_lock_hash, and the explicit-path fixture
+      is retained unchanged in that state for Step 24.
+acceptance:
+  AC01:
+    covers: [R01, R02, R05]
+    cases: [init, agent-pack-use, sync, doctor, validate, lifecycle-status, second-sync]
+    given: A fresh fixture with the runtime archive installed and the standard archive supplied through the override.
+    when: The explicit path runs and the listed command's result is examined.
+    then: init creates only the scaffold and reports it unactivated. agent-pack-use records the configured source,
+      the archive's exact version and content hash in the lock with no package-manager request. sync renders the
+      pack's agents and the seven commands. doctor exits zero and reports healthy. validate exits zero. lifecycle-status
+      reports no lineage, blocked at capture-intent with required actor human. second-sync changes no file and
+      reports nothing changed.
+    verify:
+      automated: [consumer.explicit-path]
+  AC02:
+    covers: [R03, R05]
+    given: Two fresh fixtures with the archives and the packed fixture Extension supplied through the override.
+    when: One runs init --with <fixture-extension-id> --agent-pack @pactwright/standard@<exact version>; the other
+      runs init, agent-pack use with the same source and version, extension add <fixture-extension-id> and sync;
+      then each runs sync again.
+    then: Configuration, lock, canonical stores and generated files are byte-identical between the fixtures, both
+      select the pack at the exact version with the Extension enabled and locked, doctor exits zero in both, and
+      the second sync changes nothing in either.
+    verify:
+      automated: [consumer.one-shot-equivalence]
+  AC03:
+    covers: [R04]
+    cases: [plain-init-no-selection, with-without-selection]
+    given: A fresh fixture with the runtime, pack and fixture Extension installed.
+    when: plain-init-no-selection runs pnpm pactwright init and then sync and lifecycle run; with-without-selection
+      runs init --with <fixture-extension-id> with no --agent-pack.
+    then: plain-init-no-selection creates the scaffold with no pack selected and reports it unactivated, and sync
+      and lifecycle run refuse naming the missing selection and write nothing. with-without-selection is refused
+      and the fixture is byte-identical.
+    verify:
+      automated: [consumer.no-implicit-selection]
+  AC04:
+    covers: [R06, R07]
+    given: Both fixtures after their paths complete.
+    when: The runtime process of each command is inspected and the run evidence read.
+    then: Each command resolved its entry point inside the fixture's node_modules installation of the archive, no
+      process loaded a module from the source repository, and the evidence records the archive identities, Node
+      and pnpm versions, lock and environment_lock_hash of each fixture.
+    verify:
+      automated: [consumer.packed-only]
+  AC05:
+    covers: [R01, R03, R06]
+    given: The fixture directories, their package manifests and lockfiles, and the override configuration.
+    when: Independent review inspects how the fixtures obtained the runtime, the pack and the fixture Extension.
+    then: The override is the only deviation from a published consumer, nothing links or points into the source
+      repository except the archive files, and the fixture Extension is a packed test asset absent from both
+      published archives.
+    verify:
+      review: [consumer.fixture-isolation]

@@ -1,0 +1,155 @@
+# CP01 Step 30 — Deliver the deterministic Kakeibo financial-domain foundation
+id: CP01-S30
+requires: [CP01-S29]
+uses: [claude-code-adapter, adapter-commands, runtime-hand-off, mutation-api, evidence-closure-guards, validate-command,
+  lifecycle-status]
+outputs:
+  kakeibo-domain-foundation: Kakeibo's first executable deterministic financial-domain foundation in packages/domain,
+    delivered through one Kakeibo Delivery lineage from the current canonical Kakeibo specifications, representing
+    FinancialEntry as a general financial concept, preserving the acceptance profile's financial invariants through
+    deterministic tests, and free of application, API, storage, UI, analytics and provider dependencies.
+  kakeibo-repository-foundation: The minimum public-repository foundation of Kakeibo Acceptance Profile section
+    5, present at the starting revision or delivered through a Kakeibo Delivery lineage where Step 29 found it
+    absent.
+requirements:
+  R01:
+    source: [KAKEIBO_PROFILE#5, CORE#46, CORE#19, PRINCIPLES#10, SPEC00#3]
+    statement: 'In the Kakeibo repository the seven rendered commands shall run in order through the Claude Code adapter
+      with the published pack, /capture-intent with the Intent text "Create Kakeibo''s first executable deterministic
+      financial-domain foundation in packages/domain from the current canonical Kakeibo specs. Cover FinancialEntry
+      movement semantics; planning income; fixed commitments; Needs, Wants, Culture and Unexpected plan treatment;
+      plan-funded versus tracking-only goals; goal allocation versus reviewed contribution; transfers, credit-card
+      settlement and other non-spending movements; personal versus business scope; reviewed versus unreviewed truth;
+      preparation-state independence; deterministic rule priority and first-match behaviour; split conservation;
+      source identity and re-import idempotency; financial duplicate-candidate versus confirmed-duplicate semantics;
+      and preservation of historical interpretation across plan, goal and rule changes. Add deterministic invariant
+      tests with explicit numeric assertions where applicable. Keep the domain package free of Hono, Neon, Cloudflare,
+      UI, analytics and provider dependencies. Do not introduce research-derived financial targets or recommendations.",
+      then /propose-contracts, /approve-contract by the Kakeibo owner, /write-brief, /deliver-brief, /review and
+      /prepare-evidence. The Delivery creates packages/domain; the session identities are recorded.'
+  R02:
+    source: [KAKEIBO_PROFILE#2, KAKEIBO_PROFILE#1, GUIDE#kakeibo-acceptance-model]
+    statement: The current canonical Kakeibo specifications at the revisions Step 29 recorded shall govern the semantics,
+      02 for financial-domain semantics, 05 for the package and layer boundary only and 06 for deterministic test
+      expectations only. Where this contract's invariant list and a Kakeibo specification differ, the specification
+      governs and the difference is recorded as a finding for Step 31; the Contract cites the specification sections
+      it implements.
+  R03:
+    source: [KAKEIBO_PROFILE#4, KAKEIBO_PROFILE#3, KAKEIBO_PROFILE#5]
+    statement: 'The slice shall represent FinancialEntry as the general financial concept, not as spending, and shall
+      preserve at least these invariants, each as one or more deterministic tests with explicit numeric assertions
+      where the invariant is quantitative: fixed commitments do not consume flexible envelopes; plan-funded goal
+      allocations do not also consume a flexible envelope; transfers do not become spending because cash moved;
+      credit-card settlement does not double-count tracked purchases; business activity does not consume personal
+      envelopes; reviewed totals include only reviewed entries; preparation state does not create reviewed truth;
+      rules and suggestions do not create reviewed truth; the sum of split parts equals the original amount; confirmed
+      split parts replace the source amount in aggregates; source re-import idempotency is distinct from financial
+      duplicate resolution; goal allocation is distinct from reviewed goal contribution; and plan, goal and rule
+      changes do not rewrite historical financial truth.'
+  R04:
+    source: [KAKEIBO_PROFILE#3, KAKEIBO_PROFILE#5, CHECKPOINT#explicitly-out-of-scope]
+    statement: packages/domain shall declare and import no Hono, Neon, Cloudflare, UI, analytics or provider dependency,
+      and its logic shall be deterministic, taking time and identity as inputs and reading no clock, randomness,
+      network or filesystem, so that repeated test runs give identical results.
+  R05:
+    source: [KAKEIBO_PROFILE#4, KAKEIBO_PROFILE#5]
+    statement: No research-derived financial target, allocation percentage or recommendation shall be encoded as a
+      default, constant or suggestion; plans, envelopes and goals are user-supplied inputs.
+  R06:
+    source: [KAKEIBO_PROFILE#5, PRINCIPLES#17, CORE#12]
+    statement: The approved Contract shall state every applicable invariant, the Brief decompose them into testable
+      work, the Review verdict address each, and the Evidence's verification facts cite the tests proving each,
+      so that no invariant is lost between Intent and Evidence.
+  R07:
+    source: [CORE#44, CORE#57, CORE#8]
+    statement: Afterwards the Kakeibo graph shall hold one done lineage for this work and, where R08 applies, one for
+      the foundation, validate exits zero, lifecycle status reports them done, no alternative is a record, every
+      Kakeibo specification is byte-identical, and every Pactwright-owned file was written by the runtime.
+  R08:
+    source: [KAKEIBO_PROFILE#5, KAKEIBO_PROFILE#4, PRINCIPLES#3]
+    statement: Each foundation item Step 29 recorded absent shall be delivered through a Kakeibo Delivery lineage
+      before this step is accepted, so that README.md, an Apache-2.0 LICENSE, SECURITY.md with a private disclosure
+      route, CONTRIBUTING.md, the canonical docs/specs/ set, working deterministic tests and safe synthetic fixtures
+      exist. Synthetic fixtures contain no real personal financial export, no private engine is required, and no
+      Academy, Blog, marketplace, registry, self-hosting architecture or speculative package directory is scaffolded.
+  R09:
+    source: [PRINCIPLES#12, PRINCIPLES#16, KAKEIBO_PROFILE#16, KAKEIBO_PROFILE#17]
+    statement: No Kakeibo concept shall become a Pactwright node type, relation or store, no Kakeibo choice is generalised
+      into Pactwright semantics, and each Pactwright responsibility failure observed is recorded as a finding for
+      Step 31.
+  R10:
+    source: [KAKEIBO_PROFILE#5, GUIDE#test-layers, SPEC00#3]
+    statement: Kakeibo's repository-defined deterministic test command shall run as part of this step's acceptance
+      and its result recorded; passing it is necessary and not sufficient.
+acceptance:
+  AC01:
+    covers: [R01, R07]
+    given: The Kakeibo consumer root from Step 29, the adapter session and the Kakeibo owner as approving actor.
+    when: The seven commands run in order, the owner selecting one alternative with notes.
+    then: The graph validates with one lineage deriving done whose Decision records the owner's identity, packages/domain
+      exists with its tests, every specification is byte-identical, no alternative is a record, and the session
+      identities and hand-off dispatches and results are recorded.
+    verify:
+      automated: [kakeibo.delivery-lineage]
+      approval: [kakeibo.contract-approval]
+  AC02:
+    covers: [R03, R10]
+    cases: [financial-entry-general-concept, fixed-commitments-outside-flexible-envelopes, plan-funded-goal-outside-envelope,
+      transfers-not-spending, credit-card-settlement-not-double-counted, business-outside-personal-envelopes, reviewed-totals-reviewed-only,
+      preparation-state-not-reviewed-truth, rules-not-reviewed-truth, split-conservation, confirmed-split-replaces-source,
+      reimport-idempotency-distinct-from-duplicate, allocation-distinct-from-contribution, history-preserved-across-changes]
+    given: The delivered packages/domain with its synthetic fixtures, and for each listed invariant a variant of
+      the implementation that violates only it.
+    when: Kakeibo's deterministic test command runs against the delivered code and against the variant.
+    then: The delivered code passes the listed invariant's tests, with explicit numeric assertions where the invariant
+      is quantitative, and the violating variant fails them; two runs give identical results.
+    verify:
+      automated: [kakeibo.financial-invariants]
+  AC03:
+    covers: [R04, R05]
+    cases: [dependency-manifest, import-scan, determinism, no-research-targets]
+    given: The delivered packages/domain.
+    when: Its manifest, imports, side effects and constants are inspected.
+    then: dependency-manifest shows no Hono, Neon, Cloudflare, UI, analytics or provider dependency. import-scan finds
+      no import of such a package or of clock, random, network or filesystem modules in domain logic. determinism
+      shows two test runs with identical results. no-research-targets finds no financial target, percentage or
+      recommendation constant.
+    verify:
+      automated: [kakeibo.domain-boundary]
+  AC04:
+    covers: [R06]
+    given: The Contract, Brief, Review result and Evidence of the lineage, and the R03 invariant list.
+    when: Independent review traces each invariant through them.
+    then: Every applicable invariant is stated in the Contract, decomposed by the Brief, addressed by the Review and
+      cited by the Evidence with its test; a missing link at any record fails.
+    verify:
+      review: [kakeibo.invariant-preservation]
+  AC05:
+    covers: [R07, R09]
+    given: The Kakeibo repository after the step and the Pactwright runtime's registered types.
+    when: validate and lifecycle status run and the graph and registry are inspected.
+    then: validate exits zero, status reports the lineages done, the graph contains only core record types and relations,
+      and no Kakeibo type, relation or store exists in Pactwright.
+    verify:
+      automated: [kakeibo.graph-state]
+  AC06:
+    covers: [R08]
+    cases: [readme, licence, security-route, contributing, specs-authority-set, deterministic-tests, synthetic-fixtures]
+    given: The Step 29 inventory and the Kakeibo repository after the step.
+    when: Each listed item is checked.
+    then: The item exists as R08 states, and where the inventory recorded it absent it was written during a Kakeibo
+      Delivery step whose lineage derives done. synthetic-fixtures additionally finds no real personal financial
+      export.
+    verify:
+      automated: [kakeibo.repository-foundation]
+  AC07:
+    covers: [R02, R05, R08, R09, R10]
+    given: The lineages, the delivered code, the recorded specification revisions and the test-command result.
+    when: Independent review inspects them.
+    then: The Contract cites the current specifications and their revisions match the record, every recorded difference
+      between the invariant list and the specifications is a Step 31 finding, no target or recommendation is encoded,
+      nothing Kakeibo-specific was generalised into Pactwright, no speculative structure was scaffolded, and the
+      test command ran and passed.
+    verify:
+      review: [kakeibo.acceptance-review]
+      approval: [kakeibo.delivery-landing-authority]

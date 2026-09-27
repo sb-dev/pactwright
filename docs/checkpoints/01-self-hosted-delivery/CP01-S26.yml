@@ -1,0 +1,76 @@
+# CP01 Step 26 — Deliver a real self-hosted Quick Start improvement
+id: CP01-S26
+requires: [CP01-S22, CP01-S23, CP01-S25]
+uses: [claude-code-adapter, adapter-commands, runtime-hand-off, mutation-api, evidence-closure-guards, validate-command]
+outputs:
+  self-hosted-quick-start-delivery: One Intent → Decision → Contract → Brief → Evidence lineage in the Pactwright
+    repository's own Project Graph that improves the README Quick Start using only behaviour proven in this checkpoint,
+    with every public claim it makes authorised by the Decision and Contract and its instructions executed in a
+    clean packed consumer.
+requirements:
+  R01:
+    source: [OSS#16, OSS#17, PRINCIPLES#3, PRINCIPLES#6, CORE#46]
+    statement: The Quick Start change shall be delivered through the seven rendered commands in the self-hosted project,
+      executed by the Claude Code adapter with the selected pack, whose session identities are recorded. The README
+      is changed only by the Delivery step, the Evidence names the change, and the lineage validates.
+  R02:
+    source: [OSS#18, OSS#24, PRINCIPLES#7, GUIDE#public-content-authority-before-project-intelligence, CORE#49]
+    statement: The Intent shall capture the requested outcome; the repository owner's proceed Decision selects a Contract
+      that states the product claims, positioning and identity choices the Quick Start may make and the proven
+      behaviour it may document. A claim the Contract does not authorise, or an identity or positioning choice the
+      model invents, is a Review failure, not an editorial preference.
+  R03:
+    source: [CHECKPOINT#1, GUIDE#npm-release-model, OSS#11]
+    statement: Every command and behaviour the Quick Start documents shall be proven by an accepted Checkpoint 1 criterion
+      result or by the Step 23 and 24 packed-consumer evidence. Its install instruction names the exact version this
+      checkpoint publishes, pactwright@0.0.2, never a floating specifier. It documents no Extension, GitHub integration,
+      Project Intelligence or provider-invoking lifecycle run as available.
+  R04:
+    source: [OSS#11, OSS#14, GUIDE#test-layers]
+    statement: The Quick Start's instructions shall be executed in a clean packed-consumer fixture built by the Step
+      23 procedure from archives packed from this candidate revision, with the exact-version install mapped to
+      those archives, and shall produce the documented results; the Evidence's verification facts cite that execution.
+  R05:
+    source: [GUIDE#repository-changes, CORE#55, SPEC00#3]
+    statement: The change shall land on the default branch through a pull request merged by the owner with CI / Verify
+      passing, as in Step 25, and pnpm verify passes on the candidate.
+acceptance:
+  AC01:
+    covers: [R01, R02]
+    given: The self-hosted project, the adapter session and the repository owner as approving actor.
+    when: The seven commands run in order, the owner selecting one alternative with notes.
+    then: The graph validates with one new lineage deriving done, the Decision records the owner's identity, the Contract
+      states the authorised claims and proven behaviour, the README changed only during the Delivery step, the Evidence
+      names the change and the session identities are recorded.
+    verify:
+      automated: [content.quick-start-lineage]
+      approval: [content.quick-start-contract-approval]
+  AC02:
+    covers: [R03]
+    cases: [delivered-text, unproven-command, floating-install, future-capability]
+    given: The delivered Quick Start, the inventory of commands and behaviours proven by accepted results, and a copy
+      whose only defect is the listed one, a command outside the inventory, an install line without the exact version,
+      or an Extension, GitHub, Project Intelligence or provider-invoking run documented as available.
+    when: The claim check reads each text.
+    then: delivered-text passes. Each copy fails naming the offending line.
+    verify:
+      automated: [content.quick-start-claims]
+  AC03:
+    covers: [R04]
+    given: A clean fixture built from archives of this candidate revision with the exact-version install mapped to
+      them.
+    when: The Quick Start's instructions are executed in order.
+    then: Every instruction succeeds with the documented result and the fixture ends in the state the Quick Start
+      describes.
+    verify:
+      automated: [content.quick-start-executes]
+  AC04:
+    covers: [R01, R02, R05]
+    given: The lineage, the delivered README, the AC03 result and the merged pull request.
+    when: Independent review inspects them.
+    then: Every claim in the Quick Start is authorised by the Contract and proven, no identity or positioning was invented,
+      the Evidence's statements match the diff and the AC03 execution, the README changed nowhere outside the Delivery
+      step, and the change landed with CI / Verify passing.
+    verify:
+      review: [content.quick-start-review]
+      approval: [content.quick-start-landing-authority]

@@ -1,6 +1,6 @@
 # Pactwright — Implementation Guide
 
-**Version:** 18  
+**Version:** 19  
 **Status:** Checkpoint index, engineering standard and release model
 
 ## Purpose
@@ -514,7 +514,7 @@ The `npm-release` environment admits deployments from version tags only and requ
 
 ### Preparing a development release
 
-From Checkpoint 2 onwards, create a release PR:
+From the `0.0.2` corrective release onwards, create a release PR. Before Checkpoint 2 activates GitHub, the pull request is merged by the repository owner with `CI / Verify` passing; the required-check state is repository configuration recorded in the run configuration. Update `CHANGELOG.md` first, from accepted Evidence recorded in the source that will be tagged, dating the entry and citing no Evidence outside that source's Project Graph.
 
 ```bash
 VERSION=0.0.N
@@ -574,10 +574,10 @@ Before `latest` moves to `0.1.0`:
 Published npm versions are immutable.
 
 - Do not overwrite or routinely unpublish a released version.
-- If the release workflow fails before publication, fix the cause and rerun safely.
+- If the release workflow fails before publication, fix the cause and rerun safely; a tag that published nothing may be deleted and recreated by the repository owner on the corrected commit.
 - A rerun publishes only the packages whose tagged version the registry does not hold, through the workflow's own per-package registry check; it never re-publishes or overwrites a version and never relies on the package manager's implicit skipping.
 - A release refused as superseded, because a higher version already holds the expected npm tag, is not rerun; a package it left unpublished ships in the next version, which the owner tags.
-- If a published release is defective, fix forward with the next version.
+- If a published release is defective, fix forward with the next version: the defective number is consumed, the next unused `0.0.x` becomes a corrective release, and the checkpoint's Release line is amended by the owner (npm release model).
 - Do not promote a known-defective `0.0.x` line to `latest`.
 - Moving a dist-tag to a previously published known-good version is an emergency recovery action and must be recorded as a Decision.
 
@@ -628,6 +628,8 @@ implementation verified
 → blocking feedback captured through Project Intelligence
 ```
 
+Before Project Intelligence exists, blocking failures are fixed within the checkpoint and material findings are captured as open Intents through normal Delivery (Implementation Principles §§14, 16).
+
 Checkpoint 9 additionally closes only after the generic failure matrix, Kakeibo seven-owner regression/Kei-defect lifecycle, `0.1.0` supported release, clean Quick Start smoke test and Kakeibo supported-family upgrade all pass.
 
 Graduation closes only after connected banking is proven through the existing Kakeibo ingestion abstraction without changing downstream financial, review or Kei semantics.
@@ -643,4 +645,4 @@ A non-blocking open design gap may cross a checkpoint only when:
 
 ---
 
-**Pactwright — Implementation Guide v18**
+**Pactwright — Implementation Guide v19**

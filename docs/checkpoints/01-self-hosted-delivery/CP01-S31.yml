@@ -1,0 +1,89 @@
+# CP01 Step 31 — Capture Checkpoint 1 findings as future project work
+id: CP01-S31
+requires: [CP01-S24, CP01-S25, CP01-S28, CP01-S30]
+uses: [claude-code-adapter, adapter-commands, runtime-hand-off, mutation-api, validate-command, lifecycle-status]
+outputs:
+  checkpoint-findings: A reviewed inventory of the Stage 1 to 10 execution findings, each classified once as material,
+    blocking or excluded with its reason, with every material finding captured as an open Intent in the Pactwright
+    repository's own Project Graph and every blocking finding fixed and re-verified within Checkpoint 1.
+requirements:
+  R01:
+    source: [PRINCIPLES#9, PRINCIPLES#16, GUIDE#transition-rule, SPEC00#5]
+    statement: The step shall review the execution evidence of Stages 1 to 10, the harness records, step results
+      and Kakeibo acceptance, for bootstrap-fixture friction, self-hosting friction, Kakeibo installation, workspace
+      bootstrap and onboarding problems, financial-invariant preservation, content gaps and every deviation between
+      specification and implementation, and shall also record execution friction, code quality, graph behaviour
+      and model and skill effectiveness without attributing an improvement to model choice alone.
+  R02:
+    source: [PRINCIPLES#16, PRINCIPLES#23, GUIDE#transition-rule]
+    statement: 'Each finding shall receive exactly one classification with its reason: material, when it names a Pactwright
+      responsibility failure, a manual intervention the runtime or the material should have made unnecessary, a
+      specification-to-implementation deviation or a content gap; blocking, when it falsifies an exit-gate line
+      or an accepted criterion''s evidence, or a documented command of the published release fails as documented;
+      excluded, when it is a Kakeibo-specific domain or product choice exposing no repeatable Pactwright responsibility
+      failure.'
+  R03:
+    source: [CORE#7, CORE#46, CORE#47, PRINCIPLES#14]
+    statement: For each material finding the step shall run /capture-intent through the adapter in the Pactwright repository
+      with the finding phrased as a requested outcome. Each Intent states the problem, outcome and constraints and
+      no plan, remains open with no Decision, and no code, specification or content change is made for it in
+      this step.
+  R04:
+    source: [GUIDE#transition-rule, CHECKPOINT#exit-gate, SPEC00#4]
+    statement: Each blocking finding shall be fixed within this checkpoint by correcting the candidate and re-running
+      the affected step contracts, with every affected accepted obligation re-verified; a fix after Step 25 is delivered
+      under CP01/R02, and a blocking defect in the published 0.0.2 is fixed forward under CP01-S28/R07. No blocking
+      finding is carried into Checkpoint 2.
+  R05:
+    source: [PRINCIPLES#16, PRINCIPLES#20, KAKEIBO_PROFILE#17]
+    statement: No Kakeibo-specific domain or product choice shall be generalised into Pactwright semantics; a repeatable
+      Pactwright responsibility failure may motivate a generic evaluation case or semantic change, and is captured
+      here as an Intent rather than implemented.
+  R06:
+    source: [CORE#57, CORE#44, GUIDE#repository-changes]
+    statement: validate and lifecycle status shall pass with the captured Intents, each an open lineage with no Decision,
+      the other lineages unchanged, and the commits land on the default branch through a pull request merged by
+      the owner with CI / Verify passing.
+  R07:
+    source: [SPEC00#4, CORE#56]
+    statement: The inventory shall be an execution evidence artefact outside the Project Graph, never a canonical record,
+      linking each finding to its Intent ID, its fix reference and re-verification result, or its exclusion reason.
+acceptance:
+  AC01:
+    covers: [R01, R02, R07]
+    given: The execution evidence of Stages 1 to 10.
+    when: The inventory is produced and read.
+    then: It cites the evidence of every step, records the four categories R01 names, gives every finding exactly
+      one classification with a reason, links each to an Intent ID, a fix reference or an exclusion reason, and
+      is stored outside specs/ and the canonical stores.
+    verify:
+      automated: [feedback.inventory]
+  AC02:
+    covers: [R03, R06]
+    cases: [captured-intents, validate, lifecycle-status, unchanged-lineages]
+    given: The Pactwright repository after the step and the inventory.
+    when: The graph is inspected and the listed command runs.
+    then: captured-intents shows one Intent record per material finding, phrased as an outcome, open and with no
+      Decision, resolves edge, Contract or code change. validate exits zero. lifecycle-status reports each captured
+      Intent open. unchanged-lineages shows every earlier lineage byte-identical.
+    verify:
+      automated: [feedback.captured-intents]
+  AC03:
+    covers: [R04]
+    cases: [no-blocking-open, corrected-and-reverified]
+    given: The inventory and the final candidate revision.
+    when: Each blocking finding's fix reference is followed.
+    then: no-blocking-open finds no blocking finding without a fix. corrected-and-reverified finds, for each fix,
+      fresh passing results of the affected step contracts on the final candidate revision and, for a fix after
+      Step 25, a done Delivery lineage naming it.
+    verify:
+      automated: [feedback.blocking-resolved]
+  AC04:
+    covers: [R02, R03, R05]
+    given: The inventory, the captured Intents and the Stage 10 findings.
+    when: Independent review inspects them.
+    then: Every classification is supported by its reason, no material finding was excluded, each Intent states an
+      outcome and no plan, no Kakeibo-specific choice was generalised, and nothing was changed for an open Intent.
+    verify:
+      review: [feedback.classification-review]
+      approval: [feedback.landing-authority]
