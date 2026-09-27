@@ -1,6 +1,6 @@
-# Checkpoint 1 — Self-Hosted Delivery: settings and requirements every step
-# contract in this directory inherits. Goal, scope and step order live in
-# ../01-self-hosted-delivery.md.
+# Checkpoint 1 — Self-Hosted Delivery: settings and requirements that every step
+# contract in this directory and every prose step inherit. Goal, scope and step
+# order live in ../01-self-hosted-delivery.md.
 format: 2
 checkpoint: CP01
 run_model: software-bootstrap
@@ -13,6 +13,20 @@ sources:
   GUIDE: ../00-implementation-guide.md
   KAKEIBO_PROFILE: ../00-kakeibo-acceptance-profile.md
   SPEC00: ../../specs/00-checkpoint-step-contract-and-delivery-tasks.md
+# Steps kept in their reviewed prose form (Spec 00 §2): the SHA-256 of each step
+# section as reviewed under T2 at ac08ec9 (Stages 6–11 exit record). A change to
+# the prose needs a reviewed amendment that records the new hash.
+prose_steps:
+  CP01-S22: sha256:c9938f478797cde030da9b266c615f26dd3d9bfdf1dd3e1b5dee55af2a58b0df
+  CP01-S23: sha256:d5ce78c701f384c646d9777a4113b126b108fcf6e658efe7f511c3614bdb6849
+  CP01-S24: sha256:42fed8942ecff796145d9fee6d8f2517e3e7ced3462ee10cf664152c5d419263
+  CP01-S25: sha256:90f83a51a972af9b81a4cefdce677cdc737a6f29f51a581bd594289005fa7557
+  CP01-S26: sha256:f180df055c8019d5dc133759a1ab48e112ff658c0475672697079282d75c136b
+  CP01-S27: sha256:ff57195ca529c6b6bb66e817f12c0d6e1aa5862c263a0441e9bdc329fd7b7274
+  CP01-S28: sha256:55dad8cd0e17b8c6595c16a76d98de358761cf1e6863d4aaa39b4c400d775ef1
+  CP01-S29: sha256:6bbefbc92a7bcf09177ee4f4b32e1983a96de60ea9bd46cdd0a530c92429fb53
+  CP01-S30: sha256:c7b0144a6bf9ce98d0c8e4218d02b2766a993b2ba6c2b6474888f7cb86c333af
+  CP01-S31: sha256:1b668294b6a5b74e2a0b67e70ff8b344f97043d3ad3ab046ed150017795d89da
 requirements:
   R01:
     source: [GUIDE#verification]

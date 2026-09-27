@@ -1,5 +1,6 @@
 // Validates checkpoint contract directories (Spec 00 §§2–3): the format schema,
-// cross-file references, source citations and the conversion crosswalk.
+// cross-file references, source citations, the conversion crosswalk and the
+// reviewed prose of unconverted steps.
 //
 // Usage: pnpm contracts:check [--skip-source] [checkpoint-dir ...]
 // With no directory, every docs/checkpoints/* directory holding a
@@ -9,6 +10,7 @@
 // full clone an unavailable source revision is an error.
 
 import { execFileSync } from "node:child_process";
+import { createHash } from "node:crypto";
 import { existsSync, readdirSync, readFileSync } from "node:fs";
 import { basename, dirname, join, normalize, relative } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
@@ -22,6 +24,7 @@ type Contract = {
   id?: string;
   checkpoint?: string;
   sources?: Record<string, string>;
+  prose_steps?: Record<string, string>;
   requires?: string[];
   requirements?: Record<string, Requirement>;
   acceptance?: Record<string, Criterion>;
@@ -96,15 +99,17 @@ const splitSentences = (line: string): string[] =>
     .map(norm)
     .filter(Boolean);
 
-/** Splits prompt-style step prose (References/Run/Expected/Verify) into keyed units. */
-export function splitUnits(markdown: string): StepUnits {
-  const sections = new Map<number, { title: string; lines: string[] }>();
+type Section = { heading: string; title: string; lines: string[] };
+
+/** Each step section: its `### Step N — title` heading and the lines up to the next step or `##` heading. */
+export function stepSections(markdown: string): Map<number, Section> {
+  const sections = new Map<number, Section>();
   let current: number | undefined;
   for (const line of markdown.split("\n")) {
     const heading = /^### Step (\d+) — (.*)$/.exec(line);
     if (heading) {
       current = Number(heading[1]);
-      sections.set(current, { title: heading[2] ?? "", lines: [] });
+      sections.set(current, { heading: line, title: heading[2] ?? "", lines: [] });
       continue;
     }
     if (line.startsWith("## ")) {
@@ -113,9 +118,24 @@ export function splitUnits(markdown: string): StepUnits {
     }
     if (current !== undefined) sections.get(current)?.lines.push(line);
   }
+  return sections;
+}
 
+/**
+ * SHA-256 of a step section as recorded in `prose_steps`: the heading and its
+ * lines joined by newlines, without trailing whitespace on any line or trailing
+ * blank lines.
+ */
+export function proseHash(section: Section): string {
+  const lines = [section.heading, ...section.lines].map((l) => l.trimEnd());
+  while (lines.length > 0 && lines[lines.length - 1] === "") lines.pop();
+  return `sha256:${createHash("sha256").update(lines.join("\n")).digest("hex")}`;
+}
+
+/** Splits prompt-style step prose (References/Run/Expected/Verify) into keyed units. */
+export function splitUnits(markdown: string): StepUnits {
   const result: StepUnits = {};
-  for (const [num, section] of sections) {
+  for (const [num, section] of stepSections(markdown)) {
     const sid = `S${String(num).padStart(2, "0")}`;
     const units: Unit[] = [];
     const counters = new Map<string, number>();
@@ -332,6 +352,24 @@ export function validateCheckpointDir(
     }
     checkRefs(sid, doc.requirements ?? {});
     checkCoverage(sid, doc);
+  }
+
+  // Every step is either converted to a contract or kept as reviewed prose (Spec 00 §2).
+  const sections = stepSections(markdown);
+  const prose = checkpoint.prose_steps ?? {};
+  for (const [sid, hash] of Object.entries(prose)) {
+    const section = sid.startsWith(`${cpid}-S`) ? sections.get(Number(sid.slice(-2))) : undefined;
+    if (steps.includes(sid)) errors.push(`${sid} has both a contract and a prose_steps entry`);
+    else if (!section) errors.push(`prose step ${sid} has no step heading in ${rel(`${dir}.md`)}`);
+    else if (proseHash(section) !== hash) {
+      errors.push(`prose step ${sid} differs from its reviewed text (${proseHash(section)})`);
+    }
+  }
+  for (const num of sections.keys()) {
+    const sid = `${cpid}-S${String(num).padStart(2, "0")}`;
+    if (!steps.includes(sid) && !(sid in prose)) {
+      errors.push(`Step ${num} has neither a contract nor a prose_steps entry`);
+    }
   }
 
   const crosswalkFile = join(dir, "crosswalk.yml");

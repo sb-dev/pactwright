@@ -141,6 +141,27 @@ describe("checkpoint contracts", () => {
       options: { skipUnavailableSources: false },
     },
     {
+      name: "step with neither a contract nor a prose entry",
+      file: "checkpoint.yml",
+      from: "  CP01-S31: sha256:",
+      to: "  # CP01-S31: sha256:",
+      expect: /Step 31 has neither a contract nor a prose_steps entry/,
+    },
+    {
+      name: "prose step edited after review",
+      file: "../01-self-hosted-delivery.md",
+      from: "Review the execution of Stages 1–10,",
+      to: "Review the execution of Stages 1–9,",
+      expect: /prose step CP01-S31 differs from its reviewed text/,
+    },
+    {
+      name: "prose entry for a converted step",
+      file: "checkpoint.yml",
+      from: "prose_steps:\n",
+      to: "prose_steps:\n  CP01-S21: sha256:" + "0".repeat(64) + "\n",
+      expect: /CP01-S21 has both a contract and a prose_steps entry/,
+    },
+    {
       name: "non-verbatim crosswalk quote",
       file: "crosswalk.yml",
       from: '"Create the Pactwright runtime and CLI package foundation."',

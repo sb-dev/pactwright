@@ -59,15 +59,19 @@
 # review is ../../research-logs/2026-09-26-cp01-stage-5-exit-review.md. No
 # question is deleted.
 #
-# Stages 6-11 (Q57-Q66) stay in prose form by the owner's decision; they have
-# no contracts, sources or entries here. Their T2 review and decisions:
+# Stages 6-11 (Q57-Q67) are unconverted steps (Spec 00 v6 section 2): they keep
+# their prose form by the owner's decision, checkpoint.yml records their
+# reviewed hashes under prose_steps, and they have no contracts, sources or
+# entries here until converted. Their T2 review and decisions:
 # ../../research-logs/2026-09-27-cp01-stages-6-11-b22-packed-consumer-proofs.md
-# B22 Q57,Q58,Q59; B23 Q60; B24 Q61; B25 Q62; B26 Q63,Q64; B27 Q65,Q66.
+# B22 Q57,Q58,Q59; B23 Q60; B24 Q61; B25 Q62; B26 Q63,Q64; B27 Q65,Q66;
+# B28 Q67 (Spec 00 v6, schema and checker).
 # Applied clauses: Implementation Guide v19 (Preparing a development release,
 # Release failure, Transition rule), Checkpoint 1 v31 (sections 1, 2 and 3,
 # Stage 8, 9 and 10 text, Steps 22-31 prose, exit gate) and checkpoint.yml
-# (CP01/R02-R05). The owner approved the Q60, Q61, Q62/Q65 and Q64 decisions
-# in the producing session on 2026-09-27 (exit record). The section 7 review is
+# (CP01/R02-R05, prose_steps). The owner approved the Q60, Q61, Q62/Q65 and Q64
+# decisions in the producing session on 2026-09-27 and directed the Q67
+# resolution (exit record). The section 7 review is
 # ../../research-logs/2026-09-27-cp01-stages-6-11-exit-review.md. No question
 # is deleted.
 sources:
@@ -1402,3 +1406,6 @@ open_questions:
   - id: Q66
     affects: [CP01/R02, CP01/R03, CP01/R04, CP01/R05, CP01/AC02, CP01/AC03, CP01/AC04, CP01/AC05]
     question: "Spec 00 T2 requires checkpoint-wide simplicity, graph-boundary and self-hosting obligations, and the exit gate lists thirty-one closing conditions with no named owners. What are those obligations, where are they declared and inherited, and how is each exit-gate line bound to what proves it without maintaining a second acceptance registry?"
+  - id: Q67
+    affects: [CP01-S22, CP01-S23, CP01-S24, CP01-S25, CP01-S26, CP01-S27, CP01-S28, CP01-S29, CP01-S30, CP01-S31]
+    question: "Spec 00 section 2 replaces every step's prose with a YAML contract, and T2 reviews the converted contract. By the owner's decision Steps 22-31 keep their prose form. How does Spec 00 admit a step kept in prose, how do pnpm contracts:check and the harness detect such a step rather than miss it, how is its reviewed prose protected from unreviewed edits, and when is it converted so that it can run?"

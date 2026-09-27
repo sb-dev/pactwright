@@ -1,7 +1,7 @@
 # Pactwright — Checkpoint Step Contract and Delivery Tasks
 
-**Version:** 5  
-**Date:** 24 September 2026  
+**Version:** 6  
+**Date:** 27 September 2026  
 **Purpose:** Replace checkpoint prompts with requirements and acceptance criteria, then execute them through progressively self-hosted run models.
 
 ## 1. Execution model
@@ -30,13 +30,15 @@ docs/checkpoints/
 ├── contract.schema.json          minimal format schema
 ├── 01-self-hosted-delivery.md    goal, scope, Stage/Step headings, deliverable summaries, exit gate
 └── 01-self-hosted-delivery/
-    ├── checkpoint.yml            common settings and shared requirements
+    ├── checkpoint.yml            common settings, shared requirements and prose-step hashes
     ├── CP01-S01.yml              one contract per step, named by step ID
     ├── …
     └── crosswalk.yml             conversion record: replaced prose → requirement/criterion IDs
 ```
 
 The deliverable summary restates the contract's outputs and adds no obligation. If the two disagree, the contract governs.
+
+The owner may keep a step in its prose form instead. Such an **unconverted step** keeps its full section in the checkpoint file, and that prose is its definition. The shared requirements in `checkpoint.yml` and the owning specifications apply to it as to a contract. It is listed in `checkpoint.yml` under `prose_steps` with the SHA-256 of its section as reviewed: the `### Step` heading and the lines up to the next step or `##` heading, without trailing whitespace or trailing blank lines. A change to that prose is an amendment: it needs review and records the new hash. Each step is either converted or listed, never both and never neither. An unconverted step has no crosswalk source or entries until it is converted.
 
 Declare common settings once at checkpoint level, in `checkpoint.yml`:
 
@@ -47,6 +49,8 @@ run_model: software-bootstrap
 sources:
   CORE: ../../specs/01-pactwright-core-system-and-lifecycle.md
   DISTRIBUTION: ../../specs/02-distribution-agent-packs-extensions-and-evaluation.md
+prose_steps:                     # only when a step stays unconverted
+  CP01-S22: sha256:<64 hex digits>
 ```
 
 `software-bootstrap` is a proposed model identifier. Source paths are relative to `checkpoint.yml`. `CORE#15` identifies numbered section 15; a heading without a section number, in any source, is cited by its GitHub heading anchor, such as `GUIDE#replay-provenance`. The harness resolves and pins the actual source revisions for each run.
@@ -55,7 +59,7 @@ Shared requirements, mandatory review policy and checkpoint exit criteria are de
 
 While a checkpoint is converted, `crosswalk.yml` records where each obligation of the replaced prose went, quoting it verbatim. Its `sources` list names, for each set of converted steps, the checkpoint revision whose prose they replaced, so stages converted at different revisions each quote their own text. It is conversion evidence for T1 and T2 review, not a plan to maintain.
 
-`pnpm contracts:check` validates every checkpoint directory that has a `checkpoint.yml`. It checks the format schema, step identity, key order, requirement coverage, `requires` targets and source citations. It also checks the crosswalk's IDs and, reading each step's replaced text from its source revision in Git history, its verbatim quotes. `pnpm test` runs the same checks.
+`pnpm contracts:check` validates every checkpoint directory that has a `checkpoint.yml`. It checks the format schema, step identity, key order, requirement coverage, `requires` targets and source citations, that every step heading of the checkpoint file has a contract or a `prose_steps` entry but not both, and that each unconverted step's section still has its recorded hash. It also checks the crosswalk's IDs and, reading each step's replaced text from its source revision in Git history, its verbatim quotes. `pnpm test` runs the same checks.
 
 ## 3. Compact step format
 
@@ -186,7 +190,9 @@ A step advances only when its required outputs, every criterion/case, inherited 
 
 Record definition/source revisions, inputs, candidate identity, verifier/reviewer identity and results separately from checkpoint definitions. Freeze these inputs for an attempt. Scope or acceptance changes require a visible amendment; preserve the earlier instructions and evidence. Re-verify affected accepted obligations after changes, and evaluate the integrated checkpoint at its exit gate.
 
-Missing authority, unavailable resources, contradictory requirements or exhausted execution limits pause the run as **unaccepted and resumable**. They neither grant acceptance nor justify an uncontrolled loop. Publishing and other external effects require their declared authority and receipts; retries must not duplicate them.
+The harness dispatches only converted steps. When the next eligible step is unconverted, the run pauses as below until the step is converted. Its conversion quotes the reviewed prose verbatim in the crosswalk, adds no obligation and is itself reviewed; a semantic change needs a T2 review of its own.
+
+Missing authority, unavailable resources, contradictory requirements, an unconverted step or exhausted execution limits pause the run as **unaccepted and resumable**. They neither grant acceptance nor justify an uncontrolled loop. Publishing and other external effects require their declared authority and receipts; retries must not duplicate them.
 
 ## 5. Delivery tasks
 
@@ -194,11 +200,11 @@ These are work definitions, not progress records. Execute them in dependency ord
 
 | Task | Work | Completion evidence |
 |---|---|---|
-| **T1 — Convert Checkpoint 1** | Replace every CP1 prompt with the compact contract. Retain headings, full scope, shell commands that remain valid and every exit obligation. Add the minimal format schema and generate an old-obligation-to-requirement/criterion crosswalk. | Every original obligation is accounted for; IDs, source references and requirement/criterion mappings validate. No second manually maintained plan is introduced. |
-| **T2 — Review the converted contract** | Check canonical fidelity, positive/negative coverage, step dependencies, verification methods and complete product scope. Resolve necessary semantic decisions in the owning specifications. Define checkpoint-wide simplicity, graph-boundary and self-hosting obligations. | Independent review finds no unresolved instruction ambiguity or impossible prerequisite needed to execute CP1. Each criterion has a specified verification method, with later integration proofs explicitly allocated. Verifiers need not all exist yet. |
+| **T1 — Convert Checkpoint 1** | Replace every CP1 prompt with the compact contract, except the steps the owner keeps as unconverted steps (§2). Retain headings, full scope, shell commands that remain valid and every exit obligation. Add the minimal format schema and generate an old-obligation-to-requirement/criterion crosswalk. | Every original obligation is accounted for; IDs, source references and requirement/criterion mappings validate. Every step is converted or listed as unconverted. No second manually maintained plan is introduced. |
+| **T2 — Review the converted contract** | Review each converted contract, and each unconverted step's prose in place. Check canonical fidelity, positive/negative coverage, step dependencies, verification methods and complete product scope. Resolve necessary semantic decisions in the owning specifications. Define checkpoint-wide simplicity, graph-boundary and self-hosting obligations. | Independent review finds no unresolved instruction ambiguity or impossible prerequisite needed to execute CP1. Each criterion, and each obligation of an unconverted step, has a specified verification method, with later integration proofs explicitly allocated. Each unconverted step's reviewed hash is recorded. Verifiers need not all exist yet. |
 | **T3 — Build the CP1 harness and software run model** | Implement contract parsing, dependency selection, producer/reviewer roles, skill selection, verifier bindings, evidence capture, correction loops and resume. Protect accepted definitions from candidate edits. Resolve run targets and authorised effects before dispatch. | A bounded fixture project runs through the complete produce–verify–review–correct loop without hand-written per-step prompts or manual progress edits. |
 | **T4 — Prove the harness cannot accept false completion** | Test missing outputs, no-op producers, weak or missing checks, denied operations, stale review, changed inputs, altered acceptance, interruption and repeated external effects. Use valid controls and deliberately faulty candidates. | Invalid candidates cannot advance; corrected valid candidates can. Resume preserves the right evidence and does not repeat authorised external effects blindly. Verifier/test adequacy is independently reviewed. |
-| **T5 — Implement and accept Checkpoint 1** | Prepare an isolated candidate with an explicit retained/replaced boundary; prevent reference code or stale binaries from satisfying its checks. Run every converted step through the proven harness. Build verifiers alongside capabilities and review them independently. Use accepted Pactwright features as soon as the declared self-hosting threshold is met. Retain distribution, upgrades, evaluation, clean consumers, self-hosted work, learning material, authorised release and external acceptance. | Every CP1 criterion and integrated exit obligation has current evidence, including actual published/external proofs. Capture execution friction, code quality, graph behaviour and model/skill effectiveness without attributing improvements to model choice alone. |
+| **T5 — Implement and accept Checkpoint 1** | Prepare an isolated candidate with an explicit retained/replaced boundary; prevent reference code or stale binaries from satisfying its checks. Run every converted step through the proven harness, converting each unconverted step as §4 describes before it runs. Build verifiers alongside capabilities and review them independently. Use accepted Pactwright features as soon as the declared self-hosting threshold is met. Retain distribution, upgrades, evaluation, clean consumers, self-hosted work, learning material, authorised release and external acceptance. | Every CP1 criterion and integrated exit obligation has current evidence, including actual published/external proofs. Capture execution friction, code quality, graph behaviour and model/skill effectiveness without attributing improvements to model choice alone. |
 | **T6 — Design Pactwright-backed run models** | Use CP1 execution evidence to design the reusable orchestration model and its software instance. Define shared inputs, deliverables, role/skill composition and domain verifiers for research, games, music, video and campaigns, including mixed-skill work. Separate shared mechanics from domain policy. | Reviewed designs explain what reuses CP1, what remains domain-specific and which later capabilities each model needs. No parallel canonical lifecycle or completion graph is proposed. |
 | **T7 — Update the owning specifications and remaining checkpoints** | Place run-model semantics with their correct owner. Convert remaining checkpoint prompts to contracts in the existing files. Allocate implementation/adoption of successor models to explicit steps, with complete earlier-feature usage and integration proofs. | The dependency plan is feasible, original checkpoint obligations remain covered, and each checkpoint declares which prior features it must use. Optional Extension and Production Skills integration stays at its owning checkpoint unless explicitly amended. |
 | **T8 — Implement and adopt the first Pactwright-backed run model** | Use the accepted CP1 harness/runtime to build the successor software model in its assigned next-checkpoint step. Route governed work through Pactwright's Contract, Brief, lifecycle and Evidence mechanisms; migrate execution links through supported operations. | The successor completes a real step through Pactwright, including correction and resume, without manual graph maintenance or retrospective Evidence. It is accepted before it replaces the bootstrap runner for subsequent work. |
@@ -218,10 +224,10 @@ Step definitions remain project plans. Pactwright owns authorised graph mutation
 
 ## Source basis
 
-Version 2 edited the supplied v1 proposal; version 3 moves each step contract into its own file. Neither re-audits the repository or claims that any task above has run. The original example and capability boundaries were grounded in `sb-dev/pactwright` at `19c66d5f2368932ff05306db1fae8da8ec5810dd`:
+Version 2 edited the supplied v1 proposal; version 3 moves each step contract into its own file; version 6 adds unconverted steps (§§2, 4, 5). Neither re-audits the repository or claims that any task above has run. The original example and capability boundaries were grounded in `sb-dev/pactwright` at `19c66d5f2368932ff05306db1fae8da8ec5810dd`:
 
 - [Checkpoint 1](https://github.com/sb-dev/pactwright/blob/19c66d5f2368932ff05306db1fae8da8ec5810dd/docs/checkpoints/01-self-hosted-delivery.md), particularly Step 3 and the exit gate.
 - [Core specification](https://github.com/sb-dev/pactwright/blob/19c66d5f2368932ff05306db1fae8da8ec5810dd/docs/specs/01-pactwright-core-system-and-lifecycle.md), especially §§15, 34–38 and 53–57.
 - [Implementation Principles](https://github.com/sb-dev/pactwright/blob/19c66d5f2368932ff05306db1fae8da8ec5810dd/docs/checkpoints/00-implementation-principles.md), §§3–6.
 
-**Pactwright — Checkpoint Step Contract and Delivery Tasks v5**
+**Pactwright — Checkpoint Step Contract and Delivery Tasks v6**
