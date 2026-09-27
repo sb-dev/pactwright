@@ -13,6 +13,7 @@ export default tseslint.config(
       "build/",
       "coverage/",
       ".turbo/",
+      "tools/*/test/fixtures/",
       ".claude/",
       ".pnpm-store/",
       ".tmp-pactwright-test-*/",
@@ -22,7 +23,14 @@ export default tseslint.config(
   js.configs.recommended,
   ...tseslint.configs.recommended,
   {
-    files: ["src/**/*.ts", "scripts/**/*.ts", "tests/**/*.ts", "packages/*/src/**/*.ts"],
+    files: [
+      "src/**/*.ts",
+      "scripts/**/*.ts",
+      "tests/**/*.ts",
+      "packages/*/src/**/*.ts",
+      "tools/*/src/**/*.ts",
+      "tools/*/test/**/*.ts",
+    ],
     languageOptions: { ecmaVersion: 2022, sourceType: "module" },
   },
 );

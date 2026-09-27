@@ -1,0 +1,29 @@
+{
+  "name": "@pactwright/checkpoint-harness",
+  "version": "0.0.0",
+  "private": true,
+  "description": "Bootstrap harness that loads checkpoint contracts and prepares executable work (Spec 00 T3).",
+  "type": "module",
+  "scripts": {
+    "contracts:check": "tsx src/checkpoint-contracts.ts",
+    "harness": "tsx src/cli.ts",
+    "typecheck": "tsc --noEmit",
+    "test": "node --test --import tsx test/*.test.ts"
+  },
+  "dependencies": {
+    "ajv": "^8.20.0",
+    "commander": "^14.0.3",
+    "graphology": "^0.26.0",
+    "graphology-traversal": "^0.3.1",
+    "js-yaml": "^4.3.1",
+    "safe-stable-stringify": "^2.5.0",
+    "tar": "^7.5.22"
+  },
+  "devDependencies": {
+    "@types/js-yaml": "^4.0.9",
+    "@types/node": "^22.20.1",
+    "graphology-types": "^0.24.8",
+    "tsx": "^4.23.12",
+    "typescript": "^5.9.3"
+  }
+}

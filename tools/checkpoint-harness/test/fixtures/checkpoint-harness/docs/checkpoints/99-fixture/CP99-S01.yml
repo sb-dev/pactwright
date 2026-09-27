@@ -1,0 +1,23 @@
+# CP99 Step 1 — Parse the configuration
+id: CP99-S01
+requires: []
+outputs:
+  config-parser: A parser for the fixture configuration.
+requirements:
+  R01:
+    source: [FIX#1]
+    statement: The parser shall accept a valid configuration and reject an invalid one.
+acceptance:
+  AC01:
+    covers: [R01]
+    cases: [valid, invalid]
+    given: A configuration of the listed kind.
+    when: The parser reads it.
+    then: The parser accepts the valid one and rejects the invalid one.
+    verify: {automated: [parser.accepts, parser.rejects]}
+  AC02:
+    covers: [R01]
+    given: The parser source.
+    when: A reviewer inspects it.
+    then: The parser has one validation path.
+    verify: {review: [parser.single-path]}

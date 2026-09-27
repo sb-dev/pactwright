@@ -3,6 +3,8 @@
 // reviewed prose of unconverted steps.
 //
 // Usage: pnpm contracts:check [--skip-source] [checkpoint-dir ...]
+// The checkpoint harness (./contracts.ts) plans runs from loadCheckpointDir,
+// so the checker and the harness share one validated parse.
 // With no directory, every docs/checkpoints/* directory holding a
 // checkpoint.yml is checked. --skip-source skips the verbatim crosswalk checks,
 // which read the replaced checkpoint text from Git history. In a shallow clone,
@@ -12,20 +14,33 @@
 import { execFileSync } from "node:child_process";
 import { createHash } from "node:crypto";
 import { existsSync, readdirSync, readFileSync } from "node:fs";
-import { basename, dirname, join, normalize, relative } from "node:path";
+import { basename, dirname, isAbsolute, join, normalize, relative } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 
 import { Ajv2020 } from "ajv/dist/2020.js";
 import yaml from "js-yaml";
 
-type Requirement = { source: string[]; statement: string };
-type Criterion = { covers: string[]; cases?: string[]; verify: Record<string, string[]> };
-type Contract = {
+export type Requirement = { source: string[]; statement: string };
+export type Method = "automated" | "review" | "approval";
+export type Criterion = {
+  covers: string[];
+  cases?: string[];
+  given: string;
+  when: string;
+  then: string;
+  verify: Partial<Record<Method, string[]>>;
+};
+/** A checkpoint.yml or step contract; its shape holds once the format schema accepted it. */
+export type Contract = {
   id?: string;
   checkpoint?: string;
+  run_model?: string;
   sources?: Record<string, string>;
   prose_steps?: Record<string, string>;
   requires?: string[];
+  inputs?: Record<string, string>;
+  uses?: string[];
+  outputs?: Record<string, string>;
   requirements?: Record<string, Requirement>;
   acceptance?: Record<string, Criterion>;
   [key: string]: unknown;
@@ -44,6 +59,20 @@ type Crosswalk = {
 };
 
 export type Unit = { key: string; text: string };
+
+/** A checkpoint directory's parsed files; use them only when `errors` is empty. */
+export type CheckpointLoad = {
+  errors: string[];
+  checkpoint: Contract | undefined;
+  /** Step contracts by step ID, in file-name order. */
+  steps: Map<string, Contract>;
+  /** Each step contract's file bytes, by step ID. */
+  stepTexts: Map<string, string>;
+  /** Checkpoint markdown step sections, by step number. */
+  sections: Map<number, Section>;
+  /** Declared source keys resolved to absolute paths. */
+  sources: Map<string, string>;
+};
 export type StepUnits = Record<string, { title: string; units: Unit[] }>;
 
 export type ValidateOptions = {
@@ -99,7 +128,7 @@ const splitSentences = (line: string): string[] =>
     .map(norm)
     .filter(Boolean);
 
-type Section = { intro: string[]; heading: string; title: string; lines: string[] };
+export type Section = { intro: string[]; heading: string; title: string; lines: string[] };
 
 const STEP_HEADING = /^### Step (\d+) — (.*)$/;
 
@@ -239,7 +268,8 @@ export function githubSlug(heading: string): string {
 
 const anchorCache = new Map<string, { numbers: Set<string>; slugs: Set<string> }>();
 
-function anchors(path: string): { numbers: Set<string>; slugs: Set<string> } {
+/** Numbered-section and GitHub-anchor headings of a markdown source. */
+export function anchors(path: string): { numbers: Set<string>; slugs: Set<string> } {
   const cached = anchorCache.get(path);
   if (cached) return cached;
   const numbers = new Set<string>();
@@ -278,15 +308,46 @@ export function validateCheckpointDir(
   checkpointDir: string,
   options: ValidateOptions = {},
 ): string[] {
+  return loadCheckpointDir(repoRoot, checkpointDir, options).errors;
+}
+
+/** Parses and validates a checkpoint contract directory, returning its errors and parsed files. */
+export function loadCheckpointDir(
+  repoRoot: string,
+  checkpointDir: string,
+  options: ValidateOptions = {},
+): CheckpointLoad {
   const errors: string[] = [];
+  const steps = new Map<string, Contract>();
+  const stepTexts = new Map<string, string>();
+  const result = (): CheckpointLoad => ({
+    errors,
+    checkpoint,
+    steps,
+    stepTexts,
+    sections,
+    sources,
+  });
   const dir = join(repoRoot, checkpointDir);
   const rel = (p: string): string => relative(repoRoot, p);
   const schema = JSON.parse(
     readFileSync(join(repoRoot, "docs/checkpoints/contract.schema.json"), "utf8"),
   ) as object;
   const validate = new Ajv2020({ allErrors: true }).compile(schema);
-  const load = (file: string): Contract => {
-    const data = yaml.load(readFileSync(file, "utf8")) as Contract;
+  // Parses YAML, reporting duplicate keys and syntax errors instead of throwing.
+  const parse = (file: string, text: string): unknown => {
+    try {
+      return yaml.load(text);
+    } catch (e) {
+      errors.push(
+        `${rel(file)}: yaml: ${e instanceof Error ? e.message.split("\n")[0] : String(e)}`,
+      );
+      return undefined;
+    }
+  };
+  const load = (file: string, text = readFileSync(file, "utf8")): Contract | undefined => {
+    const data = parse(file, text) as Contract | undefined;
+    if (data === undefined) return undefined;
     if (!validate(data)) {
       for (const e of validate.errors ?? []) {
         errors.push(`${rel(file)}: schema: ${e.instancePath || "/"} ${e.message ?? ""}`);
@@ -296,13 +357,19 @@ export function validateCheckpointDir(
   };
 
   const checkpointFile = join(dir, "checkpoint.yml");
-  if (!existsSync(checkpointFile)) return [`${rel(dir)}: checkpoint.yml missing`];
-  const checkpoint = load(checkpointFile);
-  const cpid = checkpoint.checkpoint ?? "";
+  const found = existsSync(checkpointFile);
+  const checkpoint = found ? load(checkpointFile) : undefined;
   const sources = new Map<string, string>();
+  let sections = new Map<number, Section>();
+  if (!found) errors.push(`${rel(dir)}: checkpoint.yml missing`);
+  if (!checkpoint) return result();
+  const cpid = checkpoint.checkpoint ?? "";
   for (const [key, path] of Object.entries(checkpoint.sources ?? {})) {
     const resolved = normalize(join(dir, path));
-    if (existsSync(resolved)) sources.set(key, resolved);
+    const fromRoot = relative(repoRoot, resolved);
+    if (fromRoot.startsWith("..") || isAbsolute(fromRoot)) {
+      errors.push(`${rel(checkpointFile)}: source ${key} escapes the repository: ${path}`);
+    } else if (existsSync(resolved)) sources.set(key, resolved);
     else errors.push(`${rel(checkpointFile)}: source ${key} does not exist: ${path}`);
   }
 
@@ -352,16 +419,20 @@ export function validateCheckpointDir(
   const stepFiles = readdirSync(dir)
     .filter((f) => /^CP\d{2}-S\d{2}\.yml$/.test(f))
     .sort();
-  const steps: string[] = [];
+  const stepIds: string[] = [];
   for (const file of stepFiles) {
     const path = join(dir, file);
     const sid = basename(file, ".yml");
     const num = Number(sid.slice(-2));
-    steps.push(sid);
-    const doc = load(path);
+    stepIds.push(sid);
+    const text = readFileSync(path, "utf8");
+    const doc = load(path, text);
+    if (!doc) continue;
+    steps.set(sid, doc);
+    stepTexts.set(sid, text);
     if (doc.id !== sid) errors.push(`${rel(path)}: id ${String(doc.id)} does not match file name`);
     const heading = new RegExp(`^### Step ${num} — (.*)$`, "m").exec(markdown)?.[1];
-    const first = readFileSync(path, "utf8").split("\n")[0];
+    const first = text.split("\n")[0];
     if (first !== `# ${cpid} Step ${num} — ${heading ?? "?"}`) {
       errors.push(
         `${rel(path)}: first line must be "# ${cpid} Step ${num} — <checkpoint heading>"`,
@@ -392,11 +463,11 @@ export function validateCheckpointDir(
   for (const num of new Set(headings.filter((n, i) => headings.indexOf(n) !== i))) {
     errors.push(`Step ${num} has more than one heading`);
   }
-  const sections = stepSections(markdown);
+  sections = stepSections(markdown);
   const prose = checkpoint.prose_steps ?? {};
   for (const [sid, hash] of Object.entries(prose)) {
     const section = sid.startsWith(`${cpid}-S`) ? sections.get(Number(sid.slice(-2))) : undefined;
-    if (steps.includes(sid)) errors.push(`${sid} has both a contract and a prose_steps entry`);
+    if (stepIds.includes(sid)) errors.push(`${sid} has both a contract and a prose_steps entry`);
     else if (!section) errors.push(`prose step ${sid} has no step heading in ${rel(`${dir}.md`)}`);
     else if (proseHash(section) !== hash) {
       errors.push(`prose step ${sid} differs from its reviewed text (${proseHash(section)})`);
@@ -404,17 +475,19 @@ export function validateCheckpointDir(
   }
   for (const num of sections.keys()) {
     const sid = `${cpid}-S${String(num).padStart(2, "0")}`;
-    if (!steps.includes(sid) && !(sid in prose)) {
+    if (!stepIds.includes(sid) && !(sid in prose)) {
       errors.push(`Step ${num} has neither a contract nor a prose_steps entry`);
     }
   }
 
   const crosswalkFile = join(dir, "crosswalk.yml");
   if (!existsSync(crosswalkFile)) {
-    if (steps.length > 0) errors.push(`${rel(dir)}: crosswalk.yml missing`);
-    return errors;
+    if (stepIds.length > 0) errors.push(`${rel(dir)}: crosswalk.yml missing`);
+    return result();
   }
-  const crosswalk = yaml.load(readFileSync(crosswalkFile, "utf8")) as Crosswalk;
+  const crosswalk = parse(crosswalkFile, readFileSync(crosswalkFile, "utf8")) as
+    Crosswalk | undefined;
+  if (!crosswalk) return result();
 
   // Each converted step quotes the checkpoint revision whose prose it replaced.
   const sourceOf = new Map<string, string>();
@@ -430,12 +503,12 @@ export function validateCheckpointDir(
         errors.push(`crosswalk: ${sid} is listed in more than one source`);
         continue;
       }
-      if (!steps.includes(sid))
+      if (!stepIds.includes(sid))
         errors.push(`crosswalk: ${source} lists ${sid}, which has no contract`);
       sourceOf.set(sid, source);
     }
   }
-  for (const sid of steps) {
+  for (const sid of stepIds) {
     if (!sourceOf.has(sid)) errors.push(`crosswalk: ${sid} has no source`);
   }
 
@@ -516,7 +589,7 @@ export function validateCheckpointDir(
       }
     }
   }
-  return errors;
+  return result();
 }
 
 /** Every docs/checkpoints subdirectory that declares a checkpoint.yml. */
@@ -529,7 +602,7 @@ export function checkpointDirs(repoRoot: string): string[] {
 }
 
 function main(argv: string[]): number {
-  const repoRoot = join(dirname(fileURLToPath(import.meta.url)), "..");
+  const repoRoot = join(dirname(fileURLToPath(import.meta.url)), "../../..");
   const skipSource = argv.includes("--skip-source");
   const skipUnavailableSources = isShallowRepository(repoRoot);
   const dirs = argv.filter((a) => !a.startsWith("--"));

@@ -1,0 +1,5 @@
+# Minimal conversion record: planning does not read crosswalk quotes.
+sources:
+  - source: docs/checkpoints/99-fixture.md@0000000
+    steps: [CP99-S01, CP99-S02, CP99-S03]
+entries: []

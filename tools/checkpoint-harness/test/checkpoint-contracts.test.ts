@@ -17,9 +17,9 @@ import {
   stepSections,
   validateCheckpointDir,
   type ValidateOptions,
-} from "../scripts/checkpoint-contracts.js";
+} from "../src/checkpoint-contracts.js";
 
-const repoRoot = join(dirname(fileURLToPath(import.meta.url)), "..");
+const repoRoot = join(dirname(fileURLToPath(import.meta.url)), "../../..");
 const CP01 = "docs/checkpoints/01-self-hosted-delivery";
 
 // The crosswalk quotes earlier Checkpoint 1 revisions. A shallow clone may lack
