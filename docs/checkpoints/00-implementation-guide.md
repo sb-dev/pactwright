@@ -514,7 +514,7 @@ The `npm-release` environment admits deployments from version tags only and requ
 
 ### Preparing a development release
 
-From the `0.0.2` corrective release onwards, create a release PR. Before Checkpoint 2 activates GitHub, the pull request is merged by the repository owner with `CI / Verify` passing; the required-check state is repository configuration recorded in the run configuration. Update `CHANGELOG.md` first, from accepted work only, and date the entry: self-hosted work cites its accepted Evidence in the source that will be tagged, work accepted before the repository self-hosted is described from its accepted step or criterion results, and the entry cites no Evidence outside that source's Project Graph.
+From the `0.0.2` corrective release onwards, create a release PR. Before Checkpoint 2 activates GitHub, the pull request is merged by the repository owner with `CI / Verify` passing; the required-check state is repository configuration recorded in the run configuration. Update `CHANGELOG.md` first, from accepted work only, and date the entry: self-hosted work cites its accepted Evidence in the source that will be tagged, work accepted up to and including the acceptance of the self-hosting step is described from its accepted step or criterion results, and the entry cites no Evidence outside that source's Project Graph.
 
 ```bash
 VERSION=0.0.N

@@ -48,9 +48,10 @@ requirements:
       have been read back. Evidence is current when it was produced on the revision it names and no later change affects
       the obligation it proves. The revision is the one each step names for its evidence (for Steps 22 to 24, the
       revision Step 22 packed), the tagged release commit for the publication, registry and tagged-source lines,
-      the Kakeibo revision for the Kakeibo lines, and the final default-branch revision for the graph-convergence
-      and coherence line and the Step 31 line, where only validate and lifecycle status of the self-hosted graph
-      are re-run. Evidence of the self-hosted Delivery lines stays on the revisions Steps 26 and 27 name.
+      the Kakeibo revision for the Kakeibo lines, the revisions of its proving steps for the sync-convergence and
+      graph-coherence line, and the final default-branch revision for the Step 31 line, where only validate and
+      lifecycle status of the self-hosted graph are re-run. Evidence of the self-hosted Delivery lines stays on
+      the revisions Steps 26 and 27 name.
 acceptance:
   AC01:
     covers: [R01]
