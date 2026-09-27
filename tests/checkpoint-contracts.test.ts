@@ -293,6 +293,32 @@ describe("checkpoint contracts", () => {
     );
   });
 
+  it("quotes step prose before its first label as body units", () => {
+    const markdown = readFileSync(join(repoRoot, `${CP01}.md`), "utf8");
+    const units = splitUnits(markdown).S28?.units ?? [];
+    assert.ok(
+      units.some(
+        (u) =>
+          u.key.startsWith("S28.body.") &&
+          u.text.startsWith("The owner's push of `v0.0.2` to the merged release commit"),
+      ),
+      "Step 28's publish authority is an S28 body unit",
+    );
+  });
+
+  it("treats labels inside a stage introduction as intro text", () => {
+    const markdown =
+      "## Stage 1 — S\n\n**References:** Intro refs.\n\n**Run**\n\nIntro text.\n\n" +
+      "### Step 1 — One\n\n**References:** Step refs.\n\n**Run**\n\nDo it.\n";
+    assert.deepEqual(splitUnits(markdown).S01?.units, [
+      { key: "S01.intro.1", text: "**References:** Intro refs." },
+      { key: "S01.intro.2", text: "**Run**" },
+      { key: "S01.intro.3", text: "Intro text." },
+      { key: "S01.references", text: "Step refs." },
+      { key: "S01.run.1", text: "Do it." },
+    ]);
+  });
+
   it("skips only the unavailable source when allowed", (t) => {
     if (!hasCommit(stage1)) {
       t.skip(`${stage1} not in this shallow clone`);

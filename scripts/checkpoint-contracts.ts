@@ -161,6 +161,7 @@ export function splitUnits(markdown: string): StepUnits {
     const counters = new Map<string, number>();
     let part: string | undefined;
     let inCode = false;
+    let inIntro = false;
     let para: string[] = [];
     const emit = (p: string, text: string): void => {
       const n = (counters.get(p) ?? 0) + 1;
@@ -185,13 +186,14 @@ export function splitUnits(markdown: string): StepUnits {
         if (line.trim() && part) emit(part, norm(line));
         return;
       }
-      const refs = /^\*\*References:\*\*\s*(.*)$/.exec(line);
+      // Inside a stage introduction, labels are plain text.
+      const refs = inIntro ? null : /^\*\*References:\*\*\s*(.*)$/.exec(line);
       if (refs) {
         flush();
         units.push({ key: `${sid}.references`, text: norm(refs[1] ?? "") });
         return;
       }
-      const label = LABELS[line.trim()];
+      const label = inIntro ? undefined : LABELS[line.trim()];
       if (label) {
         flush();
         part = label;
@@ -212,9 +214,12 @@ export function splitUnits(markdown: string): StepUnits {
     // A stage introduction before the step (its lines after the `##` heading)
     // becomes `intro` units, so a conversion must quote it (Spec 00 §2).
     part = "intro";
+    inIntro = true;
     section.intro.slice(1).forEach(feed);
     flush();
-    part = undefined;
+    // Step prose before its first Run/Expected/Verify label becomes `body` units.
+    part = "body";
+    inIntro = false;
     inCode = false;
     section.lines.forEach(feed);
     flush();
