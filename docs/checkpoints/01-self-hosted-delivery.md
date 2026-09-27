@@ -38,6 +38,7 @@ docs/specs/README.md
 docs/specs/02-financial-domain-model-spec.md
 docs/specs/05-system-architecture-and-data-spec.md
 docs/specs/06-engineering-delivery-and-operations-spec.md
+docs/specs/07-open-source-project-organisation-spec.md
 ```
 
 For this checkpoint:
@@ -46,6 +47,7 @@ For this checkpoint:
 02 → financial-domain semantics
 05 → package/layer boundary only
 06 → deterministic test expectations only
+07 → repository, licence and security foundation only
 ```
 
 `00-kakeibo-acceptance-profile.md` §5 is the shared System-Level Acceptance cross-check for this slice, and §§2–5 carry the wider Kakeibo System-Level Acceptance requirements.
@@ -388,11 +390,11 @@ pnpm pack --out /tmp/pactwright-checkpoint-1.tgz
 pnpm --filter @pactwright/standard pack --out /tmp/pactwright-standard-checkpoint-1.tgz
 ```
 
-`prepack` builds each package. Record the candidate revision and, for each archive, its sorted list of entry paths with the SHA-256 of each entry; that list is the archive's identity. Steps 23 and 24 install exactly these archives. Steps 26, 27 and 28 re-run this procedure on their own candidate revisions and record their own identities; an archive is never reused for a changed revision.
+`prepack` builds each package. From the same checkout, also pack the two fixture Extension packages of the repository test suite that later steps install: the fixture Extension used for one-shot init in Step 23 and the defective fixture Extension used for validation rule 16 in Step 24. They are test assets, packed into their own archives and never published. Record the candidate revision and, for each of the four archives, its sorted list of entry paths with the SHA-256 of each entry; that list is the archive's identity. Steps 23 and 24 install exactly these archives. Steps 26 and 27 re-run this procedure on their own candidate revisions and record their own identities; an archive is never reused for a changed revision. Step 28 publishes through the release workflow, which packs the tagged source itself.
 
 **Expected result**
 
-Real consumer artefacts exist for both components, packed from one recorded revision.
+Real consumer artefacts exist for both components, packed from one recorded revision, together with the two fixture Extension archives the consumer fixtures need.
 
 **Verify before continuing**
 
@@ -402,7 +404,8 @@ Inspect both archives:
 - every declared `main`, `types`, `bin` and `exports` target resolves inside its archive;
 - the runtime archive holds only the built runtime, its manifest, `LICENSE` and `README.md`; the pack archive holds only `dist`, `pack.yml`, `agents`, `skills`, its manifest, `LICENSE` and `README.md`; neither holds a test, fixture, checkpoint contract, Project Graph record, configuration, execution-state or source file;
 - the runtime manifest depends on `@pactwright/standard` at the exact version of the pack archive, rewritten from `workspace:*`, never a range, dist-tag or workspace reference;
-- repacking the same revision yields the same identity for both archives, and a revision that changes one packaged file changes only that archive's identity.
+- each fixture Extension archive holds only its own package and declares no dependency outside the runtime, and neither fixture Extension appears in either published archive;
+- repacking the same revision yields the same identity for every archive, and a revision that changes one packaged file changes only that archive's identity.
 
 ### Step 23 — Install and initialise clean consumer fixtures
 
@@ -425,9 +428,9 @@ A clean repository is a fresh Git repository in a temporary directory, created w
 
 In a second clean fixture, prove one-shot init with a fixture Extension and explicitly supply the same compatible packed Agent Pack source/version through the documented init selection input. Compare against the equivalent explicit operations; pack installation alone is not pack selection.
 
-The one-shot command is `pnpm pactwright init --with <fixture-extension-id> --agent-pack @pactwright/standard@<archive version>`. The fixture Extension is a test asset of the repository test suite, packed by the Step 22 procedure and supplied through the same override; it is never part of either published archive. The equivalent explicit operations run in a third clean fixture: `init`, `agent-pack use` with the same source and version, `extension add <fixture-extension-id>` and `sync`.
+The one-shot command is `pnpm pactwright init --with <fixture-extension-id> --agent-pack @pactwright/standard@<archive version>`. The fixture Extension is the one-shot fixture Extension archive Step 22 recorded, installed through the same override; it is never part of either published archive. The equivalent explicit operations run in a third clean fixture: `init`, `agent-pack use` with the same source and version, `extension add <fixture-extension-id>` and `sync`.
 
-In a fourth clean fixture with the runtime, pack and fixture Extension installed, prove the negative: plain `init` selects no pack and reports an unactivated scaffold, `sync` and `lifecycle run` then refuse naming the missing selection, and `init --with <fixture-extension-id>` without `--agent-pack` is refused leaving the fixture byte-identical.
+In a fourth clean fixture with the runtime, pack and fixture Extension installed, prove the negative, in this order: `init --with <fixture-extension-id>` without `--agent-pack` is refused and leaves the fixture byte-identical; plain `init` then selects no pack and reports an unactivated scaffold; `sync` and `lifecycle run` then refuse naming the missing selection.
 
 Keep the explicit-path fixture in its recorded state; Step 24 starts from it.
 
@@ -474,9 +477,9 @@ Inspect durable Project Graph state. Require all 17 validation cases, Evidence p
 
 Run `pactwright lifecycle status`, `next` and `run` on the fixture consumer at each lineage position. `run` must stop cleanly at manual entries and, for capability-backed automatic responsibilities, with the missing-invoker execution failure; it must not simulate any output. The consumer's lifecycle `version: 1` cannot declare Gates, corrective routes or iteration bounds, so validation rules 10, 11, 14 and 15 are proven by the repository test suite against the built runtime through the Step 6 fixture definitions; the packed consumer proves the other validation rules, and the published package exposes no fixture-definition entry point.
 
-Under the released policy the positions and stops are: with no lineage, `run` stops at the manual `capture-intent`; at open, contracted, the Delivery step and the Review step it stops with the missing-invoker execution failure at `propose-contracts`, `write-brief`, `deliver-brief` and `review` respectively; at done it performs no step. At open, `status` and `next` report `approve-contract` as the manual step that follows, with required actor human. No position changes a canonical file.
+Under the released policy the positions and stops are: with no lineage, `run` stops at the manual `capture-intent`; at open, contracted, the Delivery step, the Review step and the closure step after a closing Review with outcome may-progress, it stops with the missing-invoker execution failure at `propose-contracts`, `write-brief`, `deliver-brief`, `review` and `prepare-evidence` respectively; at done it performs no step. At each position `status` and `next` report what CP01-S08/AC01 defines for it. No position changes a canonical file.
 
-The packed consumer proves validation rules 1–9, 12, 13, 16 and 17 through the installed CLI, each on a copy of the fixture whose only defect is that rule's; rule 16 uses a packed defective fixture Extension and rule 17 a replay-base document. The seven mutation-boundary cases are the cases of CP01-S12/AC03, and the Evidence precondition failures are the cases of CP01-S12/AC10 other than `pending-gate`, which version 1 policy cannot express; each runs through the installed CLI's hand-off commands with scripted results.
+The packed consumer proves validation rules 1–9, 12, 13, 16 and 17 through the installed CLI, each on a copy of the fixture whose only defect is that rule's; rule 16 uses the defective fixture Extension archive Step 22 recorded and rule 17 a replay-base document. The seven mutation-boundary cases are the cases of CP01-S12/AC03, and the Evidence precondition failures are the cases of CP01-S12/AC10 other than `pending-gate`, which version 1 policy cannot express; each runs through the installed CLI's hand-off commands with scripted results.
 
 The complete core evaluation dimensions are proven by the repository test suite against the built runtime through scripted invokers and judges; `pnpm pactwright eval` on the fixture consumer reports every case as not evaluated, names no invoker and exits with failure, since Checkpoint 1 supplies no provider invoker, and it simulates no result.
 
@@ -526,7 +529,7 @@ Second sync is clean and repository CI passes.
 - the self-hosting commit adds only Pactwright-owned files: `.pactwright/config.yml`, `lifecycle.yml` and `lock.yml`, `specs/nodes/.gitkeep`, `specs/graph/edges.yml` and the rendered files under `.claude/`, with no execution-state document, report or hand-written Pactwright-owned file;
 - `doctor` exits zero reporting healthy and `validate` exits zero; after the merge, the repository revision resolves to the default-branch commit and the Project Graph revision is the pg1 empty-graph digest;
 - an independent resolution of the environment yields a lock byte-identical to the committed one;
-- editing one prompt under `packages/standard` makes `doctor` report action required and `sync` refuse, and `agent-pack use @pactwright/standard` then records the new identity, after which `doctor` reports healthy.
+- in a disposable copy of the initialised repository, never committed, editing one prompt under `packages/standard` makes `doctor` report action required and `sync` refuse, and `agent-pack use @pactwright/standard` then records the new identity, after which `doctor` reports healthy.
 
 ### Step 26 — Deliver a real self-hosted Quick Start improvement
 
@@ -537,7 +540,7 @@ Second sync is clean and repository CI passes.
 Use Pactwright itself to improve the Quick Start based only on behaviour proven in this checkpoint.
 Before PI exists, identity/positioning/product choices required by this public work must be authorised through Decision + Contract rather than invented.
 
-Run the seven commands through the adapter in the self-hosted project. The repository owner is the approving human: the Decision selects a Contract that states the claims, positioning and proven behaviour the Quick Start may use, and a claim the Contract does not authorise is a Review failure. Proven behaviour is a command or behaviour with an accepted Checkpoint 1 criterion result or Step 23 and 24 packed-consumer evidence of this candidate revision. The install instruction names `pactwright@0.0.2` exactly, because `latest` stays at `0.0.1` until `0.1.0` (Implementation Guide — npm release model). The Quick Start documents no Extension, GitHub integration, Project Intelligence or provider-invoking `lifecycle run` as available. The change lands through a pull request the owner merges with `CI / Verify` passing.
+Run the seven commands through the adapter in the self-hosted project. The repository owner is the approving human: the Decision selects a Contract that states the claims, positioning and proven behaviour the Quick Start may use, and a claim the Contract does not authorise is a Review failure. Proven behaviour is a command or behaviour with an accepted Checkpoint 1 criterion result, Step 23 or 24 packed-consumer evidence, or this step's own clean-fixture execution below. The install instruction names `pactwright@0.0.2` exactly, because `latest` stays at `0.0.1` until `0.1.0` (Implementation Guide — npm release model). The Quick Start documents no Extension, GitHub integration, Project Intelligence or provider-invoking `lifecycle run` as available. The change lands through a pull request the owner merges with `CI / Verify` passing.
 
 **Expected result**
 
@@ -565,7 +568,7 @@ one executable Core Delivery example
 
 Only document proven behaviour, including the core distribution commands shipped in `0.0.2`.
 
-Proven behaviour and the approving owner are as in Step 26. The Getting Started guide lives at `docs/getting-started.md`, linked from the README, and the example at `examples/core-delivery/README.md`. Across the three documents the material covers installation, initialisation by `init --agent-pack` and by `init` followed by `agent-pack use` and `sync`, `doctor`, `validate`, `lifecycle status`, the seven commands and the mutation each is permitted, `pactwright upgrade` and `upgrade --to`, `agent-pack upgrade`, and the honest posture of `lifecycle run` and `eval` without an invoker. It documents no Extension, GitHub integration or Project Intelligence as available. Every install instruction names `pactwright@0.0.2` exactly. The material and its lineages land on the default branch through pull requests the owner merges with `CI / Verify` passing, before Step 28 tags the release.
+Proven behaviour and the approving owner are as in Step 26. The Getting Started guide lives at `docs/getting-started.md`, linked from the README, and the example at `examples/core-delivery/README.md`. Across the three documents the material covers the Distribution §27 surface a core user needs, installation, initialisation by `init --agent-pack` and by `init` followed by `agent-pack use` and `sync`, `doctor`, `validate`, `pactwright upgrade` and `upgrade --to` and `agent-pack upgrade`, together with the Core §46 commands: `lifecycle status`, the seven adapter commands with the mutation each is permitted, and the honest posture of `lifecycle run` and `eval` without an invoker. It documents no Extension, GitHub integration or Project Intelligence as available. Every install instruction names `pactwright@0.0.2` exactly. The material and its lineages land on the default branch through pull requests the owner merges with `CI / Verify` passing, before Step 28 tags the release.
 
 **Expected result**
 
@@ -575,7 +578,7 @@ A new user can understand/install/execute/upgrade `0.0.2` without future Extensi
 
 Follow the material in a clean packed-consumer fixture.
 
-The fixture is built by the Step 23 procedure from archives packed from this revision, with the exact-version install mapped to them. Every command runs as documented; the example ends with `validate` exiting zero on a done lineage; `pactwright upgrade` reports no compatible newer release and `agent-pack upgrade` reports nothing changed. Every command the material names exists in the shipped CLI, and README, guide and example agree on one command surface. A reviewer given only the shipped material installs, completes one Delivery and upgrades without outside knowledge; any point where outside knowledge was needed is a content gap that fails the step.
+Each lineage validates and derives done with the owner recorded as decider, and the documents changed only during Delivery steps. The fixture is built by the Step 23 procedure from archives packed from this revision, with the exact-version install mapped to them. Every command runs as documented; the example ends with `validate` exiting zero on a done lineage; `pactwright upgrade` reports no compatible newer release and `agent-pack upgrade` reports nothing changed. Every command the material names exists in the shipped CLI, and README, guide and example agree on one command surface. A reviewer given only the shipped material installs, completes one Delivery and upgrades without outside knowledge; any point where outside knowledge was needed is a content gap that fails the step.
 
 ## Stage 9 — Publish `0.0.2`
 
@@ -602,7 +605,7 @@ the first evidence of the trusted-publisher entries. Tag accepted source as
 `v0.0.2` and verify the tag workflow, its `npm-release` deployment record and
 each published version's provenance attestation (CP01-S21/R04).
 
-Prepare the release through a release pull request (Implementation Guide — Preparing a development release): every publishable version at `0.0.2`, the lockfile refreshed, `pnpm verify` and the publish dry-run passing, and the `CHANGELOG.md` entry dated and written from accepted Evidence in the source that will be tagged, citing no Evidence outside its Project Graph. The pull request changes nothing else and the owner merges it with `CI / Verify` passing. The owner's push of `v0.0.2` to the merged release commit is the publish authority. The tagged tree holds the README Quick Start, `docs/getting-started.md`, `examples/core-delivery/README.md` and the Step 26 and 27 Evidence records. Nothing is published interactively.
+Prepare the release through a release pull request (Implementation Guide — Preparing a development release): every publishable version at `0.0.2`, the lockfile refreshed, `pnpm verify` and the publish dry-run passing, and the `CHANGELOG.md` entry dated and written from accepted work only: work delivered after Step 25 cites its Evidence in the source that will be tagged, and work accepted before self-hosting is described from its accepted step results; the entry cites no Evidence outside the tagged Project Graph. The pull request changes nothing else and the owner merges it with `CI / Verify` passing. The owner's push of `v0.0.2` to the merged release commit is the publish authority. The tagged tree holds the README Quick Start, `docs/getting-started.md`, `examples/core-delivery/README.md` and the Step 26 and 27 Evidence records. Nothing is published interactively.
 
 Before any publication, a failed run is fixed and rerun, and a tag that published nothing may be deleted and recreated by the owner on the corrected commit. After a publication the version is consumed: a defect in the published `0.0.2` is fixed forward with the next unused `0.0.x` under an owner-approved amendment of this checkpoint's Release line, the Implementation Guide's version tables and later checkpoints' Release lines (Implementation Guide — Release failure), never by unpublishing, overwriting or moving `latest`.
 
@@ -632,7 +635,7 @@ Use the final Checkpoint 1 package on the persistent external proving project.
 
 Kakeibo may still be a documentation-first/pre-implementation repository at this point. The only pre-Pactwright bootstrap permitted here is the minimum pnpm package/workspace root required to install a development dependency. Full Turborepo/application infrastructure belongs to Checkpoint 2.
 
-The Kakeibo owner authorises writes to the Kakeibo repository and every commit to its default branch in Steps 29 and 30. The run configuration names the Kakeibo repository and its starting revision, and Step 29 records the revisions of Kakeibo `docs/specs/README.md` and the 02, 05 and 06 specifications, which govern this stage.
+The Kakeibo owner authorises writes to the Kakeibo repository and every commit to its default branch in Steps 29 and 30. The run configuration names the Kakeibo repository and its starting revision, and Step 29 records the revisions of Kakeibo `docs/specs/README.md` and the 02, 05, 06 and 07 specifications, which govern this stage.
 
 ### Step 29 — Establish the minimum Kakeibo consumer root and install `0.0.2`
 
@@ -661,7 +664,7 @@ packages:
 YAML
 fi
 
-pnpm add -D pactwright@0.0.2
+pnpm add -D -w pactwright@0.0.2
 pnpm pactwright init
 pnpm pactwright agent-pack use @pactwright/standard
 pnpm pactwright sync
@@ -669,13 +672,15 @@ pnpm pactwright validate
 pnpm pactwright lifecycle status
 ```
 
+pnpm refuses `pnpm add` at a workspace root without `-w`, which the bootstrap `pnpm-workspace.yaml` makes the Kakeibo root.
+
 If the repository already has `package.json` or `pnpm-workspace.yaml`, preserve the existing files and use their adopted package/workspace configuration rather than replacing them.
 
 This step must not create application packages, Hono services, database code, R2/Workflow infrastructure or a Turborepo pipeline merely to install Pactwright.
 
-`pnpm add -D pactwright@0.0.2` installs from the registry with no override; `agent-pack use` resolves the pack from the runtime's dependencies at exactly `0.0.2`. Preserving an existing `package.json` means keeping its content apart from the development-dependency and `packageManager` fields the package manager writes.
+`pnpm add -D -w pactwright@0.0.2` installs from the registry with no override; `agent-pack use` resolves the pack from the runtime's dependencies at exactly `0.0.2`. An existing `pnpm-workspace.yaml` stays byte-identical. An existing `package.json` keeps all its content apart from the development-dependency and `packageManager` fields the package manager writes. If `.gitignore` has no rule for `node_modules/`, add one.
 
-Record, without creating any of them, whether the starting revision holds each public-repository foundation item of Kakeibo Acceptance Profile §5: `README.md`, a `LICENSE` with the Apache-2.0 text, `SECURITY.md` with a private disclosure route, `CONTRIBUTING.md`, the canonical `docs/specs/` authority set, working deterministic tests and safe synthetic financial fixtures. If the canonical `docs/specs/` authority set is absent, Stage 10 pauses: specifications are the authority for Step 30, not its output. Step 30 delivers every other absent item.
+Record, without creating any of them, whether the starting revision holds each public-repository foundation item of Kakeibo Acceptance Profile §5 and Kakeibo 07 (§§20, 35, 37, 49): `README.md`, a `LICENSE` with the Apache-2.0 text, `SECURITY.md` with a private disclosure route, `CONTRIBUTING.md`, the canonical `docs/specs/` authority set, working deterministic tests and safe synthetic financial fixtures. If the canonical `docs/specs/` authority set is absent, Stage 10 pauses: specifications are the authority for Step 30, not its output. Step 30 delivers every other absent item.
 
 **Expected result**
 
@@ -718,29 +723,51 @@ pnpm pactwright lifecycle status
 
 Run the Kakeibo repository-defined deterministic domain tests as part of the same acceptance step.
 
-The commands run through the adapter session the run configuration names, and the Kakeibo owner is the approving human. The Kakeibo specifications at the revisions Step 29 recorded govern: 02 for financial-domain semantics, 05 for the package and layer boundary only and 06 for deterministic test expectations only. The Contract cites the specification sections it implements. Where an invariant below and the governing specification differ, the specification governs: the Contract states the specification's invariant, the test replaces the listed one, and the difference is recorded as a Step 31 finding.
+The commands run through the adapter session the run configuration names, and the Kakeibo owner is the approving human. The Kakeibo specifications at the revisions Step 29 recorded govern: 02 for financial-domain semantics, 05 for the package and layer boundary only, 06 for deterministic test expectations only and 07 for the repository foundation only. The Contract cites the specification sections it implements. The invariant set below is Kakeibo 02 §14 at revision `75443233c474a2a4072348078c22d72d15573645` (02 v1.1). If the 02 revision Step 29 records differs, the set is re-derived from that revision's §14 through an amendment of this step, reviewed like this one, before Step 30 runs; no invariant is deferred to Step 31.
 
-Before this step is accepted, deliver each foundation item Step 29 recorded absent, other than the specifications, through its own Kakeibo Delivery lineage approved by the Kakeibo owner. Synthetic fixtures contain no real personal financial export. Do not scaffold Academy, Blog, marketplace, registry, parallel self-hosting architecture or speculative package directories.
+Before this step is accepted, deliver each foundation item Step 29 recorded absent through a Kakeibo Delivery lineage approved by the Kakeibo owner: the deterministic tests and synthetic fixtures through this step's domain lineage, and each other item except the specifications through its own lineage. Synthetic fixtures contain no real personal financial export (Kakeibo 07 §20), and no private financial or review engine is required for the delivered slice (07 §42). Do not scaffold Academy, Blog, marketplace, registry, parallel self-hosting architecture or speculative package directories.
 
 **Expected result**
 
-The first Kakeibo executable slice represents `FinancialEntry` as the general financial concept rather than treating every entry as spending, and preserves at least these observable invariants:
+The first Kakeibo executable slice represents `FinancialEntry` as the general financial concept rather than treating every entry as spending, and preserves every invariant of Kakeibo 02 §14. At revision `75443233` these are:
 
 ```text
-fixed commitments do not consume flexible envelopes
-plan-funded goal allocations do not also consume a flexible envelope
-transfers do not become spending because cash moved
-credit-card settlement does not double-count tracked purchases
-business activity does not consume personal envelopes
-reviewed totals include only reviewed entries
-preparation state does not create reviewed truth
-rules/suggestions do not create reviewed truth
-sum(split parts) = original amount
-confirmed split parts replace the source amount in aggregates
-source re-import idempotency ≠ financial duplicate resolution
-goal allocation ≠ reviewed goal contribution
-plan/goal/rule changes do not rewrite historical financial truth
+flexible_spending_budget
+  = planning_income
+  - fixed_commitments
+  - plan_funded_goal_allocations
+
+envelope_limits_total = Needs + Wants + Culture + Unexpected
+envelope_limits_total = flexible_spending_budget
+
+fixed commitments never consume flexible envelope limits
+plan-funded goal allocations never also consume a flexible envelope
+transfers never become flexible spending solely because cash left an account
+business activity never consumes personal Kakeibo envelopes
+
+reviewed totals contain only reviewed entries
+needs decision / worth checking / looks safe do not mean reviewed
+review skip does not mean reviewed
+rules, heuristics and assistant suggestions do not create reviewed truth
+first matching active rule wins according to explicit priority
+
+sum(split amounts) = original entry amount
+confirmed split parts replace the original amount in aggregates
+re-importing the same source entry is idempotent
+a duplicate candidate is not automatically excluded
+confirmed duplicates contribute zero to aggregates
+
+plan changes do not rewrite historical reviewed entries
+goal changes do not rewrite historical contributions or targets
+rule edits do not silently rewrite reviewed history
+
+unreviewed activity remains separately visible
+projected values remain explicitly projected
+user-selected targets remain distinct from calculated consequences
+one amount must not be counted twice across spending, transfer and goal aggregates
 ```
+
+These include the invariants the Kakeibo Acceptance Profile §4 lists, among them credit-card settlement not double-counting tracked purchases (02 §9) and goal allocation remaining distinct from reviewed goal contribution (02 §6.3).
 
 The package remains deterministic and independent of application/API/storage/UI/provider concerns.
 
@@ -752,10 +779,11 @@ The package remains deterministic and independent of application/API/storage/UI/
 - no research-derived financial target is encoded as a default or recommendation;
 - the approved Contract retains all applicable financial invariants through Brief, Delivery, Review and Evidence;
 - the Kakeibo graph contains one valid Intent → Decision → Contract → Brief → Evidence lineage for the delivered financial-domain foundation;
-- each invariant's tests pass on the delivered code and fail on a variant, supplied by the verifier rather than the producer, that violates only that invariant; two test runs give identical results;
+- each §14 invariant, and the credit-card and goal-contribution invariants above, has tests that pass on the delivered code and fail on a variant, supplied by the verifier rather than the producer, that violates only that invariant; two test runs give identical results;
+- each Kakeibo 02 §15 acceptance criterion is stated in the Contract and either covered by a test or named as outside this slice with its reason, Kei and UX criteria among them;
 - domain logic reads no clock, randomness, network or filesystem, and its manifest and imports contain none of the excluded dependencies;
 - independent review traces every invariant through the Contract, Brief, Review result and Evidence, and finds a missing link a failure;
-- every foundation item Step 29 recorded absent exists, delivered through a done Kakeibo lineage; the licence is Apache-2.0 and `SECURITY.md` names a private route;
+- every foundation item Step 29 recorded absent exists, delivered through a done Kakeibo lineage; the licence is Apache-2.0 and `SECURITY.md` names a private route (07 §§35, 37); the synthetic fixtures hold no real personal financial export and the slice needs no private financial or review engine;
 - the graph holds only core record types and relations, every Pactwright-owned file was written by the runtime, and the Kakeibo commits landed under the Kakeibo owner's authority.
 
 ## Stage 11 — Capture Checkpoint 1 feedback
@@ -796,7 +824,7 @@ Every material Checkpoint 1 finding exists as an open Intent in the Pactwright g
 
 Run `pnpm pactwright validate` and `pnpm pactwright lifecycle status`; captured Intents are valid open lineages. Confirm no blocking failure remains unresolved.
 
-Each captured Intent states an outcome and no plan and has no Decision; every earlier lineage is unchanged. Independent review confirms each classification against its reason and that no material finding was excluded.
+Each captured Intent states an outcome and no plan and has no Decision; every earlier lineage is unchanged. A finding that meets both the blocking and the material definition is classified blocking, fixed and re-verified, and has no open Intent standing in for the fix. Independent review confirms each classification against its reason and that no material finding was excluded.
 
 ## Exit gate
 

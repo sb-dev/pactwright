@@ -10,12 +10,14 @@ The review covered the five T2 checks for each step: canonical fidelity against 
 
 ## Owner decisions this pass needs
 
-None is assumed; each is stated on the PR:
+None is adopted without the owner's durable approval on the PR (owner review 5330105036, finding 5). Until that approval is recorded and cited here, each semantic decision below is a proposal, and later work must not treat it as canonical. The Kakeibo write authority is different: it is an execution prerequisite for Steps 29 and 30, not needed to merge this review.
 
 | Decision | Where | Effect |
 |---|---|---|
+| Steps 22–31 keep the version 17 prose form | Checkpoint 1 §3 | Decided by the owner in the producing session on 2026-09-27 ("T2 on the prose"). Consequence: under the Task 3 plan §2 the harness cannot execute Steps 22–31 or count them towards completion until they are converted. |
 | Project-state boundary for self-hosting (Q60) | Step 25 Run | Step 25 starts from a candidate with no Pactwright project state; `main`'s self-hosted records stay Git history. B23 records why migration is infeasible under the accepted Stage 4 contracts. |
-| Guide v19 clauses (Q62, Q65) | Guide §Preparing a development release, §Release failure, §Transition rule | Release-PR procedure from `0.0.2` with the owner-merged pull request as pre-Checkpoint-2 landing; CHANGELOG from Evidence in the tagged source; unpublished tag may be recreated; a published defect consumes a number and renumbers the version line; findings before Project Intelligence become open Intents. |
+| Guide v19 clauses (Q62, Q65) | Guide §Preparing a development release, §Release failure, §Transition rule | Release-PR procedure from `0.0.2` with the owner-merged pull request as pre-Checkpoint-2 landing; CHANGELOG from accepted work only (Evidence for self-hosted work, checkpoint results for earlier work, nothing outside the tagged graph); unpublished tag may be recreated; a published defect consumes a number and renumbers the version line; findings before Project Intelligence become open Intents. |
+| Step 30 invariant set (Q64) | Step 30 | Kakeibo 02 §14 at `75443233`, re-derived through a reviewed amendment if the recorded revision differs; no invariant deferred to Step 31. |
 | Kakeibo write authority (Q63) | Stage 10 intro | Writes to the Kakeibo repository and its default-branch commits in Steps 29 and 30. |
 | `0.0.2` wording (Q61) | Checkpoint 1 §1, Stage 8 and 9 headings, Step 27 | The release is `0.0.2`; `0.0.1` names the content set. |
 
@@ -90,7 +92,37 @@ From the two reviews of `b3b1553`; each was verified against the text before act
 | X23 | Allocation 12 | Control attribution in the Step 24 suite; exit-table citation for one-shot equivalence. | Applied: Step 24 verify; table cites S16/AC16. |
 | — | Both | Contract-only items (binding placement, binding counts, contract `then` wording). | Moot after the conversion was removed. |
 
-**Fresh review:** recorded in the PR after it runs on the amended tree; any corrections are listed there and appended here.
+Owner review [5330105036](https://github.com/sb-dev/pactwright/pull/53#pullrequestreview-5330105036) examined `b3b1553` and returned five P1 findings. They concern contract text that the prose now replaces, but each applies to the prose too:
+
+| ID | Owner finding | Disposition |
+|---|---|---|
+| O1 | Step 30 verified a shorter list than Kakeibo 02 §14, and the Kakeibo repository was not read. | Applied: 02, 05, 06, 07 and README read at `75443233`; Step 30's set is 02 §14 verbatim plus the two profile invariants; §15 criteria in the Contract; no deferral to Step 31 (B26). |
+| O2 | An existing `package.json` cannot stay byte-identical through `pnpm add`. | Applied: Step 29 keeps the workspace file byte-identical and the manifest apart from package-manager fields (B26). |
+| O3 | The one-shot fixture Extension was consumed but never produced. | Applied: Step 22 packs and verifies both fixture Extension archives; Steps 23 and 24 install them (B22). |
+| O4 | Material and blocking overlapped. | Applied: blocking takes precedence; Step 31 verify has the dual-qualifying control (B27). |
+| O5 | Semantic approvals were identified but not evidenced. | Open: the decisions above are proposals until the owner's durable approval is recorded on the PR and cited here. |
+
+**Fresh review** of `dd93560` (read-only, this session) returned four blocking and eleven non-blocking findings:
+
+| ID | Finding | Disposition |
+|---|---|---|
+| F1 | `CP01/R05` demanded the final revision for all non-publication lines, forcing Step 24's real-model Delivery to be re-run at the end. | Applied: revision per evidence group; current means produced on its named revision and unaffected since. |
+| F2 | The CHANGELOG rule required Evidence the fresh self-hosted graph cannot hold for Steps 1–24. | Applied: Guide v19 and Step 28 describe pre-self-hosting work from accepted results. |
+| F3 | `pnpm add -D` fails at the Kakeibo workspace root. | Applied: `pnpm add -D -w`; reproduced here. |
+| F4 | Stage 10 omitted Kakeibo 07, which owns the foundation files. | Applied: §2, Stage 10, Steps 29 and 30. |
+| F5 | Step 22 said Step 28 repacks. | Applied: Steps 26 and 27 repack; Step 28 publishes through the workflow. |
+| F6 | Step 26's proven behaviour required evidence of its own revision that cannot exist. | Applied: includes the step's own fixture execution. |
+| F7 | Step 24 omitted the closure position and over-pinned `next`. | Applied: `prepare-evidence` stop added; `status` and `next` defer to CP01-S08/AC01. |
+| F8 | Step 23's refusal cases ran in an order that changes their starting state. | Applied: `init --with` refusal first. |
+| F9 | Step 25's prompt-edit probe did not say it uses a throwaway copy. | Applied: disposable, never committed copy. |
+| F10 | Step 27 lacked Step 26's lineage and decider checks, and B24 mislabelled its command list as Distribution §27's. | Applied: Step 27 verify; B24 wording. |
+| F11 | Step 30's "own lineage" clashed with tests and fixtures; two profile §5 checks missing. | Applied: tests and fixtures via the domain lineage; no-real-export and no-hidden-engine checks. |
+| F12 | Step 29 checked a `node_modules` ignore rule it never wrote. | Applied: Step 29 adds it when absent. |
+| F13 | `CP01/AC03` held a simplicity assertion; `AC04` used an undefined declared dependency set. | Applied: workspace-package check moved to `AC04`; dependencies traced to requirements. |
+| F14 | B22 and B25 attributed text to runbook version 14; it is version 12 at `207ac08`. | Applied: both records. |
+| F15 | The owner-decisions table omitted the consequence of keeping the prose form. | Applied: first row of that table. |
+
+The fresh reviewer confirmed that `pnpm contracts:check` and `pnpm test` pass, every cited criterion ID and case name exists with the claimed meaning, X1–X23 match the amended text, and Guide v19 changes only its three stated sections. These corrections were authored by this record's author and need fresh review (methodology §6); the owner's next review of the PR is requested as that review.
 
 ## Checkpoint-level result (§7)
 
@@ -104,9 +136,9 @@ Identity, storage, relationships and authority were settled in Stages 1–5. The
 | `pnpm format:check`, `pnpm lint`, `pnpm typecheck` | pass |
 | `pnpm test` | 25 tests, 25 pass, 0 fail |
 | `pnpm build` / `pnpm verify` | FAIL, inherited: no runtime sources and no `@pactwright/standard` project on `refactor/pactwright-v2`; identical on `0f81839`, as the Stage 4 and 5 exit records recorded |
-| Batch challenge plans | executed as recorded in B22–B27 (registry reads of both packages on 2026-09-27; `207ac08`, `defd052` and `origin/main` reads; README, CHANGELOG and docs greps at `0f81839`; Checkpoint 2 greps) |
-| Not read | the Kakeibo repository (outside this session); Step 29 inventories it |
+| Batch challenge plans | executed as recorded in B22–B27 (registry reads of both packages on 2026-09-27; `207ac08`, `defd052` and `origin/main` reads; README, CHANGELOG and docs greps at `0f81839`; Checkpoint 2 greps; Kakeibo README, 02, 05, 06 and 07 at `75443233`; `ERR_PNPM_ADDING_TO_ROOT` and `-w` reproduced with pnpm 12.6.0) |
+| Not verified | the current Kakeibo default-branch revision; Step 29 records the revision it runs against, and Step 30 re-derives its invariant set if 02 changed |
 
-Stages 6–11 are requirement-ready in the methodology §7 sense, subject to the fresh review and the owner decisions above: no unresolved behaviour needed by Steps 22–31 remains in their prose; each obligation has a stated verification; and deferred proofs have owners (Checkpoint 2's invoker, `0.0.3` and Kakeibo upgrade; Checkpoint 3's Source ingestion; the owner's Release-line amendment if a further corrective release is needed). Checkpoint-wide, the simplicity, graph-boundary and self-hosting obligations are declared and inherited (`CP01/R02`–`R05`) and every exit-gate line has a named proof. This is scoped T2 work: it authorises no implementation, builds no harness and grants no acceptance.
+Stages 6–11 are requirement-ready in the methodology §7 sense only once the owner's durable approval of the decisions above is recorded and a fresh review accepts the corrections; until then this record states the proposed result: no unresolved behaviour needed by Steps 22–31 remains in their prose; each obligation has a stated verification; and deferred proofs have owners (Checkpoint 2's invoker, `0.0.3` and Kakeibo upgrade; Checkpoint 3's Source ingestion; the owner's Release-line amendment if a further corrective release is needed). Checkpoint-wide, the simplicity, graph-boundary and self-hosting obligations are declared and inherited (`CP01/R02`–`R05`) and every exit-gate line has a named proof. This is scoped T2 work: it authorises no implementation, builds no harness and grants no acceptance.
 
 **Checkpoint 1 Stages 6–11 exit review v1**
