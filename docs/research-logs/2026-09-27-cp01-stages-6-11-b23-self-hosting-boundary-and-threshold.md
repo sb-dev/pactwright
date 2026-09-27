@@ -10,7 +10,9 @@
 
 **Applied changes:** Checkpoint 1 v31 Step 25 prose. `CP01/R02` and `AC02`. Crosswalk Q60.
 
-**Later owners:** Steps 26, 27 and 31 (lineages under the threshold), Step 28 (release commit exempt; CHANGELOG rule in B25), Checkpoint 2 (enabling GitHub on the self-hosted project). Remaining blockers: the owner's approval of the project-state boundary before Step 25 runs.
+**Approval:** the owner approved the Step 25 project-state boundary in the producing session on 2026-09-27, answering a direct question; the [exit record](./2026-09-27-cp01-stages-6-11-exit-review.md) records the question and answer, and the PR carries a comment recording them.
+
+**Later owners:** Steps 26, 27 and 31 (lineages under the threshold), Step 28 (release commit exempt; CHANGELOG rule in B25), Checkpoint 2 (enabling GitHub on the self-hosted project). Remaining blockers: none; the owner approved the project-state boundary in the producing session on 2026-09-27 (exit record).
 
 **Verification:** see the [Stages 6–11 exit record](./2026-09-27-cp01-stages-6-11-exit-review.md).
 

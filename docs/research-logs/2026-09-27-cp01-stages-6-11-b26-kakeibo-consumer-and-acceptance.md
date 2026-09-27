@@ -11,6 +11,8 @@
 
 **Applied changes:** Checkpoint 1 v31 §2 (07), Stage 10 intro, Steps 29 and 30. Crosswalk Q63, Q64.
 
+**Approval:** the owner approved the Step 30 invariant set in the producing session on 2026-09-27, answering a direct question; the [exit record](./2026-09-27-cp01-stages-6-11-exit-review.md) records the question and answer, and the PR carries a comment recording them.
+
 **Later owners:** Step 31 (Stage 10 findings, including the Kakeibo README inconsistency), Checkpoint 2 (Kakeibo `0.0.2 → 0.0.3`, CSV ingestion), Checkpoint 9 (public-repository readiness beyond the minimum). Remaining blockers: the Kakeibo owner's authority and the Kakeibo repository and starting revision in the run configuration before Step 29 runs.
 
 **Verification:** see the [Stages 6–11 exit record](./2026-09-27-cp01-stages-6-11-exit-review.md).

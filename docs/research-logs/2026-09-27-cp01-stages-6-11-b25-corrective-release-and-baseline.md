@@ -10,6 +10,8 @@
 
 **Applied changes:** Guide v19 §Preparing a development release (applies from `0.0.2`; pre-Checkpoint-2 landing; CHANGELOG rule) and §Release failure (recreated unpublished tag; consumed number and renumbering). Checkpoint 1 v31 Step 28 prose. Crosswalk Q62.
 
+**Approval:** the owner approved the Guide v19 §Preparing a development release and §Release failure clauses in the producing session on 2026-09-27, answering a direct question; the [exit record](./2026-09-27-cp01-stages-6-11-exit-review.md) records the question and answer, and the PR carries a comment recording them.
+
 **Later owners:** Step 29 (installs the published `0.0.2`), Checkpoint 2 (`0.0.3`, the `0.0.2 → 0.0.3` upgrade, the first invoker). Remaining blockers: the Step 21 prerequisite stands (the owner configures the tag-only `npm-release` environment and the version-tag ruleset before Step 21's review).
 
 **Verification:** see the [Stages 6–11 exit record](./2026-09-27-cp01-stages-6-11-exit-review.md).

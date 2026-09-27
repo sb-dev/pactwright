@@ -11,6 +11,8 @@
 
 **Applied changes:** `checkpoint.yml`: `SPEC00` source, `CP01/R02`–`R05`, `AC02`–`AC05`. Guide v19 §Transition rule. Checkpoint 1 v31 §3, Step 31 prose, exit-gate preamble. Crosswalk Q65, Q66.
 
+**Approval:** the owner approved the Guide v19 §Transition rule clause in the producing session on 2026-09-27, answering a direct question; the [exit record](./2026-09-27-cp01-stages-6-11-exit-review.md) records the question and answer, and the PR carries a comment recording them.
+
 **Later owners:** the T3 harness (implements the inherited bindings and the acceptance accounting `CP01/AC05` needs), T5 (records the inventory's categories), Checkpoints 2 and 3 (captured Intents; Sources). Remaining blockers: none.
 
 **Verification:** see the [Stages 6–11 exit record](./2026-09-27-cp01-stages-6-11-exit-review.md).

@@ -10,6 +10,8 @@
 
 **Applied changes:** Checkpoint 1 v31 §1, Stage 8 and 9 headings, Steps 26 and 27 prose. Crosswalk Q61.
 
+**Approval:** the owner approved the `0.0.2` wording in the producing session on 2026-09-27, answering a direct question; the [exit record](./2026-09-27-cp01-stages-6-11-exit-review.md) records the question and answer, and the PR carries a comment recording them.
+
 **Later owners:** Step 28 (the tagged tree holds the material and lineages; registry consumer), Checkpoint 2 (website foundation and GitHub guide), Checkpoint 3 (promotion of the bootstrap authority into Knowledge, OSS §19). Remaining blockers: none.
 
 **Verification:** see the [Stages 6–11 exit record](./2026-09-27-cp01-stages-6-11-exit-review.md).

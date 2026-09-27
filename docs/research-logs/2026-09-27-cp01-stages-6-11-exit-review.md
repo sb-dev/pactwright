@@ -10,7 +10,7 @@ The review covered the five T2 checks for each step: canonical fidelity against 
 
 ## Owner decisions this pass needs
 
-None is adopted without the owner's durable approval on the PR (owner review 5330105036, finding 5). Until that approval is recorded and cited here, each semantic decision below is a proposal, and later work must not treat it as canonical. The Kakeibo write authority is different: it is an execution prerequisite for Steps 29 and 30, not needed to merge this review.
+The owner approved all four semantic decisions in the producing session on 2026-09-27, answering direct questions (the owner had asked to be asked directly rather than through the PR). Each question and its answer, verbatim in substance: Step 25 start state (fresh `init`; `main`'s self-hosted records stay Git history, not migrated): "Approve"; Implementation Guide v19 clauses (release-PR procedure from `0.0.2` with an owner-merged pull request; CHANGELOG from accepted work only; an unpublished tag may be recreated; a published defect consumes the version number and renumbers later versions; before Project Intelligence, findings become open Intents): "Approve"; Step 30 invariant set (Kakeibo 02 §14 verbatim at `75443233` plus the credit-card and goal-contribution invariants, re-derived through a reviewed amendment if the recorded revision differs, nothing deferred to Step 31): "Approve"; `0.0.2` wording in §1 and the Stage 8 and 9 headings: "Approve". The PR carries a comment recording these answers. The Kakeibo write authority is different: it is an execution prerequisite for Steps 29 and 30, granted by the Kakeibo owner at execution, not by this review.
 
 | Decision | Where | Effect |
 |---|---|---|
@@ -100,7 +100,7 @@ Owner review [5330105036](https://github.com/sb-dev/pactwright/pull/53#pullreque
 | O2 | An existing `package.json` cannot stay byte-identical through `pnpm add`. | Applied: Step 29 keeps the workspace file byte-identical and the manifest apart from package-manager fields (B26). |
 | O3 | The one-shot fixture Extension was consumed but never produced. | Applied: Step 22 packs and verifies both fixture Extension archives; Steps 23 and 24 install them (B22). |
 | O4 | Material and blocking overlapped. | Applied: blocking takes precedence; Step 31 verify has the dual-qualifying control (B27). |
-| O5 | Semantic approvals were identified but not evidenced. | Open: the decisions above are proposals until the owner's durable approval is recorded on the PR and cited here. |
+| O5 | Semantic approvals were identified but not evidenced. | Resolved: the owner approved all four decisions directly in the producing session on 2026-09-27, recorded above and on the PR. |
 
 **Fresh review** of `dd93560` (read-only, this session) returned four blocking and eleven non-blocking findings:
 
@@ -139,6 +139,6 @@ Identity, storage, relationships and authority were settled in Stages 1–5. The
 | Batch challenge plans | executed as recorded in B22–B27 (registry reads of both packages on 2026-09-27; `207ac08`, `defd052` and `origin/main` reads; README, CHANGELOG and docs greps at `0f81839`; Checkpoint 2 greps; Kakeibo README, 02, 05, 06 and 07 at `75443233`; `ERR_PNPM_ADDING_TO_ROOT` and `-w` reproduced with pnpm 12.6.0) |
 | Not verified | the current Kakeibo default-branch revision; Step 29 records the revision it runs against, and Step 30 re-derives its invariant set if 02 changed |
 
-Stages 6–11 are requirement-ready in the methodology §7 sense only once the owner's durable approval of the decisions above is recorded and a fresh review accepts the corrections; until then this record states the proposed result: no unresolved behaviour needed by Steps 22–31 remains in their prose; each obligation has a stated verification; and deferred proofs have owners (Checkpoint 2's invoker, `0.0.3` and Kakeibo upgrade; Checkpoint 3's Source ingestion; the owner's Release-line amendment if a further corrective release is needed). Checkpoint-wide, the simplicity, graph-boundary and self-hosting obligations are declared and inherited (`CP01/R02`–`R05`) and every exit-gate line has a named proof. This is scoped T2 work: it authorises no implementation, builds no harness and grants no acceptance.
+With the owner's approvals recorded above, Stages 6–11 are requirement-ready in the methodology §7 sense once a fresh review accepts the corrections of `945545e`; the result is: no unresolved behaviour needed by Steps 22–31 remains in their prose; each obligation has a stated verification; and deferred proofs have owners (Checkpoint 2's invoker, `0.0.3` and Kakeibo upgrade; Checkpoint 3's Source ingestion; the owner's Release-line amendment if a further corrective release is needed). Checkpoint-wide, the simplicity, graph-boundary and self-hosting obligations are declared and inherited (`CP01/R02`–`R05`) and every exit-gate line has a named proof. This is scoped T2 work: it authorises no implementation, builds no harness and grants no acceptance.
 
 **Checkpoint 1 Stages 6–11 exit review v1**
