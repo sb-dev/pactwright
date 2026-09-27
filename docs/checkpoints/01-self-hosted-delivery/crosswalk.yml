@@ -70,8 +70,9 @@
 # Release failure, Transition rule), Checkpoint 1 v31 (sections 1, 2 and 3,
 # Stage 8, 9 and 10 text, Steps 22-31 prose, exit gate) and checkpoint.yml
 # (CP01/R02-R05, prose_steps). The owner approved the Q60, Q61, Q62/Q65 and Q64
-# decisions in the producing session on 2026-09-27 and directed the Q67
-# resolution (exit record). The section 7 review is
+# decisions in the producing session on 2026-09-27, directed that Steps 22-31
+# stay in prose (Q67), and confirmed Spec 00 v6's convert-before-run boundary
+# in review 5331122570 (exit record). The section 7 review is
 # ../../research-logs/2026-09-27-cp01-stages-6-11-exit-review.md. No question
 # is deleted.
 sources:

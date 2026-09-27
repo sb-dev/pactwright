@@ -174,41 +174,49 @@ export function splitUnits(markdown: string): StepUnits {
       }
       para = [];
     };
-    for (const raw of section.lines) {
+    const feed = (raw: string): void => {
       const line = raw.trimEnd();
       if (line.startsWith("```")) {
         flush();
         inCode = !inCode;
-        continue;
+        return;
       }
       if (inCode) {
         if (line.trim() && part) emit(part, norm(line));
-        continue;
+        return;
       }
       const refs = /^\*\*References:\*\*\s*(.*)$/.exec(line);
       if (refs) {
         flush();
         units.push({ key: `${sid}.references`, text: norm(refs[1] ?? "") });
-        continue;
+        return;
       }
       const label = LABELS[line.trim()];
       if (label) {
         flush();
         part = label;
-        continue;
+        return;
       }
       if (!line.trim()) {
         flush();
-        continue;
+        return;
       }
       if (/^\s*[-*] /.test(line) || /^\s*\d+\. /.test(line)) {
         flush();
         const p = part;
         if (p) splitSentences(line.replace(/^\s*([-*]|\d+\.) /, "")).forEach((s) => emit(p, s));
-        continue;
+        return;
       }
       para.push(line);
-    }
+    };
+    // A stage introduction before the step (its lines after the `##` heading)
+    // becomes `intro` units, so a conversion must quote it (Spec 00 §2).
+    part = "intro";
+    section.intro.slice(1).forEach(feed);
+    flush();
+    part = undefined;
+    inCode = false;
+    section.lines.forEach(feed);
     flush();
     result[sid] = { title: section.title, units };
   }

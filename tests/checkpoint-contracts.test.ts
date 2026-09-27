@@ -12,6 +12,9 @@ import {
   checkpointDirs,
   githubSlug,
   isShallowRepository,
+  proseHash,
+  splitUnits,
+  stepSections,
   validateCheckpointDir,
   type ValidateOptions,
 } from "../scripts/checkpoint-contracts.js";
@@ -187,6 +190,16 @@ describe("checkpoint contracts", () => {
       needs: revisionOf("CP01-S21"),
     },
     {
+      name: "reviewed hash for a step its source does not list",
+      file: "crosswalk.yml",
+      from: "    steps: [CP01-S20, CP01-S21]\n",
+      to:
+        "    steps: [CP01-S20, CP01-S21]\n    reviewed:\n      CP01-S05: sha256:" +
+        "0".repeat(64) +
+        "\n",
+      expect: /has a reviewed hash for unlisted CP01-S05/,
+    },
+    {
       name: "prose entry for a converted step",
       file: "checkpoint.yml",
       from: "prose_steps:\n",
@@ -221,6 +234,64 @@ describe("checkpoint contracts", () => {
       );
     });
   }
+
+  it("accepts a conversion whose source is its reviewed prose", (t) => {
+    const rev = revisionOf("CP01-S21");
+    if (!hasCommit(rev)) {
+      t.skip(`${rev} not in this shallow clone`);
+      return;
+    }
+    // Step 21's text at its crosswalk source, hashed as prose_steps would record it.
+    const reviewed = "sha256:07f39f3450cf3beb9c0ba30b9f0fbcaabf8eedfb42b37762140166857d8f07d9";
+    const root = plant("reviewed", "crosswalk.yml", [
+      [
+        "    steps: [CP01-S20, CP01-S21]\n",
+        `    steps: [CP01-S20, CP01-S21]\n    reviewed:\n      CP01-S21: ${reviewed}\n`,
+      ],
+    ]);
+    const errors = validateCheckpointDir(root, CP01, {
+      skipUnavailableSources: shallow,
+      gitDir: repoRoot,
+    });
+    assert.deepEqual(errors, []);
+  });
+
+  it("ignores trailing whitespace in prose steps", () => {
+    const root = plant("whitespace", "../01-self-hosted-delivery.md", [
+      [
+        "any deviation between specification and implementation.\n",
+        "any deviation between specification and implementation.  \t\n",
+      ],
+    ]);
+    const errors = validateCheckpointDir(root, CP01, {
+      skipUnavailableSources: shallow,
+      gitDir: repoRoot,
+    });
+    assert.deepEqual(errors, []);
+  });
+
+  it("starts a step's intro at the last ## heading before it", () => {
+    const markdown = "## A\n\nText a.\n\n## Stage B\n\nText b.\n\n### Step 1 — One\n\nBody.\n";
+    const section = stepSections(markdown).get(1);
+    assert.deepEqual(section?.intro, ["## Stage B", "", "Text b.", ""]);
+    assert.equal(
+      proseHash(section!),
+      proseHash({ ...section!, intro: ["## Stage B  ", "", "Text b.", ""] }),
+    );
+  });
+
+  it("quotes a stage introduction as the first step's intro units", () => {
+    const markdown = readFileSync(join(repoRoot, `${CP01}.md`), "utf8");
+    const intro = splitUnits(markdown).S29?.units.filter((u) => u.key.startsWith("S29.intro."));
+    assert.ok(
+      intro?.some((u) => u.text.startsWith("The Kakeibo owner authorises writes")),
+      "Stage 10's authority sentence is an S29 intro unit",
+    );
+    assert.deepEqual(
+      splitUnits(markdown).S23?.units.filter((u) => u.key.includes(".intro.")),
+      [],
+    );
+  });
 
   it("skips only the unavailable source when allowed", (t) => {
     if (!hasCommit(stage1)) {
