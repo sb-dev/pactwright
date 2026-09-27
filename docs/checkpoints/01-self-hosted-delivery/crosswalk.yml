@@ -3,9 +3,8 @@
 # the IDs that carry it; allocated_to names the later step that owns the rest of
 # the proof. `sources` names the checkpoint revision each converted step
 # replaced: Stage 1 replaced version 17, Stage 2 version 20, Stage 3 version 21,
-# Stage 4 version 22, Stage 5 version 23 and Stages 6-11 version 30. Open
-# questions are retained historical inputs to T2, not runtime acceptance
-# evidence.
+# Stage 4 version 22 and Stage 5 version 23. Open questions are retained
+# historical inputs to T2, not runtime acceptance evidence.
 #
 # Stage 1 (Q01-Q20) decisions and review/check status:
 # ../../research-logs/2026-09-23-pr41-b1-loading.md
@@ -60,20 +59,16 @@
 # review is ../../research-logs/2026-09-26-cp01-stage-5-exit-review.md. No
 # question is deleted.
 #
-# Stages 6-11 (Q57-Q66) were converted and resolved in one pass against
-# Implementation Guide v18 (amended to v19), Core v6, Distribution v5, OSS v2,
-# Principles v4 and Kakeibo Acceptance Profile v2:
+# Stages 6-11 (Q57-Q66) stay in prose form by the owner's decision; they have
+# no contracts, sources or entries here. Their T2 review and decisions:
 # ../../research-logs/2026-09-27-cp01-stages-6-11-b22-packed-consumer-proofs.md
 # B22 Q57,Q58,Q59; B23 Q60; B24 Q61; B25 Q62; B26 Q63,Q64; B27 Q65,Q66.
 # Applied clauses: Implementation Guide v19 (Preparing a development release,
-# Transition rule), Checkpoint 1 v31 (section 3, Stage 8 and 9 headings, Steps
-# 22-31 summaries) and checkpoint.yml (CP01/R02-R05, SPEC00 source). Owner
-# approvals required by the records are listed in the exit record
-# ../../research-logs/2026-09-27-cp01-stages-6-11-exit-review.md, which is the
-# section 7 whole-checkpoint review. The version 30 prose of Steps 27 and 28
-# held paragraphs outside the Run/Expected/Verify labels; their obligations
-# are named in the notes of S27.expected.1 and S28.verify.2. No question is
-# deleted.
+# Release failure, Transition rule), Checkpoint 1 v31 (sections 1 and 3, Stage
+# 8, 9 and 10 text, Steps 22-31 prose, exit gate) and checkpoint.yml
+# (CP01/R02-R05). The section 7 review is
+# ../../research-logs/2026-09-27-cp01-stages-6-11-exit-review.md. No question
+# is deleted.
 sources:
   - source: docs/checkpoints/01-self-hosted-delivery.md@26ea12a
     steps: [CP01-S01, CP01-S02, CP01-S03, CP01-S04, CP01-S05]
@@ -85,8 +80,6 @@ sources:
     steps: [CP01-S14, CP01-S15, CP01-S16, CP01-S17, CP01-S18, CP01-S19]
   - source: docs/checkpoints/01-self-hosted-delivery.md@ef18fa9
     steps: [CP01-S20, CP01-S21]
-  - source: docs/checkpoints/01-self-hosted-delivery.md@0f81839
-    steps: [CP01-S22, CP01-S23, CP01-S24, CP01-S25, CP01-S26, CP01-S27, CP01-S28, CP01-S29, CP01-S30, CP01-S31]
 entries:
   - key: S01.references
     text: "Specs 01–02; Implementation Guide engineering baseline."
@@ -405,7 +398,7 @@ entries:
     text: "`run` executes automatic responsibilities through the resolved shape/policy until a required Gate, completion, execution failure or validation failure."
     covered_by: [CP01-S08/R03, CP01-S08/AC02]
     allocated_to: CP01-S24
-    note: "Step 8 proves dispatch with an instrumented capability invoker (AC02, AC07). Step 24's version 20 prose completes the Delivery through the adapter and does not yet run real Agent Pack capabilities through lifecycle run; that pending later-step amendment is Q33. What Step 8 may dispatch is Q26."
+    note: "Step 8 proves dispatch with an instrumented capability invoker (AC02, AC07). Step 24's version 20 prose completes the Delivery through the adapter and does not yet run real Agent Pack capabilities through lifecycle run; that later-step amendment was Q33, resolved in Stage 2 by option A (Step 24 runs status, next and run on the consumer with the missing-invoker stop). What Step 8 may dispatch is Q26."
   - key: S08.run.9
     text: "It cannot skip Gates, invent transitions or create Evidence before the Step 7 closure guards pass."
     covered_by: [CP01-S08/R03, CP01-S08/R04, CP01-S08/AC03, CP01-S08/AC08]
@@ -513,7 +506,7 @@ entries:
     text: "Implement the runtime context-assembly API consumed by Agent Packs/adapters."
     covered_by: [CP01-S09/R09, CP01-S09/AC08, CP01-S12/R07, CP01-S12/R08, CP01-S12/AC08]
     allocated_to: CP01-S24
-    note: "Step 9 proves the API directly (AC08-AC09). The Stage 3 conversion requires the adapter to consume it (CP01-S12/AC08) and pack prompts to rely on runtime-supplied context (CP01-S10/R05). Whether Step 24 must run real Agent Pack capabilities through lifecycle run remains Q33."
+    note: "Step 9 proves the API directly (AC08-AC09). The Stage 3 conversion requires the adapter to consume it (CP01-S12/AC08) and pack prompts to rely on runtime-supplied context (CP01-S10/R05). Q33 (Stage 2, option A) does not require Step 24 to run real Agent Pack capabilities through lifecycle run; Step 24 re-executes CP01-S12/AC08 on the packed revision (Q59)."
   - key: S09.run.22
     text: "Default Delivery context contains current relevant Contract/Brief lineage and excludes rejected alternatives, superseded state, execution transcripts and unrelated history unless explicitly required."
     covered_by: [CP01-S09/R09, CP01-S09/AC08]
@@ -1205,414 +1198,6 @@ entries:
   - key: S21.verify.1
     text: "Validate workflow syntax, permissions and release assertions."
     covered_by: [CP01-S21/R02, CP01-S21/R03, CP01-S21/AC01, CP01-S21/AC02, CP01-S21/AC03, CP01-S21/AC04, CP01-S21/AC07]
-  - key: S22.run.1
-    text: "pnpm pack --out /tmp/pactwright-checkpoint-1.tgz"
-    covered_by: [CP01-S22/R01, CP01-S22/AC01]
-  - key: S22.run.2
-    text: "pnpm --filter @pactwright/standard pack --out /tmp/pactwright-standard-checkpoint-1.tgz"
-    covered_by: [CP01-S22/R01, CP01-S22/AC01]
-  - key: S22.expected.1
-    text: "Real consumer artefacts exist for both components."
-    covered_by: [CP01-S22/R01, CP01-S22/R02, CP01-S22/AC01, CP01-S22/AC02]
-    allocated_to: CP01-S23
-    note: "Step 23 proves the archives install and initialise a clean consumer. What the archives must contain, how they are identified for later steps and how the runtime's dependency on the pack is pinned are Q57."
-  - key: S22.verify.1
-    text: "Inspect both archives."
-    covered_by: [CP01-S22/R03, CP01-S22/AC01, CP01-S22/AC04]
-    note: "The inspection is defined as AC01's content check and AC04's review (Q57)."
-  - key: S23.run.1
-    text: "Install the two packed artefacts in a clean repository outside the workspace, using a local-package override only if needed before first registry publication, then run the explicit path:"
-    covered_by: [CP01-S23/R01, CP01-S23/AC01, CP01-S23/AC05]
-    note: "The override mechanism and the origin of the packed fixture Extension are Q58."
-  - key: S23.run.2
-    text: "pnpm pactwright init"
-    covered_by: [CP01-S23/R02, CP01-S23/AC01]
-  - key: S23.run.3
-    text: "pnpm pactwright agent-pack use @pactwright/standard"
-    covered_by: [CP01-S23/R02, CP01-S23/AC01]
-  - key: S23.run.4
-    text: "pnpm pactwright sync"
-    covered_by: [CP01-S23/R02, CP01-S23/AC01]
-  - key: S23.run.5
-    text: "pnpm pactwright doctor"
-    covered_by: [CP01-S23/R02, CP01-S23/AC01]
-  - key: S23.run.6
-    text: "pnpm pactwright validate"
-    covered_by: [CP01-S23/R02, CP01-S23/AC01]
-  - key: S23.run.7
-    text: "pnpm pactwright lifecycle status"
-    covered_by: [CP01-S23/R02, CP01-S23/AC01]
-  - key: S23.run.8
-    text: "In a second clean fixture, prove one-shot init with a fixture Extension and explicitly supply the same compatible packed Agent Pack source/version through the documented init selection input."
-    covered_by: [CP01-S23/R03, CP01-S23/AC02]
-    note: "The fixture Extension is a packed repository test asset (Q58)."
-  - key: S23.run.9
-    text: "Compare against the equivalent explicit operations; pack installation alone is not pack selection."
-    covered_by: [CP01-S23/R03, CP01-S23/R04, CP01-S23/AC02, CP01-S23/AC03]
-  - key: S23.expected.1
-    text: "A repository becomes a valid Pactwright consumer from packed artefacts only, and one-shot init does not create a divergent setup or silently select a pack."
-    covered_by: [CP01-S23/R01, CP01-S23/R03, CP01-S23/R04, CP01-S23/R06, CP01-S23/AC02, CP01-S23/AC03, CP01-S23/AC04]
-  - key: S23.verify.1
-    text: "Doctor has no action-required issue; validation/status pass; second sync is clean; explicit and one-shot composition resolve equivalent state."
-    covered_by: [CP01-S23/R02, CP01-S23/R03, CP01-S23/R05, CP01-S23/AC01, CP01-S23/AC02]
-  - key: S24.run.1
-    text: "Use the generated adapter to complete:"
-    covered_by: [CP01-S24/R01, CP01-S24/AC01]
-    note: "Who executes the commands and who approves the fixture Contract are Q59."
-  - key: S24.run.2
-    text: "Intent → Contract alternatives → authorised Decision → Contract → Brief → Delivery → Review → Evidence"
-    covered_by: [CP01-S24/R01, CP01-S24/R03, CP01-S24/AC01]
-  - key: S24.run.3
-    text: "Then run validation/status and the complete core invariant suite through the assembled runtime, adapter and fixture Extension loader, including the strengthened Stage 1 cases and Step 12 guard/withdrawal/re-authorisation matrix."
-    covered_by: [CP01-S24/R07, CP01-S24/AC09, CP01-S24/AC10]
-    note: "The criteria re-executed and the revision they run on are named in R07 (Q59)."
-  - key: S24.expected.1
-    text: "The full canonical Delivery lineage completes with alternatives/execution transcripts remaining non-canonical."
-    covered_by: [CP01-S24/R03, CP01-S24/AC01, CP01-S24/AC02]
-  - key: S24.verify.1
-    text: "Inspect durable Project Graph state."
-    covered_by: [CP01-S24/R03, CP01-S24/AC02]
-  - key: S24.verify.2
-    text: "Require all 17 validation cases, Evidence precondition failures, seven adapter mutation-boundary cases and complete core evaluation dimensions to pass before self-hosting."
-    covered_by: [CP01-S24/R05, CP01-S24/R06, CP01-S24/R07, CP01-S24/AC05, CP01-S24/AC07, CP01-S24/AC08, CP01-S24/AC09]
-  - key: S24.verify.3
-    text: "Run `pactwright lifecycle status`, `next` and `run` on the fixture consumer at each lineage position."
-    covered_by: [CP01-S24/R04, CP01-S24/AC03]
-  - key: S24.verify.4
-    text: "`run` must stop cleanly at manual entries and, for capability-backed automatic responsibilities, with the missing-invoker execution failure; it must not simulate any output."
-    covered_by: [CP01-S24/R04, CP01-S24/AC03]
-  - key: S24.verify.5
-    text: "The consumer's lifecycle `version: 1` cannot declare Gates, corrective routes or iteration bounds, so validation rules 10, 11, 14 and 15 are proven by the repository test suite against the built runtime through the Step 6 fixture definitions; the packed consumer proves the other validation rules, and the published package exposes no fixture-definition entry point."
-    covered_by: [CP01-S24/R05, CP01-S24/AC05, CP01-S24/AC06]
-  - key: S24.verify.6
-    text: "The complete core evaluation dimensions are proven by the repository test suite against the built runtime through scripted invokers and judges; `pnpm pactwright eval` on the fixture consumer reports every case as not evaluated, names no invoker and exits with failure, since Checkpoint 1 supplies no provider invoker, and it simulates no result."
-    covered_by: [CP01-S24/R04, CP01-S24/R07, CP01-S24/AC04, CP01-S24/AC09]
-  - key: S24.verify.7
-    text: "Rerun the strengthened Stage 1 loading, record, edge, lineage and revision cases through the assembled runtime and installed fixture Extension."
-    covered_by: [CP01-S24/R07, CP01-S24/AC09]
-  - key: S24.verify.8
-    text: "Include non-node canonical contributions, withdrawal/re-authorisation, actor-policy denial and no-write failure controls."
-    covered_by: [CP01-S24/R07, CP01-S24/AC09]
-  - key: S24.verify.9
-    text: "Neither schema validation of these contract files nor their declared verifier IDs count as execution evidence."
-    covered_by: [CP01-S24/R07, CP01-S24/AC09, CP01-S24/AC10]
-  - key: S25.run.1
-    text: "pnpm build"
-    covered_by: [CP01-S25/R01, CP01-S25/AC01]
-  - key: S25.run.2
-    text: "pnpm pactwright init"
-    covered_by: [CP01-S25/R01, CP01-S25/AC01]
-  - key: S25.run.3
-    text: "pnpm pactwright agent-pack use @pactwright/standard"
-    covered_by: [CP01-S25/R01, CP01-S25/AC01]
-  - key: S25.run.4
-    text: "pnpm pactwright sync"
-    covered_by: [CP01-S25/R01, CP01-S25/AC01]
-  - key: S25.run.5
-    text: "pnpm pactwright doctor"
-    covered_by: [CP01-S25/R01, CP01-S25/AC01]
-  - key: S25.run.6
-    text: "pnpm pactwright validate"
-    covered_by: [CP01-S25/R01, CP01-S25/AC01]
-  - key: S25.run.7
-    text: "pnpm pactwright lifecycle status"
-    covered_by: [CP01-S25/R01, CP01-S25/AC01]
-  - key: S25.run.8
-    text: "pnpm verify"
-    covered_by: [CP01-S25/R01, CP01-S25/AC01, CP01/R01, CP01/AC01]
-  - key: S25.run.9
-    text: "Land self-hosting state through the repository process available before Checkpoint 2 product GitHub integration exists."
-    covered_by: [CP01-S25/R05, CP01-S25/AC05]
-    note: "The pre-Checkpoint-2 process is a pull request merged by the owner with CI / Verify passing (Q60)."
-  - key: S25.expected.1
-    text: "Pactwright is now a valid Pactwright project."
-    covered_by: [CP01-S25/R01, CP01-S25/R06, CP01-S25/AC01, CP01-S25/AC05]
-    note: "The start state of the self-hosted graph, the treatment of the released 0.0.1 self-hosted records and lock agreement with the workspace-linked pack are Q60."
-  - key: S25.verify.1
-    text: "Second sync is clean and repository CI passes."
-    covered_by: [CP01-S25/R04, CP01-S25/R05, CP01-S25/AC04, CP01-S25/AC05]
-  - key: S26.references
-    text: "Spec 08 Core Delivery public milestone."
-    covered_by: [CP01-S26/R02]
-  - key: S26.run.1
-    text: "Use Pactwright itself to improve the Quick Start based only on behaviour proven in this checkpoint."
-    covered_by: [CP01-S26/R01, CP01-S26/R03, CP01-S26/AC01, CP01-S26/AC02]
-    note: "What \"behaviour proven in this checkpoint\" means as a verifiable rule, and the install line before publication, are Q61."
-  - key: S26.run.2
-    text: "Before PI exists, identity/positioning/product choices required by this public work must be authorised through Decision + Contract rather than invented."
-    covered_by: [CP01-S26/R02, CP01-S26/AC01, CP01-S26/AC04]
-    note: "The approving actor is the repository owner (Q61)."
-  - key: S26.expected.1
-    text: "Pactwright completes a real public-product change through itself."
-    covered_by: [CP01-S26/R01, CP01-S26/AC01]
-  - key: S26.verify.1
-    text: "Evidence and public instructions agree with clean-consumer behaviour."
-    covered_by: [CP01-S26/R04, CP01-S26/AC03, CP01-S26/AC04]
-  - key: S27.expected.1
-    text: "A new user can understand/install/execute/upgrade `0.0.1` without future Extensions."
-    covered_by: [CP01-S27/R02, CP01-S27/R06, CP01-S27/AC02, CP01-S27/AC05]
-    note: "The version 30 prose names `0.0.1`; the release this checkpoint publishes is `0.0.2` and `0.0.1` names the content set (Q61). The untracked paragraphs \"Through normal Pactwright Delivery, produce/update: README Quick Start, Getting Started guide, one executable Core Delivery example\" and \"Only document proven behaviour, including the core distribution commands shipped in `0.0.1`\" are carried by CP01-S27/R01, R02 and R03."
-  - key: S27.verify.1
-    text: "Follow the material in a clean packed-consumer fixture."
-    covered_by: [CP01-S27/R05, CP01-S27/AC04, CP01-S27/AC05]
-  - key: S28.references
-    text: "Implementation Guide npm release model; Spec 02 baseline evaluation."
-    covered_by: [CP01-S28/R01, CP01-S28/R04]
-  - key: S28.verify.1
-    text: "pnpm view pactwright@0.0.2 version"
-    covered_by: [CP01-S28/R03, CP01-S28/AC03]
-  - key: S28.verify.2
-    text: "pnpm view @pactwright/standard@0.0.2 version"
-    covered_by: [CP01-S28/R03, CP01-S28/AC03]
-    note: "The untracked paragraphs of the version 30 prose (\"0.0.1 was published on 2026-09-01 …\", \"Publish exactly: pactwright@0.0.2, @pactwright/standard@0.0.2\" and \"Both 0.0.1 versions were published interactively … Tag accepted source as v0.0.2 and verify the tag workflow, its npm-release deployment record and each published version's provenance attestation (CP01-S21/R04)\") are carried by CP01-S28/R02, R03 and AC03. The release-preparation procedure for 0.0.2 and the CHANGELOG rule are Q62."
-  - key: S28.verify.3
-    text: "pnpm pactwright eval \\"
-    covered_by: [CP01-S28/R04, CP01-S28/AC04]
-  - key: S28.verify.4
-    text: "--baseline @pactwright/standard@0.0.1 \\"
-    covered_by: [CP01-S28/R04, CP01-S28/AC04]
-  - key: S28.verify.5
-    text: "--candidate @pactwright/standard@0.0.2"
-    covered_by: [CP01-S28/R04, CP01-S28/AC04]
-  - key: S28.verify.6
-    text: "The comparison must resolve the published `0.0.1` baseline exactly and emit per-capability/agent/case comparison results."
-    covered_by: [CP01-S28/R04, CP01-S28/AC04]
-    note: "The expected output of a comparison without an invoker is Q62."
-  - key: S28.verify.7
-    text: "A candidate whose behaviour is unchanged may correctly report no regressions; the purpose is to prove the real released-baseline path, not manufacture a difference."
-    covered_by: [CP01-S28/R04, CP01-S28/AC04]
-  - key: S29.references
-    text: "Distribution §§2–3; Kakeibo Acceptance Profile §5; current Kakeibo 05 package/layer boundary"
-    covered_by: [CP01-S29/R01, CP01-S29/R05]
-  - key: S29.run.1
-    text: "From the Kakeibo repository root:"
-    covered_by: [CP01-S29/R01]
-  - key: S29.run.2
-    text: "if [ ! -f package.json ]; then"
-    covered_by: [CP01-S29/R01, CP01-S29/AC01]
-  - key: S29.run.3
-    text: "cat > package.json <<'JSON'"
-    covered_by: [CP01-S29/R01, CP01-S29/AC01]
-  - key: S29.run.4
-    text: "{"
-    covered_by: [CP01-S29/R01, CP01-S29/AC01]
-  - key: S29.run.5
-    text: "\"name\": \"kakeibo\","
-    covered_by: [CP01-S29/R01, CP01-S29/AC01]
-  - key: S29.run.6
-    text: "\"version\": \"0.0.0\","
-    covered_by: [CP01-S29/R01, CP01-S29/AC01]
-  - key: S29.run.7
-    text: "\"private\": true"
-    covered_by: [CP01-S29/R01, CP01-S29/AC01]
-  - key: S29.run.8
-    text: "}"
-    covered_by: [CP01-S29/R01, CP01-S29/AC01]
-  - key: S29.run.9
-    text: "JSON"
-    covered_by: [CP01-S29/R01, CP01-S29/AC01]
-  - key: S29.run.10
-    text: "fi"
-    covered_by: [CP01-S29/R01, CP01-S29/AC01]
-  - key: S29.run.11
-    text: "if [ ! -f pnpm-workspace.yaml ]; then"
-    covered_by: [CP01-S29/R01, CP01-S29/AC01]
-  - key: S29.run.12
-    text: "cat > pnpm-workspace.yaml <<'YAML'"
-    covered_by: [CP01-S29/R01, CP01-S29/AC01]
-  - key: S29.run.13
-    text: "packages:"
-    covered_by: [CP01-S29/R01, CP01-S29/AC01]
-  - key: S29.run.14
-    text: "- \"apps/*\""
-    covered_by: [CP01-S29/R01, CP01-S29/AC01]
-  - key: S29.run.15
-    text: "- \"packages/*\""
-    covered_by: [CP01-S29/R01, CP01-S29/AC01]
-  - key: S29.run.16
-    text: "YAML"
-    covered_by: [CP01-S29/R01, CP01-S29/AC01]
-  - key: S29.run.17
-    text: "fi"
-    covered_by: [CP01-S29/R01, CP01-S29/AC01]
-  - key: S29.run.18
-    text: "pnpm add -D pactwright@0.0.2"
-    covered_by: [CP01-S29/R02, CP01-S29/AC01, CP01-S29/AC03]
-  - key: S29.run.19
-    text: "pnpm pactwright init"
-    covered_by: [CP01-S29/R02, CP01-S29/AC01]
-  - key: S29.run.20
-    text: "pnpm pactwright agent-pack use @pactwright/standard"
-    covered_by: [CP01-S29/R02, CP01-S29/AC01]
-  - key: S29.run.21
-    text: "pnpm pactwright sync"
-    covered_by: [CP01-S29/R02, CP01-S29/AC01]
-  - key: S29.run.22
-    text: "pnpm pactwright validate"
-    covered_by: [CP01-S29/R02, CP01-S29/AC01]
-  - key: S29.run.23
-    text: "pnpm pactwright lifecycle status"
-    covered_by: [CP01-S29/R02, CP01-S29/AC01]
-  - key: S29.run.24
-    text: "If the repository already has `package.json` or `pnpm-workspace.yaml`, preserve the existing files and use their adopted package/workspace configuration rather than replacing them."
-    covered_by: [CP01-S29/R01, CP01-S29/AC01]
-  - key: S29.run.25
-    text: "This step must not create application packages, Hono services, database code, R2/Workflow infrastructure or a Turborepo pipeline merely to install Pactwright."
-    covered_by: [CP01-S29/R01, CP01-S29/R03, CP01-S29/AC02]
-  - key: S29.expected.1
-    text: "Kakeibo has the minimum consumer package root required by its future pnpm/Turborepo architecture and is running the final Checkpoint 1 package with core Delivery only; no optional extension is enabled."
-    covered_by: [CP01-S29/R01, CP01-S29/R02, CP01-S29/R03, CP01-S29/AC01, CP01-S29/AC02]
-    note: "Which step establishes the acceptance profile's public-repository foundation, and the authority to write to Kakeibo, are Q63."
-  - key: S29.verify.1
-    text: "existing Kakeibo specs and repository-authored files are unchanged except for the intentional minimal package/workspace/bootstrap files and Pactwright-owned files;"
-    covered_by: [CP01-S29/R03, CP01-S29/AC02]
-  - key: S29.verify.2
-    text: "`pnpm pactwright validate` passes;"
-    covered_by: [CP01-S29/R02, CP01-S29/AC01]
-  - key: S29.verify.3
-    text: "`pnpm pactwright lifecycle status` passes;"
-    covered_by: [CP01-S29/R02, CP01-S29/AC01]
-  - key: S29.verify.4
-    text: "no CP2 application/infrastructure concern has been implemented early."
-    covered_by: [CP01-S29/R03, CP01-S29/AC02]
-  - key: S30.references
-    text: "Kakeibo Acceptance Profile §§3–5; current Kakeibo `02-financial-domain-model-spec.md`; current Kakeibo `05-system-architecture-and-data-spec.md` package/layer boundary; current Kakeibo `06-engineering-delivery-and-operations-spec.md` deterministic test expectations; Delivery Graph §19"
-    covered_by: [CP01-S30/R02]
-    note: "Conflicts between the invariant list and the current Kakeibo specifications, and the deciding actor in Kakeibo, are Q64."
-  - key: S30.run.1
-    text: "From the Kakeibo repository root:"
-    covered_by: [CP01-S30/R01]
-  - key: S30.run.2
-    text: "/capture-intent \"Create Kakeibo's first executable deterministic financial-domain foundation in packages/domain from the current canonical Kakeibo specs. Cover FinancialEntry movement semantics; planning income; fixed commitments; Needs, Wants, Culture and Unexpected plan treatment; plan-funded versus tracking-only goals; goal allocation versus reviewed contribution; transfers, credit-card settlement and other non-spending movements; personal versus business scope; reviewed versus unreviewed truth; preparation-state independence; deterministic rule priority and first-match behaviour; split conservation; source identity and re-import idempotency; financial duplicate-candidate versus confirmed-duplicate semantics; and preservation of historical interpretation across plan, goal and rule changes. Add deterministic invariant tests with explicit numeric assertions where applicable. Keep the domain package free of Hono, Neon, Cloudflare, UI, analytics and provider dependencies. Do not introduce research-derived financial targets or recommendations.\""
-    covered_by: [CP01-S30/R01, CP01-S30/AC01]
-  - key: S30.run.3
-    text: "/propose-contracts <intent-id>"
-    covered_by: [CP01-S30/R01, CP01-S30/AC01]
-  - key: S30.run.4
-    text: "/approve-contract <contract-id> \"<selection notes>\""
-    covered_by: [CP01-S30/R01, CP01-S30/AC01]
-  - key: S30.run.5
-    text: "/write-brief <contract-id>"
-    covered_by: [CP01-S30/R01, CP01-S30/AC01]
-  - key: S30.run.6
-    text: "/deliver-brief <brief-id>"
-    covered_by: [CP01-S30/R01, CP01-S30/AC01]
-  - key: S30.run.7
-    text: "/review <brief-id>"
-    covered_by: [CP01-S30/R01, CP01-S30/AC01]
-  - key: S30.run.8
-    text: "/prepare-evidence <brief-id>"
-    covered_by: [CP01-S30/R01, CP01-S30/AC01]
-  - key: S30.run.9
-    text: "Then:"
-    covered_by: [CP01-S30/R07, CP01-S30/AC05]
-  - key: S30.run.10
-    text: "pnpm pactwright validate"
-    covered_by: [CP01-S30/R07, CP01-S30/AC05]
-  - key: S30.run.11
-    text: "pnpm pactwright lifecycle status"
-    covered_by: [CP01-S30/R07, CP01-S30/AC05]
-  - key: S30.run.12
-    text: "Run the Kakeibo repository-defined deterministic domain tests as part of the same acceptance step."
-    covered_by: [CP01-S30/R10, CP01-S30/AC02, CP01-S30/AC07]
-  - key: S30.expected.1
-    text: "The first Kakeibo executable slice represents `FinancialEntry` as the general financial concept rather than treating every entry as spending, and preserves at least these observable invariants:"
-    covered_by: [CP01-S30/R03, CP01-S30/AC02]
-  - key: S30.expected.2
-    text: "fixed commitments do not consume flexible envelopes"
-    covered_by: [CP01-S30/R03, CP01-S30/AC02]
-  - key: S30.expected.3
-    text: "plan-funded goal allocations do not also consume a flexible envelope"
-    covered_by: [CP01-S30/R03, CP01-S30/AC02]
-  - key: S30.expected.4
-    text: "transfers do not become spending because cash moved"
-    covered_by: [CP01-S30/R03, CP01-S30/AC02]
-  - key: S30.expected.5
-    text: "credit-card settlement does not double-count tracked purchases"
-    covered_by: [CP01-S30/R03, CP01-S30/AC02]
-  - key: S30.expected.6
-    text: "business activity does not consume personal envelopes"
-    covered_by: [CP01-S30/R03, CP01-S30/AC02]
-  - key: S30.expected.7
-    text: "reviewed totals include only reviewed entries"
-    covered_by: [CP01-S30/R03, CP01-S30/AC02]
-  - key: S30.expected.8
-    text: "preparation state does not create reviewed truth"
-    covered_by: [CP01-S30/R03, CP01-S30/AC02]
-  - key: S30.expected.9
-    text: "rules/suggestions do not create reviewed truth"
-    covered_by: [CP01-S30/R03, CP01-S30/AC02]
-  - key: S30.expected.10
-    text: "sum(split parts) = original amount"
-    covered_by: [CP01-S30/R03, CP01-S30/AC02]
-  - key: S30.expected.11
-    text: "confirmed split parts replace the source amount in aggregates"
-    covered_by: [CP01-S30/R03, CP01-S30/AC02]
-  - key: S30.expected.12
-    text: "source re-import idempotency ≠ financial duplicate resolution"
-    covered_by: [CP01-S30/R03, CP01-S30/AC02]
-  - key: S30.expected.13
-    text: "goal allocation ≠ reviewed goal contribution"
-    covered_by: [CP01-S30/R03, CP01-S30/AC02]
-  - key: S30.expected.14
-    text: "plan/goal/rule changes do not rewrite historical financial truth"
-    covered_by: [CP01-S30/R03, CP01-S30/AC02]
-  - key: S30.expected.15
-    text: "The package remains deterministic and independent of application/API/storage/UI/provider concerns."
-    covered_by: [CP01-S30/R04, CP01-S30/AC03]
-  - key: S30.verify.1
-    text: "`pnpm pactwright validate` and `pnpm pactwright lifecycle status` pass;"
-    covered_by: [CP01-S30/R07, CP01-S30/AC05]
-  - key: S30.verify.2
-    text: "the Kakeibo deterministic financial-domain tests pass with explicit numeric assertions where applicable;"
-    covered_by: [CP01-S30/R03, CP01-S30/R10, CP01-S30/AC02]
-    note: "How numeric assertions and the boundary checks are verified is Q64."
-  - key: S30.verify.3
-    text: "domain code has no Hono/Neon/Cloudflare/UI/analytics/provider dependency;"
-    covered_by: [CP01-S30/R04, CP01-S30/AC03]
-  - key: S30.verify.4
-    text: "no research-derived financial target is encoded as a default or recommendation;"
-    covered_by: [CP01-S30/R05, CP01-S30/AC03, CP01-S30/AC07]
-  - key: S30.verify.5
-    text: "the approved Contract retains all applicable financial invariants through Brief, Delivery, Review and Evidence;"
-    covered_by: [CP01-S30/R06, CP01-S30/AC04]
-  - key: S30.verify.6
-    text: "the Kakeibo graph contains one valid Intent → Decision → Contract → Brief → Evidence lineage for the delivered financial-domain foundation."
-    covered_by: [CP01-S30/R07, CP01-S30/AC01, CP01-S30/AC05]
-  - key: S31.references
-    text: "Implementation Principles §§7, 14; Implementation Guide — Transition rule"
-    covered_by: [CP01-S31/R01, CP01-S31/R02]
-  - key: S31.run.1
-    text: "Review the execution of Stages 1–10, including bootstrap-fixture friction, self-hosting friction, Kakeibo installation/workspace bootstrap and onboarding problems, financial-invariant preservation, content gaps and any deviation between specification and implementation."
-    covered_by: [CP01-S31/R01, CP01-S31/AC01]
-    note: "The definitions of material and blocking findings and the location of the inventory are Q65."
-  - key: S31.run.2
-    text: "From the Pactwright repository root, for each finding worth acting on:"
-    covered_by: [CP01-S31/R03, CP01-S31/AC02]
-  - key: S31.run.3
-    text: "/capture-intent \"<finding phrased as a requested outcome>\""
-    covered_by: [CP01-S31/R03, CP01-S31/AC02]
-  - key: S31.run.4
-    text: "Project Intelligence does not exist yet, so findings are captured directly as Intents through normal Delivery (Implementation Principles §14)."
-    covered_by: [CP01-S31/R03, CP01-S31/AC02]
-  - key: S31.run.5
-    text: "Leave the captured Intents open; they are future work, not part of this checkpoint's Delivery."
-    covered_by: [CP01-S31/R03, CP01-S31/AC02, CP01-S31/AC04]
-  - key: S31.run.6
-    text: "Blocking failures must instead be fixed within this checkpoint: repeat the affected stage's steps until its verification passes."
-    covered_by: [CP01-S31/R04, CP01-S31/AC03]
-  - key: S31.run.7
-    text: "Do not generalise a Kakeibo-specific domain/product choice into Pactwright semantics unless it exposes a repeatable Pactwright responsibility failure."
-    covered_by: [CP01-S31/R05, CP01-S31/AC04]
-  - key: S31.expected.1
-    text: "Every material Checkpoint 1 finding exists as an open Intent in the Pactwright graph, and no known blocking failure is carried into Checkpoint 2."
-    covered_by: [CP01-S31/R03, CP01-S31/R04, CP01-S31/AC02, CP01-S31/AC03]
-  - key: S31.verify.1
-    text: "Run `pnpm pactwright validate` and `pnpm pactwright lifecycle status`; captured Intents are valid open lineages."
-    covered_by: [CP01-S31/R06, CP01-S31/AC02]
-  - key: S31.verify.2
-    text: "Confirm no blocking failure remains unresolved."
-    covered_by: [CP01-S31/R04, CP01-S31/AC03]
 open_questions:
   - id: Q01
     affects: [CP01-S01/R05, CP01-S02/R06, CP01-S03/R01]
@@ -1787,32 +1372,32 @@ open_questions:
     affects: [CP01-S21/R03, CP01-S21/R04, CP01-S21/R07, CP01-S21/AC05, CP01-S21/AC07, CP01-S28]
     question: "The npm-release environment's protection rules and each package's npm trusted-publisher configuration live outside the repository. Must each publish have a human approval binding through the environment, and how are the environment and trusted-publisher configuration evidenced for acceptance?"
   - id: Q57
-    affects: [CP01-S22/R01, CP01-S22/R02, CP01-S22/R03, CP01-S22/R04, CP01-S22/AC01, CP01-S22/AC02, CP01-S22/AC03, CP01-S22/AC04, CP01-S23/R01, CP01-S27/R05, CP01-S28/R05]
-    question: "Step 22 says only \"Inspect both archives\" and \"Real consumer artefacts exist for both components\". What must the inspection establish, how are the archives identified so that Steps 23, 24 and 27 install exactly the same bytes, must Step 27 repack its own revision, and in what form does the packed runtime manifest pin its dependency on @pactwright/standard once pnpm rewrites the workspace protocol?"
+    affects: [CP01-S22, CP01-S23, CP01-S26, CP01-S27, CP01-S28]
+    question: "Step 22 says only \"Inspect both archives\" and \"Real consumer artefacts exist for both components\". What must the inspection establish, how are the archives identified so that later steps install exactly the same bytes, which later steps must repack their own revision, and in what form does the packed runtime manifest pin its dependency on @pactwright/standard once pnpm rewrites the workspace protocol?"
   - id: Q58
-    affects: [CP01-S23/R01, CP01-S23/R03, CP01-S23/R06, CP01-S23/AC02, CP01-S23/AC05, CP01-S24/R05, CP01-S24/AC05]
-    question: "Before Step 28 publishes, the runtime archive's exact dependency on @pactwright/standard cannot resolve from the registry. Which override mechanism supplies the standard archive, is it the fixture's only deviation from a published consumer, and where does the packed fixture Extension for the one-shot fixture and the defective fixture Extension for rule 16 come from when the published archives expose no fixture entry point?"
+    affects: [CP01-S23, CP01-S24]
+    question: "Before Step 28 publishes, the runtime archive's exact dependency on @pactwright/standard cannot resolve from the registry. Which override supplies the standard archive, is it the fixture's only deviation from a published consumer, what negative cases prove that installation is not selection, and where do the packed fixture Extension for one-shot init and the defective Extension for rule 16 come from when the published archives expose no fixture entry point?"
   - id: Q59
-    affects: [CP01-S24/R01, CP01-S24/R02, CP01-S24/R03, CP01-S24/R04, CP01-S24/R05, CP01-S24/R06, CP01-S24/R07, CP01-S24/AC01, CP01-S24/AC03, CP01-S24/AC05, CP01-S24/AC07, CP01-S24/AC08, CP01-S24/AC09, CP01-S24/AC10]
-    question: "Step 24 is the first step in which real Agent Pack agents execute. Who runs the seven commands and how are provider, model and pack identities recorded; who authorises the fixture Contract under the released manual human policy; what does the fixture Delivery deliver; which accepted criteria does \"the complete core invariant suite through the assembled runtime\" re-execute, on which revision; and which validation rules, closure guards and mutation boundaries can the packed consumer itself exercise?"
+    affects: [CP01-S24, CP01-S12/AC03, CP01-S12/AC08, CP01-S12/AC10, CP01-S08/R03]
+    question: "Step 24 is the first step in which real Agent Pack agents execute. Who runs the seven commands and how are provider, model and pack identities recorded; who authorises the fixture Contract under the released manual human policy; which accepted criteria does \"the complete core invariant suite through the assembled runtime\" re-execute, on which revision; where exactly does lifecycle run stop at each position under the released policy; and which validation rules, closure guards and mutation boundaries can the packed consumer itself exercise?"
   - id: Q60
-    affects: [CP01-S25/R01, CP01-S25/R02, CP01-S25/R03, CP01-S25/R05, CP01-S25/R07, CP01-S25/AC02, CP01-S25/AC03, CP01-S25/AC05, CP01-S25/AC06, CP01/R02, CP01/AC02, CP01-S26/R05, CP01-S31/R04]
-    question: "The candidate branch holds no Pactwright project state while the default branch holds the released 0.0.1 self-hosted graph and configuration. Does Step 25 start from a fresh init or migrate that released project through Step 19's released-format migration; how does lock agreement treat the pack installed as a workspace link; what is \"the repository process available before Checkpoint 2\" and who lands the self-hosting state; and from which acceptance does the checkpoint's self-hosting obligation apply?"
+    affects: [CP01-S25, CP01/R02, CP01/AC02, CP01-S19/R07, CP01-S15/R03]
+    question: "The candidate branch holds no Pactwright project state while the default branch holds self-hosted state in the unversioned lock format. Does Step 25 start from a fresh init or migrate that state through Step 19's released-format migration; how does lock agreement treat the pack installed as a workspace link and a later edit to it; what is \"the repository process available before Checkpoint 2\" and who lands the self-hosting state; and from which acceptance does the checkpoint's self-hosting obligation apply?"
   - id: Q61
-    affects: [CP01-S26/R02, CP01-S26/R03, CP01-S26/R04, CP01-S26/AC01, CP01-S26/AC02, CP01-S26/AC03, CP01-S27/R02, CP01-S27/R03, CP01-S27/R04, CP01-S27/R05, CP01-S27/R06, CP01-S27/AC02, CP01-S27/AC03, CP01-S27/AC04, CP01-S27/AC05]
-    question: "Who is the human actor whose Decision authorises the public-content Contracts of Steps 26 and 27; what makes \"behaviour proven in this checkpoint\" and \"only document proven behaviour\" verifiable rules; which core distribution commands must the learning material cover; must the install instruction name the exact version before 0.0.2 is published; and what do the version 30 headings \"Complete the 0.0.1 public learning path\" and \"Publish 0.0.1\" and Step 27's \"install/execute/upgrade 0.0.1\" mean when the release is 0.0.2?"
+    affects: [CP01-S26, CP01-S27]
+    question: "Who is the human actor whose Decision authorises the public-content Contracts of Steps 26 and 27; what makes \"behaviour proven in this checkpoint\" and \"only document proven behaviour\" verifiable; which core distribution commands must the learning material cover; must install instructions name the exact version before 0.0.2 is published; and what do the headings \"Complete the 0.0.1 public learning path\" and \"Publish 0.0.1\" and Step 27's \"install/execute/upgrade 0.0.1\" mean when the release is 0.0.2?"
   - id: Q62
-    affects: [CP01-S28/R01, CP01-S28/R02, CP01-S28/R03, CP01-S28/R04, CP01-S28/R05, CP01-S28/R06, CP01-S28/R07, CP01-S28/AC01, CP01-S28/AC02, CP01-S28/AC03, CP01-S28/AC04, CP01-S28/AC05, CP01-S28/AC07]
-    question: "The version 30 prose of Step 28 has no release-preparation commands, and the Guide's release-PR procedure starts \"From Checkpoint 2 onwards\". Which procedure prepares 0.0.2, what governs the CHANGELOG entry now that the version 14 rule to derive it from accepted Evidence is gone, where does the baseline comparison run and what must it report without an invoker, is a registry-installed consumer smoke test required before Kakeibo, and how is a defect found after publication handled when 0.0.3 belongs to Checkpoint 2?"
+    affects: [CP01-S28, CP01-S13/AC06, CP01-S13/AC07, CP01-S21/R06]
+    question: "Step 28 has no release-preparation instructions and the Guide's release-PR procedure starts \"From Checkpoint 2 onwards\". Which procedure prepares 0.0.2, what governs the CHANGELOG entry, what must the baseline comparison report without an invoker, is a registry-installed consumer smoke test required before Kakeibo, and how is a defect found after publication handled when 0.0.3 belongs to Checkpoint 2?"
   - id: Q63
-    affects: [CP01-S29/R01, CP01-S29/R03, CP01-S29/R04, CP01-S29/R05, CP01-S29/AC01, CP01-S29/AC02, CP01-S29/AC04, CP01-S29/AC05, CP01-S30/R08, CP01-S30/AC06]
-    question: "Stage 10 permits only the pnpm package/workspace root as pre-Pactwright bootstrap, while Kakeibo Acceptance Profile section 5 also asks to establish or verify README, LICENSE, SECURITY.md, CONTRIBUTING.md, the canonical specs, deterministic tests and synthetic fixtures. Which step establishes that foundation and through what mechanism; who authorises writes to the Kakeibo repository; and are the Kakeibo specification revisions that govern Stage 10 recorded?"
+    affects: [CP01-S29, CP01-S30]
+    question: "Stage 10 permits only the pnpm package/workspace root as pre-Pactwright bootstrap, while Kakeibo Acceptance Profile section 5 also asks to establish or verify README, LICENSE, SECURITY.md, CONTRIBUTING.md, the canonical specs, deterministic tests and synthetic fixtures. Which step establishes that foundation and how; who authorises writes to the Kakeibo repository; and which Kakeibo specification revisions govern Stage 10?"
   - id: Q64
-    affects: [CP01-S30/R01, CP01-S30/R02, CP01-S30/R03, CP01-S30/R04, CP01-S30/R05, CP01-S30/R06, CP01-S30/R10, CP01-S30/AC01, CP01-S30/AC02, CP01-S30/AC03, CP01-S30/AC04, CP01-S30/AC07]
-    question: "Who decides the Kakeibo Contract; what happens when the checkpoint's invariant list and the current Kakeibo financial-domain specification differ; how are \"explicit numeric assertions where applicable\", the domain-package dependency boundary, determinism and the no-research-target rule verified rather than asserted; and how is preservation of every invariant through Contract, Brief, Review and Evidence checked?"
+    affects: [CP01-S30]
+    question: "Who decides the Kakeibo Contract; what happens when the checkpoint's invariant list and the current Kakeibo financial-domain specification differ; how are explicit numeric assertions, the domain-package dependency boundary, determinism and the no-research-target rule verified rather than asserted; and how is preservation of every invariant through Contract, Brief, Review and Evidence checked?"
   - id: Q65
-    affects: [CP01-S31/R01, CP01-S31/R02, CP01-S31/R03, CP01-S31/R04, CP01-S31/R07, CP01-S31/AC01, CP01-S31/AC02, CP01-S31/AC03, CP01-S31/AC04]
-    question: "Step 31 requires every material finding to become an open Intent and every blocking failure to be fixed, but defines neither term. What makes a finding material or blocking, where does the findings inventory live if it is not a graph record, and where are the T5 observations on execution friction, code quality, graph behaviour and model and skill effectiveness captured?"
+    affects: [CP01-S31]
+    question: "Step 31 requires every material finding to become an open Intent and every blocking failure to be fixed, but defines neither term. What makes a finding material or blocking, which takes precedence, where does the findings inventory live if it is not a graph record, and where are the T5 observations on execution friction, code quality, graph behaviour and model and skill effectiveness captured?"
   - id: Q66
-    affects: [CP01/R02, CP01/R03, CP01/R04, CP01/R05, CP01/AC02, CP01/AC03, CP01/AC04, CP01/AC05, CP01-S25/R07]
-    question: "Spec 00 T2 requires checkpoint-wide simplicity, graph-boundary and self-hosting obligations, and the exit gate lists thirty-one closing conditions with no named owners. What are those obligations, where are they declared and inherited, and how is each exit-gate line bound to the criteria that prove it without maintaining a second acceptance registry?"
+    affects: [CP01/R02, CP01/R03, CP01/R04, CP01/R05, CP01/AC02, CP01/AC03, CP01/AC04, CP01/AC05]
+    question: "Spec 00 T2 requires checkpoint-wide simplicity, graph-boundary and self-hosting obligations, and the exit gate lists thirty-one closing conditions with no named owners. What are those obligations, where are they declared and inherited, and how is each exit-gate line bound to what proves it without maintaining a second acceptance registry?"

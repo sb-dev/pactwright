@@ -19,15 +19,18 @@ requirements:
     statement: A step that changes files in the Pactwright repository shall leave its root `pnpm verify` gate passing.
   R02:
     source: [PRINCIPLES#3, PRINCIPLES#6, OSS#16, SPEC00#6]
-    statement: From the acceptance of CP01-S25, a step whose candidate changes committed files of the Pactwright repository,
-      other than Pactwright-owned generated or execution-state files and the CP01-S28 release commit, shall deliver
-      that change through one Intent → Decision → Contract → Brief → Evidence lineage recorded in the repository's
-      own Project Graph through the rendered adapter commands, with the Evidence naming the change. A corrective
-      re-run of an earlier step after that acceptance is such a step.
+    statement: From the acceptance of Step 25, a step whose candidate changes committed files of the Pactwright repository
+      shall deliver that change through one Intent → Decision → Contract → Brief → Evidence lineage recorded in the
+      repository's own Project Graph through the rendered adapter commands, with the Evidence naming the change.
+      Exempt are the files the runtime writes through its own commands, canonical records and edges, .pactwright/,
+      generated adapter output and execution state, and the Step 28 release commit. A corrective re-run of an earlier
+      step after that acceptance is such a step.
   R03:
     source: [PRINCIPLES#12, CORE#4, CORE#56, CHECKPOINT#explicitly-out-of-scope, KAKEIBO_PROFILE#16]
     statement: No step shall register a Project Graph node type, relation or canonical store beyond the five core record
-      types and the core relations, except fixture registrations confined to the repository test suite. Project
+      types and the core relations, except fixture registrations of the repository test suite and fixture Extensions
+      packed from it, which register only in test and consumer fixtures and never in the self-hosted or Kakeibo graphs
+      or the published archives. Project
       Intelligence, Graph Review, Assets, Publication, Operations, Experiment, Kakeibo-specific and harness or execution
       concepts shall not enter canonical graph state, and execution state, reports, transcripts, harness evidence
       and GitHub state remain outside the Project Graph and its revision.
@@ -40,9 +43,10 @@ requirements:
   R05:
     source: [CHECKPOINT#exit-gate, SPEC00#4, GUIDE#transition-rule]
     statement: The checkpoint closes only when every step is accepted, every CHECKPOINT#exit-gate line is satisfied
-      by current evidence of the criteria that own it on the integrated candidate at its final revision, every
-      obligation affected by a correction has been re-verified, and the external receipts the exit gate needs, the
-      registry state and the Kakeibo acceptance, have been read back.
+      by current evidence of the criteria or step verifications that prove it, on the revision that evidence names,
+      which is the tagged release commit for the publication and registry lines and the final default-branch revision
+      for the rest, every obligation affected by a correction has been re-verified, and the external receipts the
+      exit gate needs, the registry state and the Kakeibo acceptance, have been read back.
 acceptance:
   AC01:
     covers: [R01]
@@ -52,12 +56,12 @@ acceptance:
     verify: {automated: [repo.verify]}
   AC02:
     covers: [R02]
-    given: A step candidate after the acceptance of CP01-S25 whose change R02 covers.
+    given: A step candidate after the acceptance of Step 25 whose change R02 covers.
     when: The candidate's Project Graph is validated and its lineages compared with its diff.
     then: A lineage deriving done exists whose Evidence names the change, whose Brief's execution state records a
       completed Delivery step and a closing Review with outcome may-progress, and validate exits zero; independent
       review confirms the Evidence's delivered-work statement matches the diff and that no covered file changed
-      outside a Delivery step.
+      outside a Delivery step; exempt files change only through runtime commands.
     verify: {automated: [repo.self-hosted-lineage], review: [repo.self-hosting-review]}
   AC03:
     covers: [R03]
@@ -81,10 +85,10 @@ acceptance:
     verify: {automated: [repo.surface-inventory], review: [repo.simplicity-review]}
   AC05:
     covers: [R05]
-    given: The integrated candidate at its final revision, every step's acceptance record and the external receipts.
+    given: The integrated candidate, every step's acceptance record and the external receipts.
     when: The checkpoint exit gate is evaluated.
     then: Every step is accepted, every verification target has a current passing result, and independent review
-      derives from the contracts the criteria owning each exit-gate line, confirms each has current evidence on
-      the final revision, and confirms the registry state and the Kakeibo acceptance were read back rather than
+      derives from the contracts and step verifications what proves each exit-gate line, confirms each has current
+      evidence on the revision R05 names, and confirms the registry state and the Kakeibo acceptance were read back rather than
       claimed.
     verify: {automated: [checkpoint.acceptance-complete], review: [checkpoint.exit-gate]}

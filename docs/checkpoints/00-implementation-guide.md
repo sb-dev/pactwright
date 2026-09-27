@@ -577,7 +577,7 @@ Published npm versions are immutable.
 - If the release workflow fails before publication, fix the cause and rerun safely; a tag that published nothing may be deleted and recreated by the repository owner on the corrected commit.
 - A rerun publishes only the packages whose tagged version the registry does not hold, through the workflow's own per-package registry check; it never re-publishes or overwrites a version and never relies on the package manager's implicit skipping.
 - A release refused as superseded, because a higher version already holds the expected npm tag, is not rerun; a package it left unpublished ships in the next version, which the owner tags.
-- If a published release is defective, fix forward with the next version: the defective number is consumed, the next unused `0.0.x` becomes a corrective release, and the checkpoint's Release line is amended by the owner (npm release model).
+- If a published release is defective, fix forward with the next version: the defective number is consumed, the next unused `0.0.x` becomes a corrective release, and the owner amends the checkpoint's Release line, this guide's version tables and every later checkpoint's Release line accordingly, as the Checkpoint 1 corrective `0.0.2` did (npm release model).
 - Do not promote a known-defective `0.0.x` line to `latest`.
 - Moving a dist-tag to a previously published known-good version is an emergency recovery action and must be recorded as a Decision.
 
