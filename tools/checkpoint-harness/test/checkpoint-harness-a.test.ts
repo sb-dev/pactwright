@@ -210,7 +210,7 @@ describe("T3-A contract loading and execution planning", () => {
     );
     assert.equal(
       s01.criteria[0]?.then,
-      "The parser accepts the valid one and rejects the invalid one.",
+      "The parser accepts the valid one, printing its name and exiting 0, and rejects the invalid one, exiting 1 with an error that names the field.",
     );
     assert.deepEqual(plan.unresolvedBindings, [
       "command.prints",

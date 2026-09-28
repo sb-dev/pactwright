@@ -41,6 +41,7 @@ import {
   type SealedCandidate,
   type WritePolicy,
 } from "../../src/workspace.js";
+import { calibration } from "../verification-fixtures.js";
 
 const here = dirname(fileURLToPath(import.meta.url));
 const repoRoot = join(here, "../../../..");
@@ -140,6 +141,12 @@ before(async () => {
   mkdirSync(join(source, "docs"));
   writeFileSync(join(source, "src/lib.ts"), "export const answer = 42;\n");
   writeFileSync(join(source, "src/verifier.ts"), VERIFIER);
+  // The step's output already exists, so the producer has only the harness
+  // findings below to act on.
+  writeFileSync(
+    join(source, "src/parser.mjs"),
+    calibration("known-good").files["src/parser.mjs"] ?? "",
+  );
   writeFileSync(join(source, "docs/contract.yml"), "id: CP99-S01\n");
   base = { root: source, head: commitAll(source) };
 

@@ -1,18 +1,22 @@
 // Fixture judge for parser.accepts and parser.rejects (CP99-S01/AC01). It runs
 // outside every candidate process. For each target's run it takes the
 // subject's one line of primitive facts about the candidate program: the
-// program's exit status, the `name` it printed and its first error line.
+// program's exit status, the signal or spawn error that ended it instead, the
+// `name` it printed and its first error line. Only an intentional exit 1 is a
+// rejection; a crash, a kill or a timeout never is.
 import { readFileSync } from "node:fs";
 
 const { binding, runs } = JSON.parse(readFileSync(0, "utf8"));
+const accepted = (o) => o.exit === 0 && o.signal === null;
+const rejected = (o) => o.exit === 1 && o.signal === null;
 const checks = {
   "parser.accepts": {
-    valid: (o) => o.exit === 0 && o.name === "demo",
-    invalid: (o) => o.exit !== 0,
+    valid: (o) => accepted(o) && o.name === "demo",
+    invalid: rejected,
   },
   "parser.rejects": {
-    valid: (o) => o.exit === 0,
-    invalid: (o) => o.exit !== 0 && typeof o.error === "string" && /name/.test(o.error),
+    valid: accepted,
+    invalid: (o) => rejected(o) && typeof o.error === "string" && /name/.test(o.error),
   },
 };
 const primitive = (v) => v === null || typeof v === "string" || typeof v === "number";
@@ -27,7 +31,9 @@ const facts = (run) => {
   }
   if (o === null || typeof o !== "object" || Array.isArray(o)) return undefined;
   const keys = Object.keys(o).sort();
-  if (keys.join() !== "error,exit,name" || !keys.every((k) => primitive(o[k]))) return undefined;
+  if (keys.join() !== "error,exit,name,signal" || !keys.every((k) => primitive(o[k]))) {
+    return undefined;
+  }
   return o;
 };
 const results = runs.map((run) => {

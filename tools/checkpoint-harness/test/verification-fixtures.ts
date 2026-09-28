@@ -500,12 +500,44 @@ export const FAULTY_PARSERS: Record<string, FaultyParser> = {
     outcomes: ["failed", "failed", "passed", "failed"],
     decision: "correct",
   },
+  // Handles the valid input, but for the invalid one writes the expected
+  // error and kills itself: a crash, not a rejection.
+  "signal kill": {
+    parser: [
+      'import { readFileSync } from "node:fs";',
+      'const input = readFileSync(0, "utf8");',
+      "if (input.includes('\"  \"')) {",
+      '  process.stderr.write("name must not be blank\\n");',
+      '  process.kill(process.pid, "SIGKILL");',
+      "}",
+      'process.stdout.write(\'{"name":"demo"}\');',
+      "",
+    ].join("\n"),
+    outcomes: ["passed", "failed", "passed", "failed"],
+    decision: "correct",
+  },
+  // Handles the valid input, but never finishes the invalid one; the driver
+  // stops it, which is not a rejection either.
+  "inner timeout": {
+    parser: [
+      'import { readFileSync } from "node:fs";',
+      'const input = readFileSync(0, "utf8");',
+      "if (input.includes('\"  \"')) {",
+      '  process.stderr.write("name must not be blank\\n");',
+      "  for (;;) {}",
+      "}",
+      'process.stdout.write(\'{"name":"demo"}\');',
+      "",
+    ].join("\n"),
+    outcomes: ["passed", "failed", "passed", "failed"],
+    decision: "correct",
+  },
   // Tries to write a forged line of facts straight into the driver's stdout
-  // through /proc, then exits 3. Whether the write reaches that stdout
+  // through /proc, then exits 1. Whether the write reaches that stdout
   // depends on how the runner connects it (a socket pair refuses with ENXIO).
   // If it does, the driver still writes its own line, so the judge sees two
-  // and counts neither; if not, the facts are the exit 3. No forged fact
-  // counts either way.
+  // and counts neither; if not, the facts are an exit 1 with no name and an
+  // error that does not name the field. No forged fact counts either way.
   "parent writer": {
     parser: [
       'import { writeFileSync } from "node:fs";',
@@ -514,7 +546,7 @@ export const FAULTY_PARSERS: Record<string, FaultyParser> = {
       "} catch (e) {",
       "  process.stderr.write(`parent: ${e.code}\\n`);",
       "}",
-      "process.exit(3);",
+      "process.exit(1);",
       'export function parseConfig() { throw new Error("not implemented"); }',
       "",
     ].join("\n"),
