@@ -122,6 +122,8 @@ export type Observation = {
   attempt: number;
   packet: string;
   template: string;
+  /** Digest of the effective, non-secret session settings (`sessionSettings`). */
+  settings: string;
   session: string | null;
   model: { configured: string; reported: string | null; used: string[] };
   auth: string | null;
@@ -239,6 +241,14 @@ const PASSTHROUGH = [
   "SSL_CERT_FILE",
 ];
 const MAX_TEXT = 64 * 1024;
+const SDK_VERSION: string = (
+  JSON.parse(
+    readFileSync(
+      new URL("../node_modules/@anthropic-ai/claude-agent-sdk/package.json", import.meta.url),
+      "utf8",
+    ),
+  ) as { version: string }
+).version;
 
 const dispatchSchema: unknown = JSON.parse(
   readFileSync(new URL("./dispatch.schema.json", import.meta.url), "utf8"),
@@ -674,6 +684,51 @@ export function sdkOptions(request: ProviderRequest, home: string): Options {
 }
 
 /**
+ * The effective session settings without secrets or per-session values: the
+ * SDK version, every option `sdkOptions` sets, the environment's variable
+ * names, the system prompt's digest and each workspace tool's definition.
+ */
+export function sessionSettings(request: ProviderRequest): Record<string, unknown> {
+  const options = sdkOptions(request, "<controller-home>");
+  const { env, mcpServers, abortController, systemPrompt, ...rest } = options;
+  void [mcpServers, abortController, systemPrompt];
+  return {
+    sdk: SDK_VERSION,
+    options: rest,
+    env: Object.keys(env ?? {}).sort(),
+    system: sha256(request.system),
+    tools: request.tools.map((t) => ({
+      name: qualified(t.name),
+      description: t.description,
+      input: z.toJSONSchema(z.object(t.shape).strict()),
+    })),
+  };
+}
+
+/**
+ * Every secret value a session receives: the API key, and each proxy URL
+ * that carries credentials together with its user and password parts.
+ */
+export function providerSecrets(credential: Secret): string[] {
+  const secrets = [credential.reveal()];
+  for (const name of PASSTHROUGH) {
+    const value = process.env[name];
+    if (!value) continue;
+    let url: URL;
+    try {
+      url = new URL(value);
+    } catch {
+      continue;
+    }
+    if (url.username || url.password) {
+      secrets.push(value, url.username, url.password);
+      secrets.push(decodeURIComponent(url.username), decodeURIComponent(url.password));
+    }
+  }
+  return [...new Set(secrets.filter((s) => s !== ""))].sort((a, b) => b.length - a.length);
+}
+
+/**
  * The Claude Agent SDK session driver. It runs in the controller process,
  * outside every candidate, and sends the prompt only after the consumer has
  * seen how the session authenticates.
@@ -728,10 +783,11 @@ export async function* sdkProvider(request: ProviderRequest): AsyncGenerator<Pro
   }
 }
 
-function redact<T>(value: T, secret: string): T {
-  if (secret === "") return value;
+function redact<T>(value: T, secrets: readonly string[]): T {
   const walk = (v: unknown): unknown => {
-    if (typeof v === "string") return v.split(secret).join("[REDACTED]");
+    if (typeof v === "string") {
+      return secrets.reduce((text, secret) => text.split(secret).join("[REDACTED]"), v);
+    }
     if (Array.isArray(v)) return v.map(walk);
     if (typeof v === "object" && v !== null) {
       return Object.fromEntries(Object.entries(v).map(([k, x]) => [k, walk(x)]));
@@ -785,6 +841,7 @@ export async function invokeAgent(
     attempt: packet.attempt,
     packet: sha256(stringify(packet)),
     template: sha256(TEMPLATES[role.name]),
+    settings: "",
     session: null,
     model: { configured: role.model, reported: null, used: [] },
     auth: null,
@@ -801,20 +858,13 @@ export async function invokeAgent(
     turns: null,
     durationMs: 0,
   };
-  const secret = role.credential.reveal();
+  const secrets = providerSecrets(role.credential);
   let closed = false;
   const done = (outcome: AgentOutcome): AgentOutcome => {
     closed = true;
     outcome.observation.durationMs = Date.now() - started;
-    return redact(outcome, secret);
+    return redact(outcome, secrets);
   };
-  if (packet.role !== role.name) {
-    return done({ outcome: "failed", reason: `packet is for ${packet.role}`, observation });
-  }
-  if (packet.attempt > role.limits.attempts) {
-    return done({ outcome: "exhausted", limit: "attempts", observation });
-  }
-  if (signal.aborted) return done({ outcome: "cancelled", reason: "cancelled", observation });
 
   const policy: WritePolicy = packet.effects;
   const tools = workspaceTools(role.name, workspace, policy).map((def): ToolDef => ({
@@ -838,12 +888,7 @@ export async function invokeAgent(
   }));
 
   const abort = new AbortController();
-  let stop: (reason: Stop) => void = () => undefined;
-  const stopped = new Promise<Stop>((resolve) => (stop = resolve));
-  const onCancel = (): void => stop({ kind: "cancel" });
-  signal.addEventListener("abort", onCancel);
-  const timer = setTimeout(() => stop({ kind: "time" }), role.limits.wallTimeMs);
-  const events = (options.provider ?? sdkProvider)({
+  const request: ProviderRequest = {
     model: role.model,
     system: systemPrompt(role),
     prompt: `Work packet:\n${stringify(packet, null, 2)}`,
@@ -853,7 +898,22 @@ export async function invokeAgent(
     maxBudgetUsd: role.limits.maxBudgetUsd,
     credential: role.credential,
     abort,
-  })[Symbol.asyncIterator]();
+  };
+  observation.settings = sha256(stringify(sessionSettings(request)));
+  if (packet.role !== role.name) {
+    return done({ outcome: "failed", reason: `packet is for ${packet.role}`, observation });
+  }
+  if (packet.attempt > role.limits.attempts) {
+    return done({ outcome: "exhausted", limit: "attempts", observation });
+  }
+  if (signal.aborted) return done({ outcome: "cancelled", reason: "cancelled", observation });
+
+  let stop: (reason: Stop) => void = () => undefined;
+  const stopped = new Promise<Stop>((resolve) => (stop = resolve));
+  const onCancel = (): void => stop({ kind: "cancel" });
+  signal.addEventListener("abort", onCancel);
+  const timer = setTimeout(() => stop({ kind: "time" }), role.limits.wallTimeMs);
+  const events = (options.provider ?? sdkProvider)(request)[Symbol.asyncIterator]();
 
   // Authentication and the effective session are checked before a result
   // can count, so a provider must report them first and in this order.
@@ -989,6 +1049,7 @@ export function recordInvocation(run: RunHandle, outcome: AgentOutcome): Journal
       role: outcome.observation.role,
       outcome: outcome.outcome,
       session: outcome.observation.session,
+      settings: outcome.observation.settings,
     },
   });
 }

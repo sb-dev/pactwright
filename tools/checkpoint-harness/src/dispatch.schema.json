@@ -50,9 +50,9 @@
       "properties": {
         "adapter": { "const": "claude-sdk" },
         "model": {
-          "description": "An explicit model ID, never an alias.",
+          "description": "An exact, versioned model ID such as claude-opus-5-5 or claude-haiku-4-5-20251001; never an alias such as opus or claude-sonnet-latest.",
           "type": "string",
-          "pattern": "^claude-[a-z0-9]+(-[a-z0-9]+)+$"
+          "pattern": "^claude-[a-z]+(-[0-9]+)+$"
         },
         "skills": {
           "type": "array",

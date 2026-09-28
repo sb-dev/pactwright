@@ -13,6 +13,7 @@ import { after, before, describe, it } from "node:test";
 import { fileURLToPath } from "node:url";
 
 import type { SDKMessage } from "@anthropic-ai/claude-agent-sdk";
+import stringify from "safe-stable-stringify";
 
 import {
   buildPacket,
@@ -22,6 +23,7 @@ import {
   resolveRole,
   sdkOptions,
   Secret,
+  sessionSettings,
   SUBMISSION_SCHEMA,
   type AgentOutcome,
   type AgentRole,
@@ -31,6 +33,7 @@ import {
   type ProviderRequest,
   type RoleName,
   type WorkspaceOps,
+  workspaceTools,
 } from "../src/claude.js";
 import { prepareRun, sha256, type AcceptedOutput, type PreparedRun } from "../src/contracts.js";
 import { createRun, readEvidence, readRun } from "../src/evidence.js";
@@ -318,11 +321,27 @@ describe("T3-C dispatch refuses incomplete configuration", () => {
   });
 
   it("refuses a model alias, another adapter and an unconfigured role", () => {
-    refused(
-      config((c) => (c.roles.producer.model = "opus")),
-      "producer",
-      /model must match/,
-    );
+    for (const alias of [
+      "opus",
+      "claude-sonnet-latest",
+      "claude-opus",
+      "claude-opus-5-5[1m]",
+      "claude-opus-latest-5",
+    ]) {
+      refused(
+        config((c) => (c.roles.producer.model = alias)),
+        "producer",
+        /model must match/,
+      );
+    }
+    for (const exact of ["claude-opus-5-5", "claude-sonnet-5", "claude-haiku-4-5-20251001"]) {
+      const resolved = resolveRole(
+        config((c) => (c.roles.producer.model = exact)),
+        "producer",
+        { skillsRoot: skills, env },
+      );
+      assert.ok(resolved.ok, exact);
+    }
     refused(
       config((c) => (c.roles.producer.adapter = "claude-cli")),
       "producer",
@@ -930,13 +949,55 @@ describe("T3-C observations are redacted and journaled", () => {
     const run = createRun(join(scratch, "run-redacted"));
     const event = recordInvocation(run, outcome);
     assert.equal(event.action, "agent-invocation");
-    assert.deepEqual(event.data, { role: "producer", outcome: "failed", session: "session-1" });
+    assert.deepEqual(event.data, {
+      role: "producer",
+      outcome: "failed",
+      session: "session-1",
+      settings: outcome.observation.settings,
+    });
     const [ref] = event.evidence;
     assert.ok(ref);
     assert.ok(!readEvidence(run.dir, ref).toString("utf8").includes(SECRET));
     const read = readRun(run.dir);
     assert.ok(read.ok);
     assert.ok(!read.records.events.some((e) => e.action === "accepted"));
+  });
+});
+
+describe("T3-C proxy credentials are secrets too", () => {
+  it("a credential-bearing proxy URL never reaches an outcome or its evidence", async () => {
+    const proxy = "http://harness:pa55-w0rd@proxy.invalid:8080";
+    const saved = process.env.HTTPS_PROXY;
+    process.env.HTTPS_PROXY = proxy;
+    try {
+      const outcome = await invoke(
+        scripted(async function* (request) {
+          yield account();
+          yield init(request);
+          yield result(null, {
+            subtype: "error_during_execution",
+            output: null,
+            errors: [`connect via ${proxy} failed`, "proxy auth pa55-w0rd rejected"],
+          });
+        }),
+      );
+      assert.ok(outcome.outcome === "failed");
+      const run = createRun(join(scratch, "run-proxy"));
+      const [ref] = recordInvocation(run, outcome).evidence;
+      assert.ok(ref);
+      const stored = readEvidence(run.dir, ref).toString("utf8");
+      for (const text of [JSON.stringify(outcome), stored]) {
+        assert.ok(!text.includes("pa55-w0rd"), text);
+        assert.ok(!text.includes(proxy), text);
+      }
+      assert.match(
+        outcome.reason,
+        /connect via \[REDACTED\] failed; proxy auth \[REDACTED\] rejected/,
+      );
+    } finally {
+      if (saved === undefined) delete process.env.HTTPS_PROXY;
+      else process.env.HTTPS_PROXY = saved;
+    }
   });
 });
 
@@ -995,6 +1056,65 @@ describe("T3-C SDK session options", () => {
     } finally {
       delete process.env.PACTWRIGHT_UNRELATED_SECRET;
     }
+  });
+
+  it("pins the effective non-secret settings by digest", async () => {
+    const digest = (r: ProviderRequest): string => sha256(stringify(sessionSettings(r)));
+    const base = request();
+    const settings = sessionSettings(base);
+    assert.deepEqual((settings.options as Record<string, unknown>).settingSources, []);
+    assert.equal((settings.options as Record<string, unknown>).permissionMode, "dontAsk");
+    assert.ok(Array.isArray(settings.env) && settings.env.includes("ANTHROPIC_API_KEY"));
+    const text = JSON.stringify(settings);
+    assert.ok(!text.includes(SECRET), "no secret value");
+    assert.ok(!text.includes(process.env.PATH ?? "unreachable"), "no host value");
+
+    assert.equal(digest(base), digest(request()), "stable for identical settings");
+    assert.equal(
+      digest(base),
+      digest({
+        ...request(),
+        credential: new Secret("sk-ant-other"),
+        abort: new AbortController(),
+      }),
+      "independent of the secret and the session's abort controller",
+    );
+    const ops = memoryOps();
+    const producerTools = workspaceTools("producer", ops, POLICY);
+    const reviewerTools = workspaceTools("reviewer", ops, POLICY);
+    for (const [name, changed] of [
+      ["model", { ...request(), model: "claude-other-1" }],
+      ["turns", { ...request(), maxTurns: 5 }],
+      ["spend", { ...request(), maxBudgetUsd: 2 }],
+      ["system prompt", { ...request(), system: "other" }],
+      ["result schema", { ...request(), outputSchema: { type: "object" } }],
+      ["producer tools", { ...request(), tools: producerTools }],
+      ["reviewer tools", { ...request(), tools: reviewerTools }],
+      [
+        "tool policy",
+        { ...request(), tools: workspaceTools("producer", ops, { ...POLICY, writable: ["lib"] }) },
+      ],
+    ] as const) {
+      assert.notEqual(digest(changed), digest(base), name);
+    }
+    assert.notEqual(
+      digest({
+        ...request(),
+        tools: workspaceTools("producer", ops, { ...POLICY, writable: ["lib"] }),
+      }),
+      digest({ ...request(), tools: producerTools }),
+      "a tool definition change alone changes the digest",
+    );
+
+    const provider = scripted(async function* (r) {
+      yield account();
+      yield init(r);
+      yield result(SUBMISSION);
+    });
+    const outcome = await invoke(provider);
+    const captured = provider.requests[0];
+    assert.ok(captured);
+    assert.equal(outcome.observation.settings, digest(captured));
   });
 
   it("maps SDK init and result messages to provider events", () => {
