@@ -8,7 +8,8 @@
     "contracts:check": "node --import tsx src/checkpoint-contracts.ts",
     "harness": "node --import tsx src/cli.ts",
     "typecheck": "tsc --noEmit",
-    "test": "node --test --import tsx test/*.test.ts"
+    "test": "node --test --import tsx test/*.test.ts",
+    "test:integration": "node --test --import tsx test/integration/*.test.ts"
   },
   "dependencies": {
     "ajv": "^8.20.0",

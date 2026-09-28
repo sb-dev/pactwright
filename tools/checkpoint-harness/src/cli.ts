@@ -5,6 +5,11 @@
 // configuration or definitions print file/ID: cause diagnostics and exit 2.
 // Exit 0 means only that planning succeeded; it grants no acceptance. The
 // repository is the Git working tree containing the current directory.
+//
+// Usage: checkpoint-harness status --run DIR
+// Prints facts derived from the run directory's valid records as JSON and
+// exits 0. It writes nothing. A missing or corrupt run prints file: cause
+// diagnostics and exits 2.
 
 import { execFileSync } from "node:child_process";
 import { readFileSync } from "node:fs";
@@ -14,6 +19,7 @@ import yaml from "js-yaml";
 import stringify from "safe-stable-stringify";
 
 import { prepareRun } from "./contracts.js";
+import { runStatus } from "./evidence.js";
 
 const INVALID = 2;
 
@@ -37,6 +43,16 @@ async function plan(configFile: string): Promise<number> {
   return 0;
 }
 
+function status(dir: string): number {
+  const result = runStatus(dir);
+  if (!result.ok) {
+    for (const d of result.diagnostics) console.error(d);
+    return INVALID;
+  }
+  process.stdout.write(`${stringify(result.status, null, 2)}\n`);
+  return 0;
+}
+
 const program = new Command()
   .name("checkpoint-harness")
   .description("Bootstrap checkpoint harness (Spec 00 T3).")
@@ -48,6 +64,14 @@ program
   .requiredOption("--config <file>", "run configuration YAML")
   .action(async ({ config }: { config: string }) => {
     process.exitCode = await plan(config);
+  });
+
+program
+  .command("status")
+  .description("Print facts derived from a run directory's valid records; writes nothing.")
+  .requiredOption("--run <dir>", "run directory")
+  .action(({ run }: { run: string }) => {
+    process.exitCode = status(run);
   });
 
 try {
