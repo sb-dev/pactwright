@@ -2,6 +2,8 @@ node_modules/
 dist/
 build/
 coverage/
+.turbo/
+tools/*/test/fixtures/
 .pnpm-store/
 .tmp-pactwright-test-*/
 pnpm-lock.yaml

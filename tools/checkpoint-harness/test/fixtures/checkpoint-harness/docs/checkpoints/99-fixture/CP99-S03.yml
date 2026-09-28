@@ -1,0 +1,17 @@
+# CP99 Step 3 — Report
+id: CP99-S03
+requires: [CP99-S02]
+uses: [fixture-reporting]
+outputs:
+  report: A release report.
+requirements:
+  R01:
+    source: [FIX#reporting]
+    statement: The report shall be approved before release.
+acceptance:
+  AC01:
+    covers: [R01]
+    given: A completed report.
+    when: The owner reviews it.
+    then: The owner approves the exact report.
+    verify: {approval: [report.owner-approval]}

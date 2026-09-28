@@ -1,0 +1,46 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Checkpoint harness run configuration",
+  "description": "Operator inputs for one harness run (Task 3 research log §4). Separate from the checkpoint contract format. T3-A validates the sections planning needs; later units validate roles, workspace, permissions, credentials and budgets before dispatch.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["repository", "checkpoint", "definitions", "selection"],
+  "properties": {
+    "repository": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["name", "branch", "expected_head"],
+      "properties": {
+        "name": { "type": "string", "pattern": "^[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+$" },
+        "branch": { "type": "string", "minLength": 1 },
+        "expected_head": { "$ref": "#/$defs/commit" }
+      }
+    },
+    "checkpoint": { "type": "string", "pattern": "^[^/].*/checkpoint\\.yml$" },
+    "definitions": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["revision", "review"],
+      "properties": {
+        "revision": { "$ref": "#/$defs/commit" },
+        "review": { "type": "string", "minLength": 1 }
+      }
+    },
+    "selection": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["through"],
+      "properties": {
+        "through": { "type": "string", "pattern": "^CP[0-9]{2}-S[0-9]{2}$" }
+      }
+    },
+    "roles": { "type": "object" },
+    "workspace": { "type": "object" },
+    "permissions": { "type": "object" },
+    "credentials": { "type": "object" },
+    "budgets": { "type": "object" }
+  },
+  "$defs": {
+    "commit": { "type": "string", "pattern": "^[0-9a-f]{40}$" }
+  }
+}
