@@ -1,0 +1,79 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Checkpoint harness dispatch configuration",
+  "description": "The run configuration sections an agent dispatch needs (Task 3 research log §§4, 10 and §12 T3-C). Planning accepts any object here; dispatch refuses until these sections are complete. Other sections are validated by run-config.schema.json.",
+  "type": "object",
+  "required": ["roles", "credentials", "budgets"],
+  "properties": {
+    "roles": {
+      "type": "object",
+      "propertyNames": { "enum": ["producer", "reviewer"] },
+      "additionalProperties": { "$ref": "#/$defs/role" }
+    },
+    "credentials": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["provider"],
+      "properties": {
+        "kind": {
+          "description": "How the credential authenticates: a Console API key (default) or a Claude subscription OAuth token from `claude setup-token`.",
+          "enum": ["api-key", "oauth-token"]
+        },
+        "provider": {
+          "description": "Reference to the environment variable holding the credential; never the credential itself.",
+          "type": "string",
+          "pattern": "^env:[A-Z_][A-Z0-9_]*$"
+        }
+      }
+    },
+    "budgets": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["attempts", "wall_time_seconds", "provider_spend_limit"],
+      "properties": {
+        "attempts": { "type": "integer", "minimum": 1 },
+        "wall_time_seconds": { "type": "integer", "minimum": 1 },
+        "provider_spend_limit": {
+          "description": "Hard spend limit per invocation. The provider checks its estimate only after each turn, so turn_reservation_usd is held back for the turn that crosses the limit.",
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["usd", "turn_reservation_usd"],
+          "properties": {
+            "usd": { "type": "number", "exclusiveMinimum": 0 },
+            "turn_reservation_usd": { "type": "number", "exclusiveMinimum": 0 }
+          }
+        }
+      }
+    }
+  },
+  "$defs": {
+    "role": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["adapter", "model", "skills", "max_turns"],
+      "properties": {
+        "adapter": { "const": "claude-sdk" },
+        "model": {
+          "description": "A pinned Claude API model ID this adapter supports: the current lineup of https://platform.claude.com/docs/en/models/overview. Aliases such as claude-haiku-4-5 or claude-sonnet-4-5 resolve to the latest dated snapshot and are refused; adding an ID is a reviewed change.",
+          "enum": [
+            "claude-fable-5-1",
+            "claude-opus-5-5",
+            "claude-sonnet-5",
+            "claude-haiku-4-5-20251001"
+          ]
+        },
+        "skills": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": { "type": "string", "pattern": "^[a-z0-9][a-z0-9-]*$" }
+        },
+        "skill_digests": {
+          "description": "Expected SHA-256 of each selected skill's SKILL.md; a mismatch refuses dispatch.",
+          "type": "object",
+          "additionalProperties": { "type": "string", "pattern": "^sha256:[0-9a-f]{64}$" }
+        },
+        "max_turns": { "type": "integer", "minimum": 1 }
+      }
+    }
+  }
+}
