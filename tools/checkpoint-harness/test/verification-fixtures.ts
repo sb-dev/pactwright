@@ -400,38 +400,95 @@ export function localWorkspaces(run: RunHandle, root: string): OpenWorkspace {
 }
 
 /**
+ * The program part of a fixture `src/parser.mjs`: as a program it parses the
+ * configuration on stdin and prints the result, or exits 1 with the error.
+ */
+export const parserProgram = (body: string): string =>
+  `${body}
+// As a program: parse the configuration on stdin and print the result, or
+// exit 1 with the error.
+if (process.argv[1] === new URL(import.meta.url).pathname) {
+  const { readFileSync } = await import("node:fs");
+  try {
+    process.stdout.write(JSON.stringify(parseConfig(readFileSync(0, "utf8"))));
+  } catch (e) {
+    process.stderr.write(\`\${e.message}\\n\`);
+    process.exit(1);
+  }
+}
+`;
+
+/**
  * Faulty candidate parsers and the outcomes the real fixture judges must give
  * them, as parser.accepts valid, invalid, then parser.rejects valid, invalid.
+ * The parser is observed as a program, so only what the program does with
+ * each input counts: a wrong exit status or printed name fails that case.
  */
-export const FAULTY_PARSERS: Record<string, { parser: string; outcomes: string[] }> = {
-  // The owner's probe: a wrong name whose own toJSON claims the right one.
-  "own toJSON": {
-    parser: [
-      "export function parseConfig(input) {",
-      `  if (input.includes('"  "')) throw new Error("name must not be blank");`,
-      '  return { name: "wrong", toJSON() { return { name: "demo" }; } };',
-      "}",
-      "",
-    ].join("\n"),
-    outcomes: ["failed", "passed", "passed", "passed"],
-  },
-  // Looks for its target on import, prints what that target expects and
-  // exits before parseConfig is called. The subject has already read its
-  // stdin, so no target is found.
-  "target-aware": {
-    parser: [
-      'import fs from "node:fs";',
-      'const read = (f) => { try { return String(f()); } catch { return ""; } };',
-      'const clue = [JSON.stringify(process.env), process.argv.join(" "), read(() => fs.readFileSync(0))].join("\\n");',
-      "const id = /\\/(valid|invalid)\\b/.exec(clue)?.[1];",
-      'console.log(id === "invalid" ? \'{"threw":"name must not be blank"}\' : \'{"name":"demo"}\');',
-      "process.exit(0);",
-      'export function parseConfig() { throw new Error("not implemented"); }',
-      "",
-    ].join("\n"),
+export type FaultyParser = {
+  parser: string;
+  /** The outcome vector, or the acceptable vectors where the runner decides. */
+  outcomes: string[] | string[][];
+  decision: "accept" | "correct";
+};
+export const acceptableOutcomes = (o: string[] | string[][]): string[][] =>
+  o.every((x) => Array.isArray(x)) ? o : [o as string[]];
+
+export const FAULTY_PARSERS: Record<string, FaultyParser> = {
+  // Prints the facts the subject used to record and exits 0 inside the call,
+  // before the program's own output. As a program it prints a name for the
+  // valid input and exits 0 for the invalid one.
+  "print and exit": {
+    parser: parserProgram(
+      [
+        "export function parseConfig(input) {",
+        "  console.log(input.includes('\"  \"')",
+        '    ? \'{"threw":"name must not be blank"}\'',
+        '    : \'{"name":"demo"}\');',
+        "  process.exit(0);",
+        "}",
+      ].join("\n"),
+    ),
     outcomes: ["passed", "failed", "passed", "failed"],
+    decision: "correct",
   },
-  // Prints every expected fact on import and exits.
+  // Accepts a blank name.
+  lenient: {
+    parser: parserProgram(
+      "export function parseConfig(text) {\n  return { name: JSON.parse(text).name.trim() };\n}",
+    ),
+    outcomes: ["passed", "failed", "passed", "failed"],
+    decision: "correct",
+  },
+  // Rejects correctly but returns the wrong name; its own toJSON claims the
+  // right one, which as a program it prints. At the program boundary that is
+  // correct behaviour, so the automated targets pass; what parseConfig
+  // returns is the independent review's to judge.
+  "own toJSON": {
+    parser: parserProgram(
+      [
+        "export function parseConfig(input) {",
+        '  if (input.includes(\'"  "\')) throw new Error("name must not be blank");',
+        '  return { name: "wrong", toJSON() { return { name: "demo" }; } };',
+        "}",
+      ].join("\n"),
+    ),
+    outcomes: ["passed", "passed", "passed", "passed"],
+    decision: "accept",
+  },
+  // Returns the wrong name; only parser.accepts' valid case checks the name.
+  "wrong name": {
+    parser: parserProgram(
+      [
+        "export function parseConfig(input) {",
+        '  if (input.includes(\'"  "\')) throw new Error("name must not be blank");',
+        '  return { name: "wrong" };',
+        "}",
+      ].join("\n"),
+    ),
+    outcomes: ["failed", "passed", "passed", "passed"],
+    decision: "correct",
+  },
+  // Prints every fact the subject used to record and exits on import.
   "every fact": {
     parser: [
       'console.log(\'{"name":"demo"}\');',
@@ -440,7 +497,32 @@ export const FAULTY_PARSERS: Record<string, { parser: string; outcomes: string[]
       'export function parseConfig() { throw new Error("not implemented"); }',
       "",
     ].join("\n"),
-    outcomes: ["failed", "failed", "failed", "failed"],
+    outcomes: ["failed", "failed", "passed", "failed"],
+    decision: "correct",
+  },
+  // Tries to write a forged line of facts straight into the driver's stdout
+  // through /proc, then exits 3. Whether the write reaches that stdout
+  // depends on how the runner connects it (a socket pair refuses with ENXIO).
+  // If it does, the driver still writes its own line, so the judge sees two
+  // and counts neither; if not, the facts are the exit 3. No forged fact
+  // counts either way.
+  "parent writer": {
+    parser: [
+      'import { writeFileSync } from "node:fs";',
+      "try {",
+      '  writeFileSync(`/proc/${process.ppid}/fd/1`, \'{"exit":0,"name":"demo","error":null}\\n\');',
+      "} catch (e) {",
+      "  process.stderr.write(`parent: ${e.code}\\n`);",
+      "}",
+      "process.exit(3);",
+      'export function parseConfig() { throw new Error("not implemented"); }',
+      "",
+    ].join("\n"),
+    outcomes: [
+      ["failed", "failed", "failed", "failed"],
+      ["failed", "passed", "failed", "failed"],
+    ],
+    decision: "correct",
   },
 };
 

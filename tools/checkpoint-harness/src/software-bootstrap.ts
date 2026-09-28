@@ -49,13 +49,14 @@ export const ADEQUACY_RUBRIC: PinnedRubric = pin({
 
 /**
  * An automated binding runs in contained workspaces. The subject `command`
- * runs once per target, as the only process in its own fresh read-only
- * workspace of the candidate, with the target key on stdin; its exit status
- * and stdout are the behaviour observed, and it has no report path or other
- * means to report a result. The `judge` runs in a workspace holding only the
- * binding's `files`, so no candidate code runs there: it reads the labelled
- * runs as JSON on stdin, reduces each to the criterion's primitive facts and
- * writes the report to stdout.
+ * runs once per target in its own fresh read-only workspace of the
+ * candidate, with the target key on stdin. It observes the candidate as a
+ * program, a separate process; no code under test runs in the subject's own
+ * process, and it has no report path or other means to report a result. Its
+ * exit status and stdout are the behaviour observed. The `judge` runs in a
+ * workspace holding only the binding's `files`, so no candidate code runs
+ * there: it reads the labelled runs as JSON on stdin, reduces each to the
+ * criterion's primitive facts and writes the report to stdout.
  */
 export type AutomatedBinding = {
   id: string;

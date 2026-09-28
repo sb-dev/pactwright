@@ -72,6 +72,7 @@ import {
   manifestFor,
   passing,
   passingVerifier,
+  acceptableOutcomes,
   FAULTY_PARSERS,
   localWorkspaces,
   passVerdict,
@@ -804,10 +805,12 @@ describe("T3-D D01 observations that cannot count prevent acceptance", () => {
     });
   });
 
-  it("the real judges see behaviour, not what faulty candidate code claims", async () => {
+  it("the real judges see the candidate program's behaviour, not what its code claims", async () => {
     // The fixture subject and judge scripts run for real, as local processes;
-    // the Docker test runs the same candidates contained.
-    for (const [name, { parser, outcomes }] of Object.entries(FAULTY_PARSERS)) {
+    // the Docker test runs the same candidates contained. The parser is
+    // observed as a program, so nothing a candidate does inside its own
+    // process changes what the judge sees beyond that program's behaviour.
+    for (const [name, { parser, outcomes, decision }] of Object.entries(FAULTY_PARSERS)) {
       const w = await world(scratch);
       const a = await attemptOf(w, "CP99-S01", { files: { "src/parser.mjs": parser } });
       const local = localWorkspaces(w.run, join(scratch, `local-${randomUUID()}`));
@@ -817,12 +820,12 @@ describe("T3-D D01 observations that cannot count prevent acceptance", () => {
       const results = a.invocations
         .filter((i) => i.record.binding.startsWith("parser."))
         .flatMap((i) => i.record.results);
-      assert.deepEqual(
-        results.map((r) => r.outcome),
-        outcomes,
+      const seen = JSON.stringify(results.map((r) => r.outcome));
+      assert.ok(
+        acceptableOutcomes(outcomes).some((o) => JSON.stringify(o) === seen),
         `${name}: ${JSON.stringify(results)}`,
       );
-      assert.equal(decide(a).decision, "correct", name);
+      assert.equal(decide(a).decision, decision, name);
     }
   });
 

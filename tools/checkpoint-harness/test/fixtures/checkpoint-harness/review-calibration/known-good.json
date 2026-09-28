@@ -2,7 +2,7 @@
   "description": "Known-good CP99-S01 candidate: one validation path. A calibrated common reviewer passes it; an optional nit does not block. The verdict is a recorded fixture, not a live reviewer result.",
   "step": "CP99-S01",
   "files": {
-    "src/parser.mjs": "// Parses the fixture configuration through one validation path.\nexport function parseConfig(text) {\n  const value = JSON.parse(text);\n  if (typeof value?.name !== \"string\" || value.name.trim() === \"\") {\n    throw new Error(\"invalid configuration: name must be a non-empty string\");\n  }\n  return { name: value.name.trim() };\n}\n"
+    "src/parser.mjs": "// Parses the fixture configuration through one validation path.\nexport function parseConfig(text) {\n  const value = JSON.parse(text);\n  if (typeof value?.name !== \"string\" || value.name.trim() === \"\") {\n    throw new Error(\"invalid configuration: name must be a non-empty string\");\n  }\n  return { name: value.name.trim() };\n}\n\n// As a program: parse the configuration on stdin and print the result, or\n// exit 1 with the error.\nif (process.argv[1] === new URL(import.meta.url).pathname) {\n  const { readFileSync } = await import(\"node:fs\");\n  try {\n    process.stdout.write(JSON.stringify(parseConfig(readFileSync(0, \"utf8\"))));\n  } catch (e) {\n    process.stderr.write(`${e.message}\\n`);\n    process.exit(1);\n  }\n}\n"
   },
   "verdict": {
     "verdict": "pass",

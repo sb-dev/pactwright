@@ -442,16 +442,17 @@ function judged(
 
 /**
  * Runs one binding once: one invocation, even when other bindings share its
- * commands. The subject runs once per expected target, each time as the only
- * process in its own fresh read-only workspace of the candidate, so runs
- * cannot reach one another. Its argv is the binding's command alone and its
- * only input is the target key on stdin; a subject that reads stdin before
- * it loads code under test keeps the target from that code. A run's exit
- * status and stdout are the behaviour observed: the controller labels them
- * with the run's target and constructs nothing from them. The judge runs in
- * a workspace of a snapshot holding only the binding's files, outside every
- * candidate process: it reads the labelled runs as JSON on stdin, reduces
- * each to the criterion's primitive facts and writes the report to stdout.
+ * commands. The subject runs once per expected target, each time in its own
+ * fresh read-only workspace of the candidate, so runs cannot reach one
+ * another. Its argv is the binding's command alone and its only input is the
+ * target key on stdin. The subject observes the candidate as a program, a
+ * separate process, and no code under test runs in the subject's own
+ * process. A run's exit status and stdout are the behaviour observed: the
+ * controller labels them with the run's target and constructs nothing from
+ * them. The judge runs in a workspace of a snapshot holding only the
+ * binding's files, outside every candidate process: it reads the labelled
+ * runs as JSON on stdin, reduces each to the criterion's primitive facts and
+ * writes the report to stdout.
  * Workspace and execution errors are recorded, never thrown; a failure to
  * stop a workspace is recorded apart and never discards a run.
  */
