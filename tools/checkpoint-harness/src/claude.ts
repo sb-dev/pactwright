@@ -68,6 +68,9 @@ export class Secret {
 
 export type Skill = { name: string; digest: string; text: string };
 
+/** How the configured credential authenticates: a Console API key or a subscription OAuth token. */
+export type CredentialKind = "api-key" | "oauth-token";
+
 /** A dispatchable role, resolved from validated configuration. */
 export type AgentRole = {
   name: RoleName;
@@ -78,6 +81,7 @@ export type AgentRole = {
   skills: Skill[];
   limits: { attempts: number; wallTimeMs: number; maxTurns: number; maxBudgetUsd: number };
   credential: Secret;
+  credentialKind: CredentialKind;
 };
 
 export type Finding = { rule: string; location: string; defect: string; correction: string };
@@ -188,6 +192,7 @@ export type ProviderRequest = {
   maxTurns: number;
   maxBudgetUsd: number;
   credential: Secret;
+  credentialKind: CredentialKind;
   abort: AbortController;
 };
 
@@ -232,6 +237,7 @@ export type Provider = (request: ProviderRequest) => AsyncIterable<ProviderEvent
 const SERVER = "workspace";
 const qualified = (name: string): string => `mcp__${SERVER}__${name}`;
 const API_KEY = "ANTHROPIC_API_KEY";
+const OAUTH_TOKEN = "CLAUDE_CODE_OAUTH_TOKEN";
 /** Network settings the provider process may inherit; none is a credential. */
 const PASSTHROUGH = [
   "HTTPS_PROXY",
@@ -263,7 +269,7 @@ type RoleConfig = {
 };
 type DispatchConfig = {
   roles: Partial<Record<RoleName, RoleConfig>>;
-  credentials: { provider: string };
+  credentials: { provider: string; kind?: CredentialKind };
   budgets: {
     attempts: number;
     wall_time_seconds: number;
@@ -346,6 +352,7 @@ export function resolveRole(
         maxBudgetUsd: spend.usd - spend.turn_reservation_usd,
       },
       credential: new Secret(key),
+      credentialKind: config.credentials.kind ?? "api-key",
     },
   };
 }
@@ -647,7 +654,14 @@ export function sdkOptions(request: ProviderRequest, home: string): Options {
     CLAUDE_CONFIG_DIR: home,
     CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC: "1",
     CLAUDE_AGENT_SDK_CLIENT_APP: "pactwright-checkpoint-harness",
-    [API_KEY]: request.credential.reveal(),
+    // An API key runs in bare mode, where the CLI ignores ambient OAuth
+    // tokens (such as one a cloud host injects at a fixed path), keychains
+    // and auto-discovery. Bare mode also ignores OAuth tokens passed in the
+    // environment, so a configured OAuth token is passed without it; the CLI
+    // prefers that token to any ambient one.
+    ...(request.credentialKind === "api-key"
+      ? { [API_KEY]: request.credential.reveal(), CLAUDE_CODE_SIMPLE: "1" }
+      : { [OAUTH_TOKEN]: request.credential.reveal() }),
   };
   for (const name of PASSTHROUGH) {
     const value = process.env[name];
@@ -669,6 +683,8 @@ export function sdkOptions(request: ProviderRequest, home: string): Options {
     allowedTools: request.tools.map((t) => qualified(t.name)),
     permissionMode: "dontAsk",
     settingSources: [],
+    // The CLI's bundled agents-md plugin loads instruction files by itself.
+    settings: { enabledPlugins: { "agents-md@builtin": false } },
     skills: [],
     plugins: [],
     strictMcpConfig: true,
@@ -857,7 +873,8 @@ function initErrors(
   }
   if (event.plugins.length > 0) errors.push(`plugins loaded: ${event.plugins.join(",")}`);
   if (event.permissionMode !== "dontAsk") errors.push(`permission mode ${event.permissionMode}`);
-  if (event.apiKeySource !== API_KEY) errors.push(`authentication from ${event.apiKeySource}`);
+  const keySource = role.credentialKind === "api-key" ? API_KEY : "none";
+  if (event.apiKeySource !== keySource) errors.push(`authentication from ${event.apiKeySource}`);
   if (event.model !== role.model) errors.push(`model ${event.model} is not ${role.model}`);
   return errors;
 }
@@ -938,6 +955,7 @@ export async function invokeAgent(
     maxTurns: role.limits.maxTurns,
     maxBudgetUsd: role.limits.maxBudgetUsd,
     credential: role.credential,
+    credentialKind: role.credentialKind,
     abort,
   };
   observation.settings = sha256(stringify(sessionSettings(request)));
@@ -988,12 +1006,16 @@ export async function invokeAgent(
         };
       }
       if (event.type === "account") {
-        observation.auth = event.apiKeySource;
-        // Only the configured API key may fund the session: an ambient OAuth
-        // token (such as one a host injects) or another backend refuses it.
+        // Only the configured credential may fund the session: the other
+        // kind, an ambient OAuth token (such as one a host injects) or
+        // another backend refuses it before the prompt is sent.
+        const [key, token] =
+          role.credentialKind === "api-key" ? [API_KEY, "none"] : ["none", OAUTH_TOKEN];
+        observation.auth =
+          role.credentialKind === "api-key" ? event.apiKeySource : event.tokenSource;
         if (
-          event.apiKeySource !== API_KEY ||
-          (event.tokenSource ?? "none") !== "none" ||
+          (event.apiKeySource ?? "none") !== key ||
+          (event.tokenSource ?? "none") !== token ||
           (event.apiProvider ?? "firstParty") !== "firstParty"
         ) {
           return {
@@ -1051,7 +1073,9 @@ function resultOutcome(
   if (event.subtype !== "success" || event.isError || event.output === null) {
     return {
       outcome: "failed",
-      reason: `provider ${event.subtype}: ${event.errors.join("; ") || "no result"}`,
+      reason: `provider ${event.subtype}: ${
+        event.errors.join("; ") || (event.isError && event.output) || "no result"
+      }`,
       observation,
     };
   }

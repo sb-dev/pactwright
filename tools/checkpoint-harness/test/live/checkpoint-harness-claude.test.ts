@@ -1,5 +1,6 @@
-// T3-C acceptance, live part (Task 3 research log §12). Requires an Anthropic
-// API key in PACTWRIGHT_ANTHROPIC_API_KEY, an explicit model ID in
+// T3-C acceptance, live part (Task 3 research log §12). Requires a credential
+// in PACTWRIGHT_ANTHROPIC_API_KEY: an Anthropic API key, or a subscription
+// OAuth token with PACTWRIGHT_LIVE_CREDENTIAL_KIND=oauth-token; an explicit model ID in
 // PACTWRIGHT_LIVE_MODEL, a running Linux Docker daemon, and a provider
 // environment with no ambient OAuth token. It spends at most about
 // 2 × LIVE_SPEND_USD. A missing resource fails this file; it is never a pass.
@@ -97,7 +98,10 @@ before(async () => {
         max_turns: 10,
       },
     },
-    credentials: { provider: `env:${KEY}` },
+    credentials: {
+      provider: `env:${KEY}`,
+      kind: process.env.PACTWRIGHT_LIVE_CREDENTIAL_KIND ?? "api-key",
+    },
     budgets: {
       attempts: 1,
       wall_time_seconds: 600,
@@ -204,7 +208,10 @@ describe("T3-C live: one real producer and a fresh read-only reviewer", () => {
     process.stdout.write(`# producer: ${JSON.stringify(produced)}\n`);
 
     const o = produced.observation;
-    assert.equal(o.auth, "ANTHROPIC_API_KEY");
+    assert.equal(
+      o.auth,
+      producer.credentialKind === "api-key" ? "ANTHROPIC_API_KEY" : "CLAUDE_CODE_OAUTH_TOKEN",
+    );
     assert.equal(o.model.reported, producer.model);
     assert.deepEqual(o.tools, [
       "StructuredOutput",

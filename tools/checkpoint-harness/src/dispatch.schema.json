@@ -15,8 +15,12 @@
       "additionalProperties": false,
       "required": ["provider"],
       "properties": {
+        "kind": {
+          "description": "How the credential authenticates: a Console API key (default) or a Claude subscription OAuth token from `claude setup-token`.",
+          "enum": ["api-key", "oauth-token"]
+        },
         "provider": {
-          "description": "Reference to the environment variable holding the Anthropic API key; never the key itself.",
+          "description": "Reference to the environment variable holding the credential; never the credential itself.",
           "type": "string",
           "pattern": "^env:[A-Z_][A-Z0-9_]*$"
         }

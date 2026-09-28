@@ -27,6 +27,7 @@ import {
   SUBMISSION_SCHEMA,
   type AgentOutcome,
   type AgentRole,
+  type CredentialKind,
   type Packet,
   type Provider,
   type ProviderEvent,
@@ -94,7 +95,11 @@ const acceptedParser = (): AcceptedOutput => ({
   evidence: ["fixture acceptance"],
 });
 
-function role(name: RoleName = "producer", limits: Partial<AgentRole["limits"]> = {}): AgentRole {
+function role(
+  name: RoleName = "producer",
+  limits: Partial<AgentRole["limits"]> = {},
+  credentialKind: CredentialKind = "api-key",
+): AgentRole {
   return {
     name,
     model: MODEL,
@@ -102,6 +107,7 @@ function role(name: RoleName = "producer", limits: Partial<AgentRole["limits"]> 
     skills: [{ name: "karpathy-guidelines", digest: sha256("skill"), text: "skill" }],
     limits: { attempts: 3, wallTimeMs: 5_000, maxTurns: 8, maxBudgetUsd: 1, ...limits },
     credential: new Secret(SECRET),
+    credentialKind,
   };
 }
 
@@ -255,7 +261,7 @@ describe("T3-C dispatch refuses incomplete configuration", () => {
   };
   type ConfigFixture = {
     roles: { producer: RoleFixture; reviewer?: RoleFixture };
-    credentials: { provider: string };
+    credentials: { provider: string; kind?: string };
     budgets: { attempts?: number; wall_time_seconds: number; provider_spend_limit: unknown };
   };
   const config = (edit: (c: ConfigFixture) => void = () => undefined): unknown => {
@@ -309,6 +315,24 @@ describe("T3-C dispatch refuses incomplete configuration", () => {
     assert.equal(r.credential.reveal(), SECRET);
     assert.ok(!JSON.stringify(r).includes(SECRET), "the credential never serialises");
     assert.ok(!String(r.credential).includes(SECRET));
+  });
+
+  it("resolves the configured credential kind, defaulting to an API key", () => {
+    const apiKey = resolveRole(config(), "producer", { skillsRoot: skills, env });
+    assert.ok(apiKey.ok);
+    assert.equal(apiKey.role.credentialKind, "api-key");
+    const oauth = resolveRole(
+      config((c) => (c.credentials = { provider: "env:FIXTURE_KEY", kind: "oauth-token" })),
+      "producer",
+      { skillsRoot: skills, env },
+    );
+    assert.ok(oauth.ok);
+    assert.equal(oauth.role.credentialKind, "oauth-token");
+    refused(
+      config((c) => (c.credentials = { provider: "env:FIXTURE_KEY", kind: "subscription" })),
+      "producer",
+      /kind must be equal to one of the allowed values/,
+    );
   });
 
   it("refuses a missing credential without reading it from configuration", () => {
@@ -780,6 +804,7 @@ describe("T3-C authentication and the effective session are checked before work 
   it("an ambient token, a missing key or another backend fails before the prompt is sent", async () => {
     for (const bad of [
       { tokenSource: "CCR_OAUTH_TOKEN_FILE" },
+      { tokenSource: "CLAUDE_CODE_OAUTH_TOKEN" },
       { apiKeySource: null },
       { apiKeySource: "apiKeyHelper" },
       { apiProvider: "bedrock" },
@@ -827,6 +852,53 @@ describe("T3-C authentication and the effective session are checked before work 
       assert.ok(outcome.outcome === "failed", name);
       assert.match(outcome.reason, /^provider reported \w+ where \w+ was due$/, name);
     }
+  });
+
+  it("a configured OAuth token is admitted alone; the injected token or an API key is refused", async () => {
+    const oauth = role("producer", {}, "oauth-token");
+    const ok = await invoke(
+      scripted(async function* (request) {
+        yield account({ apiKeySource: null, tokenSource: "CLAUDE_CODE_OAUTH_TOKEN" });
+        yield init(request, { apiKeySource: "none" });
+        yield result(SUBMISSION);
+      }),
+      { role: oauth },
+    );
+    assert.equal(ok.outcome, "submitted");
+    assert.equal(ok.observation.auth, "CLAUDE_CODE_OAUTH_TOKEN");
+    for (const bad of [
+      { apiKeySource: null, tokenSource: "CCR_OAUTH_TOKEN_FILE" },
+      { apiKeySource: "ANTHROPIC_API_KEY", tokenSource: "CLAUDE_CODE_OAUTH_TOKEN" },
+      { apiKeySource: "ANTHROPIC_API_KEY", tokenSource: null },
+      { apiKeySource: null, tokenSource: null },
+    ]) {
+      let prompted = false;
+      const outcome = await invoke(
+        scripted(async function* (request) {
+          yield account(bad);
+          prompted = true;
+          yield init(request, { apiKeySource: "none" });
+          yield result(SUBMISSION);
+        }),
+        { role: oauth },
+      );
+      assert.ok(outcome.outcome === "failed", JSON.stringify(bad));
+      assert.match(outcome.reason, /unsupported authentication.*the prompt was not sent/);
+      assert.equal(prompted, false, JSON.stringify(bad));
+    }
+    const keyedSession = await invoke(
+      scripted(async function* (request) {
+        yield account({ apiKeySource: null, tokenSource: "CLAUDE_CODE_OAUTH_TOKEN" });
+        yield init(request);
+        yield result(SUBMISSION);
+      }),
+      { role: oauth },
+    );
+    assert.ok(keyedSession.outcome === "failed");
+    assert.match(
+      keyedSession.reason,
+      /effective session differs: authentication from ANTHROPIC_API_KEY/,
+    );
   });
 
   it("an effective session other than the configured one fails", async () => {
@@ -938,6 +1010,21 @@ describe("T3-C tools", () => {
 });
 
 describe("T3-C observations are redacted and journaled", () => {
+  it("a provider error result surfaces its message, redacted", async () => {
+    const outcome = await invoke(
+      scripted(async function* (request) {
+        yield account();
+        yield init(request);
+        yield result(`Invalid API key ${SECRET} · Fix external API key`, { isError: true });
+      }),
+    );
+    assert.ok(outcome.outcome === "failed");
+    assert.equal(
+      outcome.reason,
+      "provider success: Invalid API key [REDACTED] · Fix external API key",
+    );
+  });
+
   it("the credential never appears in an outcome or its evidence", async () => {
     const outcome = await invoke(
       scripted(async function* (request) {
@@ -1095,7 +1182,7 @@ describe("T3-C proxy credentials are secrets too", () => {
 });
 
 describe("T3-C SDK session options", () => {
-  const request = (): ProviderRequest => ({
+  const request = (credentialKind: CredentialKind = "api-key"): ProviderRequest => ({
     model: MODEL,
     system: "system",
     prompt: "prompt",
@@ -1104,7 +1191,22 @@ describe("T3-C SDK session options", () => {
     maxTurns: 4,
     maxBudgetUsd: 1.5,
     credential: new Secret(SECRET),
+    credentialKind,
     abort: new AbortController(),
+  });
+
+  it("passes a configured OAuth token without an API key or bare mode", () => {
+    const env = sdkOptions(request("oauth-token"), "/controller/home").env ?? {};
+    assert.equal(env.CLAUDE_CODE_OAUTH_TOKEN, SECRET);
+    assert.equal(env.ANTHROPIC_API_KEY, undefined);
+    assert.equal(env.CLAUDE_CODE_SIMPLE, undefined, "bare mode would ignore the OAuth token");
+    const keyed = sdkOptions(request("api-key"), "/controller/home").env ?? {};
+    assert.equal(keyed.CLAUDE_CODE_OAUTH_TOKEN, undefined);
+    assert.notEqual(
+      sha256(stringify(sessionSettings(request("oauth-token")))),
+      sha256(stringify(sessionSettings(request("api-key")))),
+      "the credential kind is part of the settings identity",
+    );
   });
 
   it("disables built-in tools, filesystem settings, skills, plugins and foreign MCP servers", () => {
@@ -1113,6 +1215,7 @@ describe("T3-C SDK session options", () => {
       const options = sdkOptions(request(), "/controller/home");
       assert.deepEqual(options.tools, []);
       assert.deepEqual(options.settingSources, []);
+      assert.deepEqual(options.settings, { enabledPlugins: { "agents-md@builtin": false } });
       assert.deepEqual(options.skills, []);
       assert.deepEqual(options.plugins, []);
       assert.equal(options.strictMcpConfig, true);
@@ -1127,6 +1230,7 @@ describe("T3-C SDK session options", () => {
       assert.equal(env.ANTHROPIC_API_KEY, SECRET);
       assert.equal(env.HOME, "/controller/home");
       assert.equal(env.CLAUDE_CONFIG_DIR, "/controller/home");
+      assert.equal(env.CLAUDE_CODE_SIMPLE, "1", "bare mode ignores ambient OAuth tokens");
       assert.equal(env.PACTWRIGHT_UNRELATED_SECRET, undefined, "no host variable leaks");
       assert.ok(
         Object.keys(env).every((k) =>
@@ -1135,8 +1239,10 @@ describe("T3-C SDK session options", () => {
             "HOME",
             "CLAUDE_CONFIG_DIR",
             "CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC",
+            "CLAUDE_CODE_SIMPLE",
             "CLAUDE_AGENT_SDK_CLIENT_APP",
             "ANTHROPIC_API_KEY",
+            "CLAUDE_CODE_OAUTH_TOKEN",
             "HTTPS_PROXY",
             "HTTP_PROXY",
             "NO_PROXY",
