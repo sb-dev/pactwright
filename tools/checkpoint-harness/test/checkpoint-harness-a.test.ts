@@ -40,6 +40,23 @@ const git = (cwd: string, args: string[]): string =>
 
 type Edit = { file: string; from: string; to: string };
 
+function applyEdits(root: string, edits: Edit[]): void {
+  for (const { file, from, to } of edits) {
+    const path = join(root, file);
+    const text = readFileSync(path, "utf8");
+    assert.ok(text.includes(from), `fixture text missing in ${file}: ${from}`);
+    writeFileSync(path, text.replace(from, to));
+  }
+}
+
+/** Commits `edits` and `added` files on top of a fixture repository's current revision. */
+function commit(root: string, edits: Edit[], added: Record<string, string> = {}): void {
+  applyEdits(root, edits);
+  for (const [file, text] of Object.entries(added)) writeFileSync(join(root, file), text);
+  git(root, ["add", "-A"]);
+  git(root, ["commit", "-q", "--no-gpg-sign", "-m", "change"]);
+}
+
 /** A Git repository holding the CP99 fixture, committed after applying `edits`. */
 function fixtureRepo(name: string, edits: Edit[] = [], remove: string[] = []): string {
   const root = join(scratch, name);
@@ -48,12 +65,7 @@ function fixtureRepo(name: string, edits: Edit[] = [], remove: string[] = []): s
     join(repoRoot, "docs/checkpoints/contract.schema.json"),
     join(root, "docs/checkpoints/contract.schema.json"),
   );
-  for (const { file, from, to } of edits) {
-    const path = join(root, file);
-    const text = readFileSync(path, "utf8");
-    assert.ok(text.includes(from), `fixture text missing in ${file}: ${from}`);
-    writeFileSync(path, text.replace(from, to));
-  }
+  applyEdits(root, edits);
   for (const file of remove) rmSync(join(root, file));
   git(root, ["init", "-q"]);
   git(root, ["add", "-A"]);
@@ -104,6 +116,7 @@ const acceptedOutputs = (plan: PreparedRun, steps: string[]): AcceptedOutput[] =
       step: id,
       output: o.id,
       definition: plan.stepDefinitions[id] ?? "",
+      definitions: plan.definitionsDigest,
       evidence: ["fixture"] as const,
     })),
   );
@@ -214,6 +227,7 @@ describe("T3-A contract loading and execution planning", () => {
       capability: "fixture-reporting",
       step: "CP99-S01",
       definition: plan.stepDefinitions["CP99-S01"] ?? "",
+      definitions: plan.definitionsDigest,
       evidence: ["fixture"] as const,
     };
 
@@ -235,6 +249,14 @@ describe("T3-A contract loading and execution planning", () => {
       o.step === "CP99-S01" ? { ...o, definition: "sha256:older" } : o,
     );
     assert.deepEqual(nextEligible(plan, { outputs: stale, capabilities: [] }), {
+      kind: "dispatch",
+      step: "CP99-S01",
+    });
+    // So is one bound to an older governing definition set.
+    const staleSet = outputs(["CP99-S01", "CP99-S02"]).map((o) =>
+      o.step === "CP99-S01" ? { ...o, definitions: "sha256:older" } : o,
+    );
+    assert.deepEqual(nextEligible(plan, { outputs: staleSet, capabilities: [] }), {
       kind: "dispatch",
       step: "CP99-S01",
     });
@@ -267,6 +289,50 @@ describe("T3-A contract loading and execution planning", () => {
     assert.deepEqual(nextEligible(through03, { outputs: all, capabilities: [reporting] }), {
       kind: "selection-accepted",
     });
+  });
+
+  it("A02 treats receipts as stale when a governing definition changes", async () => {
+    const repo = fixtureRepo("definitions");
+    const planAt = (): Promise<PreparedRun> => planOf(repo, config(head(repo), "CP99-S02"));
+    const accept = (plan: PreparedRun): Acceptances => ({
+      outputs: acceptedOutputs(plan, ["CP99-S01", "CP99-S02"]),
+      capabilities: [],
+    });
+    const first = await planAt();
+    const accepted = accept(first);
+    assert.deepEqual(nextEligible(first, accepted), { kind: "selection-accepted" });
+
+    // Control: a change outside the definitions leaves the receipts current.
+    commit(repo, [], { "README.md": "Not a definition.\n" });
+    const unrelated = await planAt();
+    assert.equal(unrelated.definitionsDigest, first.definitionsDigest);
+    assert.deepEqual(nextEligible(unrelated, accepted), { kind: "selection-accepted" });
+
+    // An inherited checkpoint requirement changes; no step file does.
+    commit(repo, [
+      {
+        file: `${CP99}/checkpoint.yml`,
+        from: "keep the fixture repository gate passing",
+        to: "keep the fixture repository gate and its build passing",
+      },
+    ]);
+    const inherited = await planAt();
+    assert.deepEqual(inherited.stepDefinitions, first.stepDefinitions);
+    assert.deepEqual(nextEligible(inherited, accepted), { kind: "dispatch", step: "CP99-S01" });
+
+    // A canonical source clause changes; no contract file does.
+    const reaccepted = accept(inherited);
+    assert.deepEqual(nextEligible(inherited, reaccepted), { kind: "selection-accepted" });
+    commit(repo, [
+      {
+        file: "docs/specs/fixture-spec.md",
+        from: "accepts a valid configuration",
+        to: "accepts only a valid configuration",
+      },
+    ]);
+    const canonical = await planAt();
+    assert.deepEqual(canonical.stepDefinitions, inherited.stepDefinitions);
+    assert.deepEqual(nextEligible(canonical, reaccepted), { kind: "dispatch", step: "CP99-S01" });
   });
 
   it("A02 plans Checkpoint 1 at HEAD and pauses at its first unconverted step", async () => {
@@ -381,6 +447,27 @@ describe("T3-A contract loading and execution planning", () => {
       expect: /Step 1 has neither a contract nor a prose_steps entry/,
     },
     {
+      name: "wrong-typed checkpoint field",
+      edits: [
+        {
+          file: `${CP99}/checkpoint.yml`,
+          from: "FIX: ../../specs/fixture-spec.md",
+          to: "FIX: 42",
+        },
+      ],
+      expect: /checkpoint\.yml: schema: \/sources\/FIX must be string/,
+    },
+    {
+      name: "wrong-typed step field",
+      edits: [{ file: `${CP99}/CP99-S02.yml`, from: "requires: [CP99-S01]", to: "requires: 5" }],
+      expect: /CP99-S02\.yml: schema: \/requires must be array/,
+    },
+    {
+      name: "wrong-typed crosswalk field",
+      edits: [{ file: `${CP99}/crosswalk.yml`, from: "entries: []", to: "entries: 5" }],
+      expect: /crosswalk\.yml: schema: \/entries must be array/,
+    },
+    {
       name: "unconverted step changed after review",
       edits: [
         {
@@ -452,6 +539,21 @@ describe("T3-A contract loading and execution planning", () => {
       );
     });
   }
+
+  it("A03 returns schema diagnostics for wrong-typed data instead of throwing", async () => {
+    const repo = fixtureRepo("wrong-type-api", [
+      { file: `${CP99}/checkpoint.yml`, from: "FIX: ../../specs/fixture-spec.md", to: "FIX: 42" },
+    ]);
+    const result = await prepareRun(config(head(repo)), { repoRoot: repo });
+    assert.equal(result.ok, false);
+    assert.ok(
+      !result.ok &&
+        result.diagnostics.some((d) =>
+          /checkpoint\.yml: schema: \/sources\/FIX must be string/.test(d),
+        ),
+      result.ok ? "" : result.diagnostics.join("\n"),
+    );
+  });
 
   it("A03 rejects a plan command without a configuration", () => {
     const run = spawnSync(process.execPath, ["--import", tsx, cli, "plan"], {

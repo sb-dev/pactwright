@@ -13,6 +13,7 @@ import { pipeline } from "node:stream/promises";
 import { DirectedGraph } from "graphology";
 import { dfsFromNode } from "graphology-traversal";
 import { Ajv2020 } from "ajv/dist/2020.js";
+import stringify from "safe-stable-stringify";
 import { x as extract } from "tar";
 
 import {
@@ -73,6 +74,8 @@ export type PreparedRun = {
   selection: RunConfig["selection"];
   /** Every definition file planning read, by repository path, at the definitions revision. */
   sources: { path: string; sha256: string }[];
+  /** Digest of `sources`: the governing definition set every acceptance is bound to. */
+  definitionsDigest: string;
   /** Each step's definition identity: its contract file digest or its reviewed prose hash. */
   stepDefinitions: Record<string, string>;
   /** The selected step and its transitive prerequisites, in checkpoint order. */
@@ -98,19 +101,25 @@ export type PrepareOptions = {
 
 type Evidence = readonly [string, ...string[]];
 
-/** An accepted output instance of a step, bound to that step's definition. */
+/**
+ * An accepted output instance of a step, bound to that step's definition and
+ * to the governing definition set (`PreparedRun.definitionsDigest`) it was
+ * accepted under.
+ */
 export type AcceptedOutput = {
   step: string;
   output: string;
   definition: string;
+  definitions: string;
   evidence: Evidence;
 };
 
-/** An accepted capability, bound to the definition of the step that established it. */
+/** An accepted capability, bound like an output to the step that established it. */
 export type CapabilityReceipt = {
   capability: string;
   step: string;
   definition: string;
+  definitions: string;
   evidence: Evidence;
 };
 
@@ -342,6 +351,7 @@ function plan(root: string, config: RunConfig, name: string): Preparation {
       definitions: config.definitions,
       selection: config.selection,
       sources,
+      definitionsDigest: sha256(stringify(sources)),
       stepDefinitions,
       steps,
       inherited,
@@ -353,13 +363,17 @@ function plan(root: string, config: RunConfig, name: string): Preparation {
 /**
  * The first selected step, in checkpoint order, that is not yet accepted, and
  * whether it can be dispatched. A step is accepted when every declared output
- * has an accepted instance bound to the step's current definition; a record
- * bound to an older definition is stale and counts as missing. Earlier steps
- * are never skipped. Resources and authority are checked at dispatch, not here.
+ * has an accepted instance bound to the step's current definition and to the
+ * current governing definition set. A record bound to an older step definition
+ * or definition set is stale and counts as missing: a change to an inherited
+ * requirement or a canonical source alters obligations without touching any
+ * step file. Earlier steps are never skipped. Resources and authority are
+ * checked at dispatch, not here.
  */
 export function nextEligible(plan: PreparedRun, accepted: Acceptances): Eligibility {
-  const current = (record: { step: string; definition: string }): boolean =>
-    plan.stepDefinitions[record.step] === record.definition;
+  const current = (record: { step: string; definition: string; definitions: string }): boolean =>
+    plan.stepDefinitions[record.step] === record.definition &&
+    plan.definitionsDigest === record.definitions;
   for (const step of plan.steps) {
     if (step.kind === "prose") return { kind: "unconverted", step: step.id };
     const done = step.outputs.every(({ id }) =>

@@ -5,8 +5,8 @@
   "description": "Bootstrap harness that loads checkpoint contracts and prepares executable work (Spec 00 T3).",
   "type": "module",
   "scripts": {
-    "contracts:check": "tsx src/checkpoint-contracts.ts",
-    "harness": "tsx src/cli.ts",
+    "contracts:check": "node --import tsx src/checkpoint-contracts.ts",
+    "harness": "node --import tsx src/cli.ts",
     "typecheck": "tsc --noEmit",
     "test": "node --test --import tsx test/*.test.ts"
   },

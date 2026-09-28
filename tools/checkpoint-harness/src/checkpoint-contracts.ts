@@ -55,7 +55,49 @@ type CrosswalkSource = { source?: string; steps?: string[]; reviewed?: Record<st
 type Crosswalk = {
   sources?: CrosswalkSource[];
   entries?: CrosswalkEntry[];
-  open_questions?: { id: string; affects: string[] }[];
+  open_questions?: { id: string; affects?: string[] }[];
+};
+
+// The crosswalk is conversion evidence without a format schema; this checks
+// only the shape the checks below read, so a malformed file is reported
+// instead of crashing them.
+const strings = { type: "array", items: { type: "string" } };
+const CROSSWALK_SHAPE = {
+  type: "object",
+  properties: {
+    sources: {
+      type: "array",
+      items: {
+        type: "object",
+        properties: {
+          source: { type: "string" },
+          steps: strings,
+          reviewed: { type: "object", additionalProperties: { type: "string" } },
+        },
+      },
+    },
+    entries: {
+      type: "array",
+      items: {
+        type: "object",
+        required: ["key"],
+        properties: {
+          key: { type: "string" },
+          text: { type: "string" },
+          covered_by: strings,
+          allocated_to: { type: "string" },
+        },
+      },
+    },
+    open_questions: {
+      type: "array",
+      items: {
+        type: "object",
+        required: ["id"],
+        properties: { id: { type: "string" }, affects: strings },
+      },
+    },
+  },
 };
 
 export type Unit = { key: string; text: string };
@@ -333,7 +375,9 @@ export function loadCheckpointDir(
   const schema = JSON.parse(
     readFileSync(join(repoRoot, "docs/checkpoints/contract.schema.json"), "utf8"),
   ) as object;
-  const validate = new Ajv2020({ allErrors: true }).compile(schema);
+  const ajv = new Ajv2020({ allErrors: true });
+  const validate = ajv.compile(schema);
+  const validateCrosswalk = ajv.compile<Crosswalk>(CROSSWALK_SHAPE);
   // Parses YAML, reporting duplicate keys and syntax errors instead of throwing.
   const parse = (file: string, text: string): unknown => {
     try {
@@ -345,6 +389,8 @@ export function loadCheckpointDir(
       return undefined;
     }
   };
+  // Returns a document only once the format schema accepts it; a rejected
+  // document's shape is unknown, so no further check reads it.
   const load = (file: string, text = readFileSync(file, "utf8")): Contract | undefined => {
     const data = parse(file, text) as Contract | undefined;
     if (data === undefined) return undefined;
@@ -352,6 +398,7 @@ export function loadCheckpointDir(
       for (const e of validate.errors ?? []) {
         errors.push(`${rel(file)}: schema: ${e.instancePath || "/"} ${e.message ?? ""}`);
       }
+      return undefined;
     }
     return data;
   };
@@ -485,9 +532,14 @@ export function loadCheckpointDir(
     if (stepIds.length > 0) errors.push(`${rel(dir)}: crosswalk.yml missing`);
     return result();
   }
-  const crosswalk = parse(crosswalkFile, readFileSync(crosswalkFile, "utf8")) as
-    Crosswalk | undefined;
-  if (!crosswalk) return result();
+  const crosswalk = parse(crosswalkFile, readFileSync(crosswalkFile, "utf8"));
+  if (crosswalk === undefined) return result();
+  if (!validateCrosswalk(crosswalk)) {
+    for (const e of validateCrosswalk.errors ?? []) {
+      errors.push(`${rel(crosswalkFile)}: schema: ${e.instancePath || "/"} ${e.message ?? ""}`);
+    }
+    return result();
+  }
 
   // Each converted step quotes the checkpoint revision whose prose it replaced.
   const sourceOf = new Map<string, string>();
