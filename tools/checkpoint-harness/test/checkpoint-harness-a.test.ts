@@ -88,19 +88,29 @@ async function planOf(root: string, cfg: unknown): Promise<PreparedRun> {
   return result.plan;
 }
 
+/** Planning's own temporary directories under `temp` (tsx keeps its cache there too). */
+const planDirs = (temp: string): string[] =>
+  readdirSync(temp).filter((d) => d.startsWith("pactwright-plan-"));
+
 let configs = 0;
-/** Runs `plan --config` in `root`; a string config is written verbatim. */
+/**
+ * Runs `plan --config` in `root`; a string config is written verbatim. The CLI
+ * gets its own temporary directory (TMPDIR), so a check of what planning left
+ * there cannot see files of concurrent test runs.
+ */
 function runPlan(
   root: string,
   cfg: unknown,
-): { status: number | null; stdout: string; stderr: string } {
+): { status: number | null; stdout: string; stderr: string; temp: string } {
   const file = join(scratch, `config-${configs++}.yml`);
   writeFileSync(file, typeof cfg === "string" ? cfg : yaml.dump(cfg));
+  const temp = mkdtempSync(join(scratch, "tmp-"));
   const run = spawnSync(process.execPath, ["--import", tsx, cli, "plan", "--config", file], {
     cwd: root,
     encoding: "utf8",
+    env: { ...process.env, TMPDIR: temp },
   });
-  return { status: run.status, stdout: run.stdout, stderr: run.stderr };
+  return { status: run.status, stdout: run.stdout, stderr: run.stderr, temp };
 }
 
 const contract = (plan: PreparedRun, id: string): ContractStep => {
@@ -515,28 +525,19 @@ describe("T3-A contract loading and execution planning", () => {
     },
   ];
 
-  const planDirs = (): string[] =>
-    readdirSync(tmpdir()).filter((d) => d.startsWith("pactwright-plan-"));
-
   for (const [i, defect] of defects.entries()) {
     it(`A03 reports ${defect.name} and changes nothing`, () => {
       const repo =
         defect.edits || defect.remove
           ? fixtureRepo(`defect-${i}`, defect.edits, defect.remove)
           : root;
-      const before = {
-        head: head(repo),
-        status: git(repo, ["status", "--porcelain"]),
-        temp: planDirs(),
-      };
+      const before = { head: head(repo), status: git(repo, ["status", "--porcelain"]) };
       const run = runPlan(repo, (defect.config ?? config)(head(repo)));
       assert.equal(run.status, 2, run.stderr);
       assert.equal(run.stdout, "");
       assert.match(run.stderr, defect.expect);
-      assert.deepEqual(
-        { head: head(repo), status: git(repo, ["status", "--porcelain"]), temp: planDirs() },
-        before,
-      );
+      assert.deepEqual({ head: head(repo), status: git(repo, ["status", "--porcelain"]) }, before);
+      assert.deepEqual(planDirs(run.temp), [], "planning leaves no temporary files");
     });
   }
 
@@ -569,7 +570,8 @@ describe("T3-A contract loading and execution planning", () => {
     const second = runPlan(root, config(rev));
     assert.equal(first.status, 0, first.stderr);
     assert.equal(first.stdout, second.stdout);
-    assert.ok(!first.stdout.includes(tmpdir()), "no temporary path in the plan");
+    assert.ok(!first.stdout.includes(first.temp), "no temporary path in the plan");
+    assert.deepEqual(planDirs(first.temp), [], "planning leaves no temporary files");
     assert.deepEqual(JSON.parse(first.stdout), await planOf(root, config(rev)));
     assert.deepEqual(await planOf(root, config(rev)), await planOf(root, config(rev)));
   });
