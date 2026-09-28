@@ -2,7 +2,10 @@
 import assert from "node:assert/strict";
 import { writeFileSync } from "node:fs";
 
+// Take the report path out of the environment before loading candidate code.
 const binding = process.env.PACTWRIGHT_BINDING;
+const report = process.env.PACTWRIGHT_REPORT;
+delete process.env.PACTWRIGHT_REPORT;
 const inputs = { valid: '{"name": " demo "}', invalid: '{"name": "  "}' };
 const checks = {
   "parser.accepts": {
@@ -28,5 +31,5 @@ const results = Object.entries(inputs).map(([id, input]) => {
     return { ...result, outcome: "failed", observations: { input }, message: e.message };
   }
 });
-writeFileSync(process.env.PACTWRIGHT_REPORT, JSON.stringify({ results }));
+writeFileSync(report, JSON.stringify({ results }));
 process.exit(results.every((r) => r.outcome === "passed") ? 0 : 1);

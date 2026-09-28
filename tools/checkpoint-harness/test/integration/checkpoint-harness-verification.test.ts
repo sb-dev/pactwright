@@ -14,12 +14,11 @@ import { after, before, describe, it } from "node:test";
 
 import type { Packet } from "../../src/claude.js";
 import type { PreparedRun } from "../../src/contracts.js";
-import { readRun } from "../../src/evidence.js";
 import {
   admitVerifier,
   candidateTree,
   containedVerifier,
-  decideAcceptance,
+  recordDecision,
   REPORT_DIR,
   reviewCandidate,
   targetKey,
@@ -108,27 +107,14 @@ async function attempt(
   }
   const invocations = await verifyCandidate(w.run, { ...common, admissions, open });
   const claims = [{ output: "config-parser", paths: ["src/parser.mjs"] }];
-  const review = await reviewCandidate(w.run, {
+  await reviewCandidate(w.run, {
     ...common,
     accepted: [],
     invocations,
     claims,
     reviewer: access(),
   });
-  const read = readRun(w.run.dir);
-  assert.ok(read.ok, read.ok ? "" : read.diagnostics.join("\n"));
-  const decision = decideAcceptance({
-    ...common,
-    run: w.run.run,
-    policy,
-    tree,
-    claims,
-    invocations,
-    admissions,
-    reviews: [review],
-    approvals: [],
-    journaled: new Set(read.records.events.flatMap((e) => e.evidence)),
-  });
+  const { decision } = recordDecision(w.run, { ...common, run: w.run.run, policy, claims });
   return { run: w.run.run, admissions, invocations, decision };
 }
 
@@ -192,9 +178,10 @@ describe("T3-D verifiers run contained", () => {
       policy,
     );
     for (const { record } of admissions) {
-      assert.equal(record.outcome, "rejected");
+      assert.equal(record.outcome, "invalid");
+      assert.equal(record.review, null, "a verifier that never ran is not reviewed");
       assert.match(
-        record.findings[0]?.defect ?? "",
+        record.reasons[0] ?? "",
         /verifier workspace failed: .*\.pactwright-verification: scratch path holds source/,
       );
     }

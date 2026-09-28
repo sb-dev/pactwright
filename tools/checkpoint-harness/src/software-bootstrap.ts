@@ -42,7 +42,7 @@ export const ADEQUACY_RUBRIC: PinnedRubric = pin({
     "The verifier reports only results it executed, only for its own binding, with no skip and no result copied from a file the candidate could have written.",
     "Fixtures are deterministic and need no network.",
     "The binding's files list every verifier file and fixture the command runs, so its approval pins all of them.",
-    "Residual risk to weigh: code under test runs in the same container as the verifier and could write the report; the verifier must not hand it the report path or an easy way to forge a result.",
+    "Code under test runs in the verifier's container and could write the report: the verifier reads PACTWRIGHT_REPORT and removes it from the environment before it loads or runs candidate code, runs candidate programs without it and writes the report last.",
   ],
   pass: "Pass only when every target of the binding is adequately verified. A blocking finding cites the target as its rule and names the verifier file, the defect and the correction. A target whose adequacy cannot be judged is not-assessed, never satisfied.",
 });

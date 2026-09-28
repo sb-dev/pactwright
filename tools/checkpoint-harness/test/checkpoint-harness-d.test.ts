@@ -282,6 +282,18 @@ const input = (a: Attempt, overrides: Partial<DecisionInput> = {}): DecisionInpu
   ...overrides,
 });
 
+/** What `recordDecision` takes; it reads everything else from the journal. */
+const recordInput = (a: Attempt) => ({
+  plan,
+  step: a.step,
+  run: a.w.run.run,
+  attempt: a.attempt,
+  manifest: a.manifest,
+  registry,
+  policy: PRODUCER,
+  claims: a.claims,
+});
+
 const decide = (a: Attempt, overrides: Partial<DecisionInput> = {}): Decision =>
   decideAcceptance({ ...input(a, overrides), journaled: journaled(a.w.run) });
 
@@ -605,21 +617,24 @@ describe("T3-D D01 observations that cannot count prevent acceptance", () => {
     ],
   ];
   for (const [name, execution, detail] of cases) {
-    it(`${name} prevents acceptance`, async () => {
+    it(`${name} prevents acceptance, and a passing rerun cannot replace it`, async () => {
       const w = await world(scratch);
       const a = await complete(await attemptOf(w, "CP99-S01"), {
         verifier: defective("parser.accepts", execution),
       });
-      assertReason(decide(a), {
+      await verify(a);
+      const expected = { subject: /\/automated\/parser\.accepts$/, detail };
+      assertReason(decide(a), { decision: "correct", route: "correct", ...expected });
+      const outside = { writable: ["src"], scratch: [], protected: [] };
+      assertReason(decide(a, { policy: outside }), {
         decision: "pause",
-        route: "retry",
-        subject: /\/automated\/parser\.accepts$/,
-        detail,
+        route: "owner",
+        ...expected,
       });
     });
   }
 
-  it("a verifier workspace that fails to open prevents acceptance", async () => {
+  it("a verifier workspace that fails to open prevents acceptance until a run completes", async () => {
     const w = await world(scratch);
     const a = await attemptOf(w, "CP99-S01");
     await admit(a);
@@ -633,6 +648,9 @@ describe("T3-D D01 observations that cannot count prevent acceptance", () => {
       route: "retry",
       detail: /verifier workspace failed: docker: daemon unavailable/,
     });
+    // The verifier never ran, so running it is not a reroll.
+    await verify(a);
+    assert.equal(decide(a).decision, "accept");
   });
 
   it("a cross-attempt record prevents acceptance", async () => {
@@ -813,6 +831,9 @@ describe("T3-D D01 observations that cannot count prevent acceptance", () => {
       ["parser.accepts", "parser.rejects", "repo.verify"],
     );
     assert.deepEqual(calls[0]?.argv.slice(-2), ["node", "verifiers/parser.mjs"]);
+    const reports = calls.map((c) => c.argv.find((x) => x.startsWith("PACTWRIGHT_REPORT=")));
+    assert.equal(new Set(reports).size, 3, "each invocation has its own report path");
+    for (const r of reports) assert.match(r ?? "", new RegExp(`^PACTWRIGHT_REPORT=${REPORT_DIR}/`));
     assert.deepEqual(calls[1]?.argv.slice(-2), ["node", "verifiers/parser.mjs"]);
     const ids = a.invocations.map((i) => i.record.id);
     assert.equal(new Set(ids).size, 3);
@@ -930,6 +951,64 @@ describe("T3-D D02 a proposed verifier counts only after adequacy and a fresh ru
       admission.record.findings.map((f) => [f.rule, f.defect]),
       [[WEAK, "provisional run: no result was reported"]],
     );
+  });
+
+  it("a rejected digest stays rejected: a later approval of it cannot count", async () => {
+    const w = await world(scratch);
+    const a = await attemptOf(w, "CP99-S01", { files: weakFiles() });
+    await admit(a, { adequacy: rejectWeak });
+    const [again] = await admit(a, { bindings: ["parser.rejects"] });
+    assert.equal(again?.record.outcome, "approved");
+    const verifier = passes("CP99-S01");
+    await verify(a, verifier);
+    assert.ok(!verifier.calls.some((c) => c.binding === "parser.rejects"));
+    await review(a);
+    assertReason(decide(a), {
+      decision: "correct",
+      route: "correct",
+      subject: new RegExp(`^${WEAK}$`),
+      detail: /any parser passes/,
+    });
+  });
+
+  it("a verifier that never ran is not reviewed, and its admission may be repeated", async () => {
+    const w = await world(scratch);
+    const a = await attemptOf(w, "CP99-S01");
+    const provider = scriptedReviewer(approveAll);
+    const unrun = await admitVerifier(w.run, {
+      plan,
+      step: "CP99-S01",
+      registry,
+      binding: "repo.verify",
+      candidate: a.candidate,
+      attempt: 1,
+      manifest: a.manifest,
+      accepted: [],
+      open: scriptedVerifier(() => ({}), { openError: "docker: daemon unavailable" }),
+      reviewer: { ...access(), provider },
+    });
+    assert.equal(unrun.record.outcome, "invalid");
+    assert.equal(provider.requests.length, 0);
+    assert.match(unrun.record.reasons[0] ?? "", /docker: daemon unavailable/);
+    a.admissions.push(unrun);
+    await admit(a);
+    await verify(a);
+    await review(a);
+    assert.equal(decide(a).decision, "accept");
+  });
+
+  it("an admission whose review was incomplete may be repeated", async () => {
+    const w = await world(scratch);
+    const a = await attemptOf(w, "CP99-S01");
+    const [incomplete] = await admit(a, {
+      bindings: ["repo.verify"],
+      adequacy: () => ({ verdict: "pass", coverage: [], targets: [], findings: [], blockers: [] }),
+    });
+    assert.equal(incomplete?.record.outcome, "invalid");
+    await admit(a);
+    await verify(a);
+    await review(a);
+    assert.equal(decide(a).decision, "accept");
   });
 
   it("a valid replacement passes adequacy, and only its fresh acceptance run counts", async () => {
@@ -1156,10 +1235,19 @@ describe("T3-D D03 defects and missing outputs are requirement-linked; nits do n
       };
     };
     const a = await complete(await attemptOf(w, "CP99-S01"), { respond: unassessed });
-    assertReason(decide(a), {
+    // A complete verdict binds: a later clean pass cannot replace it.
+    await review(a);
+    const decision = decide(a);
+    assertReason(decision, {
       decision: "pause",
-      route: "retry",
-      detail: /yet an item is unmet, not assessed/,
+      route: "owner",
+      subject: /^CP99-S01\/config-parser$/,
+      detail: /could not assess it/,
+    });
+    assertReason(decision, {
+      decision: "pause",
+      route: "owner",
+      detail: /contradicts itself: the verdict is pass, yet an item is unmet, not assessed/,
     });
     const blocked = await complete(await attemptOf(w, "CP99-S01"), {
       respond: (p) => ({
@@ -1186,7 +1274,43 @@ describe("T3-D D03 defects and missing outputs are requirement-linked; nits do n
     assert.equal(decide(a).decision, record.expected.decision);
   });
 
-  const protocol: [string, (v: ReviewVerdict) => ReviewVerdict, RegExp][] = [
+  type Mutation = [string, (v: ReviewVerdict) => ReviewVerdict, RegExp];
+  const incomplete: Mutation[] = [
+    [
+      "a missing coverage entry",
+      (v) => ({ ...v, coverage: v.coverage.slice(1) }),
+      /coverage has 0 entries for CP99-S01\/R01/,
+    ],
+    [
+      "an unknown subject",
+      (v) => ({
+        ...v,
+        coverage: [
+          ...v.coverage,
+          { subject: "CP99-S01/R07", result: "satisfied", basis: "executed", note: "met" },
+        ],
+      }),
+      /coverage names unknown CP99-S01\/R07/,
+    ],
+    [
+      "a missing review target",
+      (v) => ({ ...v, targets: [] }),
+      /targets has 0 entries for CP99-S01\/AC02/,
+    ],
+  ];
+  for (const [name, mutate, detail] of incomplete) {
+    it(`a review with ${name} is incomplete: it never passes, and another review may follow`, async () => {
+      const w = await world(scratch);
+      const a = await complete(await attemptOf(w, "CP99-S01"), {
+        respond: (p) => mutate(approveAll(p)),
+      });
+      assertReason(decide(a), { decision: "pause", route: "retry", subject: /^review$/, detail });
+      await review(a);
+      assert.equal(decide(a).decision, "accept");
+    });
+  }
+
+  const contradictory: Mutation[] = [
     [
       "a blocking finding on an unknown rule",
       (v) => ({
@@ -1206,27 +1330,6 @@ describe("T3-D D03 defects and missing outputs are requirement-linked; nits do n
       /cites CP99-S01\/R09, which is not recorded as unmet/,
     ],
     [
-      "a missing coverage entry",
-      (v) => ({ ...v, coverage: v.coverage.slice(1) }),
-      /coverage has 0 entries for CP99-S01\/R01/,
-    ],
-    [
-      "an unknown subject",
-      (v) => ({
-        ...v,
-        coverage: [
-          ...v.coverage,
-          { ...v.coverage[0], subject: "CP99-S01/R07" } as ReviewVerdict["coverage"][number],
-        ],
-      }),
-      /coverage names unknown CP99-S01\/R07/,
-    ],
-    [
-      "a missing review target",
-      (v) => ({ ...v, targets: [] }),
-      /targets has 0 entries for CP99-S01\/AC02/,
-    ],
-    [
       "a pass with an unmet subject",
       (v) => ({
         ...v,
@@ -1240,13 +1343,14 @@ describe("T3-D D03 defects and missing outputs are requirement-linked; nits do n
       /changes-required without a blocking finding/,
     ],
   ];
-  for (const [name, mutate, detail] of protocol) {
-    it(`a review with ${name} is incomplete and never passes`, async () => {
+  for (const [name, mutate, detail] of contradictory) {
+    it(`a complete review with ${name} binds and pauses; a later pass cannot replace it`, async () => {
       const w = await world(scratch);
       const a = await complete(await attemptOf(w, "CP99-S01"), {
         respond: (p) => mutate(approveAll(p)),
       });
-      assertReason(decide(a), { decision: "pause", route: "retry", subject: /^review$/, detail });
+      await review(a);
+      assertReason(decide(a), { decision: "pause", route: "owner", subject: /^review$/, detail });
     });
   }
 
@@ -1274,8 +1378,7 @@ describe("T3-D D04 complete evidence, common review and exact approvals accept",
     const a = await complete(await attemptOf(w, record.step, { files: record.files }), {
       respond: () => record.verdict,
     });
-    const rest = input(a);
-    const recorded = recordDecision(w.run, rest);
+    const recorded = recordDecision(w.run, recordInput(a));
     assert.equal(recorded.decision.decision, "accept");
     assert.deepEqual(recorded.accepted, [
       {
@@ -1409,17 +1512,52 @@ describe("T3-D D04 complete evidence, common review and exact approvals accept",
     assertReason(decision, { decision: "pause", route: "approval", detail: /awaiting approval/ });
   });
 
+  it("recordDecision decides from the journal: a caller cannot omit or reorder records", async () => {
+    const w = await world(scratch);
+    const a = await attemptOf(w, "CP99-S01");
+    await admit(a);
+    await verify(
+      a,
+      defective("parser.accepts", (e) => ({
+        exit: 1,
+        report: {
+          results: e.map((x) =>
+            x.case === "valid" ? { ...x, outcome: "failed", message: "rejected a valid name" } : x,
+          ),
+        },
+      })),
+    );
+    await verify(a);
+    await review(a, () => calibration("known-bad").verdict);
+    await review(a);
+    const { decision, accepted } = recordDecision(w.run, recordInput(a));
+    assertReason(decision, {
+      decision: "correct",
+      route: "correct",
+      subject: /^CP99-S01\/AC01\/valid\/automated\/parser\.accepts$/,
+      detail: /rejected a valid name/,
+    });
+    assertReason(decision, { decision: "correct", route: "correct", detail: /loadConfig/ });
+    assert.deepEqual(accepted, []);
+  });
+
   it("a correct or pause decision is journaled without an acceptance", async () => {
     const w = await world(scratch);
     const a = await complete(await attemptOf(w, "CP99-S01"), {
       respond: () => calibration("known-bad").verdict,
     });
-    const rest = input(a);
-    const corrected = recordDecision(w.run, rest);
+    const corrected = recordDecision(w.run, recordInput(a));
     assert.equal(corrected.decision.decision, "correct");
     assert.deepEqual(corrected.accepted, []);
-    const paused = recordDecision(w.run, { ...rest, reviews: [] });
-    assert.equal(paused.decision.decision, "pause");
+    const unreviewed = await attemptOf(w, "CP99-S01", { attempt: 2 });
+    unreviewed.admissions.push(...a.admissions);
+    await verify(unreviewed);
+    const paused = recordDecision(w.run, recordInput(unreviewed));
+    assertReason(paused.decision, {
+      decision: "pause",
+      route: "retry",
+      detail: /common independent review is missing/,
+    });
     const read = readRun(w.run.dir);
     assert.ok(read.ok);
     assert.deepEqual(

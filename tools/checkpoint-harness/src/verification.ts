@@ -41,10 +41,12 @@ import {
   appendEvent,
   evaluationDigest,
   putEvidence,
+  readEvidence,
   readRun,
   type EvaluationManifest,
   type Json,
   type JsonObject,
+  type JournalEvent,
   type RunHandle,
 } from "./evidence.js";
 import {
@@ -65,7 +67,6 @@ import {
 
 /** The controller's scratch directory in a verifier workspace; never candidate source. */
 export const REPORT_DIR = ".pactwright-verification";
-const REPORT = `${REPORT_DIR}/report.json`;
 const VERIFIER_POLICY: WritePolicy = { writable: [], scratch: [REPORT_DIR], protected: [] };
 const READ_ONLY: WritePolicy = { writable: [], scratch: [], protected: [] };
 
@@ -77,10 +78,18 @@ export type Stage = "provisional" | "acceptance";
 /** Where a record belongs; it counts only for this run, attempt, evaluation and candidate. */
 export type Identity = { run: string; attempt: number; evaluation: string; candidate: string };
 
-/** The controller's reading of one target in one verifier report. */
+/**
+ * The controller's reading of one target in one invocation. `invalid` is a
+ * verifier that ran but broke the report protocol; `unavailable` is one that
+ * never ran, such as a workspace that could not be opened.
+ */
 export type TargetResult =
   | { target: VerificationTarget; outcome: "passed"; assertions: number; observations: JsonObject }
-  | { target: VerificationTarget; outcome: "failed" | "invalid"; reason: string };
+  | {
+      target: VerificationTarget;
+      outcome: "failed" | "invalid" | "unavailable";
+      reason: string;
+    };
 
 /** One execution of one binding; evidence refs name its report and output. */
 export type Invocation = Identity & {
@@ -100,6 +109,8 @@ export type Invocation = Identity & {
 
 export type ReviewRecord = Identity & {
   kind: ReviewContext["kind"];
+  /** Invocation records whose results the reviewer was shown. */
+  invocations: string[];
   /** Digest of the rubric the reviewer applied. */
   rubric: string;
   /** Digest of the reviewer's packet. */
@@ -190,6 +201,28 @@ const unique = (values: readonly string[]): string[] => [...new Set(values)].sor
 
 function store<T extends object>(run: RunHandle, record: T): Stored<T> {
   return { ref: putEvidence(run, stringify(record)), record };
+}
+
+/**
+ * Journals a stored record: its reference comes first in the event's
+ * evidence and is repeated as `data.record`, where `recordDecision` finds it.
+ */
+function journal(
+  run: RunHandle,
+  action: string,
+  at: { attempt: number; evaluation: string },
+  record: string,
+  more: readonly (string | null)[],
+  data: JsonObject,
+): void {
+  const others = unique(more.flatMap((r) => (r === null || r === record ? [] : [r])));
+  appendEvent(run, {
+    action,
+    attempt: at.attempt,
+    evaluation: at.evaluation,
+    evidence: [record, ...others],
+    data: { ...data, record },
+  });
 }
 
 function contractStep(plan: PreparedRun, id: string): ContractStep {
@@ -284,7 +317,8 @@ export function reconcile(
     reason,
   });
   if (observed.error !== null) {
-    return targets.map((t) => invalid(t, `the verifier workspace failed: ${observed.error}`));
+    const reason = `the verifier workspace failed: ${observed.error}`;
+    return targets.map((t): TargetResult => ({ target: t, outcome: "unavailable", reason }));
   }
   if (observed.timedOut) {
     return targets.map((t) => failed(t, `timed out after ${binding.timeoutMs} ms`));
@@ -375,10 +409,12 @@ async function runBinding(
   },
 ): Promise<Stored<Invocation>> {
   const { binding, identity } = input;
+  // A fresh name per invocation, so code under test cannot know it in advance.
+  const report = `${REPORT_DIR}/${randomUUID()}.json`;
   const argv = [
     "env",
     `PACTWRIGHT_BINDING=${binding.id}`,
-    `PACTWRIGHT_REPORT=${REPORT}`,
+    `PACTWRIGHT_REPORT=${report}`,
     ...binding.command,
   ];
   const observed: Observed = {
@@ -398,7 +434,7 @@ async function runBinding(
       observed.stderr = result.stderr;
       stdout = result.stdout;
       if (!result.timedOut) {
-        const file = await ws.readFile(REPORT);
+        const file = await ws.readFile(report);
         if (file.ok) observed.report = file.bytes;
       }
     } finally {
@@ -425,31 +461,50 @@ async function runBinding(
     results: reconcile(binding, input.targets, observed),
   };
   const stored = store(run, record);
-  const refs = [record.report, record.stdout, record.stderr].flatMap((r) =>
-    r === null ? [] : [r],
+  journal(
+    run,
+    "verifier-invocation",
+    identity,
+    stored.ref,
+    [record.report, record.stdout, record.stderr],
+    {
+      binding: binding.id,
+      stage: input.stage,
+      invocation: record.id,
+    },
   );
-  appendEvent(run, {
-    action: "verifier-invocation",
-    attempt: identity.attempt,
-    evaluation: identity.evaluation,
-    evidence: unique([stored.ref, ...refs]),
-    data: { binding: binding.id, stage: input.stage, invocation: record.id },
-  });
   return stored;
+}
+
+/**
+ * The admission that decides a verifier digest: the first, in journal order,
+ * that completed under the current adequacy rubric. Only an `invalid`
+ * (protocol-failed) admission may be followed by another; a rejected or
+ * paused digest stays so, and a revised verifier is a new digest.
+ */
+function admissionFor(
+  admissions: readonly Stored<Admission>[],
+  binding: string,
+  digest: string | undefined,
+): { decided: Stored<Admission> | undefined; invalid: Admission[] } {
+  const own = admissions.filter(
+    ({ record: a }) =>
+      a.binding === binding && a.digest === digest && a.rubric === ADEQUACY_RUBRIC.digest,
+  );
+  return {
+    decided: own.find(({ record: a }) => a.outcome !== "invalid"),
+    invalid: own.flatMap(({ record: a }) => (a.outcome === "invalid" ? [a] : [])),
+  };
 }
 
 const approvedFor = (
   admissions: readonly Stored<Admission>[],
   binding: string,
   digest: string | undefined,
-): Stored<Admission> | undefined =>
-  admissions.find(
-    ({ record: a }) =>
-      a.outcome === "approved" &&
-      a.binding === binding &&
-      a.digest === digest &&
-      a.rubric === ADEQUACY_RUBRIC.digest,
-  );
+): Stored<Admission> | undefined => {
+  const { decided } = admissionFor(admissions, binding, digest);
+  return decided?.record.outcome === "approved" ? decided : undefined;
+};
 
 /**
  * Runs, for acceptance, every automated binding the step and its inherited
@@ -526,6 +581,8 @@ async function runReview(
     candidate: SealedCandidate;
     accepted: readonly AcceptedOutput[];
     context: ReviewContext;
+    /** Invocation records whose results the context shows. */
+    shown: readonly string[];
     reviewer: ReviewerAccess;
   },
 ): Promise<Stored<ReviewRecord>> {
@@ -549,27 +606,27 @@ async function runReview(
   const stored = store(run, {
     ...identity,
     kind: input.context.kind,
+    invocations: [...input.shown],
     rubric: input.context.rubric.digest,
     packet: built.digest,
     outcome,
   } satisfies ReviewRecord);
-  appendEvent(run, {
-    action: "review",
-    attempt: identity.attempt,
-    evaluation: identity.evaluation,
-    evidence: [stored.ref],
-    data: {
-      kind: input.context.kind,
-      outcome: outcome.outcome,
-      session: outcome.observation.session,
-    },
+  journal(run, "review", identity, stored.ref, input.shown, {
+    kind: input.context.kind,
+    outcome: outcome.outcome,
+    session: outcome.observation.session,
   });
   return stored;
 }
 
 type Scope = { subjects: readonly string[]; targets: readonly VerificationTarget[] };
 
-type Checked = { ok: true; verdict: ReviewVerdict } | { ok: false; issues: string[] };
+/**
+ * A complete verdict binds, even if it contradicts itself (`conflicts`);
+ * only an incomplete one (`issues`) may be followed by another review.
+ */
+type Checked =
+  { ok: true; verdict: ReviewVerdict; conflicts: string[] } | { ok: false; issues: string[] };
 
 const describeOutcome = (outcome: AgentOutcome): string => {
   switch (outcome.outcome) {
@@ -595,11 +652,13 @@ const verdictTargetKey = (t: ReviewVerdict["targets"][number]): string =>
   });
 
 /**
- * Whether a reviewer returned a complete, self-consistent verdict for the
- * scope: one coverage entry per subject, one entry per review target, nothing
- * unknown, blocking findings only on unmet items and with a location, defect
- * and correction, and a verdict that follows from them. A blocked verdict
- * needs blockers only. Anything else is a protocol failure, never a pass.
+ * Whether a reviewer returned a complete verdict for the scope: one coverage
+ * entry per subject and one entry per review target, nothing unknown; a
+ * blocked verdict needs blockers only. An incomplete verdict is a protocol
+ * failure. A complete one binds, and its conflicts are listed: a blocking
+ * finding on an item not recorded as unmet or without location, defect and
+ * correction, or a label that does not follow from its entries. A conflicting
+ * verdict never passes, so a later review cannot replace a negative judgement.
  */
 export function checkVerdict(outcome: AgentOutcome, scope: Scope): Checked {
   if (outcome.outcome !== "reviewed") {
@@ -608,10 +667,11 @@ export function checkVerdict(outcome: AgentOutcome, scope: Scope): Checked {
   const v = outcome.verdict;
   if (v.verdict === "blocked") {
     return v.blockers.length > 0
-      ? { ok: true, verdict: v }
+      ? { ok: true, verdict: v, conflicts: [] }
       : { ok: false, issues: ["blocked without blockers"] };
   }
   const issues: string[] = [];
+  const conflicts: string[] = [];
   const exactlyOnce = (
     label: string,
     expected: readonly string[],
@@ -639,21 +699,23 @@ export function checkVerdict(outcome: AgentOutcome, scope: Scope): Checked {
     v.coverage.some((c) => c.result === "not-assessed") ||
     v.targets.some((t) => t.result === "not-assessed");
   const blocking = v.findings.filter((f) => f.severity === "blocking");
+  if (issues.length > 0) return { ok: false, issues };
   for (const f of blocking) {
-    if (!unmet.has(f.rule))
-      issues.push(`a blocking finding cites ${f.rule}, which is not recorded as unmet`);
+    if (!unmet.has(f.rule)) {
+      conflicts.push(`a blocking finding cites ${f.rule}, which is not recorded as unmet`);
+    }
     if ([f.location, f.defect, f.correction].some((s) => s.trim() === "")) {
-      issues.push(`the blocking finding on ${f.rule} lacks a location, defect or correction`);
+      conflicts.push(`the blocking finding on ${f.rule} lacks a location, defect or correction`);
     }
   }
   if (v.verdict === "pass" && (unmet.size > 0 || unassessed || blocking.length > 0)) {
-    issues.push("the verdict is pass, yet an item is unmet, not assessed or blocking");
+    conflicts.push("the verdict is pass, yet an item is unmet, not assessed or blocking");
   }
   if (v.verdict === "changes-required" && blocking.length === 0) {
-    issues.push("changes-required without a blocking finding");
+    conflicts.push("changes-required without a blocking finding");
   }
-  if (v.blockers.length > 0) issues.push(`blockers on a ${v.verdict} verdict`);
-  return issues.length > 0 ? { ok: false, issues } : { ok: true, verdict: v };
+  if (v.blockers.length > 0) conflicts.push(`blockers on a ${v.verdict} verdict`);
+  return { ok: true, verdict: v, conflicts };
 }
 
 const blockingFindings = (v: ReviewVerdict): Finding[] =>
@@ -667,11 +729,13 @@ const unassessed = (v: ReviewVerdict): string[] => [
 ];
 
 /**
- * The §6 route for a verifier whose current digest has no approved
- * admission, whoever wrote it: a provisional run in isolation, a
- * deterministic completeness check, then an adequacy review by a fresh
- * reviewer. Only `approved` pins the digest; provisional results never count
- * for acceptance. A rejection carries precise test defects for the producer.
+ * The §6 route for a verifier digest no complete admission has decided,
+ * whoever wrote it: a provisional run in isolation, a deterministic
+ * completeness check, then an adequacy review by a fresh reviewer. Only
+ * `approved` pins the digest; provisional results never count for
+ * acceptance. `rejected` carries precise test defects for the producer and,
+ * like `paused`, binds the digest. `invalid` (the verifier never ran, or the
+ * review was incomplete) may be followed by another admission.
  */
 export async function admitVerifier(
   run: RunHandle,
@@ -696,7 +760,8 @@ export async function admitVerifier(
   const binding = entry.binding;
   const identity = identityOf(run, input.attempt, input.manifest, input.candidate);
   const tree = candidateTree(run, input.candidate);
-  const digest = bindingDigests(input.registry, tree, [binding.id])[binding.id] ?? entry.digest;
+  const digest = bindingDigests(input.registry, tree, [binding.id])[binding.id];
+  if (digest === undefined) throw new Error(`${binding.id}: no digest`);
   const targets = targetsOf(input.plan, step).filter(
     (t) => t.method === "automated" && t.binding === binding.id,
   );
@@ -718,12 +783,10 @@ export async function admitVerifier(
       findings,
       reasons,
     } satisfies Admission);
-    appendEvent(run, {
-      action: "verifier-admission",
-      attempt: identity.attempt,
-      evaluation: identity.evaluation,
-      evidence: unique([stored.ref, ...[refs.provisional, refs.review].flatMap((r) => r ?? [])]),
-      data: { binding: binding.id, digest, outcome },
+    journal(run, "verifier-admission", identity, stored.ref, [refs.provisional, refs.review], {
+      binding: binding.id,
+      digest,
+      outcome,
     });
     return stored;
   };
@@ -765,6 +828,13 @@ export async function admitVerifier(
   if (incomplete.length > 0) {
     return admit("rejected", { provisional: provisional.ref, review: null }, incomplete, []);
   }
+  // A verifier that never ran has shown nothing to review; admission may be repeated.
+  const unrun = provisional.record.results.flatMap((r) =>
+    r.outcome === "unavailable" ? [`${targetKey(r.target)}: ${r.reason}`] : [],
+  );
+  if (unrun.length > 0) {
+    return admit("invalid", { provisional: provisional.ref, review: null }, [], unrun);
+  }
 
   const subjects = targets.map(targetKey);
   const files: JsonObject = {};
@@ -776,6 +846,7 @@ export async function admitVerifier(
     candidate: input.candidate,
     accepted: input.accepted,
     reviewer: input.reviewer,
+    shown: [provisional.ref],
     context: {
       kind: "adequacy",
       rubric: ADEQUACY_RUBRIC,
@@ -798,12 +869,12 @@ export async function admitVerifier(
   const checked = checkVerdict(review.record.outcome, { subjects, targets: [] });
   if (!checked.ok) return admit("invalid", refs, [], checked.issues);
   const v = checked.verdict;
-  if (v.verdict === "blocked" || unassessed(v).length > 0) {
+  if (v.verdict === "blocked" || unassessed(v).length > 0 || checked.conflicts.length > 0) {
     return admit(
       "paused",
       refs,
       [],
-      [...v.blockers, ...unassessed(v).map((s) => `${s} not assessed`)],
+      [...v.blockers, ...unassessed(v).map((s) => `${s} not assessed`), ...checked.conflicts],
     );
   }
   if (v.verdict === "changes-required") return admit("rejected", refs, blockingFindings(v), []);
@@ -891,6 +962,7 @@ export async function reviewCandidate(
   const identity = identityOf(run, input.attempt, input.manifest, input.candidate);
   const scope = reviewScope(input.plan, step, input.registry);
   const { proofs, issues } = inventory(step, input.claims, candidateTree(run, input.candidate));
+  const shown = input.invocations.filter((i) => i.record.stage === "acceptance");
   return runReview(run, {
     plan: input.plan,
     step,
@@ -898,6 +970,7 @@ export async function reviewCandidate(
     candidate: input.candidate,
     accepted: input.accepted,
     reviewer: input.reviewer,
+    shown: shown.map((i) => i.ref),
     context: {
       kind: "candidate",
       rubric: COMMON_RUBRIC,
@@ -905,9 +978,7 @@ export async function reviewCandidate(
       targets: [...scope.targets],
       bindings: scope.bindings,
       evidence: {
-        verification: verificationSummary(
-          input.invocations.filter((i) => i.record.stage === "acceptance"),
-        ),
+        verification: verificationSummary(shown),
         outputs: { proofs, issues },
       },
     },
@@ -924,14 +995,17 @@ export type AcceptanceInput = {
   registry: Registry;
   /** The producer's write policy: a missing verifier it may write is its work. */
   policy: WritePolicy;
-  /** The sealed candidate's files (`candidateTree`). */
+  /** The sealed candidate's files: `candidateTree` of the manifest's source. */
   tree: ReadonlyMap<string, string>;
   /** The producer's output claims, checked against the tree. */
   claims: Submission["outputs"];
+  /** This attempt's invocations; a record of any other attempt or evaluation pauses. */
   invocations: readonly Stored<Invocation>[];
+  /** Every admission of the run in journal order: approvals persist across attempts and steps. */
   admissions: readonly Stored<Admission>[];
-  /** Reviews of this attempt in journal order; the first complete verdict binds. */
+  /** This attempt's reviews in journal order; adequacy reviews are ignored. */
   reviews: readonly Stored<ReviewRecord>[];
+  /** Approvals of this evaluation; one naming a target the step lacks pauses. */
   approvals: readonly Stored<Approval>[];
   /** Evidence refs listed by committed journal events. */
   journaled: ReadonlySet<string>;
@@ -1088,16 +1162,8 @@ export function decideAcceptance(input: AcceptanceInput): Decision {
     const pin =
       missing.length > 0 || changed ? undefined : approvedFor(admissions, binding.id, digest);
     if (!pin) {
-      const latest = admissions
-        .filter(
-          ({ record: a }) =>
-            a.binding === binding.id &&
-            a.digest === digest &&
-            a.run === input.run &&
-            a.attempt === input.attempt &&
-            a.evaluation === evaluation,
-        )
-        .at(-1)?.record;
+      const { decided, invalid } = admissionFor(admissions, binding.id, digest);
+      const latest = decided?.record ?? invalid.at(-1);
       if (missing.length > 0) {
         const defect = `verifier files ${missing.join(", ")} of ${binding.id} are not in the candidate`;
         if (inScope(missing)) {
@@ -1154,40 +1220,56 @@ export function decideAcceptance(input: AcceptanceInput): Decision {
       return;
     }
     evidence.add(pin.ref);
+    // Per target, an executed failure binds, then an executed protocol
+    // violation; only a verifier that never ran may be run again.
     const invocations = runs.get(binding.id) ?? [];
     for (const t of uses) {
       const key = targetKey(t);
-      let failed: string | null = null;
-      const passed: string[] = [];
-      const other: string[] = [];
-      for (const { ref, record } of invocations) {
-        for (const r of record.results.filter((x) => targetKey(x.target) === key)) {
-          if (r.outcome === "failed") failed ??= r.reason;
-          else if (r.outcome === "passed") passed.push(ref);
-          else other.push(r.reason);
-        }
-      }
-      if (failed !== null) {
+      const results = invocations.flatMap(({ ref, record }) =>
+        record.results.filter((r) => targetKey(r.target) === key).map((r) => ({ ref, r })),
+      );
+      const reasonOf = (outcome: TargetResult["outcome"]): string | undefined => {
+        const found = results.find((x) => x.r.outcome === outcome)?.r;
+        return found && found.outcome !== "passed" ? found.reason : undefined;
+      };
+      const failed = reasonOf("failed");
+      const invalid = reasonOf("invalid");
+      const passed = results.filter((x) => x.r.outcome === "passed").map((x) => x.ref);
+      if (failed !== undefined) {
         correct(
           {
             rule: key,
             location: `verifier ${binding.id}`,
             defect: failed,
-            correction:
-              "change the implementation so that this target passes; the approved verifier is not yours to change",
+            correction: "change the implementation so that this target passes",
           },
           linked(t),
         );
+      } else if (invalid !== undefined) {
+        const defect = `the verifier ran but broke the report protocol: ${invalid}`;
+        if (inScope(binding.files)) {
+          correct(
+            {
+              rule: key,
+              location: binding.files.join(", ") || `verifier ${binding.id}`,
+              defect,
+              correction:
+                "make the verifier write exactly one executed result for this target to PACTWRIGHT_REPORT; it is admitted again",
+            },
+            linked(t),
+          );
+        } else
+          reason(
+            "owner",
+            key,
+            `${defect}; the verifier is outside the producer's writable paths`,
+            linked(t),
+          );
       } else if (passed.length > 0) {
         proven.add(key);
         for (const ref of passed) evidence.add(ref);
       } else {
-        reason(
-          "retry",
-          key,
-          other.length > 0 ? other.join("; ") : "no acceptance result",
-          linked(t),
-        );
+        reason("retry", key, reasonOf("unavailable") ?? "no acceptance result", linked(t));
       }
     }
   };
@@ -1271,9 +1353,10 @@ export function decideAcceptance(input: AcceptanceInput): Decision {
   const protocol: string[] = [];
   for (const stored of input.reviews) {
     const label = `review ${stored.ref}`;
-    if (!current(label, stored)) continue;
-    if (stored.record.kind !== "candidate" || stored.record.rubric !== COMMON_RUBRIC.digest) {
-      reason("retry", label, "it is not a common review under the current rubric");
+    // Adequacy reviews belong to admissions, not to the common review.
+    if (stored.record.kind !== "candidate" || !current(label, stored)) continue;
+    if (stored.record.rubric !== COMMON_RUBRIC.digest) {
+      reason("retry", label, "it applied another rubric than the common rubric");
       continue;
     }
     const checked = checkVerdict(stored.record.outcome, scope);
@@ -1282,6 +1365,9 @@ export function decideAcceptance(input: AcceptanceInput): Decision {
       continue;
     }
     verdict = checked.verdict;
+    if (checked.conflicts.length > 0) {
+      reason("owner", "review", `the review contradicts itself: ${checked.conflicts.join("; ")}`);
+    }
     evidence.add(stored.ref);
     break;
   }
@@ -1347,20 +1433,47 @@ export function decideAcceptance(input: AcceptanceInput): Decision {
   };
 }
 
+/** Inputs `recordDecision` reads from the run instead of taking them from its caller. */
+type FromJournal = "tree" | "invocations" | "admissions" | "reviews" | "approvals" | "journaled";
+
 /**
  * Decides an attempt from the run's committed journal and records the
- * decision. Only an `accept` is journaled as `acceptance`, and only then are
- * accepted output instances returned; any other decision is journaled as
- * `decision`. The decision is always derived here, never supplied.
+ * decision. The candidate's files come from the evaluation's source tree.
+ * The attempt's invocations and reviews, the approvals of its evaluation and
+ * every admission are read from their journal events in sequence, so a
+ * caller can neither omit nor reorder them. Only an `accept` is journaled as
+ * `acceptance` and returns accepted output instances; any other decision is
+ * journaled as `decision`. The decision is always derived here.
  */
 export function recordDecision(
   run: RunHandle,
-  input: Omit<AcceptanceInput, "journaled">,
+  input: Omit<AcceptanceInput, FromJournal>,
 ): { decision: Decision; ref: string; accepted: AcceptedOutput[] } {
   const read = readRun(run.dir);
   if (!read.ok) throw new Error(read.diagnostics.join("\n"));
-  const journaled = new Set(read.records.events.flatMap((e) => e.evidence));
-  const decision = decideAcceptance({ ...input, journaled });
+  const { events } = read.records;
+  const evaluation = evaluationDigest(input.manifest);
+  // readRun has checked every evidence digest, and decideAcceptance checks
+  // each record against its reference again, so a record is what was stored.
+  const load = <T>(action: string, keep: (e: JournalEvent) => boolean): Stored<T>[] =>
+    events
+      .filter((e) => e.action === action && keep(e))
+      .map((e) => {
+        const ref = e.data.record;
+        if (typeof ref !== "string") throw new Error(`event ${e.seq}: ${action} names no record`);
+        return { ref, record: JSON.parse(readEvidence(run.dir, ref).toString("utf8")) as T };
+      });
+  const thisAttempt = (e: JournalEvent): boolean =>
+    e.attempt === input.attempt && e.evaluation === evaluation;
+  const decision = decideAcceptance({
+    ...input,
+    tree: candidateTree(run, input.manifest.source),
+    invocations: load<Invocation>("verifier-invocation", thisAttempt),
+    admissions: load<Admission>("verifier-admission", () => true),
+    reviews: load<ReviewRecord>("review", thisAttempt),
+    approvals: load<Approval>("approval", (e) => e.evaluation === evaluation),
+    journaled: new Set(events.flatMap((e) => e.evidence)),
+  });
   const ref = putEvidence(run, stringify(decision));
   const accepted: AcceptedOutput[] =
     decision.decision === "accept"
@@ -1385,6 +1498,24 @@ export function recordDecision(
     },
   });
   return { decision, ref, accepted };
+}
+
+/**
+ * Journals an operator's decision on one approval target, for the exact
+ * candidate and evaluation, where `recordDecision` counts it. The operator
+ * channel that authenticates the actor is T3-E's.
+ */
+export function recordApproval(
+  run: RunHandle,
+  attempt: number,
+  approval: Approval,
+): Stored<Approval> {
+  const stored = store(run, approval);
+  journal(run, "approval", { attempt, evaluation: approval.evaluation }, stored.ref, [], {
+    target: targetKey(approval.target),
+    decision: approval.decision,
+  });
+  return stored;
 }
 
 /**

@@ -2,6 +2,10 @@
 import { execFileSync } from "node:child_process";
 import { readdirSync, writeFileSync } from "node:fs";
 
+// Take the report path out of the environment before running candidate code.
+const report = process.env.PACTWRIGHT_REPORT;
+delete process.env.PACTWRIGHT_REPORT;
+
 const files = ["src", "verifiers"].flatMap((dir) =>
   readdirSync(dir)
     .filter((f) => f.endsWith(".mjs"))
@@ -26,5 +30,5 @@ const result = {
   observations: { files },
   ...(broken.length > 0 ? { message: `${broken.join(", ")} do not parse` } : {}),
 };
-writeFileSync(process.env.PACTWRIGHT_REPORT, JSON.stringify({ results: [result] }));
+writeFileSync(report, JSON.stringify({ results: [result] }));
 process.exit(outcome === "passed" ? 0 : 1);

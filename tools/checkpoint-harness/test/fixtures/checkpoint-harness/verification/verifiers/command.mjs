@@ -2,6 +2,10 @@
 import { execFileSync } from "node:child_process";
 import { writeFileSync } from "node:fs";
 
+// Take the report path out of the environment before running candidate code.
+const report = process.env.PACTWRIGHT_REPORT;
+delete process.env.PACTWRIGHT_REPORT;
+
 let stdout = "";
 let message;
 try {
@@ -22,5 +26,5 @@ const result = {
   observations: { stdout },
   ...(message === undefined ? {} : { message }),
 };
-writeFileSync(process.env.PACTWRIGHT_REPORT, JSON.stringify({ results: [result] }));
+writeFileSync(report, JSON.stringify({ results: [result] }));
 process.exit(message === undefined ? 0 : 1);
