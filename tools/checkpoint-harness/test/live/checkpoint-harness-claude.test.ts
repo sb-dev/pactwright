@@ -269,7 +269,7 @@ describe("T3-C live: one real producer and a fresh read-only reviewer", () => {
       recordInvocation(run, reviewed);
       process.stdout.write(`# reviewer: ${JSON.stringify(reviewed)}\n`);
       const o = reviewed.observation;
-      assert.ok(["submitted", "blocked"].includes(reviewed.outcome), JSON.stringify(reviewed));
+      assert.equal(reviewed.outcome, "reviewed", JSON.stringify(reviewed));
       assert.ok(o.session && o.session !== produced.observation.session, "a fresh session");
       assert.deepEqual(o.tools, [
         "StructuredOutput",

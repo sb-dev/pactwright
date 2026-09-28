@@ -21,7 +21,7 @@ import {
   type SDKMessage,
   type SDKUserMessage,
 } from "@anthropic-ai/claude-agent-sdk";
-import { Ajv2020 } from "ajv/dist/2020.js";
+import { Ajv2020, type ErrorObject } from "ajv/dist/2020.js";
 import stringify from "safe-stable-stringify";
 import { z } from "zod";
 
@@ -34,7 +34,13 @@ import {
   type PreparedRun,
   type VerificationTarget,
 } from "./contracts.js";
-import { appendEvent, putEvidence, type JournalEvent, type RunHandle } from "./evidence.js";
+import {
+  appendEvent,
+  putEvidence,
+  type Json,
+  type JournalEvent,
+  type RunHandle,
+} from "./evidence.js";
 import {
   exec,
   readFile,
@@ -86,6 +92,41 @@ export type AgentRole = {
 
 export type Finding = { rule: string; location: string; defect: string; correction: string };
 
+/**
+ * What a reviewer judges (T3-D): a pinned rubric, the subjects and review
+ * targets its verdict must cover, the rubrics of those targets' bindings and
+ * the controller's recorded evidence.
+ */
+export type ReviewContext = {
+  kind: "candidate" | "adequacy";
+  rubric: { id: string; digest: string; items: readonly string[]; pass: string };
+  subjects: string[];
+  targets: VerificationTarget[];
+  bindings: { id: string; digest: string; rubric: readonly string[] }[];
+  evidence: Json;
+};
+
+/** A reviewer's structured verdict. It names no acceptance; the controller decides. */
+export type ReviewVerdict = {
+  verdict: "pass" | "changes-required" | "blocked";
+  coverage: {
+    subject: string;
+    result: "satisfied" | "unsatisfied" | "not-assessed";
+    basis: "executed" | "inspection";
+    note: string;
+  }[];
+  targets: {
+    owner: string;
+    criterion: string;
+    case: string | null;
+    binding: string;
+    result: "passed" | "failed" | "not-assessed";
+    note: string;
+  }[];
+  findings: (Finding & { severity: "blocking" | "optional"; basis: "executed" | "inspection" })[];
+  blockers: string[];
+};
+
 /** Generated invocation context for one attempt. It holds no conversation. */
 export type Packet = {
   role: RoleName;
@@ -107,6 +148,8 @@ export type Packet = {
   skills: { name: string; digest: string }[];
   findings: Finding[];
   candidate: SealedCandidate | null;
+  /** Present only in reviewer packets built with a review context. */
+  review?: ReviewContext;
 };
 
 /** The agent's proposal. It names no acceptance; the controller checks actual effects. */
@@ -152,6 +195,7 @@ export type Observation = {
 
 export type AgentOutcome =
   | { outcome: "submitted"; submission: Submission; observation: Observation }
+  | { outcome: "reviewed"; verdict: ReviewVerdict; observation: Observation }
   | { outcome: "blocked"; blockers: string[]; observation: Observation }
   | { outcome: "failed"; reason: string; observation: Observation }
   | { outcome: "cancelled"; reason: string; observation: Observation }
@@ -365,9 +409,15 @@ const TEMPLATES: Record<RoleName, string> = {
     'Finish with the structured result: status "submitted" with the paths of each output you produced, a one-line summary of each changed path and any verifier you propose; or status "blocked" with the blockers. The result is a proposal. The harness checks the workspace, runs verification and obtains independent review; you cannot accept your own work.',
   ].join("\n\n"),
   reviewer: [
-    "You are an independent reviewer for one Pactwright checkpoint step. The user message is a JSON work packet: the step's exact requirements and acceptance criteria and the sealed candidate in the workspace. You have not seen the producer's conversation; judge only what the workspace contains.",
+    "You are an independent reviewer for one Pactwright checkpoint step. The user message is a JSON work packet: the step's exact requirements and acceptance criteria, the sealed candidate in the workspace and, under review, the rubric to apply, the subjects and targets to judge and the controller's recorded evidence. You have not seen the producer's conversation; judge only what the workspace and the recorded evidence show.",
     "Inspect the workspace only through mcp__workspace__read_file and mcp__workspace__search_files. You cannot change it.",
-    'Finish with the structured result: status "submitted" with one entry under changes for each path you reviewed and its finding; or status "blocked" with the reasons the review cannot be completed.',
+    [
+      "Finish with the structured verdict, following the rubric's pass rule:",
+      "- coverage: exactly one entry for each subject in review.subjects, written exactly as given, with result satisfied, unsatisfied or not-assessed, basis executed when it rests on a recorded verification result or inspection when it rests on reading the workspace, and a short note.",
+      "- targets: exactly one entry for each target in review.targets, with its owner, criterion, case and binding, result passed, failed or not-assessed, and a short note.",
+      "- findings: severity blocking only for a subject or target that is not met. Its rule is that subject, or the target written as owner/criterion/case/method/binding with - for no case. Give the location (path:line), the defect, the correction and the basis. Style preferences are optional findings and never block.",
+      '- verdict: "pass" only when every subject is satisfied, every target passed and no finding blocks; "changes-required" when a blocking finding exists; "blocked", with blockers, when the review cannot be completed. Anything you could not judge is not-assessed, never satisfied or passed.',
+    ].join("\n"),
   ].join("\n\n"),
 };
 
@@ -385,6 +435,7 @@ export function buildPacket(
     policy: WritePolicy;
     findings?: readonly Finding[];
     candidate?: SealedCandidate;
+    review?: ReviewContext;
   },
 ): { ok: true; packet: Packet; digest: string } | { ok: false; diagnostics: string[] } {
   const step = plan.steps.find((s) => s.id === stepId);
@@ -426,6 +477,7 @@ export function buildPacket(
     skills: role.skills.map(({ name, digest }) => ({ name, digest })),
     findings: [...(options.findings ?? [])],
     candidate: options.candidate ?? null,
+    ...(options.review ? { review: options.review } : {}),
   };
   return { ok: true, packet, digest: sha256(stringify(packet)) };
 }
@@ -485,6 +537,74 @@ export const SUBMISSION_SCHEMA = {
 } as const;
 
 const validateSubmission = ajv.compile<Submission>(SUBMISSION_SCHEMA);
+
+const STRING = { type: "string" } as const;
+const BASIS = { type: "string", enum: ["executed", "inspection"] } as const;
+
+/** The reviewer's structured result schema (T3-D), sent to the provider and re-validated here. */
+export const VERDICT_SCHEMA = {
+  type: "object",
+  additionalProperties: false,
+  required: ["verdict", "coverage", "targets", "findings", "blockers"],
+  properties: {
+    verdict: { type: "string", enum: ["pass", "changes-required", "blocked"] },
+    coverage: {
+      type: "array",
+      items: {
+        type: "object",
+        additionalProperties: false,
+        required: ["subject", "result", "basis", "note"],
+        properties: {
+          subject: STRING,
+          result: { type: "string", enum: ["satisfied", "unsatisfied", "not-assessed"] },
+          basis: BASIS,
+          note: STRING,
+        },
+      },
+    },
+    targets: {
+      type: "array",
+      items: {
+        type: "object",
+        additionalProperties: false,
+        required: ["owner", "criterion", "case", "binding", "result", "note"],
+        properties: {
+          owner: STRING,
+          criterion: STRING,
+          case: { type: ["string", "null"] },
+          binding: STRING,
+          result: { type: "string", enum: ["passed", "failed", "not-assessed"] },
+          note: STRING,
+        },
+      },
+    },
+    findings: {
+      type: "array",
+      items: {
+        type: "object",
+        additionalProperties: false,
+        required: ["severity", "rule", "location", "defect", "correction", "basis"],
+        properties: {
+          severity: { type: "string", enum: ["blocking", "optional"] },
+          rule: STRING,
+          location: STRING,
+          defect: STRING,
+          correction: STRING,
+          basis: BASIS,
+        },
+      },
+    },
+    blockers: { type: "array", items: STRING },
+  },
+} as const;
+
+const validateVerdict = ajv.compile<ReviewVerdict>(VERDICT_SCHEMA);
+
+/** The structured result each role must return. */
+const RESULTS = {
+  producer: { schema: SUBMISSION_SCHEMA, validate: validateSubmission },
+  reviewer: { schema: VERDICT_SCHEMA, validate: validateVerdict },
+} as const;
 
 const truncate = (text: string): string =>
   text.length > MAX_TEXT
@@ -844,6 +964,33 @@ function redactOutcome(outcome: AgentOutcome, secrets: readonly string[]): Agent
         },
       };
     }
+    case "reviewed": {
+      const v = outcome.verdict;
+      return {
+        ...outcome,
+        observation,
+        verdict: {
+          verdict: v.verdict,
+          coverage: v.coverage.map((c) => ({ ...c, subject: text(c.subject), note: text(c.note) })),
+          targets: v.targets.map((t) => ({
+            ...t,
+            owner: text(t.owner),
+            criterion: text(t.criterion),
+            case: t.case === null ? null : text(t.case),
+            binding: text(t.binding),
+            note: text(t.note),
+          })),
+          findings: v.findings.map((f) => ({
+            ...f,
+            rule: text(f.rule),
+            location: text(f.location),
+            defect: text(f.defect),
+            correction: text(f.correction),
+          })),
+          blockers: v.blockers.map(text),
+        },
+      };
+    }
     case "blocked":
       return { ...outcome, observation, blockers: outcome.blockers.map(text) };
     case "failed":
@@ -951,7 +1098,7 @@ export async function invokeAgent(
     system: systemPrompt(role),
     prompt: `Work packet:\n${stringify(packet, null, 2)}`,
     tools,
-    outputSchema: SUBMISSION_SCHEMA,
+    outputSchema: RESULTS[role.name].schema,
     maxTurns: role.limits.maxTurns,
     maxBudgetUsd: role.limits.maxBudgetUsd,
     credential: role.credential,
@@ -1045,7 +1192,7 @@ export async function invokeAgent(
           inputTokens: event.inputTokens ?? "unknown",
           outputTokens: event.outputTokens ?? "unknown",
         };
-        return resultOutcome(event, observation);
+        return resultOutcome(event, observation, role.name);
       }
     }
   };
@@ -1064,6 +1211,7 @@ export async function invokeAgent(
 function resultOutcome(
   event: Extract<ProviderEvent, { type: "result" }>,
   observation: Observation,
+  role: RoleName,
 ): AgentOutcome {
   if (event.subtype === "error_max_turns")
     return { outcome: "exhausted", limit: "turns", observation };
@@ -1085,15 +1233,21 @@ function resultOutcome(
   } catch {
     return { outcome: "failed", reason: "malformed result: not JSON", observation };
   }
+  if (role === "reviewer") {
+    return validateVerdict(value)
+      ? { outcome: "reviewed", verdict: value, observation }
+      : {
+          outcome: "failed",
+          reason: `malformed result: ${schemaErrors(validateVerdict)}`,
+          observation,
+        };
+  }
   if (!validateSubmission(value)) {
-    const errors = (validateSubmission.errors ?? [])
-      .map((e) =>
-        e.keyword === "additionalProperties"
-          ? `${e.instancePath || "/"} unexpected field ${String(e.params.additionalProperty)}`
-          : `${e.instancePath || "/"} ${e.message ?? ""}`,
-      )
-      .join("; ");
-    return { outcome: "failed", reason: `malformed result: ${errors}`, observation };
+    return {
+      outcome: "failed",
+      reason: `malformed result: ${schemaErrors(validateSubmission)}`,
+      observation,
+    };
   }
   if (value.status === "blocked") {
     return value.blockers.length > 0
@@ -1101,6 +1255,16 @@ function resultOutcome(
       : { outcome: "failed", reason: "malformed result: blocked without blockers", observation };
   }
   return { outcome: "submitted", submission: value, observation };
+}
+
+function schemaErrors(validate: { errors?: ErrorObject[] | null }): string {
+  return (validate.errors ?? [])
+    .map((e) =>
+      e.keyword === "additionalProperties"
+        ? `${e.instancePath || "/"} unexpected field ${String(e.params.additionalProperty)}`
+        : `${e.instancePath || "/"} ${e.message ?? ""}`,
+    )
+    .join("; ");
 }
 
 /** Stores an outcome as evidence and journals the invocation. It records no acceptance. */

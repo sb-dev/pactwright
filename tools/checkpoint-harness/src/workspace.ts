@@ -172,7 +172,7 @@ function walk(
 }
 
 /** Every blob of a tree: path → `mode sha`. */
-function treeEntries(runDir: string, tree: string): Map<string, string> {
+export function treeEntries(runDir: string, tree: string): Map<string, string> {
   const entries = new Map<string, string>();
   for (const record of git(runDir, ["ls-tree", "-r", "-z", "--full-tree", tree]).split("\0")) {
     const match = /^(\d+) \w+ ([0-9a-f]+)\t(.*)$/s.exec(record);

@@ -1,0 +1,69 @@
+{
+  "description": "Known-bad CP99-S01 candidate: every automated target passes, but loadConfig duplicates validation with a weaker rule. A calibrated common reviewer rejects it with a blocking finding linked to CP99-S01/R01. The verdict is a recorded fixture, not a live reviewer result.",
+  "step": "CP99-S01",
+  "files": {
+    "src/parser.mjs": "// Parses the fixture configuration.\nexport function parseConfig(text) {\n  const value = JSON.parse(text);\n  if (typeof value?.name !== \"string\" || value.name.trim() === \"\") {\n    throw new Error(\"invalid configuration: name must be a non-empty string\");\n  }\n  return { name: value.name.trim() };\n}\n\n// A second, weaker copy of the validation rule.\nexport function loadConfig(text) {\n  const value = JSON.parse(text);\n  if (typeof value?.name !== \"string\") throw new Error(\"invalid configuration\");\n  return { name: value.name };\n}\n"
+  },
+  "verdict": {
+    "verdict": "changes-required",
+    "coverage": [
+      {
+        "subject": "CP99-S01/R01",
+        "result": "unsatisfied",
+        "basis": "inspection",
+        "note": "loadConfig accepts a blank name that parseConfig rejects"
+      },
+      {
+        "subject": "CP99/R01",
+        "result": "satisfied",
+        "basis": "executed",
+        "note": "repo.verify passed"
+      },
+      {
+        "subject": "CP99-S01/config-parser",
+        "result": "satisfied",
+        "basis": "inspection",
+        "note": "src/parser.mjs exports parseConfig"
+      }
+    ],
+    "targets": [
+      {
+        "owner": "CP99-S01",
+        "criterion": "AC02",
+        "case": null,
+        "binding": "parser.single-path",
+        "result": "failed",
+        "note": "two validation paths"
+      }
+    ],
+    "findings": [
+      {
+        "severity": "blocking",
+        "rule": "CP99-S01/AC02/-/review/parser.single-path",
+        "location": "src/parser.mjs:11",
+        "defect": "loadConfig validates the configuration a second time with a weaker rule; the automated targets exercise only parseConfig",
+        "correction": "remove loadConfig or make it call parseConfig, so that one validation path remains",
+        "basis": "inspection"
+      },
+      {
+        "severity": "optional",
+        "rule": "CP99-S01/R01",
+        "location": "src/parser.mjs:5",
+        "defect": "the message could quote the rejected value",
+        "correction": "include the value in the message",
+        "basis": "inspection"
+      }
+    ],
+    "blockers": []
+  },
+  "expected": {
+    "decision": "correct",
+    "rules": [
+      "CP99-S01/AC02/-/review/parser.single-path",
+      "CP99-S01/R01"
+    ],
+    "requirements": [
+      "CP99-S01/R01"
+    ]
+  }
+}
