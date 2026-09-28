@@ -373,6 +373,25 @@ describe("T3-B durable journal and recovery", () => {
     assert.deepEqual(read.records.ignored, [{ epoch: 1, bytes: partial.length }]);
   });
 
+  it("B03 quarantines a complete final line whose anchor was not written", async () => {
+    const dir = fresh("run");
+    const child = await controller(dir, 2, "crash");
+    await child.exited;
+    const text = readFileSync(segment({ dir }, 1), "utf8");
+    const last = text.slice(0, -1).split("\n").at(-1) ?? "";
+    const next = { ...(JSON.parse(last) as JournalEvent), seq: 4 };
+    next.prev = `sha256:${createHash("sha256").update(last).digest("hex")}`;
+    const unanchored = `${JSON.stringify(next)}\n`;
+    appendFileSync(segment({ dir }, 1), unanchored);
+    const recovered = await recoverRun(dir, { fence: noFence });
+    assert.equal(recovered.kind, "recovered");
+    if (recovered.kind !== "recovered") return;
+    assert.deepEqual(recovered.events.slice(1), child.events);
+    assert.ok(recovered.quarantined);
+    assert.equal(readEvidence(dir, recovered.quarantined).toString("utf8"), unanchored);
+    assert.equal(appendEvent(recovered.run, { action: "test" }).seq, 5);
+  });
+
   const corruptions: { name: string; corrupt: (dir: string) => void; cause: RegExp }[] = [
     {
       name: "an edited committed line",
@@ -418,6 +437,41 @@ describe("T3-B durable journal and recovery", () => {
         }
       },
       cause: /corrupt evidence sha256:/,
+    },
+    {
+      // Review 5336199212 finding 2: schema, seq and prev stay valid.
+      name: "a lengthened final line",
+      corrupt: (dir) => {
+        const text = readFileSync(segment({ dir }, 1), "utf8");
+        const edited = text.replace(/"data":\{\}(?=[^\n]*\n$)/, '"data":{"forged":true}');
+        assert.notEqual(edited, text);
+        writeFileSync(segment({ dir }, 1), edited);
+      },
+      cause: /000001\.jsonl: committed lines do not match their anchor/,
+    },
+    {
+      name: "a same-length edit of the final line",
+      corrupt: (dir) => {
+        const text = readFileSync(segment({ dir }, 1), "utf8");
+        const edited = text.replace(/"time":"\d{4}(?=[^\n]*\n$)/, '"time":"1999');
+        assert.notEqual(edited, text);
+        assert.equal(edited.length, text.length);
+        writeFileSync(segment({ dir }, 1), edited);
+      },
+      cause: /000001\.jsonl: committed lines do not match their anchor/,
+    },
+    {
+      name: "a deleted anchor",
+      corrupt: (dir) => rmSync(join(dir, "journal", "000001.head")),
+      cause: /000001\.jsonl: committed lines have no anchor/,
+    },
+    {
+      name: "more than one unanchored line",
+      corrupt: (dir) => {
+        const lines = readFileSync(segment({ dir }, 1), "utf8").split("\n");
+        appendFileSync(segment({ dir }, 1), `${lines[1]}\n${lines[2]}\n`);
+      },
+      cause: /000001\.jsonl: more than one unanchored line/,
     },
     {
       name: "an unexpected segment",

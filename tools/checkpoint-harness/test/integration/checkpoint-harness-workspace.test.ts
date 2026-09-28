@@ -6,6 +6,7 @@ import assert from "node:assert/strict";
 import { execFileSync, spawn } from "node:child_process";
 import { createHash, randomUUID } from "node:crypto";
 import {
+  existsSync,
   lstatSync,
   mkdirSync,
   mkdtempSync,
@@ -14,6 +15,7 @@ import {
   readlinkSync,
   rmSync,
   statSync,
+  symlinkSync,
   writeFileSync,
 } from "node:fs";
 import { tmpdir } from "node:os";
@@ -71,13 +73,14 @@ const git = (cwd: string, args: string[]): string =>
     { cwd, encoding: "utf8", stdio: ["ignore", "pipe", "pipe"] },
   ).trim();
 
-function sourceRepo(): { root: string; head: string } {
+function sourceRepo(extra?: (root: string) => void): { root: string; head: string } {
   const root = fresh("repo");
   mkdirSync(join(root, "src"), { recursive: true });
   mkdirSync(join(root, "docs"));
   writeFileSync(join(root, "src/lib.ts"), "export const answer = 42;\n");
   writeFileSync(join(root, "src/verifier.ts"), "// approved verifier\n");
   writeFileSync(join(root, "docs/contract.yml"), "id: CP99-S01\n");
+  extra?.(root);
   git(root, ["init", "-q"]);
   git(root, ["add", "-A"]);
   git(root, ["commit", "-q", "--no-gpg-sign", "-m", "fixture"]);
@@ -90,8 +93,10 @@ const policy: WritePolicy = {
   protected: ["src/verifier.ts"],
 };
 
-async function setup(): Promise<{ run: RunHandle; base: SourceSnapshot; repo: string }> {
-  const { root, head } = sourceRepo();
+async function setup(
+  extra?: (root: string) => void,
+): Promise<{ run: RunHandle; base: SourceSnapshot; repo: string }> {
+  const { root, head } = sourceRepo(extra);
   const run = createRun(fresh("run"));
   runs.push(run.run);
   const imported = await importSource(run, root, head);
@@ -203,6 +208,40 @@ describe("T3-B candidate containment", () => {
     ]);
   });
 
+  // Review 5336199212 finding 1: a base link must not alias a bind-mount source.
+  for (const [name, writable] of [
+    ["path", "editable"],
+    ["ancestor", "editable/sub"],
+  ] as const) {
+    it(`B01 refuses a policy path whose ${name} is a link into read-only source`, async () => {
+      const { run, base } = await setup((root) => symlinkSync("docs", join(root, "editable")));
+      const root = fresh("candidate");
+      const outcome = await createWorkspace(run, {
+        base,
+        root,
+        policy: { writable: [writable], scratch: [], protected: ["docs/contract.yml"] },
+      }).catch((e: unknown) => (e instanceof Error ? e : new Error(String(e))));
+      if (!(outcome instanceof Error)) {
+        const write = await writeFile(outcome, "editable/contract.yml", Buffer.from("id: x\n"));
+        const bytes = readFileSync(join(root, "docs/contract.yml"), "utf8");
+        assert.fail(`workspace created; alias write ok=${write.ok}; contract now ${bytes}`);
+      }
+      assert.match(outcome.message, /resolves through a link at editable$/m);
+      assert.equal(await fenceWorkers(run.run), 0, "no container started");
+      assert.equal(existsSync(join(root, "docs")), false, "nothing was mounted or changed");
+    });
+  }
+
+  it("B01 a link inside a writable path cannot reach read-only source", async () => {
+    const { run, base } = await setup((root) => symlinkSync("../docs", join(root, "src/docs")));
+    const ws = await open(run, base);
+    const before = readFileSync(join(ws.root, "docs/contract.yml"));
+    const write = await writeFile(ws, "src/docs/contract.yml", Buffer.from("id: forged\n"));
+    assert.equal(write.ok, false);
+    assert.notEqual((await sh(ws, "echo x > src/docs/contract.yml")).exitCode, 0);
+    assert.deepEqual(readFileSync(join(ws.root, "docs/contract.yml")), before);
+  });
+
   it("B01 fences the whole workspace when a command times out", async () => {
     const { run, base } = await setup();
     const ws = await open(run, base);
@@ -238,6 +277,21 @@ describe("T3-B candidate containment", () => {
     assert.ok(resealed.ok);
     assert.equal(resealed.candidate.tree, sealed.candidate.tree);
     assert.deepEqual(resealed.candidate.changes, []);
+  });
+
+  // Review 5336199212 finding 3: identity depends only on source, not on the workspace.
+  it("B02 seals equal candidates from different workspaces to one identity", async () => {
+    const { run, base } = await setup();
+    const sealed = [];
+    for (let i = 0; i < 2; i += 1) {
+      const ws = await open(run, base);
+      assert.equal((await sh(ws, "sed -i 's/42/43/' src/lib.ts")).exitCode, 0);
+      const result = await sealCandidate(run, ws);
+      assert.ok(result.ok, result.ok ? "" : result.diagnostics.join("\n"));
+      sealed.push({ commit: result.candidate.commit, tree: result.candidate.tree });
+    }
+    assert.notEqual(sealed[0]?.tree, base.tree);
+    assert.deepEqual(sealed[1], sealed[0]);
   });
 
   it("B02/B04 a late write after sealing cannot change the sealed candidate", async () => {

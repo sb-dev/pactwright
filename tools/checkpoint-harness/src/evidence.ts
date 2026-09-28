@@ -5,6 +5,8 @@
 // owner record, and takes a run over only from a released or provably dead
 // owner, never by age. The next owner records how many bytes of the previous
 // segment are valid, so a late write can never change the committed record.
+// Within the current segment, an anchor file outside the segment fixes the
+// committed length and last line after every append.
 
 import { execFileSync } from "node:child_process";
 import { randomUUID } from "node:crypto";
@@ -67,7 +69,12 @@ export type RunHandle = {
   fd: number | null;
   seq: number;
   prev: string | null;
+  /** Committed byte length of the owned segment. */
+  length: number;
 };
+
+/** The committed end of a segment: its length, last seq and last line digest. */
+type Anchor = { epoch: number; seq: number; length: number; line: string };
 
 export type EventInput = {
   action: string;
@@ -128,6 +135,8 @@ const ownerOf = (event: JournalEvent): OwnerRecord => event.data as OwnerRecord;
 const segmentName = (epoch: number): string => `${String(epoch).padStart(6, "0")}.jsonl`;
 const segmentPath = (dir: string, epoch: number): string =>
   join(dir, "journal", segmentName(epoch));
+const headPath = (dir: string, epoch: number): string =>
+  segmentPath(dir, epoch).replace(/\.jsonl$/, ".head");
 const REF = /^sha256:[0-9a-f]{64}$/;
 
 function blobPath(dir: string, ref: string): string {
@@ -176,6 +185,26 @@ export function readEvidence(dir: string, ref: string): Buffer {
   return bytes;
 }
 
+/** Atomically replaces the segment's anchor; a line becomes committed only here. */
+function anchor(run: RunHandle, seq: number): void {
+  const head: Anchor = { epoch: run.epoch, seq, length: run.length, line: run.prev ?? "" };
+  renameSync(flushedTemp(run.dir, `${stringify(head)}\n`), headPath(run.dir, run.epoch));
+  fsyncDir(join(run.dir, "journal"));
+}
+
+function readAnchor(file: string): Anchor | null {
+  const value = parseLine(readFileSync(file)) as Partial<Anchor> | undefined;
+  const count = (n: unknown): n is number => Number.isSafeInteger(n) && (n as number) >= 0;
+  return value &&
+    count(value.epoch) &&
+    count(value.seq) &&
+    count(value.length) &&
+    typeof value.line === "string" &&
+    REF.test(value.line)
+    ? { epoch: value.epoch, seq: value.seq, length: value.length, line: value.line }
+    : null;
+}
+
 /** Stores immutable evidence, durable once this returns, and returns its reference. */
 export function putEvidence(run: RunHandle, bytes: Buffer | string): string {
   return storeBlob(run.dir, typeof bytes === "string" ? Buffer.from(bytes) : bytes);
@@ -215,14 +244,18 @@ function takeOwnership(
     unlinkSync(temp);
   }
   fsyncDir(join(dir, "journal"));
-  return {
+  const handle: RunHandle = {
     dir,
     run,
     epoch,
     fd: openSync(segmentPath(dir, epoch), "a"),
     seq: seq + 1,
     prev: sha256(line.slice(0, -1)),
+    length: Buffer.byteLength(line),
   };
+  // Until this anchor exists, only the owner line (published whole by link) is committed.
+  anchor(handle, seq);
+  return handle;
 }
 
 const self = (): Pick<OwnerRecord, "host" | "pid"> => ({ host: hostname(), pid: process.pid });
@@ -285,6 +318,8 @@ function write(run: RunHandle, event: JournalEvent): JournalEvent {
   fsyncSync(run.fd);
   run.seq += 1;
   run.prev = sha256(line.slice(0, -1));
+  run.length += Buffer.byteLength(line);
+  anchor(run, event.seq);
   return event;
 }
 
@@ -352,19 +387,36 @@ export function readRun(dir: string): RunRead {
     return fail(`${manifestFile}: invalid manifest`);
   }
   const journal = join(dir, "journal");
-  const names = existsSync(journal) ? readdirSync(journal).sort() : [];
+  const files = existsSync(journal) ? readdirSync(journal).sort() : [];
+  const names = files.filter((name) => name.endsWith(".jsonl"));
   if (names.length === 0) return fail(`${journal}: no journal segment`);
-  const unexpected = names.find((name, i) => name !== segmentName(i + 1));
+  const unexpected =
+    names.find((name, i) => name !== segmentName(i + 1)) ??
+    files.find((name) => !names.includes(name.replace(/\.head$/, ".jsonl")));
   if (unexpected !== undefined) return fail(`${journal}/${unexpected}: unexpected segment`);
   const segments = names.map((name) => readFileSync(join(journal, name)));
+  const currentFile = `${journal}/${names.at(-1)}`;
+  const mismatch = `${currentFile}: committed lines do not match their anchor`;
 
-  // Each segment is valid up to the length its successor's owner recorded.
+  // Each earlier segment is valid up to the length its successor's owner
+  // recorded; the current one up to its anchor.
   const limits: number[] = [];
+  let head: Anchor | null = null;
+  let headFits = true;
   for (let i = 0; i < segments.length; i += 1) {
     const bytes = segments[i] ?? Buffer.alloc(0);
     const next = segments[i + 1];
     if (next === undefined) {
-      limits.push(bytes.lastIndexOf(NEWLINE) + 1);
+      const file = headPath(dir, i + 1);
+      head = existsSync(file) ? readAnchor(file) : null;
+      headFits =
+        !existsSync(file) ||
+        (head !== null &&
+          head.epoch === i + 1 &&
+          head.length > 0 &&
+          head.length <= bytes.length &&
+          bytes[head.length - 1] === NEWLINE);
+      limits.push(head && headFits ? head.length : bytes.lastIndexOf(NEWLINE) + 1);
       continue;
     }
     const first = parseLine(next.subarray(0, Math.max(next.indexOf(NEWLINE), 0)));
@@ -438,6 +490,17 @@ export function readRun(dir: string): RunRead {
   const length = limits[last - 1] ?? 0;
   const ownerEvent = events.find((e) => e.epoch === last);
   if (!ownerEvent) return fail(`${journal}: no owner record`);
+  if (!headFits) return fail(mismatch);
+  if (head && (head.line !== prev || head.seq !== events.at(-1)?.seq)) return fail(mismatch);
+  if (!head && events.filter((e) => e.epoch === last).length > 1) {
+    return fail(`${currentFile}: committed lines have no anchor`);
+  }
+  // A crash between a segment write and its anchor leaves at most one line.
+  const unanchored = current.subarray(length);
+  const complete = lines(unanchored).length;
+  if (complete > 1 || (complete === 1 && unanchored.at(-1) !== NEWLINE)) {
+    return fail(`${currentFile}: more than one unanchored line`);
+  }
   return {
     ok: true,
     records: {

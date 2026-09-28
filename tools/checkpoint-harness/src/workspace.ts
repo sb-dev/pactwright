@@ -317,10 +317,20 @@ export async function createWorkspace(
   const inBase = treeEntries(run.dir, base.tree);
   const existsInBase = (p: string): boolean =>
     [...inBase.keys()].some((path) => path === p || path.startsWith(`${p}/`));
+  // Docker resolves a link in a bind source, so a base link on a policy path
+  // or its ancestors would mount other source (such as a protected path) there.
+  const linkOn = (p: string): string | undefined =>
+    p
+      .split("/")
+      .map((_, i, parts) => parts.slice(0, i + 1).join("/"))
+      .find((prefix) => inBase.get(prefix)?.startsWith("120000 "));
+  const paths = [...policy.writable, ...policy.scratch, ...policy.protected];
   const errors = [
-    ...[...policy.writable, ...policy.scratch, ...policy.protected].flatMap(
-      (p) => policyPathError(p) ?? [],
-    ),
+    ...paths.flatMap((p) => policyPathError(p) ?? []),
+    ...paths.flatMap((p) => {
+      const link = linkOn(p);
+      return link === undefined ? [] : [`${p}: resolves through a link at ${link}`];
+    }),
     ...policy.protected
       .filter((p) => !existsInBase(p))
       .map((p) => `${p}: protected path is absent`),
@@ -459,5 +469,6 @@ export async function fenceWorkers(run: string): Promise<number> {
  */
 export async function sealCandidate(run: RunHandle, ws: Workspace): Promise<Capture> {
   await fence(ws);
-  return captureSource(run.dir, ws.root, ws.base, ws.policy, `candidate ${ws.id}`);
+  // A fixed message keeps the commit a function of the tree and base alone.
+  return captureSource(run.dir, ws.root, ws.base, ws.policy, "candidate");
 }
