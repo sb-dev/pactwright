@@ -13,7 +13,7 @@
 // accept, correct or pause with specific reasons. Only `recordDecision`
 // journals a decision, and it derives the decision itself.
 
-import { randomUUID } from "node:crypto";
+import { randomBytes, randomUUID } from "node:crypto";
 import { mkdirSync, readFileSync, rmSync } from "node:fs";
 import { join } from "node:path";
 
@@ -112,7 +112,8 @@ export type Invocation = Identity & {
   stage: Stage;
   binding: string;
   digest: string;
-  subjects: (RunRecord & { target: string })[];
+  /** Each run's target key and the seal that marked its observations. */
+  subjects: (RunRecord & { target: string; seal: string })[];
   judge: (RunRecord & { snapshot: SourceSnapshot }) | null;
   /** Why a run could not start or complete; its targets are then unavailable. */
   error: string | null;
@@ -439,17 +440,30 @@ function judged(
 }
 
 /**
+ * The observations a subject run sealed: its stdout lines that begin with
+ * the run's seal and a space, without that prefix. Any other output, such as
+ * lines code under test printed, is not an observation.
+ */
+export const sealedObservations = (stdout: Buffer, seal: string): string[] =>
+  stdout
+    .toString("utf8")
+    .split("\n")
+    .filter((line) => line.startsWith(`${seal} `))
+    .map((line) => line.slice(seal.length + 1));
+
+/**
  * Runs one binding once: one invocation, even when other bindings share its
  * commands. In a read-only workspace of the candidate, the subject runs once
- * per expected target, as its own process, with nothing but
- * `PACTWRIGHT_BINDING` and `PACTWRIGHT_TARGET` (`owner/criterion/case`, `-`
- * for no case). The controller labels each run with its target, so code
- * under test shapes only the output of the run it is in; no report path or
- * channel exists there. The judge runs in a workspace of a snapshot holding
- * only the binding's files, so no candidate code runs where the report is
- * written. It reads the runs as JSON on stdin and writes the report to
- * stdout. Workspace and execution errors are recorded, never thrown; a
- * failure to stop a workspace is recorded apart and never discards a run.
+ * per expected target, as its own process. Its only input is stdin: a fresh
+ * random seal, a newline and the target key. Neither is in its environment
+ * or arguments, so a subject that reads stdin before it loads code under
+ * test keeps both from that code. Only stdout lines that begin with the seal
+ * are observations, and the controller labels them with the run's target.
+ * The judge runs in a workspace of a snapshot holding only the binding's
+ * files, so no candidate code runs where the report is written. It reads the
+ * labelled observations as JSON on stdin and writes the report to stdout.
+ * Workspace and execution errors are recorded, never thrown; a failure to
+ * stop a workspace is recorded apart and never discards a run.
  */
 async function runBinding(
   run: RunHandle,
@@ -464,7 +478,6 @@ async function runBinding(
   },
 ): Promise<Stored<Invocation>> {
   const { binding, identity } = input;
-  const env = ["env", `PACTWRIGHT_BINDING=${binding.id}`];
   let error: string | null = null;
   const cleanup: string[] = [];
   const timeoutMs = binding.timeoutMs;
@@ -495,15 +508,16 @@ async function runBinding(
     }
   };
 
-  const subjects: { target: VerificationTarget; argv: string[]; ran: Ran }[] = [];
+  const argv = [...binding.command];
+  const subjects: { target: VerificationTarget; seal: string; ran: Ran }[] = [];
   await contained(input.candidate, async (ws) => {
     for (const target of input.targets) {
-      const place = `${target.owner}/${target.criterion}/${target.caseId ?? "-"}`;
-      const argv = [...env, `PACTWRIGHT_TARGET=${place}`, ...binding.command];
-      subjects.push({ target, argv, ran: await ws.exec(argv, { timeoutMs }) });
+      const seal = randomBytes(32).toString("hex");
+      const stdin = Buffer.from(`${seal}\n${targetKey(target)}`);
+      subjects.push({ target, seal, ran: await ws.exec(argv, { timeoutMs, stdin }) });
     }
   });
-  const judgeArgv = [...env, ...binding.judge];
+  const judgeArgv = [...binding.judge];
   let judge: Ran | null = null;
   let judged: SourceSnapshot | null = null;
   if (subjects.length === input.targets.length) {
@@ -513,14 +527,13 @@ async function runBinding(
       error ??= message(e);
     }
     if (judged !== null) {
-      const runs = subjects.map(({ target, ran }) => ({
+      const runs = subjects.map(({ target, seal, ran }) => ({
         owner: target.owner,
         criterion: target.criterion,
         case: target.caseId,
         exit: ran.exitCode,
         timedOut: ran.timedOut,
-        stdout: ran.stdout.toString("utf8"),
-        stderr: ran.stderr.toString("utf8"),
+        observations: sealedObservations(ran.stdout, seal),
       }));
       const stdin = Buffer.from(JSON.stringify({ binding: binding.id, runs }));
       judge = await contained(judged, (ws) => ws.exec(judgeArgv, { timeoutMs, stdin }));
@@ -539,8 +552,9 @@ async function runBinding(
     stage: input.stage,
     binding: binding.id,
     digest: input.digest,
-    subjects: subjects.map(({ target, argv, ran }) => ({
+    subjects: subjects.map(({ target, seal, ran }) => ({
       target: targetKey(target),
+      seal,
       ...record(argv, ran),
     })),
     judge:

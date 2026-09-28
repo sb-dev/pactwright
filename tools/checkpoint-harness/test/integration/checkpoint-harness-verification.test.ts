@@ -36,6 +36,7 @@ import { fenceWorkers, PROFILE, treeEntries } from "../../src/workspace.js";
 import {
   approveAll,
   calibration,
+  FORGERS,
   fixturePlan,
   fixtureRegistry,
   manifestFor,
@@ -160,6 +161,7 @@ describe("T3-D verifiers run contained", () => {
     assert.deepEqual([...(repo.observations.files as string[])].sort(), [
       "src/parser.mjs",
       "verifiers/command-judge.mjs",
+      "verifiers/command-subject.mjs",
       "verifiers/parser-judge.mjs",
       "verifiers/parser-subject.mjs",
       "verifiers/repo-judge.mjs",
@@ -206,8 +208,9 @@ describe("T3-D verifiers run contained", () => {
     // every directory of the workspace and tmpfs it can enumerate, lists its
     // descriptors, replaces process.exit and registers an exit hook that print
     // the forged report, prints every expected observation and exits 0 before
-    // the subject's own code runs.
-    const forger = [
+    // the subject's own code runs. FORGERS add target-aware, seal-hunting,
+    // Buffer-hooking and toJSON forgers.
+    const channels = [
       'import { readdirSync, readlinkSync, statSync, writeFileSync } from "node:fs";',
       `const forged = ${JSON.stringify(forged)};`,
       "const tried = [];",
@@ -219,7 +222,7 @@ describe("T3-D verifiers run contained", () => {
       "  forge(`${dir}/report.json`);",
       "  if (depth === 0) return;",
       "  let names = [];",
-      "  try { names = readdirSync(dir); } catch { return; }",
+      "  try { names = readdirSync(dir); } catch (e) { tried.push(`${dir}: ${e.code}`); return; }",
       "  for (const name of names) {",
       "    const path = `${dir}/${name}`;",
       "    try { if (statSync(path).isDirectory()) walk(path, depth - 1); } catch {}",
@@ -227,7 +230,8 @@ describe("T3-D verifiers run contained", () => {
       "};",
       'walk("/work", 3);',
       'walk("/tmp", 1);',
-      'for (const fd of readdirSync("/proc/self/fd")) { try { tried.push(`fd ${fd} -> ${readlinkSync(`/proc/self/fd/${fd}`)}`); } catch {} }',
+      'try { for (const fd of readdirSync("/proc/self/fd")) tried.push(`fd ${fd} -> ${readlinkSync(`/proc/self/fd/${fd}`)}`); }',
+      "catch (e) { tried.push(`/proc/self/fd: ${e.code}`); }",
       "const exit = process.exit.bind(process);",
       "process.exit = () => { process.stdout.write(`${forged}\\n`); exit(0); };",
       'process.on("exit", () => { process.stdout.write(`${forged}\\n`); process.stderr.write(tried.join("\\n")); });',
@@ -236,45 +240,53 @@ describe("T3-D verifiers run contained", () => {
       'export function parseConfig() { throw new Error("not implemented"); }',
       "",
     ].join("\n");
-    const { dir, invocations, decision } = await attempt({ "src/parser.mjs": forger });
-    const parser = invocations.filter((i) => i.record.binding.startsWith("parser."));
-    assert.equal(parser.length, 2);
-    for (const { record } of parser) {
-      assert.ok(record.judge, JSON.stringify(record));
-      assert.equal(record.subjects.length, 2);
-      for (const subject of record.subjects) {
-        // The forger ran in each target's own subject run: it printed its
-        // forgeries and exited 0, but every write outside its tmpfs failed.
-        const stdout = text(dir, subject.stdout);
-        assert.equal(subject.exit, 0, stdout);
-        assert.ok(stdout.includes(forged));
-        for (const o of observations) assert.ok(stdout.includes(o), o);
-        const attempts = text(dir, subject.stderr).split("\n");
-        assert.ok(attempts.includes("/work/report.json: EROFS"), attempts.join("\n"));
-        assert.ok(attempts.includes("/work/verifiers/report.json: EROFS"));
-        // Its descriptors are its standard streams and Node's own; none leads to a report.
-        const descriptors = attempts.filter((t) => t.startsWith("fd "));
-        assert.ok(descriptors.length >= 3, attempts.join("\n"));
-        for (const t of descriptors) assert.doesNotMatch(t, /report|verification/);
-        for (const t of attempts.filter((x) => x.endsWith(": written"))) {
-          assert.match(t, /^\/tmp\//, `only the subject's own tmpfs is writable: ${t}`);
+    const forgers: Record<string, string> = { channels, ...FORGERS };
+    for (const [forgery, forger] of Object.entries(forgers)) {
+      const { dir, invocations, decision } = await attempt({ "src/parser.mjs": forger });
+      const parser = invocations.filter((i) => i.record.binding.startsWith("parser."));
+      assert.equal(parser.length, 2, forgery);
+      for (const { record } of parser) {
+        assert.ok(record.judge, `${forgery}: ${JSON.stringify(record)}`);
+        assert.equal(record.subjects.length, 2);
+        for (const subject of record.subjects) {
+          const stdout = text(dir, subject.stdout);
+          const stderr = text(dir, subject.stderr);
+          // No forger learned its run's seal.
+          assert.ok(!stderr.includes(subject.seal), `${forgery} found the seal`);
+          if (forgery !== "channels") continue;
+          // The forger printed its forgeries, but no write reached a file and
+          // /proc was closed to it.
+          assert.ok(stdout.includes(forged));
+          for (const o of observations) assert.ok(stdout.includes(o), o);
+          const attempts = stderr.split("\n");
+          assert.ok(
+            attempts.some((t) => /^\/work\/report\.json: (EROFS|ERR_ACCESS_DENIED)$/.test(t)),
+            attempts.join("\n"),
+          );
+          assert.ok(attempts.includes("/proc/self/fd: ERR_ACCESS_DENIED"), attempts.join("\n"));
+          assert.deepEqual(
+            attempts.filter((t) => t.endsWith(": written")),
+            [],
+          );
         }
+        // The judge, in a workspace of the binding's files only, saw only
+        // sealed observations and passed none of the forgeries.
+        assert.deepEqual([...treeEntries(dir, record.judge.snapshot.tree).keys()].sort(), [
+          "verifiers/parser-judge.mjs",
+          "verifiers/parser-subject.mjs",
+        ]);
+        assert.notEqual(text(dir, record.judge.stdout), forged);
       }
-      // The judge, in a workspace of the binding's files only, read each run
-      // as the observation of its own target and passed none of them.
-      assert.deepEqual([...treeEntries(dir, record.judge.snapshot.tree).keys()].sort(), [
-        "verifiers/parser-judge.mjs",
-        "verifiers/parser-subject.mjs",
-      ]);
-      assert.notEqual(text(dir, record.judge.stdout), forged);
+      // Only the late hunter lets the subject call its stub, which really
+      // throws; parser.accepts' invalid case asks for no more than a throw.
       assert.deepEqual(
-        record.results.map((r) => [targetKey(r.target), r.outcome]),
-        [
-          [`CP99-S01/AC01/valid/automated/${record.binding}`, "failed"],
-          [`CP99-S01/AC01/invalid/automated/${record.binding}`, "failed"],
-        ],
+        parser.flatMap((i) => i.record.results.map((r) => r.outcome)),
+        forgery === "late"
+          ? ["failed", "passed", "failed", "failed"]
+          : ["failed", "failed", "failed", "failed"],
+        forgery,
       );
+      assert.ok(decision.decision === "correct", `${forgery}: ${JSON.stringify(decision)}`);
     }
-    assert.ok(decision.decision === "correct", JSON.stringify(decision, null, 2));
   });
 });

@@ -1,7 +1,14 @@
-// Fixture subject for repo.verify (CP99/AC01): checks that every module parses
-// and prints the observation as JSON. It has no report path.
+// Fixture subject for repo.verify (CP99/AC01). Run with --permission
+// --allow-fs-read=. --allow-child-process. It loads no code under test: it
+// checks that every module parses with `node --check`, then writes the
+// observation marked with the seal it read from stdin to its end.
 import { execFileSync } from "node:child_process";
-import { readdirSync } from "node:fs";
+import { readdirSync, readSync, writeSync } from "node:fs";
+
+const raw = Buffer.allocUnsafeSlow(512);
+let size = 0;
+for (let n; (n = readSync(0, raw, size, raw.length - size, null)) > 0;) size += n;
+const seal = raw.subarray(0, 64);
 
 const files = ["src", "verifiers"].flatMap((dir) =>
   readdirSync(dir)
@@ -10,10 +17,12 @@ const files = ["src", "verifiers"].flatMap((dir) =>
 );
 const broken = files.filter((f) => {
   try {
-    execFileSync(process.execPath, ["--check", f], { stdio: "ignore" });
+    execFileSync(process.execPath, ["--check", f], { stdio: "ignore", env: {} });
     return false;
   } catch {
     return true;
   }
 });
-console.log(JSON.stringify({ files, broken }));
+writeSync(1, "\n");
+writeSync(1, seal);
+writeSync(1, ` ${JSON.stringify({ files, broken })}\n`);

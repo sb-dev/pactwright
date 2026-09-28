@@ -11,8 +11,6 @@ import { cpSync, mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs"
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 
-import stringify from "safe-stable-stringify";
-
 import {
   Secret,
   type AgentRole,
@@ -56,7 +54,13 @@ export function fixtureRegistry(): Registry {
       id: "parser.accepts",
       method: "automated",
       version: "1",
-      command: ["node", "verifiers/parser-subject.mjs"],
+      command: [
+        "node",
+        "--permission",
+        "--allow-fs-read=.",
+        "--frozen-intrinsics",
+        "verifiers/parser-subject.mjs",
+      ],
       judge: ["node", "verifiers/parser-judge.mjs"],
       files: ["verifiers/parser-judge.mjs", "verifiers/parser-subject.mjs"],
       timeoutMs: 30_000,
@@ -66,7 +70,13 @@ export function fixtureRegistry(): Registry {
       id: "parser.rejects",
       method: "automated",
       version: "1",
-      command: ["node", "verifiers/parser-subject.mjs"],
+      command: [
+        "node",
+        "--permission",
+        "--allow-fs-read=.",
+        "--frozen-intrinsics",
+        "verifiers/parser-subject.mjs",
+      ],
       judge: ["node", "verifiers/parser-judge.mjs"],
       files: ["verifiers/parser-judge.mjs", "verifiers/parser-subject.mjs"],
       timeoutMs: 30_000,
@@ -76,7 +86,13 @@ export function fixtureRegistry(): Registry {
       id: "repo.verify",
       method: "automated",
       version: "1",
-      command: ["node", "verifiers/repo-subject.mjs"],
+      command: [
+        "node",
+        "--permission",
+        "--allow-fs-read=.",
+        "--allow-child-process",
+        "verifiers/repo-subject.mjs",
+      ],
       judge: ["node", "verifiers/repo-judge.mjs"],
       files: ["verifiers/repo-judge.mjs", "verifiers/repo-subject.mjs"],
       timeoutMs: 30_000,
@@ -86,9 +102,19 @@ export function fixtureRegistry(): Registry {
       id: "command.prints",
       method: "automated",
       version: "1",
-      command: ["node", "src/command.mjs", "verifiers/fixtures/valid.json"],
+      command: [
+        "node",
+        "--permission",
+        "--allow-fs-read=.",
+        "--allow-child-process",
+        "verifiers/command-subject.mjs",
+      ],
       judge: ["node", "verifiers/command-judge.mjs"],
-      files: ["verifiers/command-judge.mjs", "verifiers/fixtures/valid.json"],
+      files: [
+        "verifiers/command-judge.mjs",
+        "verifiers/command-subject.mjs",
+        "verifiers/fixtures/valid.json",
+      ],
       timeoutMs: 30_000,
       observations: ["stdout"],
     },
@@ -282,7 +308,7 @@ export type ScriptedCall = {
   snapshot: SourceSnapshot;
   binding: string;
   role: "subject" | "judge";
-  /** The subject run's `PACTWRIGHT_TARGET`; empty for the judge. */
+  /** The subject run's target as `owner/criterion/case`, from its stdin; empty for the judge. */
   target: string;
   argv: string[];
   stdin: string;
@@ -290,16 +316,15 @@ export type ScriptedCall = {
 
 /**
  * An offline opener of verifier workspaces: `exec` runs no code but plays
- * `script` for the binding and target named in the controller's environment,
- * as the subject or, when the argv ends with the binding's judge, as the judge.
+ * `script` for the binding and target the controller names on stdin: a seal
+ * and a target key for a subject run, the judge's JSON input for the judge.
  * `openError` makes opening fail as `createWorkspace` can; `closeError`
  * makes closing fail after a completed run.
  */
 export function scriptedVerifier(
   script: (snapshot: SourceSnapshot, binding: string, target: string) => Execution,
-  options: { openError?: string; closeError?: string; registry?: Registry } = {},
+  options: { openError?: string; closeError?: string } = {},
 ): OpenWorkspace & { calls: ScriptedCall[] } {
-  const registry = options.registry ?? fixtureRegistry();
   const calls: ScriptedCall[] = [];
   const open: OpenWorkspace = (snapshot) => {
     if (options.openError !== undefined) return Promise.reject(new Error(options.openError));
@@ -308,27 +333,28 @@ export function scriptedVerifier(
       readFile: (path) => Promise.resolve({ ok: false, reason: `${path}: not scripted` }),
       writeFile: () => Promise.resolve({ ok: false, reason: "Read-only file system" }),
       exec: (argv, exec) => {
-        const binding = argv.find((a) => a.startsWith("PACTWRIGHT_BINDING="))?.slice(19) ?? "";
-        const target = argv.find((a) => a.startsWith("PACTWRIGHT_TARGET="))?.slice(18) ?? "";
-        const entry = registry.get(binding)?.binding;
-        const judge = entry?.method === "automated" ? entry.judge : [];
-        const role =
-          judge.length > 0 && stringify(argv.slice(-judge.length)) === stringify(judge)
-            ? "judge"
-            : "subject";
+        const text = exec.stdin?.toString("utf8") ?? "";
+        const [seal = "", key = ""] = text.split("\n");
+        const subject = /^[0-9a-f]{64}$/.test(seal);
+        const role = subject ? "subject" : "judge";
+        const parts = key.split("/");
+        const binding = subject
+          ? (parts[4] ?? "")
+          : String((JSON.parse(text) as { binding?: unknown }).binding ?? "");
+        const target = subject ? parts.slice(0, 3).join("/") : "";
         calls.push({
           snapshot,
           binding,
           role,
           target,
           argv: [...argv],
-          stdin: exec.stdin?.toString("utf8") ?? "",
+          stdin: text,
         });
         const run = script(snapshot, binding, target);
         const report = run.report;
         const stdout =
           role === "subject"
-            ? Buffer.from(run.subjectStdout ?? "")
+            ? Buffer.from(run.subjectStdout ?? `\n${seal} {}\n`)
             : report === undefined
               ? Buffer.alloc(0)
               : Buffer.isBuffer(report)
@@ -396,6 +422,139 @@ export function localWorkspaces(run: RunHandle, root: string): OpenWorkspace {
     return ws;
   };
 }
+
+const HUNT = [
+  'import fs from "node:fs";',
+  'import v8 from "node:v8";',
+  "const say = JSON.stringify;",
+  'const valid = \'{"name": " demo "}\';',
+  'const invalid = \'{"name": "  "}\';',
+  "const good = {",
+  '  valid: say({ input: valid, returned: { name: "demo" } }),',
+  '  invalid: say({ input: invalid, threw: "name must not be blank" }),',
+  "};",
+  'const read = (f) => { try { return String(f()); } catch (e) { return ""; } };',
+  "const clues = () => [",
+  "  JSON.stringify(process.env),",
+  '  process.argv.join(" "),',
+  "  read(() => fs.readFileSync(0)),",
+  '  read(() => fs.readFileSync("/proc/self/fd/0")),',
+  '  read(() => fs.readFileSync("/proc/self/environ")),',
+  '  read(() => fs.readFileSync("/proc/self/cmdline")),',
+  "  read(() => fs.readFileSync(`/proc/${process.ppid}/environ`)),",
+  "  read(() => fs.readFileSync(`/proc/${process.ppid}/cmdline`)),",
+  '].join("\\n");',
+  "const target = () => /\\/(valid|invalid)\\b/.exec(clues())?.[1];",
+  "const hex = (text) => text.match(/[0-9a-f]{64}/g) ?? [];",
+  'const pool = () => hex(Buffer.from(Buffer.allocUnsafe(1).buffer).toString("latin1"));',
+  "const heap = async () => {",
+  "  const chunks = [];",
+  "  for await (const c of v8.getHeapSnapshot()) chunks.push(c);",
+  '  return hex(Buffer.concat(chunks).toString("latin1"));',
+  "};",
+  "const mem = () => {",
+  "  const found = [];",
+  "  try {",
+  '    const fd = fs.openSync("/proc/self/mem", "r");',
+  '    for (const line of fs.readFileSync("/proc/self/maps", "utf8").split("\\n")) {',
+  "      const m = /^([0-9a-f]+)-([0-9a-f]+) rw/.exec(line);",
+  "      if (!m) continue;",
+  "      const start = parseInt(m[1], 16);",
+  "      const size = Math.min(parseInt(m[2], 16) - start, 64 << 20);",
+  "      const buf = Buffer.alloc(size);",
+  "      try { fs.readSync(fd, buf, 0, size, start); } catch (e) { continue; }",
+  '      found.push(...hex(buf.toString("latin1")));',
+  "    }",
+  "  } catch (e) {",
+  "    process.stderr.write(`mem: ${e.code ?? e.message}\\n`);",
+  "  }",
+  "  return found;",
+  "};",
+  "const forge = (seals, id) => {",
+  '  process.stderr.write(`seals tried: ${seals.join(" ") || "none"}\\n`);',
+  "  const lines = id === undefined ? [good.valid, good.invalid] : [good[id]];",
+  "  for (const line of lines) {",
+  "    console.log(line);",
+  "    for (const seal of seals) console.log(`${seal} ${line}`);",
+  "  }",
+  "};",
+];
+
+/**
+ * Candidate `src/parser.mjs` modules with no parser that try to forge the
+ * subject's observations. `target` looks for its target in the environment,
+ * arguments, stdin and /proc, prints the observation that target expects and
+ * exits 0 on import. `seal` also hunts for the run's seal in a heap snapshot
+ * and the buffer pool and prints the expected observations under every
+ * candidate. `late` lets the subject run its stub, which throws, then hunts
+ * again from an exit hook and prints under every candidate it finds. `hook`
+ * hooks the Buffer methods and getters the subject may use on its seal; on
+ * seeing 64 hex bytes it writes the observation its last input expects under
+ * them and exits before the subject writes its own. `json` gives every object
+ * a toJSON that rewrites an observation to the one its input expects.
+ */
+export const FORGERS: Record<"target" | "seal" | "late" | "hook" | "json", string> = {
+  target: [
+    ...HUNT,
+    "forge([], target());",
+    "process.exit(0);",
+    'export function parseConfig() { throw new Error("not implemented"); }',
+    "",
+  ].join("\n"),
+  seal: [
+    ...HUNT,
+    "forge([...new Set([...hex(clues()), ...pool(), ...mem(), ...(await heap())])], target());",
+    "process.exit(0);",
+    'export function parseConfig() { throw new Error("not implemented"); }',
+    "",
+  ].join("\n"),
+  late: [
+    ...HUNT,
+    'process.on("exit", () => forge([...new Set([...hex(clues()), ...pool()])], target()));',
+    'export function parseConfig() { throw new Error("not implemented"); }',
+    "",
+  ].join("\n"),
+  hook: [
+    ...HUNT,
+    "let last = valid;",
+    "const TypedArray = Object.getPrototypeOf(Uint8Array.prototype);",
+    "const steal = (b) => {",
+    "  const text = String.fromCharCode(...Uint8Array.prototype.slice.call(b, 0, 64));",
+    "  if (!/^[0-9a-f]{64}$/.test(text)) return;",
+    "  const line = last.includes('\"  \"') ? good.invalid : good.valid;",
+    "  fs.writeSync(1, `\\n${text} ${line}\\n`);",
+    "  process.exit(0);",
+    "};",
+    'for (const name of ["byteLength", "length"]) {',
+    "  const own = Object.getOwnPropertyDescriptor(TypedArray, name);",
+    "  try {",
+    "    Object.defineProperty(Buffer.prototype, name, {",
+    "      configurable: true,",
+    "      get() { const n = own.get.call(this); if (n >= 64) steal(this); return n; },",
+    "    });",
+    "  } catch (e) { process.stderr.write(`hook ${name}: ${e.message}\\n`); }",
+    "}",
+    'for (const name of ["toString", "latin1Slice", "utf8Slice", "copy", "fill", "subarray", "equals"]) {',
+    "  const original = Buffer.prototype[name];",
+    "  try {",
+    "    Buffer.prototype[name] = function (...args) { steal(this); return original.apply(this, args); };",
+    "  } catch (e) { process.stderr.write(`hook ${name}: ${e.message}\\n`); }",
+    "}",
+    "export function parseConfig(text) { last = text; return undefined; }",
+    "",
+  ].join("\n"),
+  json: [
+    ...HUNT,
+    "try {",
+    "  Object.prototype.toJSON = function () {",
+    '    if (!Object.hasOwn(this, "input")) return this;',
+    "    return JSON.parse(this.input.includes('\"  \"') ? good.invalid : good.valid);",
+    "  };",
+    "} catch (e) { process.stderr.write(`toJSON: ${e.message}\\n`); }",
+    "export function parseConfig() { return undefined; }",
+    "",
+  ].join("\n"),
+};
 
 /** A verifier that passes every target of each binding it runs, from `targets`. */
 export const passingVerifier = (

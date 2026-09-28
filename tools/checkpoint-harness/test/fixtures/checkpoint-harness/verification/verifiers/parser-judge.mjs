@@ -1,7 +1,7 @@
 // Fixture judge for parser.accepts and parser.rejects (CP99-S01/AC01). It runs
-// without the code under test. It reads the subject runs as JSON on stdin,
-// each labelled by the controller with its target, and writes the report to
-// stdout. A run must exit 0 and print exactly one JSON observation.
+// without the code under test. It reads each target's sealed observations as
+// JSON on stdin and writes the report to stdout. A run must exit 0 with
+// exactly one sealed observation.
 import { readFileSync } from "node:fs";
 
 const { binding, runs } = JSON.parse(readFileSync(0, "utf8"));
@@ -11,14 +11,14 @@ const checks = {
     invalid: (o) => "threw" in o,
   },
   "parser.rejects": {
-    valid: (o) => !("threw" in o),
+    valid: (o) => "returned" in o,
     invalid: (o) => "threw" in o && /name/.test(o.threw),
   },
 };
 const observe = (run) => {
-  if (run.exit !== 0) return undefined;
+  if (run.exit !== 0 || run.observations.length !== 1) return undefined;
   try {
-    const o = JSON.parse(run.stdout);
+    const o = JSON.parse(run.observations[0]);
     return o !== null && typeof o === "object" && !Array.isArray(o) ? o : undefined;
   } catch {
     return undefined;
@@ -28,7 +28,6 @@ const results = runs.map((run) => {
   const o = observe(run);
   const check = checks[binding]?.[run.case];
   const passed = o !== undefined && check !== undefined && check(o);
-  const printed = JSON.stringify(run.stdout.slice(0, 200));
   return {
     binding,
     owner: run.owner,
@@ -42,7 +41,7 @@ const results = runs.map((run) => {
       : {
           message:
             o === undefined
-              ? `exit ${run.exit}, printed ${printed}`
+              ? `exit ${run.exit}, ${run.observations.length} sealed observations`
               : `observed ${JSON.stringify(o)}`,
         }),
   };

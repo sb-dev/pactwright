@@ -72,6 +72,7 @@ import {
   manifestFor,
   passing,
   passingVerifier,
+  FORGERS,
   localWorkspaces,
   passVerdict,
   PRODUCER,
@@ -803,56 +804,84 @@ describe("T3-D D01 observations that cannot count prevent acceptance", () => {
     });
   });
 
-  it("candidate code that prints forged observations and exits cannot pass the real judges", async () => {
-    // The fixture subject and judge scripts run for real, as local processes.
-    // Each forger has no parser: on import it prints observations and exits 0
-    // before the subject's own code runs. The first prints every case in both
-    // the old and the current observation shapes; the others print one
-    // outcome whatever the case.
+  it("candidate code cannot forge the subject's observations for the real judges", async () => {
+    // The fixture subject and judge scripts run for real, as local processes
+    // under the same Node permission flags as in a container. Every forger
+    // has no parser. The first three print fixed observations on import and
+    // exit 0; the others are FORGERS: target-aware, seal-hunting and a late
+    // seal hunter that lets the stub throw.
     const valid = '{"name": " demo "}';
     const invalid = '{"name": "  "}';
-    const lines = {
-      "every case": [
-        { case: "valid", input: valid, returned: { name: "demo" } },
-        { case: "invalid", input: invalid, threw: "name must not be blank" },
-        { input: valid, returned: { name: "demo" } },
-        { input: invalid, threw: "name must not be blank" },
-      ],
-      "a return": [{ input: valid, returned: { name: "demo" } }],
-      "a rejection": [{ input: invalid, threw: "name must not be blank" }],
-    };
-    for (const [forgery, printed] of Object.entries(lines)) {
-      const forger = [
-        ...printed.map((o) => `console.log(${JSON.stringify(JSON.stringify(o))});`),
+    const printing = (lines: object[]): string =>
+      [
+        ...lines.map((o) => `console.log(${JSON.stringify(JSON.stringify(o))});`),
         "process.exit(0);",
         'export function parseConfig() { throw new Error("not implemented"); }',
         "",
       ].join("\n");
+    const forgers: Record<string, string> = {
+      "every case": printing([
+        { case: "valid", input: valid, returned: { name: "demo" } },
+        { case: "invalid", input: invalid, threw: "name must not be blank" },
+        { input: valid, returned: { name: "demo" } },
+        { input: invalid, threw: "name must not be blank" },
+      ]),
+      "a return": printing([{ input: valid, returned: { name: "demo" } }]),
+      "a rejection": printing([{ input: invalid, threw: "name must not be blank" }]),
+      ...FORGERS,
+    };
+    // Only the late hunter lets the subject call its stub, which really
+    // throws; parser.accepts' invalid case asks for no more than a throw.
+    const late = ["failed", "passed", "failed", "failed"];
+    for (const [forgery, forger] of Object.entries(forgers)) {
       const w = await world(scratch);
       const a = await attemptOf(w, "CP99-S01", { files: { "src/parser.mjs": forger } });
       const local = localWorkspaces(w.run, join(scratch, `local-${randomUUID()}`));
       await admit(a, { verifier: local });
       await verify(a, local);
       await review(a);
-      const results = a.invocations
-        .filter((i) => i.record.binding.startsWith("parser."))
-        .flatMap((i) => i.record.results);
-      assert.equal(results.length, 4, forgery);
-      for (const binding of ["parser.accepts", "parser.rejects"]) {
-        const own = results.filter((r) => r.target.binding === binding);
-        assert.ok(
-          own.some((r) => r.outcome === "failed"),
-          `${forgery}: ${binding} ${JSON.stringify(own)}`,
-        );
-      }
-      if (forgery === "every case") {
-        assert.deepEqual(
-          results.map((r) => r.outcome),
-          ["failed", "failed", "failed", "failed"],
-        );
+      const parser = a.invocations.filter((i) => i.record.binding.startsWith("parser."));
+      const results = parser.flatMap((i) => i.record.results);
+      assert.deepEqual(
+        results.map((r) => r.outcome),
+        forgery === "late" ? late : ["failed", "failed", "failed", "failed"],
+        `${forgery}: ${JSON.stringify(results)}`,
+      );
+      // No hunter found a run's seal.
+      for (const { record } of parser) {
+        for (const run of record.subjects) {
+          const stderr = readEvidence(w.run.dir, run.stderr).toString("utf8");
+          assert.ok(!stderr.includes(run.seal), `${forgery} found the seal`);
+          if (forgery === "seal" || forgery === "late") assert.match(stderr, /seals tried:/);
+        }
       }
       assert.equal(decide(a).decision, "correct", forgery);
     }
+  });
+
+  it("the real command subject observes the candidate command as a separate process", async () => {
+    const w = await world(scratch);
+    const local = localWorkspaces(w.run, join(scratch, `local-${randomUUID()}`));
+    const good = await attemptOf(w, "CP99-S02");
+    await admit(good, { verifier: local });
+    await verify(good, local);
+    await review(good);
+    const prints = (a: Attempt) =>
+      a.invocations.find((i) => i.record.binding === "command.prints")?.record.results[0];
+    assert.equal(prints(good)?.outcome, "passed", JSON.stringify(prints(good)));
+    assert.equal(decide(good).decision, "accept");
+    const wrong = await attemptOf(w, "CP99-S02", {
+      attempt: 2,
+      files: {
+        ...FILES["CP99-S02"]?.(),
+        "src/command.mjs": 'console.log(\'{"name":"other"}\');\n',
+      },
+    });
+    await admit(wrong, { verifier: local });
+    await verify(wrong, local);
+    await review(wrong);
+    assert.equal(prints(wrong)?.outcome, "failed", JSON.stringify(prints(wrong)));
+    assert.equal(decide(wrong).decision, "correct");
   });
 
   it("a failure to stop a workspace keeps the executed result it followed", async () => {
@@ -922,28 +951,36 @@ describe("T3-D D01 observations that cannot count prevent acceptance", () => {
     assert.equal(decide(b).decision, "accept");
   });
 
-  it("code under test gets no report channel, and the judge runs without candidate code", async () => {
+  it("code under test gets no report channel or target, and the judge runs without candidate code", async () => {
     const w = await world(scratch);
     const a = await attemptOf(w, "CP99-S01");
     await admit(a);
     const verifier = passes("CP99-S01");
     await verify(a, verifier);
+    const seals = new Set<string>();
     for (const call of verifier.calls) {
-      assert.ok(!call.argv.some((x) => x.startsWith("PACTWRIGHT_REPORT")), call.argv.join(" "));
       const binding = registry.get(call.binding)?.binding;
       assert.ok(binding?.method === "automated");
       if (call.role === "subject") {
         assert.equal(call.snapshot.commit, a.candidate.commit);
         assert.equal(call.snapshot.tree, a.candidate.tree);
-        assert.equal(call.stdin, "");
+        // The argv is the binding's command alone; the seal and target come on stdin.
+        assert.deepEqual(call.argv, [...binding.command]);
+        const [seal = "", key = "", ...rest] = call.stdin.split("\n");
+        assert.match(seal, /^[0-9a-f]{64}$/);
+        assert.ok(key.startsWith(`${call.target}/automated/${call.binding}`), key);
+        assert.deepEqual(rest, []);
+        seals.add(seal);
         continue;
       }
+      assert.deepEqual(call.argv, [...binding.judge]);
       // The judge's workspace holds the binding's files and nothing else.
       assert.deepEqual(
         [...candidateTree(w.run, call.snapshot).keys()].sort(),
         [...binding.files].sort(),
       );
-      // It is shown each subject run under the target the controller ran it for.
+      // It is shown each run's sealed observations, and nothing else the
+      // run printed, under the target the controller ran it for.
       const shown = JSON.parse(call.stdin) as {
         binding: string;
         runs: { owner: string; criterion: string; case: string | null }[];
@@ -955,7 +992,24 @@ describe("T3-D D01 observations that cannot count prevent acceptance", () => {
           .filter((c) => c.role === "subject" && c.binding === call.binding)
           .map((c) => c.target),
       );
+      for (const r of shown.runs) {
+        assert.deepEqual(Object.keys(r).sort(), [
+          "case",
+          "criterion",
+          "exit",
+          "observations",
+          "owner",
+          "timedOut",
+        ]);
+      }
     }
+    // Every run has its own seal, and its record keeps it.
+    const subjectCalls = verifier.calls.filter((c) => c.role === "subject");
+    assert.equal(seals.size, subjectCalls.length);
+    assert.deepEqual(
+      new Set(a.invocations.flatMap((i) => i.record.subjects.map((r) => r.seal))),
+      seals,
+    );
     for (const { record } of a.invocations) {
       assert.ok(record.judge);
       assert.notEqual(record.judge.snapshot.commit, a.candidate.commit);
@@ -987,7 +1041,7 @@ describe("T3-D D01 observations that cannot count prevent acceptance", () => {
       ],
     );
     for (const c of subjects.slice(0, 4)) {
-      assert.deepEqual(c.argv.slice(-2), ["node", "verifiers/parser-subject.mjs"]);
+      assert.deepEqual(c.argv.slice(-1), ["verifiers/parser-subject.mjs"]);
     }
     const ids = a.invocations.map((i) => i.record.id);
     assert.equal(new Set(ids).size, 3);
