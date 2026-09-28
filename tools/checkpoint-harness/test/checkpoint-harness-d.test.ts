@@ -50,7 +50,6 @@ import {
   decideAcceptance,
   protectedVerifierPaths,
   recordDecision,
-  REPORT_DIR,
   reviewCandidate,
   targetKey,
   verifyCandidate,
@@ -59,7 +58,7 @@ import {
   type Approval,
   type Decision,
   type Invocation,
-  type OpenVerifier,
+  type OpenWorkspace,
   type ReviewerAccess,
   type ReviewRecord,
   type Stored,
@@ -71,13 +70,13 @@ import {
   fixturePlan,
   fixtureRegistry,
   manifestFor,
-  noFiles,
   passing,
   passingVerifier,
   passVerdict,
   PRODUCER,
   reviewerRole,
   scriptedReviewer,
+  reviewerWorkspaces,
   scriptedVerifier,
   seal,
   stepTargets,
@@ -91,6 +90,7 @@ const scratch = mkdtempSync(join(tmpdir(), "pactwright-harness-d-"));
 after(() => rmSync(scratch, { recursive: true, force: true }));
 
 const registry = fixtureRegistry();
+const A_SNAPSHOT = { commit: "0".repeat(40), tree: "0".repeat(40) };
 
 let plan: PreparedRun;
 before(async () => {
@@ -169,7 +169,7 @@ async function attemptOf(
 
 const access = (respond: (packet: Packet) => unknown = approveAll): ReviewerAccess => ({
   role: reviewerRole(),
-  workspace: noFiles,
+  open: reviewerWorkspaces(),
   signal: new AbortController().signal,
   provider: scriptedReviewer(respond),
 });
@@ -188,7 +188,11 @@ const passes = (step: string): ReturnType<typeof scriptedVerifier> =>
 
 async function admit(
   a: Attempt,
-  options: { verifier?: OpenVerifier; adequacy?: (p: Packet) => unknown; bindings?: string[] } = {},
+  options: {
+    verifier?: OpenWorkspace;
+    adequacy?: (p: Packet) => unknown;
+    bindings?: string[];
+  } = {},
 ): Promise<Stored<Admission>[]> {
   const admitted: Stored<Admission>[] = [];
   for (const binding of options.bindings ?? automatedBindings(a.step)) {
@@ -211,7 +215,7 @@ async function admit(
   return admitted;
 }
 
-async function verify(a: Attempt, verifier: OpenVerifier = passes(a.step)): Promise<void> {
+async function verify(a: Attempt, verifier: OpenWorkspace = passes(a.step)): Promise<void> {
   a.invocations.push(
     ...(await verifyCandidate(a.w.run, {
       plan,
@@ -249,7 +253,7 @@ async function review(
 /** Admission with passing verifiers, then acceptance verification with `verifier`, then review. */
 async function complete(
   a: Attempt,
-  options: { verifier?: OpenVerifier; respond?: (p: Packet) => unknown } = {},
+  options: { verifier?: OpenWorkspace; respond?: (p: Packet) => unknown } = {},
 ): Promise<Attempt> {
   await admit(a);
   await verify(a, options.verifier);
@@ -329,7 +333,7 @@ const ACCEPTS_VALID = (): VerificationTarget =>
 const defective = (
   binding: string,
   execution: (entries: ReportEntry[]) => Execution,
-): OpenVerifier => {
+): OpenWorkspace => {
   const targets = stepTargets(plan, "CP99-S01");
   return scriptedVerifier((_, b) => {
     const entries = targets.filter((t) => t.binding === b).map(passing);
@@ -358,6 +362,7 @@ describe("T3-D binding registry", () => {
         method: "automated",
         version: "1",
         command: [],
+        judge: [],
         files: ["../escape.mjs", "/abs.mjs"],
         timeoutMs: 0,
         observations: ["x", "x"],
@@ -371,6 +376,7 @@ describe("T3-D binding registry", () => {
       "binding a.b: no version",
       "binding a.b: no rubric",
       "binding c.d: no command",
+      "binding c.d: no judge",
       "binding c.d: files must be distinct normalised relative paths",
       "binding c.d: timeoutMs must be a positive integer",
       "binding c.d: observations must be distinct",
@@ -383,7 +389,7 @@ describe("T3-D binding registry", () => {
     const w = await world(scratch);
     const a = await attemptOf(w, "CP99-S01");
     const b = await attemptOf(w, "CP99-S01", {
-      files: { ...FILES["CP99-S01"]?.(), "verifiers/parser.mjs": "// changed\n" },
+      files: { ...FILES["CP99-S01"]?.(), "verifiers/parser-subject.mjs": "// changed\n" },
     });
     const ids = ["parser.accepts", "repo.verify", "parser.single-path"];
     const before = bindingDigests(registry, a.tree, ids);
@@ -466,7 +472,7 @@ describe("T3-D reviewer protocol", () => {
     const outcome = await invokeAgent(
       reviewerRole(),
       built.packet,
-      noFiles,
+      await reviewerWorkspaces()(A_SNAPSHOT),
       new AbortController().signal,
       {
         provider,
@@ -506,7 +512,7 @@ describe("T3-D reviewer protocol", () => {
     const outcome = await invokeAgent(
       reviewerRole(),
       built.packet,
-      noFiles,
+      await reviewerWorkspaces()(A_SNAPSHOT),
       new AbortController().signal,
       {
         provider: scriptedReviewer(() => verdict),
@@ -609,11 +615,11 @@ describe("T3-D D01 observations that cannot count prevent acceptance", () => {
       (e) => ({ report: { results: e.map((x) => ({ ...x, observations: {} })) } }),
       /missing observation input/,
     ],
-    ["exit 0 without a report", () => ({ exit: 0 }), /no report was written/],
+    ["a judge that writes no report", () => ({}), /no report was written/],
     [
       "a pass claimed with a nonzero exit",
       (e) => ({ exit: 1, report: { results: e } }),
-      /exited 1, yet the report claims a pass/,
+      /the judge exited 1/,
     ],
   ];
   for (const [name, execution, detail] of cases) {
@@ -646,7 +652,7 @@ describe("T3-D D01 observations that cannot count prevent acceptance", () => {
     assertReason(decide(a), {
       decision: "pause",
       route: "retry",
-      detail: /verifier workspace failed: docker: daemon unavailable/,
+      detail: /verifier did not run: docker: daemon unavailable/,
     });
     // The verifier never ran, so running it is not a reroll.
     await verify(a);
@@ -692,7 +698,7 @@ describe("T3-D D01 observations that cannot count prevent acceptance", () => {
     const w = await world(scratch);
     const a = await complete(await attemptOf(w, "CP99-S01"), {
       verifier: defective("parser.accepts", (e) => ({
-        exit: 1,
+        subjectExit: 1,
         report: { results: e.map((x) => ({ ...x, outcome: "failed", message: "wrong" })) },
       })),
     });
@@ -733,11 +739,11 @@ describe("T3-D D01 observations that cannot count prevent acceptance", () => {
     });
   });
 
-  it("a nonzero exit explained by a reported failure fails only that target", async () => {
+  it("a report with one failure fails only that target", async () => {
     const w = await world(scratch);
     const a = await complete(await attemptOf(w, "CP99-S01"), {
       verifier: defective("parser.accepts", (e) => ({
-        exit: 1,
+        subjectExit: 1,
         report: {
           results: e.map((x) =>
             x.case === "invalid"
@@ -768,6 +774,44 @@ describe("T3-D D01 observations that cannot count prevent acceptance", () => {
     );
   });
 
+  it("a failure to stop a workspace keeps the executed result it followed", async () => {
+    const w = await world(scratch);
+    const a = await attemptOf(w, "CP99-S01");
+    await admit(a);
+    const failing = (e: ReportEntry[]): Execution => ({
+      report: {
+        results: e.map((x) =>
+          x.case === "valid" ? { ...x, outcome: "failed", message: "rejected a valid name" } : x,
+        ),
+      },
+    });
+    const targets = stepTargets(plan, "CP99-S01");
+    await verify(
+      a,
+      scriptedVerifier(
+        (_, b) => {
+          const entries = targets.filter((t) => t.binding === b).map(passing);
+          return b === "parser.accepts" ? failing(entries) : { report: { results: entries } };
+        },
+        { closeError: "docker rm: device busy" },
+      ),
+    );
+    const accepts = a.invocations.find((i) => i.record.binding === "parser.accepts")?.record;
+    assert.match(accepts?.cleanup ?? "", /docker rm: device busy/);
+    assert.deepEqual(
+      accepts?.results.map((r) => r.outcome),
+      ["failed", "passed"],
+    );
+    await verify(a);
+    await review(a);
+    assertReason(decide(a), {
+      decision: "correct",
+      route: "correct",
+      subject: /^CP99-S01\/AC01\/valid\/automated\/parser\.accepts$/,
+      detail: /rejected a valid name/,
+    });
+  });
+
   it("a rerun cannot replace a failed result; repeated passes still accept", async () => {
     const w = await world(scratch);
     const a = await attemptOf(w, "CP99-S01");
@@ -775,7 +819,7 @@ describe("T3-D D01 observations that cannot count prevent acceptance", () => {
     await verify(
       a,
       defective("parser.accepts", (e) => ({
-        exit: 1,
+        subjectExit: 1,
         report: {
           results: e.map((x) => ({ ...x, outcome: "failed", message: "rejected a valid name" })),
         },
@@ -797,26 +841,39 @@ describe("T3-D D01 observations that cannot count prevent acceptance", () => {
     assert.equal(decide(b).decision, "accept");
   });
 
-  it("a candidate holding the controller's verification directory cannot pass", async () => {
+  it("code under test gets no report channel, and the judge runs without candidate code", async () => {
     const w = await world(scratch);
-    const policy: WritePolicy = {
-      writable: ["src", "verifiers", REPORT_DIR],
-      scratch: [],
-      protected: [],
-    };
-    const files = {
-      ...FILES["CP99-S01"]?.(),
-      [`${REPORT_DIR}/report.json`]: JSON.stringify({
-        results: stepTargets(plan, "CP99-S01").map(passing),
-      }),
-    };
-    const a = await complete(await attemptOf(w, "CP99-S01", { files, policy }));
-    assertReason(decide(a, { policy }), {
-      decision: "correct",
-      route: "correct",
-      subject: new RegExp(`^${REPORT_DIR}$`),
-      detail: /verification directory/,
-    });
+    const a = await attemptOf(w, "CP99-S01");
+    await admit(a);
+    const verifier = passes("CP99-S01");
+    await verify(a, verifier);
+    for (const call of verifier.calls) {
+      assert.ok(!call.argv.some((x) => x.startsWith("PACTWRIGHT_REPORT")), call.argv.join(" "));
+      const binding = registry.get(call.binding)?.binding;
+      assert.ok(binding?.method === "automated");
+      if (call.role === "subject") {
+        assert.equal(call.snapshot.commit, a.candidate.commit);
+        assert.equal(call.snapshot.tree, a.candidate.tree);
+        assert.equal(call.stdin, "");
+        continue;
+      }
+      // The judge's workspace holds the binding's files and nothing else.
+      assert.deepEqual(
+        [...candidateTree(w.run, call.snapshot).keys()].sort(),
+        [...binding.files].sort(),
+      );
+      assert.equal(JSON.parse(call.stdin).binding, call.binding);
+    }
+    for (const { record } of a.invocations) {
+      assert.ok(record.judge);
+      assert.notEqual(record.judge.snapshot.commit, a.candidate.commit);
+      const binding = registry.get(record.binding)?.binding;
+      assert.ok(binding?.method === "automated");
+      assert.deepEqual(
+        [...candidateTree(w.run, record.judge.snapshot).keys()].sort(),
+        [...binding.files].sort(),
+      );
+    }
   });
 
   it("each binding sharing a command runs as its own recorded invocation", async () => {
@@ -825,16 +882,13 @@ describe("T3-D D01 observations that cannot count prevent acceptance", () => {
     await admit(a);
     const verifier = passes("CP99-S01");
     await verify(a, verifier);
-    const { calls } = verifier;
+    const subjects = verifier.calls.filter((c) => c.role === "subject");
     assert.deepEqual(
-      calls.map((c) => c.binding),
+      subjects.map((c) => c.binding),
       ["parser.accepts", "parser.rejects", "repo.verify"],
     );
-    assert.deepEqual(calls[0]?.argv.slice(-2), ["node", "verifiers/parser.mjs"]);
-    const reports = calls.map((c) => c.argv.find((x) => x.startsWith("PACTWRIGHT_REPORT=")));
-    assert.equal(new Set(reports).size, 3, "each invocation has its own report path");
-    for (const r of reports) assert.match(r ?? "", new RegExp(`^PACTWRIGHT_REPORT=${REPORT_DIR}/`));
-    assert.deepEqual(calls[1]?.argv.slice(-2), ["node", "verifiers/parser.mjs"]);
+    assert.deepEqual(subjects[0]?.argv.slice(-2), ["node", "verifiers/parser-subject.mjs"]);
+    assert.deepEqual(subjects[1]?.argv.slice(-2), ["node", "verifiers/parser-subject.mjs"]);
     const ids = a.invocations.map((i) => i.record.id);
     assert.equal(new Set(ids).size, 3);
     const events = readRun(w.run.dir);
@@ -867,7 +921,7 @@ describe("T3-D D02 a proposed verifier counts only after adequacy and a fresh ru
         {
           severity: "blocking",
           rule: WEAK,
-          location: "verifiers/parser.mjs:14",
+          location: "verifiers/parser-subject.mjs:14",
           defect: "the invalid case calls parseConfig on a valid input, so any parser passes",
           correction: "feed the blank-name input and assert the rejection names the field",
           basis: "inspection",
@@ -878,7 +932,7 @@ describe("T3-D D02 a proposed verifier counts only after adequacy and a fresh ru
   };
   const weakFiles = (): Record<string, string> => ({
     ...FILES["CP99-S01"]?.(),
-    "verifiers/parser.mjs": "// weak: asserts nothing about invalid input\n",
+    "verifiers/parser-subject.mjs": "// weak: asserts nothing about invalid input\n",
   });
 
   it("a weak proposed verifier is rejected with a precise test defect and gets no pin", async () => {
@@ -890,7 +944,7 @@ describe("T3-D D02 a proposed verifier counts only after adequacy and a fresh ru
     assert.deepEqual(rejected?.findings, [
       {
         rule: WEAK,
-        location: "verifiers/parser.mjs:14",
+        location: "verifiers/parser-subject.mjs:14",
         defect: "the invalid case calls parseConfig on a valid input, so any parser passes",
         correction: "feed the blank-name input and assert the rejection names the field",
       },
@@ -911,7 +965,9 @@ describe("T3-D D02 a proposed verifier counts only after adequacy and a fresh ru
       decision.reasons.find((r) => r.subject === WEAK)?.requirements.includes("CP99-S01/R01"),
     );
     assert.ok(
-      decision.findings.some((f) => f.rule === WEAK && f.location === "verifiers/parser.mjs:14"),
+      decision.findings.some(
+        (f) => f.rule === WEAK && f.location === "verifiers/parser-subject.mjs:14",
+      ),
     );
     // The rejected proposal's provisional run passed every case, yet none of it counts.
     const provisional = readRun(w.run.dir);
@@ -1011,12 +1067,37 @@ describe("T3-D D02 a proposed verifier counts only after adequacy and a fresh ru
     assert.equal(decide(a).decision, "accept");
   });
 
+  it("a provisional rejection binds only its own evaluation", async () => {
+    const w = await world(scratch);
+    const first = await attemptOf(w, "CP99-S01");
+    const [rejected] = await admit(first, {
+      bindings: ["repo.verify"],
+      verifier: defective("repo.verify", () => ({})),
+    });
+    assert.equal(rejected?.record.outcome, "rejected");
+    assert.equal(rejected?.record.review, null);
+    // The same verifier on a corrected candidate is a new evaluation: it is admitted afresh.
+    const a = await attemptOf(w, "CP99-S01", {
+      files: { ...FILES["CP99-S01"]?.(), "src/extra.mjs": "export const extra = 1;\n" },
+      attempt: 2,
+    });
+    a.admissions.push(...first.admissions);
+    assertReason(decide(a), { decision: "pause", route: "retry", detail: /admit it first/ });
+    await admit(a);
+    await verify(a);
+    await review(a);
+    assert.equal(decide(a).decision, "accept");
+  });
+
   it("a valid replacement passes adequacy, and only its fresh acceptance run counts", async () => {
     const w = await world(scratch);
     const first = await attemptOf(w, "CP99-S01", { files: weakFiles() });
     await admit(first, { adequacy: rejectWeak });
     const a = await attemptOf(w, "CP99-S01", {
-      files: { ...FILES["CP99-S01"]?.(), "verifiers/parser.mjs": "// adequate replacement\n" },
+      files: {
+        ...FILES["CP99-S01"]?.(),
+        "verifiers/parser-subject.mjs": "// adequate replacement\n",
+      },
       attempt: 2,
     });
     const replaced = await admit(a);
@@ -1050,8 +1131,10 @@ describe("T3-D D02 a proposed verifier counts only after adequacy and a fresh ru
     // Within the step a revised verifier is admitted again; other steps must not change it.
     assert.deepEqual(protectedVerifierPaths(registry, a.admissions, "CP99-S01"), []);
     assert.deepEqual(protectedVerifierPaths(registry, a.admissions, "CP99-S02"), [
-      "verifiers/parser.mjs",
-      "verifiers/repo-verify.mjs",
+      "verifiers/parser-judge.mjs",
+      "verifiers/parser-subject.mjs",
+      "verifiers/repo-judge.mjs",
+      "verifiers/repo-subject.mjs",
     ]);
   });
 
@@ -1062,7 +1145,7 @@ describe("T3-D D02 a proposed verifier counts only after adequacy and a fresh ru
     const a = await attemptOf(w, "CP99-S02", {
       files: {
         ...FILES["CP99-S02"]?.(),
-        "verifiers/repo-verify.mjs": "// edited after approval\n",
+        "verifiers/repo-subject.mjs": "// edited after approval\n",
       },
     });
     a.admissions.push(...approved.admissions);
@@ -1076,7 +1159,7 @@ describe("T3-D D02 a proposed verifier counts only after adequacy and a fresh ru
     await admit(a, { verifier, bindings: ["command.prints"] });
     await verify(a, verifier);
     assert.deepEqual(
-      verifier.calls.map((c) => c.binding),
+      verifier.calls.filter((c) => c.role === "subject").map((c) => c.binding),
       ["command.prints", "command.prints"],
     );
     // An approval of the changed verifier within this step does not lift the protection.
@@ -1096,14 +1179,17 @@ describe("T3-D D02 a proposed verifier counts only after adequacy and a fresh ru
     const approved = await attemptOf(w, "CP99-S01");
     await admit(approved);
     const a = await attemptOf(w, "CP99-S01", {
-      files: { ...FILES["CP99-S01"]?.(), "verifiers/parser.mjs": "// revised in a correction\n" },
+      files: {
+        ...FILES["CP99-S01"]?.(),
+        "verifiers/parser-subject.mjs": "// revised in a correction\n",
+      },
       attempt: 2,
     });
     a.admissions.push(...approved.admissions);
     const verifier = passes("CP99-S01");
     await verify(a, verifier);
     assert.deepEqual(
-      verifier.calls.map((c) => c.binding),
+      verifier.calls.filter((c) => c.role === "subject").map((c) => c.binding),
       ["repo.verify"],
     );
     await review(a);
@@ -1131,13 +1217,13 @@ describe("T3-D D02 a proposed verifier counts only after adequacy and a fresh ru
   it("a missing verifier is producer work in scope and an owner's outside it", async () => {
     const w = await world(scratch);
     const a = await complete(
-      await attemptOf(w, "CP99-S01", { removed: ["verifiers/repo-verify.mjs"] }),
+      await attemptOf(w, "CP99-S01", { removed: ["verifiers/repo-subject.mjs"] }),
     );
     assertReason(decide(a), {
       decision: "correct",
       route: "correct",
       subject: /^repo\.verify$/,
-      detail: /verifiers\/repo-verify\.mjs of repo\.verify are not in the candidate/,
+      detail: /verifiers\/repo-subject\.mjs of repo\.verify are not in the candidate/,
     });
     assertReason(decide(a, { policy: { writable: ["src"], scratch: [], protected: [] } }), {
       decision: "pause",
@@ -1151,6 +1237,7 @@ describe("T3-D D02 a proposed verifier counts only after adequacy and a fresh ru
     const approved = store(w.run, "verifier-admission", {
       ...rejected.record,
       outcome: "approved",
+      review: rejected.ref,
       findings: [],
     } satisfies Admission);
     assertReason(decide(a, { admissions: [...a.admissions, approved] }), {
@@ -1354,6 +1441,90 @@ describe("T3-D D03 defects and missing outputs are requirement-linked; nits do n
     });
   }
 
+  it("an incomplete review that judged against the candidate binds; a later pass cannot replace it", async () => {
+    const w = await world(scratch);
+    const a = await complete(await attemptOf(w, "CP99-S01"), {
+      respond: (p) => {
+        const v = approveAll(p);
+        return {
+          ...v,
+          coverage: v.coverage
+            .slice(1)
+            .map((c) => (c.subject === "CP99/R01" ? { ...c, result: "unsatisfied" as const } : c)),
+        };
+      },
+    });
+    await review(a);
+    assertReason(decide(a), {
+      decision: "pause",
+      route: "owner",
+      subject: /^review$/,
+      detail: /incomplete review judged against: CP99\/R01 unsatisfied/,
+    });
+  });
+
+  it("the reviewer must have been shown the outputs being accepted", async () => {
+    const w = await world(scratch);
+    const a = await attemptOf(w, "CP99-S01", {
+      files: { ...FILES["CP99-S01"]?.(), "src/other.mjs": "export const other = 1;\n" },
+    });
+    await complete(a);
+    assert.equal(decide(a).decision, "accept");
+    assertReason(decide(a, { claims: [{ output: "config-parser", paths: ["src/other.mjs"] }] }), {
+      decision: "pause",
+      route: "retry",
+      subject: /^CP99-S01\/config-parser$/,
+      detail: /shown other paths/,
+    });
+  });
+
+  it("a review runs in a workspace opened from the candidate; any other workspace is refused", async () => {
+    const w = await world(scratch);
+    const a = await attemptOf(w, "CP99-S01");
+    await admit(a);
+    await verify(a);
+    const opener = reviewerWorkspaces();
+    await reviewCandidate(w.run, {
+      plan,
+      step: a.step,
+      registry,
+      candidate: a.candidate,
+      attempt: a.attempt,
+      manifest: a.manifest,
+      accepted: [],
+      invocations: a.invocations,
+      claims: a.claims,
+      reviewer: { ...access(), open: opener },
+    });
+    assert.deepEqual(
+      opener.opened.map((s) => s.commit),
+      [a.candidate.commit],
+    );
+    const stale = reviewerWorkspaces(w.base);
+    const reviews = (): number => {
+      const read = readRun(w.run.dir);
+      assert.ok(read.ok);
+      return read.records.events.filter((e) => e.action === "review").length;
+    };
+    const before = reviews();
+    await assert.rejects(
+      reviewCandidate(w.run, {
+        plan,
+        step: a.step,
+        registry,
+        candidate: a.candidate,
+        attempt: a.attempt,
+        manifest: a.manifest,
+        accepted: [],
+        invocations: a.invocations,
+        claims: a.claims,
+        reviewer: { ...access(), open: stale },
+      }),
+      /reviewer workspace holds .*, not the candidate/,
+    );
+    assert.equal(reviews(), before, "no review is recorded");
+  });
+
   it("the first complete verdict binds: a later pass cannot replace a rejection", async () => {
     const record = calibration("known-bad");
     const w = await world(scratch);
@@ -1405,7 +1576,7 @@ describe("T3-D D04 complete evidence, common review and exact approvals accept",
     const w = await world(scratch);
     const a = await complete(await attemptOf(w, "CP99-S01"), {
       verifier: defective("parser.accepts", (e) => ({
-        exit: 1,
+        subjectExit: 1,
         report: {
           results: e.map((x) =>
             x.case === "valid" ? { ...x, outcome: "failed", message: "rejected a valid name" } : x,
@@ -1519,7 +1690,7 @@ describe("T3-D D04 complete evidence, common review and exact approvals accept",
     await verify(
       a,
       defective("parser.accepts", (e) => ({
-        exit: 1,
+        subjectExit: 1,
         report: {
           results: e.map((x) =>
             x.case === "valid" ? { ...x, outcome: "failed", message: "rejected a valid name" } : x,

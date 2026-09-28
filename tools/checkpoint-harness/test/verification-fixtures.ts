@@ -11,6 +11,8 @@ import { cpSync, mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs"
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 
+import stringify from "safe-stable-stringify";
+
 import {
   Secret,
   type AgentRole,
@@ -19,7 +21,6 @@ import {
   type ProviderEvent,
   type ProviderRequest,
   type ReviewVerdict,
-  type WorkspaceOps,
 } from "../src/claude.js";
 import {
   exportRevision,
@@ -35,7 +36,7 @@ import {
   createRegistry,
   type Registry,
 } from "../src/software-bootstrap.js";
-import type { OpenVerifier } from "../src/verification.js";
+import type { ContainedWorkspace, OpenWorkspace } from "../src/verification.js";
 import {
   captureSource,
   importSource,
@@ -48,15 +49,16 @@ import {
 const here = dirname(fileURLToPath(import.meta.url));
 export const fixtureRoot = join(here, "fixtures/checkpoint-harness");
 
-/** The fixture bindings; `parser.accepts` and `parser.rejects` share one command. */
+/** The fixture bindings; `parser.accepts` and `parser.rejects` share their commands. */
 export function fixtureRegistry(): Registry {
   const created = createRegistry([
     {
       id: "parser.accepts",
       method: "automated",
       version: "1",
-      command: ["node", "verifiers/parser.mjs"],
-      files: ["verifiers/parser.mjs"],
+      command: ["node", "verifiers/parser-subject.mjs"],
+      judge: ["node", "verifiers/parser-judge.mjs"],
+      files: ["verifiers/parser-judge.mjs", "verifiers/parser-subject.mjs"],
       timeoutMs: 30_000,
       observations: ["input"],
     },
@@ -64,8 +66,9 @@ export function fixtureRegistry(): Registry {
       id: "parser.rejects",
       method: "automated",
       version: "1",
-      command: ["node", "verifiers/parser.mjs"],
-      files: ["verifiers/parser.mjs"],
+      command: ["node", "verifiers/parser-subject.mjs"],
+      judge: ["node", "verifiers/parser-judge.mjs"],
+      files: ["verifiers/parser-judge.mjs", "verifiers/parser-subject.mjs"],
       timeoutMs: 30_000,
       observations: ["input"],
     },
@@ -73,8 +76,9 @@ export function fixtureRegistry(): Registry {
       id: "repo.verify",
       method: "automated",
       version: "1",
-      command: ["node", "verifiers/repo-verify.mjs"],
-      files: ["verifiers/repo-verify.mjs"],
+      command: ["node", "verifiers/repo-subject.mjs"],
+      judge: ["node", "verifiers/repo-judge.mjs"],
+      files: ["verifiers/repo-judge.mjs", "verifiers/repo-subject.mjs"],
       timeoutMs: 30_000,
       observations: ["files"],
     },
@@ -82,8 +86,9 @@ export function fixtureRegistry(): Registry {
       id: "command.prints",
       method: "automated",
       version: "1",
-      command: ["node", "verifiers/command.mjs"],
-      files: ["verifiers/command.mjs", "verifiers/fixtures/valid.json"],
+      command: ["node", "src/command.mjs", "verifiers/fixtures/valid.json"],
+      judge: ["node", "verifiers/command-judge.mjs"],
+      files: ["verifiers/command-judge.mjs", "verifiers/fixtures/valid.json"],
       timeoutMs: 30_000,
       observations: ["stdout"],
     },
@@ -258,61 +263,93 @@ export const passing = (t: VerificationTarget): ReportEntry => ({
   observations: { input: "fixture", files: ["src/parser.mjs"], stdout: "{}" },
 });
 
-/** What a scripted verifier invocation does. `report` is written unless undefined. */
+/**
+ * What a scripted binding run does. The subject's exit status and stdout are
+ * observations; `report` is the judge's stdout (JSON unless a string or
+ * Buffer) and `exit` its exit status.
+ */
 export type Execution = {
+  subjectExit?: number | null;
+  subjectTimedOut?: boolean;
+  subjectStdout?: string;
   exit?: number | null;
   timedOut?: boolean;
   report?: unknown;
   stderr?: string;
 };
 
+export type ScriptedCall = {
+  snapshot: SourceSnapshot;
+  binding: string;
+  role: "subject" | "judge";
+  argv: string[];
+  stdin: string;
+};
+
 /**
- * An offline verifier workspace: `exec` runs no code but plays `script` for
- * the candidate and the binding named in the controller's environment, and
- * writes its report where the controller reads it. `openError` makes
- * opening the workspace fail, as `createWorkspace` does.
+ * An offline opener of verifier workspaces: `exec` runs no code but plays
+ * `script` for the binding named in the controller's environment, as the
+ * subject or, when the argv ends with the binding's judge, as the judge.
+ * `openError` makes opening fail as `createWorkspace` can; `closeError`
+ * makes closing fail after a completed run.
  */
 export function scriptedVerifier(
-  script: (candidate: SourceSnapshot, binding: string) => Execution,
-  options: { openError?: string } = {},
-): OpenVerifier & { calls: { candidate: string; binding: string; argv: string[] }[] } {
-  const calls: { candidate: string; binding: string; argv: string[] }[] = [];
-  const open: OpenVerifier = (candidate) => {
+  script: (snapshot: SourceSnapshot, binding: string) => Execution,
+  options: { openError?: string; closeError?: string; registry?: Registry } = {},
+): OpenWorkspace & { calls: ScriptedCall[] } {
+  const registry = options.registry ?? fixtureRegistry();
+  const calls: ScriptedCall[] = [];
+  const open: OpenWorkspace = (snapshot) => {
     if (options.openError !== undefined) return Promise.reject(new Error(options.openError));
-    const files = new Map<string, Buffer>();
-    const env = (argv: readonly string[], name: string): string =>
-      argv.find((a) => a.startsWith(`${name}=`))?.slice(name.length + 1) ?? "";
-    const ops: WorkspaceOps & { close(): Promise<void> } = {
-      readFile: (path) => {
-        const bytes = files.get(path);
-        return Promise.resolve(
-          bytes ? { ok: true, bytes } : { ok: false, reason: `${path}: No such file or directory` },
-        );
-      },
+    const ws: ContainedWorkspace = {
+      snapshot,
+      readFile: (path) => Promise.resolve({ ok: false, reason: `${path}: not scripted` }),
       writeFile: () => Promise.resolve({ ok: false, reason: "Read-only file system" }),
-      exec: (argv) => {
-        const binding = env(argv, "PACTWRIGHT_BINDING");
-        calls.push({ candidate: candidate.commit, binding, argv: [...argv] });
-        const run = script(candidate, binding);
-        if (run.report !== undefined) {
-          const report = run.report;
-          files.set(
-            env(argv, "PACTWRIGHT_REPORT"),
-            Buffer.isBuffer(report)
-              ? report
-              : Buffer.from(typeof report === "string" ? report : JSON.stringify(report)),
-          );
-        }
+      exec: (argv, exec) => {
+        const binding = argv.find((a) => a.startsWith("PACTWRIGHT_BINDING="))?.slice(19) ?? "";
+        const entry = registry.get(binding)?.binding;
+        const judge = entry?.method === "automated" ? entry.judge : [];
+        const role =
+          judge.length > 0 && stringify(argv.slice(-judge.length)) === stringify(judge)
+            ? "judge"
+            : "subject";
+        calls.push({
+          snapshot,
+          binding,
+          role,
+          argv: [...argv],
+          stdin: exec.stdin?.toString("utf8") ?? "",
+        });
+        const run = script(snapshot, binding);
+        const report = run.report;
+        const stdout =
+          role === "subject"
+            ? Buffer.from(run.subjectStdout ?? "")
+            : report === undefined
+              ? Buffer.alloc(0)
+              : Buffer.isBuffer(report)
+                ? report
+                : Buffer.from(typeof report === "string" ? report : JSON.stringify(report));
         return Promise.resolve({
-          exitCode: run.exit === undefined ? 0 : run.exit,
-          stdout: Buffer.alloc(0),
-          stderr: Buffer.from(run.stderr ?? ""),
-          timedOut: run.timedOut ?? false,
+          exitCode:
+            role === "subject"
+              ? run.subjectExit === undefined
+                ? 0
+                : run.subjectExit
+              : run.exit === undefined
+                ? 0
+                : run.exit,
+          stdout,
+          stderr: Buffer.from(role === "judge" ? (run.stderr ?? "") : ""),
+          timedOut: (role === "subject" ? run.subjectTimedOut : run.timedOut) ?? false,
         });
       },
-      close: () => Promise.resolve(),
+      close: () =>
+        options.closeError === undefined
+          ? Promise.resolve()
+          : Promise.reject(new Error(options.closeError)),
     };
-    return Promise.resolve(ops);
+    return Promise.resolve(ws);
   };
   return Object.assign(open, { calls });
 }
@@ -385,18 +422,33 @@ export function scriptedReviewer(
   return Object.assign(provider, { requests });
 }
 
-/** A reviewer workspace that reads nothing; scripted reviewers never call tools. */
-export const noFiles: WorkspaceOps = {
-  readFile: (path) => Promise.resolve({ ok: false, reason: `${path}: not in this fixture` }),
-  writeFile: () => Promise.resolve({ ok: false, reason: "Read-only file system" }),
-  exec: () =>
-    Promise.resolve({
-      exitCode: 1,
-      stdout: Buffer.alloc(0),
-      stderr: Buffer.alloc(0),
-      timedOut: false,
-    }),
-};
+/**
+ * Opens a reviewer workspace that reads nothing (scripted reviewers never call
+ * tools) for the requested snapshot, or for `serve` when given, to model a
+ * workspace of the wrong source.
+ */
+export function reviewerWorkspaces(
+  serve?: SourceSnapshot,
+): OpenWorkspace & { opened: SourceSnapshot[] } {
+  const opened: SourceSnapshot[] = [];
+  const open: OpenWorkspace = (snapshot) => {
+    opened.push(snapshot);
+    return Promise.resolve({
+      snapshot: serve ?? snapshot,
+      readFile: (path) => Promise.resolve({ ok: false, reason: `${path}: not in this fixture` }),
+      writeFile: () => Promise.resolve({ ok: false, reason: "Read-only file system" }),
+      exec: () =>
+        Promise.resolve({
+          exitCode: 1,
+          stdout: Buffer.alloc(0),
+          stderr: Buffer.alloc(0),
+          timedOut: false,
+        }),
+      close: () => Promise.resolve(),
+    });
+  };
+  return Object.assign(open, { opened });
+}
 
 /** Passes whatever the packet's review context asks the reviewer to judge. */
 export const approveAll = (packet: Packet): ReviewVerdict =>

@@ -209,7 +209,10 @@ export type AgentOutcome =
 export type WorkspaceOps = {
   readFile(path: string): Promise<FileResult>;
   writeFile(path: string, bytes: Buffer): Promise<WriteResult>;
-  exec(argv: readonly string[], options: { timeoutMs: number }): Promise<ExecResult>;
+  exec(
+    argv: readonly string[],
+    options: { timeoutMs: number; stdin?: Buffer },
+  ): Promise<ExecResult>;
 };
 
 export const containedOps = (ws: Workspace): WorkspaceOps => ({

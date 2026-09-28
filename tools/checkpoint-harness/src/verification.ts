@@ -1,10 +1,13 @@
 // T3-D: verification dispatch and reconciliation, verifier admission,
 // independent review and the acceptance decision (Task 3 research log §§5–7,
-// 9 and §12; Spec 00 §§3–4). Each automated binding runs in a fresh contained
-// workspace of the sealed candidate, and its report is reconciled against the
-// exact targets. A new or changed verifier counts only after a provisional
-// run, an adequacy review, a pin and a fresh acceptance run. Every record is
-// stored as evidence under the digest of its key-ordered JSON and journaled.
+// 9 and §12; Spec 00 §§3–4). Each automated binding runs its subject, the
+// code under test, in a fresh read-only workspace of the sealed candidate, and
+// its judge in a separate workspace holding only the binding's files; the
+// judge's report is reconciled against the exact targets. Reviews run in a
+// read-only workspace opened from the candidate. A new or changed verifier
+// counts only after a provisional run, an adequacy review, a pin and a fresh
+// acceptance run. Every record is stored as evidence under the digest of its
+// key-ordered JSON and journaled.
 // `decideAcceptance` is pure: it counts only records that are that evidence,
 // are committed to the journal and belong to the current attempt, and returns
 // accept, correct or pause with specific reasons. Only `recordDecision`
@@ -59,15 +62,13 @@ import {
 import {
   createWorkspace,
   fence,
+  subsetSnapshot,
   treeEntries,
   type SealedCandidate,
   type SourceSnapshot,
   type WritePolicy,
 } from "./workspace.js";
 
-/** The controller's scratch directory in a verifier workspace; never candidate source. */
-export const REPORT_DIR = ".pactwright-verification";
-const VERIFIER_POLICY: WritePolicy = { writable: [], scratch: [REPORT_DIR], protected: [] };
 const READ_ONLY: WritePolicy = { writable: [], scratch: [], protected: [] };
 
 /** A record stored as evidence: `ref` is the SHA-256 of its key-ordered JSON. */
@@ -91,19 +92,31 @@ export type TargetResult =
       reason: string;
     };
 
-/** One execution of one binding; evidence refs name its report and output. */
+/** One contained run: its argv, exit status and evidence refs of its output. */
+export type RunRecord = {
+  argv: string[];
+  exit: number | null;
+  timedOut: boolean;
+  stdout: string;
+  stderr: string;
+};
+
+/**
+ * One execution of one binding: the subject run on the candidate, then the
+ * judge run on a snapshot of the binding's files only (`judge.snapshot`),
+ * whose stdout is the report.
+ */
 export type Invocation = Identity & {
   id: string;
   stage: Stage;
   binding: string;
   digest: string;
-  argv: string[];
-  exit: number | null;
-  timedOut: boolean;
+  subject: RunRecord | null;
+  judge: (RunRecord & { snapshot: SourceSnapshot }) | null;
+  /** Why a run could not start or complete; its targets are then unavailable. */
   error: string | null;
-  report: string | null;
-  stdout: string | null;
-  stderr: string | null;
+  /** A failure to stop a workspace after its run; the run's results still stand. */
+  cleanup: string | null;
   results: TargetResult[];
 };
 
@@ -111,6 +124,10 @@ export type ReviewRecord = Identity & {
   kind: ReviewContext["kind"];
   /** Invocation records whose results the reviewer was shown. */
   invocations: string[];
+  /** The output inventory the reviewer was shown (candidate reviews). */
+  outputs: OutputProof[];
+  /** A failure to stop the reviewer's workspace after the review. */
+  cleanup: string | null;
   /** Digest of the rubric the reviewer applied. */
   rubric: string;
   /** Digest of the reviewer's packet. */
@@ -160,14 +177,17 @@ export type Decision =
   | (DecisionBase & { decision: "correct"; reasons: Reason[]; findings: Finding[] })
   | (DecisionBase & { decision: "pause"; reasons: Reason[] });
 
-/** A workspace in which one verifier invocation runs; `close` stops and removes it. */
-export type VerifierWorkspace = WorkspaceOps & { close(): Promise<void> };
-export type OpenVerifier = (candidate: SourceSnapshot) => Promise<VerifierWorkspace>;
+/** A contained workspace of `snapshot`; `close` stops and removes it. */
+export type ContainedWorkspace = WorkspaceOps & {
+  snapshot: SourceSnapshot;
+  close(): Promise<void>;
+};
+export type OpenWorkspace = (snapshot: SourceSnapshot) => Promise<ContainedWorkspace>;
 
 export type ReviewerAccess = {
   role: AgentRole;
-  /** Read-only access to the sealed candidate. */
-  workspace: WorkspaceOps;
+  /** Opens a read-only workspace of the snapshot under review. */
+  open: OpenWorkspace;
   signal: AbortSignal;
   provider?: Provider;
 };
@@ -259,25 +279,25 @@ function identityOf(
 }
 
 /**
- * Opens each verifier invocation in a fresh B workspace of the sealed
- * candidate: nothing writable but the controller's report directory, no
- * network, the candidate's user. `createWorkspace` refuses a candidate that
- * already holds that directory, so a producer-written report is never read.
+ * Opens each subject, judge and reviewer run in a fresh B workspace of the
+ * given snapshot: read-only but for its tmpfs, no network, the candidate's
+ * user, one container. Code under test never shares a workspace with a judge.
  */
-export function containedVerifier(run: RunHandle, root: string): OpenVerifier {
+export function containedWorkspaces(run: RunHandle, root: string): OpenWorkspace {
   mkdirSync(root, { recursive: true });
-  return async (candidate) => {
+  return async (snapshot) => {
     const dir = join(root, randomUUID());
     const ws = await createWorkspace(run, {
-      base: { commit: candidate.commit, tree: candidate.tree },
+      base: { commit: snapshot.commit, tree: snapshot.tree },
       root: dir,
-      policy: VERIFIER_POLICY,
+      policy: READ_ONLY,
     }).catch((e: unknown) => {
       rmSync(dir, { recursive: true, force: true });
       throw e;
     });
     return {
       ...containedOps(ws),
+      snapshot: ws.base,
       async close() {
         if (!ws.fenced) await fence(ws);
         rmSync(dir, { recursive: true, force: true });
@@ -286,101 +306,84 @@ export function containedVerifier(run: RunHandle, root: string): OpenVerifier {
   };
 }
 
-type Observed = {
-  exit: number | null;
-  timedOut: boolean;
-  error: string | null;
-  report: Buffer | null;
-  stderr: Buffer | null;
-};
+const message = (e: unknown): string => (e instanceof Error ? e.message : String(e));
+
+const sameSnapshot = (a: SourceSnapshot, b: SourceSnapshot): boolean =>
+  a.commit === b.commit && a.tree === b.tree;
+
+type Ran = { exitCode: number | null; timedOut: boolean; stdout: Buffer; stderr: Buffer };
 
 /**
- * The controller's reading of one invocation, per expected target. A pass
- * needs exactly one reported result with at least one executed assertion and
- * every required observation, and an exit status of 0 or one the report's own
- * failures explain. Exit status alone, a missing or malformed report, a skip
- * or a result the targets do not expect never pass.
+ * The controller's reading of one invocation, per expected target. A subject
+ * or judge that never ran leaves its targets unavailable; a subject timeout
+ * fails them. Otherwise the judge must exit 0 with a report holding exactly
+ * one result per target: a pass needs at least one executed assertion and
+ * every required observation. A judge failure, a missing or malformed
+ * report, a skip or a result the targets do not expect never pass.
  */
 export function reconcile(
   binding: AutomatedBinding,
   targets: readonly VerificationTarget[],
-  observed: Observed,
+  observed: { error: string | null; subject: Ran | null; judge: Ran | null },
 ): TargetResult[] {
-  const invalid = (target: VerificationTarget, reason: string): TargetResult => ({
-    target,
-    outcome: "invalid",
-    reason,
-  });
-  const failed = (target: VerificationTarget, reason: string): TargetResult => ({
-    target,
-    outcome: "failed",
-    reason,
-  });
-  if (observed.error !== null) {
-    const reason = `the verifier workspace failed: ${observed.error}`;
-    return targets.map((t): TargetResult => ({ target: t, outcome: "unavailable", reason }));
+  const all = (outcome: "failed" | "invalid" | "unavailable", reason: string): TargetResult[] =>
+    targets.map((target) => ({ target, outcome, reason }));
+  const { subject, judge } = observed;
+  const unrun = `the verifier did not run: ${observed.error ?? "no workspace"}`;
+  if (subject === null) return all("unavailable", unrun);
+  if (subject.timedOut) return all("failed", `the subject timed out after ${binding.timeoutMs} ms`);
+  if (judge === null) return all("unavailable", unrun);
+  const stderr = judge.stderr.toString("utf8").trim().slice(-500);
+  if (judge.timedOut) return all("invalid", `the judge timed out after ${binding.timeoutMs} ms`);
+  if (judge.exitCode !== 0) {
+    return all("invalid", `the judge exited ${judge.exitCode ?? "by a signal"}: ${stderr}`);
   }
-  if (observed.timedOut) {
-    return targets.map((t) => failed(t, `timed out after ${binding.timeoutMs} ms`));
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(judge.stdout.toString("utf8"));
+  } catch {
+    return all(
+      "invalid",
+      judge.stdout.length === 0 ? "no report was written" : "the report is not JSON",
+    );
   }
-  let entries: ReportEntry[] = [];
-  let issue: string | null = null;
-  if (observed.report === null) issue = "no report was written";
-  else {
-    let parsed: unknown;
-    try {
-      parsed = JSON.parse(observed.report.toString("utf8"));
-    } catch {
-      issue = "the report is not JSON";
-    }
-    if (issue === null) {
-      if (validateReport(parsed)) entries = parsed.results;
-      else {
-        const [error] = validateReport.errors ?? [];
-        issue = `the report is malformed: ${error?.instancePath || "/"} ${error?.message ?? ""}`;
-      }
-    }
+  if (!validateReport(parsed)) {
+    const [error] = validateReport.errors ?? [];
+    return all(
+      "invalid",
+      `the report is malformed: ${error?.instancePath || "/"} ${error?.message ?? ""}`,
+    );
   }
+  const entries = parsed.results;
   const place = (owner: string, criterion: string, caseId: string | null): string =>
     stringify([owner, criterion, caseId]);
   const expected = new Set(targets.map((t) => place(t.owner, t.criterion, t.caseId)));
   const unexpected = entries.filter(
     (e) => e.binding !== binding.id || !expected.has(place(e.owner, e.criterion, e.case)),
   );
-  if (issue === null && unexpected.length > 0) {
-    issue = `the report has unexpected results: ${unexpected
-      .map((e) => `${e.binding} ${e.owner}/${e.criterion}/${e.case ?? "-"}`)
-      .join(", ")}`;
+  if (unexpected.length > 0) {
+    const names = unexpected.map((e) => `${e.binding} ${e.owner}/${e.criterion}/${e.case ?? "-"}`);
+    return all("invalid", `the report has unexpected results: ${names.join(", ")}`);
   }
-  // A nonzero exit is explained only by a failure the valid report records.
-  const ended =
-    observed.exit === 0 ? null : observed.exit === null ? "killed" : `exited ${observed.exit}`;
-  const explained =
-    issue === null && entries.some((e) => e.binding === binding.id && e.outcome === "failed");
-  const stderr = observed.stderr?.toString("utf8").trim().slice(-500) ?? "";
   return targets.map((t): TargetResult => {
+    const invalid = (reason: string): TargetResult => ({ target: t, outcome: "invalid", reason });
     const mine = entries.filter(
-      (e) =>
-        e.binding === binding.id &&
-        place(e.owner, e.criterion, e.case) === place(t.owner, t.criterion, t.caseId),
+      (e) => place(e.owner, e.criterion, e.case) === place(t.owner, t.criterion, t.caseId),
     );
-    if (ended !== null && !explained) {
-      if (mine.some((e) => e.outcome === "passed")) {
-        return invalid(t, `the verifier ${ended}, yet the report claims a pass`);
-      }
-      const message = mine.find((e) => e.outcome === "failed")?.message;
-      return failed(t, `the verifier ${ended}: ${message ?? (stderr || "no result")}`);
-    }
-    if (issue !== null) return invalid(t, issue);
     const [entry] = mine;
-    if (mine.length > 1) return invalid(t, `${mine.length} results for one target`);
-    if (entry === undefined) return invalid(t, "no result was reported");
-    if (entry.outcome === "failed")
-      return failed(t, entry.message ?? "the verifier reported a failure");
-    if (entry.outcome === "skipped") return invalid(t, "the verifier skipped it");
-    if (entry.assertions < 1) return invalid(t, "passed without an executed assertion");
+    if (mine.length > 1) return invalid(`${mine.length} results for one target`);
+    if (entry === undefined) return invalid("no result was reported");
+    if (entry.outcome === "failed") {
+      return {
+        target: t,
+        outcome: "failed",
+        reason: entry.message ?? "the judge reported a failure",
+      };
+    }
+    if (entry.outcome === "skipped") return invalid("the judge skipped it");
+    if (entry.assertions < 1) return invalid("passed without an executed assertion");
     const missing = binding.observations.filter((o) => !Object.hasOwn(entry.observations, o));
-    if (missing.length > 0) return invalid(t, `missing observation ${missing.join(", ")}`);
+    if (missing.length > 0) return invalid(`missing observation ${missing.join(", ")}`);
     return {
       target: t,
       outcome: "passed",
@@ -391,10 +394,14 @@ export function reconcile(
 }
 
 /**
- * Runs one binding once in a fresh verifier workspace: one invocation, even
- * when other bindings share its command. The binding's ID and the report
- * path are passed in the environment. Workspace and execution errors are
- * recorded, never thrown.
+ * Runs one binding once: one invocation, even when other bindings share its
+ * commands. The subject runs in a read-only workspace of the candidate with
+ * nothing but `PACTWRIGHT_BINDING`; no report path or channel exists there.
+ * The judge runs in a workspace of a snapshot holding only the binding's
+ * files, so no candidate code runs where the report is written. It reads the
+ * subject's exit status and output as JSON on stdin and writes the report to
+ * stdout. Workspace and execution errors are recorded, never thrown; a
+ * failure to stop a workspace is recorded apart and never discards a run.
  */
 async function runBinding(
   run: RunHandle,
@@ -405,95 +412,119 @@ async function runBinding(
     identity: Identity;
     stage: Stage;
     candidate: SealedCandidate;
-    open: OpenVerifier;
+    open: OpenWorkspace;
   },
 ): Promise<Stored<Invocation>> {
   const { binding, identity } = input;
-  // A fresh name per invocation, so code under test cannot know it in advance.
-  const report = `${REPORT_DIR}/${randomUUID()}.json`;
-  const argv = [
-    "env",
-    `PACTWRIGHT_BINDING=${binding.id}`,
-    `PACTWRIGHT_REPORT=${report}`,
-    ...binding.command,
-  ];
-  const observed: Observed = {
-    exit: null,
-    timedOut: false,
-    error: null,
-    report: null,
-    stderr: null,
-  };
-  let stdout: Buffer | null = null;
-  try {
-    const ws = await input.open(input.candidate);
+  const env = ["env", `PACTWRIGHT_BINDING=${binding.id}`];
+  let error: string | null = null;
+  const cleanup: string[] = [];
+  const contained = async (
+    snapshot: SourceSnapshot,
+    argv: string[],
+    stdin?: Buffer,
+  ): Promise<Ran | null> => {
+    let ws: ContainedWorkspace;
     try {
-      const result = await ws.exec(argv, { timeoutMs: binding.timeoutMs });
-      observed.exit = result.exitCode;
-      observed.timedOut = result.timedOut;
-      observed.stderr = result.stderr;
-      stdout = result.stdout;
-      if (!result.timedOut) {
-        const file = await ws.readFile(report);
-        if (file.ok) observed.report = file.bytes;
-      }
-    } finally {
-      await ws.close();
+      ws = await input.open(snapshot);
+    } catch (e) {
+      error ??= message(e);
+      return null;
     }
-  } catch (e) {
-    observed.error = e instanceof Error ? e.message : String(e);
+    try {
+      if (!sameSnapshot(ws.snapshot, snapshot)) {
+        error ??= `the workspace holds ${ws.snapshot.commit}, not ${snapshot.commit}`;
+        return null;
+      }
+      const timeoutMs = binding.timeoutMs;
+      return await ws.exec(argv, stdin === undefined ? { timeoutMs } : { timeoutMs, stdin });
+    } catch (e) {
+      error ??= message(e);
+      return null;
+    } finally {
+      await ws.close().catch((e: unknown) => {
+        cleanup.push(message(e));
+      });
+    }
+  };
+
+  const subjectArgv = [...env, ...binding.command];
+  const judgeArgv = [...env, ...binding.judge];
+  const subject = await contained(input.candidate, subjectArgv);
+  let judge: Ran | null = null;
+  let judged: SourceSnapshot | null = null;
+  if (subject !== null && !subject.timedOut) {
+    try {
+      judged = subsetSnapshot(run.dir, input.candidate, binding.files);
+    } catch (e) {
+      error ??= message(e);
+    }
+    if (judged !== null) {
+      const observations = {
+        binding: binding.id,
+        exit: subject.exitCode,
+        stdout: subject.stdout.toString("utf8"),
+        stderr: subject.stderr.toString("utf8"),
+      };
+      judge = await contained(judged, judgeArgv, Buffer.from(JSON.stringify(observations)));
+    }
   }
-  const blob = (bytes: Buffer | null): string | null =>
-    bytes === null ? null : putEvidence(run, bytes);
-  const record: Invocation = {
+  const record = (argv: string[], ran: Ran): RunRecord => ({
+    argv,
+    exit: ran.exitCode,
+    timedOut: ran.timedOut,
+    stdout: putEvidence(run, ran.stdout),
+    stderr: putEvidence(run, ran.stderr),
+  });
+  const invocation: Invocation = {
     ...identity,
     id: randomUUID(),
     stage: input.stage,
     binding: binding.id,
     digest: input.digest,
-    argv,
-    exit: observed.exit,
-    timedOut: observed.timedOut,
-    error: observed.error,
-    report: blob(observed.report),
-    stdout: blob(stdout),
-    stderr: blob(observed.stderr),
-    results: reconcile(binding, input.targets, observed),
+    subject: subject === null ? null : record(subjectArgv, subject),
+    judge:
+      judge === null || judged === null
+        ? null
+        : { ...record(judgeArgv, judge), snapshot: { commit: judged.commit, tree: judged.tree } },
+    error,
+    cleanup: cleanup.length > 0 ? cleanup.join("; ") : null,
+    results: reconcile(binding, input.targets, { error, subject, judge }),
   };
-  const stored = store(run, record);
-  journal(
-    run,
-    "verifier-invocation",
-    identity,
-    stored.ref,
-    [record.report, record.stdout, record.stderr],
-    {
-      binding: binding.id,
-      stage: input.stage,
-      invocation: record.id,
-    },
+  const stored = store(run, invocation);
+  const runs = [invocation.subject, invocation.judge].flatMap((r) =>
+    r === null ? [] : [r.stdout, r.stderr],
   );
+  journal(run, "verifier-invocation", identity, stored.ref, runs, {
+    binding: binding.id,
+    stage: input.stage,
+    invocation: invocation.id,
+  });
   return stored;
 }
 
 /**
- * The admission that decides a verifier digest: the first, in journal order,
- * that completed under the current adequacy rubric. Only an `invalid`
- * (protocol-failed) admission may be followed by another; a rejected or
- * paused digest stays so, and a revised verifier is a new digest.
+ * The admissions of a verifier digest under the current adequacy rubric.
+ * The first complete adequacy review, in journal order, decides the digest
+ * for good: approved, rejected or paused; a revised verifier is a new digest.
+ * A rejection by the provisional completeness check, or an invalid admission,
+ * speaks only for its own evaluation (`pending`, the latest of them).
  */
 function admissionFor(
   admissions: readonly Stored<Admission>[],
   binding: string,
   digest: string | undefined,
-): { decided: Stored<Admission> | undefined; invalid: Admission[] } {
+  evaluation?: string,
+): { decided: Stored<Admission> | undefined; pending: Admission | undefined } {
   const own = admissions.filter(
     ({ record: a }) =>
       a.binding === binding && a.digest === digest && a.rubric === ADEQUACY_RUBRIC.digest,
   );
+  const decides = (a: Admission): boolean => a.review !== null && a.outcome !== "invalid";
   return {
-    decided: own.find(({ record: a }) => a.outcome !== "invalid"),
-    invalid: own.flatMap(({ record: a }) => (a.outcome === "invalid" ? [a] : [])),
+    decided: own.find(({ record: a }) => decides(a)),
+    pending: own.filter(({ record: a }) => !decides(a) && a.evaluation === evaluation).at(-1)
+      ?.record,
   };
 }
 
@@ -521,7 +552,7 @@ export async function verifyCandidate(
     attempt: number;
     manifest: EvaluationManifest;
     admissions: readonly Stored<Admission>[];
-    open: OpenVerifier;
+    open: OpenWorkspace;
   },
 ): Promise<Stored<Invocation>[]> {
   const identity = identityOf(run, input.attempt, input.manifest, input.candidate);
@@ -572,6 +603,11 @@ function verificationSummary(invocations: readonly Stored<Invocation>[]): Json {
   );
 }
 
+/**
+ * Runs one review in a fresh read-only workspace opened here from the sealed
+ * candidate; a workspace of any other snapshot is refused before the
+ * reviewer starts. The record names the invocations and outputs shown.
+ */
 async function runReview(
   run: RunHandle,
   input: {
@@ -583,6 +619,8 @@ async function runReview(
     context: ReviewContext;
     /** Invocation records whose results the context shows. */
     shown: readonly string[];
+    /** The output inventory the context shows. */
+    outputs: readonly OutputProof[];
     reviewer: ReviewerAccess;
   },
 ): Promise<Stored<ReviewRecord>> {
@@ -596,17 +634,33 @@ async function runReview(
     review: input.context,
   });
   if (!built.ok) throw new Error(built.diagnostics.join("\n"));
-  const outcome = await invokeAgent(
-    reviewer.role,
-    built.packet,
-    reviewer.workspace,
-    reviewer.signal,
-    reviewer.provider ? { provider: reviewer.provider } : {},
-  );
+  const ws = await reviewer.open(input.candidate);
+  let outcome: AgentOutcome;
+  let cleanup: string | null = null;
+  try {
+    if (!sameSnapshot(ws.snapshot, input.candidate)) {
+      throw new Error(
+        `the reviewer workspace holds ${ws.snapshot.commit}, not the candidate ${input.candidate.commit}`,
+      );
+    }
+    outcome = await invokeAgent(
+      reviewer.role,
+      built.packet,
+      ws,
+      reviewer.signal,
+      reviewer.provider ? { provider: reviewer.provider } : {},
+    );
+  } finally {
+    await ws.close().catch((e: unknown) => {
+      cleanup = message(e);
+    });
+  }
   const stored = store(run, {
     ...identity,
     kind: input.context.kind,
     invocations: [...input.shown],
+    outputs: [...input.outputs],
+    cleanup,
     rubric: input.context.rubric.digest,
     packet: built.digest,
     outcome,
@@ -723,6 +777,19 @@ const blockingFindings = (v: ReviewVerdict): Finding[] =>
     .filter((f) => f.severity === "blocking")
     .map(({ rule, location, defect, correction }) => ({ rule, location, defect, correction }));
 
+/** The negative judgements a reviewed verdict records, complete or not. */
+const negatives = (outcome: AgentOutcome): string[] => {
+  if (outcome.outcome !== "reviewed") return [];
+  const v = outcome.verdict;
+  return unique([
+    ...v.findings.filter((f) => f.severity === "blocking").map((f) => `${f.rule} blocking`),
+    ...v.coverage.filter((c) => c.result !== "satisfied").map((c) => `${c.subject} ${c.result}`),
+    ...v.targets
+      .filter((t) => t.result !== "passed")
+      .map((t) => `${verdictTargetKey(t)} ${t.result}`),
+  ]);
+};
+
 const unassessed = (v: ReviewVerdict): string[] => [
   ...v.coverage.filter((c) => c.result === "not-assessed").map((c) => c.subject),
   ...v.targets.filter((t) => t.result === "not-assessed").map(verdictTargetKey),
@@ -748,7 +815,7 @@ export async function admitVerifier(
     attempt: number;
     manifest: EvaluationManifest;
     accepted: readonly AcceptedOutput[];
-    open: OpenVerifier;
+    open: OpenWorkspace;
     reviewer: ReviewerAccess;
   },
 ): Promise<Stored<Admission>> {
@@ -820,7 +887,7 @@ export async function admitVerifier(
             location,
             defect: `provisional run: ${r.reason}`,
             correction:
-              "Make the verifier write exactly one executed result for this target, for its own binding only, to PACTWRIGHT_REPORT.",
+              "Make the judge report exactly one executed result for this target, for its own binding only, on stdout.",
           },
         ]
       : [],
@@ -847,6 +914,7 @@ export async function admitVerifier(
     accepted: input.accepted,
     reviewer: input.reviewer,
     shown: [provisional.ref],
+    outputs: [],
     context: {
       kind: "adequacy",
       rubric: ADEQUACY_RUBRIC,
@@ -867,7 +935,13 @@ export async function admitVerifier(
   });
   const refs = { provisional: provisional.ref, review: review.ref };
   const checked = checkVerdict(review.record.outcome, { subjects, targets: [] });
-  if (!checked.ok) return admit("invalid", refs, [], checked.issues);
+  if (!checked.ok) {
+    // An incomplete review that already judged against the verifier binds.
+    const negative = negatives(review.record.outcome);
+    return negative.length > 0
+      ? admit("paused", refs, [], [...checked.issues, ...negative])
+      : admit("invalid", refs, [], checked.issues);
+  }
   const v = checked.verdict;
   if (v.verdict === "blocked" || unassessed(v).length > 0 || checked.conflicts.length > 0) {
     return admit(
@@ -971,6 +1045,7 @@ export async function reviewCandidate(
     accepted: input.accepted,
     reviewer: input.reviewer,
     shown: shown.map((i) => i.ref),
+    outputs: proofs,
     context: {
       kind: "candidate",
       rubric: COMMON_RUBRIC,
@@ -1092,18 +1167,6 @@ export function decideAcceptance(input: AcceptanceInput): Decision {
       );
     }
   }
-  if ([...tree.keys()].some((p) => within(p, [REPORT_DIR]))) {
-    correct(
-      {
-        rule: REPORT_DIR,
-        location: REPORT_DIR,
-        defect: "the candidate contains the controller's verification directory",
-        correction: `remove ${REPORT_DIR}; only the controller writes verification reports`,
-      },
-      [],
-    );
-  }
-
   // A record counts only when it is the evidence it claims to be, is
   // committed to the journal and belongs to this attempt's evaluation.
   const intact = (label: string, stored: Stored<object>): boolean => {
@@ -1162,8 +1225,8 @@ export function decideAcceptance(input: AcceptanceInput): Decision {
     const pin =
       missing.length > 0 || changed ? undefined : approvedFor(admissions, binding.id, digest);
     if (!pin) {
-      const { decided, invalid } = admissionFor(admissions, binding.id, digest);
-      const latest = decided?.record ?? invalid.at(-1);
+      const { decided, pending } = admissionFor(admissions, binding.id, digest, evaluation);
+      const latest = decided?.record ?? pending;
       if (missing.length > 0) {
         const defect = `verifier files ${missing.join(", ")} of ${binding.id} are not in the candidate`;
         if (inScope(missing)) {
@@ -1254,7 +1317,7 @@ export function decideAcceptance(input: AcceptanceInput): Decision {
               location: binding.files.join(", ") || `verifier ${binding.id}`,
               defect,
               correction:
-                "make the verifier write exactly one executed result for this target to PACTWRIGHT_REPORT; it is admitted again",
+                "make the judge report exactly one executed result for this target on stdout; it is admitted again",
             },
             linked(t),
           );
@@ -1350,6 +1413,7 @@ export function decideAcceptance(input: AcceptanceInput): Decision {
   }
   const scope = reviewScope(plan, step, registry);
   let verdict: ReviewVerdict | null = null;
+  let bound: ReviewRecord | null = null;
   const protocol: string[] = [];
   for (const stored of input.reviews) {
     const label = `review ${stored.ref}`;
@@ -1361,18 +1425,26 @@ export function decideAcceptance(input: AcceptanceInput): Decision {
     }
     const checked = checkVerdict(stored.record.outcome, scope);
     if (!checked.ok) {
-      protocol.push(...checked.issues);
-      continue;
+      // An incomplete verdict may be followed by another, unless it already
+      // recorded a negative judgement: that binds, so it cannot be rerolled.
+      const negative = negatives(stored.record.outcome);
+      if (negative.length === 0) {
+        protocol.push(...checked.issues);
+        continue;
+      }
+      reason("owner", "review", `an incomplete review judged against: ${negative.join("; ")}`);
+    } else {
+      verdict = checked.verdict;
+      if (checked.conflicts.length > 0) {
+        reason("owner", "review", `the review contradicts itself: ${checked.conflicts.join("; ")}`);
+      }
     }
-    verdict = checked.verdict;
-    if (checked.conflicts.length > 0) {
-      reason("owner", "review", `the review contradicts itself: ${checked.conflicts.join("; ")}`);
-    }
+    bound = stored.record;
     evidence.add(stored.ref);
     break;
   }
   const provenOutputs: OutputProof[] = [];
-  if (verdict === null) {
+  if (bound === null) {
     reason(
       "retry",
       "review",
@@ -1380,6 +1452,8 @@ export function decideAcceptance(input: AcceptanceInput): Decision {
         ? `no complete common review: ${protocol.join("; ")}`
         : "the common independent review is missing",
     );
+  } else if (verdict === null) {
+    // Bound by an incomplete review's negative judgement; reason given above.
   } else if (verdict.verdict === "blocked") {
     reason("owner", "review", `the reviewer is blocked: ${verdict.blockers.join("; ")}`);
   } else {
@@ -1407,23 +1481,25 @@ export function decideAcceptance(input: AcceptanceInput): Decision {
     const satisfied = new Set(
       verdict.coverage.filter((c) => c.result === "satisfied").map((c) => c.subject),
     );
-    provenOutputs.push(...proofs.filter((p) => satisfied.has(`${step.id}/${p.output}`)));
+    for (const p of proofs.filter((q) => satisfied.has(`${step.id}/${q.output}`))) {
+      // The reviewer must have been shown exactly these paths and contents.
+      if (bound.outputs.some((q) => stringify(q) === stringify(p))) provenOutputs.push(p);
+      else reason("retry", `${step.id}/${p.output}`, "the review was shown other paths for it");
+    }
   }
 
-  // Defence in depth: nothing is accepted without a proof of every target and output.
-  if (reasons.length === 0) {
-    for (const t of targets) {
-      if (!proven.has(targetKey(t))) reason("retry", targetKey(t), "no proof", linked(t));
-    }
-    for (const o of step.outputs) {
-      if (!provenOutputs.some((p) => p.output === o.id))
-        reason("retry", `${step.id}/${o.id}`, "no proof");
-    }
-  }
   if (reasons.some((r) => r.route === "owner")) return { ...base, decision: "pause", reasons };
   if (reasons.some((r) => r.route === "correct"))
     return { ...base, decision: "correct", reasons, findings };
   if (reasons.length > 0) return { ...base, decision: "pause", reasons };
+  // Every path above gives each target and output a proof or a reason.
+  const unproven = [
+    ...targets.map(targetKey).filter((k) => !proven.has(k)),
+    ...step.outputs
+      .filter((o) => !provenOutputs.some((p) => p.output === o.id))
+      .map((o) => `${step.id}/${o.id}`),
+  ];
+  if (unproven.length > 0) throw new Error(`accepting without a proof of ${unproven.join(", ")}`);
   return {
     ...base,
     decision: "accept",

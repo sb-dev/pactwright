@@ -42,18 +42,29 @@ export const ADEQUACY_RUBRIC: PinnedRubric = pin({
     "The verifier reports only results it executed, only for its own binding, with no skip and no result copied from a file the candidate could have written.",
     "Fixtures are deterministic and need no network.",
     "The binding's files list every verifier file and fixture the command runs, so its approval pins all of them.",
-    "Code under test runs in the verifier's container and could write the report: the verifier reads PACTWRIGHT_REPORT and removes it from the environment before it loads or runs candidate code, runs candidate programs without it and writes the report last.",
+    "Residual risk to weigh: code under test runs in the same container as the verifier and could write the report; the verifier must not hand it the report path or an easy way to forge a result.",
   ],
   pass: "Pass only when every target of the binding is adequately verified. A blocking finding cites the target as its rule and names the verifier file, the defect and the correction. A target whose adequacy cannot be judged is not-assessed, never satisfied.",
 });
 
+/**
+ * An automated binding runs in two contained workspaces. The subject
+ * `command` exercises the code under test in a read-only workspace of the
+ * candidate; its exit status, stdout and stderr are the observations, and it
+ * has no report path or other means to report a result. The `judge` runs in
+ * a workspace holding only the binding's `files`, so no candidate code runs
+ * there: it reads the observations as JSON on stdin and writes the report to
+ * stdout.
+ */
 export type AutomatedBinding = {
   id: string;
   method: "automated";
   version: string;
-  /** Program and arguments, run in the candidate's verifier workspace. */
+  /** The subject: program and arguments run in the candidate workspace. */
   command: readonly string[];
-  /** Every verifier file and fixture the command runs; their content is pinned on approval. */
+  /** Program and arguments that decide each result from the subject's observations. */
+  judge: readonly string[];
+  /** Every verifier file and fixture the subject or judge runs; pinned on approval. */
   files: readonly string[];
   timeoutMs: number;
   /** Observation keys every reported result must carry. */
@@ -108,6 +119,7 @@ export function createRegistry(
     if (binding.version.trim() === "") diagnostics.push(`${where}: no version`);
     if (binding.method === "automated") {
       if ((binding.command[0] ?? "").trim() === "") diagnostics.push(`${where}: no command`);
+      if ((binding.judge[0] ?? "").trim() === "") diagnostics.push(`${where}: no judge`);
       if (!binding.files.every(relativePath) || !texts(binding.files)) {
         diagnostics.push(`${where}: files must be distinct normalised relative paths`);
       }
