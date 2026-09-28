@@ -143,7 +143,7 @@ const validateConfig = new Ajv2020({ allErrors: true }).compile<RunConfig>(
   schema as Record<string, unknown>,
 );
 
-const sha256 = (bytes: string | Buffer): string =>
+export const sha256 = (bytes: string | Buffer): string =>
   `sha256:${createHash("sha256").update(bytes).digest("hex")}`;
 
 /** Every target of a criterion: each method's bindings × each case, or one null case. */
@@ -163,7 +163,11 @@ const requirementsOf = (doc: Contract): PlannedRequirement[] =>
 const criteriaOf = (doc: Contract): PlannedCriterion[] =>
   Object.entries(doc.acceptance ?? {}).map(([id, c]) => ({ id, ...c }));
 
-async function exportRevision(repoRoot: string, revision: string, into: string): Promise<void> {
+export async function exportRevision(
+  repoRoot: string,
+  revision: string,
+  into: string,
+): Promise<void> {
   const git = spawn("git", ["archive", revision], {
     cwd: repoRoot,
     stdio: ["ignore", "pipe", "pipe"],

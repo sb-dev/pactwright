@@ -1,0 +1,64 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Checkpoint harness journal event",
+  "description": "One line of a run journal segment (Task 3 research log §9). Separate from the checkpoint contract format and the run configuration. The first line of every segment is the owner record that took the run's lock.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "seq",
+    "run",
+    "epoch",
+    "attempt",
+    "action",
+    "evaluation",
+    "time",
+    "evidence",
+    "data",
+    "prev"
+  ],
+  "properties": {
+    "seq": { "type": "integer", "minimum": 1 },
+    "run": { "type": "string", "minLength": 1 },
+    "epoch": { "type": "integer", "minimum": 1 },
+    "attempt": { "type": ["integer", "null"], "minimum": 1 },
+    "action": { "type": "string", "pattern": "^[a-z][a-z0-9-]*$" },
+    "evaluation": { "oneOf": [{ "$ref": "#/$defs/digest" }, { "type": "null" }] },
+    "time": { "type": "string", "minLength": 1 },
+    "evidence": { "type": "array", "items": { "$ref": "#/$defs/digest" } },
+    "data": { "type": "object" },
+    "prev": { "oneOf": [{ "$ref": "#/$defs/digest" }, { "type": "null" }] }
+  },
+  "if": { "properties": { "action": { "const": "owner" } } },
+  "then": { "properties": { "data": { "$ref": "#/$defs/owner" } } },
+  "$defs": {
+    "digest": { "type": "string", "pattern": "^sha256:[0-9a-f]{64}$" },
+    "owner": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["host", "pid", "previous", "quarantined", "digest"],
+      "properties": {
+        "host": { "type": "string", "minLength": 1 },
+        "pid": { "type": "integer", "minimum": 1 },
+        "previous": {
+          "oneOf": [
+            { "type": "null" },
+            {
+              "type": "object",
+              "additionalProperties": false,
+              "required": ["epoch", "length"],
+              "properties": {
+                "epoch": { "type": "integer", "minimum": 1 },
+                "length": { "type": "integer", "minimum": 0 }
+              }
+            }
+          ]
+        },
+        "quarantined": { "oneOf": [{ "type": "null" }, { "$ref": "#/$defs/digest" }] },
+        "digest": {
+          "$ref": "#/$defs/digest",
+          "description": "SHA-256 of the key-ordered owner event without this field, published with the line."
+        }
+      }
+    }
+  }
+}
