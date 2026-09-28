@@ -72,7 +72,7 @@ import {
   manifestFor,
   passing,
   passingVerifier,
-  FORGERS,
+  FAULTY_PARSERS,
   localWorkspaces,
   passVerdict,
   PRODUCER,
@@ -614,7 +614,7 @@ describe("T3-D D01 observations that cannot count prevent acceptance", () => {
     [
       "a missing required observation",
       (e) => ({ report: { results: e.map((x) => ({ ...x, observations: {} })) } }),
-      /missing observation input/,
+      /missing observation observed/,
     ],
     ["a judge that writes no report", () => ({}), /no report was written/],
     [
@@ -804,62 +804,29 @@ describe("T3-D D01 observations that cannot count prevent acceptance", () => {
     });
   });
 
-  it("candidate code cannot forge the subject's observations for the real judges", async () => {
-    // The fixture subject and judge scripts run for real, as local processes
-    // under the same Node permission flags as in a container. Every forger
-    // has no parser. The first three print fixed observations on import and
-    // exit 0; the others are FORGERS: target-aware, seal-hunting and a late
-    // seal hunter that lets the stub throw.
-    const valid = '{"name": " demo "}';
-    const invalid = '{"name": "  "}';
-    const printing = (lines: object[]): string =>
-      [
-        ...lines.map((o) => `console.log(${JSON.stringify(JSON.stringify(o))});`),
-        "process.exit(0);",
-        'export function parseConfig() { throw new Error("not implemented"); }',
-        "",
-      ].join("\n");
-    const forgers: Record<string, string> = {
-      "every case": printing([
-        { case: "valid", input: valid, returned: { name: "demo" } },
-        { case: "invalid", input: invalid, threw: "name must not be blank" },
-        { input: valid, returned: { name: "demo" } },
-        { input: invalid, threw: "name must not be blank" },
-      ]),
-      "a return": printing([{ input: valid, returned: { name: "demo" } }]),
-      "a rejection": printing([{ input: invalid, threw: "name must not be blank" }]),
-      ...FORGERS,
-    };
-    // Only the late hunter lets the subject call its stub, which really
-    // throws; parser.accepts' invalid case asks for no more than a throw.
-    const late = ["failed", "passed", "failed", "failed"];
-    for (const [forgery, forger] of Object.entries(forgers)) {
+  it("the real judges see behaviour, not what faulty candidate code claims", async () => {
+    // The fixture subject and judge scripts run for real, as local processes;
+    // the Docker test runs the same candidates contained.
+    for (const [name, { parser, outcomes }] of Object.entries(FAULTY_PARSERS)) {
       const w = await world(scratch);
-      const a = await attemptOf(w, "CP99-S01", { files: { "src/parser.mjs": forger } });
+      const a = await attemptOf(w, "CP99-S01", { files: { "src/parser.mjs": parser } });
       const local = localWorkspaces(w.run, join(scratch, `local-${randomUUID()}`));
       await admit(a, { verifier: local });
       await verify(a, local);
       await review(a);
-      const parser = a.invocations.filter((i) => i.record.binding.startsWith("parser."));
-      const results = parser.flatMap((i) => i.record.results);
+      const results = a.invocations
+        .filter((i) => i.record.binding.startsWith("parser."))
+        .flatMap((i) => i.record.results);
       assert.deepEqual(
         results.map((r) => r.outcome),
-        forgery === "late" ? late : ["failed", "failed", "failed", "failed"],
-        `${forgery}: ${JSON.stringify(results)}`,
+        outcomes,
+        `${name}: ${JSON.stringify(results)}`,
       );
-      // No hunter found a run's seal.
-      for (const { record } of parser) {
-        for (const run of record.subjects) {
-          const stderr = readEvidence(w.run.dir, run.stderr).toString("utf8");
-          assert.ok(!stderr.includes(run.seal), `${forgery} found the seal`);
-          if (forgery === "seal" || forgery === "late") assert.match(stderr, /seals tried:/);
-        }
-      }
-      assert.equal(decide(a).decision, "correct", forgery);
+      assert.equal(decide(a).decision, "correct", name);
     }
   });
 
-  it("the real command subject observes the candidate command as a separate process", async () => {
+  it("the real command judge checks what the candidate command prints", async () => {
     const w = await world(scratch);
     const local = localWorkspaces(w.run, join(scratch, `local-${randomUUID()}`));
     const good = await attemptOf(w, "CP99-S02");
@@ -957,20 +924,15 @@ describe("T3-D D01 observations that cannot count prevent acceptance", () => {
     await admit(a);
     const verifier = passes("CP99-S01");
     await verify(a, verifier);
-    const seals = new Set<string>();
     for (const call of verifier.calls) {
       const binding = registry.get(call.binding)?.binding;
       assert.ok(binding?.method === "automated");
       if (call.role === "subject") {
         assert.equal(call.snapshot.commit, a.candidate.commit);
         assert.equal(call.snapshot.tree, a.candidate.tree);
-        // The argv is the binding's command alone; the seal and target come on stdin.
+        // The argv is the binding's command alone; the target key is its stdin.
         assert.deepEqual(call.argv, [...binding.command]);
-        const [seal = "", key = "", ...rest] = call.stdin.split("\n");
-        assert.match(seal, /^[0-9a-f]{64}$/);
-        assert.ok(key.startsWith(`${call.target}/automated/${call.binding}`), key);
-        assert.deepEqual(rest, []);
-        seals.add(seal);
+        assert.ok(call.stdin.startsWith(`${call.target}/automated/${call.binding}`), call.stdin);
         continue;
       }
       assert.deepEqual(call.argv, [...binding.judge]);
@@ -979,8 +941,8 @@ describe("T3-D D01 observations that cannot count prevent acceptance", () => {
         [...candidateTree(w.run, call.snapshot).keys()].sort(),
         [...binding.files].sort(),
       );
-      // It is shown each run's sealed observations, and nothing else the
-      // run printed, under the target the controller ran it for.
+      // It is shown each run's exit status and stdout under the target the
+      // controller ran it for.
       const shown = JSON.parse(call.stdin) as {
         binding: string;
         runs: { owner: string; criterion: string; case: string | null }[];
@@ -997,19 +959,18 @@ describe("T3-D D01 observations that cannot count prevent acceptance", () => {
           "case",
           "criterion",
           "exit",
-          "observations",
           "owner",
+          "stdout",
           "timedOut",
         ]);
       }
     }
-    // Every run has its own seal, and its record keeps it.
+    // Every subject run is the only process in its own workspace.
     const subjectCalls = verifier.calls.filter((c) => c.role === "subject");
-    assert.equal(seals.size, subjectCalls.length);
-    assert.deepEqual(
-      new Set(a.invocations.flatMap((i) => i.record.subjects.map((r) => r.seal))),
-      seals,
-    );
+    assert.equal(new Set(subjectCalls.map((c) => c.workspace)).size, subjectCalls.length);
+    for (const c of subjectCalls) {
+      assert.equal(verifier.calls.filter((x) => x.workspace === c.workspace).length, 1);
+    }
     for (const { record } of a.invocations) {
       assert.ok(record.judge);
       assert.notEqual(record.judge.snapshot.commit, a.candidate.commit);

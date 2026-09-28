@@ -5,7 +5,7 @@ const { binding, runs } = JSON.parse(readFileSync(0, "utf8"));
 const results = runs.map((run) => {
   let observed = null;
   try {
-    if (run.observations.length === 1) observed = JSON.parse(run.observations[0]);
+    observed = JSON.parse(run.stdout);
   } catch {
     // Not the subject's observation.
   }
