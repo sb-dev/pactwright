@@ -705,6 +705,14 @@ export function sessionSettings(request: ProviderRequest): Record<string, unknow
   };
 }
 
+const decodeOrRaw = (text: string): string => {
+  try {
+    return decodeURIComponent(text);
+  } catch {
+    return text;
+  }
+};
+
 /**
  * Every secret value a session receives: the API key, and each proxy URL
  * that carries credentials together with its user and password parts.
@@ -722,7 +730,7 @@ export function providerSecrets(credential: Secret): string[] {
     }
     if (url.username || url.password) {
       secrets.push(value, url.username, url.password);
-      secrets.push(decodeURIComponent(url.username), decodeURIComponent(url.password));
+      secrets.push(decodeOrRaw(url.username), decodeOrRaw(url.password));
     }
   }
   return [...new Set(secrets.filter((s) => s !== ""))].sort((a, b) => b.length - a.length);
@@ -783,18 +791,51 @@ export async function* sdkProvider(request: ProviderRequest): AsyncGenerator<Pro
   }
 }
 
-function redact<T>(value: T, secrets: readonly string[]): T {
-  const walk = (v: unknown): unknown => {
-    if (typeof v === "string") {
-      return secrets.reduce((text, secret) => text.split(secret).join("[REDACTED]"), v);
-    }
-    if (Array.isArray(v)) return v.map(walk);
-    if (typeof v === "object" && v !== null) {
-      return Object.fromEntries(Object.entries(v).map(([k, x]) => [k, walk(x)]));
-    }
-    return v;
+/**
+ * Removes secrets from the free text of an outcome: reasons, blockers, the
+ * submission's fields, tool-call targets and details, and denials. Outcome
+ * kinds, limits, digests, model names and other controller-owned fields are
+ * never rewritten, so a short secret cannot corrupt them.
+ */
+function redactOutcome(outcome: AgentOutcome, secrets: readonly string[]): AgentOutcome {
+  const text = (value: string): string =>
+    secrets.reduce((t, secret) => t.split(secret).join("[REDACTED]"), value);
+  const observation: Observation = {
+    ...outcome.observation,
+    toolCalls: outcome.observation.toolCalls.map((c) => ({
+      ...c,
+      target: text(c.target),
+      detail: text(c.detail),
+    })),
+    denials: outcome.observation.denials.map(text),
   };
-  return walk(value) as T;
+  switch (outcome.outcome) {
+    case "submitted": {
+      const s = outcome.submission;
+      return {
+        ...outcome,
+        observation,
+        submission: {
+          status: s.status,
+          outputs: s.outputs.map((o) => ({ output: text(o.output), paths: o.paths.map(text) })),
+          changes: s.changes.map((c) => ({ path: text(c.path), summary: text(c.summary) })),
+          verifier_proposals: s.verifier_proposals.map((v) => ({
+            binding: text(v.binding),
+            paths: v.paths.map(text),
+            summary: text(v.summary),
+          })),
+          blockers: s.blockers.map(text),
+        },
+      };
+    }
+    case "blocked":
+      return { ...outcome, observation, blockers: outcome.blockers.map(text) };
+    case "failed":
+    case "cancelled":
+      return { ...outcome, observation, reason: text(outcome.reason) };
+    case "exhausted":
+      return { ...outcome, observation };
+  }
 }
 
 /** Differences between the effective session and the one dispatch configured. */
@@ -863,7 +904,7 @@ export async function invokeAgent(
   const done = (outcome: AgentOutcome): AgentOutcome => {
     closed = true;
     outcome.observation.durationMs = Date.now() - started;
-    return redact(outcome, secrets);
+    return redactOutcome(outcome, secrets);
   };
 
   const policy: WritePolicy = packet.effects;

@@ -50,9 +50,13 @@
       "properties": {
         "adapter": { "const": "claude-sdk" },
         "model": {
-          "description": "An exact, versioned model ID such as claude-opus-5-5 or claude-haiku-4-5-20251001; never an alias such as opus or claude-sonnet-latest.",
-          "type": "string",
-          "pattern": "^claude-[a-z]+(-[0-9]+)+$"
+          "description": "A pinned Claude API model ID this adapter supports: the current lineup of https://platform.claude.com/docs/en/models/overview. Aliases such as claude-haiku-4-5 or claude-sonnet-4-5 resolve to the latest dated snapshot and are refused; adding an ID is a reviewed change.",
+          "enum": [
+            "claude-fable-5-1",
+            "claude-opus-5-5",
+            "claude-sonnet-5",
+            "claude-haiku-4-5-20251001"
+          ]
         },
         "skills": {
           "type": "array",

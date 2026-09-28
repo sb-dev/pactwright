@@ -327,14 +327,22 @@ describe("T3-C dispatch refuses incomplete configuration", () => {
       "claude-opus",
       "claude-opus-5-5[1m]",
       "claude-opus-latest-5",
+      "claude-sonnet-4-5",
+      "claude-opus-4-5",
+      "claude-haiku-4-5",
     ]) {
       refused(
         config((c) => (c.roles.producer.model = alias)),
         "producer",
-        /model must match/,
+        /model must be equal to one of the allowed values/,
       );
     }
-    for (const exact of ["claude-opus-5-5", "claude-sonnet-5", "claude-haiku-4-5-20251001"]) {
+    for (const exact of [
+      "claude-fable-5-1",
+      "claude-opus-5-5",
+      "claude-sonnet-5",
+      "claude-haiku-4-5-20251001",
+    ]) {
       const resolved = resolveRole(
         config((c) => (c.roles.producer.model = exact)),
         "producer",
@@ -964,7 +972,92 @@ describe("T3-C observations are redacted and journaled", () => {
   });
 });
 
+/** Runs `body` with HTTPS_PROXY set to `proxy`, restoring the previous value. */
+async function withProxy<T>(proxy: string, body: () => Promise<T>): Promise<T> {
+  const saved = process.env.HTTPS_PROXY;
+  process.env.HTTPS_PROXY = proxy;
+  try {
+    return await body();
+  } finally {
+    if (saved === undefined) delete process.env.HTTPS_PROXY;
+    else process.env.HTTPS_PROXY = saved;
+  }
+}
+
 describe("T3-C proxy credentials are secrets too", () => {
+  it("one-character proxy credentials leave outcome kinds, identities and digests intact", async () => {
+    await withProxy("http://a:b@proxy.invalid", async () => {
+      const r = role();
+      const built = buildPacket(plan, "CP99-S02", r, {
+        attempt: 1,
+        accepted: [acceptedParser()],
+        policy: POLICY,
+      });
+      assert.ok(built.ok);
+      for (const [kind, final] of [
+        ["submitted", result(SUBMISSION)],
+        [
+          "failed",
+          result(null, { subtype: "error_during_execution", output: null, errors: ["a b"] }),
+        ],
+      ] as const) {
+        const provider = scripted(async function* (request) {
+          yield account();
+          yield init(request);
+          yield final;
+        });
+        const outcome = await invokeAgent(
+          r,
+          built.packet,
+          memoryOps(),
+          new AbortController().signal,
+          {
+            provider,
+          },
+        );
+        const captured = provider.requests[0];
+        assert.ok(captured);
+        assert.equal(outcome.outcome, kind);
+        const o = outcome.observation;
+        assert.equal(o.role, "producer");
+        assert.equal(o.packet, built.digest);
+        assert.equal(o.template, built.packet.template);
+        assert.equal(o.settings, sha256(stringify(sessionSettings(captured))));
+        assert.equal(o.session, "session-1");
+        assert.deepEqual(o.model, { configured: MODEL, reported: MODEL, used: [MODEL] });
+        assert.equal(o.auth, "ANTHROPIC_API_KEY");
+        assert.deepEqual(o.skills.supplied, [
+          { name: "karpathy-guidelines", digest: sha256("skill") },
+        ]);
+        assert.equal(o.skills.invoked, "not-observable");
+        if (outcome.outcome === "submitted") assert.equal(outcome.submission.status, "submitted");
+        if (outcome.outcome === "failed") {
+          assert.equal(outcome.reason, "provider error_during_execution: [REDACTED] [REDACTED]");
+        }
+      }
+    });
+  });
+
+  it("malformed percent-encoded proxy credentials still give a typed, redacted outcome", async () => {
+    const proxy = "http://user:%E0%A4%A@proxy.invalid";
+    const outcome = await withProxy(proxy, () =>
+      invoke(
+        scripted(async function* (request) {
+          yield account();
+          yield init(request);
+          yield result(null, {
+            subtype: "error_during_execution",
+            output: null,
+            errors: [`proxy ${proxy} password %E0%A4%A refused`],
+          });
+        }),
+      ),
+    );
+    assert.ok(outcome.outcome === "failed");
+    assert.ok(!JSON.stringify(outcome).includes("%E0%A4%A"));
+    assert.ok(!JSON.stringify(outcome).includes(proxy));
+  });
+
   it("a credential-bearing proxy URL never reaches an outcome or its evidence", async () => {
     const proxy = "http://harness:pa55-w0rd@proxy.invalid:8080";
     const saved = process.env.HTTPS_PROXY;
