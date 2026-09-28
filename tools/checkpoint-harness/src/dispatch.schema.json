@@ -1,0 +1,71 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Checkpoint harness dispatch configuration",
+  "description": "The run configuration sections an agent dispatch needs (Task 3 research log §§4, 10 and §12 T3-C). Planning accepts any object here; dispatch refuses until these sections are complete. Other sections are validated by run-config.schema.json.",
+  "type": "object",
+  "required": ["roles", "credentials", "budgets"],
+  "properties": {
+    "roles": {
+      "type": "object",
+      "propertyNames": { "enum": ["producer", "reviewer"] },
+      "additionalProperties": { "$ref": "#/$defs/role" }
+    },
+    "credentials": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["provider"],
+      "properties": {
+        "provider": {
+          "description": "Reference to the environment variable holding the Anthropic API key; never the key itself.",
+          "type": "string",
+          "pattern": "^env:[A-Z_][A-Z0-9_]*$"
+        }
+      }
+    },
+    "budgets": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["attempts", "wall_time_seconds", "provider_spend_limit"],
+      "properties": {
+        "attempts": { "type": "integer", "minimum": 1 },
+        "wall_time_seconds": { "type": "integer", "minimum": 1 },
+        "provider_spend_limit": {
+          "description": "Hard spend limit per invocation. The provider checks its estimate only after each turn, so turn_reservation_usd is held back for the turn that crosses the limit.",
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["usd", "turn_reservation_usd"],
+          "properties": {
+            "usd": { "type": "number", "exclusiveMinimum": 0 },
+            "turn_reservation_usd": { "type": "number", "exclusiveMinimum": 0 }
+          }
+        }
+      }
+    }
+  },
+  "$defs": {
+    "role": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["adapter", "model", "skills", "max_turns"],
+      "properties": {
+        "adapter": { "const": "claude-sdk" },
+        "model": {
+          "description": "An explicit model ID, never an alias.",
+          "type": "string",
+          "pattern": "^claude-[a-z0-9]+(-[a-z0-9]+)+$"
+        },
+        "skills": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": { "type": "string", "pattern": "^[a-z0-9][a-z0-9-]*$" }
+        },
+        "skill_digests": {
+          "description": "Expected SHA-256 of each selected skill's SKILL.md; a mismatch refuses dispatch.",
+          "type": "object",
+          "additionalProperties": { "type": "string", "pattern": "^sha256:[0-9a-f]{64}$" }
+        },
+        "max_turns": { "type": "integer", "minimum": 1 }
+      }
+    }
+  }
+}
