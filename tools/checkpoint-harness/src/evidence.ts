@@ -132,6 +132,17 @@ const validateEvent = new Ajv2020({ allErrors: true }).compile<JournalEvent>(
 /** The owner record of a schema-valid `owner` event (the schema checks its shape). */
 const ownerOf = (event: JournalEvent): OwnerRecord => event.data as OwnerRecord;
 
+/**
+ * Digest of an owner event without its `data.digest`. It is published in the
+ * same line, so an owner line is verifiable even before its anchor exists.
+ */
+function ownerDigest(event: JournalEvent): string {
+  const data = { ...event.data };
+  delete data.digest;
+  const unsigned: JournalEvent = { ...event, data };
+  return sha256(stringify(unsigned));
+}
+
 const segmentName = (epoch: number): string => `${String(epoch).padStart(6, "0")}.jsonl`;
 const segmentPath = (dir: string, epoch: number): string =>
   join(dir, "journal", segmentName(epoch));
@@ -230,6 +241,7 @@ function takeOwnership(
     data: owner,
     prev,
   };
+  event.data = { ...owner, digest: ownerDigest(event) };
   const line = `${stringify(event)}\n`;
   // The owner appends to its segment, so only it is writable.
   const temp = flushedTemp(dir, line, 0o644);
@@ -467,6 +479,9 @@ export function readRun(dir: string): RunRead {
       };
       if (stringify(actual) !== stringify(expected)) {
         return fail(`${where}: expected ${stringify(expected)}, found ${stringify(actual)}`);
+      }
+      if (j === 0 && event.data.digest !== ownerDigest(event)) {
+        return fail(`${where}: owner record does not match its digest`);
       }
       if (j === 0 && (ownerOf(event).previous?.epoch ?? null) !== (i === 0 ? null : i)) {
         return fail(`${where}: owner record names the wrong previous segment`);

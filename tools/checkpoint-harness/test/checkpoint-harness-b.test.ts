@@ -503,6 +503,44 @@ describe("T3-B durable journal and recovery", () => {
     });
   }
 
+  // Review 5336473278: an owner line without an anchor must still be verified.
+  it("B03 pauses on an edited owner line that has no anchor", async () => {
+    const run = createRun(fresh("run"));
+    rmSync(join(run.dir, "journal", "000001.head"));
+    const text = readFileSync(segment(run, 1), "utf8");
+    const forged = text.replace(/"host":"[^"]*"/, '"host":"forged-host.example.invalid"');
+    assert.notEqual(forged, text);
+    writeFileSync(segment(run, 1), forged);
+    const before = digestTree(run.dir);
+    let fenced = false;
+    const recovered = await recoverRun(run.dir, {
+      liveness: () => "dead",
+      fence: async () => {
+        fenced = true;
+      },
+    });
+    assert.equal(recovered.kind, "paused");
+    assert.match(
+      recovered.kind === "paused" ? recovered.diagnostics.join("\n") : "",
+      /000001\.jsonl:1: owner record does not match its digest/,
+    );
+    assert.deepEqual(digestTree(run.dir), before);
+    assert.equal(fenced, false);
+  });
+
+  it("B03 recovers a crash between publishing a segment and its anchor", async () => {
+    const run = createRun(fresh("run"));
+    rmSync(join(run.dir, "journal", "000001.head"));
+    const recovered = await recoverRun(run.dir, { liveness: () => "dead", fence: noFence });
+    assert.equal(recovered.kind, "recovered");
+    if (recovered.kind !== "recovered") return;
+    assert.deepEqual(
+      recovered.events.map((e) => [e.seq, e.action]),
+      [[1, "owner"]],
+    );
+    assert.equal(recovered.quarantined, null);
+  });
+
   it("B03 refuses to journal evidence that is not stored", () => {
     const run = createRun(fresh("run"));
     const before = readFileSync(segment(run, 1));
