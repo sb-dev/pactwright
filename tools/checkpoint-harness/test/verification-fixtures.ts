@@ -5,7 +5,7 @@
 // acceptance.
 
 import assert from "node:assert/strict";
-import { execFileSync } from "node:child_process";
+import { execFileSync, spawnSync } from "node:child_process";
 import { randomUUID } from "node:crypto";
 import { cpSync, mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";
@@ -264,8 +264,8 @@ export const passing = (t: VerificationTarget): ReportEntry => ({
 });
 
 /**
- * What a scripted binding run does. The subject's exit status and stdout are
- * observations; `report` is the judge's stdout (JSON unless a string or
+ * What a scripted binding run does. Each subject run's exit status and stdout
+ * are observations; `report` is the judge's stdout (JSON unless a string or
  * Buffer) and `exit` its exit status.
  */
 export type Execution = {
@@ -282,19 +282,21 @@ export type ScriptedCall = {
   snapshot: SourceSnapshot;
   binding: string;
   role: "subject" | "judge";
+  /** The subject run's `PACTWRIGHT_TARGET`; empty for the judge. */
+  target: string;
   argv: string[];
   stdin: string;
 };
 
 /**
  * An offline opener of verifier workspaces: `exec` runs no code but plays
- * `script` for the binding named in the controller's environment, as the
- * subject or, when the argv ends with the binding's judge, as the judge.
+ * `script` for the binding and target named in the controller's environment,
+ * as the subject or, when the argv ends with the binding's judge, as the judge.
  * `openError` makes opening fail as `createWorkspace` can; `closeError`
  * makes closing fail after a completed run.
  */
 export function scriptedVerifier(
-  script: (snapshot: SourceSnapshot, binding: string) => Execution,
+  script: (snapshot: SourceSnapshot, binding: string, target: string) => Execution,
   options: { openError?: string; closeError?: string; registry?: Registry } = {},
 ): OpenWorkspace & { calls: ScriptedCall[] } {
   const registry = options.registry ?? fixtureRegistry();
@@ -307,6 +309,7 @@ export function scriptedVerifier(
       writeFile: () => Promise.resolve({ ok: false, reason: "Read-only file system" }),
       exec: (argv, exec) => {
         const binding = argv.find((a) => a.startsWith("PACTWRIGHT_BINDING="))?.slice(19) ?? "";
+        const target = argv.find((a) => a.startsWith("PACTWRIGHT_TARGET="))?.slice(18) ?? "";
         const entry = registry.get(binding)?.binding;
         const judge = entry?.method === "automated" ? entry.judge : [];
         const role =
@@ -317,10 +320,11 @@ export function scriptedVerifier(
           snapshot,
           binding,
           role,
+          target,
           argv: [...argv],
           stdin: exec.stdin?.toString("utf8") ?? "",
         });
-        const run = script(snapshot, binding);
+        const run = script(snapshot, binding, target);
         const report = run.report;
         const stdout =
           role === "subject"
@@ -352,6 +356,45 @@ export function scriptedVerifier(
     return Promise.resolve(ws);
   };
   return Object.assign(open, { calls });
+}
+
+/**
+ * Opens each workspace as a local export of the snapshot and runs commands as
+ * local processes, uncontained. Only for offline tests that run the fixture
+ * verifiers against test-authored candidates; the Docker integration test
+ * runs the same verifiers contained.
+ */
+export function localWorkspaces(run: RunHandle, root: string): OpenWorkspace {
+  return async (snapshot) => {
+    const dir = join(root, randomUUID());
+    mkdirSync(dir, { recursive: true });
+    await exportRevision(join(run.dir, "source.git"), snapshot.commit, dir);
+    const ws: ContainedWorkspace = {
+      snapshot,
+      readFile: (path) => Promise.resolve({ ok: false, reason: `${path}: not read here` }),
+      writeFile: () => Promise.resolve({ ok: false, reason: "Read-only file system" }),
+      exec: (argv, { timeoutMs, stdin }) => {
+        const [program = "", ...args] = argv;
+        const ran = spawnSync(program, args, {
+          cwd: dir,
+          input: stdin,
+          timeout: timeoutMs,
+          env: { PATH: process.env.PATH ?? "" },
+        });
+        return Promise.resolve({
+          exitCode: ran.status,
+          stdout: ran.stdout,
+          stderr: ran.stderr,
+          timedOut: (ran.error as NodeJS.ErrnoException | undefined)?.code === "ETIMEDOUT",
+        });
+      },
+      close: () => {
+        rmSync(dir, { recursive: true, force: true });
+        return Promise.resolve();
+      },
+    };
+    return ws;
+  };
 }
 
 /** A verifier that passes every target of each binding it runs, from `targets`. */

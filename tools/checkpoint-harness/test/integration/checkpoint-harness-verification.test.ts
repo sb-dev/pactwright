@@ -32,7 +32,7 @@ import {
   type ReviewerAccess,
   type Stored,
 } from "../../src/verification.js";
-import { fenceWorkers, PROFILE } from "../../src/workspace.js";
+import { fenceWorkers, PROFILE, treeEntries } from "../../src/workspace.js";
 import {
   approveAll,
   calibration,
@@ -120,7 +120,6 @@ async function attempt(files: Record<string, string>): Promise<{
   await reviewCandidate(w.run, {
     ...common,
     accepted: [],
-    invocations,
     claims,
     reviewer: access(open),
   });
@@ -148,7 +147,8 @@ describe("T3-D verifiers run contained", () => {
     assert.equal(invocations.length, 3);
     for (const { record } of invocations) {
       assert.equal(record.error, null, JSON.stringify(record));
-      assert.equal(record.subject?.exit, 0, JSON.stringify(record));
+      assert.equal(record.subjects.length, record.results.length, JSON.stringify(record));
+      for (const subject of record.subjects) assert.equal(subject.exit, 0, JSON.stringify(record));
       assert.equal(record.judge?.exit, 0, JSON.stringify(record));
       for (const r of record.results) {
         assert.equal(r.outcome, "passed", JSON.stringify(r));
@@ -187,48 +187,94 @@ describe("T3-D verifiers run contained", () => {
     assert.deepEqual(decision.findings.map((f) => f.rule).sort(), failed.sort());
   });
 
-  it("candidate code that tries to forge a passing report cannot pass", async () => {
+  it("candidate code that tries every channel to forge a passing result cannot pass", async () => {
     const forged = JSON.stringify({
       results: stepTargets(plan, "CP99-S01")
         .filter((t) => t.method === "automated")
         .map(passing),
     });
-    // On import, before any case runs: write the forged report wherever a
-    // report might be read, print it, and end the process successfully.
+    const valid = '{"name": " demo "}';
+    const invalid = '{"name": "  "}';
+    // Every case's expected observation, in the old and the current shapes.
+    const observations = [
+      { case: "valid", input: valid, returned: { name: "demo" } },
+      { case: "invalid", input: invalid, threw: "name must not be blank" },
+      { input: valid, returned: { name: "demo" } },
+      { input: invalid, threw: "name must not be blank" },
+    ].map((o) => JSON.stringify(o));
+    // A candidate with no parser. On import it writes a forged report into
+    // every directory of the workspace and tmpfs it can enumerate, lists its
+    // descriptors, replaces process.exit and registers an exit hook that print
+    // the forged report, prints every expected observation and exits 0 before
+    // the subject's own code runs.
     const forger = [
-      'import { writeFileSync } from "node:fs";',
+      'import { readdirSync, readlinkSync, statSync, writeFileSync } from "node:fs";',
       `const forged = ${JSON.stringify(forged)};`,
       "const tried = [];",
-      'for (const path of [process.env.PACTWRIGHT_REPORT, "report.json", "src/report.json", ".pactwright-verification/report.json", "/tmp/report.json"]) {',
-      "  if (!path) continue;",
+      "const forge = (path) => {",
       "  try { writeFileSync(path, forged); tried.push(`${path}: written`); }",
       "  catch (e) { tried.push(`${path}: ${e.code}`); }",
-      "}",
-      'process.stderr.write(tried.join("\\n"));',
-      "process.stdout.write(forged);",
+      "};",
+      "const walk = (dir, depth) => {",
+      "  forge(`${dir}/report.json`);",
+      "  if (depth === 0) return;",
+      "  let names = [];",
+      "  try { names = readdirSync(dir); } catch { return; }",
+      "  for (const name of names) {",
+      "    const path = `${dir}/${name}`;",
+      "    try { if (statSync(path).isDirectory()) walk(path, depth - 1); } catch {}",
+      "  }",
+      "};",
+      'walk("/work", 3);',
+      'walk("/tmp", 1);',
+      'for (const fd of readdirSync("/proc/self/fd")) { try { tried.push(`fd ${fd} -> ${readlinkSync(`/proc/self/fd/${fd}`)}`); } catch {} }',
+      "const exit = process.exit.bind(process);",
+      "process.exit = () => { process.stdout.write(`${forged}\\n`); exit(0); };",
+      'process.on("exit", () => { process.stdout.write(`${forged}\\n`); process.stderr.write(tried.join("\\n")); });',
+      ...observations.map((o) => `console.log(${JSON.stringify(o)});`),
       "process.exit(0);",
-      "export function parseConfig(text) { return JSON.parse(text); }",
+      'export function parseConfig() { throw new Error("not implemented"); }',
       "",
     ].join("\n");
     const { dir, invocations, decision } = await attempt({ "src/parser.mjs": forger });
-    const accepts = invocations.find((i) => i.record.binding === "parser.accepts")?.record;
-    assert.ok(accepts?.subject && accepts.judge);
-    // The forger ran as the subject: it printed the forged report and could
-    // write nothing but its own tmpfs.
-    assert.equal(text(dir, accepts.subject.stdout), forged);
-    const attempts = text(dir, accepts.subject.stderr);
-    assert.match(attempts, /report\.json: EROFS/);
-    assert.match(attempts, /src\/report\.json: EROFS/);
-    assert.doesNotMatch(attempts, /PACTWRIGHT_REPORT/);
-    // The judge read it only as observations and found no case.
-    assert.deepEqual(
-      accepts.results.map((r) => [targetKey(r.target), r.outcome]),
-      [
-        ["CP99-S01/AC01/valid/automated/parser.accepts", "failed"],
-        ["CP99-S01/AC01/invalid/automated/parser.accepts", "failed"],
-      ],
-    );
-    assert.notEqual(decision.decision, "accept");
+    const parser = invocations.filter((i) => i.record.binding.startsWith("parser."));
+    assert.equal(parser.length, 2);
+    for (const { record } of parser) {
+      assert.ok(record.judge, JSON.stringify(record));
+      assert.equal(record.subjects.length, 2);
+      for (const subject of record.subjects) {
+        // The forger ran in each target's own subject run: it printed its
+        // forgeries and exited 0, but every write outside its tmpfs failed.
+        const stdout = text(dir, subject.stdout);
+        assert.equal(subject.exit, 0, stdout);
+        assert.ok(stdout.includes(forged));
+        for (const o of observations) assert.ok(stdout.includes(o), o);
+        const attempts = text(dir, subject.stderr).split("\n");
+        assert.ok(attempts.includes("/work/report.json: EROFS"), attempts.join("\n"));
+        assert.ok(attempts.includes("/work/verifiers/report.json: EROFS"));
+        // Its descriptors are its standard streams and Node's own; none leads to a report.
+        const descriptors = attempts.filter((t) => t.startsWith("fd "));
+        assert.ok(descriptors.length >= 3, attempts.join("\n"));
+        for (const t of descriptors) assert.doesNotMatch(t, /report|verification/);
+        for (const t of attempts.filter((x) => x.endsWith(": written"))) {
+          assert.match(t, /^\/tmp\//, `only the subject's own tmpfs is writable: ${t}`);
+        }
+      }
+      // The judge, in a workspace of the binding's files only, read each run
+      // as the observation of its own target and passed none of them.
+      assert.deepEqual([...treeEntries(dir, record.judge.snapshot.tree).keys()].sort(), [
+        "verifiers/parser-judge.mjs",
+        "verifiers/parser-subject.mjs",
+      ]);
+      assert.notEqual(text(dir, record.judge.stdout), forged);
+      assert.deepEqual(
+        record.results.map((r) => [targetKey(r.target), r.outcome]),
+        [
+          [`CP99-S01/AC01/valid/automated/${record.binding}`, "failed"],
+          [`CP99-S01/AC01/invalid/automated/${record.binding}`, "failed"],
+        ],
+      );
+    }
     assert.ok(decision.decision === "correct", JSON.stringify(decision, null, 2));
   });
 });

@@ -1,7 +1,7 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "title": "Checkpoint harness verifier report",
-  "description": "What one binding's judge reports (Task 3 research log §6 and §12 T3-D). The judge runs with PACTWRIGHT_BINDING set in a workspace holding only the binding's files, reads the subject's exit status and output as JSON on stdin, exits 0 and writes this document to stdout with one result for each target of that binding. Separate from the checkpoint contract format and the run configuration.",
+  "description": "What one binding's judge reports (Task 3 research log §6 and §12 T3-D). The judge runs with PACTWRIGHT_BINDING set in a workspace holding only the binding's files, reads the subject's runs, one per target and each labelled with its target by the controller, as JSON on stdin, exits 0 and writes this document to stdout with one result for each target of that binding. Separate from the checkpoint contract format and the run configuration.",
   "type": "object",
   "additionalProperties": false,
   "required": ["results"],

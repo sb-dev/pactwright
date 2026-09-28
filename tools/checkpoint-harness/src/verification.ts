@@ -102,7 +102,8 @@ export type RunRecord = {
 };
 
 /**
- * One execution of one binding: the subject run on the candidate, then the
+ * One execution of one binding: one subject run per expected target on the
+ * candidate, each labelled by the controller with its target key, then the
  * judge run on a snapshot of the binding's files only (`judge.snapshot`),
  * whose stdout is the report.
  */
@@ -111,7 +112,7 @@ export type Invocation = Identity & {
   stage: Stage;
   binding: string;
   digest: string;
-  subject: RunRecord | null;
+  subjects: (RunRecord & { target: string })[];
   judge: (RunRecord & { snapshot: SourceSnapshot }) | null;
   /** Why a run could not start or complete; its targets are then unavailable. */
   error: string | null;
@@ -245,6 +246,33 @@ function journal(
   });
 }
 
+/**
+ * The stored records the run's committed journal lists under `action`, in
+ * journal order. readRun has checked every evidence digest, and
+ * decideAcceptance checks each record against its reference again, so a
+ * record is what the controller stored.
+ */
+function journalRecords<T>(
+  run: RunHandle,
+  events: readonly JournalEvent[],
+  action: string,
+  keep: (e: JournalEvent) => boolean,
+): Stored<T>[] {
+  return events
+    .filter((e) => e.action === action && keep(e))
+    .map((e) => {
+      const ref = e.data.record;
+      if (typeof ref !== "string") throw new Error(`event ${e.seq}: ${action} names no record`);
+      return { ref, record: JSON.parse(readEvidence(run.dir, ref).toString("utf8")) as T };
+    });
+}
+
+function committedEvents(run: RunHandle): JournalEvent[] {
+  const read = readRun(run.dir);
+  if (!read.ok) throw new Error(read.diagnostics.join("\n"));
+  return read.records.events;
+}
+
 function contractStep(plan: PreparedRun, id: string): ContractStep {
   const step = plan.steps.find((s) => s.id === id);
   if (step?.kind !== "contract") throw new Error(`${id}: not a planned contract step`);
@@ -314,25 +342,42 @@ const sameSnapshot = (a: SourceSnapshot, b: SourceSnapshot): boolean =>
 type Ran = { exitCode: number | null; timedOut: boolean; stdout: Buffer; stderr: Buffer };
 
 /**
- * The controller's reading of one invocation, per expected target. A subject
- * or judge that never ran leaves its targets unavailable; a subject timeout
- * fails them. Otherwise the judge must exit 0 with a report holding exactly
- * one result per target: a pass needs at least one executed assertion and
- * every required observation. A judge failure, a missing or malformed
- * report, a skip or a result the targets do not expect never pass.
+ * The controller's reading of one invocation, per expected target, given the
+ * subject runs in target order. A subject run that timed out fails its own
+ * target. Otherwise a subject or judge that never ran leaves the targets
+ * unavailable, and the judge must exit 0 with a report holding exactly one
+ * result per target: a pass needs at least one executed assertion and every
+ * required observation. A judge failure, a missing or malformed report, a
+ * skip or a result the targets do not expect never pass.
  */
 export function reconcile(
   binding: AutomatedBinding,
   targets: readonly VerificationTarget[],
-  observed: { error: string | null; subject: Ran | null; judge: Ran | null },
+  observed: { error: string | null; subjects: readonly Ran[]; judge: Ran | null },
 ): TargetResult[] {
-  const all = (outcome: "failed" | "invalid" | "unavailable", reason: string): TargetResult[] =>
+  return judged(binding, targets, observed).map((result, i) =>
+    observed.subjects[i]?.timedOut === true
+      ? {
+          target: result.target,
+          outcome: "failed",
+          reason: `the subject timed out after ${binding.timeoutMs} ms`,
+        }
+      : result,
+  );
+}
+
+function judged(
+  binding: AutomatedBinding,
+  targets: readonly VerificationTarget[],
+  observed: { error: string | null; subjects: readonly Ran[]; judge: Ran | null },
+): TargetResult[] {
+  const all = (outcome: "invalid" | "unavailable", reason: string): TargetResult[] =>
     targets.map((target) => ({ target, outcome, reason }));
-  const { subject, judge } = observed;
+  const { judge } = observed;
   const unrun = `the verifier did not run: ${observed.error ?? "no workspace"}`;
-  if (subject === null) return all("unavailable", unrun);
-  if (subject.timedOut) return all("failed", `the subject timed out after ${binding.timeoutMs} ms`);
-  if (judge === null) return all("unavailable", unrun);
+  if (observed.subjects.length !== targets.length || judge === null) {
+    return all("unavailable", unrun);
+  }
   const stderr = judge.stderr.toString("utf8").trim().slice(-500);
   if (judge.timedOut) return all("invalid", `the judge timed out after ${binding.timeoutMs} ms`);
   if (judge.exitCode !== 0) {
@@ -395,11 +440,14 @@ export function reconcile(
 
 /**
  * Runs one binding once: one invocation, even when other bindings share its
- * commands. The subject runs in a read-only workspace of the candidate with
- * nothing but `PACTWRIGHT_BINDING`; no report path or channel exists there.
- * The judge runs in a workspace of a snapshot holding only the binding's
- * files, so no candidate code runs where the report is written. It reads the
- * subject's exit status and output as JSON on stdin and writes the report to
+ * commands. In a read-only workspace of the candidate, the subject runs once
+ * per expected target, as its own process, with nothing but
+ * `PACTWRIGHT_BINDING` and `PACTWRIGHT_TARGET` (`owner/criterion/case`, `-`
+ * for no case). The controller labels each run with its target, so code
+ * under test shapes only the output of the run it is in; no report path or
+ * channel exists there. The judge runs in a workspace of a snapshot holding
+ * only the binding's files, so no candidate code runs where the report is
+ * written. It reads the runs as JSON on stdin and writes the report to
  * stdout. Workspace and execution errors are recorded, never thrown; a
  * failure to stop a workspace is recorded apart and never discards a run.
  */
@@ -419,11 +467,11 @@ async function runBinding(
   const env = ["env", `PACTWRIGHT_BINDING=${binding.id}`];
   let error: string | null = null;
   const cleanup: string[] = [];
-  const contained = async (
+  const timeoutMs = binding.timeoutMs;
+  const contained = async <T>(
     snapshot: SourceSnapshot,
-    argv: string[],
-    stdin?: Buffer,
-  ): Promise<Ran | null> => {
+    use: (ws: ContainedWorkspace) => Promise<T>,
+  ): Promise<T | null> => {
     let ws: ContainedWorkspace;
     try {
       ws = await input.open(snapshot);
@@ -436,8 +484,7 @@ async function runBinding(
         error ??= `the workspace holds ${ws.snapshot.commit}, not ${snapshot.commit}`;
         return null;
       }
-      const timeoutMs = binding.timeoutMs;
-      return await ws.exec(argv, stdin === undefined ? { timeoutMs } : { timeoutMs, stdin });
+      return await use(ws);
     } catch (e) {
       error ??= message(e);
       return null;
@@ -448,25 +495,35 @@ async function runBinding(
     }
   };
 
-  const subjectArgv = [...env, ...binding.command];
+  const subjects: { target: VerificationTarget; argv: string[]; ran: Ran }[] = [];
+  await contained(input.candidate, async (ws) => {
+    for (const target of input.targets) {
+      const place = `${target.owner}/${target.criterion}/${target.caseId ?? "-"}`;
+      const argv = [...env, `PACTWRIGHT_TARGET=${place}`, ...binding.command];
+      subjects.push({ target, argv, ran: await ws.exec(argv, { timeoutMs }) });
+    }
+  });
   const judgeArgv = [...env, ...binding.judge];
-  const subject = await contained(input.candidate, subjectArgv);
   let judge: Ran | null = null;
   let judged: SourceSnapshot | null = null;
-  if (subject !== null && !subject.timedOut) {
+  if (subjects.length === input.targets.length) {
     try {
       judged = subsetSnapshot(run.dir, input.candidate, binding.files);
     } catch (e) {
       error ??= message(e);
     }
     if (judged !== null) {
-      const observations = {
-        binding: binding.id,
-        exit: subject.exitCode,
-        stdout: subject.stdout.toString("utf8"),
-        stderr: subject.stderr.toString("utf8"),
-      };
-      judge = await contained(judged, judgeArgv, Buffer.from(JSON.stringify(observations)));
+      const runs = subjects.map(({ target, ran }) => ({
+        owner: target.owner,
+        criterion: target.criterion,
+        case: target.caseId,
+        exit: ran.exitCode,
+        timedOut: ran.timedOut,
+        stdout: ran.stdout.toString("utf8"),
+        stderr: ran.stderr.toString("utf8"),
+      }));
+      const stdin = Buffer.from(JSON.stringify({ binding: binding.id, runs }));
+      judge = await contained(judged, (ws) => ws.exec(judgeArgv, { timeoutMs, stdin }));
     }
   }
   const record = (argv: string[], ran: Ran): RunRecord => ({
@@ -482,17 +539,24 @@ async function runBinding(
     stage: input.stage,
     binding: binding.id,
     digest: input.digest,
-    subject: subject === null ? null : record(subjectArgv, subject),
+    subjects: subjects.map(({ target, argv, ran }) => ({
+      target: targetKey(target),
+      ...record(argv, ran),
+    })),
     judge:
       judge === null || judged === null
         ? null
         : { ...record(judgeArgv, judge), snapshot: { commit: judged.commit, tree: judged.tree } },
     error,
     cleanup: cleanup.length > 0 ? cleanup.join("; ") : null,
-    results: reconcile(binding, input.targets, { error, subject, judge }),
+    results: reconcile(binding, input.targets, {
+      error,
+      subjects: subjects.map((s) => s.ran),
+      judge,
+    }),
   };
   const stored = store(run, invocation);
-  const runs = [invocation.subject, invocation.judge].flatMap((r) =>
+  const runs = [...invocation.subjects, invocation.judge].flatMap((r) =>
     r === null ? [] : [r.stdout, r.stderr],
   );
   journal(run, "verifier-invocation", identity, stored.ref, runs, {
@@ -1027,7 +1091,6 @@ export async function reviewCandidate(
     attempt: number;
     manifest: EvaluationManifest;
     accepted: readonly AcceptedOutput[];
-    invocations: readonly Stored<Invocation>[];
     claims: Submission["outputs"];
     reviewer: ReviewerAccess;
   },
@@ -1036,7 +1099,16 @@ export async function reviewCandidate(
   const identity = identityOf(run, input.attempt, input.manifest, input.candidate);
   const scope = reviewScope(input.plan, step, input.registry);
   const { proofs, issues } = inventory(step, input.claims, candidateTree(run, input.candidate));
-  const shown = input.invocations.filter((i) => i.record.stage === "acceptance");
+  // The evidence shown is this attempt's committed acceptance runs, never a caller's selection.
+  const shown = journalRecords<Invocation>(
+    run,
+    committedEvents(run),
+    "verifier-invocation",
+    (e) =>
+      e.attempt === identity.attempt &&
+      e.evaluation === identity.evaluation &&
+      e.data.stage === "acceptance",
+  );
   return runReview(run, {
     plan: input.plan,
     step,
@@ -1443,6 +1515,18 @@ export function decideAcceptance(input: AcceptanceInput): Decision {
     evidence.add(stored.ref);
     break;
   }
+  if (bound !== null) {
+    // The verdict speaks for the evidence it was shown: exactly the runs counted here.
+    const counted = unique([...runs.values()].flat().map((i) => i.ref));
+    const shown = unique(bound.invocations);
+    if (stringify(counted) !== stringify(shown)) {
+      reason(
+        "retry",
+        "review",
+        `the review was shown runs ${shown.join(", ") || "(none)"}, not the counted ${counted.join(", ") || "(none)"}`,
+      );
+    }
+  }
   const provenOutputs: OutputProof[] = [];
   if (bound === null) {
     reason(
@@ -1525,20 +1609,10 @@ export function recordDecision(
   run: RunHandle,
   input: Omit<AcceptanceInput, FromJournal>,
 ): { decision: Decision; ref: string; accepted: AcceptedOutput[] } {
-  const read = readRun(run.dir);
-  if (!read.ok) throw new Error(read.diagnostics.join("\n"));
-  const { events } = read.records;
+  const events = committedEvents(run);
   const evaluation = evaluationDigest(input.manifest);
-  // readRun has checked every evidence digest, and decideAcceptance checks
-  // each record against its reference again, so a record is what was stored.
   const load = <T>(action: string, keep: (e: JournalEvent) => boolean): Stored<T>[] =>
-    events
-      .filter((e) => e.action === action && keep(e))
-      .map((e) => {
-        const ref = e.data.record;
-        if (typeof ref !== "string") throw new Error(`event ${e.seq}: ${action} names no record`);
-        return { ref, record: JSON.parse(readEvidence(run.dir, ref).toString("utf8")) as T };
-      });
+    journalRecords<T>(run, events, action, keep);
   const thisAttempt = (e: JournalEvent): boolean =>
     e.attempt === input.attempt && e.evaluation === evaluation;
   const decision = decideAcceptance({

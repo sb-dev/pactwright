@@ -72,6 +72,7 @@ import {
   manifestFor,
   passing,
   passingVerifier,
+  localWorkspaces,
   passVerdict,
   PRODUCER,
   reviewerRole,
@@ -242,7 +243,6 @@ async function review(
     attempt: a.attempt,
     manifest: a.manifest,
     accepted: inputsFor(a.step),
-    invocations: a.invocations,
     claims: a.claims,
     reviewer: access(respond),
   });
@@ -648,7 +648,6 @@ describe("T3-D D01 observations that cannot count prevent acceptance", () => {
       a,
       scriptedVerifier(() => ({}), { openError: "docker: daemon unavailable" }),
     );
-    await review(a);
     assertReason(decide(a), {
       decision: "pause",
       route: "retry",
@@ -656,6 +655,7 @@ describe("T3-D D01 observations that cannot count prevent acceptance", () => {
     });
     // The verifier never ran, so running it is not a reroll.
     await verify(a);
+    await review(a);
     assert.equal(decide(a).decision, "accept");
   });
 
@@ -774,6 +774,87 @@ describe("T3-D D01 observations that cannot count prevent acceptance", () => {
     );
   });
 
+  it("a subject run that times out fails only its own target", async () => {
+    const w = await world(scratch);
+    const a = await attemptOf(w, "CP99-S01");
+    await admit(a);
+    const targets = stepTargets(plan, "CP99-S01");
+    await verify(
+      a,
+      scriptedVerifier((_, b, target) => ({
+        subjectTimedOut: b === "parser.accepts" && target === "CP99-S01/AC01/invalid",
+        report: { results: targets.filter((t) => t.binding === b).map(passing) },
+      })),
+    );
+    await review(a);
+    const accepts = a.invocations.find((i) => i.record.binding === "parser.accepts")?.record;
+    assert.deepEqual(
+      accepts?.results.map((r) => [targetKey(r.target), r.outcome]),
+      [
+        ["CP99-S01/AC01/valid/automated/parser.accepts", "passed"],
+        ["CP99-S01/AC01/invalid/automated/parser.accepts", "failed"],
+      ],
+    );
+    assertReason(decide(a), {
+      decision: "correct",
+      route: "correct",
+      subject: /^CP99-S01\/AC01\/invalid\/automated\/parser\.accepts$/,
+      detail: /the subject timed out after 30000 ms/,
+    });
+  });
+
+  it("candidate code that prints forged observations and exits cannot pass the real judges", async () => {
+    // The fixture subject and judge scripts run for real, as local processes.
+    // Each forger has no parser: on import it prints observations and exits 0
+    // before the subject's own code runs. The first prints every case in both
+    // the old and the current observation shapes; the others print one
+    // outcome whatever the case.
+    const valid = '{"name": " demo "}';
+    const invalid = '{"name": "  "}';
+    const lines = {
+      "every case": [
+        { case: "valid", input: valid, returned: { name: "demo" } },
+        { case: "invalid", input: invalid, threw: "name must not be blank" },
+        { input: valid, returned: { name: "demo" } },
+        { input: invalid, threw: "name must not be blank" },
+      ],
+      "a return": [{ input: valid, returned: { name: "demo" } }],
+      "a rejection": [{ input: invalid, threw: "name must not be blank" }],
+    };
+    for (const [forgery, printed] of Object.entries(lines)) {
+      const forger = [
+        ...printed.map((o) => `console.log(${JSON.stringify(JSON.stringify(o))});`),
+        "process.exit(0);",
+        'export function parseConfig() { throw new Error("not implemented"); }',
+        "",
+      ].join("\n");
+      const w = await world(scratch);
+      const a = await attemptOf(w, "CP99-S01", { files: { "src/parser.mjs": forger } });
+      const local = localWorkspaces(w.run, join(scratch, `local-${randomUUID()}`));
+      await admit(a, { verifier: local });
+      await verify(a, local);
+      await review(a);
+      const results = a.invocations
+        .filter((i) => i.record.binding.startsWith("parser."))
+        .flatMap((i) => i.record.results);
+      assert.equal(results.length, 4, forgery);
+      for (const binding of ["parser.accepts", "parser.rejects"]) {
+        const own = results.filter((r) => r.target.binding === binding);
+        assert.ok(
+          own.some((r) => r.outcome === "failed"),
+          `${forgery}: ${binding} ${JSON.stringify(own)}`,
+        );
+      }
+      if (forgery === "every case") {
+        assert.deepEqual(
+          results.map((r) => r.outcome),
+          ["failed", "failed", "failed", "failed"],
+        );
+      }
+      assert.equal(decide(a).decision, "correct", forgery);
+    }
+  });
+
   it("a failure to stop a workspace keeps the executed result it followed", async () => {
     const w = await world(scratch);
     const a = await attemptOf(w, "CP99-S01");
@@ -833,7 +914,7 @@ describe("T3-D D01 observations that cannot count prevent acceptance", () => {
       subject: /\/automated\/parser\.accepts$/,
       detail: /rejected a valid name/,
     });
-    const b = await attemptOf(w, "CP99-S01");
+    const b = await attemptOf(w, "CP99-S01", { attempt: 2 });
     await admit(b);
     await verify(b);
     await verify(b);
@@ -862,7 +943,18 @@ describe("T3-D D01 observations that cannot count prevent acceptance", () => {
         [...candidateTree(w.run, call.snapshot).keys()].sort(),
         [...binding.files].sort(),
       );
-      assert.equal(JSON.parse(call.stdin).binding, call.binding);
+      // It is shown each subject run under the target the controller ran it for.
+      const shown = JSON.parse(call.stdin) as {
+        binding: string;
+        runs: { owner: string; criterion: string; case: string | null }[];
+      };
+      assert.equal(shown.binding, call.binding);
+      assert.deepEqual(
+        shown.runs.map((r) => `${r.owner}/${r.criterion}/${r.case ?? "-"}`),
+        verifier.calls
+          .filter((c) => c.role === "subject" && c.binding === call.binding)
+          .map((c) => c.target),
+      );
     }
     for (const { record } of a.invocations) {
       assert.ok(record.judge);
@@ -882,13 +974,21 @@ describe("T3-D D01 observations that cannot count prevent acceptance", () => {
     await admit(a);
     const verifier = passes("CP99-S01");
     await verify(a, verifier);
+    // The subject runs once per target, as its own process.
     const subjects = verifier.calls.filter((c) => c.role === "subject");
     assert.deepEqual(
-      subjects.map((c) => c.binding),
-      ["parser.accepts", "parser.rejects", "repo.verify"],
+      subjects.map((c) => `${c.binding} ${c.target}`),
+      [
+        "parser.accepts CP99-S01/AC01/valid",
+        "parser.accepts CP99-S01/AC01/invalid",
+        "parser.rejects CP99-S01/AC01/valid",
+        "parser.rejects CP99-S01/AC01/invalid",
+        "repo.verify CP99/AC01/-",
+      ],
     );
-    assert.deepEqual(subjects[0]?.argv.slice(-2), ["node", "verifiers/parser-subject.mjs"]);
-    assert.deepEqual(subjects[1]?.argv.slice(-2), ["node", "verifiers/parser-subject.mjs"]);
+    for (const c of subjects.slice(0, 4)) {
+      assert.deepEqual(c.argv.slice(-2), ["node", "verifiers/parser-subject.mjs"]);
+    }
     const ids = a.invocations.map((i) => i.record.id);
     assert.equal(new Set(ids).size, 3);
     const events = readRun(w.run.dir);
@@ -1492,7 +1592,6 @@ describe("T3-D D03 defects and missing outputs are requirement-linked; nits do n
       attempt: a.attempt,
       manifest: a.manifest,
       accepted: [],
-      invocations: a.invocations,
       claims: a.claims,
       reviewer: { ...access(), open: opener },
     });
@@ -1516,13 +1615,56 @@ describe("T3-D D03 defects and missing outputs are requirement-linked; nits do n
         attempt: a.attempt,
         manifest: a.manifest,
         accepted: [],
-        invocations: a.invocations,
         claims: a.claims,
         reviewer: { ...access(), open: stale },
       }),
       /reviewer workspace holds .*, not the candidate/,
     );
     assert.equal(reviews(), before, "no review is recorded");
+  });
+
+  it("a review counts only for the exact runs it was shown", async () => {
+    const w = await world(scratch);
+    const a = await attemptOf(w, "CP99-S01");
+    await admit(a);
+    await verify(a);
+    await review(a);
+    const [shown] = a.reviews;
+    assert.deepEqual(
+      [...(shown?.record.invocations ?? [])].sort(),
+      a.invocations.map((i) => i.ref).sort(),
+      "the review was shown this attempt's journaled acceptance runs",
+    );
+    assert.equal(decide(a).decision, "accept");
+    // A run the reviewer never saw, or a run it saw that is no longer counted,
+    // breaks the match.
+    await verify(a);
+    assertReason(decide(a), {
+      decision: "pause",
+      route: "retry",
+      subject: /^review$/,
+      detail: /the review was shown runs .*, not the counted/,
+    });
+    assertReason(decide(a, { invocations: a.invocations.slice(1, 3) }), {
+      decision: "pause",
+      route: "retry",
+      subject: /^review$/,
+      detail: /the review was shown runs/,
+    });
+    assert.equal(recordDecision(w.run, recordInput(a)).decision.decision, "pause");
+    // A review held before the runs were journaled was shown none of them.
+    const b = await attemptOf(w, "CP99-S01", { attempt: 2 });
+    await admit(b);
+    await review(b);
+    assert.deepEqual(b.reviews[0]?.record.invocations, []);
+    await verify(b);
+    const { decision } = recordDecision(w.run, recordInput(b));
+    assertReason(decision, {
+      decision: "pause",
+      route: "retry",
+      subject: /^review$/,
+      detail: /the review was shown runs \(none\), not the counted sha256:/,
+    });
   });
 
   it("the first complete verdict binds: a later pass cannot replace a rejection", async () => {
