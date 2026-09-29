@@ -1195,7 +1195,10 @@ describe("T3-E amendments: an operator amends a paused run and it resumes in pla
   it("a restrictive write-policy amendment is enforced on the accepted candidate, as in a fresh run", async () => {
     const violation = /write-policy: src\/parser\.mjs: added outside the writable paths/;
     const w = world();
-    const producer = goodProducer();
+    // Attempt 1 fails the verifiers; attempt 2 corrects it and is accepted.
+    const producer = producerBy((attempt) => ({
+      "src/parser.mjs": attempt === 1 ? LENIENT_PARSER : GOOD_PARSER(),
+    }));
     const deps = testDeps(w.repo, { producer, reviewer: reviewer() });
     const config = runConfig(w.repo, w.scratch);
     const first = await startRun(config, deps);
@@ -1218,10 +1221,15 @@ describe("T3-E amendments: an operator amends a paused run and it resumes in pla
     });
     assert.deepEqual(paused.accepted, []);
     assert.equal(actions(dir, "acceptance").length, 1);
-    // The accepted candidate is not reused: a correction starts from the base.
+    // The accepted candidate is not reused: a correction starts from the base,
+    // keeping the findings attempt 2 was correcting, then the policy finding.
     const second = producer.packets.find((p) => p.attempt === 2);
+    const third = producer.packets.find((p) => p.attempt === 3);
+    assert.ok(second && third);
+    assert.ok(second.findings.length > 0);
+    assert.deepEqual(third.findings.slice(0, second.findings.length), second.findings);
     assert.deepEqual(
-      second?.findings.map((f) => [f.rule, f.defect]),
+      third.findings.slice(second.findings.length).map((f) => [f.rule, f.defect]),
       [["write-policy", "src/parser.mjs: added outside the writable paths"]],
     );
 

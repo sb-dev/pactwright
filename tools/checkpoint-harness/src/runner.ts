@@ -672,6 +672,15 @@ function newAttempt(
   };
 }
 
+/**
+ * The findings a restarted attempt keeps: those it was already correcting,
+ * then the new ones, each once.
+ */
+function carry(previous: readonly Finding[], added: readonly Finding[]): Finding[] {
+  const all = [...previous, ...added];
+  return all.filter((f, i) => all.findIndex((g) => stringify(g) === stringify(f)) === i);
+}
+
 const sealFindings = (diagnostics: readonly string[]): Finding[] =>
   diagnostics.map((d) => ({
     rule: "write-policy",
@@ -819,7 +828,7 @@ function evaluationAction(
       accepted,
       attempt + 1,
       production.base,
-      sealFindings(violations),
+      carry(production.findings, sealFindings(violations)),
     );
   }
   const manifest = manifestOf(ctx, step, accepted, record.candidate);
@@ -942,7 +951,6 @@ function stepAction(
   const rejected = s.rejections.filter(mine).at(-1);
   if (rejected) {
     // The rejected work is discarded: start where it started, with its findings too.
-    const findings = [...production.findings, ...sealFindings(rejected.record.diagnostics)];
     return newAttempt(
       ctx,
       s,
@@ -950,7 +958,7 @@ function stepAction(
       accepted,
       attempt + 1,
       production.from,
-      findings.filter((f, i) => findings.findIndex((g) => stringify(g) === stringify(f)) === i),
+      carry(production.findings, sealFindings(rejected.record.diagnostics)),
     );
   }
   const produced = s.producers
