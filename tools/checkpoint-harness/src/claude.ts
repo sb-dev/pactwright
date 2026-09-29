@@ -39,6 +39,7 @@ import {
   putEvidence,
   type Json,
   type JournalEvent,
+  type JsonObject,
   type RunHandle,
 } from "./evidence.js";
 import {
@@ -1270,14 +1271,22 @@ function schemaErrors(validate: { errors?: ErrorObject[] | null }): string {
     .join("; ");
 }
 
-/** Stores an outcome as evidence and journals the invocation. It records no acceptance. */
-export function recordInvocation(run: RunHandle, outcome: AgentOutcome): JournalEvent {
+/**
+ * Stores an outcome as evidence and journals the invocation, with `data`
+ * such as the step it belongs to. It records no acceptance.
+ */
+export function recordInvocation(
+  run: RunHandle,
+  outcome: AgentOutcome,
+  data: JsonObject = {},
+): JournalEvent {
   const ref = putEvidence(run, stringify(outcome));
   return appendEvent(run, {
     action: "agent-invocation",
     attempt: outcome.observation.attempt,
     evidence: [ref],
     data: {
+      ...data,
       role: outcome.observation.role,
       outcome: outcome.outcome,
       session: outcome.observation.session,

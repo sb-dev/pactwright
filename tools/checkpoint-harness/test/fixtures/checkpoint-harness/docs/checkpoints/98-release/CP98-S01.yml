@@ -1,0 +1,16 @@
+# CP98 Step 1 — Publish the report
+id: CP98-S01
+requires: []
+outputs:
+  report: A release report, `src/report.md`, published once the owner approves it.
+requirements:
+  R01:
+    source: [FIX#reporting]
+    statement: The report shall be approved before release.
+acceptance:
+  AC01:
+    covers: [R01]
+    given: A completed report.
+    when: The owner reviews it.
+    then: The owner approves the exact report, which is then published once.
+    verify: {approval: [report.release-approval]}

@@ -33,6 +33,11 @@
       "properties": {
         "attempts": { "type": "integer", "minimum": 1 },
         "wall_time_seconds": { "type": "integer", "minimum": 1 },
+        "retries": {
+          "description": "Protocol retries per step (T3-E): repeated production, admission, verification or review after a malformed result, a temporary fault or an interruption. The runner requires it; the adapter does not read it.",
+          "type": "integer",
+          "minimum": 0
+        },
         "provider_spend_limit": {
           "description": "Hard spend limit per invocation. The provider checks its estimate only after each turn, so turn_reservation_usd is held back for the turn that crosses the limit.",
           "type": "object",

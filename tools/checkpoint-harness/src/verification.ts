@@ -254,7 +254,7 @@ function journal(
  * decideAcceptance checks each record against its reference again, so a
  * record is what the controller stored.
  */
-function journalRecords<T>(
+export function journalRecords<T>(
   run: RunHandle,
   events: readonly JournalEvent[],
   action: string,
@@ -269,7 +269,8 @@ function journalRecords<T>(
     });
 }
 
-function committedEvents(run: RunHandle): JournalEvent[] {
+/** The run's committed journal events; corrupt records throw. */
+export function committedEvents(run: RunHandle): JournalEvent[] {
   const read = readRun(run.dir);
   if (!read.ok) throw new Error(read.diagnostics.join("\n"));
   return read.records.events;
@@ -604,42 +605,60 @@ const approvedFor = (
   return decided?.record.outcome === "approved" ? decided : undefined;
 };
 
+type VerifyInput = {
+  plan: PreparedRun;
+  step: string;
+  registry: Registry;
+  candidate: SealedCandidate;
+  attempt: number;
+  manifest: EvaluationManifest;
+  admissions: readonly Stored<Admission>[];
+};
+
 /**
- * Runs, for acceptance, every automated binding the step and its inherited
- * requirements need whose current digest has an approved admission. Other
- * bindings are not run; `decideAcceptance` states why they cannot count.
+ * The automated bindings `verifyCandidate` runs for acceptance: each one the
+ * step and its inherited requirements need whose current digest, as the
+ * evaluation lists it, has an approved admission. Other bindings are not
+ * run; `decideAcceptance` states why they cannot count.
  */
-export async function verifyCandidate(
-  run: RunHandle,
-  input: {
-    plan: PreparedRun;
-    step: string;
-    registry: Registry;
-    candidate: SealedCandidate;
-    attempt: number;
-    manifest: EvaluationManifest;
-    admissions: readonly Stored<Admission>[];
-    open: OpenWorkspace;
-  },
-): Promise<Stored<Invocation>[]> {
-  const identity = identityOf(run, input.attempt, input.manifest, input.candidate);
+export function runnableBindings(run: RunHandle, input: VerifyInput): string[] {
   const targets = targetsOf(input.plan, contractStep(input.plan, input.step)).filter(
     (t) => t.method === "automated",
   );
   const ids = unique(targets.map((t) => t.binding));
   const digests = bindingDigests(input.registry, candidateTree(run, input.candidate), ids);
+  return ids.filter((id) => {
+    const digest = digests[id];
+    return (
+      input.registry.get(id)?.binding.method === "automated" &&
+      digest !== undefined &&
+      input.manifest.verifiers[id] === digest &&
+      approvedFor(input.admissions, id, digest) !== undefined
+    );
+  });
+}
+
+/**
+ * Runs, for acceptance, each of the `runnableBindings`, or only those of
+ * them named in `bindings`.
+ */
+export async function verifyCandidate(
+  run: RunHandle,
+  input: VerifyInput & { open: OpenWorkspace; bindings?: readonly string[] },
+): Promise<Stored<Invocation>[]> {
+  const identity = identityOf(run, input.attempt, input.manifest, input.candidate);
+  const targets = targetsOf(input.plan, contractStep(input.plan, input.step)).filter(
+    (t) => t.method === "automated",
+  );
+  const ids = runnableBindings(run, input).filter(
+    (id) => input.bindings === undefined || input.bindings.includes(id),
+  );
+  const digests = bindingDigests(input.registry, candidateTree(run, input.candidate), ids);
   const invocations: Stored<Invocation>[] = [];
   for (const id of ids) {
     const binding = input.registry.get(id)?.binding;
     const digest = digests[id];
-    if (
-      binding?.method !== "automated" ||
-      digest === undefined ||
-      input.manifest.verifiers[id] !== digest ||
-      !approvedFor(input.admissions, id, digest)
-    ) {
-      continue;
-    }
+    if (binding?.method !== "automated" || digest === undefined) continue;
     invocations.push(
       await runBinding(run, {
         binding,
@@ -845,7 +864,7 @@ const blockingFindings = (v: ReviewVerdict): Finding[] =>
     .map(({ rule, location, defect, correction }) => ({ rule, location, defect, correction }));
 
 /** The negative judgements a reviewed verdict records, complete or not. */
-const negatives = (outcome: AgentOutcome): string[] => {
+export const negatives = (outcome: AgentOutcome): string[] => {
   if (outcome.outcome !== "reviewed") return [];
   const v = outcome.verdict;
   return unique([
@@ -1023,7 +1042,7 @@ export async function admitVerifier(
 }
 
 /** The subjects and review targets a step's common review must cover. */
-function reviewScope(
+export function reviewScope(
   plan: PreparedRun,
   step: ContractStep,
   registry: Registry,
