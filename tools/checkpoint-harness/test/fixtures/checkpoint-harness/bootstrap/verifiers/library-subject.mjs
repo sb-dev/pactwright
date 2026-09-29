@@ -1,8 +1,8 @@
 // Fixture subject for library.accepts and library.rejects (CP97-S01). It loads
-// no code under test. library-driver.mjs imports the candidate's
-// `src/config.mjs` in a child process under Node's permission model, reading
-// only `src/` and itself. The subject gives the child a one-time nonce and the
-// case input on stdin, which the driver reads before any candidate code runs.
+// no code under test. library-driver.mjs loads the candidate's
+// `src/config.mjs` in a child process, in a V8 realm of its own, under Node's
+// permission model. The subject gives the child a one-time nonce and the case
+// input on stdin, which the driver reads before any candidate code runs.
 // Everything the child prints is untrusted output: the subject derives its
 // facts from the one line that starts with the nonce, and from nothing else.
 // A child that prints no such line, or more than one, reports nothing.
@@ -36,7 +36,13 @@ const nonce = randomBytes(32).toString("hex");
 const driver = resolve("verifiers/library-driver.mjs");
 const ran = spawnSync(
   process.execPath,
-  ["--permission", `--allow-fs-read=${resolve("src")}/`, `--allow-fs-read=${driver}`, driver],
+  [
+    "--experimental-vm-modules",
+    "--permission",
+    `--allow-fs-read=${resolve("src")}/`,
+    `--allow-fs-read=${driver}`,
+    driver,
+  ],
   { input: `${nonce}\n${INPUTS[id]}`, stdio: ["pipe", "pipe", "ignore"], env: {}, timeout: 5_000 },
 );
 // A program the runner had to stop, or that a signal killed, has no exit status.

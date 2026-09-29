@@ -368,6 +368,17 @@ for (const [fd, line] of [[3, report], [1, report], [1, \`\${"0".repeat(64)} \${
 process.exit(0);
 `;
 
+/**
+ * Rewrites any report object that shows a returned out-of-range port into a
+ * rejection, through the prototype every plain object inherits.
+ */
+const TO_JSON_FORGERY = `Object.prototype.toJSON = function () {
+  return this.returned === true && /65536/.test(this.value)
+    ? { returned: false, value: null, error: "ConfigError", message: "hidden" }
+    : this;
+};
+`;
+
 /** A seeded fault, labelled in its first line like the injected ones. */
 const seeded = (label: string, text: string): string =>
   `${INJECTED}: ${label}. Seeded by the test; not produced by a model.\n${text}`;
@@ -442,6 +453,32 @@ describe("T3-F F04 boundaries: each seeded fault fails exactly its targets", () 
         "src/config.mjs": seeded(
           "untyped error",
           replaced(library, "new ConfigError(", "new Error("),
+        ),
+      },
+      ownRejections(),
+    ],
+    [
+      "hides the upper-bound fault behind an inherited toJSON",
+      LIBRARY,
+      {
+        "src/config.mjs": seeded(
+          "prototype forgery",
+          `${TO_JSON_FORGERY}${workOf(LIBRARY).fault()["src/config.mjs"] ?? ""}`,
+        ),
+      },
+      [lib("AC03/port-above-highest")],
+    ],
+    [
+      "throws errors named ConfigError that are not ConfigError instances",
+      LIBRARY,
+      {
+        "src/config.mjs": seeded(
+          "error name spoof",
+          replaced(
+            replaced(library, "throw new ConfigError(", "throw spoof("),
+            "const FIELDS",
+            'const spoof = (m) => Object.assign(new Error(m), { name: "ConfigError" });\nconst FIELDS',
+          ),
         ),
       },
       ownRejections(),
