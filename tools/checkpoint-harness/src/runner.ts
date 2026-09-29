@@ -6,9 +6,11 @@
 // and no counter lives outside the journal. Each step moves through
 // producing → verifying → reviewing → accepted; a correction returns to
 // producing with its findings, and anything else stops the run unaccepted and
-// resumable. Only `recordDecision` journals an acceptance. Approvals enter
-// only through `approveRequest`, from an operator; an approved effect runs
-// after its step's acceptance, once, between a journaled intent and a receipt.
+// resumable. Only `recordDecision` journals an acceptance, and an acceptance
+// counts only while its full evaluation identity is current. Approvals enter
+// only through `approveRequest` and configuration changes only through
+// `amendRun`, from an operator; an approved effect runs after its step's
+// acceptance, once, between a journaled intent and a receipt.
 
 import { execFileSync } from "node:child_process";
 import { randomUUID } from "node:crypto";
@@ -225,6 +227,12 @@ type RunnerConfig = RunConfig & {
 
 type RunStart = { config: RunnerConfig; plan: string; base: SourceSnapshot };
 
+/** One changed configuration value, by JSON pointer; an absent value is null. */
+export type ConfigChange = { path: string; old: unknown; new: unknown };
+
+/** An operator's journaled amendment: the new configuration, each change and why. */
+type Amendment = { actor: string; reason: string; config: RunnerConfig; changes: ConfigChange[] };
+
 /** How one attempt is produced; retries of the attempt reuse it. */
 type Production = {
   from: SourceSnapshot;
@@ -278,6 +286,8 @@ type State = {
   approvals: Fact<Approval & { request?: string }>[];
   intents: Fact<Intent>[];
   receipts: Fact<ReceiptRecord>[];
+  invalidReceipts: Fact<{ key: string; receipt: Receipt }>[];
+  amendments: Fact<Amendment>[];
 };
 
 type Acceptance = {
@@ -380,7 +390,7 @@ function journal(
 }
 
 /** The records of `action`, in journal order: `data.record`, else the first evidence. */
-function facts<T>(run: RunHandle, events: readonly JournalEvent[], action: string): Fact<T>[] {
+function facts<T>(dir: string, events: readonly JournalEvent[], action: string): Fact<T>[] {
   return events
     .filter((e) => e.action === action)
     .map((e) => {
@@ -392,13 +402,13 @@ function facts<T>(run: RunHandle, events: readonly JournalEvent[], action: strin
         attempt: e.attempt,
         evaluation: e.evaluation,
         data: e.data,
-        record: JSON.parse(readEvidence(run.dir, ref).toString("utf8")) as T,
+        record: JSON.parse(readEvidence(dir, ref).toString("utf8")) as T,
       };
     });
 }
 
 function readState(run: RunHandle, events: JournalEvent[]): State {
-  const load = <T>(action: string): Fact<T>[] => facts<T>(run, events, action);
+  const load = <T>(action: string): Fact<T>[] => facts<T>(run.dir, events, action);
   return {
     events,
     starts: load<Start>("start"),
@@ -415,6 +425,8 @@ function readState(run: RunHandle, events: JournalEvent[]): State {
     approvals: load<Approval & { request?: string }>("approval"),
     intents: load<Intent>("effect-intent"),
     receipts: load<ReceiptRecord>("effect-receipt"),
+    invalidReceipts: load("effect-invalid"),
+    amendments: load<Amendment>("amendment"),
   };
 }
 
@@ -430,41 +442,44 @@ const targetsOf = (plan: PreparedRun, step: ContractStep): VerificationTarget[] 
 ];
 
 /**
- * Each step's latest acceptance whose evaluation is bound to the step's
- * current definition and the current definition set; older or stale
- * acceptances stay in the journal as history.
+ * Each step's latest acceptance whose evaluation is still current: the
+ * manifest recomputed now for its candidate, with the current acceptances of
+ * the steps it consumes, has the accepted evaluation's digest. A change to a
+ * definition, an accepted input, the harness, a binding, the rubric, a skill
+ * or the evaluated configuration therefore invalidates the acceptance and
+ * every acceptance that consumes it, before any effect or scheduling. The
+ * old records stay in the journal as history.
  */
 function acceptances(ctx: Ctx, s: State): Map<string, Acceptance> {
   const current = new Map<string, Acceptance>();
-  for (const d of s.decisions) {
-    const decision = d.record;
-    if (decision.decision !== "accept") continue;
-    const ev = s.evaluations.find(
-      (e) => e.evaluation === decision.evaluation && e.record.step === decision.step,
-    );
-    if (!ev) throw new Error(`acceptance ${d.ref} names no journaled evaluation`);
-    const { manifest } = ev.record;
-    if (
-      manifest.step.definition !== ctx.plan.stepDefinitions[decision.step] ||
-      manifest.definitions !== ctx.plan.definitionsDigest
-    ) {
-      continue;
+  for (const step of ctx.plan.steps) {
+    if (step.kind !== "contract") continue;
+    for (const d of [...s.decisions].reverse()) {
+      const decision = d.record;
+      if (decision.decision !== "accept" || decision.step !== step.id) continue;
+      const ev = s.evaluations.find(
+        (e) => e.evaluation === decision.evaluation && e.record.step === decision.step,
+      );
+      if (!ev) throw new Error(`acceptance ${d.ref} names no journaled evaluation`);
+      const manifest = manifestOf(ctx, step, current, ev.record.candidate);
+      if (!manifest || evaluationDigest(manifest) !== decision.evaluation) continue;
+      current.set(step.id, {
+        step: step.id,
+        seq: d.seq,
+        ref: d.ref,
+        evaluation: decision.evaluation,
+        decision,
+        candidate: ev.record.candidate,
+        outputs: decision.outputs.map((o) => ({
+          step: step.id,
+          output: o.output,
+          definition: manifest.step.definition,
+          definitions: manifest.definitions,
+          evidence: [d.ref],
+        })),
+      });
+      break;
     }
-    current.set(decision.step, {
-      step: decision.step,
-      seq: d.seq,
-      ref: d.ref,
-      evaluation: decision.evaluation,
-      decision,
-      candidate: ev.record.candidate,
-      outputs: decision.outputs.map((o) => ({
-        step: decision.step,
-        output: o.output,
-        definition: manifest.step.definition,
-        definitions: manifest.definitions,
-        evidence: [d.ref],
-      })),
-    });
   }
   return current;
 }
@@ -537,25 +552,26 @@ function mounted(ctx: Ctx, policy: WritePolicy, from: SourceSnapshot): WritePoli
   };
 }
 
+/** The evaluation manifest of `candidate` now, or null when an input has no current acceptance. */
 function manifestOf(
   ctx: Ctx,
   step: ContractStep,
   accepted: Map<string, Acceptance>,
   candidate: SourceSnapshot,
-): EvaluationManifest {
+): EvaluationManifest | null {
+  const inputs: EvaluationManifest["inputs"][number][] = [];
+  for (const i of step.inputs.filter((x) => x.kind === "output")) {
+    const [producer = "", output = ""] = i.ref.split("/");
+    const acceptance = accepted.get(producer);
+    if (!acceptance) return null;
+    inputs.push({ step: producer, output, evaluation: acceptance.evaluation });
+  }
   const tree = treeEntries(ctx.run.dir, candidate.tree);
   return {
     source: { commit: candidate.commit, tree: candidate.tree },
     definitions: ctx.plan.definitionsDigest,
     step: { id: step.id, definition: ctx.plan.stepDefinitions[step.id] ?? "" },
-    inputs: step.inputs
-      .filter((i) => i.kind === "output")
-      .map((i) => {
-        const [producer = "", output = ""] = i.ref.split("/");
-        const acceptance = accepted.get(producer);
-        if (!acceptance) throw new Error(`${step.id}: input ${i.ref} has no current acceptance`);
-        return { step: producer, output, evaluation: acceptance.evaluation };
-      }),
+    inputs,
     harness: ctx.deps.harness,
     runModel: ctx.plan.runModel,
     verifiers: bindingDigests(
@@ -689,13 +705,32 @@ function effectAction(ctx: Ctx, s: State, acceptance: Acceptance): Action | null
     );
     const request = s.requests.find((r) => r.ref === approval?.record.request)?.record;
     const effect = request?.effect;
-    if (!effect || !acceptance.decision.targets.includes(key)) {
+    if (
+      !request ||
+      !effect ||
+      request.step !== step.id ||
+      request.evaluation !== acceptance.evaluation ||
+      targetKey(request.target) !== key ||
+      effect.candidate !== acceptance.candidate.commit ||
+      !acceptance.decision.targets.includes(key)
+    ) {
       return pause(step.id, [
         reason("owner", key, "the accepted approval is bound to no approved effect request"),
       ]);
     }
     const id = effectKey(effect);
     if (s.receipts.some((r) => r.record.key === id)) continue;
+    // A response, even a wrong one, means the effect was sent: never again.
+    const invalid = s.invalidReceipts.find((r) => r.record.key === id);
+    if (invalid) {
+      return pause(step.id, [
+        reason(
+          "effect-invalid",
+          id,
+          `the service answered with a receipt for ${invalid.record.receipt.key} at ${invalid.record.receipt.target}; the harness will not repeat the effect`,
+        ),
+      ]);
+    }
     const intents = s.intents.filter((i) => i.record.key === id);
     const service = ctx.deps.effects;
     if (!service) {
@@ -724,6 +759,39 @@ function effectAction(ctx: Ctx, s: State, acceptance: Acceptance): Action | null
   return null;
 }
 
+/**
+ * Approvals of an evaluation that did not come through the operator channel.
+ * D counts an approval by target, authority, candidate and evaluation; the
+ * runner also requires it to answer a journaled request of this step,
+ * evaluation, target and candidate, by an actor holding the request's
+ * authority in the run's configuration.
+ */
+function unchanneled(ctx: Ctx, s: State, step: ContractStep, evaluation: string): PauseReason[] {
+  return s.approvals
+    .filter((a) => a.evaluation === evaluation)
+    .flatMap((a) => {
+      const request = s.requests.find((r) => r.ref === a.record.request)?.record;
+      const holders = request ? (ctx.config.permissions.approvers[request.authority] ?? []) : [];
+      const channelled =
+        request !== undefined &&
+        request.step === step.id &&
+        request.evaluation === evaluation &&
+        request.candidate === a.record.candidate &&
+        request.authority === a.record.authority &&
+        targetKey(request.target) === targetKey(a.record.target) &&
+        holders.includes(a.record.actor);
+      return channelled
+        ? []
+        : [
+            reason(
+              "owner",
+              targetKey(a.record.target),
+              `approval ${a.ref} did not come through the operator channel for a request of this evaluation`,
+            ),
+          ];
+    });
+}
+
 /** The phases of one evaluation: admissions, verification, review, decision, approvals. */
 function evaluationAction(
   ctx: Ctx,
@@ -736,6 +804,7 @@ function evaluationAction(
   const { run, plan, deps } = ctx;
   const record = latest.record;
   const manifest = manifestOf(ctx, step, accepted, record.candidate);
+  if (!manifest) throw new Error(`${step.id}: an input has no current acceptance`);
   const evaluation = evaluationDigest(manifest);
   // A changed input, definition, rubric, verifier, skill or configuration
   // makes a new evaluation of the same candidate; earlier records stay.
@@ -786,8 +855,9 @@ function evaluationAction(
     (r) => checkVerdict(r.record.outcome, scope).ok || negatives(r.record.outcome).length > 0,
   );
   if (!binds) {
-    const last = reviews.at(-1)?.record.outcome;
-    if (last?.outcome === "exhausted") {
+    const lastReview = reviews.at(-1);
+    const last = lastReview?.record.outcome;
+    if (last?.outcome === "exhausted" && !amendedSince(s, lastReview?.seq ?? 0)) {
       return pause(step.id, [
         reason("exhausted", step.id, `the reviewer exhausted its ${last.limit} limit`),
       ]);
@@ -799,7 +869,10 @@ function evaluationAction(
   const approvedSince = s.approvals.some(
     (a) => a.evaluation === evaluation && a.seq > (decision?.seq ?? 0),
   );
-  if (!decision || approvedSince) return { kind: "decide", ev };
+  if (!decision || approvedSince) {
+    const bypassed = unchanneled(ctx, s, step, evaluation);
+    return bypassed.length > 0 ? pause(step.id, bypassed) : { kind: "decide", ev };
+  }
   const d = decision.record;
   if (d.decision === "accept") {
     throw new Error(`${step.id}: evaluation ${evaluation} is accepted but not current`);
@@ -850,20 +923,16 @@ function stepAction(
   if (evaluation) return evaluationAction(ctx, s, step, accepted, evaluation, production);
   const rejected = s.rejections.filter(mine).at(-1);
   if (rejected) {
-    const previous = s.evaluations.filter((e) => e.record.step === step.id).at(-1);
-    return newAttempt(
-      ctx,
-      s,
-      step,
-      accepted,
-      attempt + 1,
-      previous?.record.candidate ?? production.from,
-      sealFindings(rejected.record.diagnostics),
-    );
+    // The rejected work is discarded: start where it started, with its findings too.
+    return newAttempt(ctx, s, step, accepted, attempt + 1, production.from, [
+      ...production.findings,
+      ...sealFindings(rejected.record.diagnostics),
+    ]);
   }
-  const outcome = s.producers
+  const produced = s.producers
     .filter((p) => p.data.step === step.id && p.attempt === attempt)
-    .at(-1)?.record;
+    .at(-1);
+  const outcome = amendedSince(s, produced?.seq ?? 0) ? undefined : produced?.record;
   if (outcome?.outcome === "blocked") {
     return pause(
       step.id,
@@ -875,7 +944,8 @@ function stepAction(
       reason("exhausted", step.id, `the producer exhausted its ${outcome.limit} limit`),
     ]);
   }
-  // Interrupted, failed, cancelled, or submitted without a sealed candidate.
+  // Interrupted, failed, cancelled, submitted without a sealed candidate, or
+  // stopped by a limit or blocker that a later amendment addressed.
   return { kind: "produce", step, attempt, production };
 }
 
@@ -936,6 +1006,9 @@ function phaseOf(
       return null;
   }
 }
+
+/** Whether an operator amended the configuration after event `seq`. */
+const amendedSince = (s: State, seq: number): boolean => s.amendments.some((a) => a.seq > seq);
 
 /** Repeated executions of the step's phases and effects: the protocol retries used. */
 function retriesUsed(s: State, step: string): number {
@@ -1037,12 +1110,14 @@ async function produce(
       );
       return undefined;
     }
+    const manifest = manifestOf(ctx, step, accepted, captured.candidate);
+    if (!manifest) throw new Error(`${step.id}: an input has no current acceptance`);
     const record: EvaluationRecord = {
       step: step.id,
       attempt,
       candidate: captured.candidate,
       claims: outcome.submission.outputs,
-      manifest: manifestOf(ctx, step, accepted, captured.candidate),
+      manifest,
     };
     journal(
       run,
@@ -1067,6 +1142,7 @@ async function effect(
   const { step, key, request } = action;
   const receipt = (found: Receipt, reconciled: boolean): Stop | undefined => {
     if (found.key !== key || found.target !== request.target) {
+      journal(ctx.run, "effect-invalid", { key, receipt: found }, {}, { step, key });
       return pause(step, [
         reason(
           "effect-invalid",
@@ -1271,7 +1347,11 @@ type Admitted =
  * sections, both roles with their credential and pinned skills, the write
  * policy and the repository head.
  */
-async function admit(config: unknown, deps: RunnerDeps, name: string): Promise<Admitted> {
+async function admit(
+  config: unknown,
+  deps: Pick<RunnerDeps, "repoRoot" | "skillsRoot" | "env">,
+  name: string,
+): Promise<Admitted> {
   const prepared = await prepareRun(config, { repoRoot: deps.repoRoot, configName: name });
   if (!prepared.ok) return prepared;
   if (!validateRunner(config)) {
@@ -1315,6 +1395,23 @@ async function admit(config: unknown, deps: RunnerDeps, name: string): Promise<A
   return { ok: true, config, plan: prepared.plan, roles: { producer, reviewer } };
 }
 
+/**
+ * The configuration an evaluation depends on. Budgets, workspace roots,
+ * credentials, approvers and the selection bound how far, where and by whom
+ * work proceeds, so amending them keeps accepted evaluations current.
+ */
+const evaluatedConfiguration = (config: RunnerConfig): object => ({
+  repository: config.repository,
+  checkpoint: config.checkpoint,
+  definitions: config.definitions,
+  roles: config.roles,
+  permissions: {
+    writable: config.permissions.writable,
+    scratch: config.permissions.scratch,
+    protected: config.permissions.protected,
+  },
+});
+
 function context(
   run: RunHandle,
   admitted: Extract<Admitted, { ok: true }>,
@@ -1335,8 +1432,19 @@ function context(
         roles[r].skills.map((skill) => [`${r}/${skill.name}`, skill.digest]),
       ),
     ),
-    configuration: sha256(stringify(config)),
+    configuration: sha256(stringify(evaluatedConfiguration(config))),
   };
+}
+
+/** The run's configuration: its latest amendment, else the one it started with, and its base. */
+function pinned(
+  dir: string,
+  events: readonly JournalEvent[],
+): { config: RunnerConfig; base: SourceSnapshot } | null {
+  const [started] = facts<RunStart>(dir, events, "run-start");
+  if (!started) return null;
+  const amended = facts<Amendment>(dir, events, "amendment").at(-1);
+  return { config: amended?.record.config ?? started.record.config, base: started.record.base };
 }
 
 const invalid = (diagnostics: string[]): RunResult => ({ outcome: "invalid", diagnostics });
@@ -1398,17 +1506,47 @@ export async function resumeRun(dir: string, deps: RunnerDeps): Promise<RunResul
     };
   }
   const { run } = recovery;
-  const [started] = facts<RunStart>(run, recovery.events, "run-start");
-  if (!started) {
+  const configured = pinned(dir, recovery.events);
+  if (!configured) {
     releaseRun(run);
     return invalid([`${dir}: the run has no run-start record`]);
   }
-  const admitted = await admit(started.record.config, deps, `${dir} run-start`);
+  const admitted = await admit(configured.config, deps, `${dir} configuration`);
   if (!admitted.ok) {
     releaseRun(run);
     return invalid(admitted.diagnostics);
   }
-  return drive(context(run, admitted, started.record.base, deps));
+  return drive(context(run, admitted, configured.base, deps));
+}
+
+type Taken =
+  { ok: true; run: RunHandle; events: JournalEvent[] } | { ok: false; diagnostics: string[] };
+
+/**
+ * Takes over a released run for an operator record. Only a released run is
+ * taken over, so no worker can be running to fence, and a live or crashed
+ * controller is never displaced.
+ */
+async function takeReleased(dir: string): Promise<Taken> {
+  const read = readRun(dir);
+  if (!read.ok) return read;
+  if (!read.records.owner.released) {
+    return {
+      ok: false,
+      diagnostics: [`${dir}: the run is not released; wait for it to pause, or resume it first`],
+    };
+  }
+  const recovery = await recoverRun(dir, {
+    fence: () => Promise.resolve(),
+    liveness: () => "unknown",
+  });
+  if (recovery.kind !== "recovered") {
+    return {
+      ok: false,
+      diagnostics: [`${dir}: the run could not be taken over (${recovery.kind})`],
+    };
+  }
+  return { ok: true, run: recovery.run, events: recovery.events };
 }
 
 export type ApproveResult = { ok: true; approval: string } | { ok: false; diagnostics: string[] };
@@ -1418,7 +1556,7 @@ function refusal(
   events: readonly JournalEvent[],
   input: { request: string; actor: string },
 ): string | null {
-  const requests = facts<ApprovalRequest>(run, events, "approval-request");
+  const requests = facts<ApprovalRequest>(run.dir, events, "approval-request");
   const found = requests.find((r) => r.ref === input.request);
   if (!found) return `${input.request} is not an approval request of this run`;
   const request = found.record;
@@ -1432,12 +1570,11 @@ function refusal(
   ) {
     return `${input.request} is superseded by a later request for ${targetKey(request.target)}`;
   }
-  const approvals = facts<Approval & { request?: string }>(run, events, "approval");
+  const approvals = facts<Approval & { request?: string }>(run.dir, events, "approval");
   if (approvals.some((a) => a.record.request === input.request)) {
     return `${input.request} is already decided`;
   }
-  const [started] = facts<RunStart>(run, events, "run-start");
-  const holders = started?.record.config.permissions.approvers[request.authority] ?? [];
+  const holders = pinned(run.dir, events)?.config.permissions.approvers[request.authority] ?? [];
   if (!holders.includes(input.actor)) {
     return `${input.actor} does not hold the ${request.authority} authority of this run`;
   }
@@ -1455,26 +1592,9 @@ export async function approveRequest(
   dir: string,
   input: { request: string; decision: "approved" | "denied"; actor: string },
 ): Promise<ApproveResult> {
-  const read = readRun(dir);
-  if (!read.ok) return read;
-  if (!read.records.owner.released) {
-    return {
-      ok: false,
-      diagnostics: [`${dir}: the run is not released; wait for it to pause, or resume it first`],
-    };
-  }
-  // Only a released run is taken over, so no worker can be running to fence.
-  const recovery = await recoverRun(dir, {
-    fence: () => Promise.resolve(),
-    liveness: () => "unknown",
-  });
-  if (recovery.kind !== "recovered") {
-    return {
-      ok: false,
-      diagnostics: [`${dir}: the run could not be taken over (${recovery.kind})`],
-    };
-  }
-  const { run, events } = recovery;
+  const taken = await takeReleased(dir);
+  if (!taken.ok) return taken;
+  const { run, events } = taken;
   const refused = refusal(run, events, input);
   if (refused) {
     releaseRun(run);
@@ -1494,6 +1614,86 @@ export async function approveRequest(
   const stored = recordApproval(run, request.attempt, approval);
   releaseRun(run);
   return { ok: true, approval: stored.ref };
+}
+
+/** Configuration that identifies the run itself; changing it needs a new run. */
+const FIXED = ["/repository", "/checkpoint", "/permissions/approvers"];
+
+/** The leaf differences between two JSON values, by JSON pointer. */
+function differences(before: unknown, after: unknown, path = ""): ConfigChange[] {
+  const object = (v: unknown): v is Record<string, unknown> =>
+    typeof v === "object" && v !== null && !Array.isArray(v);
+  if (object(before) && object(after)) {
+    return unique([...Object.keys(before), ...Object.keys(after)]).flatMap((key) =>
+      differences(before[key], after[key], `${path}/${key}`),
+    );
+  }
+  return stringify(before) === stringify(after)
+    ? []
+    : [{ path: path || "/", old: before ?? null, new: after ?? null }];
+}
+
+export type AmendResult =
+  { ok: true; amendment: string; changes: ConfigChange[] } | { ok: false; diagnostics: string[] };
+
+/**
+ * An operator's amendment of a released run's configuration (research log
+ * §7): budgets, roles, the write policy, workspace roots, the definitions
+ * revision or the selection. The new configuration must pass the same
+ * admission as `run`. The amendment journals the actor, the reason and each
+ * old and new value; prior attempts, receipts and acceptances stay, and
+ * resume continues under the new configuration. Changing only budgets,
+ * workspace roots, credentials or the selection keeps accepted evaluations
+ * current; any other change re-evaluates them. The repository, the checkpoint
+ * and the approvers identify the run and cannot be amended.
+ */
+export async function amendRun(
+  dir: string,
+  input: { config: unknown; reason: string; actor: string },
+  deps: Pick<RunnerDeps, "repoRoot" | "skillsRoot" | "env">,
+): Promise<AmendResult> {
+  const refuse = (diagnostic: string): AmendResult => ({ ok: false, diagnostics: [diagnostic] });
+  if (input.reason.trim() === "") return refuse("an amendment needs a reason");
+  const read = readRun(dir);
+  if (!read.ok) return read;
+  const before = pinned(dir, read.records.events);
+  if (!before) return refuse(`${dir}: the run has no run-start record`);
+  const config: unknown = JSON.parse(stringify(input.config) ?? "null");
+  const changes = differences(before.config, config);
+  if (changes.length === 0) return refuse("the configuration is unchanged");
+  const fixed = changes.filter((c) =>
+    FIXED.some((f) => c.path === f || c.path.startsWith(`${f}/`)),
+  );
+  if (fixed.length > 0) {
+    return refuse(
+      `${fixed.map((c) => c.path).join(", ")} cannot be amended within a run; start a new run`,
+    );
+  }
+  const admitted = await admit(config, deps, "amendment");
+  if (!admitted.ok) return admitted;
+  const taken = await takeReleased(dir);
+  if (!taken.ok) return taken;
+  if (stringify(pinned(dir, taken.events)?.config) !== stringify(before.config)) {
+    releaseRun(taken.run);
+    return refuse(`${dir}: the configuration changed meanwhile; amend again`);
+  }
+  const amendment: Amendment = {
+    actor: input.actor,
+    reason: input.reason,
+    config: admitted.config,
+    changes,
+  };
+  const ref = journal(
+    taken.run,
+    "amendment",
+    amendment,
+    {},
+    {
+      changes: changes.map((c) => c.path),
+    },
+  );
+  releaseRun(taken.run);
+  return { ok: true, amendment: ref, changes };
 }
 
 /** The runner states journaled facts show, in order, for status and recovery traces. */

@@ -310,7 +310,7 @@ export const goodProducer = (): ScriptedAgent =>
 /** A local effect service with inspectable receipts; `fault` fails its next execution once. */
 export type ReceiptService = EffectService & {
   executions: string[];
-  fault: "crash-before" | "crash-after" | "lost" | null;
+  fault: "crash-before" | "crash-after" | "lost" | "wrong-receipt" | null;
 };
 
 export class Crash extends Error {
@@ -335,6 +335,9 @@ export function receiptService(options: { inspect?: boolean } = {}): ReceiptServ
       effects.set(key, request);
       if (fault === "crash-after") return Promise.reject(new Crash("crash after the effect"));
       if (fault === "lost") return Promise.resolve(null);
+      if (fault === "wrong-receipt") {
+        return Promise.resolve({ key, target: "elsewhere", reference: "misrouted" });
+      }
       return Promise.resolve(receipt(key, request, `published-${service.executions.length}`));
     },
     ...(options.inspect === false
@@ -347,11 +350,14 @@ export function receiptService(options: { inspect?: boolean } = {}): ReceiptServ
   return service;
 }
 
-/** A progress callback that crashes the controller once, after the first event of `action`. */
-export function crashAfter(action: string): (event: JournalEvent) => void {
+/**
+ * A progress callback that crashes the controller once, after the first
+ * event of `action` (of `phase`, for a phase start).
+ */
+export function crashAfter(action: string, phase?: string): (event: JournalEvent) => void {
   let fired = false;
   return (event) => {
-    if (!fired && event.action === action) {
+    if (!fired && event.action === action && (phase === undefined || event.data.phase === phase)) {
       fired = true;
       throw new Crash(`crash after ${action}`);
     }

@@ -23,6 +23,11 @@
 // Usage: checkpoint-harness approve --run DIR --request ID [--deny]
 // The operator channel: records the operator account's decision on one
 // approval request of a paused run. Exits 0 when recorded and 2 when refused.
+//
+// Usage: checkpoint-harness amend --run DIR --config FILE --reason TEXT
+// Records the operator account's amendment of a paused run's configuration,
+// with the reason and each old and new value; `resume` then continues under
+// it. Exits 0 when recorded and 2 when refused.
 
 import { execFileSync } from "node:child_process";
 import { readFileSync } from "node:fs";
@@ -36,6 +41,7 @@ import stringify from "safe-stable-stringify";
 import { prepareRun } from "./contracts.js";
 import { readRun, runStatus } from "./evidence.js";
 import {
+  amendRun,
   approveRequest,
   containedProducer,
   exitCode,
@@ -155,17 +161,37 @@ async function run(configFile: string): Promise<number> {
   return drive((deps) => startRun(config, deps, { configName: configFile }));
 }
 
-async function approve(dir: string, request: string, deny: boolean): Promise<number> {
+/** Runs an operator record: 0 when recorded, 2 when refused or failed. */
+async function operator(
+  record: (actor: string) => Promise<{ ok: true } | { ok: false; diagnostics: string[] }>,
+): Promise<number> {
   const actor = userInfo().username;
-  const result = await approveRequest(dir, {
-    request,
-    decision: deny ? "denied" : "approved",
-    actor,
-  });
+  let result: { ok: true } | { ok: false; diagnostics: string[] };
+  try {
+    result = await record(actor);
+  } catch (e) {
+    result = { ok: false, diagnostics: [firstLine(e)] };
+  }
   process.stdout.write(`${stringify({ actor, ...result }, null, 2)}\n`);
   if (!result.ok) for (const d of result.diagnostics) console.error(d);
   return result.ok ? 0 : INVALID;
 }
+
+const approve = (dir: string, request: string, deny: boolean): Promise<number> =>
+  operator((actor) =>
+    approveRequest(dir, { request, decision: deny ? "denied" : "approved", actor }),
+  );
+
+const amend = (dir: string, configFile: string, reason: string): Promise<number> =>
+  operator((actor) => {
+    const root = repoRoot();
+    const config: unknown = yaml.load(readFileSync(configFile, "utf8"));
+    return amendRun(
+      dir,
+      { config, reason, actor },
+      { repoRoot: root, skillsRoot: join(root, ".claude/skills"), env: process.env },
+    );
+  });
 
 const program = new Command()
   .name("checkpoint-harness")
@@ -212,6 +238,16 @@ program
   .option("--deny", "deny instead of approve")
   .action(async ({ run, request, deny }: { run: string; request: string; deny?: boolean }) => {
     process.exitCode = await approve(run, request, deny === true);
+  });
+
+program
+  .command("amend")
+  .description("Amend a paused run's configuration, recording the reason and each change.")
+  .requiredOption("--run <dir>", "run directory")
+  .requiredOption("--config <file>", "the amended run configuration YAML")
+  .requiredOption("--reason <text>", "why the configuration changes")
+  .action(async ({ run, config, reason }: { run: string; config: string; reason: string }) => {
+    process.exitCode = await amend(run, config, reason);
   });
 
 try {

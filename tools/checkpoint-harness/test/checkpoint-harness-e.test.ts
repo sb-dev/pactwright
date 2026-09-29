@@ -35,6 +35,7 @@ import {
   type JournalEvent,
 } from "../src/evidence.js";
 import {
+  amendRun,
   approveRequest,
   exitCode,
   resumeRun,
@@ -52,7 +53,9 @@ import {
   fixtureRepo,
   GOOD_PARSER,
   goodProducer,
+  KEY_VAR,
   LENIENT_PARSER,
+  MODEL,
   OWNER,
   receiptService,
   runConfig,
@@ -69,6 +72,7 @@ import { approveAll, calibration, git } from "./verification-fixtures.js";
 const here = dirname(fileURLToPath(import.meta.url));
 const cli = join(here, "../src/cli.ts");
 const tsx = import.meta.resolve("tsx");
+const skillsRoot = join(here, "../../../.claude/skills");
 
 const scratch = mkdtempSync(join(tmpdir(), "pactwright-harness-e-"));
 after(() => rmSync(scratch, { recursive: true, force: true }));
@@ -146,6 +150,17 @@ const producerBy = (
       STEP_WORK[session.packet.step.id]?.outputs ?? {},
     ),
   );
+
+/** The approval an operator would record for `asked`, without its request. */
+const approvalFor = (asked: ApprovalRequest): Approval => ({
+  run: asked.run,
+  target: asked.target,
+  authority: asked.authority,
+  actor: OWNER,
+  decision: "approved",
+  candidate: asked.candidate,
+  evaluation: asked.evaluation,
+});
 
 const approvalOf = (result: RunResult): string => {
   const paused = assertPaused(result, { code: "approval", detail: /awaiting approval by owner/ });
@@ -291,6 +306,40 @@ describe("T3-E correction: failures lead to corrections and eventual acceptance"
       "start",
     ).find((s) => s.step === "CP99-S02");
     assert.equal(s02Start?.production?.base.commit, s01?.candidate.commit);
+  });
+});
+
+describe("T3-E correction: a sealed-out attempt keeps what it was correcting", () => {
+  it("the attempt after a seal rejection restarts from where it started, with the earlier findings", async () => {
+    const w = world();
+    const producer = producerBy((attempt) =>
+      attempt === 1
+        ? { "src/parser.mjs": LENIENT_PARSER }
+        : attempt === 2
+          ? {
+              "src/parser.mjs": GOOD_PARSER(),
+              "README.md": "rewritten outside the writable paths\n",
+            }
+          : { "src/parser.mjs": GOOD_PARSER() },
+    );
+    const result = await startRun(
+      runConfig(w.repo, w.scratch),
+      testDeps(w.repo, { producer, reviewer: reviewer(), bypass: true }),
+    );
+    assertAccepted(result, ["CP99-S01"]);
+    const [second, third] = [producer.packets[1], producer.packets[2]];
+    assert.ok(second && third);
+    assert.ok(second.findings.length > 0);
+    assert.deepEqual(third.findings.slice(0, second.findings.length), second.findings);
+    assert.deepEqual(
+      third.findings.slice(second.findings.length).map((f) => [f.rule, f.defect]),
+      [["write-policy", "README.md: modified outside the writable paths"]],
+    );
+    const starts = recordsOf<{ phase: string; production: { from: { commit: string } } | null }>(
+      dirOf(result),
+      "start",
+    ).filter((st) => st.phase === "produce");
+    assert.equal(starts[2]?.production?.from.commit, starts[1]?.production?.from.commit);
   });
 });
 
@@ -467,9 +516,9 @@ describe("T3-E approvals and effects", () => {
     assert.match(stringify(reversal), /already decided/);
   });
 
-  it("a missing approval, or one of another target or evaluation, permits no effect", async () => {
+  /** A CP98 run paused awaiting approval, and its request. */
+  async function awaiting(service: ReturnType<typeof receiptService>) {
     const w = world();
-    const service = receiptService();
     const deps = testDeps(w.repo, {
       producer: goodProducer(),
       reviewer: reviewer(),
@@ -479,63 +528,65 @@ describe("T3-E approvals and effects", () => {
     const dir = dirOf(paused);
     const [asked] = recordsOf<ApprovalRequest>(dir, "approval-request");
     assert.ok(asked);
-    // Missing: resuming without an approval asks again and runs nothing.
+    return { dir, deps, asked, request: approvalOf(paused) };
+  }
+
+  it("a missing approval permits no acceptance or effect", async () => {
+    const service = receiptService();
+    const { dir, deps } = await awaiting(service);
     approvalOf(await resumeRun(dir, deps));
-    // A faulty writer records approvals of another target and another evaluation.
-    const taken = await recoverRun(dir, { fence: () => Promise.resolve() });
-    assert.equal(taken.kind, "recovered");
-    assert.ok(taken.kind === "recovered");
-    const wrong = (overrides: Partial<Approval>): Approval => ({
-      run: asked.run,
-      target: asked.target,
-      authority: "owner",
-      actor: OWNER,
-      decision: "approved",
-      candidate: asked.candidate,
-      evaluation: asked.evaluation,
-      ...overrides,
-    });
-    recordApproval(
-      taken.run,
-      asked.attempt,
-      wrong({ target: { ...asked.target, criterion: "AC02" } }),
-    );
-    recordApproval(taken.run, asked.attempt, wrong({ evaluation: `sha256:${"1".repeat(64)}` }));
-    releaseRun(taken.run);
-    const result = await resumeRun(dir, deps);
-    assertPaused(result, { code: "approval", detail: /names no approval target/ });
-    assertPaused(result, { code: "approval", detail: /awaiting approval/ });
     assert.equal(service.executions.length, 0);
     assert.equal(actions(dir, "acceptance").length, 0);
   });
 
-  it("an acceptance by an approval bound to no request runs no effect", async () => {
-    const w = world();
+  // A faulty writer records approvals past the operator channel.
+  const bypassed = /did not come through the operator channel/;
+  const bypasses: [
+    string,
+    (asked: ApprovalRequest, request: string) => Approval,
+    { code: string; detail: RegExp },
+  ][] = [
+    [
+      "of another target",
+      (asked) => ({ ...approvalFor(asked), target: { ...asked.target, criterion: "AC02" } }),
+      { code: "owner", detail: bypassed },
+    ],
+    ["answering no request", (asked) => approvalFor(asked), { code: "owner", detail: bypassed }],
+    [
+      "by an actor without the authority",
+      (asked, request) => ({ ...approvalFor(asked), actor: "intruder", request }),
+      { code: "owner", detail: bypassed },
+    ],
+    [
+      "of another evaluation",
+      (asked) => ({ ...approvalFor(asked), evaluation: `sha256:${"1".repeat(64)}` }),
+      { code: "approval", detail: /awaiting approval/ },
+    ],
+  ];
+  for (const [name, approval, expected] of bypasses) {
+    it(`an approval ${name} permits no acceptance or effect`, async () => {
+      const service = receiptService();
+      const { dir, deps, asked, request } = await awaiting(service);
+      const taken = await recoverRun(dir, { fence: () => Promise.resolve() });
+      assert.ok(taken.kind === "recovered");
+      recordApproval(taken.run, asked.attempt, approval(asked, request));
+      releaseRun(taken.run);
+      assertPaused(await resumeRun(dir, deps), expected);
+      assert.equal(service.executions.length, 0);
+      assert.equal(actions(dir, "acceptance").length, 0);
+    });
+  }
+
+  it("a receipt for another effect is recorded, and the effect never runs again", async () => {
     const service = receiptService();
-    const deps = testDeps(w.repo, {
-      producer: goodProducer(),
-      reviewer: reviewer(),
-      effects: service,
-    });
-    const paused = await startRun(release(w), deps);
-    const dir = dirOf(paused);
-    const [asked] = recordsOf<ApprovalRequest>(dir, "approval-request");
-    assert.ok(asked);
-    const taken = await recoverRun(dir, { fence: () => Promise.resolve() });
-    assert.ok(taken.kind === "recovered");
-    recordApproval(taken.run, asked.attempt, {
-      run: asked.run,
-      target: asked.target,
-      authority: "owner",
-      actor: OWNER,
-      decision: "approved",
-      candidate: asked.candidate,
-      evaluation: asked.evaluation,
-    });
-    releaseRun(taken.run);
-    const result = await resumeRun(dir, deps);
-    assertPaused(result, { code: "owner", detail: /bound to no approved effect request/ });
-    assert.equal(service.executions.length, 0);
+    const { dir, deps, request } = await awaiting(service);
+    assert.ok((await approveRequest(dir, { request, decision: "approved", actor: OWNER })).ok);
+    service.fault = "wrong-receipt";
+    assertPaused(await resumeRun(dir, deps), { code: "effect-invalid", detail: /elsewhere/ });
+    assertPaused(await resumeRun(dir, deps), { code: "effect-invalid", detail: /will not repeat/ });
+    assert.equal(service.executions.length, 1);
+    assert.equal(actions(dir, "effect-invalid").length, 1);
+    assert.equal(actions(dir, "effect-receipt").length, 0);
   });
 
   it("the operator channel is not the candidate's: tools, released runs and journaled requests only", async () => {
@@ -564,31 +615,112 @@ describe("T3-E approvals and effects", () => {
 });
 
 describe("T3-E recovery: crashes recover without duplicate action", () => {
-  const crashes: [string, (w: World) => Partial<Parameters<typeof testDeps>[1]>][] = [
-    ["after production", () => ({ progress: crashAfter("evaluation") })],
-    ["after an admission", () => ({ progress: crashAfter("verifier-admission") })],
-    ["after verification", () => ({ progress: crashAfter("start") })],
-    ["after a review", () => ({ progress: crashAfter("review") })],
-    ["after an acceptance", () => ({ progress: crashAfter("acceptance") })],
+  const candidateReviews = (dir: string): number =>
+    actions(dir, "review").filter((e) => e.data.kind === "candidate").length;
+  const runDir = (w: World): string => {
+    const [dir] = readdirSync(join(w.scratch, "runs")).map((d) => join(w.scratch, "runs", d));
+    assert.ok(dir);
+    return dir;
+  };
+
+  const crashes: [string, (event: JournalEvent) => void][] = [
+    ["after production", crashAfter("evaluation")],
+    ["after an admission", crashAfter("verifier-admission")],
+    ["after verification", crashAfter("start", "verify")],
+    ["after a review", crashAfter("start", "review")],
+    ["after an acceptance", crashAfter("acceptance")],
   ];
-  for (const [name, faults] of crashes) {
-    it(`a crash ${name} resumes to one acceptance per step`, async () => {
+  for (const [name, progress] of crashes) {
+    it(`a crash ${name} resumes to one acceptance per step, repeating no work`, async () => {
       const w = world();
       const config = runConfig(w.repo, w.scratch, { through: "CP99-S02" });
       const producer = goodProducer();
-      const crashing = testDeps(w.repo, { producer, reviewer: reviewer(), ...faults(w) });
-      await assert.rejects(startRun(config, crashing), Crash);
-      const [dir] = readdirSync(join(w.scratch, "runs")).map((d) => join(w.scratch, "runs", d));
-      assert.ok(dir);
-      const result = await resumeRun(dir, testDeps(w.repo, { producer, reviewer: reviewer() }));
+      const review = reviewer();
+      await assert.rejects(
+        startRun(config, testDeps(w.repo, { producer, reviewer: review, progress })),
+        Crash,
+      );
+      const dir = runDir(w);
+      const result = await resumeRun(dir, testDeps(w.repo, { producer, reviewer: review }));
       assertAccepted(result, ["CP99-S01", "CP99-S02"]);
       assert.deepEqual(
         actions(dir, "acceptance").map((e) => e.data.step),
         ["CP99-S01", "CP99-S02"],
       );
-      assert.ok(actions(dir, "owner").length >= 2);
+      // Completed work is never redone: one production and one review per step.
+      assert.equal(producer.requests.length, 2);
+      assert.equal(candidateReviews(dir), 2);
+      assert.equal(actions(dir, "start").filter((e) => e.data.phase === "verify").length, 2);
     });
   }
+
+  /** Workspaces whose `role` opening fails once, as soon as a `phase` start is journaled. */
+  const failOnceDuring = (
+    deps: RunnerDeps,
+    role: "verifier" | "reviewer",
+    phase: string,
+    error: () => Error,
+  ): RunnerDeps => ({
+    ...deps,
+    workspaces: (run, root) => {
+      const base = deps.workspaces(run, root);
+      let failed = false;
+      return {
+        ...base,
+        [role]: (snapshot: Parameters<typeof base.verifier>[0]) => {
+          const started = eventsOf(run.dir).some(
+            (e) => e.action === "start" && e.data.phase === phase,
+          );
+          if (started && !failed) {
+            failed = true;
+            return Promise.reject(error());
+          }
+          return base[role](snapshot);
+        },
+      };
+    },
+  });
+
+  it("a crash inside a review reruns the review on resume, as a retry", async () => {
+    const w = world();
+    const deps = testDeps(w.repo, { producer: goodProducer(), reviewer: reviewer() });
+    const crashing = failOnceDuring(
+      deps,
+      "reviewer",
+      "review",
+      () => new Crash("crash opening the reviewer workspace"),
+    );
+    await assert.rejects(startRun(runConfig(w.repo, w.scratch), crashing), Crash);
+    const dir = runDir(w);
+    assert.equal(candidateReviews(dir), 0);
+    assertAccepted(await resumeRun(dir, deps), ["CP99-S01"]);
+    assert.equal(actions(dir, "start").filter((e) => e.data.phase === "review").length, 2);
+    assert.equal(candidateReviews(dir), 1);
+  });
+
+  it("a verifier that could not run is run again before the review", async () => {
+    const w = world();
+    const deps = failOnceDuring(
+      testDeps(w.repo, { producer: goodProducer(), reviewer: reviewer() }),
+      "verifier",
+      "verify",
+      () => new Error("docker: no such container"),
+    );
+    const result = await startRun(runConfig(w.repo, w.scratch), deps);
+    assertAccepted(result, ["CP99-S01"]);
+    const dir = dirOf(result);
+    const runs = recordsOf<{ stage: string; binding: string; error: string | null }>(
+      dir,
+      "verifier-invocation",
+    ).filter((i) => i.stage === "acceptance");
+    assert.match(runs[0]?.error ?? "", /no such container/);
+    assert.equal(runs.filter((i) => i.binding === runs[0]?.binding).length, 2);
+    // The review came after the rerun, so it was shown every counted run.
+    const events = eventsOf(dir);
+    const lastRun = events.map((e) => e.action).lastIndexOf("verifier-invocation");
+    const review = events.findIndex((e) => e.action === "start" && e.data.phase === "review");
+    assert.ok(lastRun < review);
+  });
 
   it("a crash inside production is retried once on resume, within the retry budget", async () => {
     const w = world();
@@ -845,6 +977,260 @@ describe("T3-E invalidation: changed inputs invalidate prior results", () => {
   });
 });
 
+describe("T3-E invalidation after acceptance: an acceptance counts only while its evaluation is current", () => {
+  const evaluationsOf = (dir: string, step: string): string[] =>
+    actions(dir, "evaluation")
+      .filter((e) => e.data.step === step)
+      .map((e) => e.evaluation ?? "");
+
+  it("a harness change after acceptance re-evaluates the accepted step and its dependant", async () => {
+    const w = world();
+    const producer = goodProducer();
+    const config = runConfig(w.repo, w.scratch, { through: "CP99-S02" });
+    const first = await startRun(config, testDeps(w.repo, { producer, reviewer: reviewer() }));
+    assertAccepted(first, ["CP99-S01", "CP99-S02"]);
+    const dir = dirOf(first);
+    // Unchanged, a resume accepts again without any new work.
+    assertAccepted(await resumeRun(dir, testDeps(w.repo, { producer, reviewer: reviewer() })), [
+      "CP99-S01",
+      "CP99-S02",
+    ]);
+    assert.equal(actions(dir, "evaluation").length, 2);
+
+    const changed = testDeps(w.repo, { producer, reviewer: reviewer(), harness: "t3-e-changed" });
+    assertAccepted(await resumeRun(dir, changed), ["CP99-S01", "CP99-S02"]);
+    // Both steps were evaluated, verified and reviewed again; nothing was produced again.
+    assert.equal(producer.requests.length, 2);
+    assert.equal(evaluationsOf(dir, "CP99-S01").length, 2);
+    assert.equal(evaluationsOf(dir, "CP99-S02").length, 2);
+    const acceptances = actions(dir, "acceptance");
+    assert.deepEqual(
+      acceptances.map((e) => e.data.step),
+      ["CP99-S01", "CP99-S02", "CP99-S01", "CP99-S02"],
+    );
+    // The dependant was re-evaluated against its input's new evaluation.
+    const s02 = recordsOf<{ step: string; manifest: { inputs: { evaluation: string }[] } }>(
+      dir,
+      "evaluation",
+    ).filter((e) => e.step === "CP99-S02");
+    assert.deepEqual(
+      s02.map((e) => e.manifest.inputs[0]?.evaluation),
+      evaluationsOf(dir, "CP99-S01"),
+    );
+  });
+
+  it("an accepted step interrupted before its effect is re-evaluated, and asks again, before the effect", async () => {
+    const w = world();
+    const service = receiptService();
+    const base = { producer: goodProducer(), reviewer: reviewer(), effects: service };
+    const paused = await startRun(
+      runConfig(w.repo, w.scratch, { checkpoint: "CP98", through: "CP98-S01" }),
+      testDeps(w.repo, base),
+    );
+    const dir = dirOf(paused);
+    const first = approvalOf(paused);
+    assert.ok(
+      (await approveRequest(dir, { request: first, decision: "approved", actor: OWNER })).ok,
+    );
+    await assert.rejects(
+      resumeRun(dir, testDeps(w.repo, { ...base, progress: crashAfter("acceptance") })),
+      Crash,
+    );
+    assert.equal(actions(dir, "acceptance").length, 1);
+
+    const changed = testDeps(w.repo, { ...base, harness: "t3-e-changed" });
+    const second = approvalOf(await resumeRun(dir, changed));
+    assert.notEqual(second, first);
+    assert.equal(service.executions.length, 0);
+    assert.ok(
+      (await approveRequest(dir, { request: second, decision: "approved", actor: OWNER })).ok,
+    );
+    assertAccepted(await resumeRun(dir, changed), ["CP98-S01"]);
+    assert.equal(service.executions.length, 1);
+  });
+
+  it("an effect already run is not repeated when its step is re-evaluated and approved again", async () => {
+    const w = world();
+    const service = receiptService();
+    const base = { producer: goodProducer(), reviewer: reviewer(), effects: service };
+    const paused = await startRun(
+      runConfig(w.repo, w.scratch, { checkpoint: "CP98", through: "CP98-S01" }),
+      testDeps(w.repo, base),
+    );
+    const dir = dirOf(paused);
+    assert.ok(
+      (
+        await approveRequest(dir, {
+          request: approvalOf(paused),
+          decision: "approved",
+          actor: OWNER,
+        })
+      ).ok,
+    );
+    assertAccepted(await resumeRun(dir, testDeps(w.repo, base)), ["CP98-S01"]);
+    assert.equal(service.executions.length, 1);
+
+    const changed = testDeps(w.repo, { ...base, harness: "t3-e-changed" });
+    const again = approvalOf(await resumeRun(dir, changed));
+    assert.ok(
+      (await approveRequest(dir, { request: again, decision: "approved", actor: OWNER })).ok,
+    );
+    assertAccepted(await resumeRun(dir, changed), ["CP98-S01"]);
+    assert.equal(service.executions.length, 1);
+    assert.equal(actions(dir, "effect-intent").length, 1);
+  });
+});
+
+describe("T3-E amendments: an operator amends a paused run and it resumes in place", () => {
+  it("a raised attempt budget lets an exhausted step continue, keeping its attempts", async () => {
+    const w = world();
+    const producer = producerBy((attempt) => ({
+      "src/parser.mjs": attempt <= 2 ? LENIENT_PARSER : GOOD_PARSER(),
+    }));
+    const deps = testDeps(w.repo, { producer, reviewer: reviewer() });
+    const paused = await startRun(runConfig(w.repo, w.scratch, { attempts: 2 }), deps);
+    assertPaused(paused, { code: "exhausted" });
+    const dir = dirOf(paused);
+    const amended = await amendRun(
+      dir,
+      {
+        config: runConfig(w.repo, w.scratch, { attempts: 3 }),
+        reason: "one more attempt",
+        actor: OWNER,
+      },
+      { repoRoot: w.repo.root, skillsRoot, env: { [KEY_VAR]: "sk-ant-test-e" } },
+    );
+    assert.ok(amended.ok, stringify(amended));
+    assert.deepEqual(amended.changes, [{ path: "/budgets/attempts", old: 2, new: 3 }]);
+    const [record] = recordsOf<{ actor: string; reason: string; changes: unknown[] }>(
+      dir,
+      "amendment",
+    );
+    assert.deepEqual([record?.actor, record?.reason], [OWNER, "one more attempt"]);
+
+    assertAccepted(await resumeRun(dir, deps), ["CP99-S01"]);
+    assert.deepEqual(
+      producer.packets.map((p) => p.attempt),
+      [1, 2, 3],
+    );
+    assert.deepEqual(
+      recordsOf<{ decision: string }>(dir, "decision").map((d) => d.decision),
+      ["correct", "correct"],
+    );
+  });
+
+  it("a raised spend limit lifts a provider stop", async () => {
+    const w = world();
+    let calls = 0;
+    const producer = scriptedAgent((session) =>
+      ++calls === 1
+        ? { subtype: "error_max_budget_usd" }
+        : submit(
+            session,
+            { "src/parser.mjs": GOOD_PARSER() },
+            { "config-parser": ["src/parser.mjs"] },
+          ),
+    );
+    const deps = testDeps(w.repo, { producer, reviewer: reviewer() });
+    const config = runConfig(w.repo, w.scratch);
+    const paused = await startRun(config, deps);
+    assertPaused(paused, { code: "exhausted", detail: /spend/ });
+    const dir = dirOf(paused);
+    assertPaused(await resumeRun(dir, deps), { code: "exhausted" });
+    const raised = structuredClone(config);
+    raised.budgets = {
+      ...(config.budgets as object),
+      provider_spend_limit: { usd: 2, turn_reservation_usd: 0.1 },
+    };
+    const amended = await amendRun(
+      dir,
+      { config: raised, reason: "the task needs more tokens", actor: OWNER },
+      { repoRoot: w.repo.root, skillsRoot, env: { [KEY_VAR]: "sk-ant-test-e" } },
+    );
+    assert.ok(amended.ok, stringify(amended));
+    assertAccepted(await resumeRun(dir, deps), ["CP99-S01"]);
+    assert.equal(producer.requests.length, 2);
+  });
+
+  it("an extended selection keeps accepted evaluations; a reviewer change re-evaluates them", async () => {
+    const w = world();
+    const producer = goodProducer();
+    const deps = testDeps(w.repo, { producer, reviewer: reviewer() });
+    const first = await startRun(runConfig(w.repo, w.scratch), deps);
+    assertAccepted(first, ["CP99-S01"]);
+    const dir = dirOf(first);
+    const env = { repoRoot: w.repo.root, skillsRoot, env: { [KEY_VAR]: "sk-ant-test-e" } };
+    const extended = runConfig(w.repo, w.scratch, { through: "CP99-S02", retries: 3 });
+    const amended = await amendRun(
+      dir,
+      { config: extended, reason: "run step 2", actor: OWNER },
+      env,
+    );
+    assert.ok(amended.ok);
+    assert.deepEqual(
+      amended.changes.map((c) => c.path),
+      ["/budgets/retries", "/selection/through"],
+    );
+    assertAccepted(await resumeRun(dir, deps), ["CP99-S01", "CP99-S02"]);
+    assert.equal(actions(dir, "evaluation").filter((e) => e.data.step === "CP99-S01").length, 1);
+
+    const reviewed = structuredClone(extended);
+    reviewed.roles = {
+      ...(extended.roles as object),
+      reviewer: {
+        adapter: "claude-sdk",
+        model: MODEL,
+        skills: ["code-review-and-quality", "evaluation"],
+        max_turns: 8,
+      },
+    };
+    assert.ok(
+      (await amendRun(dir, { config: reviewed, reason: "stricter review", actor: OWNER }, env)).ok,
+    );
+    assertAccepted(await resumeRun(dir, deps), ["CP99-S01", "CP99-S02"]);
+    assert.equal(actions(dir, "evaluation").filter((e) => e.data.step === "CP99-S01").length, 2);
+    assert.equal(producer.requests.length, 2);
+  });
+
+  it("an amendment is refused without a reason, without a change, for the run's identity, when invalid or when not released", async () => {
+    const w = world();
+    const deps = testDeps(w.repo, { producer: goodProducer(), reviewer: reviewer() });
+    const config = runConfig(w.repo, w.scratch, { attempts: 1 });
+    const paused = await startRun(config, deps);
+    const dir = dirOf(paused);
+    const env = { repoRoot: w.repo.root, skillsRoot, env: { [KEY_VAR]: "sk-ant-test-e" } };
+    const refused = async (next: Record<string, unknown>, reason: string, pattern: RegExp) => {
+      const result = await amendRun(dir, { config: next, reason, actor: OWNER }, env);
+      assert.equal(result.ok, false, stringify(result));
+      assert.match(stringify(result), pattern);
+    };
+    const raised = runConfig(w.repo, w.scratch, { attempts: 2 });
+    await refused(raised, " ", /needs a reason/);
+    await refused(config, "no change", /unchanged/);
+    await refused(
+      { ...raised, repository: { ...(raised.repository as object), name: "sb-dev/other" } },
+      "rename",
+      /\/repository\/name cannot be amended within a run/,
+    );
+    await refused(
+      {
+        ...raised,
+        permissions: { ...(raised.permissions as object), approvers: { owner: ["intruder"] } },
+      },
+      "grant",
+      /\/permissions\/approvers\/owner cannot be amended/,
+    );
+    const { workspace: _dropped, ...incomplete } = raised;
+    void _dropped;
+    await refused(incomplete, "invalid", /runner: \/ must have required property 'workspace'/);
+    const taken = await recoverRun(dir, { fence: () => Promise.resolve() });
+    assert.ok(taken.kind === "recovered");
+    await refused(raised, "busy", /not released/);
+    releaseRun(taken.run);
+    assert.equal(actions(dir, "amendment").length, 0);
+  });
+});
+
 describe("T3-E scheduling and command line", () => {
   it("with no eligible step, the run reports the unmet dependency", async () => {
     const w = world();
@@ -937,5 +1323,24 @@ describe("T3-E scheduling and command line", () => {
       [approval?.actor, approval?.request, approval?.decision],
       [operator, request, "approved"],
     );
+  });
+
+  it("amend records nothing for an unchanged configuration and exits 2", async () => {
+    const w = world();
+    const config = runConfig(w.repo, w.scratch, { attempts: 1 });
+    const paused = await startRun(
+      config,
+      testDeps(w.repo, { producer: scriptedAgent(() => ({ raw: "{" })), reviewer: reviewer() }),
+    );
+    const dir = dirOf(paused);
+    const file = join(w.scratch, "amended.yml");
+    writeFileSync(file, JSON.stringify(config));
+    const amend = harness(
+      ["amend", "--run", dir, "--config", file, "--reason", "none"],
+      w.repo.root,
+    );
+    assert.equal(amend.status, 2, amend.stderr);
+    assert.match(amend.stdout, /the configuration is unchanged/);
+    assert.equal(actions(dir, "amendment").length, 0);
   });
 });
