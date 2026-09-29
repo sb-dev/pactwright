@@ -282,10 +282,26 @@ function contractStep(plan: PreparedRun, id: string): ContractStep {
   return step;
 }
 
-/** Every target a step must satisfy: its own and the checkpoint's inherited ones. */
-const targetsOf = (plan: PreparedRun, step: ContractStep): VerificationTarget[] => [
+/** The planned contract steps before `step`, in checkpoint order. */
+const earlierSteps = (plan: PreparedRun, step: ContractStep): ContractStep[] =>
+  plan.steps
+    .slice(
+      0,
+      plan.steps.findIndex((s) => s.id === step.id),
+    )
+    .filter((s): s is ContractStep => s.kind === "contract");
+
+/**
+ * Every target a step must satisfy: its own, the checkpoint's inherited ones
+ * and the automated targets of every earlier planned step. A step's candidate
+ * builds on the earlier acceptances, so their executed checks run again on it
+ * (T3 plan §5). Earlier review and approval targets keep their recorded
+ * evidence; approvals and effects are never replayed.
+ */
+export const targetsOf = (plan: PreparedRun, step: ContractStep): VerificationTarget[] => [
   ...step.targets,
   ...plan.inherited.targets,
+  ...earlierSteps(plan, step).flatMap((s) => s.targets.filter((t) => t.method === "automated")),
 ];
 
 /** The candidate's files: path → `mode sha`, read from the run's source repository. */
@@ -1220,10 +1236,12 @@ export function decideAcceptance(input: AcceptanceInput): Decision {
   const targets = targetsOf(plan, step);
   const byKey = new Map(targets.map((t) => [targetKey(t), t]));
   const covers = new Map<string, string[]>([
-    ...step.criteria.map((c): [string, string[]] => [
-      `${step.id}/${c.id}`,
-      c.covers.map((r) => `${step.id}/${r}`),
-    ]),
+    ...[step, ...earlierSteps(plan, step)].flatMap((s) =>
+      s.criteria.map((c): [string, string[]] => [
+        `${s.id}/${c.id}`,
+        c.covers.map((r) => `${s.id}/${r}`),
+      ]),
+    ),
     ...plan.inherited.criteria.map((c): [string, string[]] => [
       `${plan.checkpoint}/${c.id}`,
       c.covers.map((r) => `${plan.checkpoint}/${r}`),

@@ -34,7 +34,7 @@ import {
   createRegistry,
   type Registry,
 } from "../src/software-bootstrap.js";
-import type { ContainedWorkspace, OpenWorkspace } from "../src/verification.js";
+import { targetsOf, type ContainedWorkspace, type OpenWorkspace } from "../src/verification.js";
 import {
   captureSource,
   importSource,
@@ -203,11 +203,11 @@ export const calibration = (name: "known-good" | "known-bad"): Calibration =>
     readFileSync(join(fixtureRoot, "review-calibration", `${name}.json`), "utf8"),
   ) as Calibration;
 
-/** Every target of a step and its inherited requirements. */
+/** Every target of a step: the controller's own `targetsOf`. */
 export function stepTargets(plan: PreparedRun, id: string): VerificationTarget[] {
   const step = plan.steps.find((s) => s.id === id);
   assert.ok(step?.kind === "contract");
-  return [...step.targets, ...plan.inherited.targets];
+  return targetsOf(plan, step);
 }
 
 /** An evaluation manifest for `candidate`, with the binding digests its tree yields. */

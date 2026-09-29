@@ -854,6 +854,33 @@ describe("T3-D D01 observations that cannot count prevent acceptance", () => {
     assert.equal(decide(wrong).decision, "correct");
   });
 
+  it("a later step's candidate is rechecked against the earlier step's automated targets", async () => {
+    const w = await world(scratch);
+    const local = localWorkspaces(w.run, join(scratch, `local-${randomUUID()}`));
+    const good = await attemptOf(w, "CP99-S02");
+    await complete(good, { verifier: local });
+    const accepted = decide(good);
+    assert.ok(accepted.decision === "accept", stringify(accepted));
+    for (const c of ["valid", "invalid"]) {
+      assert.ok(accepted.targets.includes(`CP99-S01/AC01/${c}/automated/parser.accepts`), c);
+    }
+    // The integrated candidate breaks the earlier step's parser: its own target still passes.
+    const broken = await attemptOf(w, "CP99-S02", {
+      attempt: 2,
+      files: { ...FILES["CP99-S02"]?.(), "src/parser.mjs": FAULTY_PARSERS.lenient?.parser ?? "" },
+    });
+    await complete(broken, { verifier: local });
+    const decision = decide(broken);
+    assertReason(decision, {
+      decision: "correct",
+      route: "correct",
+      subject: /^CP99-S01\/AC01\/invalid\/automated\/parser\.(accepts|rejects)$/,
+      detail: /change the implementation so that this target passes/,
+    });
+    assert.ok(decision.decision === "correct");
+    assert.ok(decision.reasons.some((r) => r.requirements.includes("CP99-S01/R01")));
+  });
+
   it("a failure to stop a workspace keeps the executed result it followed", async () => {
     const w = await world(scratch);
     const a = await attemptOf(w, "CP99-S01");
@@ -1276,9 +1303,17 @@ describe("T3-D D02 a proposed verifier counts only after adequacy and a fresh ru
     }));
     await admit(a, { verifier, bindings: ["command.prints"] });
     await verify(a, verifier);
+    // The unchanged parser verifiers of CP99-S01 run again on this candidate.
     assert.deepEqual(
       verifier.calls.filter((c) => c.role === "subject").map((c) => c.binding),
-      ["command.prints", "command.prints"],
+      [
+        "command.prints",
+        "command.prints",
+        "parser.accepts",
+        "parser.accepts",
+        "parser.rejects",
+        "parser.rejects",
+      ],
     );
     // An approval of the changed verifier within this step does not lift the protection.
     await admit(a, { verifier, bindings: ["repo.verify"] });
