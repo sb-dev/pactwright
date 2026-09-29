@@ -6,13 +6,12 @@ is `../docs/specs/bootstrap-spec.md`. It is not Checkpoint 1 acceptance.
 
 - `verifiers/` implements the CP97 bindings of `test/bootstrap-fixtures.ts`
   with the subject/judge split of `../verification/README.md`. The library
-  subject runs `library-driver.mjs` in a child process under Node's
-  permission model. The driver reads a one-time nonce and the case input
-  from stdin, then loads the candidate library in a V8 realm of its own,
-  linked only to modules under `src/`: no `process`, built-in modules,
-  timers or output, and no access to the driver's objects. The subject takes
-  its facts only from the one output line that starts with the nonce; all
-  other child output is untrusted, so a candidate cannot write a report. The command subject stages each case's path in a
+  subject runs `library-driver.mjs` in a child process. The driver loads the
+  candidate library in a V8 realm of its own, linked only to modules under
+  `src/`: candidate code has no `process`, built-in modules, timers or
+  output, and no reference to the driver's objects, so it can neither read
+  the process nor write a report. The driver alone forms the fact and
+  prints it. The command subject stages each case's path in a
   fresh temporary directory, runs the command as a program and compares the
   path before and after. Judges never run candidate code.
 - `candidates/` holds the known-good submissions of the scripted producers

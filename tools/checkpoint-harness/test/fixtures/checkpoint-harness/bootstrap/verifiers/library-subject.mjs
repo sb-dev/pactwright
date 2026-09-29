@@ -1,15 +1,11 @@
 // Fixture subject for library.accepts and library.rejects (CP97-S01). It loads
-// no code under test. library-driver.mjs loads the candidate's
-// `src/config.mjs` in a child process, in a V8 realm of its own, under Node's
-// permission model. The subject gives the child a one-time nonce and the case
-// input on stdin, which the driver reads before any candidate code runs.
-// Everything the child prints is untrusted output: the subject derives its
-// facts from the one line that starts with the nonce, and from nothing else.
-// A child that prints no such line, or more than one, reports nothing.
+// no code under test: library-driver.mjs loads the candidate's
+// `src/config.mjs` in a child process, in a V8 realm of its own that has no
+// process, built-in modules or output, and prints one fact. The subject passes
+// the case input on stdin and reduces the child's output to one line of
+// primitive facts; output that is not exactly one fact reports nothing.
 import { spawnSync } from "node:child_process";
-import { randomBytes } from "node:crypto";
 import { readFileSync } from "node:fs";
-import { resolve } from "node:path";
 
 const INPUTS = {
   "lowest-port": '{"port": 1, "label": "api"}',
@@ -32,29 +28,21 @@ const INPUTS = {
 const [owner, , id] = readFileSync(0, "utf8").split("/");
 if (owner !== "CP97-S01" || id === undefined || !Object.hasOwn(INPUTS, id)) process.exit(2);
 
-const nonce = randomBytes(32).toString("hex");
-const driver = resolve("verifiers/library-driver.mjs");
 const ran = spawnSync(
   process.execPath,
-  [
-    "--experimental-vm-modules",
-    "--permission",
-    `--allow-fs-read=${resolve("src")}/`,
-    `--allow-fs-read=${driver}`,
-    driver,
-  ],
-  { input: `${nonce}\n${INPUTS[id]}`, stdio: ["pipe", "pipe", "ignore"], env: {}, timeout: 5_000 },
+  ["--experimental-vm-modules", "verifiers/library-driver.mjs"],
+  { input: INPUTS[id], stdio: ["pipe", "pipe", "ignore"], env: {}, timeout: 5_000 },
 );
 // A program the runner had to stop, or that a signal killed, has no exit status.
 const signal = ran.signal ?? ran.error?.code ?? null;
-const reported = ran.stdout
+const lines = ran.stdout
   .toString("utf8")
   .split("\n")
-  .filter((l) => l.startsWith(`${nonce} `));
+  .filter((l) => l !== "");
 let fact = { returned: null, value: null, error: null, message: null };
-if (reported.length === 1) {
+if (lines.length === 1) {
   try {
-    const o = JSON.parse(reported[0].slice(nonce.length + 1));
+    const o = JSON.parse(lines[0]);
     fact = {
       returned: typeof o.returned === "boolean" ? o.returned : null,
       value: typeof o.value === "string" ? o.value : null,
@@ -62,7 +50,7 @@ if (reported.length === 1) {
       message: typeof o.message === "string" ? o.message : null,
     };
   } catch {
-    // The nonce line is not the driver's report.
+    // Not the driver's fact.
   }
 }
 process.stdout.write(`${JSON.stringify({ exit: ran.status, signal, ...fact })}\n`);

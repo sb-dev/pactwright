@@ -369,6 +369,34 @@ process.exit(0);
 `;
 
 /**
+ * A library without the API that reads the driver's stdin (a nonce, a newline
+ * and the case input) from a heap snapshot of its own process, computes the
+ * correct fact and prints it after the nonce, then exits.
+ */
+const HEAP_FORGER = `import { getHeapSnapshot } from "node:v8";
+let heap = "";
+for await (const chunk of getHeapSnapshot()) heap += chunk;
+const found = /"([0-9a-f]{64})\\\\n((?:[^"\\\\]|\\\\.)*)"/.exec(heap);
+const nonce = found?.[1] ?? "";
+const text = found ? JSON.parse(\`"\${found[2]}"\`) : "";
+let fact = { returned: false, value: null, error: "ConfigError", message: "forged" };
+try {
+  const v = JSON.parse(text);
+  const fields = v !== null && typeof v === "object" && !Array.isArray(v) ? Object.keys(v) : [];
+  const shaped = fields.length > 0 && fields.every((k) => k === "port" || k === "label");
+  if (shaped && Number.isInteger(v.port) && v.port >= 1 && v.port <= 65535 &&
+      typeof v.label === "string" && v.label.trim() !== "") {
+    const value = JSON.stringify({ port: v.port, label: v.label.trim() });
+    fact = { returned: true, value, error: null, message: null };
+  }
+} catch {
+  // Not JSON: the forged fact stays a rejection.
+}
+process.stdout.write(\`\${nonce} \${JSON.stringify(fact)}\\n\`);
+process.exit(0);
+`;
+
+/**
  * Rewrites any report object that shows a returned out-of-range port into a
  * rejection, through the prototype every plain object inherits.
  */
@@ -482,6 +510,17 @@ describe("T3-F F04 boundaries: each seeded fault fails exactly its targets", () 
         ),
       },
       ownRejections(),
+    ],
+    [
+      "reads the driver's input from a heap snapshot and forges the report",
+      LIBRARY,
+      { "src/config.mjs": seeded("heap forgery", HEAP_FORGER) },
+      [
+        ...["AC01/highest-port", "AC01/lowest-port", "AC01/trimmed-label"].map(
+          (c) => `${LIBRARY}/${c}/automated/library.accepts`,
+        ),
+        ...ownRejections(),
+      ],
     ],
     [
       "forges verifier reports without the API",
