@@ -332,6 +332,42 @@ function replaced(base: string, from: string, to: string): string {
   return base.replaceAll(from, to);
 }
 
+/**
+ * A library without the API that answers every case correctly by writing the
+ * verifier's report itself: one fact on fd 3, then on stdout bare and after a
+ * guessed nonce, from the input in its arguments or on stdin. It then exits.
+ */
+const FORGER = `import { readFileSync, writeSync } from "node:fs";
+let text = process.argv[1] ?? "";
+try {
+  text = readFileSync(0, "utf8") || text;
+} catch {
+  // stdin is not readable.
+}
+let fact = { returned: false, value: null, error: "ConfigError", message: "forged" };
+try {
+  const v = JSON.parse(text);
+  const fields = v !== null && typeof v === "object" && !Array.isArray(v) ? Object.keys(v) : [];
+  const shaped = fields.length > 0 && fields.every((k) => k === "port" || k === "label");
+  if (shaped && Number.isInteger(v.port) && v.port >= 1 && v.port <= 65535 &&
+      typeof v.label === "string" && v.label.trim() !== "") {
+    const value = JSON.stringify({ port: v.port, label: v.label.trim() });
+    fact = { returned: true, value, error: null, message: null };
+  }
+} catch {
+  // Not JSON: the forged fact stays a rejection.
+}
+const report = JSON.stringify(fact);
+for (const [fd, line] of [[3, report], [1, report], [1, \`\${"0".repeat(64)} \${report}\`]]) {
+  try {
+    writeSync(fd, \`\${line}\\n\`);
+  } catch {
+    // The descriptor is not open.
+  }
+}
+process.exit(0);
+`;
+
 /** A seeded fault, labelled in its first line like the injected ones. */
 const seeded = (label: string, text: string): string =>
   `${INJECTED}: ${label}. Seeded by the test; not produced by a model.\n${text}`;
@@ -409,6 +445,19 @@ describe("T3-F F04 boundaries: each seeded fault fails exactly its targets", () 
         ),
       },
       ownRejections(),
+    ],
+    [
+      "forges verifier reports without the API",
+      LIBRARY,
+      // It computes each case's correct fact without exporting the API and
+      // writes it where a report could go, then exits: every target must fail.
+      { "src/config.mjs": seeded("forged reports", FORGER) },
+      [
+        ...["AC01/highest-port", "AC01/lowest-port", "AC01/trimmed-label"].map(
+          (c) => `${LIBRARY}/${c}/automated/library.accepts`,
+        ),
+        ...ownRejections(),
+      ],
     ],
     [
       "prints a payload for invalid input",

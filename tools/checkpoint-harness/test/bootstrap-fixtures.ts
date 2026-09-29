@@ -99,10 +99,14 @@ export function bootstrapConfig(
 
 const LIBRARY_VERIFIER = {
   method: "automated",
-  version: "1",
+  version: "2",
   command: ["node", "verifiers/library-subject.mjs"],
   judge: ["node", "verifiers/library-judge.mjs"],
-  files: ["verifiers/library-judge.mjs", "verifiers/library-subject.mjs"],
+  files: [
+    "verifiers/library-driver.mjs",
+    "verifiers/library-judge.mjs",
+    "verifiers/library-subject.mjs",
+  ],
   timeoutMs: 30_000,
   observations: ["observed"],
 } as const;
