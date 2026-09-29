@@ -803,6 +803,25 @@ function evaluationAction(
 ): Action {
   const { run, plan, deps } = ctx;
   const record = latest.record;
+  const { attempt } = record;
+  // The current write policy, never the one the candidate was produced under,
+  // governs it: a candidate whose changes it no longer permits is corrected
+  // from the step's base, with the same rule and wording as the seal's check.
+  const policy = policyFor(ctx, s, step, accepted);
+  const violations = record.candidate.changes
+    .filter((c) => !within(c.path, policy.writable) || within(c.path, policy.protected))
+    .map((c) => `${c.path}: ${c.kind} outside the writable paths`);
+  if (violations.length > 0) {
+    return newAttempt(
+      ctx,
+      s,
+      step,
+      accepted,
+      attempt + 1,
+      production.base,
+      sealFindings(violations),
+    );
+  }
   const manifest = manifestOf(ctx, step, accepted, record.candidate);
   if (!manifest) throw new Error(`${step.id}: an input has no current acceptance`);
   const evaluation = evaluationDigest(manifest);
@@ -810,8 +829,7 @@ function evaluationAction(
   // makes a new evaluation of the same candidate; earlier records stay.
   if (evaluation !== latest.evaluation)
     return { kind: "evaluate", record: { ...record, manifest } };
-  const { attempt } = record;
-  const ev: Evaluated = { step, attempt, evaluation, record, policy: production.policy };
+  const ev: Evaluated = { step, attempt, evaluation, record, policy };
   const thisEvaluation = <T extends { evaluation: string; attempt: number }>(f: Fact<T>): boolean =>
     f.record.evaluation === evaluation && f.record.attempt === attempt;
 
@@ -924,10 +942,16 @@ function stepAction(
   const rejected = s.rejections.filter(mine).at(-1);
   if (rejected) {
     // The rejected work is discarded: start where it started, with its findings too.
-    return newAttempt(ctx, s, step, accepted, attempt + 1, production.from, [
-      ...production.findings,
-      ...sealFindings(rejected.record.diagnostics),
-    ]);
+    const findings = [...production.findings, ...sealFindings(rejected.record.diagnostics)];
+    return newAttempt(
+      ctx,
+      s,
+      step,
+      accepted,
+      attempt + 1,
+      production.from,
+      findings.filter((f, i) => findings.findIndex((g) => stringify(g) === stringify(f)) === i),
+    );
   }
   const produced = s.producers
     .filter((p) => p.data.step === step.id && p.attempt === attempt)

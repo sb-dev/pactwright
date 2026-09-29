@@ -88,7 +88,9 @@ again.
   revision re-evaluates accepted steps and their dependants on resume. So does
   a change to the harness code, a binding or a skill. Each is verified and
   reviewed again, and approvals of its new evaluation are requested again. An
-  effect that already has a receipt never runs again.
+  effect that already has a receipt never runs again. A candidate whose
+  changes the current write policy no longer permits is not reused: the step
+  is corrected from its base.
 - **Refused.** The repository, the checkpoint and the approvers identify the
   run and cannot be amended; they need a new run.
 

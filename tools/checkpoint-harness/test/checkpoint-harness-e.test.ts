@@ -1192,6 +1192,49 @@ describe("T3-E amendments: an operator amends a paused run and it resumes in pla
     assert.equal(producer.requests.length, 2);
   });
 
+  it("a restrictive write-policy amendment is enforced on the accepted candidate, as in a fresh run", async () => {
+    const violation = /write-policy: src\/parser\.mjs: added outside the writable paths/;
+    const w = world();
+    const producer = goodProducer();
+    const deps = testDeps(w.repo, { producer, reviewer: reviewer() });
+    const config = runConfig(w.repo, w.scratch);
+    const first = await startRun(config, deps);
+    assertAccepted(first, ["CP99-S01"]);
+    const dir = dirOf(first);
+    const restricted = structuredClone(config);
+    restricted.permissions = {
+      ...(config.permissions as object),
+      protected: ["src/parser.mjs"],
+    };
+    const amended = await amendRun(
+      dir,
+      { config: restricted, reason: "protect the parser", actor: OWNER },
+      { repoRoot: w.repo.root, skillsRoot, env: { [KEY_VAR]: "sk-ant-test-e" } },
+    );
+    assert.ok(amended.ok, stringify(amended));
+    const paused = assertPaused(await resumeRun(dir, deps), {
+      code: "exhausted",
+      detail: violation,
+    });
+    assert.deepEqual(paused.accepted, []);
+    assert.equal(actions(dir, "acceptance").length, 1);
+    // The accepted candidate is not reused: a correction starts from the base.
+    const second = producer.packets.find((p) => p.attempt === 2);
+    assert.deepEqual(
+      second?.findings.map((f) => [f.rule, f.defect]),
+      [["write-policy", "src/parser.mjs: added outside the writable paths"]],
+    );
+
+    // Control: a fresh run under the same policy stops the same way.
+    const v = world();
+    const fresh = await startRun(
+      { ...runConfig(v.repo, v.scratch), permissions: restricted.permissions },
+      testDeps(v.repo, { producer: goodProducer(), reviewer: reviewer() }),
+    );
+    assertPaused(fresh, { code: "exhausted", detail: violation });
+    assert.equal(actions(dirOf(fresh), "acceptance").length, 0);
+  });
+
   it("an amendment is refused without a reason, without a change, for the run's identity, when invalid or when not released", async () => {
     const w = world();
     const deps = testDeps(w.repo, { producer: goodProducer(), reviewer: reviewer() });
