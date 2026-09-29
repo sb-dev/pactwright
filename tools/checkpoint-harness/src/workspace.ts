@@ -122,7 +122,7 @@ const hasControl = (text: string): boolean =>
   [...text].some((c) => c.charCodeAt(0) < 0x20 || c.charCodeAt(0) === 0x7f);
 
 /** A policy path: relative, normalised, inside the workspace and not Git metadata. */
-function policyPathError(path: string): string | null {
+export function policyPathError(path: string): string | null {
   if (path === "" || isAbsolute(path) || posix.normalize(path) !== path || path === ".") {
     return `${path}: not a normalised relative path`;
   }
@@ -497,10 +497,17 @@ export async function fenceWorkers(run: string): Promise<number> {
 
 /**
  * Stops every writer of the workspace, then captures its files as a new
- * snapshot whose parent is the workspace base.
+ * snapshot whose parent is `against.base`, checking the diff against
+ * `against.policy`. Both default to the workspace's own; a workspace started
+ * from an earlier candidate is sealed against its step's base, with protected
+ * paths the base lacked.
  */
-export async function sealCandidate(run: RunHandle, ws: Workspace): Promise<Capture> {
+export async function sealCandidate(
+  run: RunHandle,
+  ws: Workspace,
+  against: { base: SourceSnapshot; policy: WritePolicy } = ws,
+): Promise<Capture> {
   await fence(ws);
   // A fixed message keeps the commit a function of the tree and base alone.
-  return captureSource(run.dir, ws.root, ws.base, ws.policy, "candidate");
+  return captureSource(run.dir, ws.root, against.base, against.policy, "candidate");
 }

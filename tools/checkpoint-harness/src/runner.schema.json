@@ -1,0 +1,62 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Checkpoint harness runner configuration",
+  "description": "The run configuration sections `run` needs besides planning and dispatch (Task 3 research log §§4, 7 and §12 T3-E). run-config.schema.json validates planning, dispatch.schema.json roles, credentials and budgets; this schema requires both roles, the workspace roots, the write and approval permissions and the per-step retry budget.",
+  "type": "object",
+  "required": ["roles", "budgets", "workspace", "permissions"],
+  "properties": {
+    "roles": { "type": "object", "required": ["producer", "reviewer"] },
+    "budgets": {
+      "type": "object",
+      "required": ["attempts", "retries"],
+      "properties": {
+        "attempts": { "description": "Production attempts per step, corrections included." },
+        "retries": { "description": "Protocol retries per step." }
+      }
+    },
+    "workspace": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["candidate_root", "controller_root"],
+      "properties": {
+        "candidate_root": {
+          "description": "Directory for candidate, verifier and reviewer workspaces; never inside a run directory.",
+          "type": "string",
+          "minLength": 1
+        },
+        "controller_root": {
+          "description": "Directory in which `run` creates its run directory.",
+          "type": "string",
+          "minLength": 1
+        }
+      }
+    },
+    "permissions": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["writable", "scratch", "protected", "approvers"],
+      "properties": {
+        "writable": { "$ref": "#/$defs/paths" },
+        "scratch": { "$ref": "#/$defs/paths" },
+        "protected": { "$ref": "#/$defs/paths" },
+        "approvers": {
+          "description": "The operator accounts that hold each approval authority a binding names.",
+          "type": "object",
+          "additionalProperties": {
+            "type": "array",
+            "minItems": 1,
+            "uniqueItems": true,
+            "items": { "type": "string", "minLength": 1 }
+          }
+        }
+      }
+    }
+  },
+  "$defs": {
+    "paths": {
+      "type": "array",
+      "uniqueItems": true,
+      "items": { "type": "string", "minLength": 1 }
+    }
+  }
+}

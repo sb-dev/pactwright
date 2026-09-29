@@ -89,9 +89,21 @@ export type ApprovalBinding = {
   authority: string;
   /** The exact output or effect being authorised. */
   subject: string;
+  /**
+   * The external effect the approval authorises, if any (T3-E). It runs only
+   * after the step is accepted, once, and is proved by a receipt.
+   */
+  effect?: { action: string; target: string };
 };
 
 export type Binding = AutomatedBinding | ReviewBinding | ApprovalBinding;
+
+/**
+ * The code-owned bindings of Checkpoint 1's product verifiers. None exists
+ * yet: each is delivered and admitted with its capability (Spec 00 §5 T5), so
+ * until then the runner pauses a step whose bindings are unregistered.
+ */
+export const BINDINGS: readonly Binding[] = [];
 
 /** Bindings by ID, each with the digest of its definition. */
 export type Registry = ReadonlyMap<string, { binding: Binding; digest: string }>;
@@ -133,8 +145,16 @@ export function createRegistry(
       if (binding.rubric.length === 0 || !texts(binding.rubric)) {
         diagnostics.push(`${where}: no rubric`);
       }
-    } else if (binding.authority.trim() === "" || binding.subject.trim() === "") {
-      diagnostics.push(`${where}: approval needs an authority and a subject`);
+    } else {
+      if (binding.authority.trim() === "" || binding.subject.trim() === "") {
+        diagnostics.push(`${where}: approval needs an authority and a subject`);
+      }
+      if (
+        binding.effect &&
+        (binding.effect.action.trim() === "" || binding.effect.target.trim() === "")
+      ) {
+        diagnostics.push(`${where}: an effect needs an action and a target`);
+      }
     }
     registry.set(binding.id, { binding, digest: sha256(stringify(binding)) });
   }
