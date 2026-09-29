@@ -80,6 +80,7 @@ import {
   reviewScope,
   runnableBindings,
   targetKey,
+  targetsOf,
   verifyCandidate,
   type Admission,
   type Approval,
@@ -435,11 +436,6 @@ function contractStep(plan: PreparedRun, id: string): ContractStep {
   if (step?.kind !== "contract") throw new Error(`${id}: not a planned contract step`);
   return step;
 }
-
-const targetsOf = (plan: PreparedRun, step: ContractStep): VerificationTarget[] => [
-  ...step.targets,
-  ...plan.inherited.targets,
-];
 
 /**
  * Each step's latest acceptance whose evaluation is still current: the

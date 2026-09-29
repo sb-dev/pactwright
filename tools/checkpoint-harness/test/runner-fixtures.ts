@@ -51,10 +51,11 @@ export type Repo = { root: string; head: string };
 
 /**
  * A Git repository on branch `fixture` holding the fixture definitions, the
- * format schema and the verifier source, committed once: the definitions
- * revision and the expected head of every fixture run.
+ * format schema and the verifier source, plus the fixture directories
+ * `verifiers` under `verifiers/`, committed once: the definitions revision and
+ * the expected head of every fixture run.
  */
-export function fixtureRepo(scratch: string): Repo {
+export function fixtureRepo(scratch: string, verifiers: readonly string[] = []): Repo {
   const root = join(scratch, `repo-${randomUUID()}`);
   mkdirSync(root, { recursive: true });
   cpSync(join(fixtureRoot, "docs"), join(root, "docs"), { recursive: true });
@@ -63,6 +64,9 @@ export function fixtureRepo(scratch: string): Repo {
     join(root, "docs/checkpoints/contract.schema.json"),
   );
   cpSync(join(fixtureRoot, "verification"), root, { recursive: true });
+  for (const dir of verifiers) {
+    cpSync(join(fixtureRoot, dir), join(root, "verifiers"), { recursive: true });
+  }
   git(root, ["init", "-q", "-b", "fixture"]);
   git(root, ["add", "-A"]);
   git(root, ["commit", "-q", "--no-gpg-sign", "-m", "fixture"]);
@@ -72,6 +76,7 @@ export function fixtureRepo(scratch: string): Repo {
 export const CHECKPOINTS = {
   CP99: "docs/checkpoints/99-fixture/checkpoint.yml",
   CP98: "docs/checkpoints/98-release/checkpoint.yml",
+  CP97: "docs/checkpoints/97-bootstrap/checkpoint.yml",
 } as const;
 
 /** A complete run configuration for `repo`; runs and workspaces live under `scratch`. */
@@ -208,8 +213,8 @@ export type Session = {
 export type ScriptedAgent = Provider & { requests: ProviderRequest[]; packets: Packet[] };
 
 /**
- * A provider session that authenticates as the configured API key, reports
- * the requested model and tools, runs `script` and returns its reply.
+ * A provider session that authenticates with the configured credential kind,
+ * reports the requested model and tools, runs `script` and returns its reply.
  */
 export function scriptedAgent(script: (session: Session) => Promise<Reply> | Reply): ScriptedAgent {
   const requests: ProviderRequest[] = [];
@@ -223,11 +228,12 @@ export function scriptedAgent(script: (session: Session) => Promise<Reply> | Rep
       assert.ok(tool, `tool ${name} is offered`);
       return tool.run(args);
     };
+    const token = request.credentialKind === "oauth-token";
     return (async function* (): AsyncGenerator<ProviderEvent> {
       yield {
         type: "account",
-        apiKeySource: "ANTHROPIC_API_KEY",
-        tokenSource: null,
+        apiKeySource: token ? "none" : "ANTHROPIC_API_KEY",
+        tokenSource: token ? "CLAUDE_CODE_OAUTH_TOKEN" : null,
         apiProvider: "firstParty",
       };
       yield {
@@ -238,7 +244,7 @@ export function scriptedAgent(script: (session: Session) => Promise<Reply> | Rep
         mcpServers: [{ name: "workspace", status: "connected" }],
         plugins: [],
         permissionMode: "dontAsk",
-        apiKeySource: "ANTHROPIC_API_KEY",
+        apiKeySource: token ? "none" : "ANTHROPIC_API_KEY",
       };
       const reply = await script({ packet, request, call });
       yield {
