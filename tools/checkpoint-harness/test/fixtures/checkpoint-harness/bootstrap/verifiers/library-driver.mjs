@@ -8,6 +8,7 @@
 import { readFileSync, writeSync } from "node:fs";
 import { dirname, resolve, sep } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
+import { types } from "node:util";
 import vm from "node:vm";
 
 const text = readFileSync(0, "utf8");
@@ -32,8 +33,47 @@ const linker = (specifier, referencing) => {
   return load(path);
 };
 
-// Facts are null-prototype objects of primitives, so no candidate toJSON
-// takes part in the report.
+// The observer reads candidate values only through reflection on ordinary
+// objects, which runs no candidate code: no getter, proxy trap, toJSON or
+// Symbol.hasInstance takes part in a fact.
+const plain = (o) => o !== null && (typeof o === "object" || typeof o === "function") && !types.isProxy(o);
+const data = (o, key) => {
+  const d = Reflect.getOwnPropertyDescriptor(o, key);
+  return d !== undefined && "value" in d ? d.value : undefined;
+};
+// The returned configuration: an ordinary object whose only own properties
+// are the data properties port (a number) and label (a string). An exotic
+// object whose reflection throws is not one.
+const configuration = (value) => {
+  try {
+    if (!plain(value) || typeof value === "function") return null;
+    const keys = Reflect.ownKeys(value);
+    if (keys.length !== 2 || !keys.includes("port") || !keys.includes("label")) return null;
+    const port = data(value, "port");
+    const label = data(value, "label");
+    return typeof port === "number" && typeof label === "string" ? { port, label } : null;
+  } catch {
+    return null;
+  }
+};
+// A ConfigError: an ordinary object with ConfigError.prototype on its
+// prototype chain, and its own message when that is a data property.
+const rejection = (error, ConfigError) => {
+  try {
+    const prototype = plain(ConfigError) ? data(ConfigError, "prototype") : undefined;
+    for (let o = error; plain(o); ) {
+      o = Reflect.getPrototypeOf(o);
+      if (o !== null && o === prototype) {
+        const message = data(error, "message");
+        return { typed: true, message: typeof message === "string" ? message : null };
+      }
+    }
+  } catch {
+    // An exotic value whose reflection throws is not a ConfigError.
+  }
+  return { typed: false, message: null };
+};
+
 let fact = { __proto__: null, returned: null, value: null, error: "the library did not load", message: null };
 try {
   const library = load(resolve("src/config.mjs"));
@@ -43,12 +83,20 @@ try {
   if (typeof parseConfig !== "function" || typeof ConfigError !== "function") {
     fact = { __proto__: null, returned: null, value: null, error: "no parseConfig and ConfigError exports", message: null };
   } else {
+    // Only the call itself can reject; its result is judged afterwards.
+    let outcome;
     try {
-      const value = JSON.stringify(parseConfig(text));
-      fact = { __proto__: null, returned: true, value: typeof value === "string" ? value : null, error: null, message: null };
+      outcome = { returned: true, value: parseConfig(text) };
     } catch (e) {
-      const typed = e instanceof ConfigError;
-      const message = typed && typeof e.message === "string" ? `${e.message}` : null;
+      outcome = { returned: false, error: e };
+    }
+    if (outcome.returned) {
+      const config = configuration(outcome.value);
+      fact = config
+        ? { __proto__: null, returned: true, value: JSON.stringify(config), error: null, message: null }
+        : { __proto__: null, returned: true, value: null, error: "not a {port, label} configuration", message: null };
+    } else {
+      const { typed, message } = rejection(outcome.error, ConfigError);
       fact = { __proto__: null, returned: false, value: null, error: typed ? "ConfigError" : "not a ConfigError", message };
     }
   }

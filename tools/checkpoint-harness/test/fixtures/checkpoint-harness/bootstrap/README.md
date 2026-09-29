@@ -10,8 +10,10 @@ is `../docs/specs/bootstrap-spec.md`. It is not Checkpoint 1 acceptance.
   candidate library in a V8 realm of its own, linked only to modules under
   `src/`: candidate code has no `process`, built-in modules, timers or
   output, and no reference to the driver's objects, so it can neither read
-  the process nor write a report. The driver alone forms the fact and
-  prints it. The command subject stages each case's path in a
+  the process nor write a report. Only the `parseConfig` call can reject;
+  the driver reads its result or error by reflection on ordinary objects,
+  so no getter, proxy, `toJSON` or `Symbol.hasInstance` of the candidate
+  takes part. The driver alone forms the fact and prints it. The command subject stages each case's path in a
   fresh temporary directory, runs the command as a program and compares the
   path before and after. Judges never run candidate code.
 - `candidates/` holds the known-good submissions of the scripted producers

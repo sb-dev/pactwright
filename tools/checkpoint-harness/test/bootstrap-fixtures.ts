@@ -99,7 +99,7 @@ export function bootstrapConfig(
 
 const LIBRARY_VERIFIER = {
   method: "automated",
-  version: "4",
+  version: "5",
   command: ["node", "verifiers/library-subject.mjs"],
   judge: ["node", "verifiers/library-judge.mjs"],
   files: [

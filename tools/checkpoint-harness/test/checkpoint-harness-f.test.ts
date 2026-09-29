@@ -512,6 +512,21 @@ describe("T3-F F04 boundaries: each seeded fault fails exactly its targets", () 
       ownRejections(),
     ],
     [
+      "returns an object whose toJSON throws a ConfigError for an out-of-range port",
+      LIBRARY,
+      {
+        "src/config.mjs": seeded(
+          "serialisation throw",
+          replaced(
+            library,
+            "  if (port < 1 || port > 65535)",
+            '  if (port > 65535) return { port, label, toJSON() { throw new ConfigError("port"); } };\n  if (port < 1 || port > 65535)',
+          ),
+        ),
+      },
+      [lib("AC03/port-above-highest")],
+    ],
+    [
       "reads the driver's input from a heap snapshot and forges the report",
       LIBRARY,
       { "src/config.mjs": seeded("heap forgery", HEAP_FORGER) },
