@@ -2,7 +2,11 @@
 id: CP99-S01
 requires: []
 outputs:
-  config-parser: A parser for the fixture configuration.
+  config-parser: >-
+    A parser for the fixture configuration, `src/parser.mjs`. A configuration
+    is a JSON object whose `name` is a non-empty string once trimmed. Run as a
+    program the parser reads a configuration on stdin; it prints the parsed
+    JSON and exits 0, or exits 1 with an error naming the field on stderr.
 requirements:
   R01:
     source: [FIX#1]
@@ -12,8 +16,10 @@ acceptance:
     covers: [R01]
     cases: [valid, invalid]
     given: A configuration of the listed kind.
-    when: The parser reads it.
-    then: The parser accepts the valid one and rejects the invalid one.
+    when: The parser program reads it on stdin.
+    then: >-
+      The parser accepts the valid one, printing its name and exiting 0, and
+      rejects the invalid one, exiting 1 with an error that names the field.
     verify: {automated: [parser.accepts, parser.rejects]}
   AC02:
     covers: [R01]

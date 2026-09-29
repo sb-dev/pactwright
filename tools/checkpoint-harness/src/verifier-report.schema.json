@@ -1,0 +1,43 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Checkpoint harness verifier report",
+  "description": "What one binding's judge reports (Task 3 research log §6 and §12 T3-D). The judge runs in a workspace holding only the binding's files, reads the subject's runs, one per target, each labelled with its target by the controller and carrying its exit status and stdout, as JSON on stdin, exits 0 and writes this document to stdout with one result for each target of that binding. Separate from the checkpoint contract format and the run configuration.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["results"],
+  "properties": {
+    "results": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "binding",
+          "owner",
+          "criterion",
+          "case",
+          "outcome",
+          "assertions",
+          "observations"
+        ],
+        "properties": {
+          "binding": { "type": "string" },
+          "owner": { "type": "string" },
+          "criterion": { "type": "string" },
+          "case": { "type": ["string", "null"] },
+          "outcome": { "enum": ["passed", "failed", "skipped"] },
+          "assertions": {
+            "description": "Assertions executed for this result; a pass needs at least one.",
+            "type": "integer",
+            "minimum": 0
+          },
+          "observations": {
+            "description": "Named observations; the binding lists the keys each result must carry.",
+            "type": "object"
+          },
+          "message": { "type": "string" }
+        }
+      }
+    }
+  }
+}

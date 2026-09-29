@@ -172,7 +172,7 @@ function walk(
 }
 
 /** Every blob of a tree: path → `mode sha`. */
-function treeEntries(runDir: string, tree: string): Map<string, string> {
+export function treeEntries(runDir: string, tree: string): Map<string, string> {
   const entries = new Map<string, string>();
   for (const record of git(runDir, ["ls-tree", "-r", "-z", "--full-tree", tree]).split("\0")) {
     const match = /^(\d+) \w+ ([0-9a-f]+)\t(.*)$/s.exec(record);
@@ -248,6 +248,38 @@ export function captureSource(
     );
     git(runDir, ["update-ref", `refs/snapshots/${commit}`, commit]);
     return { ok: true, candidate: { commit, tree, base, changes } };
+  } finally {
+    rmSync(scratchDir, { recursive: true, force: true });
+  }
+}
+
+/**
+ * A snapshot holding only `paths` of `snapshot`, with their exact blobs and
+ * modes: a workspace of it runs those files without the rest of the source.
+ * Every path must be a file or link of `snapshot`.
+ */
+export function subsetSnapshot(
+  runDir: string,
+  snapshot: SourceSnapshot,
+  paths: readonly string[],
+): SourceSnapshot {
+  const entries = treeEntries(runDir, snapshot.tree);
+  const info = paths
+    .map((path) => {
+      const entry = entries.get(path);
+      if (entry === undefined) throw new Error(`${path}: not in ${snapshot.commit}`);
+      const [mode = "", sha = ""] = entry.split(" ");
+      return `${mode} ${sha}\t${path}\0`;
+    })
+    .join("");
+  const scratchDir = mkdtempSync(join(tmpdir(), "pactwright-index-"));
+  try {
+    const index = join(scratchDir, "index");
+    if (info) git(runDir, ["update-index", "-z", "--index-info"], info, index);
+    const tree = git(runDir, ["write-tree"], undefined, index);
+    const commit = git(runDir, ["commit-tree", tree, "-m", "subset"], undefined);
+    git(runDir, ["update-ref", `refs/snapshots/${commit}`, commit]);
+    return { commit, tree };
   } finally {
     rmSync(scratchDir, { recursive: true, force: true });
   }

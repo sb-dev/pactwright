@@ -210,6 +210,8 @@ const SUBMISSION = {
   blockers: [],
 };
 
+const VERDICT = { verdict: "pass", coverage: [], targets: [], findings: [], blockers: [] };
+
 /** A provider that plays `script` and records how far it got. */
 function scripted(
   script: (request: ProviderRequest) => AsyncGenerator<ProviderEvent>,
@@ -943,10 +945,10 @@ describe("T3-C authentication and the effective session are checked before work 
     const provider = scripted(async function* (request) {
       yield account();
       yield init(request);
-      yield result(SUBMISSION);
+      yield result(VERDICT);
     });
     const outcome = await invoke(provider, { role: reviewer });
-    assert.equal(outcome.outcome, "submitted");
+    assert.equal(outcome.outcome, "reviewed");
     assert.deepEqual(
       provider.requests[0]?.tools.map((t) => t.name),
       ["read_file", "search_files"],
@@ -967,11 +969,12 @@ describe("T3-C authentication and the effective session are checked before work 
             "mcp__workspace__write_file",
           ],
         });
-        yield result(SUBMISSION);
+        yield result(VERDICT);
       }),
       { role: reviewer },
     );
     assert.equal(widened.outcome, "failed");
+    assert.match(widened.outcome === "failed" ? widened.reason : "", /effective session differs/);
   });
 });
 
