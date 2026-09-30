@@ -1,7 +1,9 @@
 # Pactwright — Checkpoint Step Contract and Delivery Tasks
 
-**Version:** 6  
-**Date:** 27 September 2026  
+**Version:** 7
+
+**Date:** 30 September 2026
+
 **Purpose:** Replace checkpoint prompts with requirements and acceptance criteria, then execute them through progressively self-hosted run models.
 
 ## 1. Execution model
@@ -20,6 +22,8 @@ Canonical specifications → checkpoint contracts
 Agent prompts are generated invocation context, not requirements or acceptance authority. The harness accepts outputs only against the approved contract and current evidence.
 
 Checkpoint 1 proves a software-development instance using an external bootstrap harness. That experience informs Pactwright-backed run models for software and other production domains. Later models use the existing Pactwright lifecycle and graph, not competing versions of them.
+
+For T5, the bootstrap harness runs on GitHub Actions. A **run** is the full harness execution. Its **controller** is the trusted process that schedules work, invokes agents, evaluates evidence and records progress. A replacement job restores the same run rather than starting its acceptance history again.
 
 ## 2. Checkpoint organisation
 
@@ -53,7 +57,7 @@ prose_steps:                     # only when a step stays unconverted
   CP01-S22: sha256:<64 hex digits>
 ```
 
-`software-bootstrap` is a proposed model identifier. Source paths are relative to `checkpoint.yml`. `CORE#15` identifies numbered section 15; a heading without a section number, in any source, is cited by its GitHub heading anchor, such as `GUIDE#replay-provenance`. The harness resolves and pins the actual source revisions for each run.
+`software-bootstrap` identifies the bootstrap software run model. Source paths are relative to `checkpoint.yml`. `CORE#15` identifies numbered section 15; a heading without a section number, in any source, is cited by its GitHub heading anchor, such as `GUIDE#replay-provenance`. The harness resolves and pins the actual source revisions for each run.
 
 Shared requirements, mandatory review policy and checkpoint exit criteria are declared once and inherited. Shared requirements live in `checkpoint.yml`; their IDs take the checkpoint prefix, such as `CP01/R01`. Do not maintain a second hand-written plan or acceptance registry duplicating these contracts; generate indexes and coverage views from the contract files and `prose_steps`.
 
@@ -178,7 +182,7 @@ This step proves the registration mechanism. Installed Extension composition mus
 
 An **automated** binding defines executable assertions and required observations. A **review** binding defines its independent role, rubric, pass rule and evidence. An **approval** binding identifies the authority and exact output/effect being authorised. Common independent review is required by the run model even when the step lists only automated bindings.
 
-Repository, branch, permitted writes, model/skill versions, credentials and execution budgets belong to validated run configuration. They must be resolved before dispatch, not guessed by an agent. Verifier implementations can be delivered alongside a capability, but an unresolved or untested binding cannot satisfy acceptance.
+Repository, branch, permitted writes, per-role model and effort, skill versions, credentials and execution budgets belong to validated run configuration. Effective model and effort are recorded in invocation evidence and evaluation identity. They must be resolved before dispatch, not guessed by an agent. Verifier implementations can be delivered alongside a capability, but an unresolved or untested binding cannot satisfy acceptance.
 
 Canonical specifications remain authoritative. A source conflict requires an explicit decision and amendment, not an agent choosing an easier interpretation. Neither the producer nor its generated tests may weaken the approved contract. Review checks semantic coverage and test adequacy, not just ID mapping or a green process exit.
 
@@ -190,9 +194,23 @@ A step advances only when its required outputs, every criterion/case, inherited 
 
 Record definition/source revisions, inputs, candidate identity, verifier/reviewer identity and results separately from checkpoint definitions. Freeze these inputs for an attempt. Scope or acceptance changes require a visible amendment; preserve the earlier instructions and evidence. Re-verify affected accepted obligations after changes, and evaluate the integrated checkpoint at its exit gate.
 
-The harness dispatches only converted steps. An unconverted step is eligible once every earlier step of its checkpoint is accepted. When the next eligible step is unconverted, the run pauses as below until the step is converted. Its conversion quotes the reviewed prose verbatim in the crosswalk, adds no obligation and is itself reviewed; a semantic change needs a T2 review of its own.
+The harness executes both converted contracts and reviewed operational steps retained in prose. An operational step is eligible once every earlier step of its checkpoint is accepted. The harness runs its prescribed commands and adapter work in the declared repository or fixture, then verifies its outputs and observations against the pinned procedure and shared requirements. Prose is an execution authority, not a completion claim; conversion to YAML is not an execution prerequisite.
 
-Missing authority, unavailable resources, contradictory requirements, an unconverted step or exhausted execution limits pause the run as **unaccepted and resumable**. They neither grant acceptance nor justify an uncontrolled loop. Publishing and other external effects require their declared authority and receipts; retries must not duplicate them.
+Checkpoint-wide targets apply at the point their conditions specify. Later-only obligations remain pending until that point; they do not block an otherwise valid earlier step or disappear from the final exit evaluation.
+
+### GitHub Actions execution
+
+The committed run template holds stable settings. The workflow composes the effective configuration from that template, dispatch inputs and saved run state. For T5, `through` is an optional `workflow_dispatch` input: a new run without it selects `CP01-S01`; a continuation without it retains the saved boundary. An explicit boundary is validated and recorded before work continues. Automatic continuation stays within that boundary.
+
+Run state includes the journal, evidence, candidate Git history, effective configuration, approvals, counters and external receipts. Save a consistent, identifiable artifact after durable phases, before external effects and before a planned yield. Restore and validate the exact saved sequence on a fresh runner; missing, corrupt or stale state cannot reset progress or limits.
+
+One controller writes a run at a time. Takeover uses recorded GitHub run/job/attempt identity and verified job state, not a hostname, process ID or elapsed time. Jobs yield before their time limit. Invocation allowances are saved before dispatch, and unresolved usage remains reserved after runner loss.
+
+Pinned controller code and credentials stay outside candidate workspaces. Privileged effects use only their declared authority. An approval binds an authorised GitHub actor to the exact request and candidate. Persist intent before an effect and read its target back before recording completion or deciding whether to retry.
+
+Repository transitions retain links to earlier evidence and re-evaluate affected obligations on the declared target. Job completion or artifact upload alone does not establish step or checkpoint acceptance.
+
+Missing authority, unavailable resources, contradictory requirements, missing execution support or exhausted execution limits pause the run as **unaccepted and resumable**. They neither grant acceptance nor justify an uncontrolled loop. Publishing and other external effects require their declared authority and receipts; retries must not duplicate them.
 
 ## 5. Delivery tasks
 
@@ -202,15 +220,17 @@ These are work definitions, not progress records. Execute them in dependency ord
 |---|---|---|
 | **T1 — Convert Checkpoint 1** | Replace every CP1 prompt with the compact contract, except the steps the owner keeps as unconverted steps (§2). Retain headings, full scope, shell commands that remain valid and every exit obligation. Add the minimal format schema and generate an old-obligation-to-requirement/criterion crosswalk. | Every original obligation is accounted for; IDs, source references and requirement/criterion mappings validate. Every step is converted or listed as unconverted. No second manually maintained plan is introduced. |
 | **T2 — Review the converted contract and unconverted steps** | Review each converted contract, and each unconverted step's prose in place. Check canonical fidelity, positive/negative coverage, step dependencies, verification methods and complete product scope. Resolve necessary semantic decisions in the owning specifications. Define checkpoint-wide simplicity, graph-boundary and self-hosting obligations. | Independent review finds no unresolved instruction ambiguity or impossible prerequisite needed to execute CP1. Each criterion, and each obligation of an unconverted step, has a specified verification method, with later integration proofs explicitly allocated. Each unconverted step's reviewed hash is recorded. Verifiers need not all exist yet. |
-| **T3 — Build the CP1 harness and software run model** | Implement contract parsing, `prose_steps` reading with the pause at an unconverted step (§4), dependency selection, producer/reviewer roles, skill selection, verifier bindings, evidence capture, correction loops and resume. Protect accepted definitions from candidate edits. Resolve run targets and authorised effects before dispatch. | A bounded fixture project runs through the complete produce–verify–review–correct loop without hand-written per-step prompts or manual progress edits. |
-| **T4 — Prove the harness cannot accept false completion** | Test missing outputs, an unconverted step, no-op producers, weak or missing checks, denied operations, stale review, changed inputs, altered acceptance, interruption and repeated external effects. Use valid controls and deliberately faulty candidates. | Invalid candidates cannot advance; corrected valid candidates can. Resume preserves the right evidence and does not repeat authorised external effects blindly. Verifier/test adequacy is independently reviewed. |
-| **T5 — Implement and accept Checkpoint 1** | Prepare an isolated candidate with an explicit retained/replaced boundary; prevent reference code or stale binaries from satisfying its checks. Run every converted step through the proven harness, converting each unconverted step as §4 describes before it runs. Build verifiers alongside capabilities and review them independently. Use accepted Pactwright features as soon as the declared self-hosting threshold is met. Retain distribution, upgrades, evaluation, clean consumers, self-hosted work, learning material, authorised release and external acceptance. | Every CP1 criterion and integrated exit obligation has current evidence, including actual published/external proofs. Capture execution friction, code quality, graph behaviour and model/skill effectiveness without attributing improvements to model choice alone. |
+| **T3 — Build the CP1 harness and software run model** | Implement contract parsing, `prose_steps` reading, dependency selection, producer/reviewer roles, skill selection, verifier bindings, evidence capture, correction loops and resume. Protect accepted definitions from candidate edits. Resolve run targets and authorised effects before dispatch. | A bounded fixture project runs through the complete produce–verify–review–correct loop without hand-written per-step prompts or manual progress edits. |
+| **T4 — Prove the harness cannot accept false completion** | Test missing outputs, reviewed operational steps, no-op producers, weak or missing checks, denied operations, stale review, changed inputs, altered acceptance, interruption and repeated external effects. Include fresh-runner restore, invalid saved state, competing controllers and GitHub-bound approvals. Use valid controls and deliberately faulty candidates. | Invalid candidates cannot advance; corrected valid candidates can. Resume preserves the right evidence and does not repeat authorised external effects blindly. Verifier/test adequacy is independently reviewed. |
+| **T5 — Implement and accept Checkpoint 1** | Prepare an isolated candidate with an explicit retained/replaced boundary; prevent reference code or stale binaries from satisfying its checks. Run contract-driven implementation and the reviewed operational procedures through the GitHub Actions harness. Use the S01 pilot, then extend through the existing stage boundaries. Build verifiers alongside capabilities and review them independently. Use accepted Pactwright features as soon as the declared self-hosting threshold is met. Retain distribution, upgrades, evaluation, clean consumers, self-hosted work, learning material, authorised release and external acceptance. | Every CP1 criterion and integrated exit obligation has current evidence, including actual published/external proofs. Capture execution friction, code quality, graph behaviour and model/skill effectiveness without attributing improvements to model choice alone. |
 | **T6 — Design Pactwright-backed run models** | Use CP1 execution evidence to design the reusable orchestration model and its software instance. Define shared inputs, deliverables, role/skill composition and domain verifiers for research, games, music, video and campaigns, including mixed-skill work. Separate shared mechanics from domain policy. | Reviewed designs explain what reuses CP1, what remains domain-specific and which later capabilities each model needs. No parallel canonical lifecycle or completion graph is proposed. |
 | **T7 — Update the owning specifications and remaining checkpoints** | Place run-model semantics with their correct owner. Convert remaining checkpoint prompts to contracts in the existing files. Allocate implementation/adoption of successor models to explicit steps, with complete earlier-feature usage and integration proofs. | The dependency plan is feasible, original checkpoint obligations remain covered, and each checkpoint declares which prior features it must use. Optional Extension and Production Skills integration stays at its owning checkpoint unless explicitly amended. |
 | **T8 — Implement and adopt the first Pactwright-backed run model** | Use the accepted CP1 harness/runtime to build the successor software model in its assigned next-checkpoint step. Route governed work through Pactwright's Contract, Brief, lifecycle and Evidence mechanisms; migrate execution links through supported operations. | The successor completes a real step through Pactwright, including correction and resume, without manual graph maintenance or retrospective Evidence. It is accepted before it replaces the bootstrap runner for subsequent work. |
 | **T9 — Execute subsequent checkpoints and expand the run models** | Run each checkpoint with the latest accepted model and all applicable previously built features. Implement and prove further domain models and integrations at their assigned steps, then adopt them for later work. Include representative real mixed-skill deliverables as capabilities become available. | Each checkpoint passes its integrated exit gate and provides evidence of prior-feature use. Multi-skill runs verify shared-input consistency and final combined deliverables, not merely individual agent outputs. |
 
-T1–T2 establish the execution contract, which T5 completes for any unconverted step by converting it; T3–T4 establish the bootstrap executor; T5 proves both on CP1; T6–T9 turn that evidence into progressively self-hosted orchestration.
+T1–T2 establish the step definitions; T3 builds the bootstrap executor; T4 proves the relevant executor revision; T5 delivers CP1. T6–T9 use that evidence for progressively self-hosted orchestration.
+
+The [T5 harness prerequisites](../research-logs/2026-09-30-cp01-t5-harness-prerequisites.md) define H1 production verification, H2 model/effort control and H3 GitHub Actions operation. Implement these separately from T5 and include their changed behaviour in T4 proof. The [T5 run guide](../research-logs/2026-09-29-cp01-task-5-implementation-and-acceptance.md) owns the operator procedure. The historical T3 plan remains the record of its original implementation.
 
 ## 6. Progressive use and production domains
 
@@ -230,4 +250,6 @@ Version 2 edited the supplied v1 proposal; version 3 moves each step contract in
 - [Core specification](https://github.com/sb-dev/pactwright/blob/19c66d5f2368932ff05306db1fae8da8ec5810dd/docs/specs/01-pactwright-core-system-and-lifecycle.md), especially §§15, 34–38 and 53–57.
 - [Implementation Principles](https://github.com/sb-dev/pactwright/blob/19c66d5f2368932ff05306db1fae8da8ec5810dd/docs/checkpoints/00-implementation-principles.md), §§3–6.
 
-**Pactwright — Checkpoint Step Contract and Delivery Tasks v6**
+Version 7 defines operational-step execution and GitHub Actions continuation, adds per-role effort, and separates harness prerequisites from T5 execution. It does not claim those changes have been implemented.
+
+**Pactwright — Checkpoint Step Contract and Delivery Tasks v7**

@@ -1,22 +1,83 @@
 # Checkpoint harness — operator procedure
 
-The bootstrap harness of Spec 00 Task 3
-([research log](../../docs/research-logs/2026-09-26-cp01-task-3-harness-and-software-run-model.md)).
-It runs checkpoint steps through produce → verify → review → correct and
-records every fact in a controller-owned run directory. This page covers
-running, resuming, approving and amending, and what to do at each pause.
+The harness runs checkpoint work through produce → verify → review → correct → accept.
 
-Never edit a run directory: not the journal, not the evidence, not the source
-repository. Resume derives everything from the recorded facts. Approvals enter
-only through `approve`, and configuration changes only through `amend`.
+GitHub Actions operation below is the interface specified by the [H1–H3 prerequisites](../../docs/research-logs/2026-09-30-cp01-t5-harness-prerequisites.md). At baseline `5dccd16373d8988a7294548de6f9de61be48e33a`, the CLI exists; the hosted workflow, portable recovery and GitHub approval channel still require implementation.
 
-## Commands
+For the S01 pilot and stage selections, use the [T5 run guide](../../docs/research-logs/2026-09-29-cp01-task-5-implementation-and-acceptance.md). The [T3 log](../../docs/research-logs/2026-09-26-cp01-task-3-harness-and-software-run-model.md) records the original design.
 
-Run from inside the repository that holds the definitions and the source
-branch. pnpm runs the script in `tools/checkpoint-harness`, so give absolute
-paths:
+## Execution model
 
-```bash
+A **run** is the full harness execution. Its identifier is separate from the GitHub workflow run ID.
+
+The **controller** is the trusted harness process inside a job. It reads saved state, chooses the next action, invokes Claude, runs checks and records acceptance. GitHub supplies the runner; it does not decide acceptance.
+
+Candidate commands run in disposable Docker workspaces. Verification and review use fresh workspaces for the sealed candidate. Provider credentials stay with the controller. Repository writes and publication use narrowly authorised effect jobs.
+
+The durable run state contains the journal, evidence, candidate Git history, effective configuration, approvals, counters and receipts. A fresh job restores this state and continues the same run.
+
+## Workflow controls
+
+**Workflow file:** `.github/workflows/checkpoint-harness.yml`
+
+**T5 configuration file:** `.github/checkpoint-harness/cp01-t5.yml`
+
+H3 supplies the workflow named **Checkpoint harness** on the default branch and the complete configuration template. Operate it through **Actions → Checkpoint harness → Run workflow**.
+
+| Input | Use |
+| --- | --- |
+| `action` | `start`, `continue`, `approve`, `deny`, `amend` or `status`. |
+| `run` | Stable identifier for the full harness execution, such as `cp01-t5`. |
+| `through` | Optional boundary for `start` or `continue`. A new T5 run defaults to `CP01-S01`; an existing run keeps its saved boundary when omitted. |
+| `request` | Exact pending request from the summary, for `approve` or `deny`. |
+| `config_revision` | Commit containing the revised configuration, for `amend`. |
+| `reason` | Explanation recorded with an amendment. |
+
+The committed template omits `selection.through`. The workflow combines dispatch inputs with saved state and supplies the resolved selection to the harness. A blank continuation must not reset the boundary to S01.
+
+### Start and continue
+
+Use `start` for a new run. The workflow validates the configuration and pins the controller, definitions and candidate revisions.
+
+Use `continue` with the same run identifier to resume. Supply `through` to extend the selected boundary, or omit it to retain the current selection. The workflow records a changed selection and restores the exact saved artifact; no local run-directory path is needed.
+
+A job can stop at selection acceptance, an operator pause or a planned yield before timeout. A yield saves state and schedules continuation within the same selection. It does not extend the scope or reset a budget.
+
+### Approve or amend
+
+For `approve` or `deny`, inspect the pending request and candidate in the summary. The workflow records the authenticated GitHub actor against that request. An approval is not permission for a different candidate or effect.
+
+For `amend`, commit the configuration change, supply its `config_revision` and a reason, then continue the run. Later jobs use the saved effective configuration, not an unrecorded edit on a branch. Role, effort, skill, verifier, policy or definition changes re-evaluate affected evidence. Existing receipts are retained.
+
+### Read the result
+
+The summary shows the run identifier, selected boundary, accepted steps, model/effort, reported spending and unresolved reservations, pause reason and next action. It links evidence, any candidate PR, and saved-state identity and expiry.
+
+`selection-accepted` means the requested selection is accepted. A green job or successful artifact upload does not mean the checkpoint is complete. Final completion also requires its exit evaluation.
+
+## Save and recover
+
+H3 stores consistent state as immutable Actions artifacts with increasing sequence numbers. Save after durable phases, before an external action and before a planned yield. Retain the state for the full execution; an end-of-job upload alone cannot protect against runner loss.
+
+Use one concurrency group per run with `cancel-in-progress: false`. Recovery also checks the recorded GitHub workflow/job/attempt and saved sequence. An active or unknown owner cannot be replaced merely because another runner has a different hostname or process ID.
+
+| Condition | Action |
+| --- | --- |
+| Planned yield | Automatic continuation restores the saved selection. Use `continue` if scheduling failed. |
+| Runner lost | `continue` restores the last valid state, preserves counters and reconciles any pending effect. |
+| Pending approval | Review the exact request, choose `approve` or `deny`, then continue when authorised. |
+| Budget exhausted | Amend only the required limit and record the reason. Existing usage remains counted. |
+| Missing, corrupt or stale archive | Stop and investigate the named state. Do not silently start a fresh run or restore an older sequence. |
+| Uncertain external result | Read the target back. Retain a matching receipt; retry only when the target proves the action did not complete. |
+| Harness defect | Correct the relevant prerequisite outside T5, verify it, and record the changed harness revision before recovery. |
+
+Operational steps use their declared repository or fixture. The harness retains evidence links when work lands or the target changes, and reruns affected checks. Reviewed prose does not require conversion before execution; missing required execution evidence still prevents acceptance.
+
+## Internal CLI reference
+
+These are the existing CLI entry points used inside workflow jobs. `FILE` and `DIR` denote resolved absolute paths supplied by the workflow, not operator shell variables.
+
+```text
 pnpm --filter @pactwright/checkpoint-harness harness plan --config FILE
 pnpm --filter @pactwright/checkpoint-harness harness run --config FILE
 pnpm --filter @pactwright/checkpoint-harness harness resume --run DIR
@@ -25,109 +86,11 @@ pnpm --filter @pactwright/checkpoint-harness harness amend --run DIR --config FI
 pnpm --filter @pactwright/checkpoint-harness harness status --run DIR
 ```
 
-| Command   | Exit 0                         | Exit 2                                                          | Exit 3                                      |
-| --------- | ------------------------------ | --------------------------------------------------------------- | ------------------------------------------- |
-| `run`     | the selection is accepted      | invalid admission: configuration, definitions, roles, head      | the run stopped unaccepted; see its reasons |
-| `resume`  | the selection is accepted      | not a run, a live owner, or the pinned configuration is invalid | the run stopped unaccepted, or is corrupt   |
-| `approve` | the decision is recorded       | refused: see the diagnostics                                    | —                                           |
-| `amend`   | the amendment is recorded      | refused: see the diagnostics                                    | —                                           |
-| `status`  | facts printed; nothing written | not a run or corrupt                                            | —                                           |
+| Command | Exit 0 | Exit 2 | Exit 3 |
+| --- | --- | --- | --- |
+| `plan` | Plan prepared; no acceptance. | Invalid configuration or definitions. | — |
+| `run`, `resume` | Selection accepted. | Invalid admission or run. | Stopped unaccepted; inspect reasons. |
+| `approve`, `amend` | Decision or amendment recorded. | Request refused. | — |
+| `status` | Recorded facts printed. | Invalid or corrupt run. | — |
 
-`run` and `resume` print one JSON result:
-
-- `outcome` is `selection-accepted` or `paused`;
-- `dir` is the run directory;
-- `accepted` lists the accepted steps;
-- each entry of `reasons` has a `code`, a `subject`, a `detail`, the linked
-  `requirements` and, when an operator can answer it, a `request`.
-
-Exit 0 means the selected steps are accepted, never that the checkpoint is
-complete. Progress events go to stderr. SIGINT or SIGTERM stops the run
-resumably. An unexpected controller error prints `outcome: failed` and exits
-3; `resume` recovers the run.
-
-## Run configuration
-
-Besides the planning sections, `run` needs:
-
-- **`roles.producer`** and **`roles.reviewer`**: see `dispatch.schema.json`.
-- **`credentials.provider`**: `env:NAME`, the variable that holds the
-  credential.
-- **`budgets`**:
-  - `attempts`: production attempts per step, corrections included;
-  - `retries`: protocol retries per step;
-  - `wall_time_seconds` and `provider_spend_limit`: limits per invocation.
-- **`workspace`**:
-  - `candidate_root`: holds the contained workspaces;
-  - `controller_root`: holds the run directories.
-- **`permissions`**:
-  - `writable`, `scratch` and `protected` paths;
-  - `approvers`: authority → the operator accounts that hold it.
-
-The repository branch must be at `repository.expected_head`. The
-configuration is pinned in the run; `resume` uses the latest amendment of it.
-
-## Amending a paused run
-
-`amend` records a new configuration for a paused run. The run must be
-released. The new configuration passes the same admission as `run`. The
-journal records:
-
-- the operator account and the reason;
-- each old and new value, by JSON pointer.
-
-Prior attempts, receipts and acceptances stay, and `resume` continues under
-the new configuration. Attempt and retry counts keep their history: raise the
-budget to allow more. An amendment also lets a producer or reviewer that
-stopped at a provider limit, or a producer that reported a blocker, run
-again.
-
-- **Kept current.** Changing only budgets, workspace roots, the credential
-  reference or the selection keeps accepted evaluations current.
-- **Re-evaluated.** Changing roles, the write policy or the definitions
-  revision re-evaluates accepted steps and their dependants on resume. So does
-  a change to the harness code, a binding or a skill. Each is verified and
-  reviewed again, and approvals of its new evaluation are requested again. An
-  effect that already has a receipt never runs again. A candidate whose
-  changes the current write policy no longer permits is not reused: the step
-  is corrected from its base.
-- **Refused.** The repository, the checkpoint and the approvers identify the
-  run and cannot be amended; they need a new run.
-
-## Pauses
-
-`status --run DIR` shows the latest pause and the runner state. A repeated
-execution always counts as a retry, including after a crash or cancellation.
-Counters never reset on resume.
-
-| Code                                         | Meaning                                                                                                                                                                                                                                       | Operator action                                                                                                                                                                                                    |
-| -------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| `approval` with `awaiting approval`          | The step passed verification and review, and needs an approval of this exact evaluation.                                                                                                                                                      | Inspect the request in the evidence. As an account listed under its authority, run `approve --run DIR --request ID`, or add `--deny`. Then `resume`. An approved effect runs once, after acceptance.                |
-| `approval` with `denied` or another mismatch | The approval was denied, or a recorded approval does not match this target, authority or evaluation.                                                                                                                                         | This evaluation cannot be accepted. A change that re-evaluates the step asks again: an `amend` of evaluated settings, or a registry, binding or harness change.                                                                                                              |
-| `cancelled`                                  | The controller was stopped.                                                                                                                                                                                                                   | `resume`.                                                                                                                                                                                                          |
-| `retries`                                    | The step used its protocol retries: malformed results, faults or interruptions.                                                                                                                                                               | Read the failures in the journal. `amend` with a higher `budgets.retries` and a reason, then `resume`.                                                                                                             |
-| `exhausted`                                  | Correction attempts, or a provider time, turn or spend limit, ran out.                                                                                                                                                                        | Read the last findings. `amend` the budget or the limit, then `resume`.                                                                                                                                            |
-| `producer-blocked`                           | The producer reported a contradiction or missing authority.                                                                                                                                                                                   | The owner resolves it, for example with a reviewed definition amendment or granted permissions. `amend` accordingly, then `resume`.                                                                                |
-| `owner`                                      | An owner decision is needed. Possible causes: an unregistered or misused binding; no effect service; a changed accepted input; a paused admission; a changed protected verifier; a self-contradicting or blocked review; an approval that bypassed `approve`. | The detail names the cause. Fix it through its owner, then `resume`. A registry, binding or harness change, or an `amend` of evaluated settings, re-evaluates the step.                                           |
-| `retry`                                      | A decision found records it cannot count, after every retry of its phases.                                                                                                                                                                    | This indicates a harness defect. Fix it, then `resume`, which re-evaluates.                                                                                                                                        |
-| `unmet-dependency`                           | A step `uses` a capability that has no current receipt.                                                                                                                                                                                       | The step cannot run until that capability is accepted.                                                                                                                                                             |
-| `unconverted`                                | The next eligible step is reviewed prose (Spec 00 §4).                                                                                                                                                                                        | Convert and review the step. `amend` `definitions.revision` to that revision, then `resume`. Accepted steps are re-evaluated against the new definitions.                                                         |
-| `effect-uncertain`                           | An effect may have run, and its service cannot read the target back.                                                                                                                                                                          | The harness never repeats it. Check the target by hand. This run cannot finish; a new run needs its approval again, so deny that approval if the effect already happened.                                         |
-| `effect-invalid`                             | A receipt named another effect or target.                                                                                                                                                                                                     | Owner investigation. The effect is never repeated in this run.                                                                                                                                                     |
-| `corrupt`                                    | Committed journal records failed validation.                                                                                                                                                                                                  | Keep the run directory unchanged for investigation. Start a new run.                                                                                                                                               |
-
-`resume` exits 2 in these cases:
-
-- the branch head moved away from `expected_head`;
-- the credential is missing, or a skill pinned by `skill_digests` changed;
-- another controller is live.
-
-A moved head needs a new run. For the others, fix the environment and resume
-again.
-
-A new run is genuinely needed only in these cases:
-
-- the head moved;
-- the repository, checkpoint or approvers must change;
-- the journal is corrupt;
-- an effect outcome is uncertain or invalid.
+`run` and `resume` print the result as JSON, with progress on stderr. `status` reads records without writing them. The workflow translates dispatch actions into these operations; H3 supplies the cross-runner state and GitHub identity support that the baseline CLI lacks.
