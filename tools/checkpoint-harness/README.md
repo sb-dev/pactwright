@@ -2,7 +2,7 @@
 
 The harness runs checkpoint work through produce → verify → review → correct → accept.
 
-GitHub Actions operation below is the interface specified by the [H1–H3 prerequisites](../../docs/research-logs/2026-09-30-cp01-t5-harness-prerequisites.md). At baseline `5dccd16373d8988a7294548de6f9de61be48e33a`, the CLI exists; the hosted workflow, portable recovery and GitHub approval channel still require implementation.
+GitHub Actions operation below is the interface specified by the [T3.5 production readiness](../../docs/research-logs/2026-09-30-cp01-task-3-5-harness-production-readiness.md). At baseline `5dccd16373d8988a7294548de6f9de61be48e33a`, the CLI exists; the hosted workflow, portable recovery and GitHub approval channel still require implementation.
 
 For the S01 pilot and stage selections, use the [T5 run guide](../../docs/research-logs/2026-09-29-cp01-task-5-implementation-and-acceptance.md). The [T3 log](../../docs/research-logs/2026-09-26-cp01-task-3-harness-and-software-run-model.md) records the original design.
 
@@ -69,7 +69,7 @@ Use one concurrency group per run with `cancel-in-progress: false`. Recovery als
 | Budget exhausted | Amend only the required limit and record the reason. Existing usage remains counted. |
 | Missing, corrupt or stale archive | Stop and investigate the named state. Do not silently start a fresh run or restore an older sequence. |
 | Uncertain external result | Read the target back. Retain a matching receipt; retry only when the target proves the action did not complete. |
-| Harness defect | Correct the relevant prerequisite outside T5, verify it, and record the changed harness revision before recovery. |
+| Harness defect | Return the missing capability or design defect to T3.5, verify the corrected harness revision through T4, then resume T5. |
 
 Operational steps use their declared repository or fixture. The harness retains evidence links when work lands or the target changes, and reruns affected checks. Reviewed prose does not require conversion before execution; missing required execution evidence still prevents acceptance.
 

@@ -4,7 +4,7 @@
 
 **Date:** 30 September 2026
 
-**Status:** Execution plan; GitHub Actions support is defined by the separate harness prerequisites.
+**Status:** Execution plan; requires accepted T3.5 harness production readiness and a passing T4 proof.
 
 **Source inspected:** `refactor/pactwright-v2` at `5dccd16373d8988a7294548de6f9de61be48e33a`
 
@@ -84,9 +84,9 @@ Candidate code remains inside Docker containment. Provider credentials stay with
 
 The controller does not assume an interrupted external action failed. On resume it reads the target back, records the receipt if the action completed, and only retries when the target proves that it did not.
 
-## 2. Harness prerequisites
+## 2. Required harness baseline
 
-The separate [harness prerequisite log](2026-09-30-cp01-t5-harness-prerequisites.md) defines the changes this guide uses:
+[T3.5 — Harness Production Readiness](2026-09-30-cp01-task-3-5-harness-production-readiness.md) defines the changes this guide uses:
 
 | Contract | Change |
 | --- | --- |
@@ -94,7 +94,7 @@ The separate [harness prerequisite log](2026-09-30-cp01-t5-harness-prerequisites
 | H2 | Independent producer/reviewer model and effort settings, with recorded effective values. |
 | H3 | GitHub workflow controls, portable state, approvals and operational continuation. |
 
-These changes are implemented outside T5. The remaining sections describe how to use their outputs.
+T3.5 must be accepted before T4 starts, and T4 must pass before this T5 run starts. The remaining sections describe how to use that proven harness.
 
 ## 3. Configure the GitHub workflow
 
@@ -238,6 +238,7 @@ The guide uses the repository revision in the header and the official references
 
 - [Spec 00 — Checkpoint Step Contract and Delivery Tasks][spec00]
 - [T3 — Harness and Software Run Model][t3]
+- [T3.5 — Harness Production Readiness][t35]
 - [Checkpoint 1 — Self-Hosted Delivery][cp01]
 - [Harness operator procedure][harness]
 - [GitHub artifacts][gha-artifacts], [limits][gha-limits], [manual dispatch][gha-dispatch], [concurrency][gha-concurrency], [workflow triggering][gha-trigger] and [security][gha-security]
@@ -245,6 +246,7 @@ The guide uses the repository revision in the header and the official references
 
 [spec00]: ../specs/00-checkpoint-step-contract-and-delivery-tasks.md
 [t3]: 2026-09-26-cp01-task-3-harness-and-software-run-model.md
+[t35]: 2026-09-30-cp01-task-3-5-harness-production-readiness.md
 [cp01]: ../checkpoints/01-self-hosted-delivery.md
 [harness]: ../../tools/checkpoint-harness/README.md
 [gha-artifacts]: https://docs.github.com/en/actions/tutorials/store-and-share-data

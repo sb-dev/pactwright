@@ -6,13 +6,13 @@
 
 **T3 accepted baseline:** `9294813b9b62631804ca5a61547bd329c924bf94`
 
-**Authority:** [Spec 00 v7](../specs/00-checkpoint-step-contract-and-delivery-tasks.md), §§3–5, and [T3 plan v4](2026-09-26-cp01-task-3-harness-and-software-run-model.md), §§5–9 and §12.
+**Authority:** [Spec 00 v7](../specs/00-checkpoint-step-contract-and-delivery-tasks.md), §§3–5; [T3 plan v4](2026-09-26-cp01-task-3-harness-and-software-run-model.md), §§5–9 and §12; and [T3.5 production readiness](2026-09-30-cp01-task-3-5-harness-production-readiness.md).
 
 ## 1. Objective
 
-Establish whether the harness revision intended for T5 rejects false completion and permits valid correction. Reuse applicable T3 tests and evidence, then audit the changes delivered by the [H1–H3 prerequisite contracts](2026-09-30-cp01-t5-harness-prerequisites.md).
+Establish whether the harness produced by T3 and T3.5 rejects false completion and permits valid correction. Reuse applicable T3 tests and evidence, then audit the H1–H3 changes delivered by [T3.5](2026-09-30-cp01-task-3-5-harness-production-readiness.md).
 
-The recorded T3 baseline remains historical evidence. It does not prove later GitHub Actions or operational-step behaviour. If a prerequisite is not implemented, record that dependency as missing rather than as a defect in T3. H1–H3 implementation stays in the separate prerequisite work.
+The recorded T3 baseline remains historical evidence. It does not prove T3.5 GitHub Actions or operational-step behaviour. If a T3.5 requirement is not implemented, record T4 as blocked on T3.5 rather than treating the missing capability as a T3 defect.
 
 ## 2. Execution
 
@@ -95,11 +95,11 @@ For each execution result, record the command, revision, outcome, GitHub job/att
 
 ### Inputs
 
-Read the authorities above, H1–H3 implementation and acceptance records, the source and tests in `tools/checkpoint-harness/`, and T3 A–F reviews in PRs #54–#59. Start with [T3-E, PR #58](https://github.com/sb-dev/pactwright/pull/58) and [T3-F, PR #59](https://github.com/sb-dev/pactwright/pull/59) for integration and retained execution evidence.
+Read the authorities above, T3.5 implementation and acceptance records, the source and tests in `tools/checkpoint-harness/`, and T3 A–F reviews in PRs #54–#59. Start with [T3-E, PR #58](https://github.com/sb-dev/pactwright/pull/58) and [T3-F, PR #59](https://github.com/sb-dev/pactwright/pull/59) for integration and retained execution evidence.
 
 ### Tasks
 
-1. Use the working branch from §2. Record its starting SHA, the included H1–H3 revisions and relevant changes from the T3 baseline.
+1. Use the working branch from §2. Record its starting SHA, the included T3.5 revisions and relevant changes from the T3 baseline.
 2. Map every required case to its exact test, deliberate fault, valid control and execution evidence. Trace the controller's acceptance and next-step dispatch where progression is at issue.
 3. Run existing probes where inspection does not establish coverage. Record an unproved behaviour as an evidence gap, not as a confirmed code defect.
 
@@ -111,7 +111,7 @@ Fill Baseline and Coverage. Record executed checks in Verification. Use coverage
 
 ### Exit
 
-Every required case has adequate evidence or a precise gap. Route an unimplemented H1–H3 requirement to the prerequisite work. Continue to B for proof gaps or defects in implemented behaviour; otherwise go to C. Harness behaviour remains unchanged during A.
+Every required case has adequate evidence or a precise gap. Route an unimplemented H1–H3 requirement back to T3.5. Continue to B for proof gaps or defects in implemented behaviour; otherwise go to C. Harness behaviour remains unchanged during A.
 
 ### Run prompt
 
@@ -127,7 +127,7 @@ Update the exit review and stop at the T4-A exit condition.
 
 ### Inputs
 
-Use the gaps and evidence recorded by A, or findings returned by C. Newly required H1–H3 capabilities are implemented under their prerequisite contracts, not added as T5 product work.
+Use the gaps and evidence recorded by A, or findings returned by C. Missing H1–H3 capabilities return to T3.5; T4-B fixes defects or proof gaps in behaviour that T3.5 already claims to provide.
 
 ### Tasks
 

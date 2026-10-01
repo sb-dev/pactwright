@@ -1,4 +1,4 @@
-# Checkpoint 1 — T5 Harness Prerequisites
+# Checkpoint 1 Task 3.5 — Harness Production Readiness
 
 **Version:** 1
 
@@ -8,13 +8,13 @@
 
 **Authority:** [Spec 00](../specs/00-checkpoint-step-contract-and-delivery-tasks.md), §§3–5.
 
-These three changes are implemented outside T5. H1 and H2 retain their separate responsibilities. H3 adds GitHub Actions operation and cross-job recovery.
+Task 3.5 productionises the T3 harness before T4. H1 and H2 retain their separate responsibilities; H3 adds GitHub Actions operation and cross-job recovery. T4 proves the resulting harness before T5 uses it.
 
 ## 1. Contract context
 
 The three prerequisite files use `CP00-S01` to `CP00-S03` in a separate format-2 bundle. These are H1–H3, not additional CP01 product steps. Verifier IDs below name checks to implement.
 
-**Recommended file:** `docs/research-logs/cp01-t5-prerequisites/checkpoint.yml`
+**Recommended file:** `docs/research-logs/cp01-task-3-5-harness-production-readiness/checkpoint.yml`
 
 ```yaml
 format: 2
@@ -24,14 +24,13 @@ sources:
   SPEC00: ../../specs/00-checkpoint-step-contract-and-delivery-tasks.md
   T3: ../2026-09-26-cp01-task-3-harness-and-software-run-model.md
   CP01: ../../checkpoints/01-self-hosted-delivery.md
-  T5: ../2026-09-29-cp01-task-5-implementation-and-acceptance.md
 ```
 
 ## 2. H1 — CP01 production verification
 
 The production binding registry is empty in the inspected source. H1 provides binding admission and a candidate environment that can run real CP01 checks on a hosted runner. Product verifiers still arrive with their capabilities during T5. [Binding registry][bindings-source].
 
-**Recommended file:** `docs/research-logs/cp01-t5-prerequisites/CP00-S01.yml`
+**Recommended file:** `docs/research-logs/cp01-task-3-5-harness-production-readiness/CP00-S01.yml`
 
 ```yaml
 id: CP00-S01
@@ -50,7 +49,7 @@ requirements:
       A new or changed verifier shall complete adequacy review before its results count towards
       acceptance.
   R03:
-    source: [T3#8, T5#1]
+    source: [T3#8, SPEC00#4]
     statement: >-
       The hosted runner shall execute required build, test and verification commands from isolated
       candidate snapshots with prepared dependencies.
@@ -92,7 +91,7 @@ acceptance:
 
 Add independent model and effort settings for the producer and reviewer. Validate them against the pinned adapter and record what was requested and what the provider reports.
 
-**Recommended file:** `docs/research-logs/cp01-t5-prerequisites/CP00-S02.yml`
+**Recommended file:** `docs/research-logs/cp01-task-3-5-harness-production-readiness/CP00-S02.yml`
 
 ```yaml
 id: CP00-S02
@@ -140,7 +139,7 @@ acceptance:
 
 The current recovery model uses local ownership, and the operator procedure assumes a persistent run directory. H3 makes that state portable and exposes the operator actions through GitHub. It also supports the later CLI procedures, repository transitions and external actions. [Recovery source][evidence-source]; [operator procedure][harness].
 
-**Recommended file:** `docs/research-logs/cp01-t5-prerequisites/CP00-S03.yml`
+**Recommended file:** `docs/research-logs/cp01-task-3-5-harness-production-readiness/CP00-S03.yml`
 
 ```yaml
 id: CP00-S03
@@ -151,28 +150,29 @@ outputs:
   operational-execution: Target-aware CLI execution, GitHub-authorised decisions and external receipts.
 requirements:
   R01:
-    source: [T3#9, T5#1]
+    source: [T3#9, SPEC00#4]
     statement: >-
-      The harness shall publish consistent state archives at the save points in T5 section 1 and
-      restore the exact trusted run sequence with file metadata and evidence intact.
+      The harness shall publish consistent state archives after durable phases, before external
+      effects and before planned yields, then restore the exact trusted run sequence with file
+      metadata and evidence intact.
   R02:
-    source: [T3#7, T5#1]
+    source: [T3#7, SPEC00#4]
     statement: >-
       Jobs shall yield before timeout and retain attempts, retries and spending across restarts;
       invocation allowance shall be saved before dispatch and unresolved usage shall remain
       reserved.
   R03:
-    source: [T3#9, T5#1]
+    source: [T3#9, SPEC00#4]
     statement: >-
       A run shall have one active controller, with takeover based on GitHub job status and
       saved sequence rather than hostname, process ID or elapsed time.
   R04:
-    source: [T3#8, T5#1]
+    source: [T3#8, SPEC00#4]
     statement: >-
       Pinned controller code shall remain separate from candidate code; candidate commands shall
       not receive provider credentials, repository-write credentials or the Docker control socket.
   R05:
-    source: [T3#9, T5#7]
+    source: [T3#9, SPEC00#4]
     statement: >-
       Approval shall bind an authorised GitHub actor to the exact request and candidate; external
       actions shall follow an uploaded intent and require read-back receipts, including after
@@ -184,7 +184,7 @@ requirements:
       links across landed revisions and target changes, and re-evaluate affected obligations
       before continuing.
   R07:
-    source: [T5#3, T5#5, T5#6, T5#7, T5#8]
+    source: [SPEC00#4]
     statement: >-
       The workflow shall provide the documented start, continue, approve, deny, amend and status
       actions, accept an optional through input at dispatch time, compose the effective harness
@@ -257,12 +257,12 @@ acceptance:
 
 The first H3 proof is a small fixture across two hosted runners, including interruption after an external intent. Test that hand-off before using the workflow for product implementation.
 
-## 5. Handoff to T4 and T5
+## 5. Exit and handoff
 
-Record each contract's implementation revision and acceptance evidence. H1 and H2 can proceed separately; H3 integrates their outputs. The [T4 proof](2026-09-29-cp01-task-4-false-completion-proof.md) reviews the resulting execution and recovery paths. The [T5 guide](2026-09-29-cp01-task-5-implementation-and-acceptance.md) uses the resulting workflow.
+Record each contract's implementation revision and acceptance evidence. H1 and H2 can proceed separately; H3 integrates their outputs. Task 3.5 is complete only when all three contracts are accepted. The [T4 proof](2026-09-29-cp01-task-4-false-completion-proof.md) then reviews the resulting execution and recovery paths. The [T5 guide](2026-09-29-cp01-task-5-implementation-and-acceptance.md) uses the harness only after T4 passes.
 
 [harness]: ../../tools/checkpoint-harness/README.md
 [bindings-source]: https://github.com/sb-dev/pactwright/blob/5dccd16373d8988a7294548de6f9de61be48e33a/tools/checkpoint-harness/src/software-bootstrap.ts
 [evidence-source]: https://github.com/sb-dev/pactwright/blob/5dccd16373d8988a7294548de6f9de61be48e33a/tools/checkpoint-harness/src/evidence.ts
 
-**Checkpoint 1 — T5 Harness Prerequisites, Version 1**
+**Checkpoint 1 Task 3.5 — Harness Production Readiness, Version 1**
