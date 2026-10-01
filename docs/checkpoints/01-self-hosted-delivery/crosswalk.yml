@@ -71,8 +71,13 @@
 # Stage 8, 9 and 10 text, Steps 22-31 prose, exit gate) and checkpoint.yml
 # (CP01/R02-R05, prose_steps). The owner approved the Q60, Q61, Q62/Q65 and Q64
 # decisions in the producing session on 2026-09-27, directed that Steps 22-31
-# stay in prose (Q67), and confirmed Spec 00 v6's convert-before-run boundary
-# in review 5331122570 (exit record). The section 7 review is
+# stay in prose (Q67), and originally confirmed Spec 00 v6's convert-before-run
+# boundary in review 5331122570. That execution boundary is superseded by
+# Spec 00 v8 sections 4-5 and the 1 October 2026 owner decision:
+# https://github.com/sb-dev/pactwright/pull/60#issuecomment-5938936037
+# B28 v2 records direct execution as reviewed operational/CLI steps, with no
+# prior YAML conversion. Reviewed hashes and shared obligations still apply.
+# T3.5-H3 implements the path; T4 proves it; T5 uses it. The section 7 review is
 # ../../research-logs/2026-09-27-cp01-stages-6-11-exit-review.md. No question
 # is deleted.
 sources:
@@ -1407,6 +1412,9 @@ open_questions:
   - id: Q66
     affects: [CP01/R02, CP01/R03, CP01/R04, CP01/R05, CP01/AC02, CP01/AC03, CP01/AC04, CP01/AC05]
     question: "Spec 00 T2 requires checkpoint-wide simplicity, graph-boundary and self-hosting obligations, and the exit gate lists thirty-one closing conditions with no named owners. What are those obligations, where are they declared and inherited, and how is each exit-gate line bound to what proves it without maintaining a second acceptance registry?"
+  # Disposition: resolved by B28 v2 and Spec 00 v8 sections 2, 4-5. The owner
+  # superseded convert-before-run; S22-S31 stay reviewed prose operational steps.
+  # Original question retained verbatim as the historical input.
   - id: Q67
     affects: [CP01-S22, CP01-S23, CP01-S24, CP01-S25, CP01-S26, CP01-S27, CP01-S28, CP01-S29, CP01-S30, CP01-S31]
     question: "Spec 00 section 2 replaces every step's prose with a YAML contract, and T2 reviews the converted contract. By the owner's decision Steps 22-31 keep their prose form. How does Spec 00 admit a step kept in prose, how do pnpm contracts:check and the harness detect such a step rather than miss it, how is its reviewed prose protected from unreviewed edits, and when is it converted so that it can run?"
