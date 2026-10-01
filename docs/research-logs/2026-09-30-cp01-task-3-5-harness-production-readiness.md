@@ -1,268 +1,190 @@
 # Checkpoint 1 Task 3.5 — Harness Production Readiness
 
-**Version:** 1
+**Version:** 2
 
-**Date:** 30 September 2026
+**Date:** 1 October 2026
 
-**Source inspected:** `refactor/pactwright-v2` at `5dccd16373d8988a7294548de6f9de61be48e33a`
+**T3 accepted baseline:** `9294813b9b62631804ca5a61547bd329c924bf94`
 
-**Authority:** [Spec 00](../specs/00-checkpoint-step-contract-and-delivery-tasks.md), §§3–5.
+**Planning baseline:** `refactor/pactwright-v2` at `5dccd16373d8988a7294548de6f9de61be48e33a`
 
-Task 3.5 productionises the T3 harness before T4. H1 and H2 retain their separate responsibilities; H3 adds GitHub Actions operation and cross-job recovery. T4 proves the resulting harness before T5 uses it.
+**Authority:** [Spec 00](../specs/00-checkpoint-step-contract-and-delivery-tasks.md), §§3–5, and [T3 plan v4](2026-09-26-cp01-task-3-harness-and-software-run-model.md), §§4–12.
 
-## 1. Contract context
+## 1. Purpose and entry conditions
 
-The three prerequisite files use `CP00-S01` to `CP00-S03` in a separate format-2 bundle. These are H1–H3, not additional CP01 product steps. Verifier IDs below name checks to implement.
+Task 3.5 productionises the accepted T3 harness before T4 tests false completion and before T5 executes CP01.
 
-**Recommended file:** `docs/research-logs/cp01-task-3-5-harness-production-readiness/checkpoint.yml`
+T3.5 does not implement CP01 product steps. It closes three harness gaps found while preparing T5:
 
-```yaml
-format: 2
-checkpoint: CP00
-run_model: software-bootstrap
-sources:
-  SPEC00: ../../specs/00-checkpoint-step-contract-and-delivery-tasks.md
-  T3: ../2026-09-26-cp01-task-3-harness-and-software-run-model.md
-  CP01: ../../checkpoints/01-self-hosted-delivery.md
+- **H1 — CP01 production verification:** admit real CP01 verifier bindings and run candidate repository checks.
+- **H2 — Claude model and effort:** configure and record model/effort independently for producer and reviewer.
+- **H3 — GitHub Actions execution and operational continuation:** run the harness on hosted runners with portable state, GitHub-bound decisions and operational-step support.
+
+H1 and H2 may be implemented independently. H3 depends on both. T4 starts only after H1–H3 are accepted.
+
+## 2. Implementation layout and shared verification
+
+Expected change areas:
+
+```text
+tools/checkpoint-harness/
+  src/software-bootstrap.ts   production binding admission and target policy
+  src/verification.ts         candidate verification and verifier adequacy
+  src/dispatch.schema.json    role model/effort configuration
+  src/claude.ts               provider model/effort dispatch and evidence
+  src/evidence.ts             portable ownership and run-state records
+  src/runner.ts               yield, restore and operational execution
+  src/cli.ts                  workflow-facing start/resume/decision paths
+
+.github/
+  workflows/checkpoint-harness.yml
+  checkpoint-harness/cp01-t5.yml
+
+tools/checkpoint-harness/test/
+  checkpoint-harness-h1.test.ts
+  checkpoint-harness-h2.test.ts
+  checkpoint-harness-h3.test.ts
+  integration/
+  live/
 ```
 
-## 2. H1 — CP01 production verification
+These names assign responsibilities; they do not require one new wrapper per item. Reuse T3 boundaries where they already own the behaviour.
 
-The production binding registry is empty in the inspected source. H1 provides binding admission and a candidate environment that can run real CP01 checks on a hosted runner. Product verifiers still arrive with their capabilities during T5. [Binding registry][bindings-source].
+For each unit, run its focused tests, accumulated harness tests and repository gate before acceptance:
 
-**Recommended file:** `docs/research-logs/cp01-task-3-5-harness-production-readiness/CP00-S01.yml`
-
-```yaml
-id: CP00-S01
-requires: []
-outputs:
-  cp01-production-verification: CP01 verifier admission and candidate execution on a hosted Ubuntu runner.
-requirements:
-  R01:
-    source: [T3#6, SPEC00#3]
-    statement: >-
-      The harness shall admit CP01 bindings supplied with a capability without a controller-source
-      edit for each binding.
-  R02:
-    source: [T3#6, SPEC00#3]
-    statement: >-
-      A new or changed verifier shall complete adequacy review before its results count towards
-      acceptance.
-  R03:
-    source: [T3#8, SPEC00#4]
-    statement: >-
-      The hosted runner shall execute required build, test and verification commands from isolated
-      candidate snapshots with prepared dependencies.
-  R04:
-    source: [SPEC00#4, CP01#exit-gate]
-    statement: >-
-      The harness shall apply shared criteria at their declared scope and evaluate terminal
-      criteria at checkpoint completion.
-acceptance:
-  AC01:
-    covers: [R01, R02]
-    cases: [adequate-verifier, weak-verifier, changed-verifier]
-    given: A capability with a supplied verifier binding.
-    when: The harness admits the binding and evaluates the candidate.
-    then: >-
-      No controller-source edit is needed; only an adequately reviewed version can satisfy
-      acceptance, and a changed version requires new review.
-    verify: {automated: [harness.cp01-binding-admission]}
-  AC02:
-    covers: [R03]
-    given: A clean candidate and its prepared dependencies on a GitHub-hosted runner.
-    when: The harness executes the repository verification command.
-    then: >-
-      Verification uses the candidate snapshot and cannot obtain a pass from stale host build
-      output.
-    verify: {automated: [harness.cp01-candidate-environment]}
-  AC03:
-    covers: [R04]
-    cases: [early-step, checkpoint-exit]
-    given: An early valid step and a checkpoint with missing terminal evidence.
-    when: Acceptance is evaluated at the applicable point.
-    then: >-
-      The early step can pass its applicable checks; the checkpoint cannot close while terminal
-      evidence is missing.
-    verify: {automated: [harness.checkpoint-target-applicability]}
+```bash
+pnpm --filter @pactwright/checkpoint-harness test
+pnpm contracts:check
+pnpm verify
 ```
 
-## 3. H2 — Claude model and effort
+Run Docker integration where the unit changes containment or candidate execution. Run live-provider checks only where provider behaviour must be observed. Missing Docker, provider access or GitHub-hosted execution is a blocker for the proof that requires it, not a pass.
 
-Add independent model and effort settings for the producer and reviewer. Validate them against the pinned adapter and record what was requested and what the provider reports.
+Use one implementation commit per unit. Suggested subjects:
 
-**Recommended file:** `docs/research-logs/cp01-task-3-5-harness-production-readiness/CP00-S02.yml`
-
-```yaml
-id: CP00-S02
-requires: []
-outputs:
-  claude-role-settings: Validated model and effort settings for each role, recorded in execution evidence.
-requirements:
-  R01:
-    source: [T3#4, T3#10]
-    statement: >-
-      Each role shall declare a model and effort combination supported by the pinned adapter and
-      available to the configured credential.
-  R02:
-    source: [T3#10]
-    statement: >-
-      The Claude adapter shall pass the configured model and effort for each role through its
-      supported SDK options.
-  R03:
-    source: [T3#5, T3#9]
-    statement: >-
-      Evaluation identity shall include model and effort; invocation evidence shall distinguish
-      requested settings from provider-reported settings.
-acceptance:
-  AC01:
-    covers: [R01, R02]
-    cases: [producer, reviewer, unsupported-setting]
-    given: Roles configured with supported settings and a separate unsupported combination.
-    when: The harness validates and dispatches them.
-    then: >-
-      Supported requests contain the configured settings; the unsupported combination is rejected
-      before production work.
-    verify: {automated: [harness.claude-role-settings]}
-  AC02:
-    covers: [R03]
-    cases: [recorded-invocation, changed-effort]
-    given: A recorded invocation and a later change to effort.
-    when: Evidence and evaluation identities are compared.
-    then: >-
-      Requested and reported settings remain distinguishable, and the effort change produces a
-      different evaluation identity.
-    verify: {automated: [harness.claude-effort-evidence]}
+```text
+feature: implement T3.5-H1 production verification
+feature: implement T3.5-H2 Claude role effort
+feature: implement T3.5-H3 GitHub Actions execution
 ```
 
-## 4. H3 — GHA execution and operational continuation
+Corrections use `fix:`. Fresh review precedes dependent work. Commits alone are not acceptance.
 
-The current recovery model uses local ownership, and the operator procedure assumes a persistent run directory. H3 makes that state portable and exposes the operator actions through GitHub. It also supports the later CLI procedures, repository transitions and external actions. [Recovery source][evidence-source]; [operator procedure][harness].
+## 3. T3.5 implementation units
 
-**Recommended file:** `docs/research-logs/cp01-task-3-5-harness-production-readiness/CP00-S03.yml`
+Implement H1 and H2, then H3.
 
-```yaml
-id: CP00-S03
-requires: [CP00-S01, CP00-S02]
-outputs:
-  gha-workflow: A manually dispatched Checkpoint harness workflow and complete T5 configuration template.
-  portable-run-state: Validated Actions artifacts from which a new runner resumes the same T5 run.
-  operational-execution: Target-aware CLI execution, GitHub-authorised decisions and external receipts.
-requirements:
-  R01:
-    source: [T3#9, SPEC00#4]
-    statement: >-
-      The harness shall publish consistent state archives after durable phases, before external
-      effects and before planned yields, then restore the exact trusted run sequence with file
-      metadata and evidence intact.
-  R02:
-    source: [T3#7, SPEC00#4]
-    statement: >-
-      Jobs shall yield before timeout and retain attempts, retries and spending across restarts;
-      invocation allowance shall be saved before dispatch and unresolved usage shall remain
-      reserved.
-  R03:
-    source: [T3#9, SPEC00#4]
-    statement: >-
-      A run shall have one active controller, with takeover based on GitHub job status and
-      saved sequence rather than hostname, process ID or elapsed time.
-  R04:
-    source: [T3#8, SPEC00#4]
-    statement: >-
-      Pinned controller code shall remain separate from candidate code; candidate commands shall
-      not receive provider credentials, repository-write credentials or the Docker control socket.
-  R05:
-    source: [T3#9, SPEC00#4]
-    statement: >-
-      Approval shall bind an authorised GitHub actor to the exact request and candidate; external
-      actions shall follow an uploaded intent and require read-back receipts, including after
-      interruption.
-  R06:
-    source: [SPEC00#4, CP01#stage-10-prove-the-published-release-on-kakeibo]
-    statement: >-
-      Operational steps shall execute in their declared repository or fixture, preserve acceptance
-      links across landed revisions and target changes, and re-evaluate affected obligations
-      before continuing.
-  R07:
-    source: [SPEC00#4]
-    statement: >-
-      The workflow shall provide the documented start, continue, approve, deny, amend and status
-      actions, accept an optional through input at dispatch time, compose the effective harness
-      selection from that input and saved run state, automatically continue saved work within
-      the selected scope, and publish the documented summary.
-acceptance:
-  AC01:
-    covers: [R01]
-    cases: [fresh-runner, damaged-archive, missing-archive, stale-sequence]
-    given: Saved run state and a fresh runner with different filesystem paths.
-    when: The workflow restores the state or encounters the listed defect.
-    then: >-
-      Valid state preserves the journal, evidence, Git history, configuration and file metadata;
-      defective or stale state is rejected without resetting the T5 run.
-    verify: {automated: [harness.gha-state-restore]}
-  AC02:
-    covers: [R02]
-    cases: [planned-yield, runner-loss-during-invocation]
-    given: A T5 run with recorded limits and an invocation reservation.
-    when: A job yields or its runner is lost, then execution resumes elsewhere.
-    then: >-
-      Counters and unresolved usage remain accounted for; continuation stays within the existing
-      scope and limits.
-    verify: {automated: [harness.gha-bounded-resume]}
-  AC03:
-    covers: [R03]
-    cases: [active-owner, stopped-owner, unknown-owner]
-    given: Two dispatches for the same T5 run.
-    when: The second attempts to resume.
-    then: >-
-      Only a stopped or released owner permits takeover; active or unknown ownership cannot create
-      a competing writer.
-    verify: {automated: [harness.gha-single-writer]}
-  AC04:
-    covers: [R04]
-    given: Candidate code that attempts to access controller resources and credentials.
-    when: It runs in the hosted candidate environment.
-    then: The attempts fail while the controller can still invoke Claude and run verifiers.
-    verify: {automated: [harness.gha-containment]}
-  AC05:
-    covers: [R05]
-    cases: [authorised-decision, unauthorised-decision, stale-request, completed-effect, interrupted-effect]
-    given: >-
-      A pending approval and a readable external fixture target that survives runner replacement.
-    when: A decision arrives or an approved action is interrupted.
-    then: >-
-      Only the matching authorised decision is recorded; uploaded intent precedes execution, and
-      read-back prevents repeating a completed action or accepting an unresolved one.
-    verify: {automated: [harness.gha-approval-recovery]}
-  AC06:
-    covers: [R06]
-    cases: [landed-revision, other-repository]
-    given: An accepted candidate followed by a merge or a step in another repository.
-    when: The T5 run continues on a new runner.
-    then: >-
-      Commands use the declared target and revision; earlier evidence stays linked, affected
-      checks rerun, and completed external actions are not replayed.
-    verify: {automated: [harness.gha-operational-handoff]}
-  AC07:
-    covers: [R07]
-    cases: [new-default-selection, explicit-selection, continue-current-selection]
-    given: The workflow, supplied T5 configuration template and optional through input.
-    when: A fixture T5 run starts or continues on a fresh runner.
-    then: >-
-      A new T5 run without through starts at CP01-S01; a supplied through value becomes the
-      selected boundary; a continuation without through keeps the saved selection; the workflow
-      completes the fixture without local commands and reports the resulting scope and next action.
-    verify: {automated: [harness.gha-operator-flow], review: [harness.gha-run-guide]}
-```
+### T3.5-H1 — CP01 production verification
 
-The first H3 proof is a small fixture across two hosted runners, including interruption after an external intent. Test that hand-off before using the workflow for product implementation.
+**Prerequisites:** accepted T3-F; current CP01 contracts and shared checkpoint requirements; a supported Linux Docker environment for candidate execution. No live provider call is required.
 
-## 5. Exit and handoff
+**Deliver:** a production binding admission path for CP01, candidate repository verification from sealed snapshots, and applicability rules that distinguish step-level checks from checkpoint-exit checks.
 
-Record each contract's implementation revision and acceptance evidence. H1 and H2 can proceed separately; H3 integrates their outputs. Task 3.5 is complete only when all three contracts are accepted. The [T4 proof](2026-09-29-cp01-task-4-false-completion-proof.md) then reviews the resulting execution and recovery paths. The [T5 guide](2026-09-29-cp01-task-5-implementation-and-acceptance.md) uses the harness only after T4 passes.
+**Implementation requirements:**
+
+1. Replace the empty production-binding assumption with a registry/loading path that can admit verifier bindings delivered with a CP01 capability without editing controller source for every binding.
+2. Apply the T3-D verifier lifecycle to every new or changed production verifier: isolated execution, adequacy review, pinning, then fresh acceptance execution. A weak or unreviewed verifier cannot count.
+3. Run repository build/test/verification commands against the sealed candidate and prepared dependencies. Stale host build output, controller checkout state or reference binaries cannot satisfy candidate checks.
+4. Evaluate shared checkpoint targets only when their declared scope applies. Later-only exit obligations remain pending without blocking an otherwise valid early step, and remain mandatory at checkpoint exit.
+5. Record binding version/digest, candidate identity, command observations and applicability decision in the normal evidence model.
+
+**Acceptance — `test/checkpoint-harness-h1.test.ts` plus applicable integration tests:**
+
+| ID | Observable result |
+| --- | --- |
+| H1-01 | A supplied production binding is admitted without a per-binding controller-source edit; an unknown or malformed binding is rejected. |
+| H1-02 | A weak verifier is rejected by adequacy review; an accepted changed verifier gets a new identity and fresh execution before its result counts. |
+| H1-03 | Candidate verification runs from the sealed candidate and fails when only stale host/reference output could make the check pass. |
+| H1-04 | An early step can pass its applicable targets while missing terminal evidence still prevents checkpoint completion. |
+
+Run the real candidate containment path where H1 invokes repository commands.
+
+**Handoff:** an admitted production-verifier mechanism, adequacy evidence and candidate-execution fixtures used by H3 and T4. Product verifiers themselves still arrive with the CP01 capabilities that own them.
+
+### T3.5-H2 — Claude model and effort
+
+**Prerequisites:** accepted T3-C provider adapter and evidence identity; authorised provider account for the live compatibility proof. H1 is not required.
+
+**Deliver:** per-role `model` and `effort` settings in validated run configuration, adapter propagation for both producer and reviewer, and evidence that records requested and provider-reported settings separately.
+
+**Implementation requirements:**
+
+1. Extend role configuration so producer and reviewer each declare a model and effort supported by the pinned adapter. Reject unsupported combinations before production work.
+2. Pass the configured model and effort through the existing Claude SDK adapter rather than introducing a second provider path.
+3. Include requested model/effort in evaluation identity. Record provider-reported model/usage/settings separately when the API exposes them; absence remains explicit rather than inferred.
+4. A model or effort amendment invalidates affected evaluation/review evidence under the existing amendment rules. Unaffected receipts and history remain.
+5. Keep provider limits and harness budgets separate from effort. Changing effort does not reset attempts, retries or spend accounting.
+
+**Acceptance — `test/checkpoint-harness-h2.test.ts` and the live Claude adapter test:**
+
+| ID | Observable result |
+| --- | --- |
+| H2-01 | Producer and reviewer may use distinct admitted model/effort settings; unsupported settings fail admission before dispatch. |
+| H2-02 | Captured SDK requests contain each role's configured model and effort. |
+| H2-03 | Evidence distinguishes requested settings from provider-reported values and changes evaluation identity when model or effort changes. |
+| H2-04 | Amending model/effort re-evaluates affected work without resetting run budgets or replaying completed effects. |
+
+Run the existing live Claude test with the admitted settings to prove the SDK/provider path accepts them. Missing provider access leaves H2 unaccepted.
+
+**Handoff:** validated role settings and execution identity used by H3 workflow configuration and T4 evidence.
+
+### T3.5-H3 — GitHub Actions execution and operational continuation
+
+**Prerequisites:** accepted H1 and H2; a GitHub-hosted Ubuntu runner with Docker; repository permission to run the workflow; provider credential for the live fixture. Use fixture effects for recovery proof rather than a real release.
+
+**Deliver:** `.github/workflows/checkpoint-harness.yml`, the complete `.github/checkpoint-harness/cp01-t5.yml` template, portable run-state persistence, GitHub-aware controller ownership, workflow-dispatch operator actions and operational-step execution.
+
+The **controller** is the trusted harness process inside a GitHub Actions job. It decides the next harness action, invokes providers and verifiers, records evidence and owns the run while that job is active. A new job starts a new controller process but resumes the same full harness run from saved state.
+
+**Implementation requirements:**
+
+1. **Portable state.** Persist the journal, evidence, candidate Git history, effective configuration, approvals, counters and receipts as one validated run-state archive. Save after durable phases, before an external effect and before planned yield.
+2. **Restore and ownership.** Restore the exact latest saved sequence on a fresh runner. Replace hostname/PID liveness with recorded GitHub workflow run/job/attempt identity plus verified job status. Active or unknown ownership cannot be taken over.
+3. **Bounded jobs.** Yield before the hosted-job limit with enough time to save state. Persist attempts, retries and spend counters. Reserve invocation allowance before provider dispatch so runner loss cannot make unresolved usage disappear.
+4. **Workflow inputs.** Expose `start`, `continue`, `approve`, `deny`, `amend` and `status`. `through` is optional: a new T5 run without it selects `CP01-S01`; a continuation without it keeps the saved selection; an explicit new boundary is validated and recorded.
+5. **Containment and credentials.** Keep pinned controller code, provider credentials, repository-write credentials and the Docker control socket outside candidate execution. Candidate code continues through the T3 containment boundary.
+6. **GitHub decisions.** Bind approval/denial to the authenticated GitHub actor, exact pending request, candidate and authority. A stale or unauthorised decision is refused.
+7. **External effects.** Persist intent before execution. After interruption, inspect the target and record the receipt if the action completed; retry only when read-back proves it did not. Unsupported reconciliation pauses.
+8. **Operational steps.** Execute reviewed prose procedures in their declared repository or fixture, capture command/observation evidence, preserve earlier evidence across landed revisions or repository changes, and re-evaluate affected obligations before continuing.
+9. **Operator summary.** Each workflow job reports run identity, selected boundary, accepted steps, model/effort, budget state, pause reason, next action, evidence links and saved-state identity. A green job or successful artifact upload cannot be reported as checkpoint acceptance.
+
+**Acceptance — `test/checkpoint-harness-h3.test.ts` plus a hosted two-job fixture:**
+
+| ID | Observable result |
+| --- | --- |
+| H3-01 | A fresh runner restores the exact valid state; missing, damaged or stale archives are refused without resetting the run. |
+| H3-02 | A second controller cannot take over an active or unknown owner; a stopped/released owner can be resumed without competing writes. |
+| H3-03 | Planned yield and runner loss preserve attempts, retries, spend and unresolved invocation allowance. |
+| H3-04 | Candidate code cannot obtain provider/repository credentials or Docker control while normal contained work still succeeds. |
+| H3-05 | Authorised decisions bind to the exact request; unauthorised, stale and mismatched decisions are refused. |
+| H3-06 | Interruption before/after a fixture external effect does not duplicate a completed action or claim completion without a receipt. |
+| H3-07 | New/explicit/omitted `through` inputs produce the documented selection behaviour, and automatic continuation never extends scope. |
+| H3-08 | An operational fixture can land a revision or change repository, resume on a fresh runner and retain valid earlier evidence while rerunning affected checks. |
+
+The hosted proof must span at least two GitHub-hosted jobs and include interruption after an external intent. A local process restart does not establish H3 acceptance.
+
+**Handoff:** the exact harness revision, workflow run IDs, state artifacts, fixture-effect receipts and acceptance records used by T4. T5 does not begin from H3 acceptance alone.
+
+## 4. T3.5 exit
+
+Task 3.5 is complete when:
+
+- H1, H2 and H3 have accepted evidence at the same harness revision;
+- the shared repository gate passes;
+- required Docker, live-provider and hosted-runner proofs are executed rather than skipped;
+- the final operator procedure in [the harness README][harness] matches the implemented workflow;
+- no T5 product capability is counted as T3.5 completion.
+
+T4 then evaluates false completion against this exact harness revision. A T4 defect in behaviour claimed by H1–H3 returns to the owning T3.5 unit for correction, after which the affected T4 proof is repeated.
 
 [harness]: ../../tools/checkpoint-harness/README.md
 [bindings-source]: https://github.com/sb-dev/pactwright/blob/5dccd16373d8988a7294548de6f9de61be48e33a/tools/checkpoint-harness/src/software-bootstrap.ts
 [evidence-source]: https://github.com/sb-dev/pactwright/blob/5dccd16373d8988a7294548de6f9de61be48e33a/tools/checkpoint-harness/src/evidence.ts
 
-**Checkpoint 1 Task 3.5 — Harness Production Readiness, Version 1**
+## 5. Revision record
+
+Version 1 expressed H1–H3 as a separate pseudo-checkpoint contract bundle.
+
+Version 2 follows the T3 implementation-unit format: prerequisites, deliverables, implementation requirements, executable acceptance and handoff for each H unit. It removes the CP00 contract bundle and makes the T3.5 → T4 handoff explicit.
+
+**Checkpoint 1 Task 3.5 — Harness Production Readiness, Version 2**

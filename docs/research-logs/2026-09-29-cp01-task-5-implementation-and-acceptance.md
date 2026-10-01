@@ -88,7 +88,7 @@ The controller does not assume an interrupted external action failed. On resume 
 
 [T3.5 — Harness Production Readiness](2026-09-30-cp01-task-3-5-harness-production-readiness.md) defines the changes this guide uses:
 
-| Contract | Change |
+| Unit | Change |
 | --- | --- |
 | H1 | CP01 verifier admission, hosted candidate checks and checkpoint-target applicability. |
 | H2 | Independent producer/reviewer model and effort settings, with recorded effective values. |
