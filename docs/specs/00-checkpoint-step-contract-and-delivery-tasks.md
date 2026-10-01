@@ -1,8 +1,8 @@
 # Pactwright — Checkpoint Step Contract and Delivery Tasks
 
-**Version:** 7
+**Version:** 8
 
-**Date:** 30 September 2026
+**Date:** 1 October 2026
 
 **Purpose:** Replace checkpoint prompts with requirements and acceptance criteria, then execute them through progressively self-hosted run models.
 
@@ -194,6 +194,8 @@ A step advances only when its required outputs, every criterion/case, inherited 
 
 Record definition/source revisions, inputs, candidate identity, verifier/reviewer identity and results separately from checkpoint definitions. Freeze these inputs for an attempt. Scope or acceptance changes require a visible amendment; preserve the earlier instructions and evidence. Re-verify affected accepted obligations after changes, and evaluate the integrated checkpoint at its exit gate.
 
+The [superseding Q67 owner decision](https://github.com/sb-dev/pactwright/pull/60#issuecomment-5938936037) approves the Version 7 execution rule below. It replaces Version 6's convert-before-run rule for reviewed operational steps, including CP01-S22–S31. Their reviewed hashes, shared requirements and acceptance obligations remain mandatory. The [B28 decision record](../research-logs/2026-09-27-cp01-stages-6-11-b28-unconverted-steps.md) retains the original decision and records its replacement. The historical T3 conversion-pause behaviour is not the governing execution rule for T3.5 or T5.
+
 The harness executes both converted contracts and reviewed operational steps retained in prose. An operational step is eligible once every earlier step of its checkpoint is accepted. The harness runs its prescribed commands and adapter work in the declared repository or fixture, then verifies its outputs and observations against the pinned procedure and shared requirements. Prose is an execution authority, not a completion claim; conversion to YAML is not an execution prerequisite.
 
 Checkpoint-wide targets apply at the point their conditions specify. Later-only obligations remain pending until that point; they do not block an otherwise valid earlier step or disappear from the final exit evaluation.
@@ -253,4 +255,6 @@ Version 2 edited the supplied v1 proposal; version 3 moves each step contract in
 
 Version 7 defines operational-step execution and GitHub Actions continuation, adds per-role effort, and inserts T3.5 between harness construction and false-completion proof. It does not claim those changes have been implemented.
 
-**Pactwright — Checkpoint Step Contract and Delivery Tasks v7**
+Version 8 records approval and traceability for the Version 7 Q67 rule. It supersedes the earlier execution boundary without changing the reviewed step prose or claiming new execution proof.
+
+**Pactwright — Checkpoint Step Contract and Delivery Tasks v8**

@@ -1,12 +1,12 @@
 # Checkpoint 1 Task 4 — False-Completion Proof
 
-**Version:** 5
+**Version:** 6
 
-**Date:** 30 September 2026
+**Date:** 1 October 2026
 
 **T3 accepted baseline:** `9294813b9b62631804ca5a61547bd329c924bf94`
 
-**Authority:** [Spec 00 v7](../specs/00-checkpoint-step-contract-and-delivery-tasks.md), §§3–5; [T3 plan v4](2026-09-26-cp01-task-3-harness-and-software-run-model.md), §§5–9 and §12; and [T3.5 production readiness](2026-09-30-cp01-task-3-5-harness-production-readiness.md).
+**Authority:** [Spec 00 v8](../specs/00-checkpoint-step-contract-and-delivery-tasks.md), §§3–5; [T3 plan v4](2026-09-26-cp01-task-3-harness-and-software-run-model.md), §§5–9 and §12; and [T3.5 production readiness](2026-09-30-cp01-task-3-5-harness-production-readiness.md).
 
 ## 1. Objective
 
@@ -62,9 +62,14 @@ Use the prerequisite tests where they already exercise these paths. Test valid a
 | Competing controllers | Only a stopped or released owner permits takeover. Active or unknown ownership cannot create a second writer. |
 | Yield or runner loss | Attempts, retries and spend remain accounted for, including a lost invocation's reserved allowance. |
 | Interrupted external action | Uploaded intent survives runner loss before or after execution. Target read-back prevents both duplicate effects and unsupported completion claims. |
-| Approval and containment | Unauthorised or stale approvals are refused. Candidate code cannot access controller credentials or the Docker control socket. |
+| Approve and deny (H3-05) | Valid approval permits only its exact effect; valid denial executes no effect and grants no acceptance. Unauthorised, stale and mismatched requests fail for each action. |
+| Containment (H3-04) | Candidate code cannot access controller credentials or the Docker control socket; valid contained work succeeds. |
+| Amend (H3-09) | Valid revision and reason record an authorised amendment and invalidate affected evidence. Unauthorised actor, missing reason, stale revision and invalid configuration are rejected without changing effective state. Receipts and counters remain. |
+| Read-only status (H3-10) | Latest state is reported without journal, run-state digest or effect-record changes. Corrupt or stale state cannot be presented as current. |
+| Operator summary (H3-11) | Each action reports all required fields with values matching saved state. Remove or falsify each field in turn: the summary check must fail. Explicit unknowns on a pre-restore refusal cannot grant acceptance. |
+| Bounded continuation (H3-12) | Automatic continuation preserves counters and stays within scope. Boundary or human input stops it. A green job or uploaded artifact with incomplete evidence cannot establish acceptance. |
 | Model and verifier identity | Unsupported model/effort pairs and unadmitted verifiers cannot pass. Changed settings or bindings invalidate affected evidence. |
-| Scope and target changes | Omitted `through` keeps an existing selection; a new T5 run defaults to S01. Explicit extension, landed revisions and repository changes preserve the correct evidence links. |
+| Scope and target changes (H3-07, H3-08) | Exercise `start` and `continue` with omitted, valid explicit and invalid boundaries. Invalid input cannot start or change a run. Landed revisions and repository changes preserve evidence links and rerun affected checks. Wrong target, changed/unreviewed prose or missing operational observations prevent acceptance. |
 | Checkpoint-wide targets | Applicable early checks can pass while later-only obligations remain pending. Final completion still requires the full exit evidence. |
 
 ### Verification and evidence
@@ -193,4 +198,6 @@ Version 4 consolidates the case checklist, report layout and verification policy
 
 Version 5 adds H1–H3 and GitHub Actions proof, replaces the conversion-pause case with operational execution, and keeps historical T3 evidence separate from the revised target.
 
-**Checkpoint 1 Task 4 — False-Completion Proof, Version 5**
+Version 6 aligns the Q67 authority and adds explicit challenges for approve/deny, amendments, read-only status, each summary field and bounded continuation. Historical conversion-pause evidence cannot satisfy the operational-step case.
+
+**Checkpoint 1 Task 4 — False-Completion Proof, Version 6**

@@ -1,6 +1,6 @@
 # Checkpoint 1 Task 3.5 — Harness Production Readiness
 
-**Version:** 2
+**Version:** 3
 
 **Date:** 1 October 2026
 
@@ -8,7 +8,9 @@
 
 **Planning baseline:** `refactor/pactwright-v2` at `5dccd16373d8988a7294548de6f9de61be48e33a`
 
-**Authority:** [Spec 00](../specs/00-checkpoint-step-contract-and-delivery-tasks.md), §§3–5, and [T3 plan v4](2026-09-26-cp01-task-3-harness-and-software-run-model.md), §§4–12.
+**Authority:** [Spec 00 v8](../specs/00-checkpoint-step-contract-and-delivery-tasks.md), §§3–5, and [B28 v2](2026-09-27-cp01-stages-6-11-b28-unconverted-steps.md), current Q67 decision approved on [PR #60](https://github.com/sb-dev/pactwright/pull/60#issuecomment-5938936037).
+
+**Historical implementation baseline:** [T3 plan v4](2026-09-26-cp01-task-3-harness-and-software-run-model.md), §§4–12. Reuse its applicable containment, verifier and evidence boundaries. Its convert-before-run rule is superseded by Spec 00 and B28; it does not govern H3 operational execution.
 
 ## 1. Purpose and entry conditions
 
@@ -143,12 +145,15 @@ The **controller** is the trusted harness process inside a GitHub Actions job. I
 3. **Bounded jobs.** Yield before the hosted-job limit with enough time to save state. Persist attempts, retries and spend counters. Reserve invocation allowance before provider dispatch so runner loss cannot make unresolved usage disappear.
 4. **Workflow inputs.** Expose `start`, `continue`, `approve`, `deny`, `amend` and `status`. `through` is optional: a new T5 run without it selects `CP01-S01`; a continuation without it keeps the saved selection; an explicit new boundary is validated and recorded.
 5. **Containment and credentials.** Keep pinned controller code, provider credentials, repository-write credentials and the Docker control socket outside candidate execution. Candidate code continues through the T3 containment boundary.
-6. **GitHub decisions.** Bind approval/denial to the authenticated GitHub actor, exact pending request, candidate and authority. A stale or unauthorised decision is refused.
+6. **GitHub decisions.** Bind approval/denial to the authenticated GitHub actor, exact pending request, candidate and authority. A stale or unauthorised decision is refused. Record a denial without executing its effect or granting acceptance.
 7. **External effects.** Persist intent before execution. After interruption, inspect the target and record the receipt if the action completed; retry only when read-back proves it did not. Unsupported reconciliation pauses.
 8. **Operational steps.** Execute reviewed prose procedures in their declared repository or fixture, capture command/observation evidence, preserve earlier evidence across landed revisions or repository changes, and re-evaluate affected obligations before continuing.
-9. **Operator summary.** Each workflow job reports run identity, selected boundary, accepted steps, model/effort, budget state, pause reason, next action, evidence links and saved-state identity. A green job or successful artifact upload cannot be reported as checkpoint acceptance.
+9. **Amend and status.** An amendment requires an authorised actor, a valid configuration revision and a reason. Record it and re-evaluate affected evidence before continuation. Reject stale or invalid configuration without changing effective state. Preserve receipts and counters. `status` reads the latest recorded state without changing the journal, run-state digest or effect records.
+10. **Operator summary.** Each workflow job reports run identity, selected boundary, accepted steps, model/effort, budget state, pause reason, next action, evidence links and saved-state identity. A green job or successful artifact upload cannot be reported as checkpoint acceptance.
 
-**Acceptance — `test/checkpoint-harness-h3.test.ts` plus a hosted two-job fixture:**
+**Acceptance — automated assertions in `test/checkpoint-harness-h3.test.ts` plus a hosted fixture:**
+
+Each semicolon-separated case below needs its own asserted result and valid control where rejection is required. Exercise every operator action through the workflow dispatch path in the hosted fixture; retain workflow/job IDs and observations for each case. Summary checks must compare fields with saved state, not just check that labels exist.
 
 | ID | Observable result |
 | --- | --- |
@@ -156,10 +161,14 @@ The **controller** is the trusted harness process inside a GitHub Actions job. I
 | H3-02 | A second controller cannot take over an active or unknown owner; a stopped/released owner can be resumed without competing writes. |
 | H3-03 | Planned yield and runner loss preserve attempts, retries, spend and unresolved invocation allowance. |
 | H3-04 | Candidate code cannot obtain provider/repository credentials or Docker control while normal contained work still succeeds. |
-| H3-05 | Authorised decisions bind to the exact request; unauthorised, stale and mismatched decisions are refused. |
+| H3-05 | `approve` from an authorised actor for the exact request/candidate records approval and permits only that effect; valid `deny` records denial and the effect does not execute or count as accepted; for each action, unauthorised actor, stale request and mismatched candidate are refused without changing decisions or executing the effect. |
 | H3-06 | Interruption before/after a fixture external effect does not duplicate a completed action or claim completion without a receipt. |
-| H3-07 | New/explicit/omitted `through` inputs produce the documented selection behaviour, and automatic continuation never extends scope. |
-| H3-08 | An operational fixture can land a revision or change repository, resume on a fresh runner and retain valid earlier evidence while rerunning affected checks. |
+| H3-07 | `start` without `through` selects S01; `start` with a valid boundary records it; `continue` without `through` retains the saved boundary; `continue` with a valid extension records it; invalid boundaries for either action are refused without starting or changing the run; automatic continuation never extends scope. |
+| H3-08 | A pinned operational fixture executes in the declared target; missing command/observation evidence, wrong target and changed or unreviewed prose prevent acceptance; valid execution can land a revision or change repository, resume on a fresh runner and retain valid earlier evidence while rerunning affected checks. |
+| H3-09 | `amend` with an authorised actor, valid revision and reason records the change and re-evaluates affected evidence before continuing; unauthorised actor, missing reason, stale revision and invalid configuration are each refused without changing effective state; completed receipts and counters remain intact in both paths. |
+| H3-10 | `status` reports the latest recorded state; before/after journal, run-state digest and effect records are identical; corrupt or stale restored state is refused rather than presented as current. |
+| H3-11 | Every workflow action reports run identity, selected boundary, accepted steps, requested/provider-reported model and effort (or explicit absence), spending and unresolved reservations, pause reason, next action, resolvable evidence links and saved-state identity/expiry; each field agrees with recorded state; omitting or falsifying any field fails its own assertion. A pre-restore refusal reports unknown fields explicitly and grants no acceptance. |
+| H3-12 | The hosted fixture yields and automatically continues within the selected boundary while preserving counters; it stops at the boundary or a human decision; a green job and successful artifact upload with incomplete required evidence still leave the step/checkpoint unaccepted. |
 
 The hosted proof must span at least two GitHub-hosted jobs and include interruption after an external intent. A local process restart does not establish H3 acceptance.
 
@@ -187,4 +196,6 @@ Version 1 expressed H1–H3 as a separate pseudo-checkpoint contract bundle.
 
 Version 2 follows the T3 implementation-unit format: prerequisites, deliverables, implementation requirements, executable acceptance and handoff for each H unit. It removes the CP00 contract bundle and makes the T3.5 → T4 handoff explicit.
 
-**Checkpoint 1 Task 3.5 — Harness Production Readiness, Version 2**
+Version 3 records the superseding Q67 authority, treats T3 as a historical baseline, and adds explicit workflow-action, failure-case and summary acceptance coverage.
+
+**Checkpoint 1 Task 3.5 — Harness Production Readiness, Version 3**
