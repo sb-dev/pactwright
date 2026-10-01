@@ -235,6 +235,7 @@ export function manifestFor(
     skills: {},
     configuration: sha256("t3-d test configuration"),
     toolchain: { profile: profileDigest, lockfile: null },
+    pending: [],
     ...overrides,
   };
 }

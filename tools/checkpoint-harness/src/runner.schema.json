@@ -1,17 +1,24 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "title": "Checkpoint harness runner configuration",
-  "description": "The run configuration sections `run` needs besides planning and dispatch (Task 3 research log §§4, 7 and §12 T3-E). run-config.schema.json validates planning, dispatch.schema.json roles, credentials and budgets; this schema requires both roles, the workspace roots, the write and approval permissions and the per-step retry budget.",
+  "description": "The run configuration sections `run` needs besides planning and dispatch (Task 3 research log \u00a7\u00a74, 7 and \u00a712 T3-E). run-config.schema.json validates planning, dispatch.schema.json roles, credentials and budgets; this schema requires both roles, the workspace roots, the write and approval permissions and the per-step retry budget. T3.5 H1 adds the optional verification section: where a candidate declares its bindings and how the run prepares its dependencies.",
   "type": "object",
   "required": ["roles", "budgets", "workspace", "permissions"],
   "properties": {
-    "roles": { "type": "object", "required": ["producer", "reviewer"] },
+    "roles": {
+      "type": "object",
+      "required": ["producer", "reviewer"]
+    },
     "budgets": {
       "type": "object",
       "required": ["attempts", "retries"],
       "properties": {
-        "attempts": { "description": "Production attempts per step, corrections included." },
-        "retries": { "description": "Protocol retries per step." }
+        "attempts": {
+          "description": "Production attempts per step, corrections included."
+        },
+        "retries": {
+          "description": "Protocol retries per step."
+        }
       }
     },
     "workspace": {
@@ -36,9 +43,15 @@
       "additionalProperties": false,
       "required": ["writable", "scratch", "protected", "approvers"],
       "properties": {
-        "writable": { "$ref": "#/$defs/paths" },
-        "scratch": { "$ref": "#/$defs/paths" },
-        "protected": { "$ref": "#/$defs/paths" },
+        "writable": {
+          "$ref": "#/$defs/paths"
+        },
+        "scratch": {
+          "$ref": "#/$defs/paths"
+        },
+        "protected": {
+          "$ref": "#/$defs/paths"
+        },
         "approvers": {
           "description": "The operator accounts that hold each approval authority a binding names.",
           "type": "object",
@@ -46,7 +59,56 @@
             "type": "array",
             "minItems": 1,
             "uniqueItems": true,
-            "items": { "type": "string", "minLength": 1 }
+            "items": {
+              "type": "string",
+              "minLength": 1
+            }
+          }
+        }
+      }
+    },
+    "verification": {
+      "description": "Production verification (T3.5 H1). Absent: only controller bindings, and no binding may need prepared dependencies.",
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "bindings": {
+          "description": "Candidate directory holding one <binding-id>.yml declaration per binding a capability delivers; each counts only after admission.",
+          "type": "string",
+          "minLength": 1
+        },
+        "dependencies": {
+          "description": "How dependencies are prepared for bindings that declare them: command runs in a contained workspace holding only the candidate's inputs paths, and its outputs are mounted read-only into subject workspaces.",
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["inputs", "command", "outputs", "network", "timeout_ms"],
+          "properties": {
+            "inputs": {
+              "type": "array",
+              "$ref": "#/$defs/paths",
+              "minItems": 1
+            },
+            "command": {
+              "type": "array",
+              "minItems": 1,
+              "items": {
+                "type": "string",
+                "minLength": 1
+              }
+            },
+            "outputs": {
+              "type": "array",
+              "$ref": "#/$defs/paths",
+              "minItems": 1
+            },
+            "network": {
+              "description": "none, or bridge when the operator lets the preparation fetch packages; candidate commands never have network.",
+              "enum": ["none", "bridge"]
+            },
+            "timeout_ms": {
+              "type": "integer",
+              "minimum": 1
+            }
           }
         }
       }
@@ -56,7 +118,10 @@
     "paths": {
       "type": "array",
       "uniqueItems": true,
-      "items": { "type": "string", "minLength": 1 }
+      "items": {
+        "type": "string",
+        "minLength": 1
+      }
     }
   }
 }

@@ -52,8 +52,8 @@ import {
   type RunnerDeps,
   type RunResult,
 } from "./runner.js";
-import { BINDINGS, createRegistry } from "./software-bootstrap.js";
-import { containedWorkspaces } from "./verification.js";
+import { APPLICABILITY, BINDINGS, createRegistry } from "./software-bootstrap.js";
+import { containedDependencies, containedWorkspaces } from "./verification.js";
 import { fenceWorkers } from "./workspace.js";
 
 const INVALID = 2;
@@ -73,7 +73,11 @@ async function plan(configFile: string): Promise<number> {
     console.error(`${configFile}: ${firstLine(e)}`);
     return INVALID;
   }
-  const result = await prepareRun(config, { repoRoot: repoRoot(), configName: configFile });
+  const result = await prepareRun(config, {
+    repoRoot: repoRoot(),
+    configName: configFile,
+    applicability: APPLICABILITY,
+  });
   if (!result.ok) {
     for (const d of result.diagnostics) console.error(d);
     return INVALID;
@@ -99,7 +103,11 @@ function status(dir: string): number {
   return 0;
 }
 
-/** The production boundaries: B's containment, the SDK provider and no effect service. */
+/**
+ * The production boundaries: B's containment, the SDK provider and no effect
+ * service. Production bindings are those each candidate declares under
+ * `verification.bindings` (T3.5 H1); the controller registers none itself.
+ */
 function productionDeps(signal: AbortSignal): RunnerDeps {
   const root = repoRoot();
   const registry = createRegistry(BINDINGS);
@@ -109,11 +117,13 @@ function productionDeps(signal: AbortSignal): RunnerDeps {
     skillsRoot: join(root, ".claude/skills"),
     env: process.env,
     registry: registry.registry,
+    applicability: APPLICABILITY,
     harness: harnessIdentity(),
     workspaces: (run, candidateRoot) => ({
       producer: containedProducer(run, candidateRoot),
       verifier: containedWorkspaces(run, candidateRoot),
       reviewer: containedWorkspaces(run, candidateRoot),
+      dependencies: (spec) => containedDependencies(run, candidateRoot, spec),
     }),
     effects: null,
     fence: fenceWorkers,
@@ -189,7 +199,12 @@ const amend = (dir: string, configFile: string, reason: string): Promise<number>
     return amendRun(
       dir,
       { config, reason, actor },
-      { repoRoot: root, skillsRoot: join(root, ".claude/skills"), env: process.env },
+      {
+        repoRoot: root,
+        skillsRoot: join(root, ".claude/skills"),
+        env: process.env,
+        applicability: APPLICABILITY,
+      },
     );
   });
 

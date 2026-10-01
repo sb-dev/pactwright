@@ -253,10 +253,15 @@ describe("T3-B source identity", () => {
       skills: { "karpathy-guidelines": "sha256:k" },
       configuration: "sha256:c",
       toolchain: { profile: "sha256:p", lockfile: "sha256:l" },
+      pending: [
+        { target: "CP99/AC02/-/automated/repo.verify", rule: "exit" },
+        { target: "CP99/AC01/-/automated/repo.verify", rule: "after CP99-S02" },
+      ],
     };
     const digest = evaluationDigest(manifest);
     assert.match(digest, /^sha256:[0-9a-f]{64}$/);
     const reordered: EvaluationManifest = {
+      pending: [...manifest.pending].reverse(),
       toolchain: { lockfile: "sha256:l", profile: "sha256:p" },
       configuration: "sha256:c",
       skills: { "karpathy-guidelines": "sha256:k" },
@@ -282,6 +287,7 @@ describe("T3-B source identity", () => {
       { ...manifest, skills: {} },
       { ...manifest, configuration: "sha256:x" },
       { ...manifest, toolchain: { ...manifest.toolchain, lockfile: null } },
+      { ...manifest, pending: manifest.pending.slice(1) },
     ];
     const digests = new Set([digest, ...variants.map(evaluationDigest)]);
     assert.equal(digests.size, variants.length + 1);

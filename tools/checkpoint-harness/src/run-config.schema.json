@@ -38,7 +38,8 @@
     "workspace": { "type": "object" },
     "permissions": { "type": "object" },
     "credentials": { "type": "object" },
-    "budgets": { "type": "object" }
+    "budgets": { "type": "object" },
+    "verification": { "type": "object" }
   },
   "$defs": {
     "commit": { "type": "string", "pattern": "^[0-9a-f]{40}$" }

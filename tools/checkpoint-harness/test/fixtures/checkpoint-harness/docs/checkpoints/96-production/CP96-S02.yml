@@ -1,0 +1,18 @@
+# CP96 Step 2 — Build the banner
+id: CP96-S02
+requires: [CP96-S01]
+inputs:
+  greeting: CP96-S01/greeting
+outputs:
+  banner: The banner module `src/banner.mjs` of PROD §2.
+requirements:
+  R01:
+    source: [PROD#2]
+    statement: The banner shall shout the greeting of a valid name.
+acceptance:
+  AC01:
+    covers: [R01]
+    given: The name Ada.
+    when: The banner program runs with it.
+    then: It prints `Hello, Ada!!` and exits 0.
+    verify: {automated: [banner.prints]}

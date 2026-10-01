@@ -13,10 +13,17 @@
 // are committed to the journal and belong to the current attempt, and returns
 // accept, correct or pause with specific reasons. Only `recordDecision`
 // journals a decision, and it derives the decision itself.
+//
+// T3.5 H1 (production readiness log §3 H1): bindings a candidate declares are
+// admitted through the same route. Repository commands run on the sealed
+// candidate with empty scratch paths for their build output and the run's
+// prepared dependencies mounted read-only, so neither host state nor
+// prebuilt output can satisfy a check. Each evaluation records which
+// inherited targets its applicability rules leave pending.
 
 import { randomUUID } from "node:crypto";
-import { mkdirSync, readFileSync, rmSync } from "node:fs";
-import { join } from "node:path";
+import { existsSync, mkdirSync, readFileSync, renameSync, rmSync } from "node:fs";
+import { dirname, join } from "node:path";
 
 import { Ajv2020 } from "ajv/dist/2020.js";
 import stringify from "safe-stable-stringify";
@@ -35,6 +42,9 @@ import {
   type WorkspaceOps,
 } from "./claude.js";
 import {
+  definitionOf,
+  exitId,
+  plannedContract,
   sha256,
   type AcceptedOutput,
   type ContractStep,
@@ -51,20 +61,27 @@ import {
   type Json,
   type JsonObject,
   type JournalEvent,
+  type Pending,
   type RunHandle,
 } from "./evidence.js";
 import {
-  ADEQUACY_RUBRIC,
+  adequacyRubric,
   bindingDigests,
   COMMON_RUBRIC,
+  needsAdmission,
   type AutomatedBinding,
   type Registry,
+  type RegistryEntry,
+  type Rejection,
 } from "./software-bootstrap.js";
 import {
   createWorkspace,
+  exec,
   fence,
+  profileDigest,
   subsetSnapshot,
   treeEntries,
+  type Mount,
   type SealedCandidate,
   type SourceSnapshot,
   type WritePolicy,
@@ -112,10 +129,14 @@ export type Invocation = Identity & {
   id: string;
   stage: Stage;
   binding: string;
+  /** The binding's declared version; `digest` is its identity. */
+  version: string;
   digest: string;
   /** One run per target, each in its own workspace, labelled with its target key. */
   subjects: (RunRecord & { target: string })[];
   judge: (RunRecord & { snapshot: SourceSnapshot }) | null;
+  /** The prepared dependencies the subjects ran with: their key and preparation record. */
+  dependencies: { key: string; record: string } | null;
   /** Why a run could not start or complete; its targets are then unavailable. */
   error: string | null;
   /** A failure to stop a workspace after its run; the run's results still stand. */
@@ -142,6 +163,7 @@ export type ReviewRecord = Identity & {
 export type Admission = Identity & {
   step: string;
   binding: string;
+  version: string;
   digest: string;
   /** Digest of the adequacy rubric the review applied. */
   rubric: string;
@@ -185,7 +207,55 @@ export type ContainedWorkspace = WorkspaceOps & {
   snapshot: SourceSnapshot;
   close(): Promise<void>;
 };
-export type OpenWorkspace = (snapshot: SourceSnapshot) => Promise<ContainedWorkspace>;
+
+/** A subject workspace's empty writable scratch paths and read-only mounts. */
+export type WorkspaceOptions = { scratch?: readonly string[]; mounts?: readonly Mount[] };
+
+export type OpenWorkspace = (
+  snapshot: SourceSnapshot,
+  options?: WorkspaceOptions,
+) => Promise<ContainedWorkspace>;
+
+/**
+ * How a run prepares dependencies (operator configuration
+ * `verification.dependencies`): `command` runs in a contained workspace
+ * holding only the candidate's `inputs` paths, such as its manifests,
+ * lockfile and vendored packages, with the configured network; the
+ * `outputs` it writes are mounted read-only into subject workspaces of
+ * bindings that declare `dependencies`.
+ */
+export type DependencySpec = {
+  inputs: readonly string[];
+  command: readonly string[];
+  outputs: readonly string[];
+  network: "none" | "bridge";
+  timeoutMs: number;
+};
+
+/** One preparation of dependencies for a candidate, stored as evidence. */
+export type PreparationRecord = {
+  run: string;
+  key: string;
+  candidate: string;
+  /** The snapshot of the candidate's input paths the command ran on. */
+  inputs: SourceSnapshot;
+  spec: DependencySpec;
+  profile: string;
+  ran: RunRecord | null;
+  outcome: "prepared" | "failed" | "unavailable";
+  reason: string | null;
+};
+
+/** Prepared dependencies of one candidate: the mounts when `prepared`, else why not. */
+export type PreparedDependencies = {
+  key: string;
+  record: string;
+  outcome: PreparationRecord["outcome"];
+  reason: string | null;
+  mounts: Mount[];
+};
+
+export type PrepareDependencies = (candidate: SealedCandidate) => Promise<PreparedDependencies>;
 
 export type ReviewerAccess = {
   role: AgentRole;
@@ -277,36 +347,100 @@ export function committedEvents(run: RunHandle): JournalEvent[] {
 }
 
 function contractStep(plan: PreparedRun, id: string): ContractStep {
-  const step = plan.steps.find((s) => s.id === id);
-  if (step?.kind !== "contract") throw new Error(`${id}: not a planned contract step`);
+  const step = plannedContract(plan, id);
+  if (!step) throw new Error(`${id}: not a planned contract step`);
   return step;
 }
 
-/** The planned contract steps before `step`, in checkpoint order. */
+/**
+ * The planned contract steps before `step`, in checkpoint order. The exit
+ * evaluation has none: the integrated acceptance holds their results.
+ */
 const earlierSteps = (plan: PreparedRun, step: ContractStep): ContractStep[] =>
-  plan.steps
-    .slice(
-      0,
-      plan.steps.findIndex((s) => s.id === step.id),
-    )
-    .filter((s): s is ContractStep => s.kind === "contract");
+  step.id === exitId(plan)
+    ? []
+    : plan.steps
+        .slice(
+          0,
+          plan.steps.findIndex((s) => s.id === step.id),
+        )
+        .filter((s): s is ContractStep => s.kind === "contract");
 
 /**
  * Every target a step must satisfy: its own, the checkpoint's inherited ones
- * and the automated targets of every earlier planned step. A step's candidate
+ * that apply (all but `pending`, the evaluation's applicability decision) and
+ * the automated targets of every earlier planned step. A step's candidate
  * builds on the earlier acceptances, so their executed checks run again on it
  * (T3 plan §5). Earlier review and approval targets keep their recorded
  * evidence; approvals and effects are never replayed.
  */
-export const targetsOf = (plan: PreparedRun, step: ContractStep): VerificationTarget[] => [
-  ...step.targets,
-  ...plan.inherited.targets,
-  ...earlierSteps(plan, step).flatMap((s) => s.targets.filter((t) => t.method === "automated")),
-];
+export const targetsOf = (
+  plan: PreparedRun,
+  step: ContractStep,
+  pending: readonly Pending[] = [],
+): VerificationTarget[] => {
+  const deferred = new Set(pending.map((p) => p.target));
+  return [
+    ...step.targets,
+    ...plan.inherited.targets.filter((t) => !deferred.has(targetKey(t))),
+    ...earlierSteps(plan, step).flatMap((s) => s.targets.filter((t) => t.method === "automated")),
+  ];
+};
+
+/**
+ * The applicability decision for an evaluation of `step` (T3.5 H1; Spec 00
+ * §4): the inherited targets whose rule does not apply yet. An `exit` target
+ * waits for the checkpoint exit evaluation; an `after` target waits until its
+ * step has been accepted before the evaluation (`accepted`, the steps with an
+ * acceptance journaled earlier). The exit evaluation leaves nothing pending.
+ */
+export function pendingTargets(
+  plan: PreparedRun,
+  step: ContractStep,
+  accepted: ReadonlySet<string>,
+): Pending[] {
+  if (step.id === exitId(plan)) return [];
+  return plan.inherited.targets.flatMap((t): Pending[] => {
+    const rule = plan.inherited.applicability[t.criterion] ?? { kind: "step" };
+    if (rule.kind === "exit") return [{ target: targetKey(t), rule: "exit" }];
+    if (rule.kind === "after" && !accepted.has(rule.step)) {
+      return [{ target: targetKey(t), rule: `after ${rule.step}` }];
+    }
+    return [];
+  });
+}
+
+/**
+ * Why an evaluation's pending list is not one the plan's rules allow: a
+ * deferred target that is not inherited, a rule other than the target's own,
+ * a `step` target deferred, or anything deferred at the exit.
+ */
+export function pendingIssues(
+  plan: PreparedRun,
+  step: ContractStep,
+  pending: readonly Pending[],
+): string[] {
+  if (step.id === exitId(plan) && pending.length > 0) {
+    return ["the exit evaluation defers no target"];
+  }
+  return pending.flatMap((p) => {
+    const target = plan.inherited.targets.find((t) => targetKey(t) === p.target);
+    if (!target) return [`${p.target} is deferred but is no inherited target`];
+    const rule = plan.inherited.applicability[target.criterion] ?? { kind: "step" };
+    const text = rule.kind === "after" ? `after ${rule.step}` : rule.kind;
+    return rule.kind === "step" || text !== p.rule
+      ? [`${p.target} is deferred as ${p.rule}, but its rule is ${text}`]
+      : [];
+  });
+}
 
 /** The candidate's files: path → `mode sha`, read from the run's source repository. */
 export const candidateTree = (run: RunHandle, snapshot: SourceSnapshot): Map<string, string> =>
   treeEntries(run.dir, snapshot.tree);
+
+/** The paths of `tree` at or below any of `prefixes`. */
+const heldUnder = (tree: ReadonlyMap<string, string>, prefixes: readonly string[]): string[] =>
+  [...tree.keys()].filter((path) => within(path, prefixes));
 
 function identityOf(
   run: RunHandle,
@@ -332,12 +466,13 @@ function identityOf(
  */
 export function containedWorkspaces(run: RunHandle, root: string): OpenWorkspace {
   mkdirSync(root, { recursive: true });
-  return async (snapshot) => {
+  return async (snapshot, options = {}) => {
     const dir = join(root, randomUUID());
     const ws = await createWorkspace(run, {
       base: { commit: snapshot.commit, tree: snapshot.tree },
       root: dir,
-      policy: READ_ONLY,
+      policy: { ...READ_ONLY, scratch: [...(options.scratch ?? [])] },
+      mounts: [...(options.mounts ?? [])],
     }).catch((e: unknown) => {
       rmSync(dir, { recursive: true, force: true });
       throw e;
@@ -354,6 +489,130 @@ export function containedWorkspaces(run: RunHandle, root: string): OpenWorkspace
 }
 
 const message = (e: unknown): string => (e instanceof Error ? e.message : String(e));
+
+/**
+ * Prepares a candidate's dependencies under `root`/dependencies (T3.5 H1):
+ * the spec's command runs once per key — the snapshot of the candidate's
+ * input paths, the spec and the containment profile — in a contained
+ * workspace of that snapshot alone, as the candidate's user, with only the
+ * output paths writable and the configured network. Its outputs move to a
+ * directory named by the key, which subject workspaces mount read-only. Each
+ * preparation is journaled as `dependency-preparation` before its outputs
+ * are published, so a published directory always has a record; a later
+ * preparation of the same key reuses both. A candidate holding files at an
+ * output path, a failing command or a missing output fails; a workspace that
+ * could not run or a timeout leaves the dependencies unavailable.
+ */
+export function containedDependencies(
+  run: RunHandle,
+  root: string,
+  spec: DependencySpec,
+): PrepareDependencies {
+  const cache = join(root, "dependencies");
+  return async (candidate) => {
+    const tree = candidateTree(run, candidate);
+    const inputs = subsetSnapshot(run.dir, candidate, heldUnder(tree, spec.inputs));
+    const identity = { inputs: inputs.tree, spec, profile: profileDigest };
+    const key = sha256(stringify(identity));
+    const dir = join(cache, key.slice("sha256:".length));
+    const mounts = spec.outputs.map((path) => ({ path, source: join(dir, path) }));
+    const settle = (
+      outcome: PreparationRecord["outcome"],
+      reason: string | null,
+      ran: RunRecord | null,
+    ): PreparedDependencies => {
+      const stored = store(run, {
+        run: run.run,
+        key,
+        candidate: candidate.commit,
+        inputs: { commit: inputs.commit, tree: inputs.tree },
+        spec,
+        profile: profileDigest,
+        ran,
+        outcome,
+        reason,
+      } satisfies PreparationRecord);
+      appendEvent(run, {
+        action: "dependency-preparation",
+        evidence: [stored.ref, ...unique(ran ? [ran.stdout, ran.stderr] : [])],
+        data: { key, outcome, candidate: candidate.commit, record: stored.ref },
+      });
+      return { key, record: stored.ref, outcome, reason, mounts };
+    };
+    const held = heldUnder(tree, spec.outputs);
+    if (held.length > 0) {
+      return settle(
+        "failed",
+        `the candidate holds ${held.join(", ")} at a dependency output path; dependencies are prepared, never taken from the candidate`,
+        null,
+      );
+    }
+    const prepared = journalRecords<PreparationRecord>(
+      run,
+      committedEvents(run),
+      "dependency-preparation",
+      (e) => e.data.key === key && e.data.outcome === "prepared",
+    ).at(-1);
+    if (prepared && existsSync(dir)) {
+      return { key, record: prepared.ref, outcome: "prepared", reason: null, mounts };
+    }
+    mkdirSync(cache, { recursive: true });
+    const work = join(cache, `${randomUUID()}.work`);
+    try {
+      let ws;
+      try {
+        ws = await createWorkspace(run, {
+          base: inputs,
+          root: work,
+          policy: { writable: [], scratch: [...spec.outputs], protected: [] },
+          network: spec.network,
+        });
+      } catch (e) {
+        return settle(
+          "unavailable",
+          `the preparation workspace did not start: ${message(e)}`,
+          null,
+        );
+      }
+      const result = await exec(ws, spec.command, { timeoutMs: spec.timeoutMs });
+      if (!ws.fenced) await fence(ws);
+      const ran: RunRecord = {
+        argv: [...spec.command],
+        exit: result.exitCode,
+        timedOut: result.timedOut,
+        stdout: putEvidence(run, result.stdout),
+        stderr: putEvidence(run, result.stderr),
+      };
+      const stderr = result.stderr.toString("utf8").trim().slice(-500);
+      if (result.timedOut) {
+        return settle("unavailable", `the preparation timed out after ${spec.timeoutMs} ms`, ran);
+      }
+      if (result.exitCode !== 0) {
+        return settle(
+          "failed",
+          `the preparation exited ${result.exitCode ?? "by a signal"}: ${stderr}`,
+          ran,
+        );
+      }
+      const absent = spec.outputs.filter((o) => !existsSync(join(work, o)));
+      if (absent.length > 0) {
+        return settle("failed", `the preparation produced no ${absent.join(", ")}`, ran);
+      }
+      const partial = `${dir}.partial`;
+      rmSync(partial, { recursive: true, force: true });
+      for (const o of spec.outputs) {
+        mkdirSync(dirname(join(partial, o)), { recursive: true });
+        renameSync(join(work, o), join(partial, o));
+      }
+      const settled = settle("prepared", null, ran);
+      rmSync(dir, { recursive: true, force: true });
+      renameSync(partial, dir);
+      return settled;
+    } finally {
+      rmSync(work, { recursive: true, force: true });
+    }
+  };
+}
 
 const sameSnapshot = (a: SourceSnapshot, b: SourceSnapshot): boolean =>
   a.commit === b.commit && a.tree === b.tree;
@@ -472,6 +731,13 @@ function judged(
  * writes the report to stdout.
  * Workspace and execution errors are recorded, never thrown; a failure to
  * stop a workspace is recorded apart and never discards a run.
+ *
+ * Repository commands (T3.5 H1): a subject workspace has the binding's
+ * scratch paths empty and writable, for build output, and the prepared
+ * dependencies mounted read-only when the binding declares them. A candidate
+ * holding files under a scratch path fails every target, so prebuilt output
+ * cannot pass; dependencies that failed to prepare fail them too, and
+ * dependencies that could not be prepared leave them unavailable.
  */
 async function runBinding(
   run: RunHandle,
@@ -483,6 +749,7 @@ async function runBinding(
     stage: Stage;
     candidate: SealedCandidate;
     open: OpenWorkspace;
+    prepare?: PrepareDependencies | undefined;
   },
 ): Promise<Stored<Invocation>> {
   const { binding, identity } = input;
@@ -492,10 +759,11 @@ async function runBinding(
   const contained = async <T>(
     snapshot: SourceSnapshot,
     use: (ws: ContainedWorkspace) => Promise<T>,
+    options?: WorkspaceOptions,
   ): Promise<T | null> => {
     let ws: ContainedWorkspace;
     try {
-      ws = await input.open(snapshot);
+      ws = await input.open(snapshot, options);
     } catch (e) {
       error ??= message(e);
       return null;
@@ -516,18 +784,51 @@ async function runBinding(
     }
   };
 
+  // What the candidate and its dependencies decide before any subject runs.
+  let precondition: { outcome: "failed" | "unavailable"; reason: string } | null = null;
+  let dependencies: Invocation["dependencies"] = null;
+  const options: WorkspaceOptions = { scratch: binding.scratch ?? [], mounts: [] };
+  const held = heldUnder(candidateTree(run, input.candidate), binding.scratch ?? []);
+  if (held.length > 0) {
+    precondition = {
+      outcome: "failed",
+      reason: `the candidate holds ${held.join(", ")} under the scratch paths ${(binding.scratch ?? []).join(", ")}; build output is produced from the candidate's source, never taken from it`,
+    };
+  } else if (binding.dependencies === true) {
+    if (!input.prepare) {
+      precondition = { outcome: "unavailable", reason: "no dependency preparation is configured" };
+    } else {
+      try {
+        const prepared = await input.prepare(input.candidate);
+        dependencies = { key: prepared.key, record: prepared.record };
+        if (prepared.outcome === "prepared") options.mounts = prepared.mounts;
+        else {
+          precondition = {
+            outcome: prepared.outcome,
+            reason: `dependencies: ${prepared.reason ?? prepared.outcome}`,
+          };
+        }
+      } catch (e) {
+        precondition = { outcome: "unavailable", reason: `dependencies: ${message(e)}` };
+      }
+    }
+  }
   const argv = [...binding.command];
   const subjects: { target: VerificationTarget; ran: Ran }[] = [];
-  for (const target of input.targets) {
+  for (const target of precondition === null ? input.targets : []) {
     const stdin = Buffer.from(targetKey(target));
-    const ran = await contained(input.candidate, (ws) => ws.exec(argv, { timeoutMs, stdin }));
+    const ran = await contained(
+      input.candidate,
+      (ws) => ws.exec(argv, { timeoutMs, stdin }),
+      options,
+    );
     if (ran === null) break;
     subjects.push({ target, ran });
   }
   const judgeArgv = [...binding.judge];
   let judge: Ran | null = null;
   let judged: SourceSnapshot | null = null;
-  if (subjects.length === input.targets.length) {
+  if (precondition === null && subjects.length === input.targets.length) {
     try {
       judged = subsetSnapshot(run.dir, input.candidate, binding.files);
     } catch (e) {
@@ -558,6 +859,7 @@ async function runBinding(
     id: randomUUID(),
     stage: input.stage,
     binding: binding.id,
+    version: binding.version,
     digest: input.digest,
     subjects: subjects.map(({ target, ran }) => ({
       target: targetKey(target),
@@ -567,18 +869,25 @@ async function runBinding(
       judge === null || judged === null
         ? null
         : { ...record(judgeArgv, judge), snapshot: { commit: judged.commit, tree: judged.tree } },
-    error,
+    dependencies,
+    error: error ?? (precondition?.outcome === "unavailable" ? precondition.reason : null),
     cleanup: cleanup.length > 0 ? cleanup.join("; ") : null,
-    results: reconcile(binding, input.targets, {
-      error,
-      subjects: subjects.map((s) => s.ran),
-      judge,
-    }),
+    results:
+      precondition === null
+        ? reconcile(binding, input.targets, {
+            error,
+            subjects: subjects.map((s) => s.ran),
+            judge,
+          })
+        : input.targets.map((target) => ({ target, ...precondition })),
   };
   const stored = store(run, invocation);
-  const runs = [...invocation.subjects, invocation.judge].flatMap((r) =>
-    r === null ? [] : [r.stdout, r.stderr],
-  );
+  const runs = [
+    ...[...invocation.subjects, invocation.judge].flatMap((r) =>
+      r === null ? [] : [r.stdout, r.stderr],
+    ),
+    ...(dependencies ? [dependencies.record] : []),
+  ];
   journal(run, "verifier-invocation", identity, stored.ref, runs, {
     binding: binding.id,
     stage: input.stage,
@@ -600,9 +909,9 @@ function admissionFor(
   digest: string | undefined,
   evaluation?: string,
 ): { decided: Stored<Admission> | undefined; pending: Admission | undefined } {
+  const rubrics = new Set([adequacyRubric("automated").digest, adequacyRubric("review").digest]);
   const own = admissions.filter(
-    ({ record: a }) =>
-      a.binding === binding && a.digest === digest && a.rubric === ADEQUACY_RUBRIC.digest,
+    ({ record: a }) => a.binding === binding && a.digest === digest && rubrics.has(a.rubric),
   );
   const decides = (a: Admission): boolean => a.review !== null && a.outcome !== "invalid";
   return {
@@ -629,6 +938,8 @@ type VerifyInput = {
   attempt: number;
   manifest: EvaluationManifest;
   admissions: readonly Stored<Admission>[];
+  /** Prepares the candidate's dependencies for bindings that declare them. */
+  prepare?: PrepareDependencies | undefined;
 };
 
 /**
@@ -638,9 +949,11 @@ type VerifyInput = {
  * run; `decideAcceptance` states why they cannot count.
  */
 export function runnableBindings(run: RunHandle, input: VerifyInput): string[] {
-  const targets = targetsOf(input.plan, contractStep(input.plan, input.step)).filter(
-    (t) => t.method === "automated",
-  );
+  const targets = targetsOf(
+    input.plan,
+    contractStep(input.plan, input.step),
+    input.manifest.pending,
+  ).filter((t) => t.method === "automated");
   const ids = unique(targets.map((t) => t.binding));
   const digests = bindingDigests(input.registry, candidateTree(run, input.candidate), ids);
   return ids.filter((id) => {
@@ -663,9 +976,11 @@ export async function verifyCandidate(
   input: VerifyInput & { open: OpenWorkspace; bindings?: readonly string[] },
 ): Promise<Stored<Invocation>[]> {
   const identity = identityOf(run, input.attempt, input.manifest, input.candidate);
-  const targets = targetsOf(input.plan, contractStep(input.plan, input.step)).filter(
-    (t) => t.method === "automated",
-  );
+  const targets = targetsOf(
+    input.plan,
+    contractStep(input.plan, input.step),
+    input.manifest.pending,
+  ).filter((t) => t.method === "automated");
   const ids = runnableBindings(run, input).filter(
     (id) => input.bindings === undefined || input.bindings.includes(id),
   );
@@ -684,6 +999,7 @@ export async function verifyCandidate(
         stage: "acceptance",
         candidate: input.candidate,
         open: input.open,
+        prepare: input.prepare,
       }),
     );
   }
@@ -904,7 +1220,9 @@ const unassessed = (v: ReviewVerdict): string[] => [
  * `approved` pins the digest; provisional results never count for
  * acceptance. `rejected` carries precise test defects for the producer and,
  * like `paused`, binds the digest. `invalid` (the verifier never ran, or the
- * review was incomplete) may be followed by another admission.
+ * review was incomplete) may be followed by another admission. A review
+ * binding a candidate declares (T3.5 H1) has nothing to run: its rubric
+ * alone is reviewed, against the review-binding adequacy rubric.
  */
 export async function admitVerifier(
   run: RunHandle,
@@ -919,20 +1237,22 @@ export async function admitVerifier(
     accepted: readonly AcceptedOutput[];
     open: OpenWorkspace;
     reviewer: ReviewerAccess;
+    prepare?: PrepareDependencies | undefined;
   },
 ): Promise<Stored<Admission>> {
   const step = contractStep(input.plan, input.step);
   const entry = input.registry.get(input.binding);
-  if (entry?.binding.method !== "automated") {
-    throw new Error(`${input.binding}: not a registered automated binding`);
+  if (!entry || !needsAdmission(entry)) {
+    throw new Error(`${input.binding}: not a registered binding that needs admission`);
   }
   const binding = entry.binding;
+  const rubric = adequacyRubric(binding.method);
   const identity = identityOf(run, input.attempt, input.manifest, input.candidate);
   const tree = candidateTree(run, input.candidate);
   const digest = bindingDigests(input.registry, tree, [binding.id])[binding.id];
   if (digest === undefined) throw new Error(`${binding.id}: no digest`);
-  const targets = targetsOf(input.plan, step).filter(
-    (t) => t.method === "automated" && t.binding === binding.id,
+  const targets = targetsOf(input.plan, step, input.manifest.pending).filter(
+    (t) => t.method === binding.method && t.binding === binding.id,
   );
   if (targets.length === 0) throw new Error(`${binding.id}: no target of ${step.id} uses it`);
   const admit = (
@@ -945,8 +1265,9 @@ export async function admitVerifier(
       ...identity,
       step: step.id,
       binding: binding.id,
+      version: binding.version,
       digest,
-      rubric: ADEQUACY_RUBRIC.digest,
+      rubric: rubric.digest,
       ...refs,
       outcome,
       findings,
@@ -959,55 +1280,83 @@ export async function admitVerifier(
     });
     return stored;
   };
+  const declaration = entry.source ?? null;
+  const declared: JsonObject =
+    declaration === null
+      ? {}
+      : { declaration: { path: declaration, entry: tree.get(declaration) ?? null } };
 
-  const absent = binding.files.filter((f) => !tree.has(f));
-  if (absent.length > 0) {
-    const finding = {
-      rule: binding.id,
-      location: absent.join(", "),
-      defect: `verifier files ${absent.join(", ")} of ${binding.id} are not in the candidate`,
-      correction: `add the verifier for ${binding.id} at the binding's files`,
+  let provisional: Stored<Invocation> | null = null;
+  let evidence: JsonObject;
+  if (binding.method === "automated") {
+    const absent = binding.files.filter((f) => !tree.has(f));
+    if (absent.length > 0) {
+      const finding = {
+        rule: binding.id,
+        location: absent.join(", "),
+        defect: `verifier files ${absent.join(", ")} of ${binding.id} are not in the candidate`,
+        correction: `add the verifier for ${binding.id} at the binding's files`,
+      };
+      return admit("rejected", { provisional: null, review: null }, [finding], []);
+    }
+    provisional = await runBinding(run, {
+      binding,
+      digest,
+      targets,
+      identity,
+      stage: "provisional",
+      candidate: input.candidate,
+      open: input.open,
+      prepare: input.prepare,
+    });
+
+    const location = binding.files.join(", ") || binding.command.join(" ");
+    const incomplete = provisional.record.results.flatMap((r) =>
+      r.outcome === "invalid"
+        ? [
+            {
+              rule: targetKey(r.target),
+              location,
+              defect: `provisional run: ${r.reason}`,
+              correction:
+                "Make the judge report exactly one executed result for this target, for its own binding only, on stdout.",
+            },
+          ]
+        : [],
+    );
+    if (incomplete.length > 0) {
+      return admit("rejected", { provisional: provisional.ref, review: null }, incomplete, []);
+    }
+    // A verifier that never ran has shown nothing to review; admission may be repeated.
+    const unrun = provisional.record.results.flatMap((r) =>
+      r.outcome === "unavailable" ? [`${targetKey(r.target)}: ${r.reason}`] : [],
+    );
+    if (unrun.length > 0) {
+      return admit("invalid", { provisional: provisional.ref, review: null }, [], unrun);
+    }
+    const files: JsonObject = {};
+    for (const f of binding.files) files[f] = tree.get(f) ?? null;
+    evidence = {
+      binding: {
+        id: binding.id,
+        command: [...binding.command],
+        timeoutMs: binding.timeoutMs,
+        observations: [...binding.observations],
+        scratch: [...(binding.scratch ?? [])],
+        dependencies: binding.dependencies === true,
+      },
+      files,
+      provisional: verificationSummary([provisional]),
+      ...declared,
     };
-    return admit("rejected", { provisional: null, review: null }, [finding], []);
-  }
-  const provisional = await runBinding(run, {
-    binding,
-    digest,
-    targets,
-    identity,
-    stage: "provisional",
-    candidate: input.candidate,
-    open: input.open,
-  });
-
-  const location = binding.files.join(", ") || binding.command.join(" ");
-  const incomplete = provisional.record.results.flatMap((r) =>
-    r.outcome === "invalid"
-      ? [
-          {
-            rule: targetKey(r.target),
-            location,
-            defect: `provisional run: ${r.reason}`,
-            correction:
-              "Make the judge report exactly one executed result for this target, for its own binding only, on stdout.",
-          },
-        ]
-      : [],
-  );
-  if (incomplete.length > 0) {
-    return admit("rejected", { provisional: provisional.ref, review: null }, incomplete, []);
-  }
-  // A verifier that never ran has shown nothing to review; admission may be repeated.
-  const unrun = provisional.record.results.flatMap((r) =>
-    r.outcome === "unavailable" ? [`${targetKey(r.target)}: ${r.reason}`] : [],
-  );
-  if (unrun.length > 0) {
-    return admit("invalid", { provisional: provisional.ref, review: null }, [], unrun);
-  }
+  } else if (binding.method === "review") {
+    evidence = {
+      binding: { id: binding.id, version: binding.version, rubric: [...binding.rubric] },
+      ...declared,
+    };
+  } else throw new Error(`${binding.id}: approval bindings are not admitted`);
 
   const subjects = targets.map(targetKey);
-  const files: JsonObject = {};
-  for (const f of binding.files) files[f] = tree.get(f) ?? null;
   const review = await runReview(run, {
     plan: input.plan,
     step,
@@ -1015,27 +1364,18 @@ export async function admitVerifier(
     candidate: input.candidate,
     accepted: input.accepted,
     reviewer: input.reviewer,
-    shown: [provisional.ref],
+    shown: provisional ? [provisional.ref] : [],
     outputs: [],
     context: {
       kind: "adequacy",
-      rubric: ADEQUACY_RUBRIC,
+      rubric,
       subjects,
       targets: [],
       bindings: [],
-      evidence: {
-        binding: {
-          id: binding.id,
-          command: [...binding.command],
-          timeoutMs: binding.timeoutMs,
-          observations: [...binding.observations],
-        },
-        files,
-        provisional: verificationSummary([provisional]),
-      },
+      evidence,
     },
   });
-  const refs = { provisional: provisional.ref, review: review.ref };
+  const refs = { provisional: provisional?.ref ?? null, review: review.ref };
   const checked = checkVerdict(review.record.outcome, { subjects, targets: [] });
   if (!checked.ok) {
     // An incomplete review that already judged against the verifier binds.
@@ -1062,12 +1402,24 @@ export function reviewScope(
   plan: PreparedRun,
   step: ContractStep,
   registry: Registry,
+  pending: readonly Pending[] = [],
 ): Scope & { bindings: ReviewContext["bindings"] } {
-  const targets = targetsOf(plan, step).filter((t) => t.method === "review");
+  const targets = targetsOf(plan, step, pending).filter((t) => t.method === "review");
+  // An inherited requirement every one of whose targets is pending is judged
+  // where those targets apply, not before.
+  const deferred = new Set(pending.map((p) => p.target));
+  const applies = (requirement: string): boolean => {
+    const proving = plan.inherited.targets.filter((t) =>
+      plan.inherited.criteria.some((c) => c.id === t.criterion && c.covers.includes(requirement)),
+    );
+    return proving.length === 0 || proving.some((t) => !deferred.has(targetKey(t)));
+  };
   return {
     subjects: [
       ...step.requirements.map((r) => `${step.id}/${r.id}`),
-      ...plan.inherited.requirements.map((r) => `${plan.checkpoint}/${r.id}`),
+      ...plan.inherited.requirements
+        .filter((r) => applies(r.id))
+        .map((r) => `${plan.checkpoint}/${r.id}`),
       ...step.outputs.map((o) => `${step.id}/${o.id}`),
     ],
     targets,
@@ -1135,7 +1487,7 @@ export async function reviewCandidate(
 ): Promise<Stored<ReviewRecord>> {
   const step = contractStep(input.plan, input.step);
   const identity = identityOf(run, input.attempt, input.manifest, input.candidate);
-  const scope = reviewScope(input.plan, step, input.registry);
+  const scope = reviewScope(input.plan, step, input.registry, input.manifest.pending);
   const { proofs, issues } = inventory(step, input.claims, candidateTree(run, input.candidate));
   // The evidence shown is this attempt's committed acceptance runs, never a caller's selection.
   const shown = journalRecords<Invocation>(
@@ -1194,11 +1546,17 @@ export type AcceptanceInput = {
   approvals: readonly Stored<Approval>[];
   /** Evidence refs listed by committed journal events. */
   journaled: ReadonlySet<string>;
+  /**
+   * Where the candidate declares bindings and the declarations its registry
+   * refused (T3.5 H1); none when the run configures no declarations.
+   */
+  declarations?: { dir: string | null; rejected: readonly Rejection[] };
 };
 
 /**
  * Decides one attempt from its evidence. A step is accepted only when every
- * current target — its own and inherited, of every method — has a proof,
+ * current target — its own and the inherited ones that apply, of every
+ * method — has a proof,
  * every declared output is inventoried and found satisfied by the common
  * review, and nothing else is wrong. Otherwise the decision is `correct`,
  * with findings for the producer, or `pause`, with each reason's route. An
@@ -1233,7 +1591,7 @@ export function decideAcceptance(input: AcceptanceInput): Decision {
     findings.push(finding);
   };
 
-  const targets = targetsOf(plan, step);
+  const targets = targetsOf(plan, step, manifest.pending);
   const byKey = new Map(targets.map((t) => [targetKey(t), t]));
   const covers = new Map<string, string[]>([
     ...[step, ...earlierSteps(plan, step)].flatMap((s) =>
@@ -1262,10 +1620,13 @@ export function decideAcceptance(input: AcceptanceInput): Decision {
   const digests = bindingDigests(registry, tree, ids);
   if (
     manifest.step.id !== step.id ||
-    manifest.step.definition !== plan.stepDefinitions[step.id] ||
+    manifest.step.definition !== definitionOf(plan, step.id) ||
     manifest.definitions !== plan.definitionsDigest
   ) {
     reason("retry", "evaluation", "the evaluation is not for this step's current definitions");
+  }
+  for (const issue of pendingIssues(plan, step, manifest.pending)) {
+    reason("retry", "evaluation", `the applicability decision is not the plan's: ${issue}`);
   }
   if (manifest.rubric !== COMMON_RUBRIC.digest) {
     reason("retry", "evaluation", `the evaluation's rubric is not ${COMMON_RUBRIC.digest}`);
@@ -1324,11 +1685,50 @@ export function decideAcceptance(input: AcceptanceInput): Decision {
   const inScope = (paths: readonly string[]): boolean =>
     paths.every((p) => within(p, input.policy.writable) && !within(p, input.policy.protected));
 
-  const decideAutomated = (binding: AutomatedBinding, uses: VerificationTarget[]): void => {
+  const declarations = input.declarations ?? { dir: null, rejected: [] };
+  const declarationPath = (id: string): string | null =>
+    declarations.dir === null ? null : `${declarations.dir}/${id}.yml`;
+  // The paths a producer changes to correct a binding: its files and declaration.
+  const ownPaths = (entry: RegistryEntry): string[] => [
+    ...(entry.binding.method === "automated" ? entry.binding.files : []),
+    ...(entry.source === undefined ? [] : [entry.source]),
+  ];
+  for (const r of declarations.rejected) {
+    const subject = r.binding ?? r.path;
+    const uses = targets.filter((t) => t.binding === r.binding);
+    const detail = r.diagnostics.join("; ");
+    if (inScope([r.path])) {
+      correct(
+        {
+          rule: subject,
+          location: r.path,
+          defect: `the binding declaration is refused: ${detail}`,
+          correction: `correct or remove ${r.path}; a declaration is ${declarations.dir ?? "the bindings directory"}/<binding-id>.yml for a binding a planned target names`,
+        },
+        uses.flatMap(linked),
+      );
+    } else
+      reason(
+        "owner",
+        subject,
+        `the binding declaration is refused: ${detail}`,
+        uses.flatMap(linked),
+      );
+  }
+
+  /**
+   * The approved admission that pins the binding's current digest, or
+   * undefined with the reason it cannot count yet. A verifier approved for
+   * another step is protected: only its approved digest may run.
+   */
+  const pinFor = (
+    entry: RegistryEntry,
+    uses: VerificationTarget[],
+  ): Stored<Admission> | undefined => {
+    const { binding } = entry;
     const digest = digests[binding.id];
     const requirements = uses.flatMap(linked);
-    const missing = binding.files.filter((f) => !tree.has(f));
-    // Approved for another step, a verifier is protected: only its approved digest may run.
+    const missing = binding.method === "automated" ? binding.files.filter((f) => !tree.has(f)) : [];
     const protectedPins = admissions.filter(
       ({ record: a }) => a.outcome === "approved" && a.binding === binding.id && a.step !== step.id,
     );
@@ -1336,64 +1736,72 @@ export function decideAcceptance(input: AcceptanceInput): Decision {
       protectedPins.length > 0 && !protectedPins.some(({ record: a }) => a.digest === digest);
     const pin =
       missing.length > 0 || changed ? undefined : approvedFor(admissions, binding.id, digest);
-    if (!pin) {
-      const { decided, pending } = admissionFor(admissions, binding.id, digest, evaluation);
-      const latest = decided?.record ?? pending;
-      if (missing.length > 0) {
-        const defect = `verifier files ${missing.join(", ")} of ${binding.id} are not in the candidate`;
-        if (inScope(missing)) {
-          correct(
-            {
-              rule: binding.id,
-              location: missing.join(", "),
-              defect,
-              correction: `add the verifier for ${binding.id}; it is admitted before its results count`,
-            },
-            requirements,
-          );
-        } else
-          reason(
-            "owner",
-            binding.id,
-            `${defect}, outside the producer's writable paths`,
-            requirements,
-          );
-      } else if (changed) {
-        const steps = unique(protectedPins.map(({ record: a }) => a.step)).join(", ");
+    if (pin) return pin;
+    const { decided, pending } = admissionFor(admissions, binding.id, digest, evaluation);
+    const latest = decided?.record ?? pending;
+    if (missing.length > 0) {
+      const defect = `verifier files ${missing.join(", ")} of ${binding.id} are not in the candidate`;
+      if (inScope(missing)) {
+        correct(
+          {
+            rule: binding.id,
+            location: missing.join(", "),
+            defect,
+            correction: `add the verifier for ${binding.id}; it is admitted before its results count`,
+          },
+          requirements,
+        );
+      } else
         reason(
           "owner",
           binding.id,
-          `the approved verifier of ${steps} changed: ${digest ?? "no digest"} is not its approved digest`,
+          `${defect}, outside the producer's writable paths`,
           requirements,
         );
-      } else if (latest?.outcome === "rejected") {
-        if (inScope(binding.files)) for (const f of latest.findings) correct(f, linksOf(f.rule));
-        else
-          reason(
-            "owner",
-            binding.id,
-            `admission rejected a verifier outside the producer's writable paths`,
-            requirements,
-          );
-      } else if (latest?.outcome === "paused") {
-        reason("owner", binding.id, `admission paused: ${latest.reasons.join("; ")}`, requirements);
-      } else if (latest?.outcome === "invalid") {
+    } else if (changed) {
+      const steps = unique(protectedPins.map(({ record: a }) => a.step)).join(", ");
+      reason(
+        "owner",
+        binding.id,
+        `the approved verifier of ${steps} changed: ${digest ?? "no digest"} is not its approved digest`,
+        requirements,
+      );
+    } else if (latest?.outcome === "rejected") {
+      if (inScope(ownPaths(entry))) for (const f of latest.findings) correct(f, linksOf(f.rule));
+      else
         reason(
-          "retry",
+          "owner",
           binding.id,
-          `admission incomplete: ${latest.reasons.join("; ")}`,
+          `admission rejected a verifier outside the producer's writable paths`,
           requirements,
         );
-      } else {
-        reason(
-          "retry",
-          binding.id,
-          `${digest ?? "the verifier"} has no approved admission; admit it first`,
-          requirements,
-        );
-      }
-      return;
+    } else if (latest?.outcome === "paused") {
+      reason("owner", binding.id, `admission paused: ${latest.reasons.join("; ")}`, requirements);
+    } else if (latest?.outcome === "invalid") {
+      reason(
+        "retry",
+        binding.id,
+        `admission incomplete: ${latest.reasons.join("; ")}`,
+        requirements,
+      );
+    } else {
+      reason(
+        "retry",
+        binding.id,
+        `${digest ?? "the verifier"} has no approved admission; admit it first`,
+        requirements,
+      );
     }
+    return undefined;
+  };
+
+  const decideAutomated = (
+    entry: RegistryEntry,
+    binding: AutomatedBinding,
+    uses: VerificationTarget[],
+  ): void => {
+    const pin = pinFor(entry, uses);
+    if (!pin) return;
     evidence.add(pin.ref);
     // Per target, an executed failure binds, then an executed protocol
     // violation; only a verifier that never ran may be run again.
@@ -1496,9 +1904,30 @@ export function decideAcceptance(input: AcceptanceInput): Decision {
   for (const id of ids) {
     const uses = targets.filter((t) => t.binding === id);
     const methods = unique(uses.map((t) => t.method));
-    const binding = registry.get(id)?.binding;
-    if (!binding) {
-      reason("owner", id, `the binding registry has no definition of ${id}`, uses.flatMap(linked));
+    const entry = registry.get(id);
+    const binding = entry?.binding;
+    const path = declarationPath(id);
+    if (!entry || !binding) {
+      // A refused declaration already has its reason.
+      if (declarations.rejected.some((r) => r.binding === id)) continue;
+      if (path !== null && inScope([path])) {
+        correct(
+          {
+            rule: id,
+            location: path,
+            defect: `no binding defines ${id}`,
+            correction: `declare ${id} at ${path} with the verifier it runs; it is admitted before its results count`,
+          },
+          uses.flatMap(linked),
+        );
+      } else {
+        reason(
+          "owner",
+          id,
+          `the binding registry has no definition of ${id}`,
+          uses.flatMap(linked),
+        );
+      }
     } else if (methods.length !== 1 || methods[0] !== binding.method) {
       reason(
         "owner",
@@ -1506,8 +1935,14 @@ export function decideAcceptance(input: AcceptanceInput): Decision {
         `${id} is a ${binding.method} binding, used as ${methods.join(", ")}`,
         uses.flatMap(linked),
       );
-    } else if (binding.method === "automated") decideAutomated(binding, uses);
+    } else if (binding.method === "automated") decideAutomated(entry, binding, uses);
     else if (binding.method === "approval") for (const t of uses) decideApproval(binding, t);
+    else if (needsAdmission(entry)) {
+      // A declared review binding's rubric counts only once admitted; the
+      // common review proves its targets.
+      const pin = pinFor(entry, uses);
+      if (pin) evidence.add(pin.ref);
+    }
   }
 
   // The common review: the first complete verdict of this attempt binds.
@@ -1523,7 +1958,7 @@ export function decideAcceptance(input: AcceptanceInput): Decision {
       [],
     );
   }
-  const scope = reviewScope(plan, step, registry);
+  const scope = reviewScope(plan, step, registry, manifest.pending);
   let verdict: ReviewVerdict | null = null;
   let bound: ReviewRecord | null = null;
   const protocol: string[] = [];
@@ -1720,12 +2155,14 @@ export function protectedVerifierPaths(
 ): string[] {
   return unique(
     admissions.flatMap(({ record }) => {
-      const binding = registry.get(record.binding)?.binding;
-      return record.outcome === "approved" &&
-        record.step !== step &&
-        binding?.method === "automated"
-        ? [...binding.files]
-        : [];
+      const entry = registry.get(record.binding);
+      if (record.outcome !== "approved" || record.step === step || !needsAdmission(entry)) {
+        return [];
+      }
+      return [
+        ...(entry?.binding.method === "automated" ? entry.binding.files : []),
+        ...(entry?.source === undefined ? [] : [entry.source]),
+      ];
     }),
   );
 }

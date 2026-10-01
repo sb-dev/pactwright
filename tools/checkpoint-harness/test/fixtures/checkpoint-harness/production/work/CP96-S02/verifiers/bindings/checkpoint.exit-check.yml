@@ -1,0 +1,9 @@
+# CP96/AC03, evaluated only at the checkpoint exit.
+id: checkpoint.exit-check
+method: automated
+version: "1"
+command: [node, verifiers/changelog-subject.mjs]
+judge: [node, verifiers/exit-judge.mjs]
+files: [verifiers/changelog-subject.mjs, verifiers/exit-judge.mjs]
+timeoutMs: 30000
+observations: [steps]

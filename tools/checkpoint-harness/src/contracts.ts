@@ -66,6 +66,18 @@ export type ProseStep = { kind: "prose"; id: string; reviewedHash: string };
 
 export type PlannedStep = ContractStep | ProseStep;
 
+/**
+ * When the targets of an inherited criterion apply (T3.5 H1; Spec 00 §4):
+ * to every step's evaluation, to the evaluations journaled after a step's
+ * first acceptance, or only to the checkpoint exit evaluation. A target that
+ * does not apply yet is pending, never waived: the exit evaluation applies
+ * every inherited target.
+ */
+export type Applicability = { kind: "step" } | { kind: "after"; step: string } | { kind: "exit" };
+
+/** The run model's reviewed applicability rules: checkpoint → inherited criterion → rule. */
+export type ApplicabilityRules = Readonly<Record<string, Readonly<Record<string, Applicability>>>>;
+
 export type PreparedRun = {
   checkpoint: string;
   runModel: string;
@@ -85,6 +97,8 @@ export type PreparedRun = {
     requirements: PlannedRequirement[];
     criteria: PlannedCriterion[];
     targets: VerificationTarget[];
+    /** When each inherited criterion's targets apply; `step` unless a rule says otherwise. */
+    applicability: Record<string, Applicability>;
   };
   /** Binding IDs the selection needs; no binding is resolved before T3-D. */
   unresolvedBindings: string[];
@@ -97,6 +111,8 @@ export type PrepareOptions = {
   repoRoot: string;
   /** Name used for the configuration in diagnostics. */
   configName?: string;
+  /** The run model's applicability rules; an inherited criterion without one applies to every step. */
+  applicability?: ApplicabilityRules;
 };
 
 type Evidence = readonly [string, ...string[]];
@@ -218,13 +234,18 @@ export async function prepareRun(config: unknown, options: PrepareOptions): Prom
   const root = mkdtempSync(join(tmpdir(), "pactwright-plan-"));
   try {
     await exportRevision(options.repoRoot, revision, root);
-    return plan(root, { ...config, checkpoint: checkpointPath }, name);
+    return plan(root, { ...config, checkpoint: checkpointPath }, name, options.applicability ?? {});
   } finally {
     rmSync(root, { recursive: true, force: true });
   }
 }
 
-function plan(root: string, config: RunConfig, name: string): Preparation {
+function plan(
+  root: string,
+  config: RunConfig,
+  name: string,
+  rules: ApplicabilityRules,
+): Preparation {
   const dir = posix.dirname(config.checkpoint);
   if (!existsSync(join(root, config.checkpoint))) {
     return {
@@ -291,6 +312,17 @@ function plan(root: string, config: RunConfig, name: string): Preparation {
   if (!graph.hasNode(through)) {
     diagnostics.push(`${name}: selection.through ${through} is not a step of ${cpid}`);
   }
+  const inheritedCriteria = criteriaOf(checkpoint);
+  const ownRules = rules[cpid] ?? {};
+  for (const [criterion, rule] of Object.entries(ownRules)) {
+    const where = `applicability ${cpid}/${criterion}`;
+    if (!inheritedCriteria.some((c) => c.id === criterion)) {
+      diagnostics.push(`${where}: not a criterion of ${dir}/checkpoint.yml`);
+    }
+    if (rule.kind === "after" && !graph.hasNode(rule.step)) {
+      diagnostics.push(`${where}: ${rule.step} is not a step of ${cpid}`);
+    }
+  }
   if (diagnostics.length > 0) return { ok: false, diagnostics };
 
   const selected = closure(through);
@@ -316,11 +348,16 @@ function plan(root: string, config: RunConfig, name: string): Preparation {
         targets: expand(sid, criteria),
       };
     });
-  const inheritedCriteria = criteriaOf(checkpoint);
   const inherited = {
     requirements: requirementsOf(checkpoint),
     criteria: inheritedCriteria,
     targets: expand(cpid, inheritedCriteria),
+    applicability: Object.fromEntries(
+      inheritedCriteria.map((c): [string, Applicability] => [
+        c.id,
+        ownRules[c.id] ?? { kind: "step" },
+      ]),
+    ),
   };
   const bindings = [
     ...inherited.targets,
@@ -393,3 +430,43 @@ export function nextEligible(plan: PreparedRun, accepted: Acceptances): Eligibil
   }
   return { kind: "selection-accepted" };
 }
+
+/** The checkpoint exit evaluation's step ID (T3.5 H1): it follows every step and has no producer. */
+export const exitId = (plan: Pick<PreparedRun, "checkpoint">): string => `${plan.checkpoint}/exit`;
+
+/** Whether the selection plans every step of the checkpoint, so its exit evaluation is due. */
+export const coversCheckpoint = (plan: PreparedRun): boolean =>
+  Object.keys(plan.stepDefinitions).every((sid) => plan.steps.some((s) => s.id === sid));
+
+/**
+ * The checkpoint exit evaluation as a contract step without own outputs,
+ * requirements or targets (Spec 00 §4): it evaluates the integrated
+ * candidate against every inherited target, none pending. The steps' own
+ * targets stand on the integrated acceptance, an evaluation of the same
+ * candidate that the exit requires to be current. Its definition is the
+ * governing definition set.
+ */
+export function exitStep(plan: PreparedRun): ContractStep {
+  return {
+    kind: "contract",
+    id: exitId(plan),
+    requires: plan.steps.map((s) => s.id),
+    inputs: [],
+    uses: [],
+    outputs: [],
+    requirements: [],
+    criteria: [],
+    targets: [],
+  };
+}
+
+/** A planned contract step by ID, the exit evaluation included. */
+export function plannedContract(plan: PreparedRun, id: string): ContractStep | undefined {
+  if (id === exitId(plan)) return exitStep(plan);
+  const step = plan.steps.find((s) => s.id === id);
+  return step?.kind === "contract" ? step : undefined;
+}
+
+/** A step's definition identity: its contract digest, or the definition set for the exit. */
+export const definitionOf = (plan: PreparedRun, id: string): string =>
+  id === exitId(plan) ? plan.definitionsDigest : (plan.stepDefinitions[id] ?? "");

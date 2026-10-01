@@ -282,7 +282,10 @@ describe("T3-E correction: failures lead to corrections and eventual acceptance"
       testDeps(w.repo, { producer, reviewer: reviewer() }),
     );
     assertAccepted(result, ["CP99-S01", "CP99-S02"]);
-    assert.ok(!("checkpoint" in result));
+    assert.ok(result.outcome === "selection-accepted");
+    // Selection acceptance is not checkpoint completion (T3.5 H1).
+    assert.equal(result.checkpoint.complete, false);
+    assert.deepEqual(result.checkpoint.unaccepted, ["CP99-S03", "CP99-S04"]);
     const dir = dirOf(result);
     const [first] = actions(dir, "acceptance");
     assert.ok(first);

@@ -1,0 +1,7 @@
+# Delivered with the greeting capability (CP96-S01/AC02).
+id: greet.single-path
+method: review
+version: "1"
+rubric:
+  - One function validates the name; the program path calls it and restates no rule.
+  - A second validation path, or a rule the program checks again, fails the target.
