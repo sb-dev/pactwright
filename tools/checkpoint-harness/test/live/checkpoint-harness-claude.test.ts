@@ -1,14 +1,20 @@
-// T3-C acceptance, live part (Task 3 research log §12). Requires a credential
-// in PACTWRIGHT_ANTHROPIC_API_KEY: an Anthropic API key, or a subscription
-// OAuth token with PACTWRIGHT_LIVE_CREDENTIAL_KIND=oauth-token; an explicit model ID in
-// PACTWRIGHT_LIVE_MODEL, a running Linux Docker daemon, and a provider
-// environment with no ambient OAuth token. It spends at most about
-// 2 × LIVE_SPEND_USD. A missing resource fails this file; it is never a pass.
+// T3-C acceptance, live part (Task 3 research log §12), and the T3.5 H2 live
+// compatibility proof. Requires a credential in PACTWRIGHT_ANTHROPIC_API_KEY:
+// an Anthropic API key, or a subscription OAuth token with
+// PACTWRIGHT_LIVE_CREDENTIAL_KIND=oauth-token; the producer's model ID in
+// PACTWRIGHT_LIVE_MODEL and its effort in PACTWRIGHT_LIVE_PRODUCER_EFFORT; the
+// reviewer's effort in PACTWRIGHT_LIVE_REVIEWER_EFFORT and, optionally, its
+// own model in PACTWRIGHT_LIVE_REVIEWER_MODEL; a running Linux Docker daemon,
+// and a provider environment with no ambient OAuth token. It spends at most
+// about 2 × LIVE_SPEND_USD. A missing resource fails this file; it is never a
+// pass.
 //
 // It proves one real producer session making a scoped edit through B's
 // containment, a denied write to a protected path, the effective session
 // (tools, MCP server, authentication, model), and a fresh read-only reviewer
-// session on the sealed candidate. No outcome here is acceptance.
+// session on the sealed candidate. Each session runs with its role's admitted
+// model and effort and reports applying exactly them. No outcome here is
+// acceptance.
 
 import assert from "node:assert/strict";
 import { execFileSync } from "node:child_process";
@@ -80,6 +86,14 @@ before(async () => {
   if (!process.env[KEY]) missing.push(`${KEY} is not set`);
   const model = process.env.PACTWRIGHT_LIVE_MODEL ?? "";
   if (!model) missing.push("PACTWRIGHT_LIVE_MODEL is not set");
+  const reviewerModel = process.env.PACTWRIGHT_LIVE_REVIEWER_MODEL || model;
+  const effort = {
+    producer: process.env.PACTWRIGHT_LIVE_PRODUCER_EFFORT ?? "",
+    reviewer: process.env.PACTWRIGHT_LIVE_REVIEWER_EFFORT ?? "",
+  };
+  for (const [role, level] of Object.entries(effort)) {
+    if (!level) missing.push(`PACTWRIGHT_LIVE_${role.toUpperCase()}_EFFORT is not set`);
+  }
   try {
     execFileSync("docker", ["info"], { stdio: "ignore" });
   } catch {
@@ -91,10 +105,17 @@ before(async () => {
 
   const config = {
     roles: {
-      producer: { adapter: "claude-sdk", model, skills: ["karpathy-guidelines"], max_turns: 20 },
-      reviewer: {
+      producer: {
         adapter: "claude-sdk",
         model,
+        effort: effort.producer,
+        skills: ["karpathy-guidelines"],
+        max_turns: 20,
+      },
+      reviewer: {
+        adapter: "claude-sdk",
+        model: reviewerModel,
+        effort: effort.reviewer,
         skills: ["code-review-and-quality"],
         max_turns: 10,
       },
@@ -219,7 +240,9 @@ describe("T3-C live: one real producer and a fresh read-only reviewer", () => {
       o.auth,
       producer.credentialKind === "api-key" ? "ANTHROPIC_API_KEY" : "CLAUDE_CODE_OAUTH_TOKEN",
     );
+    assert.equal(o.model.configured, producer.model);
     assert.equal(o.model.reported, producer.model);
+    assert.deepEqual(o.effort, { configured: producer.effort, reported: [producer.effort] });
     assert.deepEqual(o.tools, [
       "StructuredOutput",
       "mcp__workspace__read_file",
@@ -278,6 +301,9 @@ describe("T3-C live: one real producer and a fresh read-only reviewer", () => {
       const o = reviewed.observation;
       assert.equal(reviewed.outcome, "reviewed", JSON.stringify(reviewed));
       assert.ok(o.session && o.session !== produced.observation.session, "a fresh session");
+      assert.equal(o.model.configured, reviewer.model);
+      assert.equal(o.model.reported, reviewer.model);
+      assert.deepEqual(o.effort, { configured: reviewer.effort, reported: [reviewer.effort] });
       assert.deepEqual(o.tools, [
         "StructuredOutput",
         "mcp__workspace__read_file",
