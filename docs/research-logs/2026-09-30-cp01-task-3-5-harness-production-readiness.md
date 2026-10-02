@@ -1,14 +1,14 @@
 # Checkpoint 1 Task 3.5 — Harness Production Readiness
 
-**Version:** 3
+**Version:** 4
 
-**Date:** 1 October 2026
+**Date:** 2 October 2026
 
 **T3 accepted baseline:** `9294813b9b62631804ca5a61547bd329c924bf94`
 
 **Planning baseline:** `refactor/pactwright-v2` at `5dccd16373d8988a7294548de6f9de61be48e33a`
 
-**Authority:** [Spec 00 v8](../specs/00-checkpoint-step-contract-and-delivery-tasks.md), §§3–5, and [B28 v2](2026-09-27-cp01-stages-6-11-b28-unconverted-steps.md), current Q67 decision approved on [PR #60](https://github.com/sb-dev/pactwright/pull/60#issuecomment-5938936037).
+**Authority:** [Spec 00 v9](../specs/00-checkpoint-step-contract-and-delivery-tasks.md), §§3–5, and [B28 v2](2026-09-27-cp01-stages-6-11-b28-unconverted-steps.md), current Q67 decision approved on [PR #60](https://github.com/sb-dev/pactwright/pull/60#issuecomment-5938936037).
 
 **Historical implementation baseline:** [T3 plan v4](2026-09-26-cp01-task-3-harness-and-software-run-model.md), §§4–12. Reuse its applicable containment, verifier and evidence boundaries. Its convert-before-run rule is superseded by Spec 00 and B28; it does not govern H3 operational execution.
 
@@ -20,7 +20,7 @@ T3.5 does not implement CP01 product steps. It closes three harness gaps found w
 
 - **H1 — CP01 production verification:** admit real CP01 verifier bindings and run candidate repository checks.
 - **H2 — Claude model and effort:** configure and record model/effort independently for producer and reviewer.
-- **H3 — GitHub Actions execution and operational continuation:** run the harness on hosted runners with portable state, GitHub-bound decisions and operational-step support.
+- **H3 — GitHub Actions execution and operational continuation:** run the harness on hosted runners with portable state, GitHub-bound decisions, operational-step support and PR correction rounds.
 
 H1 and H2 may be implemented independently. H3 depends on both. T4 starts only after H1–H3 are accepted.
 
@@ -134,7 +134,7 @@ Run the existing live Claude test with the admitted settings to prove the SDK/pr
 
 **Prerequisites:** accepted H1 and H2; a GitHub-hosted Ubuntu runner with Docker; repository permission to run the workflow; provider credential for the live fixture. Use fixture effects for recovery proof rather than a real release.
 
-**Deliver:** `.github/workflows/checkpoint-harness.yml`, the complete `.github/checkpoint-harness/cp01-t5.yml` template, portable run-state persistence, GitHub-aware controller ownership, workflow-dispatch operator actions and operational-step execution.
+**Deliver:** `.github/workflows/checkpoint-harness.yml`, the complete `.github/checkpoint-harness/cp01-t5.yml` template, portable run-state persistence, GitHub-aware controller ownership, workflow-dispatch operator actions, operational-step execution and PR correction rounds using the same saved run.
 
 The **controller** is the trusted harness process inside a GitHub Actions job. It decides the next harness action, invokes providers and verifiers, records evidence and owns the run while that job is active. A new job starts a new controller process but resumes the same full harness run from saved state.
 
@@ -143,13 +143,19 @@ The **controller** is the trusted harness process inside a GitHub Actions job. I
 1. **Portable state.** Persist the journal, evidence, candidate Git history, effective configuration, approvals, counters and receipts as one validated run-state archive. Save after durable phases, before an external effect and before planned yield.
 2. **Restore and ownership.** Restore the exact latest saved sequence on a fresh runner. Replace hostname/PID liveness with recorded GitHub workflow run/job/attempt identity plus verified job status. Active or unknown ownership cannot be taken over.
 3. **Bounded jobs.** Yield before the hosted-job limit with enough time to save state. Persist attempts, retries and spend counters. Reserve invocation allowance before provider dispatch so runner loss cannot make unresolved usage disappear.
-4. **Workflow inputs.** Expose `start`, `continue`, `approve`, `deny`, `amend` and `status`. `through` is optional: a new T5 run without it selects `CP01-S01`; a continuation without it keeps the saved selection; an explicit new boundary is validated and recorded.
+4. **Workflow inputs.** Expose `start`, `continue`, `approve`, `deny`, `amend`, `status` and `address-comments`. The last action requires `run` and `pr`; it retains the saved selection and cannot extend scope. `through` is optional: a new T5 run without it selects `CP01-S01`; a continuation without it keeps the saved selection; an explicit new boundary is validated and recorded.
 5. **Containment and credentials.** Keep pinned controller code, provider credentials, repository-write credentials and the Docker control socket outside candidate execution. Candidate code continues through the T3 containment boundary.
 6. **GitHub decisions.** Bind approval/denial to the authenticated GitHub actor, exact pending request, candidate and authority. A stale or unauthorised decision is refused. Record a denial without executing its effect or granting acceptance.
 7. **External effects.** Persist intent before execution. After interruption, inspect the target and record the receipt if the action completed; retry only when read-back proves it did not. Unsupported reconciliation pauses.
 8. **Operational steps.** Execute reviewed prose procedures in their declared repository or fixture, capture command/observation evidence, preserve earlier evidence across landed revisions or repository changes, and re-evaluate affected obligations before continuing.
 9. **Amend and status.** An amendment requires an authorised actor, a valid configuration revision and a reason. Record it and re-evaluate affected evidence before continuation. Reject stale or invalid configuration without changing effective state. Preserve receipts and counters. `status` reads the latest recorded state without changing the journal, run-state digest or effect records.
-10. **Operator summary.** Each workflow job reports run identity, selected boundary, accepted steps, model/effort, budget state, pause reason, next action, evidence links and saved-state identity. A green job or successful artifact upload cannot be reported as checkpoint acceptance.
+10. **Operator summary.** Each workflow job reports run identity, selected boundary, accepted steps, model/effort, budget state, pause reason, next action, evidence links and saved-state identity. For a PR correction round, include the PR/head, feedback dispositions, fixing commit, checks and reply receipts. A green job or successful artifact upload cannot be reported as checkpoint acceptance.
+11. **PR correction rounds.** Restore the latest portable state and acquire the existing controller ownership. Fetch the current PR, submitted reviews, inline threads and conversation comments. Validate the saved PR association, repository, base branch and head before editing. Reconcile newer commits through existing candidate handling without discarding them; pause if reconciliation cannot be established. Recheck the head before publishing and never overwrite intervening work.
+12. **Feedback and correction.** Assess each item against pinned requirements and current code. Record it as actionable, already addressed, declined with a reason, or blocked. Feed actionable findings into the existing correction loop, invalidate affected acceptance evidence before progression, and seal, verify and independently review the corrected candidate. Preserve history, unaffected evidence, receipts, attempts and spending. Feedback cannot amend definitions, scope or approval authority.
+13. **Shared triggers.** Manual `address-comments` and a submitted-review event from a configured authorised reviewer call the same correction path. Batch the submitted review rather than triggering per inline comment. Manual dispatch also collects conversation comments. Validate the actor and PR scope against trusted effective configuration. Ignore the harness's own replies and reject unauthorised triggers. Duplicate events resume unfinished recorded work or skip completed unchanged feedback; changed content is assessed again.
+14. **PR records and publication.** Store the PR association (repository, number, base/head branches and published head SHA), feedback snapshots with IDs/content digests, dispositions and round results in the existing journal and evidence store. Initial harness publication must retain complete portable state. Publish corrections to the same PR branch through existing effect handling. Reply with each disposition and the fixing commit/check evidence where applicable. Read back the remote head and replies before recording completion, then save state. Reconcile interrupted pushes and replies before retrying. Leave thread resolution and acceptance to the reviewer. Importing standalone Claude Code sessions is outside this change.
+
+Do not introduce a separate PR-fixing harness, scheduler or state model. Reuse T3 configuration, correction, review, amendment and effect boundaries. Explicitly dispatch a further GHA review where token-generated changes do not trigger it; do not assume pushes or replies restart the loop.
 
 **Acceptance — automated assertions in `test/checkpoint-harness-h3.test.ts` plus a hosted fixture:**
 
@@ -169,10 +175,13 @@ Each semicolon-separated case below needs its own asserted result and valid cont
 | H3-10 | `status` reports the latest recorded state; before/after journal, run-state digest and effect records are identical; corrupt or stale restored state is refused rather than presented as current. |
 | H3-11 | Every workflow action reports run identity, selected boundary, accepted steps, requested/provider-reported model and effort (or explicit absence), spending and unresolved reservations, pause reason, next action, resolvable evidence links and saved-state identity/expiry; each field agrees with recorded state; omitting or falsifying any field fails its own assertion. A pre-restore refusal reports unknown fields explicitly and grants no acceptance. |
 | H3-12 | The hosted fixture yields and automatically continues within the selected boundary while preserving counters; it stops at the boundary or a human decision; a green job and successful artifact upload with incomplete required evidence still leave the step/checkpoint unaccepted. |
+| H3-13 | Initial publication and two PR correction rounds reuse one run across separate hosted jobs. History, receipts, attempts and spending persist. Affected evidence is renewed; unaffected evidence remains valid. A fixing commit or reply alone cannot restore acceptance. |
+| H3-14 | Manual dispatch and authorised submitted-review events use the same correction path. Manual handling includes conversation comments. Duplicate events resume incomplete work or skip completed work without repeated commits/replies; edited feedback is reassessed. Unauthorised triggers, wrong PR association and unsupported scope changes are rejected. Own replies do not trigger correction. Valid feedback is corrected; already addressed or unsupported feedback receives a recorded disposition and reason where required. |
+| H3-15 | Runner loss after a correction push or reply is recovered through target read-back without duplicating completed effects or claiming an unresolved effect completed. A changed PR head is reconciled without losing newer commits or causes a pause; missing saved state cannot start a new correction run. Concurrent triggers cannot acquire competing ownership; budget exhaustion pauses without resetting limits. |
 
-The hosted proof must span at least two GitHub-hosted jobs and include interruption after an external intent. A local process restart does not establish H3 acceptance.
+The hosted proof must span at least two GitHub-hosted jobs and include interruption after an external intent. The PR fixture must retain initial publication and two correction rounds in separate hosted jobs, with feedback snapshots, fixing commits and reply receipts. A local process restart does not establish H3 acceptance.
 
-**Handoff:** the exact harness revision, workflow run IDs, state artifacts, fixture-effect receipts and acceptance records used by T4. T5 does not begin from H3 acceptance alone.
+**Handoff:** the exact harness revision, workflow run IDs, state artifacts, fixture-effect receipts, PR correction-round records and acceptance records used by T4. T5 does not begin from H3 acceptance alone.
 
 ## 4. T3.5 exit
 
@@ -198,4 +207,6 @@ Version 2 follows the T3 implementation-unit format: prerequisites, deliverables
 
 Version 3 records the superseding Q67 authority, treats T3 as a historical baseline, and adds explicit workflow-action, failure-case and summary acceptance coverage.
 
-**Checkpoint 1 Task 3.5 — Harness Production Readiness, Version 3**
+Version 4 adds PR correction rounds to H3 using existing portable state, correction and effect handling. It adds shared manual/automatic triggers and H3-13–H3-15 proof without claiming implementation or acceptance.
+
+**Checkpoint 1 Task 3.5 — Harness Production Readiness, Version 4**

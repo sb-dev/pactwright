@@ -1,12 +1,12 @@
 # Checkpoint 1 Task 5 — GitHub Actions Run Guide
 
-**Version:** 14
+**Version:** 15
 
-**Date:** 30 September 2026
+**Date:** 2 October 2026
 
 **Status:** Execution plan; requires accepted T3.5 harness production readiness and a passing T4 proof.
 
-**Source inspected:** `refactor/pactwright-v2` at `5dccd16373d8988a7294548de6f9de61be48e33a`
+**Source inspected:** `refactor/pactwright-v2` at `57bafc1761b3f2319751571c9865a6ccab615aa9`
 
 **Recommended repository file:** `docs/research-logs/2026-09-29-cp01-task-5-implementation-and-acceptance.md`
 
@@ -92,7 +92,7 @@ The controller does not assume an interrupted external action failed. On resume 
 | --- | --- |
 | H1 | CP01 verifier admission, hosted candidate checks and checkpoint-target applicability. |
 | H2 | Independent producer/reviewer model and effort settings, with recorded effective values. |
-| H3 | GitHub workflow controls, portable state, approvals and operational continuation. |
+| H3 | GitHub workflow controls, portable state, approvals, operational continuation and PR correction rounds. |
 
 T3.5 must be accepted before T4 starts, and T4 must pass before this T5 run starts. The remaining sections describe how to use that proven harness.
 
@@ -102,7 +102,7 @@ T3.5 must be accepted before T4 starts, and T4 must pass before this T5 run star
 
 **Recommended file:** `.github/workflows/checkpoint-harness.yml`
 
-H3 supplies one manually dispatched workflow named **Checkpoint harness**.
+H3 supplies one workflow named **Checkpoint harness**, with manual dispatch and an authorised submitted-review trigger for PR corrections.
 
 The workflow has four responsibilities:
 
@@ -122,6 +122,10 @@ The committed template omits `selection.through`. The workflow supplies the effe
 Use one concurrency group per T5 run with `cancel-in-progress: false`. A continuation job must not cancel the controller that is currently writing run state.
 
 The workflow uses the provider credential required by the harness. Privileged repository or publication credentials are supplied only to the jobs that execute those effects.
+
+Configure the authorised review submitters in trusted run configuration. A submitted review starts one batched `address-comments` round only for a PR associated with that run. Manual dispatch is the fallback for conversation comments, edited feedback or a missed trigger. Both paths restore the same state and use the same per-run concurrency group.
+
+Do not assume a `GITHUB_TOKEN` push or reply triggers another review workflow. Use explicit workflow dispatch or suitable GitHub App authentication for that next review. Keep privileged credentials outside candidate workspaces. [GitHub workflow triggering][gha-trigger].
 
 ### 3.2 Run configuration
 
@@ -219,10 +223,23 @@ Use the same **Run workflow** form and run ID.
 | Approval request | Review the request and candidate in the summary. Select `approve` or `deny` and copy its exact ID into `request`. The workflow checks your GitHub identity. |
 | Required human merge or release action | Perform the specific action named by the checkpoint. Select `continue` so the harness reads back the result. |
 | Budget or model change | Edit the run configuration in GitHub. Select `amend`, supply its commit SHA as `config_revision`, and give a `reason`. The workflow records the change before resuming. |
+| PR feedback | Select `address-comments`, keep the original `run` ID and supply the associated PR number as `pr`. Leave `through` empty; the correction round keeps the saved selection. |
 | Inspect without continuing | Select `status`. |
 | Harness defect or missing state | Resolve the separate harness or recovery issue, then select `continue`. |
 
 Automatic continuations cannot grant human approvals. An interrupted external action is inspected before it is retried. Approval of an action is not evidence that the action completed.
+
+### PR correction rounds
+
+Initial implementation and PR publication must use the harness and retain portable state. A standalone Claude Code PR has no harness state by default; importing its conversation or reconstructing a run is outside this procedure.
+
+An authorised submitted review starts a round automatically. For the manual fallback, use `action: address-comments`, the original `run` and `pr`. The controller fetches current reviews, inline threads and conversation comments, then checks them against the pinned requirements and current candidate.
+
+The round reuses the existing correction, verification and independent-review loop. It preserves history, counters and completed receipts. Newer PR commits are reconciled without discarding them; unsafe reconciliation pauses the run.
+
+Read the round summary for the PR/head, feedback dispositions, fixing commit, checks, reply receipts and next action. The controller reads back pushed changes and replies before recording completion. Unchanged completed feedback is skipped; interrupted work is reconciled and edited feedback is assessed again. Thread resolution and acceptance remain with the reviewer. A fixing commit or reply alone is not acceptance.
+
+If the round pauses for missing state, budget, authority or conflicting changes, resolve the named issue before resuming. Do not start a new run to reset the limits or replace missing state.
 
 ## 8. Complete T5
 
@@ -257,4 +274,8 @@ The guide uses the repository revision in the header and the official references
 [gha-security]: https://docs.github.com/en/actions/reference/security/secure-use
 [claude-effort]: https://platform.claude.com/docs/en/build-with-claude/effort
 
-**Checkpoint 1 Task 5 — GitHub Actions Run Guide, Version 14**
+## Revision record
+
+Version 15 adds authorised submitted-review triggers, the manual `address-comments` fallback and PR correction-round operation using the initial harness run. It does not claim that the workflow or correction capability has been implemented.
+
+**Checkpoint 1 Task 5 — GitHub Actions Run Guide, Version 15**

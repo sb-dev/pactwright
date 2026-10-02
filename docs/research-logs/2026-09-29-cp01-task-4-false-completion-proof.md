@@ -1,12 +1,12 @@
 # Checkpoint 1 Task 4 — False-Completion Proof
 
-**Version:** 6
+**Version:** 7
 
-**Date:** 1 October 2026
+**Date:** 2 October 2026
 
 **T3 accepted baseline:** `9294813b9b62631804ca5a61547bd329c924bf94`
 
-**Authority:** [Spec 00 v8](../specs/00-checkpoint-step-contract-and-delivery-tasks.md), §§3–5; [T3 plan v4](2026-09-26-cp01-task-3-harness-and-software-run-model.md), §§5–9 and §12; and [T3.5 production readiness](2026-09-30-cp01-task-3-5-harness-production-readiness.md).
+**Authority:** [Spec 00 v9](../specs/00-checkpoint-step-contract-and-delivery-tasks.md), §§3–5; [T3 plan v4](2026-09-26-cp01-task-3-harness-and-software-run-model.md), §§5–9 and §12; and [T3.5 production readiness](2026-09-30-cp01-task-3-5-harness-production-readiness.md).
 
 ## 1. Objective
 
@@ -71,6 +71,11 @@ Use the prerequisite tests where they already exercise these paths. Test valid a
 | Model and verifier identity | Unsupported model/effort pairs and unadmitted verifiers cannot pass. Changed settings or bindings invalidate affected evidence. |
 | Scope and target changes (H3-07, H3-08) | Exercise `start` and `continue` with omitted, valid explicit and invalid boundaries. Invalid input cannot start or change a run. Landed revisions and repository changes preserve evidence links and rerun affected checks. Wrong target, changed/unreviewed prose or missing operational observations prevent acceptance. |
 | Checkpoint-wide targets | Applicable early checks can pass while later-only obligations remain pending. Final completion still requires the full exit evidence. |
+| PR state reuse (H3-13) | Initial publication and two correction rounds resume one run across separate hosted jobs. Missing saved state cannot start a fresh correction run. History, counters and receipts persist; affected evidence is renewed and unaffected evidence remains valid. |
+| PR feedback and triggers (H3-14) | Manual dispatch and authorised submitted reviews use the same correction path. Duplicate feedback resumes incomplete work or skips completed work without repeated commits/replies; edited content is reassessed. Own replies, unauthorised triggers, wrong PR association and scope-changing feedback cannot cause unauthorised work. Valid findings are corrected and unsupported/already addressed findings have recorded dispositions. |
+| PR head and concurrent triggers (H3-15) | Stale heads are reconciled without losing newer commits or pause. Race a new commit before publication and race two correction triggers: neither overwrites intervening work or permits competing writers. Valid unchanged or safely reconciled heads can progress. |
+| PR effects and budget (H3-15) | Interrupt after a correction push or reply but before its receipt is saved. Target read-back prevents duplication; unresolved effects cannot count as completed. Exhausted limits pause; a valid authorised budget amendment preserves prior usage. |
+| PR correction acceptance (H3-13) | A fixing commit, posted reply or resolved thread cannot restore acceptance without current verification and independent review. A valid correction with the required evidence can progress. |
 
 ### Verification and evidence
 
@@ -92,7 +97,7 @@ pnpm --filter @pactwright/checkpoint-harness test:integration
 PACTWRIGHT_LIVE_KEEP=1 pnpm --filter @pactwright/checkpoint-harness test:live
 ```
 
-Prove runner replacement with separate hosted jobs and retained artifacts, including interruption around an external intent. Local process restart tests do not establish this behaviour. Reuse fixture effects rather than performing a real publication.
+Prove runner replacement with separate hosted jobs and retained artifacts, including interruption around an external intent. Retain initial PR publication and both correction rounds with their feedback, commit and reply records. Local process restart tests do not establish this behaviour. Reuse fixture effects rather than performing a real publication.
 
 For each execution result, record the command, revision, outcome, GitHub job/attempt and evidence artifact identity. Distinguish T4 executions from reported T3 results and code inspection. If a required rerun is unavailable, record the missing proof. Retain the report and supporting run evidence for any new live execution.
 
@@ -200,4 +205,6 @@ Version 5 adds H1–H3 and GitHub Actions proof, replaces the conversion-pause c
 
 Version 6 aligns the Q67 authority and adds explicit challenges for approve/deny, amendments, read-only status, each summary field and bounded continuation. Historical conversion-pause evidence cannot satisfy the operational-step case.
 
-**Checkpoint 1 Task 4 — False-Completion Proof, Version 6**
+Version 7 adds PR correction-round challenges for portable state reuse, feedback identity, stale heads, concurrent triggers, budget preservation and interrupted publication. Commits and replies remain separate from acceptance evidence.
+
+**Checkpoint 1 Task 4 — False-Completion Proof, Version 7**
