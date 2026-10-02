@@ -1,15 +1,26 @@
 // T3-D: the software-bootstrap run model's review rubrics and binding
 // registry (Task 3 research log §§6–7 and §12; Spec 00 §3). Rubrics are code
 // constants pinned by digest: the common rubric governs every step's
-// independent review, the adequacy rubric governs admission of a new
+// independent review, the adequacy rubrics govern admission of a new
 // verifier. A binding declares how one verifier ID is checked; it refers to
 // contract targets by ID and never restates their requirements.
+//
+// T3.5 H1 (production readiness log §3 H1): production bindings arrive with
+// the capability that owns them, as declaration files in the candidate,
+// loaded into the registry of that candidate without a controller edit; a
+// declared binding counts only after admission. The run model also owns the
+// applicability rules that defer checkpoint-wide criteria to a later step or
+// to the checkpoint exit.
 
+import { readFileSync } from "node:fs";
 import { posix } from "node:path";
 
+import { Ajv2020 } from "ajv/dist/2020.js";
+import yaml from "js-yaml";
 import stringify from "safe-stable-stringify";
 
-import { sha256 } from "./contracts.js";
+import type { Method } from "./checkpoint-contracts.js";
+import { sha256, type ApplicabilityRules } from "./contracts.js";
 
 export type Rubric = { id: string; items: readonly string[]; pass: string };
 export type PinnedRubric = Rubric & { digest: string };
@@ -42,9 +53,21 @@ export const ADEQUACY_RUBRIC: PinnedRubric = pin({
     "The verifier reports only results it executed, only for its own binding, with no skip and no result copied from a file the candidate could have written.",
     "Fixtures are deterministic and need no network.",
     "The binding's files list every verifier file and fixture the command runs, so its approval pins all of them.",
+    "Repository commands run on the candidate's own source: build output is produced in the binding's scratch paths and dependencies come only from the prepared dependencies; no result rests on prebuilt output, host state or a binary outside the candidate.",
     "Residual risk to weigh: code under test runs in the same container as the verifier and could write the report; the verifier must not hand it the report path or an easy way to forge a result.",
   ],
   pass: "Pass only when every target of the binding is adequately verified. A blocking finding cites the target as its rule and names the verifier file, the defect and the correction. A target whose adequacy cannot be judged is not-assessed, never satisfied.",
+});
+
+/** Admission of a review binding a candidate declares: its rubric, before it governs a review (T3.5 H1). */
+export const REVIEW_ADEQUACY_RUBRIC: PinnedRubric = pin({
+  id: "software-bootstrap/review-binding-adequacy",
+  items: [
+    "The rubric judges each target of the binding against its criterion's given/when/then as written; it neither restates nor weakens the criterion and adds no exemption or skip.",
+    "The rubric states what fails a target, so a reviewer applying it rejects an implementation that violates the criterion.",
+    "Every rubric item can be decided from the candidate and the recorded evidence, or says what evidence it needs.",
+  ],
+  pass: "Pass only when every target of the binding is adequately judged by the rubric. A blocking finding cites the target as its rule and names the declaration, the defect and the correction. A target whose adequacy cannot be judged is not-assessed, never satisfied.",
 });
 
 /**
@@ -71,6 +94,14 @@ export type AutomatedBinding = {
   timeoutMs: number;
   /** Observation keys every reported result must carry. */
   observations: readonly string[];
+  /**
+   * Paths the subject may write, such as build output: created empty in each
+   * subject workspace and never sealed. A candidate holding files there fails
+   * the binding's targets, so prebuilt output can never satisfy them.
+   */
+  scratch?: readonly string[];
+  /** Whether the subject runs with the run's prepared dependencies mounted read-only. */
+  dependencies?: boolean;
 };
 
 export type ReviewBinding = {
@@ -105,8 +136,12 @@ export type Binding = AutomatedBinding | ReviewBinding | ApprovalBinding;
  */
 export const BINDINGS: readonly Binding[] = [];
 
-/** Bindings by ID, each with the digest of its definition. */
-export type Registry = ReadonlyMap<string, { binding: Binding; digest: string }>;
+/**
+ * Bindings by ID, each with the digest of its definition and, for a binding a
+ * candidate declares, the path of its declaration.
+ */
+export type Registry = ReadonlyMap<string, RegistryEntry>;
+export type RegistryEntry = { binding: Binding; digest: string; source?: string };
 
 /** Format 2's binding ID pattern (docs/checkpoints/contract.schema.json). */
 const BINDING_ID = /^[a-z0-9]+(-[a-z0-9]+)*(\.[a-z0-9]+(-[a-z0-9]+)*)+$/;
@@ -141,6 +176,18 @@ export function createRegistry(
         diagnostics.push(`${where}: timeoutMs must be a positive integer`);
       }
       if (!texts(binding.observations)) diagnostics.push(`${where}: observations must be distinct`);
+      const scratch = binding.scratch ?? [];
+      if (!scratch.every((p) => relativePath(p) && !/[,"]/.test(p)) || !texts(scratch)) {
+        diagnostics.push(`${where}: scratch must be distinct normalised relative paths`);
+      }
+      const overlaps = binding.files.filter((f) =>
+        scratch.some((p) => f === p || f.startsWith(`${p}/`)),
+      );
+      if (overlaps.length > 0) {
+        diagnostics.push(
+          `${where}: verifier files ${overlaps.join(", ")} are under a scratch path`,
+        );
+      }
     } else if (binding.method === "review") {
       if (binding.rubric.length === 0 || !texts(binding.rubric)) {
         diagnostics.push(`${where}: no rubric`);
@@ -189,3 +236,129 @@ export function bindingDigests(
   }
   return digests;
 }
+
+/** The adequacy rubric that admits a binding of `method`. */
+export const adequacyRubric = (method: Binding["method"]): PinnedRubric =>
+  method === "review" ? REVIEW_ADEQUACY_RUBRIC : ADEQUACY_RUBRIC;
+
+/**
+ * Whether a binding counts only after an approved admission of its digest:
+ * every automated binding, whose verifier files come from the candidate, and
+ * every review binding a candidate declares. Code-owned review and approval
+ * bindings are reviewed with the controller.
+ */
+export const needsAdmission = (entry: RegistryEntry | undefined): boolean =>
+  entry?.binding.method === "automated" ||
+  (entry?.binding.method === "review" && entry.source !== undefined);
+
+/** One binding declaration file of a candidate: its path and bytes. */
+export type Declaration = { path: string; bytes: Buffer };
+
+/** A declaration the loader refused, with why; `binding` is its ID when it names one. */
+export type Rejection = { path: string; binding: string | null; diagnostics: string[] };
+
+export type Declared = { registry: Registry; rejected: Rejection[] };
+
+const declarationSchema: unknown = JSON.parse(
+  readFileSync(new URL("./binding.schema.json", import.meta.url), "utf8"),
+);
+const validateDeclaration = new Ajv2020({ allErrors: true }).compile<Binding>(
+  declarationSchema as Record<string, unknown>,
+);
+
+/**
+ * The registry of one candidate (T3.5 H1): the controller's bindings and the
+ * bindings the candidate declares under `dir`, one `<id>.yml` file each. A
+ * declaration is refused, with its diagnostics, when it is not YAML, repeats
+ * a key, fails the declaration schema, is named for another ID, redefines a
+ * controller binding, declares an approval binding, names no target of the
+ * plan (`known`, binding ID → the method the plan uses it as) or is used as
+ * another method. An accepted declaration is registered under its own path;
+ * it still counts only after admission.
+ */
+export function declaredRegistry(
+  controller: Registry,
+  declarations: readonly Declaration[],
+  dir: string,
+  known: ReadonlyMap<string, Method>,
+): Declared {
+  const registry = new Map(controller);
+  const rejected: Rejection[] = [];
+  for (const { path, bytes } of [...declarations].sort((a, b) => (a.path < b.path ? -1 : 1))) {
+    const name = /^([^/]+)\.yml$/.exec(posix.relative(dir, path))?.[1];
+    const refuse = (binding: string | null, ...diagnostics: string[]): void => {
+      rejected.push({ path, binding, diagnostics });
+    };
+    if (name === undefined) {
+      refuse(null, `${path}: a binding declaration is ${dir}/<binding-id>.yml`);
+      continue;
+    }
+    let parsed: unknown;
+    try {
+      parsed = yaml.load(bytes.toString("utf8"), { schema: yaml.JSON_SCHEMA });
+    } catch (e) {
+      refuse(name, `${path}: ${e instanceof Error ? (e.message.split("\n")[0] ?? "") : String(e)}`);
+      continue;
+    }
+    const method = (parsed as { method?: unknown } | null)?.method;
+    if (method === "approval") {
+      refuse(
+        name,
+        `${path}: approval bindings name an authority and an effect; they are controller-owned, not declared by a candidate`,
+      );
+      continue;
+    }
+    if (!validateDeclaration(parsed)) {
+      const errors = (validateDeclaration.errors ?? []).map(
+        (e) => `${path}: schema: ${e.instancePath || "/"} ${e.message ?? ""}`,
+      );
+      refuse(name, ...errors);
+      continue;
+    }
+    const binding = parsed;
+    if (binding.id !== name) {
+      refuse(name, `${path}: declares ${binding.id}, not the ${name} its file name gives`);
+      continue;
+    }
+    if (controller.has(binding.id)) {
+      refuse(
+        binding.id,
+        `${path}: ${binding.id} is a controller binding; a candidate cannot redefine it`,
+      );
+      continue;
+    }
+    const used = known.get(binding.id);
+    if (used === undefined) {
+      refuse(binding.id, `${path}: unknown binding: no planned target names ${binding.id}`);
+      continue;
+    }
+    if (used !== binding.method) {
+      refuse(
+        binding.id,
+        `${path}: ${binding.id} is declared ${binding.method} but used as ${used}`,
+      );
+      continue;
+    }
+    const created = createRegistry([binding]);
+    if (!created.ok) {
+      refuse(binding.id, ...created.diagnostics.map((d) => `${path}: ${d}`));
+      continue;
+    }
+    const entry = created.registry.get(binding.id);
+    if (entry) registry.set(binding.id, { ...entry, source: path });
+  }
+  return { registry, rejected };
+}
+
+/**
+ * Checkpoint 1's applicability rules (Spec 00 §4; checkpoint.yml). CP01/AC02
+ * proves CP01/R02, which binds from the acceptance of Step 25; CP01/AC05
+ * proves the exit gate of CP01/R05, evaluated only at the checkpoint exit.
+ * Every other inherited criterion applies to every step.
+ */
+export const APPLICABILITY: ApplicabilityRules = {
+  CP01: {
+    AC02: { kind: "after", step: "CP01-S25" },
+    AC05: { kind: "exit" },
+  },
+};

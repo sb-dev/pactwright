@@ -11,6 +11,12 @@
 // only through `approveRequest` and configuration changes only through
 // `amendRun`, from an operator; an approved effect runs after its step's
 // acceptance, once, between a journaled intent and a receipt.
+//
+// T3.5 H1: each candidate's registry adds the bindings it declares; each
+// evaluation records the inherited targets its applicability rules leave
+// pending; and when the selection covers the checkpoint and its integrated
+// acceptance left targets pending, the checkpoint exit evaluation applies
+// them before the run reports the checkpoint complete.
 
 import { execFileSync } from "node:child_process";
 import { randomUUID } from "node:crypto";
@@ -36,10 +42,16 @@ import {
   type WorkspaceOps,
 } from "./claude.js";
 import {
+  coversCheckpoint,
+  definitionOf,
+  exitId,
+  exitStep,
   nextEligible,
+  plannedContract,
   prepareRun,
   sha256,
   type AcceptedOutput,
+  type ApplicabilityRules,
   type ContractStep,
   type PreparedRun,
   type RunConfig,
@@ -59,20 +71,26 @@ import {
   type JsonObject,
   type Liveness,
   type OwnerRecord,
+  type Pending,
   type RunHandle,
 } from "./evidence.js";
 import {
-  ADEQUACY_RUBRIC,
+  adequacyRubric,
   bindingDigests,
   COMMON_RUBRIC,
+  declaredRegistry,
+  needsAdmission,
+  type Declared,
   type Registry,
 } from "./software-bootstrap.js";
 import {
   admitVerifier,
   checkVerdict,
   committedEvents,
+  givenCheckpoint,
   inventory,
   negatives,
+  pendingTargets,
   protectedVerifierPaths,
   recordApproval,
   recordDecision,
@@ -84,10 +102,13 @@ import {
   verifyCandidate,
   type Admission,
   type Approval,
+  type CheckpointEvidence,
   type Decision,
+  type DependencySpec,
   type Invocation,
   type OpenWorkspace,
   type OutputProof,
+  type PrepareDependencies,
   type ReviewerAccess,
   type ReviewRecord,
 } from "./verification.js";
@@ -99,6 +120,7 @@ import {
   profileDigest,
   sealCandidate,
   treeEntries,
+  treeFiles,
   type Capture,
   type SealedCandidate,
   type SourceSnapshot,
@@ -160,6 +182,8 @@ export type Workspaces = {
   producer(from: SourceSnapshot, policy: WritePolicy): Promise<ProducerWorkspace>;
   verifier: OpenWorkspace;
   reviewer: OpenWorkspace;
+  /** Prepares a candidate's dependencies under the configured spec (T3.5 H1). */
+  dependencies?: (spec: DependencySpec) => PrepareDependencies;
 };
 
 /** The runner's boundaries: repository, resources, provider sessions and effects. */
@@ -169,7 +193,10 @@ export type RunnerDeps = {
   /** The controller's skills root; skills are never read from a candidate. */
   skillsRoot: string;
   env: Readonly<Record<string, string | undefined>>;
+  /** The controller's bindings; a candidate adds those it declares (T3.5 H1). */
   registry: Registry;
+  /** The run model's applicability rules for inherited criteria (T3.5 H1). */
+  applicability?: ApplicabilityRules;
   /** Identity of the harness and run-model code, part of every evaluation. */
   harness: string;
   workspaces(run: RunHandle, candidateRoot: string): Workspaces;
@@ -193,6 +220,21 @@ export type PauseReason = {
   request: string | null;
 };
 
+/**
+ * Whether the checkpoint is complete (T3.5 H1): every step of it has a
+ * current acceptance and no inherited target is pending, because the
+ * integrated acceptance left none or a current exit evaluation applied them.
+ * Selection acceptance alone never means completion.
+ */
+export type CheckpointStatus = {
+  checkpoint: string;
+  complete: boolean;
+  /** The checkpoint's steps without a current acceptance, selected or not. */
+  unaccepted: string[];
+  /** Inherited targets not yet applied, with the rule that defers each. */
+  pending: Pending[];
+};
+
 export type RunResult =
   | {
       outcome: "selection-accepted";
@@ -200,6 +242,7 @@ export type RunResult =
       dir: string;
       through: string;
       accepted: string[];
+      checkpoint: CheckpointStatus;
     }
   | {
       outcome: "paused";
@@ -209,6 +252,7 @@ export type RunResult =
       accepted: string[];
       step: string | null;
       reasons: PauseReason[];
+      checkpoint: CheckpointStatus | null;
     }
   | { outcome: "invalid"; diagnostics: string[] };
 
@@ -224,6 +268,16 @@ type RunnerConfig = RunConfig & {
   budgets: { attempts: number; retries: number };
   workspace: { candidate_root: string; controller_root: string };
   permissions: WritePolicy & { approvers: Record<string, string[]> };
+  verification?: {
+    bindings?: string;
+    dependencies?: {
+      inputs: string[];
+      command: string[];
+      outputs: string[];
+      network: "none" | "bridge";
+      timeout_ms: number;
+    };
+  };
 };
 
 type RunStart = { config: RunnerConfig; plan: string; base: SourceSnapshot };
@@ -315,7 +369,7 @@ type Stop = { kind: "done" } | { kind: "pause"; step: string | null; reasons: Pa
 type Action =
   | Stop
   | { kind: "produce"; step: ContractStep; attempt: number; production: Production }
-  | { kind: "evaluate"; record: EvaluationRecord }
+  | { kind: "evaluate"; record: EvaluationRecord; checkpoint?: CheckpointEvidence }
   | { kind: "admit"; ev: Evaluated; binding: string }
   | { kind: "verify"; ev: Evaluated; bindings: string[] }
   | { kind: "review"; ev: Evaluated }
@@ -333,6 +387,10 @@ type Ctx = {
   workspaces: Workspaces;
   skills: Record<string, string>;
   configuration: string;
+  /** The registry of a snapshot: the controller's bindings and those it declares. */
+  declared(snapshot: SourceSnapshot): Declared;
+  /** Prepares dependencies, when the configuration says how. */
+  prepare: PrepareDependencies | undefined;
 };
 
 const runnerSchema: unknown = JSON.parse(
@@ -378,13 +436,14 @@ function journal(
   record: object,
   at: { attempt?: number; evaluation?: string },
   data: JsonObject,
+  more: readonly string[] = [],
 ): string {
   const ref = putEvidence(run, stringify(record));
   appendEvent(run, {
     action,
     ...(at.attempt === undefined ? {} : { attempt: at.attempt }),
     ...(at.evaluation === undefined ? {} : { evaluation: at.evaluation }),
-    evidence: [ref],
+    evidence: [ref, ...unique(more.filter((m) => m !== ref))],
     data: { ...data, record: ref },
   });
   return ref;
@@ -432,10 +491,21 @@ function readState(run: RunHandle, events: JournalEvent[]): State {
 }
 
 function contractStep(plan: PreparedRun, id: string): ContractStep {
-  const step = plan.steps.find((s) => s.id === id);
-  if (step?.kind !== "contract") throw new Error(`${id}: not a planned contract step`);
+  const step = plannedContract(plan, id);
+  if (!step) throw new Error(`${id}: not a planned contract step`);
   return step;
 }
+
+/**
+ * The steps with an acceptance journaled before event `seq`, current or
+ * not: an `after` rule binds from a step's first acceptance (Spec 00 §4).
+ */
+const acceptedBefore = (s: State, seq: number): Set<string> =>
+  new Set(
+    s.decisions
+      .filter((d) => d.seq < seq && d.record.decision === "accept")
+      .map((d) => d.record.step),
+  );
 
 /**
  * Each step's latest acceptance whose evaluation is still current: the
@@ -457,7 +527,13 @@ function acceptances(ctx: Ctx, s: State): Map<string, Acceptance> {
         (e) => e.evaluation === decision.evaluation && e.record.step === decision.step,
       );
       if (!ev) throw new Error(`acceptance ${d.ref} names no journaled evaluation`);
-      const manifest = manifestOf(ctx, step, current, ev.record.candidate);
+      const manifest = manifestOf(
+        ctx,
+        step,
+        current,
+        ev.record.candidate,
+        acceptedBefore(s, ev.seq),
+      );
       if (!manifest || evaluationDigest(manifest) !== decision.evaluation) continue;
       current.set(step.id, {
         step: step.id,
@@ -483,8 +559,79 @@ function acceptances(ctx: Ctx, s: State): Map<string, Acceptance> {
 const acceptedOutputs = (accepted: Map<string, Acceptance>): AcceptedOutput[] =>
   [...accepted.values()].flatMap((a) => a.outputs);
 
+/** The integrated candidate's acceptance: the latest current acceptance. */
+const integrated = (accepted: Map<string, Acceptance>): Acceptance | undefined =>
+  [...accepted.values()].sort((a, b) => b.seq - a.seq)[0];
+
+/** The pending targets of the evaluation an acceptance accepted. */
+function pendingOf(s: State, acceptance: Acceptance): readonly Pending[] {
+  const ev = s.evaluations.find(
+    (e) => e.evaluation === acceptance.evaluation && e.record.step === acceptance.step,
+  );
+  return ev?.record.manifest.pending ?? [];
+}
+
+/**
+ * The current acceptance of the checkpoint exit evaluation: of the
+ * integrated candidate, with an evaluation still current.
+ */
+function exitAcceptance(
+  ctx: Ctx,
+  s: State,
+  accepted: Map<string, Acceptance>,
+): Fact<Decision> | undefined {
+  const exit = exitStep(ctx.plan);
+  const latest = integrated(accepted);
+  if (!latest) return undefined;
+  return [...s.decisions].reverse().find((d) => {
+    if (d.record.decision !== "accept" || d.record.step !== exit.id) return false;
+    const ev = s.evaluations.find(
+      (e) => e.evaluation === d.record.evaluation && e.record.step === exit.id,
+    );
+    if (!ev) throw new Error(`acceptance ${d.ref} names no journaled evaluation`);
+    if (!sameSnapshot(ev.record.candidate, latest.candidate)) return false;
+    const manifest = manifestOf(
+      ctx,
+      exit,
+      accepted,
+      ev.record.candidate,
+      acceptedBefore(s, ev.seq),
+      checkpointEvidence(ctx, s, accepted),
+    );
+    return manifest !== null && evaluationDigest(manifest) === d.record.evaluation;
+  });
+}
+
+/** Checkpoint completion from the recorded facts (T3.5 H1). */
+function checkpointStatus(ctx: Ctx, s: State, accepted: Map<string, Acceptance>): CheckpointStatus {
+  const unaccepted = Object.keys(ctx.plan.stepDefinitions).filter((id) => !accepted.has(id));
+  const latest = integrated(accepted);
+  const deferred = ctx.plan.inherited.targets.flatMap((t): Pending[] => {
+    const rule = ctx.plan.inherited.applicability[t.criterion] ?? { kind: "step" };
+    return rule.kind === "step"
+      ? []
+      : [{ target: targetKey(t), rule: rule.kind === "after" ? `after ${rule.step}` : "exit" }];
+  });
+  const pending =
+    unaccepted.length === 0 && exitAcceptance(ctx, s, accepted)
+      ? []
+      : unaccepted.length === 0 && latest
+        ? [...pendingOf(s, latest)]
+        : deferred;
+  return {
+    checkpoint: ctx.plan.checkpoint,
+    complete: unaccepted.length === 0 && pending.length === 0,
+    unaccepted,
+    pending,
+  };
+}
+
 /** The integrated candidate a step builds on: the latest acceptance of an earlier step. */
 function stepBase(ctx: Ctx, step: ContractStep, accepted: Map<string, Acceptance>): SourceSnapshot {
+  if (step.id === exitId(ctx.plan)) {
+    const latest = integrated(accepted);
+    return latest ? snapshotOf(latest.candidate) : ctx.base;
+  }
   const earlier = ctx.plan.steps.slice(
     0,
     ctx.plan.steps.findIndex((s) => s.id === step.id),
@@ -509,10 +656,23 @@ function inputProofs(
     });
 }
 
+/** Nothing is the exit evaluation's to change when no step can correct it. */
+const EXIT_POLICY: WritePolicy = { writable: [], scratch: [], protected: [] };
+
+/**
+ * The step whose producer corrects the exit evaluation's findings: the
+ * selection's final step, when it is a contract step. Its next attempt
+ * starts from the integrated candidate with the exit's findings.
+ */
+function correctingStep(ctx: Ctx): ContractStep | undefined {
+  const last = ctx.plan.steps.at(-1);
+  return last?.kind === "contract" ? last : undefined;
+}
+
 /**
  * The producer's write policy: the configured paths, with the definitions,
- * verifiers approved for other steps and the step's accepted inputs
- * protected.
+ * verifiers approved for other steps (their files and declarations, read
+ * from the step's base) and the step's accepted inputs protected.
  */
 function policyFor(
   ctx: Ctx,
@@ -520,14 +680,20 @@ function policyFor(
   step: ContractStep,
   accepted: Map<string, Acceptance>,
 ): WritePolicy {
+  if (step.id === exitId(ctx.plan)) {
+    // The exit is judged under the policy of the producer that corrects it.
+    const correcting = correctingStep(ctx);
+    return correcting ? policyFor(ctx, s, correcting, accepted) : EXIT_POLICY;
+  }
   const { writable, scratch } = ctx.config.permissions;
+  const { registry } = ctx.declared(stepBase(ctx, step, accepted));
   return {
     writable: [...writable],
     scratch: [...scratch],
     protected: unique([
       ...ctx.config.permissions.protected,
       ...ctx.plan.sources.map((x) => x.path),
-      ...protectedVerifierPaths(ctx.deps.registry, s.admissions, step.id),
+      ...protectedVerifierPaths(registry, s.admissions, step.id),
       ...inputProofs(step, accepted).flatMap(({ proof }) => proof?.paths.map((p) => p.path) ?? []),
     ]),
   };
@@ -548,58 +714,151 @@ function mounted(ctx: Ctx, policy: WritePolicy, from: SourceSnapshot): WritePoli
   };
 }
 
-/** The evaluation manifest of `candidate` now, or null when an input has no current acceptance. */
+/**
+ * The evaluation manifest of `candidate` now, or null when an input has no
+ * current acceptance. `ever` holds the steps accepted before the evaluation,
+ * from which its applicability decision follows. The exit evaluation's
+ * inputs are every planned step's accepted outputs, and it names the
+ * `checkpoint` evidence it is given by digest.
+ */
 function manifestOf(
   ctx: Ctx,
   step: ContractStep,
   accepted: Map<string, Acceptance>,
   candidate: SourceSnapshot,
+  ever: ReadonlySet<string>,
+  checkpoint: CheckpointEvidence | null = null,
 ): EvaluationManifest | null {
+  const consumed =
+    step.id === exitId(ctx.plan)
+      ? ctx.plan.steps.flatMap((p) =>
+          p.kind === "contract" ? p.outputs.map((o) => `${p.id}/${o.id}`) : [],
+        )
+      : step.inputs.filter((x) => x.kind === "output").map((x) => x.ref);
   const inputs: EvaluationManifest["inputs"][number][] = [];
-  for (const i of step.inputs.filter((x) => x.kind === "output")) {
-    const [producer = "", output = ""] = i.ref.split("/");
+  for (const ref of consumed) {
+    const [producer = "", output = ""] = ref.split("/");
     const acceptance = accepted.get(producer);
     if (!acceptance) return null;
     inputs.push({ step: producer, output, evaluation: acceptance.evaluation });
   }
   const tree = treeEntries(ctx.run.dir, candidate.tree);
+  const pending = pendingTargets(ctx.plan, step, ever);
   return {
     source: { commit: candidate.commit, tree: candidate.tree },
     definitions: ctx.plan.definitionsDigest,
-    step: { id: step.id, definition: ctx.plan.stepDefinitions[step.id] ?? "" },
+    step: { id: step.id, definition: definitionOf(ctx.plan, step.id) },
     inputs,
     harness: ctx.deps.harness,
     runModel: ctx.plan.runModel,
     verifiers: bindingDigests(
-      ctx.deps.registry,
+      ctx.declared(candidate).registry,
       tree,
-      targetsOf(ctx.plan, step).map((t) => t.binding),
+      targetsOf(ctx.plan, step, pending).map((t) => t.binding),
     ),
     rubric: COMMON_RUBRIC.digest,
     skills: ctx.skills,
     configuration: ctx.configuration,
     toolchain: { profile: profileDigest, lockfile: tree.get("pnpm-lock.yaml") ?? null },
+    pending,
+    checkpoint: checkpoint === null ? null : sha256(stringify(checkpoint)),
   };
 }
 
-/** Why a step cannot be dispatched: unregistered bindings, no effect service, a changed input. */
+/**
+ * The checkpoint evidence the exit evaluation is given (T3.5 H1), from the
+ * controller's records alone: each planned step's current acceptance, the
+ * revision, targets, outputs and evidence it records, and the receipts of
+ * the step's effects. Null while a planned step has no current acceptance.
+ */
+function checkpointEvidence(
+  ctx: Ctx,
+  s: State,
+  accepted: Map<string, Acceptance>,
+): CheckpointEvidence | null {
+  const steps: CheckpointEvidence["steps"] = [];
+  for (const step of ctx.plan.steps) {
+    if (step.kind !== "contract") continue;
+    const acceptance = accepted.get(step.id);
+    if (!acceptance) return null;
+    const { decision } = acceptance;
+    steps.push({
+      step: step.id,
+      decision: acceptance.ref,
+      attempt: decision.attempt,
+      evaluation: acceptance.evaluation,
+      candidate: snapshotOf(acceptance.candidate),
+      targets: [...decision.targets],
+      outputs: decision.outputs,
+      evidence: [...decision.evidence],
+      receipts: s.receipts
+        .filter((r) => r.data.step === step.id)
+        .map((r) => ({
+          record: r.ref,
+          key: r.record.key,
+          target: r.record.receipt.target,
+          reference: r.record.receipt.reference,
+          reconciled: r.record.reconciled,
+        })),
+    });
+  }
+  return {
+    checkpoint: ctx.plan.checkpoint,
+    run: ctx.run.run,
+    definitions: ctx.plan.definitionsDigest,
+    steps,
+  };
+}
+
+/** The checkpoint evidence an evaluation's manifest names, as stored, for its phases. */
+const given = (ctx: Ctx, ev: Evaluated): ReturnType<typeof givenCheckpoint> =>
+  givenCheckpoint(ctx.run.dir, ev.record.manifest.checkpoint);
+
+/**
+ * Why a step cannot be dispatched: unregistered bindings its producer cannot
+ * declare, dependencies no configuration prepares, no effect service, a
+ * changed input. The targets are those that apply now.
+ */
 function readiness(
   ctx: Ctx,
+  s: State,
   step: ContractStep,
   accepted: Map<string, Acceptance>,
   base: SourceSnapshot,
 ): PauseReason[] {
   const reasons: PauseReason[] = [];
-  const targets = targetsOf(ctx.plan, step);
+  const pending = pendingTargets(ctx.plan, step, acceptedBefore(s, Number.POSITIVE_INFINITY));
+  const targets = targetsOf(ctx.plan, step, pending);
+  const { registry } = ctx.declared(base);
+  const policy = policyFor(ctx, s, step, accepted);
+  const dir = ctx.config.verification?.bindings;
   for (const id of unique(targets.map((t) => t.binding))) {
     const methods = unique(targets.filter((t) => t.binding === id).map((t) => t.method));
-    const binding = ctx.deps.registry.get(id)?.binding;
+    const binding = registry.get(id)?.binding;
+    const declarable =
+      dir !== undefined &&
+      within(`${dir}/${id}.yml`, policy.writable) &&
+      !within(`${dir}/${id}.yml`, policy.protected);
     if (!binding) {
+      if (!declarable) {
+        reasons.push(
+          reason(
+            "owner",
+            id,
+            `binding ${id} is not registered; its verifier comes with its capability`,
+          ),
+        );
+      }
+    } else if (
+      binding.method === "automated" &&
+      binding.dependencies === true &&
+      ctx.prepare === undefined
+    ) {
       reasons.push(
         reason(
           "owner",
           id,
-          `binding ${id} is not registered; its verifier comes with its capability`,
+          `${id} needs prepared dependencies; configure verification.dependencies`,
         ),
       );
     } else if (methods.length !== 1 || methods[0] !== binding.method) {
@@ -653,7 +912,7 @@ function newAttempt(
     ]);
   }
   const base = stepBase(ctx, step, accepted);
-  const blocked = readiness(ctx, step, accepted, base);
+  const blocked = readiness(ctx, s, step, accepted, base);
   if (blocked.length > 0) return pause(step.id, blocked);
   return {
     kind: "produce",
@@ -687,8 +946,12 @@ const sealFindings = (diagnostics: readonly string[]): Finding[] =>
   }));
 
 /** The approval targets of a step whose binding carries an effect. */
-function effectTargets(ctx: Ctx, step: ContractStep): VerificationTarget[] {
-  return targetsOf(ctx.plan, step).filter((t) => {
+function effectTargets(
+  ctx: Ctx,
+  step: ContractStep,
+  pending: readonly Pending[],
+): VerificationTarget[] {
+  return targetsOf(ctx.plan, step, pending).filter((t) => {
     const binding = ctx.deps.registry.get(t.binding)?.binding;
     return (
       t.method === "approval" && binding?.method === "approval" && binding.effect !== undefined
@@ -699,7 +962,7 @@ function effectTargets(ctx: Ctx, step: ContractStep): VerificationTarget[] {
 /** The next effect of an accepted step that has no receipt, or a stop. */
 function effectAction(ctx: Ctx, s: State, acceptance: Acceptance): Action | null {
   const step = contractStep(ctx.plan, acceptance.step);
-  for (const t of effectTargets(ctx, step)) {
+  for (const t of effectTargets(ctx, step, pendingOf(s, acceptance))) {
     const key = targetKey(t);
     const approval = s.approvals.find(
       (a) =>
@@ -797,16 +1060,20 @@ function unchanneled(ctx: Ctx, s: State, step: ContractStep, evaluation: string)
     });
 }
 
-/** The phases of one evaluation: admissions, verification, review, decision, approvals. */
+/**
+ * The phases of one evaluation: admissions, verification, review, decision,
+ * approvals. The exit evaluation has no `production`: it is never corrected
+ * by a producer, so a decision to correct it pauses.
+ */
 function evaluationAction(
   ctx: Ctx,
   s: State,
   step: ContractStep,
   accepted: Map<string, Acceptance>,
   latest: Fact<EvaluationRecord>,
-  production: Production,
+  production: Production | null,
 ): Action {
-  const { run, plan, deps } = ctx;
+  const { run, plan } = ctx;
   const record = latest.record;
   const { attempt } = record;
   // The current write policy, never the one the candidate was produced under,
@@ -816,7 +1083,7 @@ function evaluationAction(
   const violations = record.candidate.changes
     .filter((c) => !within(c.path, policy.writable) || within(c.path, policy.protected))
     .map((c) => `${c.path}: ${c.kind} outside the writable paths`);
-  if (violations.length > 0) {
+  if (production && violations.length > 0) {
     return newAttempt(
       ctx,
       s,
@@ -827,39 +1094,87 @@ function evaluationAction(
       carry(production.findings, sealFindings(violations)),
     );
   }
-  const manifest = manifestOf(ctx, step, accepted, record.candidate);
+  const checkpoint = production ? null : checkpointEvidence(ctx, s, accepted);
+  const manifest = manifestOf(
+    ctx,
+    step,
+    accepted,
+    record.candidate,
+    acceptedBefore(s, latest.seq),
+    checkpoint,
+  );
   if (!manifest) throw new Error(`${step.id}: an input has no current acceptance`);
   const evaluation = evaluationDigest(manifest);
-  // A changed input, definition, rubric, verifier, skill or configuration
-  // makes a new evaluation of the same candidate; earlier records stay.
-  if (evaluation !== latest.evaluation)
-    return { kind: "evaluate", record: { ...record, manifest } };
+  // A changed input, definition, rubric, verifier, skill, configuration or,
+  // at the exit, checkpoint evidence makes a new evaluation of the same
+  // candidate; earlier records stay.
+  if (evaluation !== latest.evaluation) {
+    const now = manifestOf(
+      ctx,
+      step,
+      accepted,
+      record.candidate,
+      acceptedBefore(s, Number.POSITIVE_INFINITY),
+      checkpoint,
+    );
+    if (!now) throw new Error(`${step.id}: an input has no current acceptance`);
+    return {
+      kind: "evaluate",
+      record: { ...record, manifest: now },
+      ...(checkpoint ? { checkpoint } : {}),
+    };
+  }
   const ev: Evaluated = { step, attempt, evaluation, record, policy };
   const thisEvaluation = <T extends { evaluation: string; attempt: number }>(f: Fact<T>): boolean =>
     f.record.evaluation === evaluation && f.record.attempt === attempt;
+  const { registry } = ctx.declared(record.candidate);
 
-  for (const binding of unique(targetsOf(plan, step).map((t) => t.binding))) {
-    if (deps.registry.get(binding)?.binding.method !== "automated") continue;
+  for (const binding of unique(targetsOf(plan, step, manifest.pending).map((t) => t.binding))) {
+    const entry = registry.get(binding);
+    if (!entry || !needsAdmission(entry)) continue;
+    const rubric = adequacyRubric(entry.binding.method).digest;
     const own = s.admissions.filter(
       (a) =>
         a.record.binding === binding &&
         a.record.digest === manifest.verifiers[binding] &&
-        a.record.rubric === ADEQUACY_RUBRIC.digest,
+        a.record.rubric === rubric,
     );
     const decided = own.some((a) => a.record.review !== null && a.record.outcome !== "invalid");
     const settled = own.some((a) => thisEvaluation(a) && a.record.outcome !== "invalid");
-    if (!decided && !settled) return { kind: "admit", ev, binding };
+    if (decided || settled) continue;
+    if (entry.binding.method === "automated" && entry.binding.dependencies && !ctx.prepare) {
+      return pause(step.id, [
+        reason(
+          "owner",
+          binding,
+          `${binding} needs prepared dependencies; configure verification.dependencies`,
+        ),
+      ]);
+    }
+    return { kind: "admit", ev, binding };
   }
 
   const expected = runnableBindings(run, {
     plan,
     step: step.id,
-    registry: deps.registry,
+    registry,
     candidate: record.candidate,
     attempt,
     manifest,
     admissions: s.admissions,
   });
+  const unprepared = expected.filter((b) => {
+    const binding = registry.get(b)?.binding;
+    return binding?.method === "automated" && binding.dependencies === true && !ctx.prepare;
+  });
+  if (unprepared.length > 0) {
+    return pause(
+      step.id,
+      unprepared.map((b) =>
+        reason("owner", b, `${b} needs prepared dependencies; configure verification.dependencies`),
+      ),
+    );
+  }
   const runs = s.invocations.filter((i) => thisEvaluation(i) && i.record.stage === "acceptance");
   const missing = expected.filter((b) => !runs.some((r) => r.record.binding === b));
   if (missing.length > 0) return { kind: "verify", ev, bindings: missing };
@@ -872,7 +1187,7 @@ function evaluationAction(
   );
   if (unavailable.length > 0) return { kind: "verify", ev, bindings: unavailable };
 
-  const scope = reviewScope(plan, step, deps.registry);
+  const scope = reviewScope(plan, step, registry, manifest.pending);
   const reviews = s.reviews.filter((r) => r.record.kind === "candidate" && thisEvaluation(r));
   const binds = reviews.some(
     (r) => checkVerdict(r.record.outcome, scope).ok || negatives(r.record.outcome).length > 0,
@@ -901,11 +1216,13 @@ function evaluationAction(
     throw new Error(`${step.id}: evaluation ${evaluation} is accepted but not current`);
   }
   if (d.decision === "correct") {
-    return newAttempt(ctx, s, step, accepted, attempt + 1, record.candidate, d.findings);
+    return production
+      ? newAttempt(ctx, s, step, accepted, attempt + 1, record.candidate, d.findings)
+      : correctExit(ctx, s, accepted, d.findings);
   }
   const requests = s.requests.filter((r) => r.evaluation === evaluation);
   if (d.reasons.every((r) => r.route === "approval")) {
-    const missingRequests = targetsOf(plan, step).filter(
+    const missingRequests = targetsOf(plan, step, manifest.pending).filter(
       (t) =>
         t.method === "approval" &&
         !requests.some((r) => targetKey(r.record.target) === targetKey(t)),
@@ -922,6 +1239,92 @@ function evaluationAction(
       request: requests.find((q) => targetKey(q.record.target) === r.subject)?.ref ?? null,
     })),
   );
+}
+
+/**
+ * The next action of the checkpoint exit evaluation (T3.5 H1), due once every
+ * step is accepted and the integrated acceptance left inherited targets
+ * pending: an evaluation of the integrated candidate without production, or
+ * its next phase, or done once it is accepted.
+ */
+function exitAction(ctx: Ctx, s: State, accepted: Map<string, Acceptance>): Action {
+  const exit = exitStep(ctx.plan);
+  // A correction of the exit's findings runs as the correcting step's attempt.
+  const correcting = correctingStep(ctx);
+  if (correcting && correctionUnderway(s, correcting, accepted)) {
+    return stepAction(ctx, s, correcting, accepted);
+  }
+  if (exitAcceptance(ctx, s, accepted)) return { kind: "done" };
+  const latest = integrated(accepted);
+  if (!latest) throw new Error(`${exit.id}: no step of the selection is accepted`);
+  const evaluations = s.evaluations.filter((e) => e.record.step === exit.id);
+  const current = evaluations
+    .filter((e) => sameSnapshot(e.record.candidate, latest.candidate))
+    .at(-1);
+  if (current) return evaluationAction(ctx, s, exit, accepted, current, null);
+  const candidate = snapshotOf(latest.candidate);
+  const blocked = readiness(ctx, s, exit, accepted, candidate);
+  if (blocked.length > 0) return pause(exit.id, blocked);
+  const checkpoint = checkpointEvidence(ctx, s, accepted);
+  const manifest = manifestOf(
+    ctx,
+    exit,
+    accepted,
+    candidate,
+    acceptedBefore(s, Number.POSITIVE_INFINITY),
+    checkpoint,
+  );
+  if (!manifest || !checkpoint) throw new Error(`${exit.id}: a step has no current acceptance`);
+  const attempt = Math.max(0, ...evaluations.map((e) => e.record.attempt)) + 1;
+  return {
+    kind: "evaluate",
+    record: { step: exit.id, attempt, candidate: latest.candidate, claims: [], manifest },
+    checkpoint,
+  };
+}
+
+/** Whether the correcting step has an attempt after its current acceptance. */
+function correctionUnderway(
+  s: State,
+  step: ContractStep,
+  accepted: Map<string, Acceptance>,
+): boolean {
+  const acceptance = accepted.get(step.id);
+  const latest = s.starts
+    .filter((f) => f.record.phase === "produce" && f.record.step === step.id)
+    .at(-1)?.record.attempt;
+  return acceptance !== undefined && latest !== undefined && latest > acceptance.decision.attempt;
+}
+
+/**
+ * Routes the exit evaluation's findings to the correcting step (Spec 00 §4;
+ * T3 plan §7): its next attempt, within its attempt budget, starts from the
+ * integrated candidate with those findings, and its acceptance moves the
+ * integrated candidate, which the exit then evaluates again. Earlier records
+ * stay as history. Without a contract step to correct it, the exit pauses.
+ */
+function correctExit(
+  ctx: Ctx,
+  s: State,
+  accepted: Map<string, Acceptance>,
+  findings: Finding[],
+): Action {
+  const exit = exitId(ctx.plan);
+  const step = correctingStep(ctx);
+  const acceptance = step ? accepted.get(step.id) : undefined;
+  if (!step || !acceptance) {
+    return pause(exit, [
+      reason("owner", exit, "no contract step can correct the exit evaluation's findings"),
+    ]);
+  }
+  const attempt =
+    Math.max(
+      0,
+      ...s.starts
+        .filter((f) => f.record.phase === "produce" && f.record.step === step.id)
+        .map((f) => f.record.attempt),
+    ) + 1;
+  return newAttempt(ctx, s, step, accepted, attempt, acceptance.candidate, findings);
 }
 
 /** The next action for a dispatchable step, from its attempts' facts. */
@@ -986,8 +1389,13 @@ function nextAction(ctx: Ctx, s: State): Action {
   }
   const next = nextEligible(ctx.plan, { outputs: acceptedOutputs(accepted), capabilities: [] });
   switch (next.kind) {
-    case "selection-accepted":
-      return { kind: "done" };
+    case "selection-accepted": {
+      // The exit applies what the integrated acceptance left pending.
+      const latest = integrated(accepted);
+      const due =
+        coversCheckpoint(ctx.plan) && latest !== undefined && pendingOf(s, latest).length > 0;
+      return due ? exitAction(ctx, s, accepted) : { kind: "done" };
+    }
     case "unconverted":
       return pause(next.step, [
         reason(
@@ -1100,11 +1508,13 @@ async function produce(
   const { run, plan, roles, deps } = ctx;
   const { step, attempt, production } = action;
   const accepted = acceptances(ctx, s);
+  const bindings = ctx.config.verification?.bindings;
   const built = buildPacket(plan, step.id, roles.producer, {
     attempt,
     accepted: acceptedOutputs(accepted),
     policy: production.policy,
     findings: production.findings,
+    ...(bindings === undefined ? {} : { bindings }),
   });
   if (!built.ok)
     return pause(
@@ -1138,7 +1548,13 @@ async function produce(
       );
       return undefined;
     }
-    const manifest = manifestOf(ctx, step, accepted, captured.candidate);
+    const manifest = manifestOf(
+      ctx,
+      step,
+      accepted,
+      captured.candidate,
+      acceptedBefore(s, Number.POSITIVE_INFINITY),
+    );
     if (!manifest) throw new Error(`${step.id}: an input has no current acceptance`);
     const record: EvaluationRecord = {
       step: step.id,
@@ -1197,29 +1613,36 @@ async function effect(
 }
 
 async function perform(ctx: Ctx, s: State, action: Action): Promise<Stop | undefined> {
-  const { run, plan, deps } = ctx;
+  const { run, plan } = ctx;
   switch (action.kind) {
     case "done":
     case "pause":
       return action;
     case "produce":
       return produce(ctx, s, action);
-    case "evaluate":
+    case "evaluate": {
+      // The exit's checkpoint evidence is stored and journaled with its evaluation.
+      const checkpoint = action.checkpoint ? putEvidence(run, stringify(action.checkpoint)) : null;
+      if (checkpoint !== action.record.manifest.checkpoint) {
+        throw new Error(`${action.record.step}: the evaluation names other checkpoint evidence`);
+      }
       journal(
         run,
         "evaluation",
         action.record,
         { attempt: action.record.attempt, evaluation: evaluationDigest(action.record.manifest) },
         { step: action.record.step },
+        checkpoint === null ? [] : [checkpoint],
       );
       return undefined;
+    }
     case "admit": {
       const { ev } = action;
       start(ctx, action, null);
       await admitVerifier(run, {
         plan,
         step: ev.step.id,
-        registry: deps.registry,
+        registry: ctx.declared(ev.record.candidate).registry,
         binding: action.binding,
         candidate: ev.record.candidate,
         attempt: ev.attempt,
@@ -1227,6 +1650,8 @@ async function perform(ctx: Ctx, s: State, action: Action): Promise<Stop | undef
         accepted: acceptedOutputs(acceptances(ctx, s)),
         open: ctx.workspaces.verifier,
         reviewer: reviewerAccess(ctx),
+        prepare: ctx.prepare,
+        checkpoint: given(ctx, ev) ?? undefined,
       });
       return undefined;
     }
@@ -1236,13 +1661,15 @@ async function perform(ctx: Ctx, s: State, action: Action): Promise<Stop | undef
       await verifyCandidate(run, {
         plan,
         step: ev.step.id,
-        registry: deps.registry,
+        registry: ctx.declared(ev.record.candidate).registry,
         candidate: ev.record.candidate,
         attempt: ev.attempt,
         manifest: ev.record.manifest,
         admissions: s.admissions,
         open: ctx.workspaces.verifier,
         bindings: action.bindings,
+        prepare: ctx.prepare,
+        checkpoint: given(ctx, ev) ?? undefined,
       });
       return undefined;
     }
@@ -1252,27 +1679,33 @@ async function perform(ctx: Ctx, s: State, action: Action): Promise<Stop | undef
       await reviewCandidate(run, {
         plan,
         step: ev.step.id,
-        registry: deps.registry,
+        registry: ctx.declared(ev.record.candidate).registry,
         candidate: ev.record.candidate,
         attempt: ev.attempt,
         manifest: ev.record.manifest,
         accepted: acceptedOutputs(acceptances(ctx, s)),
         claims: ev.record.claims,
         reviewer: reviewerAccess(ctx),
+        checkpoint: given(ctx, ev) ?? undefined,
       });
       return undefined;
     }
     case "decide": {
       const { ev } = action;
+      const declared = ctx.declared(ev.record.candidate);
       recordDecision(run, {
         plan,
         step: ev.step.id,
         run: run.run,
         attempt: ev.attempt,
         manifest: ev.record.manifest,
-        registry: deps.registry,
+        registry: declared.registry,
         policy: ev.policy,
         claims: ev.record.claims,
+        declarations: {
+          dir: ctx.config.verification?.bindings ?? null,
+          rejected: declared.rejected,
+        },
       });
       return undefined;
     }
@@ -1280,8 +1713,9 @@ async function perform(ctx: Ctx, s: State, action: Action): Promise<Stop | undef
       const { ev } = action;
       const tree = treeEntries(run.dir, ev.record.candidate.tree);
       const { proofs } = inventory(ev.step, ev.record.claims, tree);
+      const { registry } = ctx.declared(ev.record.candidate);
       for (const target of action.targets) {
-        const binding = deps.registry.get(target.binding)?.binding;
+        const binding = registry.get(target.binding)?.binding;
         if (binding?.method !== "approval") throw new Error(`${target.binding}: not an approval`);
         const digest = ev.record.manifest.verifiers[binding.id] ?? "";
         const request: ApprovalRequest = {
@@ -1329,6 +1763,7 @@ function finish(ctx: Ctx, s: State, stop: Stop): RunResult {
     dir: ctx.run.dir,
     through: ctx.plan.selection.through,
     accepted: steps,
+    checkpoint: checkpointStatus(ctx, s, accepted),
   };
   if (stop.kind === "done") {
     releaseRun(ctx.run);
@@ -1377,10 +1812,14 @@ type Admitted =
  */
 async function admit(
   config: unknown,
-  deps: Pick<RunnerDeps, "repoRoot" | "skillsRoot" | "env">,
+  deps: Pick<RunnerDeps, "repoRoot" | "skillsRoot" | "env" | "applicability">,
   name: string,
 ): Promise<Admitted> {
-  const prepared = await prepareRun(config, { repoRoot: deps.repoRoot, configName: name });
+  const prepared = await prepareRun(config, {
+    repoRoot: deps.repoRoot,
+    configName: name,
+    ...(deps.applicability ? { applicability: deps.applicability } : {}),
+  });
   if (!prepared.ok) return prepared;
   if (!validateRunner(config)) {
     return {
@@ -1401,6 +1840,15 @@ async function admit(
   for (const path of [...writable, ...scratch, ...config.permissions.protected]) {
     const error = policyPathError(path);
     if (error) diagnostics.add(`${name}: permissions: ${error}`);
+  }
+  const { bindings, dependencies } = config.verification ?? {};
+  for (const path of [
+    ...(bindings === undefined ? [] : [bindings]),
+    ...(dependencies?.inputs ?? []),
+    ...(dependencies?.outputs ?? []),
+  ]) {
+    const error = policyPathError(path);
+    if (error) diagnostics.add(`${name}: verification: ${error}`);
   }
   const { branch, expected_head } = config.repository;
   let head = "";
@@ -1438,7 +1886,17 @@ const evaluatedConfiguration = (config: RunnerConfig): object => ({
     scratch: config.permissions.scratch,
     protected: config.permissions.protected,
   },
+  verification: config.verification ?? null,
 });
+
+/** The binding ID → method every planned target, the exit's included, uses. */
+const plannedBindings = (plan: PreparedRun): Map<string, VerificationTarget["method"]> =>
+  new Map(
+    [
+      ...plan.inherited.targets,
+      ...plan.steps.flatMap((step) => (step.kind === "contract" ? step.targets : [])),
+    ].map((t) => [t.binding, t.method]),
+  );
 
 function context(
   run: RunHandle,
@@ -1447,6 +1905,11 @@ function context(
   deps: RunnerDeps,
 ): Ctx {
   const { config, roles } = admitted;
+  const workspaces = deps.workspaces(run, resolve(config.workspace.candidate_root));
+  const dir = config.verification?.bindings;
+  const known = plannedBindings(admitted.plan);
+  const declared = new Map<string, Declared>();
+  const spec = config.verification?.dependencies;
   return {
     run,
     config,
@@ -1454,7 +1917,31 @@ function context(
     base,
     roles,
     deps,
-    workspaces: deps.workspaces(run, resolve(config.workspace.candidate_root)),
+    workspaces,
+    declared(snapshot) {
+      const found = declared.get(snapshot.tree);
+      if (found) return found;
+      const files =
+        dir === undefined ? new Map<string, Buffer>() : treeFiles(run.dir, snapshot.tree, dir);
+      const result = declaredRegistry(
+        deps.registry,
+        [...files].map(([path, bytes]) => ({ path, bytes })),
+        dir ?? "",
+        known,
+      );
+      declared.set(snapshot.tree, result);
+      return result;
+    },
+    prepare:
+      spec && workspaces.dependencies
+        ? workspaces.dependencies({
+            inputs: spec.inputs,
+            command: spec.command,
+            outputs: spec.outputs,
+            network: spec.network,
+            timeoutMs: spec.timeout_ms,
+          })
+        : undefined,
     skills: Object.fromEntries(
       (["producer", "reviewer"] as const).flatMap((r) =>
         roles[r].skills.map((skill) => [`${r}/${skill.name}`, skill.digest]),
@@ -1531,6 +2018,7 @@ export async function resumeRun(dir: string, deps: RunnerDeps): Promise<RunResul
       accepted: [],
       step: null,
       reasons: recovery.diagnostics.map((d) => reason("corrupt", dir, d)),
+      checkpoint: null,
     };
   }
   const { run } = recovery;
@@ -1678,7 +2166,7 @@ export type AmendResult =
 export async function amendRun(
   dir: string,
   input: { config: unknown; reason: string; actor: string },
-  deps: Pick<RunnerDeps, "repoRoot" | "skillsRoot" | "env">,
+  deps: Pick<RunnerDeps, "repoRoot" | "skillsRoot" | "env" | "applicability">,
 ): Promise<AmendResult> {
   const refuse = (diagnostic: string): AmendResult => ({ ok: false, diagnostics: [diagnostic] });
   if (input.reason.trim() === "") return refuse("an amendment needs a reason");

@@ -26,6 +26,9 @@ import stringify from "safe-stable-stringify";
 import { z } from "zod";
 
 import {
+  definitionOf,
+  exitId,
+  plannedContract,
   sha256,
   type AcceptedOutput,
   type PlannedCriterion,
@@ -151,6 +154,12 @@ export type Packet = {
   candidate: SealedCandidate | null;
   /** Present only in reviewer packets built with a review context. */
   review?: ReviewContext;
+  /**
+   * Present when the run configures binding declarations (T3.5 H1): where the
+   * producer declares a binding a target needs that no registered binding
+   * defines, as `<bindings>/<binding-id>.yml`.
+   */
+  verification?: { bindings: string };
 };
 
 /** The agent's proposal. It names no acceptance; the controller checks actual effects. */
@@ -410,6 +419,7 @@ const TEMPLATES: Record<RoleName, string> = {
     "You are the producer for one Pactwright checkpoint step. The user message is a JSON work packet: the step's exact requirements and acceptance criteria, its accepted inputs, the paths you may change and findings from earlier attempts.",
     "Work only through the mcp__workspace__ tools: read_file, search_files, write_file and run_command. They act inside an isolated workspace with no network. Change only the writable paths listed under effects; protected paths and every other path are read-only.",
     "Do not weaken or reinterpret a requirement. If a requirement is contradictory, needs authority you lack, or cannot be met within the permitted effects, report it as a blocker instead of guessing.",
+    "When the packet names verification.bindings, a target whose binding the harness lacks needs its verifier and a declaration at <bindings>/<binding-id>.yml (automated: id, method, version, command, judge, files, timeoutMs, observations, optional scratch and dependencies; review: id, method, version, rubric). The harness admits a declared binding before any of its results count; inherited criteria marked exit or after a step under inherited.applicability are not yet this step's to satisfy.",
     'Finish with the structured result: status "submitted" with the paths of each output you produced, a one-line summary of each changed path and any verifier you propose; or status "blocked" with the blockers. The result is a proposal. The harness checks the workspace, runs verification and obtains independent review; you cannot accept your own work.',
   ].join("\n\n"),
   reviewer: [
@@ -440,15 +450,25 @@ export function buildPacket(
     findings?: readonly Finding[];
     candidate?: SealedCandidate;
     review?: ReviewContext;
+    bindings?: string;
   },
 ): { ok: true; packet: Packet; digest: string } | { ok: false; diagnostics: string[] } {
-  const step = plan.steps.find((s) => s.id === stepId);
-  if (step?.kind !== "contract") {
+  const step = plannedContract(plan, stepId);
+  if (!step) {
     return { ok: false, diagnostics: [`${stepId}: not a planned contract step`] };
   }
   const accepted: AcceptedOutput[] = [];
   const diagnostics: string[] = [];
-  for (const input of step.inputs.filter((i) => i.kind === "output")) {
+  // The exit evaluation consumes every planned step's accepted outputs.
+  const consumed =
+    step.id === exitId(plan)
+      ? plan.steps.flatMap((p) =>
+          p.kind === "contract"
+            ? p.outputs.map((o) => ({ name: `${p.id}/${o.id}`, ref: `${p.id}/${o.id}` }))
+            : [],
+        )
+      : step.inputs.filter((i) => i.kind === "output");
+  for (const input of consumed) {
     const [producer, output] = input.ref.split("/");
     const record = options.accepted.find(
       (o) =>
@@ -469,7 +489,7 @@ export function buildPacket(
     definitions: plan.definitionsDigest,
     step: {
       id: step.id,
-      definition: plan.stepDefinitions[step.id] ?? "",
+      definition: definitionOf(plan, step.id),
       outputs: step.outputs,
       requirements: step.requirements,
       criteria: step.criteria,
@@ -482,6 +502,7 @@ export function buildPacket(
     findings: [...(options.findings ?? [])],
     candidate: options.candidate ?? null,
     ...(options.review ? { review: options.review } : {}),
+    ...(options.bindings === undefined ? {} : { verification: { bindings: options.bindings } }),
   };
   return { ok: true, packet, digest: sha256(stringify(packet)) };
 }

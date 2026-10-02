@@ -182,6 +182,25 @@ export function treeEntries(runDir: string, tree: string): Map<string, string> {
 }
 
 /**
+ * The bytes of every blob of `tree` below `dir`, by path: what the
+ * controller reads of a candidate as data, never as code to run.
+ */
+export function treeFiles(runDir: string, tree: string, dir: string): Map<string, Buffer> {
+  const files = new Map<string, Buffer>();
+  for (const [path, entry] of treeEntries(runDir, tree)) {
+    if (!within(path, [dir])) continue;
+    const [mode = "", sha = ""] = entry.split(" ");
+    if (mode === "120000") continue;
+    const bytes = execFileSync("git", ["cat-file", "blob", sha], {
+      maxBuffer: 1 << 28,
+      env: { PATH: process.env.PATH ?? "", GIT_DIR: sourceGit(runDir) },
+    });
+    files.set(path, bytes);
+  }
+  return files;
+}
+
+/**
  * Captures the files under `dir` as a source snapshot in the run's source
  * repository. Links are never followed. Scratch paths are excluded. Special
  * files, Git metadata and links leaving the tree are rejected. Against a
@@ -332,14 +351,41 @@ function chownTree(path: string, id: number): void {
 }
 
 /**
+ * The link at `path` or at one of its ancestors in `entries` (path → `mode
+ * sha`), if any: a path through it would resolve to other source.
+ */
+export function linkAncestor(
+  entries: ReadonlyMap<string, string>,
+  path: string,
+): string | undefined {
+  return path
+    .split("/")
+    .map((_, i, parts) => parts.slice(0, i + 1).join("/"))
+    .find((prefix) => entries.get(prefix)?.startsWith("120000 "));
+}
+
+/** A host directory mounted read-only at a workspace path, such as prepared dependencies. */
+export type Mount = { path: string; source: string };
+
+/**
  * Exports `base` from the run's source repository into `root`, a new
  * directory outside the run directory, and starts the workspace container.
+ * `mounts` are mounted read-only at paths the base does not hold. The network
+ * is the profile's `none` unless an operator-configured preparation asks for
+ * `bridge`; candidate commands never have it.
  */
 export async function createWorkspace(
   run: RunHandle,
-  options: { base: SourceSnapshot; root: string; policy: WritePolicy },
+  options: {
+    base: SourceSnapshot;
+    root: string;
+    policy: WritePolicy;
+    mounts?: readonly Mount[];
+    network?: "none" | "bridge";
+  },
 ): Promise<Workspace> {
   const { base, policy } = options;
+  const mounts = options.mounts ?? [];
   const root = resolve(options.root);
   const runDir = resolve(run.dir);
   if (root === runDir || root.startsWith(runDir + sep) || runDir.startsWith(root + sep)) {
@@ -349,13 +395,10 @@ export async function createWorkspace(
   const inBase = treeEntries(run.dir, base.tree);
   const existsInBase = (p: string): boolean =>
     [...inBase.keys()].some((path) => path === p || path.startsWith(`${p}/`));
-  // Docker resolves a link in a bind source, so a base link on a policy path
-  // or its ancestors would mount other source (such as a protected path) there.
-  const linkOn = (p: string): string | undefined =>
-    p
-      .split("/")
-      .map((_, i, parts) => parts.slice(0, i + 1).join("/"))
-      .find((prefix) => inBase.get(prefix)?.startsWith("120000 "));
+  // Docker resolves a link in a bind source, so a base link on a policy or
+  // mount path or its ancestors would mount other source (such as a protected
+  // path) there.
+  const linkOn = (p: string): string | undefined => linkAncestor(inBase, p);
   const paths = [...policy.writable, ...policy.scratch, ...policy.protected];
   const errors = [
     ...paths.flatMap((p) => policyPathError(p) ?? []),
@@ -367,6 +410,18 @@ export async function createWorkspace(
       .filter((p) => !existsInBase(p))
       .map((p) => `${p}: protected path is absent`),
     ...policy.scratch.filter(existsInBase).map((p) => `${p}: scratch path holds source`),
+    ...mounts.flatMap((m) => policyPathError(m.path) ?? []),
+    ...mounts.flatMap((m) => {
+      const link = linkOn(m.path);
+      return link === undefined ? [] : [`${m.path}: resolves through a link at ${link}`];
+    }),
+    ...mounts.filter((m) => existsInBase(m.path)).map((m) => `${m.path}: mount path holds source`),
+    ...mounts
+      .filter((m) => !isAbsolute(m.source) || /[,"]/.test(m.source))
+      .map((m) => `${m.source}: a mount source is an absolute path without , or "`),
+    ...mounts
+      .filter((m) => paths.some((p) => within(m.path, [p]) || within(p, [m.path])))
+      .map((m) => `${m.path}: mount path overlaps a policy path`),
   ];
   if (errors.length > 0) throw new Error(errors.join("\n"));
 
@@ -377,6 +432,7 @@ export async function createWorkspace(
     mkdirSync(join(root, p), { recursive: true });
     if (rootUser) chownTree(join(root, p), CANDIDATE_ID);
   }
+  for (const m of mounts) mkdirSync(join(root, m.path), { recursive: true });
   const user = rootUser
     ? `${CANDIDATE_ID}:${CANDIDATE_ID}`
     : `${process.getuid?.()}:${process.getgid?.()}`;
@@ -393,7 +449,7 @@ export async function createWorkspace(
     "--label",
     `pactwright.workspace=${id}`,
     "--network",
-    PROFILE.network,
+    options.network ?? PROFILE.network,
     "--read-only",
     "--tmpfs",
     `/tmp:rw,nosuid,nodev,size=${PROFILE.tmp}`,
@@ -419,6 +475,10 @@ export async function createWorkspace(
     `type=bind,source=${root},target=/work,readonly`,
     ...[...policy.writable, ...policy.scratch].flatMap((p) => mount(p, false)),
     ...policy.protected.flatMap((p) => mount(p, true)),
+    ...mounts.flatMap((m) => [
+      "--mount",
+      `type=bind,source=${m.source},target=${posix.join("/work", m.path)},readonly`,
+    ]),
     "--entrypoint",
     "sleep",
     PROFILE.image,

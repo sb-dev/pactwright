@@ -607,13 +607,32 @@ export type EvaluationManifest = {
   skills: Readonly<Record<string, string>>;
   configuration: string;
   toolchain: { profile: string; lockfile: string | null };
+  /**
+   * The applicability decision (T3.5 H1): each inherited target this
+   * evaluation leaves pending, with the rule that defers it. Every other
+   * target of the step applies.
+   */
+  pending: readonly Pending[];
+  /**
+   * The checkpoint exit evaluation's checkpoint evidence, by digest: the
+   * controller-built record of every step's acceptance it is given (T3.5 H1).
+   * Null for a step's evaluation.
+   */
+  checkpoint: string | null;
 };
 
-/** SHA-256 of the manifest as key-ordered JSON, with accepted inputs in a canonical order. */
+/** An inherited target an evaluation leaves pending, by key, and the rule that defers it. */
+export type Pending = { target: string; rule: string };
+
+/**
+ * SHA-256 of the manifest as key-ordered JSON, with accepted inputs and
+ * pending targets in a canonical order.
+ */
 export function evaluationDigest(manifest: EvaluationManifest): string {
   const inputs = [...manifest.inputs].sort((a, b) =>
     `${a.step}/${a.output}/${a.evaluation}` < `${b.step}/${b.output}/${b.evaluation}` ? -1 : 1,
   );
-  const canonical: EvaluationManifest = { ...manifest, inputs };
+  const pending = [...manifest.pending].sort((a, b) => (a.target < b.target ? -1 : 1));
+  const canonical: EvaluationManifest = { ...manifest, inputs, pending };
   return sha256(stringify(canonical));
 }

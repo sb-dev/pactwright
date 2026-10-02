@@ -1,0 +1,5 @@
+# Minimal conversion record: the fixture was written as contracts; planning does not read crosswalk quotes.
+sources:
+  - source: docs/checkpoints/96-production.md@0000000
+    steps: [CP96-S01, CP96-S02]
+entries: []

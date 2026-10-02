@@ -1,0 +1,56 @@
+# Checkpoint harness verification (T3.5): the focused H1 tests, the
+# accumulated harness tests, the Docker integration tests, the contract check
+# and the repository gate, on a GitHub-hosted runner. A pull request runs on
+# its head commit, so the evidence is bound to that SHA. This is not the H3
+# harness workflow and grants no checkpoint acceptance.
+name: Checkpoint harness verification
+
+on:
+  pull_request:
+    paths:
+      - ".github/workflows/checkpoint-harness-verify.yml"
+      - "docs/checkpoints/**"
+      - "package.json"
+      - "pnpm-lock.yaml"
+      - "pnpm-workspace.yaml"
+      - "tools/checkpoint-harness/**"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: checkpoint-harness-verify-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  verify:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          # The contract check reads replaced prose from earlier revisions.
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413 # v6.1.0
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: 22
+          cache: pnpm
+      - name: Install
+        run: pnpm install --frozen-lockfile
+      - name: Tested commit
+        run: git rev-parse HEAD
+      - name: H1 tests
+        working-directory: tools/checkpoint-harness
+        run: node --test --import tsx test/checkpoint-harness-h1.test.ts
+      - name: Harness tests
+        run: pnpm --filter @pactwright/checkpoint-harness test
+      - name: Docker integration tests
+        run: pnpm --filter @pactwright/checkpoint-harness test:integration
+      - name: Contract check
+        run: pnpm contracts:check
+      - name: Repository gate
+        run: pnpm verify
