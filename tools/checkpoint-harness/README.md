@@ -2,7 +2,7 @@
 
 The harness runs checkpoint work through produce → verify → review → correct → accept.
 
-GitHub Actions operation below is the interface specified by the [T3.5 production readiness](../../docs/research-logs/2026-09-30-cp01-task-3-5-harness-production-readiness.md). At baseline `5dccd16373d8988a7294548de6f9de61be48e33a`, the CLI exists; the hosted workflow, portable recovery and GitHub approval channel still require implementation. H1 adds production verification, described under [Production verification](#production-verification).
+GitHub Actions operation below is the interface specified by the [T3.5 production readiness](../../docs/research-logs/2026-09-30-cp01-task-3-5-harness-production-readiness.md). At baseline `5dccd16373d8988a7294548de6f9de61be48e33a`, the CLI exists; the hosted workflow, portable recovery and GitHub approval channel still require implementation. H1 adds production verification, described under [Production verification](#production-verification). H2 adds each role's model and effort, described under [Role model and effort](#role-model-and-effort).
 
 For the S01 pilot and stage selections, use the [T5 run guide](../../docs/research-logs/2026-09-29-cp01-task-5-implementation-and-acceptance.md). The [T3 log](../../docs/research-logs/2026-09-26-cp01-task-3-harness-and-software-run-model.md) records the original design.
 
@@ -119,6 +119,39 @@ When the selection covers every step and the integrated acceptance left targets 
 The exit evaluation is given the controller's checkpoint evidence: each step's current acceptance record, the revision it names, its proven targets and outputs, the evidence it counted and its effects' receipts. The exit manifest names that record by digest. Each exit judge receives it on stdin as `checkpoint`, and the exit reviewer is shown it with every accepted output. Neither reads the journal or a candidate-authored summary. A decision refuses evidence that is missing, uncommitted, stale, incomplete or was not given to its judges and reviewer.
 
 The exit's correctable findings, including a missing or rejected exit binding, go to the selection's final step. Its next attempt, within its attempt budget, starts from the integrated candidate with those findings. Its acceptance moves the integrated candidate, and the exit is evaluated again. Earlier records stay as history. Authority and resource problems pause the run unaccepted and leave the checkpoint incomplete.
+
+## Role model and effort
+
+H2 sets the Claude model and reasoning effort of each role in the run configuration:
+
+```yaml
+roles:
+  producer:
+    adapter: claude-sdk
+    model: MODEL_ID
+    effort: EFFORT_LEVEL
+    skills: [SKILL, ...]
+    max_turns: POSITIVE_INTEGER
+  reviewer:
+    adapter: claude-sdk
+    model: MODEL_ID
+    effort: EFFORT_LEVEL
+    skills: [SKILL, ...]
+    max_turns: POSITIVE_INTEGER
+```
+
+| Model | Effort levels |
+| --- | --- |
+| `claude-fable-5-1`, `claude-opus-5-5`, `claude-sonnet-5` | `low`, `medium`, `high`, `xhigh`, `max` |
+| `claude-haiku-4-5-20251001` | None. Haiku 4.5 rejects the effort parameter, so no role can use it. |
+
+- **Admission.** `run`, `resume` and `amend` refuse a missing effort, an unknown level or a level the model does not accept, before any session starts. The CLI would otherwise lower such a level silently. The table is `EFFORT_LEVELS` in [claude.ts](src/claude.ts); adding a model or level is a reviewed change.
+- **Dispatch.** Every session of a role runs with its model and effort: production, candidate review and verifier adequacy review. The SDK passes them to the CLI as `--model` and `--effort`.
+- **Evidence.** Each invocation's observation records `model: {configured, reported, used}` and `effort: {configured, reported}`. The API does not echo effort, so `effort.reported` lists the levels the session reports applying to its turns, after any silent downgrade, or `"not-reported"` when it reports none. A reported level other than the configured one fails the invocation at once, and its later tool calls are refused.
+- **Identity.** The roles are part of the evaluated configuration. Changing any role's model or effort gives every evaluation a new identity.
+- **Amendment.** Amending a model or effort re-verifies and re-reviews each accepted evaluation on the same candidate. The candidate is not produced again, so its producer's original settings remain in that invocation's record. Admitted verifiers are pinned by digest and are not reviewed again. Approvals are requested again for the new evaluation, but an effect with a receipt never runs again.
+- **Budgets.** Effort does not change limits. Attempts, retries and recorded usage persist across an amendment. Lowering effort after a spend stop reruns the same attempt as a counted retry.
+- **Existing runs.** A run started before H2 has no effort in its saved configuration. Amend it with each role's effort before resuming.
 
 ## Internal CLI reference
 

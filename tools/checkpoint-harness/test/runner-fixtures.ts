@@ -99,12 +99,14 @@ export function runConfig(
       producer: {
         adapter: "claude-sdk",
         model: MODEL,
+        effort: "high",
         skills: ["karpathy-guidelines"],
         max_turns: 8,
       },
       reviewer: {
         adapter: "claude-sdk",
         model: MODEL,
+        effort: "high",
         skills: ["code-review-and-quality"],
         max_turns: 8,
       },

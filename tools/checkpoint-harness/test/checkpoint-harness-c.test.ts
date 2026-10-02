@@ -103,6 +103,7 @@ function role(
   return {
     name,
     model: MODEL,
+    effort: "high",
     available: ["karpathy-guidelines"],
     skills: [{ name: "karpathy-guidelines", digest: sha256("skill"), text: "skill" }],
     limits: { attempts: 3, wallTimeMs: 5_000, maxTurns: 8, maxBudgetUsd: 1, ...limits },
@@ -257,6 +258,7 @@ describe("T3-C dispatch refuses incomplete configuration", () => {
   type RoleFixture = {
     adapter: string;
     model: string;
+    effort: string;
     skills: string[];
     max_turns: number;
     skill_digests?: Record<string, string>;
@@ -272,12 +274,14 @@ describe("T3-C dispatch refuses incomplete configuration", () => {
         producer: {
           adapter: "claude-sdk",
           model: "claude-opus-5-5",
+          effort: "high",
           skills: ["karpathy-guidelines"],
           max_turns: 20,
         },
         reviewer: {
           adapter: "claude-sdk",
           model: "claude-opus-5-5",
+          effort: "high",
           skills: ["code-review-and-quality"],
           max_turns: 10,
         },
@@ -363,12 +367,7 @@ describe("T3-C dispatch refuses incomplete configuration", () => {
         /model must be equal to one of the allowed values/,
       );
     }
-    for (const exact of [
-      "claude-fable-5-1",
-      "claude-opus-5-5",
-      "claude-sonnet-5",
-      "claude-haiku-4-5-20251001",
-    ]) {
+    for (const exact of ["claude-fable-5-1", "claude-opus-5-5", "claude-sonnet-5"]) {
       const resolved = resolveRole(
         config((c) => (c.roles.producer.model = exact)),
         "producer",
@@ -376,6 +375,12 @@ describe("T3-C dispatch refuses incomplete configuration", () => {
       );
       assert.ok(resolved.ok, exact);
     }
+    // An admitted ID, but Haiku 4.5 accepts no effort (T3.5 H2).
+    refused(
+      config((c) => (c.roles.producer.model = "claude-haiku-4-5-20251001")),
+      "producer",
+      /roles\.producer\.effort: claude-haiku-4-5-20251001 does not accept effort high/,
+    );
     refused(
       config((c) => (c.roles.producer.adapter = "claude-cli")),
       "producer",
@@ -1187,6 +1192,8 @@ describe("T3-C proxy credentials are secrets too", () => {
 describe("T3-C SDK session options", () => {
   const request = (credentialKind: CredentialKind = "api-key"): ProviderRequest => ({
     model: MODEL,
+    effort: "high",
+    onEffort: () => undefined,
     system: "system",
     prompt: "prompt",
     tools: [],
@@ -1286,6 +1293,7 @@ describe("T3-C SDK session options", () => {
     const reviewerTools = workspaceTools("reviewer", ops, POLICY);
     for (const [name, changed] of [
       ["model", { ...request(), model: "claude-other-1" }],
+      ["effort", { ...request(), effort: "low" }],
       ["turns", { ...request(), maxTurns: 5 }],
       ["spend", { ...request(), maxBudgetUsd: 2 }],
       ["system prompt", { ...request(), system: "other" }],

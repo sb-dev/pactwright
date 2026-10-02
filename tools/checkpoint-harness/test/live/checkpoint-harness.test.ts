@@ -7,8 +7,9 @@
 //
 // Requires a credential in PACTWRIGHT_ANTHROPIC_API_KEY (an Anthropic API key,
 // or an OAuth token with PACTWRIGHT_LIVE_CREDENTIAL_KIND=oauth-token), an
-// explicit model ID in PACTWRIGHT_LIVE_MODEL and a running Linux Docker
-// daemon. A missing resource fails this file; it is never a pass. Spend is
+// explicit model ID in PACTWRIGHT_LIVE_MODEL, each role's effort in
+// PACTWRIGHT_LIVE_PRODUCER_EFFORT and PACTWRIGHT_LIVE_REVIEWER_EFFORT (T3.5
+// H2) and a running Linux Docker daemon. A missing resource fails this file; it is never a pass. Spend is
 // capped per session by budgets.provider_spend_limit. The evidence report is
 // printed and, when PACTWRIGHT_LIVE_REPORT names a file, written there; with
 // PACTWRIGHT_LIVE_KEEP set, the run directory is kept and its path printed.
@@ -54,6 +55,7 @@ const SPEND = { usd: 1, turn_reservation_usd: 0.2 };
 const PORT_ABOVE_HIGHEST = `${LIBRARY}/AC03/port-above-highest/automated/library.rejects`;
 
 let model = "";
+let effort = { producer: "", reviewer: "" };
 let result: RunResult | null = null;
 let report: BootstrapReport | null = null;
 
@@ -62,6 +64,13 @@ before(() => {
   if (!process.env[KEY]) missing.push(`${KEY} is not set`);
   model = process.env.PACTWRIGHT_LIVE_MODEL ?? "";
   if (model === "") missing.push("PACTWRIGHT_LIVE_MODEL is not set");
+  effort = {
+    producer: process.env.PACTWRIGHT_LIVE_PRODUCER_EFFORT ?? "",
+    reviewer: process.env.PACTWRIGHT_LIVE_REVIEWER_EFFORT ?? "",
+  };
+  for (const [role, level] of Object.entries(effort)) {
+    if (level === "") missing.push(`PACTWRIGHT_LIVE_${role.toUpperCase()}_EFFORT is not set`);
+  }
   try {
     execFileSync("docker", ["info"], { stdio: "ignore" });
   } catch {
@@ -95,12 +104,14 @@ describe("T3-F live: the bootstrap loop with a real producer and a fresh real re
         producer: {
           adapter: "claude-sdk",
           model,
+          effort: effort.producer,
           skills: ["karpathy-guidelines", "typescript-magician"],
           max_turns: 40,
         },
         reviewer: {
           adapter: "claude-sdk",
           model,
+          effort: effort.reviewer,
           skills: ["code-review-and-quality", "evaluation"],
           max_turns: 30,
         },

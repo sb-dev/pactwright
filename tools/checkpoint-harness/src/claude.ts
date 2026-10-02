@@ -1,22 +1,34 @@
 // T3-C: the one provider adapter (Task 3 research log §§8, 10 and §12). A
-// role is dispatched only from complete configuration: an explicit model, an
-// API key named by reference, attempt/time/turn limits and a spend limit the
-// provider can enforce. The session driver runs outside the candidate; the
-// agent has no built-in tools, no filesystem settings, plugins or hooks, and
-// acts only through contained workspace tools. Selected skills are supplied
-// inline and pinned by digest. The outcome is a validated proposal; it never
-// carries acceptance, which only the controller records after verification.
+// role is dispatched only from complete configuration: an explicit model and
+// an effort the model accepts (T3.5 H2), an API key named by reference,
+// attempt/time/turn limits and a spend limit the provider can enforce. The
+// session driver runs outside the candidate; the agent has no built-in tools,
+// no filesystem settings, plugins or hooks, and acts only through contained
+// workspace tools. A controller hook observes the effort each turn applies.
+// Selected skills are supplied inline and pinned by digest. The outcome is a
+// validated proposal; it never carries acceptance, which only the controller
+// records after verification.
 
-import { spawn, type ChildProcess } from "node:child_process";
+import {
+  spawn,
+  type ChildProcess,
+  type ChildProcessByStdio,
+  type SpawnOptionsWithStdioTuple,
+  type StdioNull,
+  type StdioPipe,
+} from "node:child_process";
 import { once } from "node:events";
 import { mkdtempSync, readdirSync, readFileSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import type { Readable, Writable } from "node:stream";
 
 import {
   createSdkMcpServer,
   query,
   tool,
+  type EffortLevel,
+  type HookCallback,
   type Options,
   type SDKMessage,
   type SDKUserMessage,
@@ -85,6 +97,7 @@ export type CredentialKind = "api-key" | "oauth-token";
 export type AgentRole = {
   name: RoleName;
   model: string;
+  effort: EffortLevel;
   /** Skill directories present in the controller's skills root. */
   available: string[];
   /** Selected skills with their pinned SKILL.md bytes. */
@@ -183,6 +196,12 @@ export type Observation = {
   settings: string;
   session: string | null;
   model: { configured: string; reported: string | null; used: string[] };
+  /**
+   * The configured effort and each level the session reported applying to a
+   * turn, after any silent downgrade (T3.5 H2). The API does not echo
+   * effort; a session that reports none records "not-reported".
+   */
+  effort: { configured: EffortLevel; reported: string[] | "not-reported" };
   auth: string | null;
   tools: string[] | null;
   skills: {
@@ -242,6 +261,9 @@ export type ToolDef = {
 
 export type ProviderRequest = {
   model: string;
+  effort: EffortLevel;
+  /** Called with the effort level the session reports applying to a turn. */
+  onEffort(level: string): void;
   system: string;
   prompt: string;
   tools: readonly ToolDef[];
@@ -320,6 +342,7 @@ const dispatchSchema: unknown = JSON.parse(
 type RoleConfig = {
   adapter: "claude-sdk";
   model: string;
+  effort: EffortLevel;
   skills: string[];
   skill_digests?: Record<string, string>;
   max_turns: number;
@@ -332,6 +355,22 @@ type DispatchConfig = {
     wall_time_seconds: number;
     provider_spend_limit: { usd: number; turn_reservation_usd: number };
   };
+};
+
+const EFFORTS = ["low", "medium", "high", "xhigh", "max"] as const satisfies readonly EffortLevel[];
+
+/**
+ * The effort levels each model of the dispatch schema accepts (T3.5 H2),
+ * from the pinned SDK's `effort` option and the API's effort reference:
+ * xhigh and max need Fable 5, Opus 4.7+ or Sonnet 5, and Haiku 4.5 rejects
+ * the parameter. The CLI would silently lower a level a model lacks, so
+ * dispatch refuses it instead.
+ */
+export const EFFORT_LEVELS: Readonly<Record<string, readonly EffortLevel[]>> = {
+  "claude-fable-5-1": EFFORTS,
+  "claude-opus-5-5": EFFORTS,
+  "claude-sonnet-5": EFFORTS,
+  "claude-haiku-4-5-20251001": [],
 };
 
 const ajv = new Ajv2020({ allErrors: true });
@@ -394,12 +433,19 @@ export function resolveRole(
       diagnostics.push(`roles.${name}.skill_digests: ${pinned} is not selected`);
     }
   }
+  const levels = EFFORT_LEVELS[role.model] ?? [];
+  if (!levels.includes(role.effort)) {
+    diagnostics.push(
+      `roles.${name}.effort: ${role.model} does not accept effort ${role.effort}; it accepts ${levels.join(", ") || "no effort setting"}`,
+    );
+  }
   if (diagnostics.length > 0 || !key) return { ok: false, diagnostics };
   return {
     ok: true,
     role: {
       name,
       model: role.model,
+      effort: role.effort,
       available,
       skills,
       limits: {
@@ -787,10 +833,10 @@ export function fromSdkMessage(message: SDKMessage): ProviderEvent | null {
 }
 
 /**
- * Options for one SDK session: an empty working and configuration directory
- * (`home`), a minimal environment, no built-in tools, no filesystem settings,
- * skills, plugins or other MCP servers, and denial of any tool not
- * pre-approved.
+ * Options for one SDK session: the role's model and effort, an empty working
+ * and configuration directory (`home`), a minimal environment, no built-in
+ * tools, no filesystem settings, skills, plugins or other MCP servers, and
+ * denial of any tool not pre-approved.
  */
 export function sdkOptions(request: ProviderRequest, home: string): Options {
   const env: Record<string, string> = {
@@ -821,8 +867,16 @@ export function sdkOptions(request: ProviderRequest, home: string): Options {
       }),
     ),
   });
+  // The controller's one hook reports the effort a turn applies, before each
+  // tool use and when the turn ends. It returns no decision, so permissions
+  // stay as configured.
+  const observe: HookCallback = (input) => {
+    if (input.effort) request.onEffort(input.effort.level);
+    return Promise.resolve({});
+  };
   return {
     model: request.model,
+    effort: request.effort,
     systemPrompt: request.system,
     tools: [],
     allowedTools: request.tools.map((t) => qualified(t.name)),
@@ -841,22 +895,25 @@ export function sdkOptions(request: ProviderRequest, home: string): Options {
     maxTurns: request.maxTurns,
     maxBudgetUsd: request.maxBudgetUsd,
     abortController: request.abort,
+    hooks: { PreToolUse: [{ hooks: [observe] }], Stop: [{ hooks: [observe] }] },
   };
 }
 
 /**
  * The effective session settings without secrets or per-session values: the
  * SDK version, every option `sdkOptions` sets, the environment's variable
- * names, the system prompt's digest and each workspace tool's definition.
+ * names, the hooked events, the system prompt's digest and each workspace
+ * tool's definition.
  */
 export function sessionSettings(request: ProviderRequest): Record<string, unknown> {
   const options = sdkOptions(request, "<controller-home>");
-  const { env, mcpServers, abortController, systemPrompt, ...rest } = options;
+  const { env, mcpServers, abortController, systemPrompt, hooks, ...rest } = options;
   void [mcpServers, abortController, systemPrompt];
   return {
     sdk: SDK_VERSION,
     options: rest,
     env: Object.keys(env ?? {}).sort(),
+    hooks: Object.keys(hooks ?? {}).sort(),
     system: sha256(request.system),
     tools: request.tools.map((t) => ({
       name: qualified(t.name),
@@ -897,12 +954,22 @@ export function providerSecrets(credential: Secret): string[] {
   return [...new Set(secrets.filter((s) => s !== ""))].sort((a, b) => b.length - a.length);
 }
 
+/** Starts the CLI process for the SDK: `spawn`, or a test's recorder. */
+export type SpawnProcess = (
+  command: string,
+  args: readonly string[],
+  options: SpawnOptionsWithStdioTuple<StdioPipe, StdioPipe, StdioNull>,
+) => ChildProcessByStdio<Writable, Readable, null>;
+
 /**
  * The Claude Agent SDK session driver. It runs in the controller process,
  * outside every candidate, and sends the prompt only after the consumer has
  * seen how the session authenticates.
  */
-export async function* sdkProvider(request: ProviderRequest): AsyncGenerator<ProviderEvent> {
+export async function* sdkProvider(
+  request: ProviderRequest,
+  spawnProcess: SpawnProcess = spawn,
+): AsyncGenerator<ProviderEvent> {
   const home = mkdtempSync(join(tmpdir(), "pactwright-agent-"));
   let release = (): void => undefined;
   const released = new Promise<void>((resolve) => (release = resolve));
@@ -922,7 +989,12 @@ export async function* sdkProvider(request: ProviderRequest): AsyncGenerator<Pro
     options: {
       ...sdkOptions(request, home),
       spawnClaudeCodeProcess: ({ command, args, cwd, env, signal }) =>
-        (child = spawn(command, args, { cwd, env, signal, stdio: ["pipe", "pipe", "ignore"] })),
+        (child = spawnProcess(command, args, {
+          cwd,
+          env,
+          signal,
+          stdio: ["pipe", "pipe", "ignore"],
+        })),
     },
   });
   try {
@@ -1051,12 +1123,13 @@ function initErrors(
   return errors;
 }
 
-type Stop = { kind: "cancel" } | { kind: "time" };
+type Stop = { kind: "cancel" } | { kind: "time" } | { kind: "effort"; level: string };
 
 /**
  * Runs one attempt of a role on a packet in a workspace. The caller's signal
  * cancels it. Events and tool calls after the outcome is decided are ignored
- * or refused. Only schema-valid results become `submitted` or `blocked`.
+ * or refused. Only schema-valid results become `submitted` or `blocked`. A
+ * session that reports applying an effort other than the role's fails at once.
  */
 export async function invokeAgent(
   role: AgentRole,
@@ -1074,6 +1147,7 @@ export async function invokeAgent(
     settings: "",
     session: null,
     model: { configured: role.model, reported: null, used: [] },
+    effort: { configured: role.effort, reported: "not-reported" },
     auth: null,
     tools: null,
     skills: {
@@ -1117,9 +1191,23 @@ export async function invokeAgent(
     },
   }));
 
+  let stop: (reason: Stop) => void = () => undefined;
+  const stopped = new Promise<Stop>((resolve) => (stop = resolve));
+  const reported = new Set<string>();
   const abort = new AbortController();
   const request: ProviderRequest = {
     model: role.model,
+    effort: role.effort,
+    onEffort(level) {
+      if (closed) return;
+      reported.add(level);
+      observation.effort.reported = [...reported].sort();
+      if (level !== role.effort) {
+        // The turn's tool calls are refused from here on.
+        closed = true;
+        stop({ kind: "effort", level });
+      }
+    },
     system: systemPrompt(role),
     prompt: `Work packet:\n${stringify(packet, null, 2)}`,
     tools,
@@ -1139,8 +1227,6 @@ export async function invokeAgent(
   }
   if (signal.aborted) return done({ outcome: "cancelled", reason: "cancelled", observation });
 
-  let stop: (reason: Stop) => void = () => undefined;
-  const stopped = new Promise<Stop>((resolve) => (stop = resolve));
   const onCancel = (): void => stop({ kind: "cancel" });
   signal.addEventListener("abort", onCancel);
   const timer = setTimeout(() => stop({ kind: "time" }), role.limits.wallTimeMs);
@@ -1162,9 +1248,18 @@ export async function invokeAgent(
         };
       }
       if ("kind" in next) {
-        return next.kind === "time"
-          ? { outcome: "exhausted", limit: "time", observation }
-          : { outcome: "cancelled", reason: "cancelled by the controller", observation };
+        switch (next.kind) {
+          case "time":
+            return { outcome: "exhausted", limit: "time", observation };
+          case "cancel":
+            return { outcome: "cancelled", reason: "cancelled by the controller", observation };
+          case "effort":
+            return {
+              outcome: "failed",
+              reason: `effective session differs: effort ${next.level} is not ${role.effort}`,
+              observation,
+            };
+        }
       }
       if (next.done) {
         return { outcome: "failed", reason: "provider ended without a result", observation };
