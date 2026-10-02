@@ -106,7 +106,7 @@ A declared binding counts only after admission. Automated bindings run provision
 
 ### Repository commands
 
-Each subject workspace is a fresh export of the sealed candidate. A binding's `scratch` paths start empty and are writable; nothing else is. A candidate holding files under a scratch path fails that binding's targets, so committed build output cannot pass. Host working trees, the controller checkout and host-installed packages are never mounted.
+Each subject workspace is a fresh export of the sealed candidate. A binding's `scratch` paths start empty and are writable; nothing else is. A candidate holding files under a scratch path fails that binding's targets, so committed build output cannot pass. The same holds for a scratch, dependency-output or mount path that a candidate link on it or an ancestor would resolve into other source. Host working trees, the controller checkout and host-installed packages are never mounted.
 
 For a binding with `dependencies: true`, the harness prepares dependencies once per key: the snapshot of the candidate's `inputs` paths, the command and the profile. The command runs as the candidate user in a contained workspace holding only those paths, with only `outputs` writable and the configured network. Use flags that skip lifecycle scripts, such as `--ignore-scripts`. The outputs are mounted read-only into subject workspaces. A failed preparation fails the targets; a preparation that could not run leaves them unavailable. Each preparation is journaled as `dependency-preparation`, and each invocation records the key it used.
 
@@ -114,7 +114,11 @@ For a binding with `dependencies: true`, the harness prepares dependencies once 
 
 The run model's rules state when each inherited criterion applies. For CP01, `AC02` applies from the first acceptance of `CP01-S25`, `AC05` only at the checkpoint exit, and every other criterion to every step. Each evaluation records the inherited targets it leaves pending. Pending targets do not block an earlier step and are never waived.
 
-When the selection covers every step and the integrated acceptance left targets pending, the harness runs the exit evaluation `<checkpoint>/exit`. It evaluates the integrated candidate against every inherited target, without a producer. A failing or missing exit binding pauses the run unaccepted and leaves the checkpoint incomplete.
+When the selection covers every step and the integrated acceptance left targets pending, the harness runs the exit evaluation `<checkpoint>/exit`. It evaluates the integrated candidate against every inherited target, without a producer of its own.
+
+The exit evaluation is given the controller's checkpoint evidence: each step's current acceptance record, the revision it names, its proven targets and outputs, the evidence it counted and its effects' receipts. The exit manifest names that record by digest. Each exit judge receives it on stdin as `checkpoint`, and the exit reviewer is shown it with every accepted output. Neither reads the journal or a candidate-authored summary. A decision refuses evidence that is missing, uncommitted, stale, incomplete or was not given to its judges and reviewer.
+
+The exit's correctable findings, including a missing or rejected exit binding, go to the selection's final step. Its next attempt, within its attempt budget, starts from the integrated candidate with those findings. Its acceptance moves the integrated candidate, and the exit is evaluated again. Earlier records stay as history. Authority and resource problems pause the run unaccepted and leave the checkpoint incomplete.
 
 ## Internal CLI reference
 

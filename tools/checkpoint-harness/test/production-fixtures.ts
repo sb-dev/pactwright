@@ -27,6 +27,7 @@ import {
 import type { RunnerDeps } from "../src/runner.js";
 import type { Registry } from "../src/software-bootstrap.js";
 import type {
+  CheckpointEvidence,
   ContainedWorkspace,
   DependencySpec,
   OpenWorkspace,
@@ -167,12 +168,18 @@ export type JudgeCall = {
 
 /**
  * An offline verifier: no code runs. A subject run exits 0; a judge reports
- * every run it is given as passed, unless `fails(binding, snapshot, run)`
- * returns a failure message. It records each call with the workspace options
- * the controller opened it with.
+ * every run it is given as passed, unless `fails(binding, snapshot, run,
+ * checkpoint)` returns a failure message, where `checkpoint` is the
+ * checkpoint evidence the controller gave the judge, if any. It records each
+ * call with the workspace options the controller opened it with.
  */
 export function judgeVerifier(
-  fails: (binding: string, snapshot: SourceSnapshot, run: JudgedRun) => string | null = () => null,
+  fails: (
+    binding: string,
+    snapshot: SourceSnapshot,
+    run: JudgedRun,
+    checkpoint: CheckpointEvidence | undefined,
+  ) => string | null = () => null,
 ): OpenWorkspace & { calls: JudgeCall[] } {
   const calls: JudgeCall[] = [];
   const open: OpenWorkspace = (snapshot, options = {}) => {
@@ -195,9 +202,12 @@ export function judgeVerifier(
             timedOut: false,
           });
         }
-        const { runs } = JSON.parse(text) as { runs: JudgedRun[] };
+        const { runs, checkpoint } = JSON.parse(text) as {
+          runs: JudgedRun[];
+          checkpoint?: CheckpointEvidence;
+        };
         const results = runs.map((run) => {
-          const message = fails(binding, snapshot, run);
+          const message = fails(binding, snapshot, run, checkpoint);
           return {
             binding,
             owner: run.owner,
@@ -213,6 +223,7 @@ export function judgeVerifier(
               dependency: "1.0.0",
               distBefore: [],
               steps: [],
+              accepted: [],
             },
             ...(message === null ? {} : { message }),
           };
@@ -273,7 +284,7 @@ export function productionDeps(
     reviewer: ScriptedAgent;
     registry?: Registry;
     verifier?: OpenWorkspace;
-    progress?: RunnerDeps["progress"];
+    progress?: RunnerDeps["progress"] | undefined;
   },
 ): RunnerDeps {
   const { verifier } = options;

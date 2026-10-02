@@ -613,6 +613,12 @@ export type EvaluationManifest = {
    * target of the step applies.
    */
   pending: readonly Pending[];
+  /**
+   * The checkpoint exit evaluation's checkpoint evidence, by digest: the
+   * controller-built record of every step's acceptance it is given (T3.5 H1).
+   * Null for a step's evaluation.
+   */
+  checkpoint: string | null;
 };
 
 /** An inherited target an evaluation leaves pending, by key, and the rule that defers it. */

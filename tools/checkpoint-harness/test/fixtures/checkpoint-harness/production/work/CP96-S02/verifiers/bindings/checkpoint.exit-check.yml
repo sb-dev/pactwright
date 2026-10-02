@@ -6,4 +6,4 @@ command: [node, verifiers/changelog-subject.mjs]
 judge: [node, verifiers/exit-judge.mjs]
 files: [verifiers/changelog-subject.mjs, verifiers/exit-judge.mjs]
 timeoutMs: 30000
-observations: [steps]
+observations: [steps, accepted]

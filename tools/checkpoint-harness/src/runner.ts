@@ -87,6 +87,7 @@ import {
   admitVerifier,
   checkVerdict,
   committedEvents,
+  givenCheckpoint,
   inventory,
   negatives,
   pendingTargets,
@@ -101,6 +102,7 @@ import {
   verifyCandidate,
   type Admission,
   type Approval,
+  type CheckpointEvidence,
   type Decision,
   type DependencySpec,
   type Invocation,
@@ -367,7 +369,7 @@ type Stop = { kind: "done" } | { kind: "pause"; step: string | null; reasons: Pa
 type Action =
   | Stop
   | { kind: "produce"; step: ContractStep; attempt: number; production: Production }
-  | { kind: "evaluate"; record: EvaluationRecord }
+  | { kind: "evaluate"; record: EvaluationRecord; checkpoint?: CheckpointEvidence }
   | { kind: "admit"; ev: Evaluated; binding: string }
   | { kind: "verify"; ev: Evaluated; bindings: string[] }
   | { kind: "review"; ev: Evaluated }
@@ -434,13 +436,14 @@ function journal(
   record: object,
   at: { attempt?: number; evaluation?: string },
   data: JsonObject,
+  more: readonly string[] = [],
 ): string {
   const ref = putEvidence(run, stringify(record));
   appendEvent(run, {
     action,
     ...(at.attempt === undefined ? {} : { attempt: at.attempt }),
     ...(at.evaluation === undefined ? {} : { evaluation: at.evaluation }),
-    evidence: [ref],
+    evidence: [ref, ...unique(more.filter((m) => m !== ref))],
     data: { ...data, record: ref },
   });
   return ref;
@@ -593,6 +596,7 @@ function exitAcceptance(
       accepted,
       ev.record.candidate,
       acceptedBefore(s, ev.seq),
+      checkpointEvidence(ctx, s, accepted),
     );
     return manifest !== null && evaluationDigest(manifest) === d.record.evaluation;
   });
@@ -652,8 +656,18 @@ function inputProofs(
     });
 }
 
-/** Nothing is the exit evaluation's to change: it has no producer. */
+/** Nothing is the exit evaluation's to change when no step can correct it. */
 const EXIT_POLICY: WritePolicy = { writable: [], scratch: [], protected: [] };
+
+/**
+ * The step whose producer corrects the exit evaluation's findings: the
+ * selection's final step, when it is a contract step. Its next attempt
+ * starts from the integrated candidate with the exit's findings.
+ */
+function correctingStep(ctx: Ctx): ContractStep | undefined {
+  const last = ctx.plan.steps.at(-1);
+  return last?.kind === "contract" ? last : undefined;
+}
 
 /**
  * The producer's write policy: the configured paths, with the definitions,
@@ -666,7 +680,11 @@ function policyFor(
   step: ContractStep,
   accepted: Map<string, Acceptance>,
 ): WritePolicy {
-  if (step.id === exitId(ctx.plan)) return EXIT_POLICY;
+  if (step.id === exitId(ctx.plan)) {
+    // The exit is judged under the policy of the producer that corrects it.
+    const correcting = correctingStep(ctx);
+    return correcting ? policyFor(ctx, s, correcting, accepted) : EXIT_POLICY;
+  }
   const { writable, scratch } = ctx.config.permissions;
   const { registry } = ctx.declared(stepBase(ctx, step, accepted));
   return {
@@ -700,7 +718,8 @@ function mounted(ctx: Ctx, policy: WritePolicy, from: SourceSnapshot): WritePoli
  * The evaluation manifest of `candidate` now, or null when an input has no
  * current acceptance. `ever` holds the steps accepted before the evaluation,
  * from which its applicability decision follows. The exit evaluation's
- * inputs are every planned step's accepted outputs.
+ * inputs are every planned step's accepted outputs, and it names the
+ * `checkpoint` evidence it is given by digest.
  */
 function manifestOf(
   ctx: Ctx,
@@ -708,6 +727,7 @@ function manifestOf(
   accepted: Map<string, Acceptance>,
   candidate: SourceSnapshot,
   ever: ReadonlySet<string>,
+  checkpoint: CheckpointEvidence | null = null,
 ): EvaluationManifest | null {
   const consumed =
     step.id === exitId(ctx.plan)
@@ -741,8 +761,58 @@ function manifestOf(
     configuration: ctx.configuration,
     toolchain: { profile: profileDigest, lockfile: tree.get("pnpm-lock.yaml") ?? null },
     pending,
+    checkpoint: checkpoint === null ? null : sha256(stringify(checkpoint)),
   };
 }
+
+/**
+ * The checkpoint evidence the exit evaluation is given (T3.5 H1), from the
+ * controller's records alone: each planned step's current acceptance, the
+ * revision, targets, outputs and evidence it records, and the receipts of
+ * the step's effects. Null while a planned step has no current acceptance.
+ */
+function checkpointEvidence(
+  ctx: Ctx,
+  s: State,
+  accepted: Map<string, Acceptance>,
+): CheckpointEvidence | null {
+  const steps: CheckpointEvidence["steps"] = [];
+  for (const step of ctx.plan.steps) {
+    if (step.kind !== "contract") continue;
+    const acceptance = accepted.get(step.id);
+    if (!acceptance) return null;
+    const { decision } = acceptance;
+    steps.push({
+      step: step.id,
+      decision: acceptance.ref,
+      attempt: decision.attempt,
+      evaluation: acceptance.evaluation,
+      candidate: snapshotOf(acceptance.candidate),
+      targets: [...decision.targets],
+      outputs: decision.outputs,
+      evidence: [...decision.evidence],
+      receipts: s.receipts
+        .filter((r) => r.data.step === step.id)
+        .map((r) => ({
+          record: r.ref,
+          key: r.record.key,
+          target: r.record.receipt.target,
+          reference: r.record.receipt.reference,
+          reconciled: r.record.reconciled,
+        })),
+    });
+  }
+  return {
+    checkpoint: ctx.plan.checkpoint,
+    run: ctx.run.run,
+    definitions: ctx.plan.definitionsDigest,
+    steps,
+  };
+}
+
+/** The checkpoint evidence an evaluation's manifest names, as stored, for its phases. */
+const given = (ctx: Ctx, ev: Evaluated): ReturnType<typeof givenCheckpoint> =>
+  givenCheckpoint(ctx.run.dir, ev.record.manifest.checkpoint);
 
 /**
  * Why a step cannot be dispatched: unregistered bindings its producer cannot
@@ -1024,11 +1094,20 @@ function evaluationAction(
       carry(production.findings, sealFindings(violations)),
     );
   }
-  const manifest = manifestOf(ctx, step, accepted, record.candidate, acceptedBefore(s, latest.seq));
+  const checkpoint = production ? null : checkpointEvidence(ctx, s, accepted);
+  const manifest = manifestOf(
+    ctx,
+    step,
+    accepted,
+    record.candidate,
+    acceptedBefore(s, latest.seq),
+    checkpoint,
+  );
   if (!manifest) throw new Error(`${step.id}: an input has no current acceptance`);
   const evaluation = evaluationDigest(manifest);
-  // A changed input, definition, rubric, verifier, skill or configuration
-  // makes a new evaluation of the same candidate; earlier records stay.
+  // A changed input, definition, rubric, verifier, skill, configuration or,
+  // at the exit, checkpoint evidence makes a new evaluation of the same
+  // candidate; earlier records stay.
   if (evaluation !== latest.evaluation) {
     const now = manifestOf(
       ctx,
@@ -1036,9 +1115,14 @@ function evaluationAction(
       accepted,
       record.candidate,
       acceptedBefore(s, Number.POSITIVE_INFINITY),
+      checkpoint,
     );
     if (!now) throw new Error(`${step.id}: an input has no current acceptance`);
-    return { kind: "evaluate", record: { ...record, manifest: now } };
+    return {
+      kind: "evaluate",
+      record: { ...record, manifest: now },
+      ...(checkpoint ? { checkpoint } : {}),
+    };
   }
   const ev: Evaluated = { step, attempt, evaluation, record, policy };
   const thisEvaluation = <T extends { evaluation: string; attempt: number }>(f: Fact<T>): boolean =>
@@ -1131,8 +1215,10 @@ function evaluationAction(
   if (d.decision === "accept") {
     throw new Error(`${step.id}: evaluation ${evaluation} is accepted but not current`);
   }
-  if (d.decision === "correct" && production) {
-    return newAttempt(ctx, s, step, accepted, attempt + 1, record.candidate, d.findings);
+  if (d.decision === "correct") {
+    return production
+      ? newAttempt(ctx, s, step, accepted, attempt + 1, record.candidate, d.findings)
+      : correctExit(ctx, s, accepted, d.findings);
   }
   const requests = s.requests.filter((r) => r.evaluation === evaluation);
   if (d.reasons.every((r) => r.route === "approval")) {
@@ -1163,6 +1249,11 @@ function evaluationAction(
  */
 function exitAction(ctx: Ctx, s: State, accepted: Map<string, Acceptance>): Action {
   const exit = exitStep(ctx.plan);
+  // A correction of the exit's findings runs as the correcting step's attempt.
+  const correcting = correctingStep(ctx);
+  if (correcting && correctionUnderway(s, correcting, accepted)) {
+    return stepAction(ctx, s, correcting, accepted);
+  }
   if (exitAcceptance(ctx, s, accepted)) return { kind: "done" };
   const latest = integrated(accepted);
   if (!latest) throw new Error(`${exit.id}: no step of the selection is accepted`);
@@ -1174,19 +1265,66 @@ function exitAction(ctx: Ctx, s: State, accepted: Map<string, Acceptance>): Acti
   const candidate = snapshotOf(latest.candidate);
   const blocked = readiness(ctx, s, exit, accepted, candidate);
   if (blocked.length > 0) return pause(exit.id, blocked);
+  const checkpoint = checkpointEvidence(ctx, s, accepted);
   const manifest = manifestOf(
     ctx,
     exit,
     accepted,
     candidate,
     acceptedBefore(s, Number.POSITIVE_INFINITY),
+    checkpoint,
   );
-  if (!manifest) throw new Error(`${exit.id}: a step has no current acceptance`);
+  if (!manifest || !checkpoint) throw new Error(`${exit.id}: a step has no current acceptance`);
   const attempt = Math.max(0, ...evaluations.map((e) => e.record.attempt)) + 1;
   return {
     kind: "evaluate",
     record: { step: exit.id, attempt, candidate: latest.candidate, claims: [], manifest },
+    checkpoint,
   };
+}
+
+/** Whether the correcting step has an attempt after its current acceptance. */
+function correctionUnderway(
+  s: State,
+  step: ContractStep,
+  accepted: Map<string, Acceptance>,
+): boolean {
+  const acceptance = accepted.get(step.id);
+  const latest = s.starts
+    .filter((f) => f.record.phase === "produce" && f.record.step === step.id)
+    .at(-1)?.record.attempt;
+  return acceptance !== undefined && latest !== undefined && latest > acceptance.decision.attempt;
+}
+
+/**
+ * Routes the exit evaluation's findings to the correcting step (Spec 00 §4;
+ * T3 plan §7): its next attempt, within its attempt budget, starts from the
+ * integrated candidate with those findings, and its acceptance moves the
+ * integrated candidate, which the exit then evaluates again. Earlier records
+ * stay as history. Without a contract step to correct it, the exit pauses.
+ */
+function correctExit(
+  ctx: Ctx,
+  s: State,
+  accepted: Map<string, Acceptance>,
+  findings: Finding[],
+): Action {
+  const exit = exitId(ctx.plan);
+  const step = correctingStep(ctx);
+  const acceptance = step ? accepted.get(step.id) : undefined;
+  if (!step || !acceptance) {
+    return pause(exit, [
+      reason("owner", exit, "no contract step can correct the exit evaluation's findings"),
+    ]);
+  }
+  const attempt =
+    Math.max(
+      0,
+      ...s.starts
+        .filter((f) => f.record.phase === "produce" && f.record.step === step.id)
+        .map((f) => f.record.attempt),
+    ) + 1;
+  return newAttempt(ctx, s, step, accepted, attempt, acceptance.candidate, findings);
 }
 
 /** The next action for a dispatchable step, from its attempts' facts. */
@@ -1482,15 +1620,22 @@ async function perform(ctx: Ctx, s: State, action: Action): Promise<Stop | undef
       return action;
     case "produce":
       return produce(ctx, s, action);
-    case "evaluate":
+    case "evaluate": {
+      // The exit's checkpoint evidence is stored and journaled with its evaluation.
+      const checkpoint = action.checkpoint ? putEvidence(run, stringify(action.checkpoint)) : null;
+      if (checkpoint !== action.record.manifest.checkpoint) {
+        throw new Error(`${action.record.step}: the evaluation names other checkpoint evidence`);
+      }
       journal(
         run,
         "evaluation",
         action.record,
         { attempt: action.record.attempt, evaluation: evaluationDigest(action.record.manifest) },
         { step: action.record.step },
+        checkpoint === null ? [] : [checkpoint],
       );
       return undefined;
+    }
     case "admit": {
       const { ev } = action;
       start(ctx, action, null);
@@ -1506,6 +1651,7 @@ async function perform(ctx: Ctx, s: State, action: Action): Promise<Stop | undef
         open: ctx.workspaces.verifier,
         reviewer: reviewerAccess(ctx),
         prepare: ctx.prepare,
+        checkpoint: given(ctx, ev) ?? undefined,
       });
       return undefined;
     }
@@ -1523,6 +1669,7 @@ async function perform(ctx: Ctx, s: State, action: Action): Promise<Stop | undef
         open: ctx.workspaces.verifier,
         bindings: action.bindings,
         prepare: ctx.prepare,
+        checkpoint: given(ctx, ev) ?? undefined,
       });
       return undefined;
     }
@@ -1539,6 +1686,7 @@ async function perform(ctx: Ctx, s: State, action: Action): Promise<Stop | undef
         accepted: acceptedOutputs(acceptances(ctx, s)),
         claims: ev.record.claims,
         reviewer: reviewerAccess(ctx),
+        checkpoint: given(ctx, ev) ?? undefined,
       });
       return undefined;
     }

@@ -27,6 +27,7 @@ import { z } from "zod";
 
 import {
   definitionOf,
+  exitId,
   plannedContract,
   sha256,
   type AcceptedOutput,
@@ -458,7 +459,16 @@ export function buildPacket(
   }
   const accepted: AcceptedOutput[] = [];
   const diagnostics: string[] = [];
-  for (const input of step.inputs.filter((i) => i.kind === "output")) {
+  // The exit evaluation consumes every planned step's accepted outputs.
+  const consumed =
+    step.id === exitId(plan)
+      ? plan.steps.flatMap((p) =>
+          p.kind === "contract"
+            ? p.outputs.map((o) => ({ name: `${p.id}/${o.id}`, ref: `${p.id}/${o.id}` }))
+            : [],
+        )
+      : step.inputs.filter((i) => i.kind === "output");
+  for (const input of consumed) {
     const [producer, output] = input.ref.split("/");
     const record = options.accepted.find(
       (o) =>

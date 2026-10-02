@@ -9,7 +9,7 @@
 import assert from "node:assert/strict";
 import { execFileSync } from "node:child_process";
 import { randomUUID } from "node:crypto";
-import { mkdirSync, mkdtempSync, rmSync } from "node:fs";
+import { existsSync, mkdirSync, mkdtempSync, readdirSync, rmSync, symlinkSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { after, describe, it } from "node:test";
@@ -18,9 +18,22 @@ import { fileURLToPath } from "node:url";
 import stringify from "safe-stable-stringify";
 
 import type { Packet } from "../src/claude.js";
-import { exportRevision, prepareRun, plannedContract, type PreparedRun } from "../src/contracts.js";
-import { createRun, type EvaluationManifest } from "../src/evidence.js";
-import { startRun, type RunResult } from "../src/runner.js";
+import {
+  exportRevision,
+  prepareRun,
+  plannedContract,
+  sha256,
+  type PreparedRun,
+} from "../src/contracts.js";
+import {
+  createRun,
+  readEvidence,
+  recoverRun,
+  releaseRun,
+  type EvaluationManifest,
+  type RunHandle,
+} from "../src/evidence.js";
+import { resumeRun, startRun, type RunResult } from "../src/runner.js";
 import {
   ADEQUACY_RUBRIC,
   APPLICABILITY,
@@ -30,22 +43,34 @@ import {
   REVIEW_ADEQUACY_RUBRIC,
   type Binding,
   type Declaration,
+  type Registry,
 } from "../src/software-bootstrap.js";
 import {
   admitVerifier,
   candidateTree,
+  containedDependencies,
+  decideAcceptance,
+  journalInput,
   pendingIssues,
   pendingTargets,
   targetKey,
   verifyCandidate,
   type Admission,
+  type CheckpointEvidence,
   type Invocation,
   type PreparationRecord,
 } from "../src/verification.js";
-import { captureSource, importSource, type SealedCandidate } from "../src/workspace.js";
+import {
+  captureSource,
+  createWorkspace,
+  importSource,
+  treeFiles,
+  type SealedCandidate,
+} from "../src/workspace.js";
 import {
   BINDINGS_DIR,
   CP96,
+  eventsIn,
   EXIT,
   fault,
   judgeVerifier,
@@ -61,7 +86,7 @@ import {
   S02,
   work,
 } from "./production-fixtures.js";
-import type { ScriptedAgent } from "./runner-fixtures.js";
+import { Crash, crashAfter, type ScriptedAgent } from "./runner-fixtures.js";
 import {
   passVerdict,
   reviewerRole,
@@ -133,6 +158,58 @@ async function run(options: {
   );
   assert.ok("dir" in result, stringify(result));
   return { result, dir: result.dir, reviewer };
+}
+
+/**
+ * Admits `binding` for CP96-S01 on `candidate` with offline workspaces and a
+ * passing reviewer, and returns its provisional invocation.
+ */
+async function provisional(
+  r: RunHandle,
+  candidate: SealedCandidate,
+  registry: Registry,
+  binding: string,
+  verifier: ReturnType<typeof judgeVerifier>,
+): Promise<{ invocation: Invocation }> {
+  const p = await plan(S01);
+  const step = plannedContract(p, S01);
+  assert.ok(step);
+  const manifest: EvaluationManifest = {
+    source: { commit: candidate.commit, tree: candidate.tree },
+    definitions: p.definitionsDigest,
+    step: { id: S01, definition: p.stepDefinitions[S01] ?? "" },
+    inputs: [],
+    harness: "t3.5-h1-test",
+    runModel: p.runModel,
+    verifiers: bindingDigests(registry, candidateTree(r, candidate), [binding]),
+    rubric: null,
+    skills: {},
+    configuration: "sha256:h1",
+    toolchain: { profile: "offline", lockfile: null },
+    pending: pendingTargets(p, step, new Set()),
+    checkpoint: null,
+  };
+  const reviewer = {
+    role: reviewerRole(),
+    open: verifier,
+    signal: new AbortController().signal,
+    provider: scriptedReviewer((packet) => passVerdict(packet.review?.subjects ?? [])),
+  };
+  const admission = await admitVerifier(r, {
+    plan: p,
+    step: S01,
+    registry,
+    binding,
+    candidate,
+    attempt: 1,
+    manifest,
+    accepted: [],
+    open: verifier,
+    reviewer,
+  });
+  const ref = admission.record.provisional;
+  assert.ok(ref, stringify(admission.record));
+  return { invocation: JSON.parse(readEvidence(r.dir, ref).toString("utf8")) as Invocation };
 }
 
 /** The `mode sha` Git gives a file's text as a blob. */
@@ -539,6 +616,7 @@ describe("T3.5 H1-03 candidate verification runs from the sealed candidate", () 
       configuration: "sha256:h1",
       toolchain: { profile: "offline", lockfile: null },
       pending,
+      checkpoint: null,
     };
     const verifier = judgeVerifier();
     const reviewer = {
@@ -736,23 +814,74 @@ describe("T3.5 H1-04 checkpoint-wide targets apply at the point their rules name
     assert.deepEqual(exitReview.review?.targets.map(targetKey), [EXIT_REVIEW]);
   });
 
-  it("missing terminal evidence prevents checkpoint completion", async () => {
-    const producer = producerOf((step) => {
-      const files = work(step);
-      return Object.fromEntries(
-        Object.entries(files).filter(([path]) => !path.includes("checkpoint.exit")),
+  it("missing terminal evidence prevents completion until the correcting step delivers it", async () => {
+    const withoutExit = (step: string): Record<string, string> =>
+      Object.fromEntries(
+        Object.entries(work(step)).filter(([path]) => !path.includes("checkpoint.exit")),
       );
-    });
-    const { result } = await run({ through: S02, producer });
+    const producer = producerOf((step, attempt) =>
+      step === S02 && attempt === 1 ? withoutExit(step) : work(step),
+    );
+    const { result, dir } = await run({ through: S02, producer });
+    assert.ok(result.outcome === "selection-accepted", stringify(result, null, 2));
+    assert.equal(result.checkpoint.complete, true);
+    // The exit found the terminal bindings missing and sent them to S02's producer.
+    const [exitDecision] = records<{
+      step: string;
+      decision: string;
+      findings: { rule: string; location: string }[];
+    }>(dir, "decision");
+    assert.deepEqual([exitDecision?.step, exitDecision?.decision], [EXIT, "correct"]);
+    assert.deepEqual(
+      exitDecision?.findings.map((f) => [f.rule, f.location]),
+      [
+        ["checkpoint.exit-check", `${BINDINGS_DIR}/checkpoint.exit-check.yml`],
+        ["checkpoint.exit-review", `${BINDINGS_DIR}/checkpoint.exit-review.yml`],
+      ],
+    );
+    assert.deepEqual(
+      producer.packets.map((p) => [p.step.id, p.attempt]),
+      [
+        [S01, 1],
+        [S02, 1],
+        [S02, 2],
+      ],
+    );
+    const correction = producer.packets.at(-1);
+    assert.deepEqual(
+      correction?.findings.map((f) => f.rule),
+      ["checkpoint.exit-check", "checkpoint.exit-review"],
+    );
+    const exits = records<{ step: string; attempt: number; candidate: { commit: string } }>(
+      dir,
+      "evaluation",
+    ).filter((e) => e.step === EXIT);
+    const s02 = records<{ step: string; candidate: string }>(dir, "acceptance").filter(
+      (a) => a.step === S02,
+    );
+    assert.deepEqual(
+      exits.map((e) => e.attempt),
+      [1, 2],
+    );
+    assert.deepEqual(
+      exits.map((e) => e.candidate.commit),
+      s02.map((a) => a.candidate),
+      "each exit evaluation is of the integrated candidate of its time",
+    );
+  });
+
+  it("missing terminal evidence never delivered leaves the checkpoint incomplete", async () => {
+    const producer = producerOf((step) =>
+      Object.fromEntries(
+        Object.entries(work(step)).filter(([path]) => !path.includes("checkpoint.exit")),
+      ),
+    );
+    const { result } = await run({ through: S02, producer, attempts: 2 });
     assert.ok(result.outcome === "paused", stringify(result, null, 2));
     assert.deepEqual(result.accepted, [S01, S02]);
-    assert.equal(result.step, EXIT);
     assert.deepEqual(
       result.reasons.map((r) => [r.code, r.subject]),
-      [
-        ["owner", "checkpoint.exit-check"],
-        ["owner", "checkpoint.exit-review"],
-      ],
+      [["exhausted", S02]],
     );
     assert.equal(result.checkpoint?.complete, false);
     assert.deepEqual(
@@ -761,29 +890,69 @@ describe("T3.5 H1-04 checkpoint-wide targets apply at the point their rules name
     );
   });
 
-  it("a failing exit check leaves the checkpoint incomplete and is never corrected by a producer", async () => {
-    const verifier = judgeVerifier((binding) =>
-      binding === "checkpoint.exit-check" ? "the changelog does not name CP96-S02" : null,
+  it("a failing exit check is corrected through the final step, and resume completes the checkpoint", async () => {
+    // S02's first changelog omits S02; the exit check fails while the
+    // checkpoint evidence it is given names that first S02 acceptance.
+    const verifier = judgeVerifier((binding, _snapshot, _run, checkpoint) =>
+      binding === "checkpoint.exit-check" &&
+      checkpoint?.steps.find((s) => s.step === S02)?.attempt === 1
+        ? "the changelog does not name CP96-S02"
+        : null,
     );
-    const producer = producerOf();
-    const { result, dir } = await run({ through: S02, producer, verifier });
-    assert.ok(result.outcome === "paused", stringify(result, null, 2));
-    assert.equal(result.step, EXIT);
+    const producer = producerOf((step, attempt) =>
+      step === S02 && attempt === 1
+        ? { ...work(step), "changes/CHANGELOG.md": fault("CHANGELOG-S01-only.md") }
+        : work(step),
+    );
+    const reviewer = reviewerOf();
+    const repo = productionRepo(scratch);
+    const own = join(scratch, `crash-${randomUUID()}`);
+    mkdirSync(own);
+    const config = productionConfig(repo, own, { through: S02 });
+    await assert.rejects(
+      startRun(
+        config,
+        productionDeps(repo, { producer, reviewer, verifier, progress: crashAfter("decision") }),
+      ),
+      Crash,
+    );
+    const [runDir, other] = readdirSync(join(own, "runs"));
+    assert.ok(runDir && other === undefined);
+    const dir = join(own, "runs", runDir);
+    const result = await resumeRun(dir, productionDeps(repo, { producer, reviewer, verifier }));
+    assert.ok(result.outcome === "selection-accepted", stringify(result, null, 2));
+    assert.equal(result.checkpoint.complete, true);
+    const decisions = records<{ step: string; decision: string; findings: { rule: string }[] }>(
+      dir,
+      "decision",
+    );
     assert.deepEqual(
-      result.reasons.map((r) => [r.code, r.subject]),
-      [["correct", EXIT_CHECK]],
+      decisions.map((d) => [d.step, d.decision, d.findings.map((f) => f.rule)]),
+      [[EXIT, "correct", [EXIT_CHECK]]],
     );
-    assert.equal(result.checkpoint?.complete, false);
     assert.deepEqual(
-      producer.packets.map((p) => p.step.id),
-      [S01, S02],
-      "no producer ran for the exit",
+      producer.packets.map((p) => [p.step.id, p.attempt, p.findings.map((f) => f.rule)]),
+      [
+        [S01, 1, []],
+        [S02, 1, []],
+        [S02, 2, [EXIT_CHECK]],
+      ],
     );
-    const decisions = records<{ step: string; decision: string }>(dir, "decision");
+    const acceptances = records<{ step: string; attempt: number }>(dir, "acceptance");
     assert.deepEqual(
-      decisions.map((d) => [d.step, d.decision]),
-      [[EXIT, "correct"]],
+      acceptances.map((a) => [a.step, a.attempt]),
+      [
+        [S01, 1],
+        [S02, 1],
+        [S02, 2],
+        [EXIT, 2],
+      ],
     );
+    // The corrected S02 candidate was verified again before the exit.
+    const rechecked = records<Invocation>(dir, "verifier-invocation").filter(
+      (i) => i.attempt === 2 && i.stage === "acceptance" && i.binding === "banner.prints",
+    );
+    assert.equal(rechecked.length, 1);
   });
 
   it("an evaluation cannot defer a target its rule does not defer", async () => {
@@ -808,5 +977,268 @@ describe("T3.5 H1-04 checkpoint-wide targets apply at the point their rules name
     assert.deepEqual(pendingIssues(p, exit, [{ target: EXIT_CHECK, rule: "exit" }]), [
       "the exit evaluation defers no target",
     ]);
+  });
+});
+
+describe("T3.5 H1-04 the exit evaluation is given the controller's checkpoint evidence", () => {
+  it("gives every exit judge and the exit reviewer the recorded acceptance of every step", async () => {
+    const verifier = judgeVerifier();
+    const { result, dir, reviewer } = await run({ through: S02, verifier });
+    assert.ok(result.outcome === "selection-accepted", stringify(result, null, 2));
+    assert.equal(result.checkpoint.complete, true);
+    const events = eventsIn(dir);
+    const exitEvaluation = records<{ step: string; manifest: EvaluationManifest }>(
+      dir,
+      "evaluation",
+    ).find((e) => e.step === EXIT);
+    const ref = exitEvaluation?.manifest.checkpoint;
+    assert.ok(ref, "the exit manifest names its checkpoint evidence");
+    const event = events.find((e) => e.action === "evaluation" && e.data.step === EXIT);
+    assert.ok(event?.evidence.includes(ref), "the evidence is journaled with the evaluation");
+    const evidence = JSON.parse(readEvidence(dir, ref).toString("utf8")) as CheckpointEvidence;
+    const accepted = events.filter((e) => e.action === "acceptance" && e.data.step !== EXIT);
+    assert.deepEqual(
+      evidence.steps.map((s) => [s.step, s.decision, s.evaluation]),
+      accepted.map((e) => [e.data.step, e.evidence[0], e.evaluation]),
+    );
+    const decisions = records<{ step: string; targets: string[] }>(dir, "acceptance");
+    for (const s of evidence.steps) {
+      assert.deepEqual(s.targets, decisions.find((d) => d.step === s.step)?.targets);
+    }
+    // Each exit judge got exactly that record; no step judge got any.
+    const judges = verifier.calls.filter((c) => c.role === "judge");
+    const given = judges.flatMap((c) => {
+      const stdin = JSON.parse(c.stdin) as { checkpoint?: CheckpointEvidence };
+      return stdin.checkpoint === undefined ? [] : [{ binding: c.binding, ...stdin }];
+    });
+    assert.deepEqual([...new Set(given.map((g) => g.binding))].sort(), [
+      "changelog.current",
+      "checkpoint.exit-check",
+      "repo.build-test",
+    ]);
+    for (const g of given) assert.deepEqual(g.checkpoint, evidence);
+    assert.ok(judges.length > given.length, "step judges run without it");
+    const exitDigest = event?.evaluation;
+    for (const i of records<Invocation>(dir, "verifier-invocation")) {
+      assert.equal(i.checkpoint, i.evaluation === exitDigest ? ref : null);
+    }
+    // The exit reviewer saw it and every accepted output.
+    const exitReview = reviewer.packets.find(
+      (p) => p.review?.kind === "candidate" && p.step.id === EXIT,
+    );
+    const shown = exitReview?.review?.evidence as { checkpoint?: unknown } | undefined;
+    assert.deepEqual(shown?.checkpoint, evidence);
+    assert.deepEqual(
+      exitReview?.inputs.accepted.map((a) => [a.step, a.output]),
+      [
+        [S01, "greeting"],
+        [S02, "banner"],
+      ],
+    );
+    for (const p of reviewer.packets.filter((x) => x.step.id !== EXIT)) {
+      assert.equal(
+        (p.review?.evidence as { checkpoint?: unknown } | undefined)?.checkpoint,
+        undefined,
+      );
+    }
+  });
+
+  it("refuses an exit decision whose evidence is missing, uncommitted, stale, incomplete or unshown", async () => {
+    const { result, dir } = await run({ through: S02 });
+    assert.ok(result.outcome === "selection-accepted", stringify(result, null, 2));
+    const p = await plan(S02);
+    const recovered = await recoverRun(dir, {
+      fence: () => Promise.resolve(),
+      liveness: () => "released",
+    });
+    assert.ok(recovered.kind === "recovered");
+    try {
+      const evaluation = records<{
+        step: string;
+        attempt: number;
+        candidate: { tree: string };
+        manifest: EvaluationManifest;
+      }>(dir, "evaluation").find((e) => e.step === EXIT);
+      assert.ok(evaluation);
+      const files = treeFiles(dir, evaluation.candidate.tree, BINDINGS_DIR);
+      const declared = declaredRegistry(
+        new Map(),
+        [...files].map(([path, bytes]) => ({ path, bytes })),
+        BINDINGS_DIR,
+        known(p),
+      );
+      const input = journalInput(recovered.run, {
+        plan: p,
+        step: EXIT,
+        run: recovered.run.run,
+        attempt: evaluation.attempt,
+        manifest: evaluation.manifest,
+        registry: declared.registry,
+        policy: { writable: ["changes", "src", "test", "verifiers"], scratch: [], protected: [] },
+        claims: [],
+        declarations: { dir: BINDINGS_DIR, rejected: declared.rejected },
+      });
+      const why = (d: ReturnType<typeof decideAcceptance>): string =>
+        d.decision === "accept"
+          ? "accepted"
+          : d.reasons.map((r) => `${r.subject}: ${r.detail}`).join("\n");
+      assert.equal(decideAcceptance(input).decision, "accept", why(decideAcceptance(input)));
+      const given = input.checkpoint;
+      assert.ok(given);
+      const rebind = (record: CheckpointEvidence): Parameters<typeof decideAcceptance>[0] => {
+        const ref = sha256(stringify(record));
+        return {
+          ...input,
+          manifest: { ...input.manifest, checkpoint: ref },
+          checkpoint: { ref, record },
+          journaled: new Set([...input.journaled, ref]),
+        };
+      };
+      const cases: [string, Parameters<typeof decideAcceptance>[0], RegExp][] = [
+        [
+          "missing",
+          { ...input, checkpoint: null },
+          /^checkpoint-evidence: the checkpoint evidence sha256:\w+ is missing$/mu,
+        ],
+        [
+          "another record than the manifest names",
+          (() => {
+            const record = { ...given.record, run: "another-run" };
+            return { ...input, checkpoint: { ref: sha256(stringify(record)), record } };
+          })(),
+          /^checkpoint-evidence: the checkpoint evidence sha256:\w+ is missing$/mu,
+        ],
+        [
+          "uncommitted",
+          { ...input, journaled: new Set([...input.journaled].filter((r) => r !== given.ref)) },
+          /^checkpoint-evidence: the checkpoint evidence is not in the committed journal$/mu,
+        ],
+        [
+          "stale",
+          rebind({
+            ...given.record,
+            steps: given.record.steps.map((s) =>
+              s.step === S01 ? { ...s, evaluation: `sha256:${"1".repeat(64)}` } : s,
+            ),
+          }),
+          /^checkpoint-evidence\/CP96-S01: it is stale: evaluation sha256:1{64}, the exit evaluation names sha256:\w+$/mu,
+        ],
+        [
+          "incomplete",
+          rebind({ ...given.record, steps: given.record.steps.filter((s) => s.step !== S02) }),
+          /^checkpoint-evidence\/CP96-S02: the checkpoint evidence holds 0 acceptances of CP96-S02$/mu,
+        ],
+        [
+          "unshown to the reviewer",
+          (() => {
+            const reviews = input.reviews.map((r) => {
+              const record = { ...r.record, checkpoint: null };
+              return { ref: sha256(stringify(record)), record };
+            });
+            return {
+              ...input,
+              reviews,
+              journaled: new Set([...input.journaled, ...reviews.map((r) => r.ref)]),
+            };
+          })(),
+          /^review: the review was not shown the evaluation's checkpoint evidence$/mu,
+        ],
+        [
+          "ungiven to a judge",
+          (() => {
+            const invocations = input.invocations.map((i) => {
+              const record = { ...i.record, checkpoint: null };
+              return { ref: sha256(stringify(record)), record };
+            });
+            return {
+              ...input,
+              invocations,
+              journaled: new Set([...input.journaled, ...invocations.map((i) => i.ref)]),
+            };
+          })(),
+          /its judge was not given the evaluation's checkpoint evidence$/mu,
+        ],
+      ];
+      for (const [name, variant, cause] of cases) {
+        const decision = decideAcceptance(variant);
+        assert.notEqual(decision.decision, "accept", name);
+        assert.match(why(decision), cause, name);
+      }
+    } finally {
+      releaseRun(recovered.run);
+    }
+  });
+});
+
+describe("T3.5 H1-03 a candidate link cannot carry a mount or build output into other source", () => {
+  /** A run whose base holds `src/generated/kept.txt` and the link `deps -> src`. */
+  async function linked(): Promise<{ r: RunHandle; base: SealedCandidate }> {
+    const r = createRun(join(scratch, `run-${randomUUID()}`));
+    const dir = join(scratch, `tree-${randomUUID()}`);
+    writeFiles(dir, {
+      "package.json": "{}\n",
+      "src/generated/kept.txt": "source\n",
+      "verifiers/subject.mjs": "\n",
+      "verifiers/judge.mjs": "\n",
+    });
+    symlinkSync("src", join(dir, "deps"));
+    symlinkSync("src", join(dir, "build"));
+    const none = { writable: [], scratch: [], protected: [] };
+    const captured = captureSource(r.dir, dir, null, none, "linked");
+    assert.ok(captured.ok, captured.ok ? "" : captured.diagnostics.join("\n"));
+    return { r, base: captured.candidate };
+  }
+
+  it("refuses a mount path through a link before touching any file", async () => {
+    const { r, base } = await linked();
+    const root = join(scratch, `ws-${randomUUID()}`);
+    const source = join(scratch, `deps-${randomUUID()}`);
+    mkdirSync(source);
+    await assert.rejects(
+      createWorkspace(r, {
+        base,
+        root,
+        policy: { writable: [], scratch: [], protected: [] },
+        mounts: [{ path: "deps/generated", source }],
+      }),
+      /deps\/generated: resolves through a link at deps/u,
+    );
+    assert.equal(existsSync(root), false, "no workspace directory was made");
+  });
+
+  it("fails dependency preparation and build output whose path resolves through a link", async () => {
+    const { r, base } = await linked();
+    const prepare = containedDependencies(r, join(scratch, `deps-${randomUUID()}`), {
+      inputs: ["package.json"],
+      command: ["true"],
+      outputs: ["deps/generated"],
+      network: "none",
+      timeoutMs: 1_000,
+    });
+    const prepared = await prepare(base);
+    assert.equal(prepared.outcome, "failed");
+    assert.match(prepared.reason ?? "", /holds deps at a dependency output path/u);
+
+    const binding = {
+      id: "repo.build-test",
+      method: "automated" as const,
+      version: "1",
+      command: ["node", "verifiers/subject.mjs"],
+      judge: ["node", "verifiers/judge.mjs"],
+      files: ["verifiers/judge.mjs", "verifiers/subject.mjs"],
+      timeoutMs: 1_000,
+      observations: [],
+      scratch: ["build/out"],
+    };
+    const registry = createRegistry([binding]);
+    assert.ok(registry.ok, registry.ok ? "" : registry.diagnostics.join("\n"));
+    const verifier = judgeVerifier();
+    const { invocation } = await provisional(r, base, registry.registry, binding.id, verifier);
+    assert.deepEqual(invocation.subjects, [], "no subject ran");
+    assert.ok(invocation.results.every((x) => x.outcome === "failed"));
+    assert.match(
+      invocation.results[0]?.outcome === "failed" ? invocation.results[0].reason : "",
+      /the candidate holds build under the scratch paths build\/out/u,
+    );
   });
 });

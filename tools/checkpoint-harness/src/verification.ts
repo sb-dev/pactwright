@@ -78,6 +78,7 @@ import {
   createWorkspace,
   exec,
   fence,
+  linkAncestor,
   profileDigest,
   subsetSnapshot,
   treeEntries,
@@ -137,6 +138,8 @@ export type Invocation = Identity & {
   judge: (RunRecord & { snapshot: SourceSnapshot }) | null;
   /** The prepared dependencies the subjects ran with: their key and preparation record. */
   dependencies: { key: string; record: string } | null;
+  /** The checkpoint evidence the judge was given, for the exit evaluation; else null. */
+  checkpoint: string | null;
   /** Why a run could not start or complete; its targets are then unavailable. */
   error: string | null;
   /** A failure to stop a workspace after its run; the run's results still stand. */
@@ -156,6 +159,8 @@ export type ReviewRecord = Identity & {
   rubric: string;
   /** Digest of the reviewer's packet. */
   packet: string;
+  /** The checkpoint evidence the reviewer was shown, for the exit evaluation; else null. */
+  checkpoint: string | null;
   outcome: AgentOutcome;
 };
 
@@ -256,6 +261,42 @@ export type PreparedDependencies = {
 };
 
 export type PrepareDependencies = (candidate: SealedCandidate) => Promise<PreparedDependencies>;
+
+/**
+ * What the controller gives the checkpoint exit evaluation (T3.5 H1; CP01
+ * R05/AC05): every planned step's current acceptance as the journal records
+ * it, with the revision it names, its proven targets and outputs, the
+ * evidence it counted and its effects' receipts. It is built from the
+ * controller's own records, stored as evidence and named by digest in the
+ * exit evaluation's manifest, then handed to each exit judge on stdin and to
+ * the exit reviewer, never through the candidate.
+ */
+export type CheckpointEvidence = {
+  checkpoint: string;
+  run: string;
+  definitions: string;
+  steps: {
+    step: string;
+    /** The acceptance record. */
+    decision: string;
+    attempt: number;
+    evaluation: string;
+    candidate: SourceSnapshot;
+    targets: string[];
+    outputs: OutputProof[];
+    evidence: string[];
+    receipts: {
+      record: string;
+      key: string;
+      target: string;
+      reference: string;
+      reconciled: boolean;
+    }[];
+  }[];
+};
+
+/** Checkpoint evidence as given to an exit evaluation: its record and evidence reference. */
+export type GivenCheckpoint = { ref: string; record: CheckpointEvidence };
 
 export type ReviewerAccess = {
   role: AgentRole;
@@ -438,9 +479,16 @@ export function pendingIssues(
 export const candidateTree = (run: RunHandle, snapshot: SourceSnapshot): Map<string, string> =>
   treeEntries(run.dir, snapshot.tree);
 
-/** The paths of `tree` at or below any of `prefixes`. */
+/**
+ * What the candidate holds at the workspace paths `prefixes`: its files at
+ * or below them, and the links on their ancestors that would resolve them
+ * into other source.
+ */
 const heldUnder = (tree: ReadonlyMap<string, string>, prefixes: readonly string[]): string[] =>
-  [...tree.keys()].filter((path) => within(path, prefixes));
+  unique([
+    ...[...tree.keys()].filter((path) => within(path, prefixes)),
+    ...prefixes.flatMap((p) => linkAncestor(tree, p) ?? []),
+  ]);
 
 function identityOf(
   run: RunHandle,
@@ -511,7 +559,11 @@ export function containedDependencies(
   const cache = join(root, "dependencies");
   return async (candidate) => {
     const tree = candidateTree(run, candidate);
-    const inputs = subsetSnapshot(run.dir, candidate, heldUnder(tree, spec.inputs));
+    const inputs = subsetSnapshot(
+      run.dir,
+      candidate,
+      [...tree.keys()].filter((path) => within(path, spec.inputs)),
+    );
     const identity = { inputs: inputs.tree, spec, profile: profileDigest };
     const key = sha256(stringify(identity));
     const dir = join(cache, key.slice("sha256:".length));
@@ -750,9 +802,14 @@ async function runBinding(
     candidate: SealedCandidate;
     open: OpenWorkspace;
     prepare?: PrepareDependencies | undefined;
+    checkpoint?: GivenCheckpoint | undefined;
   },
 ): Promise<Stored<Invocation>> {
   const { binding, identity } = input;
+  const checkpoint = input.checkpoint ?? null;
+  if (checkpoint && sha256(stringify(checkpoint.record)) !== checkpoint.ref) {
+    throw new Error(`the checkpoint evidence does not match ${checkpoint.ref}`);
+  }
   let error: string | null = null;
   const cleanup: string[] = [];
   const timeoutMs = binding.timeoutMs;
@@ -843,7 +900,13 @@ async function runBinding(
         timedOut: ran.timedOut,
         stdout: ran.stdout.toString("utf8"),
       }));
-      const stdin = Buffer.from(JSON.stringify({ binding: binding.id, runs }));
+      const stdin = Buffer.from(
+        JSON.stringify({
+          binding: binding.id,
+          runs,
+          ...(checkpoint ? { checkpoint: checkpoint.record } : {}),
+        }),
+      );
       judge = await contained(judged, (ws) => ws.exec(judgeArgv, { timeoutMs, stdin }));
     }
   }
@@ -870,6 +933,7 @@ async function runBinding(
         ? null
         : { ...record(judgeArgv, judge), snapshot: { commit: judged.commit, tree: judged.tree } },
     dependencies,
+    checkpoint: checkpoint?.ref ?? null,
     error: error ?? (precondition?.outcome === "unavailable" ? precondition.reason : null),
     cleanup: cleanup.length > 0 ? cleanup.join("; ") : null,
     results:
@@ -887,6 +951,7 @@ async function runBinding(
       r === null ? [] : [r.stdout, r.stderr],
     ),
     ...(dependencies ? [dependencies.record] : []),
+    ...(checkpoint ? [checkpoint.ref] : []),
   ];
   journal(run, "verifier-invocation", identity, stored.ref, runs, {
     binding: binding.id,
@@ -940,6 +1005,8 @@ type VerifyInput = {
   admissions: readonly Stored<Admission>[];
   /** Prepares the candidate's dependencies for bindings that declare them. */
   prepare?: PrepareDependencies | undefined;
+  /** The checkpoint evidence of an exit evaluation, given to every judge. */
+  checkpoint?: GivenCheckpoint | undefined;
 };
 
 /**
@@ -1000,6 +1067,7 @@ export async function verifyCandidate(
         candidate: input.candidate,
         open: input.open,
         prepare: input.prepare,
+        checkpoint: input.checkpoint,
       }),
     );
   }
@@ -1039,6 +1107,8 @@ async function runReview(
     shown: readonly string[];
     /** The output inventory the context shows. */
     outputs: readonly OutputProof[];
+    /** The checkpoint evidence the context shows, for the exit evaluation. */
+    checkpoint: string | null;
     reviewer: ReviewerAccess;
   },
 ): Promise<Stored<ReviewRecord>> {
@@ -1081,9 +1151,10 @@ async function runReview(
     cleanup,
     rubric: input.context.rubric.digest,
     packet: built.digest,
+    checkpoint: input.checkpoint,
     outcome,
   } satisfies ReviewRecord);
-  journal(run, "review", identity, stored.ref, input.shown, {
+  journal(run, "review", identity, stored.ref, [...input.shown, input.checkpoint], {
     kind: input.context.kind,
     outcome: outcome.outcome,
     session: outcome.observation.session,
@@ -1238,6 +1309,7 @@ export async function admitVerifier(
     open: OpenWorkspace;
     reviewer: ReviewerAccess;
     prepare?: PrepareDependencies | undefined;
+    checkpoint?: GivenCheckpoint | undefined;
   },
 ): Promise<Stored<Admission>> {
   const step = contractStep(input.plan, input.step);
@@ -1308,6 +1380,7 @@ export async function admitVerifier(
       candidate: input.candidate,
       open: input.open,
       prepare: input.prepare,
+      checkpoint: input.checkpoint,
     });
 
     const location = binding.files.join(", ") || binding.command.join(" ");
@@ -1366,6 +1439,7 @@ export async function admitVerifier(
     reviewer: input.reviewer,
     shown: provisional ? [provisional.ref] : [],
     outputs: [],
+    checkpoint: null,
     context: {
       kind: "adequacy",
       rubric,
@@ -1483,9 +1557,12 @@ export async function reviewCandidate(
     accepted: readonly AcceptedOutput[];
     claims: Submission["outputs"];
     reviewer: ReviewerAccess;
+    /** The checkpoint evidence of an exit evaluation, shown to the reviewer. */
+    checkpoint?: GivenCheckpoint | undefined;
   },
 ): Promise<Stored<ReviewRecord>> {
   const step = contractStep(input.plan, input.step);
+  const checkpoint = input.checkpoint ?? null;
   const identity = identityOf(run, input.attempt, input.manifest, input.candidate);
   const scope = reviewScope(input.plan, step, input.registry, input.manifest.pending);
   const { proofs, issues } = inventory(step, input.claims, candidateTree(run, input.candidate));
@@ -1508,6 +1585,7 @@ export async function reviewCandidate(
     reviewer: input.reviewer,
     shown: shown.map((i) => i.ref),
     outputs: proofs,
+    checkpoint: checkpoint?.ref ?? null,
     context: {
       kind: "candidate",
       rubric: COMMON_RUBRIC,
@@ -1517,6 +1595,7 @@ export async function reviewCandidate(
       evidence: {
         verification: verificationSummary(shown),
         outputs: { proofs, issues },
+        ...(checkpoint ? { checkpoint: checkpoint.record } : {}),
       },
     },
   });
@@ -1551,6 +1630,11 @@ export type AcceptanceInput = {
    * refused (T3.5 H1); none when the run configures no declarations.
    */
   declarations?: { dir: string | null; rejected: readonly Rejection[] };
+  /**
+   * The checkpoint evidence the exit evaluation's manifest names, read from
+   * the run's evidence; null or absent when there is none.
+   */
+  checkpoint?: GivenCheckpoint | null;
 };
 
 /**
@@ -1665,13 +1749,83 @@ export function decideAcceptance(input: AcceptanceInput): Decision {
     return false;
   };
 
+  // The exit evaluation is given the controller's checkpoint evidence: it
+  // must exist, be committed and hold exactly the current acceptance of every
+  // planned step that the evaluation's inputs name.
+  const exiting = step.id === exitId(plan);
+  if (!exiting && manifest.checkpoint !== null) {
+    reason("retry", "evaluation", "a step evaluation names checkpoint evidence");
+  }
+  if (exiting) {
+    const given = input.checkpoint ?? null;
+    if (manifest.checkpoint === null) {
+      reason("retry", "checkpoint-evidence", "the exit evaluation names no checkpoint evidence");
+    } else if (
+      given === null ||
+      given.ref !== manifest.checkpoint ||
+      sha256(stringify(given.record)) !== given.ref
+    ) {
+      reason(
+        "owner",
+        "checkpoint-evidence",
+        `the checkpoint evidence ${manifest.checkpoint} is missing`,
+      );
+    } else if (!input.journaled.has(given.ref)) {
+      reason(
+        "retry",
+        "checkpoint-evidence",
+        "the checkpoint evidence is not in the committed journal",
+      );
+    } else {
+      const record = given.record;
+      if (record.checkpoint !== plan.checkpoint || record.definitions !== plan.definitionsDigest) {
+        reason("retry", "checkpoint-evidence", "the checkpoint evidence is of other definitions");
+      }
+      const planned = plan.steps.filter((s): s is ContractStep => s.kind === "contract");
+      for (const entry of record.steps) {
+        if (!planned.some((s) => s.id === entry.step)) {
+          reason("retry", `checkpoint-evidence/${entry.step}`, "it is not a planned step");
+        }
+      }
+      for (const s of planned) {
+        const subject = `checkpoint-evidence/${s.id}`;
+        const entries = record.steps.filter((e) => e.step === s.id);
+        const [entry] = entries;
+        const named = unique(
+          manifest.inputs.filter((i) => i.step === s.id).map((i) => i.evaluation),
+        );
+        if (entries.length !== 1 || entry === undefined) {
+          reason(
+            "retry",
+            subject,
+            `the checkpoint evidence holds ${entries.length} acceptances of ${s.id}`,
+          );
+        } else if (!input.journaled.has(entry.decision)) {
+          reason(
+            "retry",
+            subject,
+            `its acceptance ${entry.decision} is not in the committed journal`,
+          );
+        } else if (named.some((e) => e !== entry.evaluation)) {
+          reason(
+            "retry",
+            subject,
+            `it is stale: evaluation ${entry.evaluation}, the exit evaluation names ${named.join(", ")}`,
+          );
+        }
+      }
+    }
+  }
+
   const admissions = input.admissions.filter((a) => intact(`admission ${a.ref}`, a));
   const runs = new Map<string, Stored<Invocation>[]>();
   for (const stored of input.invocations) {
     const r = stored.record;
     const label = `invocation ${r.id} of ${r.binding}`;
     if (!current(label, stored) || r.stage === "provisional") continue;
-    if (!targets.some((t) => t.method === "automated" && t.binding === r.binding)) {
+    if ((r.checkpoint ?? null) !== manifest.checkpoint) {
+      reason("retry", label, "its judge was not given the evaluation's checkpoint evidence");
+    } else if (!targets.some((t) => t.method === "automated" && t.binding === r.binding)) {
       reason("retry", label, `${step.id} has no automated target of ${r.binding}`);
     } else if (r.digest !== digests[r.binding]) {
       reason(
@@ -1990,6 +2144,9 @@ export function decideAcceptance(input: AcceptanceInput): Decision {
     evidence.add(stored.ref);
     break;
   }
+  if (bound !== null && (bound.checkpoint ?? null) !== manifest.checkpoint) {
+    reason("retry", "review", "the review was not shown the evaluation's checkpoint evidence");
+  }
   if (bound !== null) {
     // The verdict speaks for the evidence it was shown: exactly the runs counted here.
     const counted = unique([...runs.values()].flat().map((i) => i.ref));
@@ -2068,29 +2225,21 @@ export function decideAcceptance(input: AcceptanceInput): Decision {
   };
 }
 
-/** Inputs `recordDecision` reads from the run instead of taking them from its caller. */
-type FromJournal = "tree" | "invocations" | "admissions" | "reviews" | "approvals" | "journaled";
-
 /**
- * Decides an attempt from the run's committed journal and records the
- * decision. The candidate's files come from the evaluation's source tree.
- * The attempt's invocations and reviews, the approvals of its evaluation and
- * every admission are read from their journal events in sequence, so a
- * caller can neither omit nor reorder them. Only an `accept` is journaled as
- * `acceptance` and returns accepted output instances; any other decision is
- * journaled as `decision`. The decision is always derived here.
+ * The acceptance input of an attempt with every part `recordDecision` reads
+ * from the run's committed journal and evidence rather than from its caller.
  */
-export function recordDecision(
+export function journalInput(
   run: RunHandle,
   input: Omit<AcceptanceInput, FromJournal>,
-): { decision: Decision; ref: string; accepted: AcceptedOutput[] } {
+): AcceptanceInput {
   const events = committedEvents(run);
   const evaluation = evaluationDigest(input.manifest);
   const load = <T>(action: string, keep: (e: JournalEvent) => boolean): Stored<T>[] =>
     journalRecords<T>(run, events, action, keep);
   const thisAttempt = (e: JournalEvent): boolean =>
     e.attempt === input.attempt && e.evaluation === evaluation;
-  const decision = decideAcceptance({
+  return {
     ...input,
     tree: candidateTree(run, input.manifest.source),
     invocations: load<Invocation>("verifier-invocation", thisAttempt),
@@ -2098,7 +2247,41 @@ export function recordDecision(
     reviews: load<ReviewRecord>("review", thisAttempt),
     approvals: load<Approval>("approval", (e) => e.evaluation === evaluation),
     journaled: new Set(events.flatMap((e) => e.evidence)),
-  });
+    checkpoint: givenCheckpoint(run.dir, input.manifest.checkpoint),
+  };
+}
+
+/** The checkpoint evidence stored under `ref`, or null when there is none or it is unreadable. */
+export function givenCheckpoint(dir: string, ref: string | null): GivenCheckpoint | null {
+  if (ref === null) return null;
+  try {
+    const record = JSON.parse(readEvidence(dir, ref).toString("utf8")) as CheckpointEvidence;
+    return { ref, record };
+  } catch {
+    return null;
+  }
+}
+
+/** Inputs `recordDecision` reads from the run instead of taking them from its caller. */
+type FromJournal =
+  "tree" | "invocations" | "admissions" | "reviews" | "approvals" | "journaled" | "checkpoint";
+
+/**
+ * Decides an attempt from the run's committed journal and records the
+ * decision. The candidate's files come from the evaluation's source tree.
+ * The attempt's invocations and reviews, the approvals of its evaluation and
+ * every admission are read from their journal events in sequence, so a
+ * caller can neither omit nor reorder them. The checkpoint evidence an exit
+ * evaluation's manifest names is read from the run's evidence. Only an
+ * `accept` is journaled as `acceptance` and returns accepted output
+ * instances; any other decision is journaled as `decision`. The decision is
+ * always derived here.
+ */
+export function recordDecision(
+  run: RunHandle,
+  input: Omit<AcceptanceInput, FromJournal>,
+): { decision: Decision; ref: string; accepted: AcceptedOutput[] } {
+  const decision = decideAcceptance(journalInput(run, input));
   const ref = putEvidence(run, stringify(decision));
   const accepted: AcceptedOutput[] =
     decision.decision === "accept"

@@ -350,6 +350,20 @@ function chownTree(path: string, id: number): void {
   }
 }
 
+/**
+ * The link at `path` or at one of its ancestors in `entries` (path → `mode
+ * sha`), if any: a path through it would resolve to other source.
+ */
+export function linkAncestor(
+  entries: ReadonlyMap<string, string>,
+  path: string,
+): string | undefined {
+  return path
+    .split("/")
+    .map((_, i, parts) => parts.slice(0, i + 1).join("/"))
+    .find((prefix) => entries.get(prefix)?.startsWith("120000 "));
+}
+
 /** A host directory mounted read-only at a workspace path, such as prepared dependencies. */
 export type Mount = { path: string; source: string };
 
@@ -381,13 +395,10 @@ export async function createWorkspace(
   const inBase = treeEntries(run.dir, base.tree);
   const existsInBase = (p: string): boolean =>
     [...inBase.keys()].some((path) => path === p || path.startsWith(`${p}/`));
-  // Docker resolves a link in a bind source, so a base link on a policy path
-  // or its ancestors would mount other source (such as a protected path) there.
-  const linkOn = (p: string): string | undefined =>
-    p
-      .split("/")
-      .map((_, i, parts) => parts.slice(0, i + 1).join("/"))
-      .find((prefix) => inBase.get(prefix)?.startsWith("120000 "));
+  // Docker resolves a link in a bind source, so a base link on a policy or
+  // mount path or its ancestors would mount other source (such as a protected
+  // path) there.
+  const linkOn = (p: string): string | undefined => linkAncestor(inBase, p);
   const paths = [...policy.writable, ...policy.scratch, ...policy.protected];
   const errors = [
     ...paths.flatMap((p) => policyPathError(p) ?? []),
@@ -400,6 +411,10 @@ export async function createWorkspace(
       .map((p) => `${p}: protected path is absent`),
     ...policy.scratch.filter(existsInBase).map((p) => `${p}: scratch path holds source`),
     ...mounts.flatMap((m) => policyPathError(m.path) ?? []),
+    ...mounts.flatMap((m) => {
+      const link = linkOn(m.path);
+      return link === undefined ? [] : [`${m.path}: resolves through a link at ${link}`];
+    }),
     ...mounts.filter((m) => existsInBase(m.path)).map((m) => `${m.path}: mount path holds source`),
     ...mounts
       .filter((m) => !isAbsolute(m.source) || /[,"]/.test(m.source))

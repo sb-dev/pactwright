@@ -11,14 +11,15 @@
 
 import assert from "node:assert/strict";
 import { execFileSync } from "node:child_process";
-import { mkdtempSync, rmSync } from "node:fs";
+import { existsSync, mkdtempSync, rmSync, symlinkSync } from "node:fs";
+import { randomUUID } from "node:crypto";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { after, before, describe, it } from "node:test";
 
 import stringify from "safe-stable-stringify";
 
-import { readEvidence } from "../../src/evidence.js";
+import { createRun, readEvidence, type RunHandle } from "../../src/evidence.js";
 import { containedProducer, startRun, type RunnerDeps, type RunResult } from "../../src/runner.js";
 import {
   containedDependencies,
@@ -26,7 +27,16 @@ import {
   type Invocation,
   type PreparationRecord,
 } from "../../src/verification.js";
-import { fenceWorkers, PROFILE, treeEntries } from "../../src/workspace.js";
+import {
+  captureSource,
+  createWorkspace,
+  exec,
+  fence,
+  fenceWorkers,
+  PROFILE,
+  treeEntries,
+  type SourceSnapshot,
+} from "../../src/workspace.js";
 import {
   DEPENDENCIES,
   EXIT,
@@ -223,24 +233,95 @@ describe("T3.5 H1-04 contained: the exit evaluation applies the terminal targets
     assert.equal(exit?.step, EXIT);
   });
 
-  it("a real exit check that finds a step missing leaves the checkpoint incomplete", async () => {
+  it("a real exit check that finds a step missing is corrected through the final step", async () => {
     const producer = producerOf(
-      (step) =>
-        step === S02
+      (step, attempt) =>
+        step === S02 && attempt === 1
           ? { ...work(step), "changes/CHANGELOG.md": fault("CHANGELOG-S01-only.md") }
           : work(step),
       { mkdirs: true },
     );
     const { result, dir } = await start(S02, producer);
-    assert.ok(result.outcome === "paused", stringify(result, null, 2));
-    assert.deepEqual(result.accepted, [S01, S02]);
-    assert.equal(result.step, EXIT);
-    assert.equal(result.checkpoint?.complete, false);
-    const check = records<Invocation>(dir, "verifier-invocation").find(
+    assert.ok(result.outcome === "selection-accepted", stringify(result, null, 2));
+    assert.equal(result.checkpoint.complete, true);
+    const checks = records<Invocation>(dir, "verifier-invocation").filter(
       (i) => i.binding === "checkpoint.exit-check" && i.stage === "acceptance",
     );
-    const [outcome] = check?.results ?? [];
-    assert.ok(outcome?.outcome === "failed", stringify(check));
-    assert.match(outcome.reason, /does not name CP96-S02/u);
+    assert.deepEqual(
+      checks.map((i) => i.results.map((r) => r.outcome)),
+      [["failed"], ["passed"]],
+    );
+    const [failed] = checks[0]?.results ?? [];
+    assert.ok(failed?.outcome === "failed");
+    assert.match(failed.reason, /the changelog does not name CP96-S02/u);
+    const [passed] = checks[1]?.results ?? [];
+    assert.ok(passed?.outcome === "passed");
+    // The real judge counted both steps from the checkpoint evidence it was given.
+    assert.deepEqual(passed.observations.accepted, [S01, S02]);
+    assert.deepEqual(
+      producer.packets.map((p) => [p.step.id, p.attempt, p.findings.map((f) => f.rule)]),
+      [
+        [S01, 1, []],
+        [S02, 1, []],
+        [S02, 2, ["CP96/AC03/-/automated/checkpoint.exit-check"]],
+      ],
+    );
+  });
+});
+
+describe("T3.5 H1-03 contained: mounts never resolve into candidate source", () => {
+  /** A run whose base holds `src/generated/kept.txt`, with the link `deps -> src` when `link`. */
+  async function based(link: boolean): Promise<{ r: RunHandle; base: SourceSnapshot }> {
+    const r = createRun(join(scratch, `run-${randomUUID()}`));
+    runs.push(r.run);
+    const dir = join(scratch, `tree-${randomUUID()}`);
+    writeFiles(dir, { "src/generated/kept.txt": "source\n" });
+    if (link) symlinkSync("src", join(dir, "deps"));
+    const none = { writable: [], scratch: [], protected: [] };
+    const captured = captureSource(r.dir, dir, null, none, "base");
+    assert.ok(captured.ok, captured.ok ? "" : captured.diagnostics.join("\n"));
+    return { r, base: { commit: captured.candidate.commit, tree: captured.candidate.tree } };
+  }
+
+  const prepared = (): string => {
+    const source = join(scratch, `prepared-${randomUUID()}`);
+    writeFiles(source, { "dep.txt": "prepared\n" });
+    return source;
+  };
+
+  it("a mount through a candidate link is refused and the linked source is untouched", async () => {
+    const { r, base } = await based(true);
+    const root = join(scratch, `ws-${randomUUID()}`);
+    await assert.rejects(
+      createWorkspace(r, {
+        base,
+        root,
+        policy: { writable: [], scratch: [], protected: [] },
+        mounts: [{ path: "deps/generated", source: prepared() }],
+      }),
+      /deps\/generated: resolves through a link at deps/u,
+    );
+    assert.equal(existsSync(root), false);
+    assert.equal(containers(r.run), "", "no container was started");
+  });
+
+  it("an ordinary nested mount is mounted read-only beside the candidate source", async () => {
+    const { r, base } = await based(false);
+    const ws = await createWorkspace(r, {
+      base,
+      root: join(scratch, `ws-${randomUUID()}`),
+      policy: { writable: [], scratch: [], protected: [] },
+      mounts: [{ path: "deps/generated", source: prepared() }],
+    });
+    try {
+      const read = await exec(ws, ["cat", "deps/generated/dep.txt", "src/generated/kept.txt"]);
+      assert.equal(read.exitCode, 0, read.stderr.toString("utf8"));
+      assert.equal(read.stdout.toString("utf8"), "prepared\nsource\n");
+      const write = await exec(ws, ["sh", "-c", "echo x > deps/generated/new.txt"]);
+      assert.notEqual(write.exitCode, 0);
+      assert.match(write.stderr.toString("utf8"), /Read-only file system/u);
+    } finally {
+      await fence(ws);
+    }
   });
 });
