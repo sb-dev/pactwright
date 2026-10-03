@@ -86,6 +86,22 @@ importers:
         specifier: ^5.9.3
         version: 5.9.3
 
+  tools/repository-settings:
+    dependencies:
+      commander:
+        specifier: ^14.0.3
+        version: 14.0.3
+    devDependencies:
+      '@types/node':
+        specifier: ^22.20.1
+        version: 22.20.1
+      tsx:
+        specifier: ^4.23.12
+        version: 4.23.12
+      typescript:
+        specifier: ^5.9.3
+        version: 5.9.3
+
 packages:
 
   '@anthropic-ai/claude-agent-sdk-darwin-arm64@0.3.283':

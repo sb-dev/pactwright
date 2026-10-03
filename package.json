@@ -45,6 +45,7 @@
     "prepack": "pnpm build",
     "pactwright": "node dist/cli.js",
     "contracts:check": "pnpm --filter @pactwright/checkpoint-harness contracts:check",
+    "github:settings": "pnpm --filter @pactwright/repository-settings settings --",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
     "lint": "eslint .",
