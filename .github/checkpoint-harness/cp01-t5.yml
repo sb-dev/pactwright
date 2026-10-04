@@ -87,6 +87,13 @@ publication:
   pull_request:
     title: "CP01 T5: harness-accepted selection"
     draft: true
+  # A push by the workflow token starts no workflow: each published head,
+  # initial or corrected, gets the repository's verification as its next
+  # review, dispatched by the harness. The live Claude job is left out.
+  review:
+    workflow: checkpoint-harness-verify.yml
+    inputs:
+      live: "false"
 job:
   # Yield well before the controller job's 330-minute limit.
   yield_after_seconds: 18000

@@ -15,6 +15,7 @@ import { dirname, join } from "node:path";
 import { after, describe, it } from "node:test";
 import { fileURLToPath } from "node:url";
 
+import yaml from "js-yaml";
 import stringify from "safe-stable-stringify";
 
 import type { AgentOutcome } from "../src/claude.js";
@@ -1854,6 +1855,53 @@ describe("H3-14 one correction path for reviews and manual rounds", () => {
     assert.equal(
       receipts.filter((r) => r.receipt.target.includes("checkpoint-harness-verify.yml")).length,
       3,
+    );
+  });
+
+  it("the complete CP01 template dispatches its review once for every published head", async () => {
+    const root = join(here, "../../..");
+    const cp01 = yaml.load(
+      readFileSync(join(root, ".github/checkpoint-harness/cp01-t5.yml"), "utf8"),
+    ) as { publication: { review?: { workflow: string; inputs?: Record<string, string> } } };
+    const review = cp01.publication.review;
+    assert.deepEqual(review, {
+      workflow: "checkpoint-harness-verify.yml",
+      inputs: { live: "false" },
+    });
+    // The workflow it names is dispatchable with exactly those inputs.
+    const named = yaml.load(
+      readFileSync(join(root, ".github/workflows", review.workflow), "utf8"),
+    ) as {
+      on: { workflow_dispatch?: { inputs?: Record<string, unknown> } };
+    };
+    for (const input of Object.keys(review.inputs ?? {})) {
+      assert.ok(named.on.workflow_dispatch?.inputs?.[input], `${review.workflow} accepts ${input}`);
+    }
+    // CP01's publication settings, on the fixture: initial and corrected heads each get one review.
+    const w = world(scratch, {
+      edit: (t) =>
+        t.replace(/^publication:\n(?:[ #].*\n)*/m, yaml.dump({ publication: cp01.publication })),
+    });
+    await toPublished(w);
+    const pull = w.github.pullOf(`harness/${w.run}`).number;
+    await settle(w, await dispatch(w, { action: "continue", through: S02 }));
+    w.github.comment(pull, OWNER, `[actionable] cite the spec in ${GREETING}`);
+    await settle(w, await dispatch(w, { action: "address-comments", pr: String(pull) }));
+    const heads = recordsOf<{ receipt: { details?: { commit?: string } } }>(
+      w,
+      "effect-receipt",
+    ).flatMap((r) =>
+      typeof r.receipt.details?.commit === "string" ? [r.receipt.details.commit] : [],
+    );
+    assert.equal(new Set(heads).size, 3, "the initial, extended and corrected publications");
+    assert.deepEqual(
+      w.github.dispatches,
+      [...new Set(heads)].map((commit) => ({
+        workflow: review.workflow,
+        ref: `harness/${w.run}`,
+        commit,
+        inputs: review.inputs,
+      })),
     );
   });
 
