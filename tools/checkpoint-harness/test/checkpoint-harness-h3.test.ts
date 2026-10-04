@@ -927,6 +927,11 @@ describe("H3-05 approvals and denials are bound to the GitHub actor, request and
     const pending = await toApproval(w);
     const approved = await dispatch(w, { action: "approve", ...pending });
     assert.equal(last(approved).exit, 0);
+    // The decision is applied by the next continuation, and the summary says so.
+    assert.equal(
+      last(approved).summary.next,
+      "continue: the next job applies the recorded decision",
+    );
     const [approval] = recordsOf<{
       actor: string;
       request: string;
@@ -946,9 +951,12 @@ describe("H3-05 approvals and denials are bound to the GitHub actor, request and
   it("a denial is recorded; its effect never runs and the step stays unaccepted", async () => {
     const w = world(scratch);
     const pending = await toApproval(w);
-    assert.equal(last(await dispatch(w, { action: "deny", ...pending })).exit, 0);
+    const denied = last(await dispatch(w, { action: "deny", ...pending }));
+    assert.equal(denied.exit, 0);
+    assert.equal(denied.summary.next, "continue: the next job applies the recorded decision");
     const continued = await dispatch(w, { action: "continue" });
     assert.match(stringify(last(continued).summary.pause), /denied by sb-dev/);
+    assert.equal(last(continued).summary.next, "resolve the named pause reason, then continue");
     assert.deepEqual((await factsOf(w)).accepted, []);
     assert.equal(w.github.executions.length, 0);
   });
@@ -1497,6 +1505,10 @@ describe("H3-09 amendments", () => {
       reason: "a deeper review",
     });
     assert.equal(last(amended).exit, 0);
+    assert.equal(
+      last(amended).summary.next,
+      "continue: the next job applies the recorded amendment",
+    );
     const [amendment] = recordsOf<{
       actor: string;
       reason: string;

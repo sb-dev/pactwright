@@ -3298,6 +3298,8 @@ export type RunFacts = {
   };
   /** The reasons of the last stop, when the run stopped paused. */
   pause: PauseReason[] | null;
+  /** Operator input recorded since the last stop that only a continuation applies. */
+  unapplied: "decision" | "amendment" | null;
   /** Approval requests of current evaluations that no decision answers yet. */
   pending: {
     request: string;
@@ -3453,6 +3455,12 @@ export async function runFacts(
         last?.action === "pause" && Array.isArray(last.data.reasons)
           ? (last.data.reasons as PauseReason[])
           : null,
+      unapplied:
+        last?.action === "approval"
+          ? "decision"
+          : last?.action === "amendment"
+            ? "amendment"
+            : null,
       pending,
       pullRequest: assoc,
       queued: queuedReviews(events, s.feedback),
