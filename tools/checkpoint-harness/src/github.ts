@@ -93,6 +93,27 @@ async function pages<T, P>(api: GitHubApi, path: string, pick: (page: P) => T[])
   }
 }
 
+/** Waits the given milliseconds; injected so tests need not. */
+export type Wait = (ms: number) => Promise<void>;
+const wait: Wait = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+
+/**
+ * The waits between read-backs of a write GitHub has accepted: listings and
+ * newly uploaded artifacts can lag a write by seconds, so a read-back keeps
+ * looking for about a minute before it reports the write absent.
+ */
+export const SETTLE_MS = [1000, 2000, 4000, 8000, 16000, 32000] as const;
+
+/** `read` once, then again after each settling wait until it finds something. */
+async function settled<T>(read: () => Promise<T | null>, delay: Wait): Promise<T | null> {
+  for (const ms of SETTLE_MS) {
+    const found = await read();
+    if (found !== null) return found;
+    await delay(ms);
+  }
+  return read();
+}
+
 type JobsPage = { jobs: { name: string; status: string }[] };
 
 /**
@@ -193,6 +214,7 @@ export function githubStore(
     retentionDays?: number;
     /** The artifact client; the Actions runtime's by default. */
     client?: Pick<DefaultArtifactClient, "uploadArtifact" | "downloadArtifact">;
+    wait?: Wait;
   },
 ): StateStore {
   const client = options.client ?? new DefaultArtifactClient();
@@ -252,10 +274,21 @@ export function githubStore(
       if (uploaded.id === undefined)
         throw new Error(`${artifact}: the upload returned no artifact`);
       // The saved state is what GitHub records for the artifact, its expiry included.
-      const row = await api.request<ArtifactRow>(
-        "GET",
-        `/repos/${api.repository}/actions/artifacts/${uploaded.id}`,
-      );
+      // A just-finalized artifact can read as missing for a few seconds.
+      const row = await settled(async () => {
+        try {
+          return await api.request<ArtifactRow>(
+            "GET",
+            `/repos/${api.repository}/actions/artifacts/${uploaded.id}`,
+          );
+        } catch (e) {
+          if (e instanceof GitHubError && e.status === 404) return null;
+          throw e;
+        }
+      }, options.wait ?? wait);
+      if (row === null) {
+        throw new Error(`${artifact}: GitHub does not show the uploaded artifact ${uploaded.id}`);
+      }
       if (row.name !== artifact) {
         throw new Error(`artifact ${uploaded.id} is ${row.name}, not the uploaded ${artifact}`);
       }
@@ -471,6 +504,7 @@ export function githubEffects(
     ref: string;
     /** The account the job's token acts as; only its comments are the harness's replies. */
     actor?: string;
+    wait?: Wait;
   },
 ): EffectService {
   const provenance = artifactProvenance(api, options.ref);
@@ -551,6 +585,12 @@ export function githubEffects(
     const run = runs.workflow_runs[0];
     return run ? receipt(key, request, run.html_url, { run: run.id, url: run.html_url }) : null;
   };
+  // After a write, the receipt is what reading the target back finds once GitHub shows it.
+  const readBack = (
+    inspect: (key: string, r: EffectRequest) => Promise<Receipt | null>,
+    key: string,
+    request: EffectRequest,
+  ): Promise<Receipt | null> => settled(() => inspect(key, request), options.wait ?? wait);
   const inspectors: Record<string, (key: string, r: EffectRequest) => Promise<Receipt | null>> = {
     "push-branch": pushed,
     "open-pr": opened,
@@ -620,7 +660,7 @@ export function githubEffects(
             remote,
             `${commit}:refs/heads/${branch}`,
           ]);
-          return pushed(key, request);
+          return readBack(pushed, key, request);
         }
         case "open-pr": {
           const existing = await opened(key, request);
@@ -633,7 +673,7 @@ export function githubEffects(
             draft: payload.draft === true,
           });
           // The receipt is what reading the target back finds, not the response.
-          return opened(key, request);
+          return readBack(opened, key, request);
         }
         case "pr-reply": {
           const body = `${text(payload.body)}\n\n${marker(key)}`;
@@ -649,7 +689,7 @@ export function githubEffects(
               body,
             });
           }
-          return replied(key, request);
+          return readBack(replied, key, request);
         }
         case "fixture-receipt": {
           const dir = join(options.runDir, "tmp", fixtureName(key));
@@ -657,7 +697,7 @@ export function githubEffects(
           const file = join(dir, "request.json");
           writeFileSync(file, `${stringify({ key, request }, null, 2)}\n`);
           await artifacts.uploadArtifact(fixtureName(key), [file], dir);
-          return fixture(key, request);
+          return readBack(fixture, key, request);
         }
         case "review-dispatch": {
           // The review runs on the published head only: a moved branch is not dispatched.
@@ -672,7 +712,7 @@ export function githubEffects(
             `/repos/${api.repository}/actions/workflows/${encodeURIComponent(text(payload.workflow))}/dispatches`,
             { ref: text(payload.ref), inputs: payload.inputs ?? {} },
           );
-          return reviewed(key, request);
+          return readBack(reviewed, key, request);
         }
         default:
           throw new EffectRefused(`no GitHub effect performs ${request.action}`);

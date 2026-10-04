@@ -28,10 +28,12 @@ import {
   type RoundRecord,
 } from "../src/pull-requests.js";
 import {
+  GitHubError,
   githubEffects,
   githubFeedback,
   githubStore,
   ProvenanceError,
+  SETTLE_MS,
   targetRepositories,
   WORKFLOW,
   type GitHubApi,
@@ -539,7 +541,12 @@ describe("H3-11 and H3-14 GitHub boundaries", () => {
         ["review-comment:11", 10],
       ],
     );
-    const effects = githubEffects(api, { repoRoot: scratch, runDir: scratch, ref: "main-line" });
+    const effects = githubEffects(api, {
+      repoRoot: scratch,
+      runDir: scratch,
+      ref: "main-line",
+      wait: () => Promise.resolve(),
+    });
     await effects.execute("sha256:k", {
       run: "r",
       step: S02,
@@ -557,36 +564,117 @@ describe("H3-11 and H3-14 GitHub boundaries", () => {
     const dir = mkdtempSync(join(scratch, "upload-"));
     writeFileSync(join(dir, "state.tar.gz"), "a");
     writeFileSync(join(dir, "state.json"), "{}");
-    const api: GitHubApi = {
-      repository: REPOSITORY,
-      token: "t",
-      request<T>(_method: string, path: string): Promise<T> {
-        assert.equal(path, `/repos/${REPOSITORY}/actions/artifacts/4242`);
-        return Promise.resolve({
-          id: 4242,
-          name: "harness-h3-test-000003",
-          expired: false,
-          expires_at: "2026-12-30T10:00:00Z",
-          workflow_run: { id: 77 },
-        } as T);
+    // GitHub can report a just-finalized artifact missing (hosted run 37232764758).
+    const store = (missing: number, waits: number[]) =>
+      githubStore(
+        {
+          repository: REPOSITORY,
+          token: "t",
+          request<T>(_method: string, path: string): Promise<T> {
+            assert.equal(path, `/repos/${REPOSITORY}/actions/artifacts/4242`);
+            if (missing-- > 0) return Promise.reject(new GitHubError(`GET ${path}: 404`, 404));
+            return Promise.resolve({
+              id: 4242,
+              name: "harness-h3-test-000003",
+              expired: false,
+              expires_at: "2026-12-30T10:00:00Z",
+              workflow_run: { id: 77 },
+            } as T);
+          },
+        },
+        {
+          currentRun: 77,
+          ref: "main-line",
+          client: {
+            uploadArtifact: () => Promise.resolve({ id: 4242, size: 2 }),
+            downloadArtifact: () => Promise.reject(new Error("unused")),
+          } as unknown as NonNullable<Parameters<typeof githubStore>[1]["client"]>,
+          wait: (ms) => {
+            waits.push(ms);
+            return Promise.resolve();
+          },
+        },
+      );
+    const files = { archive: join(dir, "state.tar.gz"), manifest: join(dir, "state.json") };
+    for (const missing of [0, 2]) {
+      const waits: number[] = [];
+      const saved = await store(missing, waits).upload("h3-test", 3, files);
+      assert.deepEqual(
+        [saved.id, saved.expiresAt, saved.workflowRun],
+        ["4242", "2026-12-30T10:00:00Z", 77],
+      );
+      assert.deepEqual(waits, SETTLE_MS.slice(0, missing));
+    }
+    const waits: number[] = [];
+    await assert.rejects(
+      store(SETTLE_MS.length + 1, waits).upload("h3-test", 3, files),
+      /harness-h3-test-000003: GitHub does not show the uploaded artifact 4242/,
+    );
+    assert.deepEqual(waits, [...SETTLE_MS]);
+  });
+
+  it("a dispatched review is read back once GitHub lists its run, and is not sent twice", async () => {
+    const request = {
+      run: "r",
+      step: S04,
+      binding: { id: "b", digest: "d" },
+      candidate: "c",
+      outputs: [],
+      action: "review-dispatch",
+      target: "t",
+      payload: {
+        workflow: "checkpoint-harness-verify.yml",
+        ref: "harness/r",
+        commit: "a".repeat(40),
+        inputs: { live: "false" },
       },
+    } as unknown as EffectRequest;
+    const dispatch = async (unlisted: number) => {
+      const posts: string[] = [];
+      const waits: number[] = [];
+      const effects = githubEffects(
+        {
+          repository: REPOSITORY,
+          token: "t",
+          request<T>(method: string, path: string): Promise<T> {
+            if (method === "POST") {
+              posts.push(path);
+              return Promise.resolve(null as T);
+            }
+            if (path.endsWith("/git/ref/heads/harness/r")) {
+              return Promise.resolve({ object: { sha: "a".repeat(40) } } as T);
+            }
+            assert.match(path, /\/actions\/workflows\/checkpoint-harness-verify\.yml\/runs\?/);
+            const run = { id: 91, html_url: "https://github.com/runs/91" };
+            return Promise.resolve({ workflow_runs: unlisted-- > 0 ? [] : [run] } as T);
+          },
+        },
+        {
+          repoRoot: scratch,
+          runDir: scratch,
+          ref: "main-line",
+          wait: (ms) => {
+            waits.push(ms);
+            return Promise.resolve();
+          },
+        },
+      );
+      return { receipt: await effects.execute("sha256:k", request), posts, waits };
     };
-    const client = {
-      uploadArtifact: () => Promise.resolve({ id: 4242, size: 2 }),
-      downloadArtifact: () => Promise.reject(new Error("unused")),
-    } as unknown as NonNullable<Parameters<typeof githubStore>[1]["client"]>;
-    const saved = await githubStore(api, { currentRun: 77, ref: "main-line", client }).upload(
-      "h3-test",
-      3,
-      {
-        archive: join(dir, "state.tar.gz"),
-        manifest: join(dir, "state.json"),
-      },
-    );
-    assert.deepEqual(
-      [saved.id, saved.expiresAt, saved.workflowRun],
-      ["4242", "2026-12-30T10:00:00Z", 77],
-    );
+    const dispatches = [
+      `/repos/${REPOSITORY}/actions/workflows/checkpoint-harness-verify.yml/dispatches`,
+    ];
+    for (const unlisted of [0, 3]) {
+      const { receipt, posts, waits } = await dispatch(unlisted);
+      assert.equal(receipt?.reference, "https://github.com/runs/91");
+      assert.deepEqual(posts, dispatches);
+      assert.deepEqual(waits, SETTLE_MS.slice(0, unlisted));
+    }
+    // Never listed: the outcome is uncertain, for the runner to read back, not a second dispatch.
+    const { receipt, posts, waits } = await dispatch(SETTLE_MS.length + 1);
+    assert.equal(receipt, null);
+    assert.deepEqual(posts, dispatches);
+    assert.deepEqual(waits, [...SETTLE_MS]);
   });
 
   it("a malformed dispatch is refused at the command line with every run field unknown", () => {
