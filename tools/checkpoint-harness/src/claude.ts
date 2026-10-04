@@ -166,6 +166,8 @@ export type Packet = {
     targets: VerificationTarget[];
     /** The reviewed procedure's hash, for an operational step (T3.5 H3); its text is `PROCEDURE`. */
     procedure?: string;
+    /** How to carry the procedure out (`OPERATION_GUIDANCE`), for an operational step only. */
+    operation?: string;
     /** Where the procedure runs when it is not the candidate: the workspace holds that repository. */
     target?: { name: string; repository: string; revision: string };
   };
@@ -494,12 +496,19 @@ export function resolveRole(
   };
 }
 
+/**
+ * How a producer carries out a reviewed operational procedure (T3.5 H3). It
+ * travels in the packet of an operational step only, so a contract step's
+ * producer prompt stays as H2 admitted it.
+ */
+export const OPERATION_GUIDANCE =
+  "This step is a reviewed operational procedure and its PROCEDURE requirement is the procedure's text: carry it out as written by running its commands with run_command in this workspace; when step.target is present, the workspace holds that repository at that revision rather than the candidate. The harness records each command, its exit status and its output as evidence; the step is accepted only on that evidence, checked against the procedure's expected result and checks.";
+
 const TEMPLATES: Record<RoleName, string> = {
   producer: [
     "You are the producer for one Pactwright checkpoint step. The user message is a JSON work packet: the step's exact requirements and acceptance criteria, its accepted inputs, the paths you may change and findings from earlier attempts.",
     "Work only through the mcp__workspace__ tools: read_file, search_files, write_file and run_command. They act inside an isolated workspace with no network. Change only the writable paths listed under effects; protected paths and every other path are read-only.",
     "Do not weaken or reinterpret a requirement. If a requirement is contradictory, needs authority you lack, or cannot be met within the permitted effects, report it as a blocker instead of guessing.",
-    "When step.procedure is present, the step is a reviewed operational procedure and its PROCEDURE requirement is the procedure's text: carry it out as written by running its commands with run_command in this workspace; when step.target is present, the workspace holds that repository at that revision rather than the candidate. The harness records each command, its exit status and its output as evidence; the step is accepted only on that evidence, checked against the procedure's expected result and checks.",
     "When the packet names verification.bindings, a target whose binding the harness lacks needs its verifier and a declaration at <bindings>/<binding-id>.yml (automated: id, method, version, command, judge, files, timeoutMs, observations, optional scratch and dependencies; review: id, method, version, rubric). The harness admits a declared binding before any of its results count; inherited criteria marked exit or after a step under inherited.applicability are not yet this step's to satisfy.",
     'Finish with the structured result: status "submitted" with the paths of each output you produced, a one-line summary of each changed path and any verifier you propose; or status "blocked" with the blockers. The result is a proposal. The harness checks the workspace, runs verification and obtains independent review; you cannot accept your own work.',
   ].join("\n\n"),
@@ -575,7 +584,7 @@ export function buildPacket(
       requirements: step.requirements,
       criteria: step.criteria,
       targets: step.targets,
-      ...(step.procedure ? { procedure: step.procedure.hash } : {}),
+      ...(step.procedure ? { procedure: step.procedure.hash, operation: OPERATION_GUIDANCE } : {}),
       ...(step.procedure?.target
         ? {
             target: {

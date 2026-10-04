@@ -18,8 +18,8 @@ import { fileURLToPath } from "node:url";
 import yaml from "js-yaml";
 import stringify from "safe-stable-stringify";
 
-import type { AgentOutcome } from "../src/claude.js";
-import { prepareRun } from "../src/contracts.js";
+import { buildPacket, OPERATION_GUIDANCE, type AgentOutcome } from "../src/claude.js";
+import { prepareRun, type AcceptedOutput } from "../src/contracts.js";
 import { readRun, type RunHandle } from "../src/evidence.js";
 import {
   collect,
@@ -89,6 +89,7 @@ import {
   savedDir,
   STAMP,
   WELCOME,
+  WORK,
   world,
   type World,
 } from "./h3-fixtures.js";
@@ -1068,6 +1069,49 @@ async function redecide(w: World, step: string): Promise<AcceptanceInput> {
 }
 
 describe("H3-08 operational steps", () => {
+  it("operational guidance travels only in operational packets; the producer prompt is the one H2 admitted", async () => {
+    const w = world(scratch);
+    const prepared = await prepareRun(
+      {
+        repository: { name: REPOSITORY, branch: BRANCH, expected_head: w.repo.head },
+        checkpoint: `${H}/docs/checkpoints/95-hosted/checkpoint.yml`,
+        definitions: { revision: w.repo.head, review: "x" },
+        selection: { through: S02 },
+      },
+      { repoRoot: w.repo.root },
+    );
+    assert.ok(prepared.ok, prepared.ok ? "" : prepared.diagnostics.join("\n"));
+    const producer = { name: "producer" as const, skills: [] };
+    const policy = { writable: [WORK], scratch: [], protected: [] };
+    const contract = buildPacket(prepared.plan, S01, producer, {
+      attempt: 1,
+      accepted: [],
+      policy,
+    });
+    assert.ok(contract.ok);
+    // The digest of the producer prompt H2's live proof ran with (job 111430653474).
+    assert.equal(
+      contract.packet.template,
+      "sha256:8c02b311fb64cb52f19f9021cbea40cbc51aa4721c49df961616a62a0da19b3e",
+    );
+    assert.equal(contract.packet.step.operation, undefined);
+    assert.equal(contract.packet.step.procedure, undefined);
+    const accepted: AcceptedOutput[] = [
+      {
+        step: S01,
+        output: "greeting",
+        definition: prepared.plan.stepDefinitions[S01] ?? "",
+        definitions: prepared.plan.definitionsDigest,
+        evidence: ["sha256:x"],
+      },
+    ];
+    const operational = buildPacket(prepared.plan, S02, producer, { attempt: 1, accepted, policy });
+    assert.ok(operational.ok, operational.ok ? "" : operational.diagnostics.join("\n"));
+    assert.equal(operational.packet.template, contract.packet.template);
+    assert.equal(operational.packet.step.operation, OPERATION_GUIDANCE);
+    assert.match(operational.packet.step.procedure ?? "", /^sha256:/);
+  });
+
   it("the reviewed procedure runs in its target and is accepted on its command evidence", async () => {
     const w = world(scratch);
     await toS02(w);
