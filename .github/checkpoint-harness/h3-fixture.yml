@@ -22,7 +22,7 @@ roles:
   reviewer:
     adapter: claude-sdk
     model: claude-opus-5-5
-    effort: low
+    effort: medium
     skills: [code-review-and-quality]
     skill_digests:
       code-review-and-quality: sha256:8f3cabca581bbf7cb5f0add3f7454e7a4523f9d4353a6a4a217e6fa515309612
