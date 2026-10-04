@@ -1,7 +1,7 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "title": "Checkpoint harness dispatch configuration",
-  "description": "The run configuration sections an agent dispatch needs (Task 3 research log §§4, 10 and §12 T3-C). Planning accepts any object here; dispatch refuses until these sections are complete. Other sections are validated by run-config.schema.json.",
+  "description": "The run configuration sections an agent dispatch needs (Task 3 research log §§4, 10 and §12 T3-C; T3.5 H2 adds each role's effort). Planning accepts any object here; dispatch refuses until these sections are complete. Other sections are validated by run-config.schema.json.",
   "type": "object",
   "required": ["roles", "credentials", "budgets"],
   "properties": {
@@ -55,17 +55,21 @@
     "role": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["adapter", "model", "skills", "max_turns"],
+      "required": ["adapter", "model", "effort", "skills", "max_turns"],
       "properties": {
         "adapter": { "const": "claude-sdk" },
         "model": {
-          "description": "A pinned Claude API model ID this adapter supports: the current lineup of https://platform.claude.com/docs/en/models/overview. Aliases such as claude-haiku-4-5 or claude-sonnet-4-5 resolve to the latest dated snapshot and are refused; adding an ID is a reviewed change.",
+          "description": "A pinned Claude API model ID this adapter supports: the current lineup of https://platform.claude.com/docs/en/models/overview. Aliases such as claude-haiku-4-5 or claude-sonnet-4-5 resolve to the latest dated snapshot and are refused; adding an ID, with its EFFORT_LEVELS entry, is a reviewed change.",
           "enum": [
             "claude-fable-5-1",
             "claude-opus-5-5",
             "claude-sonnet-5",
             "claude-haiku-4-5-20251001"
           ]
+        },
+        "effort": {
+          "description": "The role's reasoning effort (T3.5 H2), sent with every request of its sessions. Dispatch also refuses a level the model does not accept (EFFORT_LEVELS in claude.ts); Claude Haiku 4.5 accepts none.",
+          "enum": ["low", "medium", "high", "xhigh", "max"]
         },
         "skills": {
           "type": "array",

@@ -1,8 +1,9 @@
-# Checkpoint harness verification (T3.5): the focused H1 tests, the
+# Checkpoint harness verification (T3.5): the focused H1 and H2 tests, the
 # accumulated harness tests, the Docker integration tests, the contract check
-# and the repository gate, on a GitHub-hosted runner. A pull request runs on
-# its head commit, so the evidence is bound to that SHA. This is not the H3
-# harness workflow and grants no checkpoint acceptance.
+# and the repository gate, on a GitHub-hosted runner, and the H2 live Claude
+# compatibility proof. A pull request runs on its head commit, so the evidence
+# is bound to that SHA. This is not the H3 harness workflow and grants no
+# checkpoint acceptance.
 name: Checkpoint harness verification
 
 on:
@@ -46,6 +47,9 @@ jobs:
       - name: H1 tests
         working-directory: tools/checkpoint-harness
         run: node --test --import tsx test/checkpoint-harness-h1.test.ts
+      - name: H2 tests
+        working-directory: tools/checkpoint-harness
+        run: node --test --import tsx test/checkpoint-harness-h2.test.ts
       - name: Harness tests
         run: pnpm --filter @pactwright/checkpoint-harness test
       - name: Docker integration tests
@@ -54,3 +58,39 @@ jobs:
         run: pnpm contracts:check
       - name: Repository gate
         run: pnpm verify
+
+  # The live Claude adapter test with distinct admitted producer and reviewer
+  # settings (T3.5 H2). It spends at most about 2 USD per run on the owner's
+  # subscription token. The token is a secret of the claude-live environment,
+  # whose required reviewer approves each run in the web UI. Fork pull
+  # requests receive no secrets, so the job runs
+  # only for this repository's branches; a missing secret fails it.
+  live-claude:
+    if: github.event_name == 'workflow_dispatch' || github.event.pull_request.head.repo.full_name == github.repository
+    runs-on: ubuntu-24.04
+    environment: claude-live
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          persist-credentials: false
+      - uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413 # v6.1.0
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: 22
+          cache: pnpm
+      - name: Install
+        run: pnpm install --frozen-lockfile
+      - name: Tested commit
+        run: git rev-parse HEAD
+      - name: Live Claude compatibility test
+        working-directory: tools/checkpoint-harness
+        env:
+          PACTWRIGHT_ANTHROPIC_API_KEY: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+          PACTWRIGHT_LIVE_CREDENTIAL_KIND: oauth-token
+          PACTWRIGHT_LIVE_MODEL: claude-sonnet-5
+          PACTWRIGHT_LIVE_PRODUCER_EFFORT: medium
+          PACTWRIGHT_LIVE_REVIEWER_MODEL: claude-opus-5-5
+          PACTWRIGHT_LIVE_REVIEWER_EFFORT: low
+        run: node --test --import tsx test/live/checkpoint-harness-claude.test.ts

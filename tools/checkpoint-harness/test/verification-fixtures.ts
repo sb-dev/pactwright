@@ -574,6 +574,7 @@ export function reviewerRole(): AgentRole {
   return {
     name: "reviewer",
     model: REVIEW_MODEL,
+    effort: "high",
     available: ["code-review-and-quality"],
     skills: [{ name: "code-review-and-quality", digest: sha256("skill"), text: "skill" }],
     limits: { attempts: 3, wallTimeMs: 5_000, maxTurns: 8, maxBudgetUsd: 1 },

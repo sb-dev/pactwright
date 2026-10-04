@@ -1183,6 +1183,7 @@ describe("T3-E amendments: an operator amends a paused run and it resumes in pla
       reviewer: {
         adapter: "claude-sdk",
         model: MODEL,
+        effort: "high",
         skills: ["code-review-and-quality", "evaluation"],
         max_turns: 8,
       },
