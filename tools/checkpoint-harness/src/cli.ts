@@ -55,6 +55,8 @@ import {
   githubFeedback,
   githubLiveness,
   githubStore,
+  fetchCommit,
+  targetRepositories,
   pullsFrom,
 } from "./github.js";
 import {
@@ -72,7 +74,7 @@ import {
 } from "./runner.js";
 import { APPLICABILITY, BINDINGS, createRegistry, FIXTURE_BINDINGS } from "./software-bootstrap.js";
 import { latestState } from "./state.js";
-import { renderSummary } from "./summary.js";
+import { refusedSummary, renderSummary } from "./summary.js";
 import {
   checkTemplates,
   parseInputs,
@@ -247,6 +249,7 @@ function hostedServices(root: string, signal: AbortSignal): Services {
   const registry = controllerRegistry();
   if (!registry.ok) throw new Error(registry.diagnostics.join("\n"));
   const header = `AUTHORIZATION: basic ${Buffer.from(`x-access-token:${api.token}`).toString("base64")}`;
+  const server = process.env.GITHUB_SERVER_URL ?? "https://github.com";
   return {
     store: githubStore(api, {
       currentRun: Number(process.env.GITHUB_RUN_ID),
@@ -263,27 +266,15 @@ function hostedServices(root: string, signal: AbortSignal): Services {
     branchHead: (branch) => branchHead(api, branch),
     pullsFrom: async (branch) => (await pullsFrom(api, branch)).map((p) => p.number),
     fetch(commit) {
-      try {
-        execFileSync("git", ["cat-file", "-e", `${commit}^{commit}`], {
-          cwd: root,
-          stdio: "ignore",
-        });
-      } catch {
-        execFileSync(
-          "git",
-          [
-            "-c",
-            `http.extraheader=${header}`,
-            "fetch",
-            "--quiet",
-            `${process.env.GITHUB_SERVER_URL ?? "https://github.com"}/${api.repository}.git`,
-            commit,
-          ],
-          { cwd: root, stdio: "ignore" },
-        );
-      }
+      fetchCommit(root, server, api.repository, commit, header);
       return Promise.resolve();
     },
+    repositories: targetRepositories(api, {
+      root,
+      server,
+      header,
+      temp: process.env.RUNNER_TEMP ?? tmpdir(),
+    }),
     registry: registry.registry,
     harness: harnessIdentity(),
     skillsRoot: join(root, ".claude/skills"),
@@ -336,14 +327,21 @@ async function workflow(kind: string): Promise<number> {
     fault: env.HARNESS_FAULT,
   });
   if (!parsed.ok) {
+    // Refused before any state is read: every run field is reported unknown.
     for (const d of parsed.diagnostics) console.error(d);
-    if (env.GITHUB_STEP_SUMMARY) {
-      appendFileSync(
-        env.GITHUB_STEP_SUMMARY,
-        `# Checkpoint harness — refused\n\n${parsed.diagnostics.map((d) => `- ${d}`).join("\n")}\n`,
-      );
-    }
-    output({ next: "none", controller: "" });
+    const job = `${env.GITHUB_SERVER_URL ?? "https://github.com"}/${env.GITHUB_REPOSITORY ?? ""}/actions/runs/${env.GITHUB_RUN_ID ?? ""}`;
+    const summary = refusedSummary(env.HARNESS_ACTION ?? "", job, parsed.diagnostics);
+    if (env.GITHUB_STEP_SUMMARY) appendFileSync(env.GITHUB_STEP_SUMMARY, renderSummary(summary));
+    process.stdout.write(
+      `${stringify({ exit: INVALID, next: "none", summary, dispatch: null, saved: null }, null, 2)}\n`,
+    );
+    output({
+      next: "none",
+      controller: "",
+      dispatch_ref: "",
+      dispatch_pr: "",
+      dispatch_review: "",
+    });
     return INVALID;
   }
   const { inputs } = parsed;

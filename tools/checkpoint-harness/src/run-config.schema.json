@@ -57,6 +57,7 @@
             "properties": {
               "repository": { "type": "string", "pattern": "^[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+$" },
               "revision": { "$ref": "#/$defs/commit" },
+              "path": { "type": "string", "minLength": 1 },
               "writable": { "type": "array", "items": { "type": "string", "minLength": 1 } }
             }
           }

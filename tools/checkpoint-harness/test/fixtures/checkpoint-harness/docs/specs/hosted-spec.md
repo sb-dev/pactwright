@@ -16,3 +16,8 @@ The greeting is released only after the owner approves the exact candidate.
 
 The stamp records the greeting of `Pactwright` in the fixture's work
 directory, so a later reader sees which greeting the candidate holds.
+
+## 4. Welcome
+
+The welcome module welcomes a name with the greeting module's greeting of it,
+followed by ` Welcome aboard.`.

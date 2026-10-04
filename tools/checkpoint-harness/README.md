@@ -71,7 +71,7 @@ For `amend`, commit the template change, supply its `config_revision` and a reas
 
 ### Read the result
 
-The job summary shows the run name and identifier, selected boundary, accepted steps, requested and reported model and effort, reported spending and unresolved reservations, pause reason and next action. It links the job and the saved state, lists evidence records by path in that state, and shows the saved-state identity and expiry and any pull request. Each job compares every field with the state it saved and fails on a mismatch. A job refused before restoring state reports every run field as `unknown`.
+The job summary shows the run name and identifier, selected boundary, accepted steps, requested and reported model and effort, reported spending and unresolved reservations, pause reason and next action. It links the job and the saved state, lists evidence records by path in that state, and shows the saved-state identity and expiry and any pull request. Each job compares every field with the state it saved and fails on a mismatch. A job refused before restoring state, malformed inputs included, reports every run field as `unknown`. The saved state's expiry is the one GitHub records for its artifact.
 
 `status` restores the latest state and reports it. It saves nothing and takes no ownership.
 
@@ -83,7 +83,7 @@ Every `run` and `resume` result carries `checkpoint`: `complete`, the checkpoint
 
 H3 stores the run state as immutable Actions artifacts named `harness-RUN-NNNNNN`, with increasing sequence numbers. Each holds `state.tar.gz` (the run directory) and `state.json` (name, sequence, journal head, pinned controller commit and archive digest). A job saves after each durable phase, before an agent session or external effect, and before a planned yield. Artifacts follow the repository's retention; the latest state must not expire during a run.
 
-A run is operated from the branch it was started on. Only artifacts of `workflow_dispatch` runs of this workflow in this repository, on that branch, count; a dispatch on another branch is refused. The route job checks that the dispatched commit's history carries the run's pinned controller commit before it runs that code. Protect the branch: whoever can push to it controls the harness code.
+A run is operated from the branch it was started on. Only artifacts of `workflow_dispatch` runs of this workflow in this repository, on that branch, count; a dispatch on another branch is refused. An artifact of the run whose workflow run cannot be read refuses the job: the harness never falls back to an older state. The route job checks that the dispatched commit's history carries the run's pinned controller commit before it runs that code. Protect the branch: whoever can push to it controls the harness code.
 
 A save that finds the same or a later sequence fails, so two controllers cannot both write the run. If two writers race past that check, the first save of the sequence stands and the later writer stops.
 
@@ -113,16 +113,21 @@ operations:
     TARGET_NAME:
       repository: OWNER/REPOSITORY
       revision: FULL_COMMIT_SHA
+      path: DIRECTORY # optional: this directory of the revision is the target's root
       writable: [PATH, ...]
   steps:
     STEP_ID: TARGET_NAME
 ```
 
-The target is imported at `start`. Its steps build on each other, never on the candidate; the candidate's checks do not run there, and its evidence stays current. A target outside this repository needs a local copy the controller can read; the hosted workflow provides none, so such a run is refused at start. A procedure that needs the network, a registry or another repository's merge cannot run in containment: its producer reports `blocked` and the run pauses for the owner (CP01 S28–S30).
+The route job fetches the pinned revision at `start`: from this repository's checkout, or into a separate checkout of another repository the job's token can read. The run imports it as the target's base; candidate work only ever sees that snapshot. Its steps build on each other, never on the candidate; the candidate's checks do not run there, and the candidate's evidence stays current. A repository the job cannot read refuses the start. A procedure that needs the network, a registry or another repository's merge cannot run in containment: its producer reports `blocked` and the run pauses for the owner (CP01 S28–S30).
+
+The hosted fixture runs CP95 Step 3 in `test/fixtures/checkpoint-harness/registry`, a repository root of its own pinned at a revision of this repository.
 
 ## Pull-request correction rounds
 
 When the selection is accepted, the `effects` job pushes the integrated candidate to `harness/RUN` as one deterministic commit whose parent is the run's recorded source head, and opens a pull request against `publication.pull_request.base`, else the run's branch. Each later accepted candidate becomes one commit on top of the published head. The branch is never force-pushed; a branch that moved elsewhere refuses the push.
+
+A push by the workflow token starts no workflow. With `publication.review: {workflow: FILE, inputs: {...}}`, the `effects` job dispatches that workflow on `harness/RUN` once for each published head and reads its run back. The hosted fixture dispatches `checkpoint-harness-verify.yml` without its live job.
 
 Run `address-comments` with `run` and `pr` to address feedback. A review submitted on the pull request by a member of `permissions.approvers.feedback` is forwarded to the same action with `review`. A person who dispatches a round must hold that authority too; a dismissed review starts nothing. A review submitted while a round is open is recorded and starts the next round when that one completes. Both paths:
 
@@ -132,7 +137,7 @@ Run `address-comments` with `run` and `pr` to address feedback. A review submitt
 4. adopt newer commits on the head that build on the published commit and stay within the write policy; a diverged head pauses the round;
 5. assess each item with a fresh reviewer: `actionable`, `already-addressed`, `declined` or `blocked`, with a reason; feedback that would change definitions, verifiers, the workflow or the configuration is declined;
 6. correct actionable feedback through the final step's next attempt: produce, seal, verify, review and decide again, within the same budgets;
-7. push the fixing commit on the current head, reply to each item with its disposition, the fixing commit and its checks, and read both back before recording the round. A receipt is what reading the target back finds: the branch head, the open pull request, a reply carrying the effect's marker written by the workflow's own account, or a fixture artifact from this run's branch.
+7. push the fixing commit on the current head, reply to each item with its disposition, the fixing commit and its checks, and read both back before recording the round. An inline comment is answered in its thread, on the thread's first comment. A receipt is what reading the target back finds: the branch head, the open pull request, a reply carrying the effect's marker written by the workflow's own account, or a fixture artifact from this run's branch.
 
 A fixing commit or a reply alone never restores acceptance. The reviewer resolves threads and decides acceptance.
 

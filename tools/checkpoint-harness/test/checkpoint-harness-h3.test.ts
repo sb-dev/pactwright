@@ -8,19 +8,33 @@
 // control where a case is a refusal.
 
 import assert from "node:assert/strict";
-import { execFileSync } from "node:child_process";
-import { mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { execFileSync, spawnSync } from "node:child_process";
+import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
-import { join } from "node:path";
+import { dirname, join } from "node:path";
 import { after, describe, it } from "node:test";
+import { fileURLToPath } from "node:url";
 
 import stringify from "safe-stable-stringify";
 
 import type { AgentOutcome } from "../src/claude.js";
 import { prepareRun } from "../src/contracts.js";
 import { readRun, type RunHandle } from "../src/evidence.js";
-import type { Assessment, FeedbackSnapshot, RoundRecord } from "../src/pull-requests.js";
-import { githubEffects, githubStore, WORKFLOW, type GitHubApi } from "../src/github.js";
+import {
+  collect,
+  type Assessment,
+  type FeedbackSnapshot,
+  type RoundRecord,
+} from "../src/pull-requests.js";
+import {
+  githubEffects,
+  githubFeedback,
+  githubStore,
+  ProvenanceError,
+  targetRepositories,
+  WORKFLOW,
+  type GitHubApi,
+} from "../src/github.js";
 import { pinned, type ConfigChange, type EffectRequest } from "../src/runner.js";
 import {
   APPLICABILITY,
@@ -35,7 +49,13 @@ import {
   type StateFiles,
   type StateStore,
 } from "../src/state.js";
-import { checkSummary, FIELDS, refusedSummary, type Summary } from "../src/summary.js";
+import {
+  checkSummary,
+  FIELDS,
+  refusedSummary,
+  renderSummary,
+  type Summary,
+} from "../src/summary.js";
 import {
   decideAcceptance,
   journalInput,
@@ -58,17 +78,21 @@ import {
   OWNER,
   pendingOf,
   recordsOf,
+  registryRepo,
   RELEASES,
   REPOSITORY,
   S01,
   S02,
   S03,
+  S04,
   savedDir,
   STAMP,
+  WELCOME,
   world,
   type World,
 } from "./h3-fixtures.js";
 
+const here = dirname(fileURLToPath(import.meta.url));
 const scratch = mkdtempSync(join(tmpdir(), "pactwright-harness-h3-"));
 after(() => rmSync(scratch, { recursive: true, force: true }));
 
@@ -309,16 +333,37 @@ describe("H3-01 and H3-06 GitHub provenance and read-back", () => {
     expires_at: null,
     workflow_run: { id: run },
   });
-  const api = (comments: object[] = []): GitHubApi => ({
+  const api = (
+    options: {
+      comments?: object[];
+      artifacts?: object[];
+      runs?: Record<number, object>;
+      /** Runs whose lookup fails, each for the given number of reads. */
+      failing?: Map<number, number>;
+      posts?: string[];
+    } = {},
+  ): GitHubApi => ({
     repository: REPOSITORY,
     token: "test",
-    request<T>(_method: string, path: string): Promise<T> {
+    request<T>(method: string, path: string): Promise<T> {
+      if (method === "POST") {
+        options.posts?.push(path);
+        return Promise.resolve({ id: 1, body: "", html_url: "posted", user: null } as T);
+      }
       const runs = /\/actions\/runs\/(\d+)$/.exec(path);
-      if (runs) return Promise.resolve(RUNS[Number(runs[1])] as T);
+      if (runs) {
+        const id = Number(runs[1]);
+        const left = options.failing?.get(id) ?? 0;
+        if (left > 0) {
+          options.failing?.set(id, left - 1);
+          return Promise.reject(new Error(`GET ${path}: 502`));
+        }
+        return Promise.resolve({ ...RUNS, ...options.runs }[id] as T);
+      }
       if (path.includes("/actions/artifacts")) {
-        const all = [1, 2, 3, 4, 5].map((run) =>
-          artifact(100 + run, "harness-h3-test-000007", run),
-        );
+        const all =
+          options.artifacts ??
+          [1, 2, 3, 4, 5].map((run) => artifact(100 + run, "harness-h3-test-000007", run));
         const fixture = [1, 2].map((run) => artifact(200 + run, "harness-effect-abc", run));
         const page = /[?&]page=(\d+)/.exec(path)?.[1] ?? "1";
         const named = /[?&]name=([^&]+)/.exec(path)?.[1];
@@ -327,10 +372,72 @@ describe("H3-01 and H3-06 GitHub provenance and read-back", () => {
       }
       if (path.includes("/comments")) {
         const page = /[?&]page=(\d+)/.exec(path)?.[1] ?? "1";
-        return Promise.resolve((page === "1" && path.includes("/issues/") ? comments : []) as T);
+        return Promise.resolve(
+          (page === "1" && path.includes("/issues/") ? (options.comments ?? []) : []) as T,
+        );
       }
       return Promise.reject(new Error(`unexpected ${path}`));
     },
+  });
+
+  it("an artifact whose run cannot be read refuses the run's state, never yielding an older one", async () => {
+    // Sequence 7 from a trusted run; sequence 8 from run 6, which cannot be read.
+    const rows = [
+      artifact(101, "harness-h3-test-000007", 1),
+      artifact(106, "harness-h3-test-000008", 6),
+    ];
+    const run6 = { ...(RUNS[1] as object), id: 6 };
+    const unreadable = githubStore(api({ artifacts: rows, failing: new Map([[6, 99]]) }), {
+      currentRun: 9,
+      ref: "main-line",
+    });
+    await assert.rejects(() => unreadable.list("h3-test"), ProvenanceError);
+    const refused = await latestState(unreadable, "h3-test");
+    assert.equal(refused.kind, "refused");
+    assert.match(refused.kind === "refused" ? refused.diagnostics.join() : "", /cannot be read/);
+    // Control: once the run reads as this run's, sequence 8 is the latest.
+    const readable = await latestState(
+      githubStore(api({ artifacts: rows, runs: { 6: run6 } }), { currentRun: 9, ref: "main-line" }),
+      "h3-test",
+    );
+    assert.ok(readable.kind === "found");
+    assert.equal(readable.saved.sequence, 8);
+    // A failed read is not remembered: the same store reads the run again.
+    const flaky = githubStore(
+      api({ artifacts: rows, runs: { 6: run6 }, failing: new Map([[6, 1]]) }),
+      {
+        currentRun: 9,
+        ref: "main-line",
+      },
+    );
+    await assert.rejects(() => flaky.list("h3-test"), ProvenanceError);
+    assert.deepEqual((await flaky.list("h3-test")).map((x) => x.sequence).sort(), [7, 8]);
+  });
+
+  it("a job whose saved states cannot be vouched for refuses before restoring, saving or dispatching", async () => {
+    const w = world(scratch);
+    await dispatch(w, START);
+    const saved = sequences(w);
+    const unverifiable: StateStore = {
+      list: () =>
+        Promise.reject(new ProvenanceError("artifact 9: its workflow run cannot be read")),
+      download: (x, into) => w.store.download(x, into),
+      upload: (name, sequence, files) => w.store.upload(name, sequence, files),
+    };
+    const blind = { ...w, store: unverifiable as unknown as typeof w.store };
+    for (const action of ["continue", "status"]) {
+      const refused = await job(blind, "route", { action });
+      assert.equal(refused.exit, 2, action);
+      assert.match(refused.summary.diagnostics.join("\n"), /cannot be read/);
+      assert.deepEqual([refused.next, refused.dispatch, refused.saved], ["none", null, null]);
+      assert.equal(refused.summary.run, "unknown");
+    }
+    assert.deepEqual(sequences(w), saved);
+    assert.equal(
+      (await job(w, "route", { action: "continue" })).exit,
+      0,
+      "control: a readable store",
+    );
   });
 
   it("only states a dispatched run of this workflow uploaded on the run's branch count", async () => {
@@ -356,12 +463,14 @@ describe("H3-01 and H3-06 GitHub provenance and read-back", () => {
     } as unknown as EffectRequest;
     const marked = `reply\n\n<!-- pactwright-harness effect=${key} -->`;
     const forged = githubEffects(
-      api([{ id: 1, body: marked, html_url: "u1", user: { login: "intruder" } }]),
+      api({ comments: [{ id: 1, body: marked, html_url: "u1", user: { login: "intruder" } }] }),
       { repoRoot: scratch, runDir: scratch, ref: "main-line" },
     );
     assert.equal(await forged.inspect?.(key, request), null);
     const own = githubEffects(
-      api([{ id: 2, body: marked, html_url: "u2", user: { login: "github-actions[bot]" } }]),
+      api({
+        comments: [{ id: 2, body: marked, html_url: "u2", user: { login: "github-actions[bot]" } }],
+      }),
       { repoRoot: scratch, runDir: scratch, ref: "main-line" },
     );
     assert.equal((await own.inspect?.(key, request))?.reference, "u2");
@@ -373,6 +482,153 @@ describe("H3-01 and H3-06 GitHub provenance and read-back", () => {
     assert.equal((await elsewhere.inspect?.(key, fixture))?.details?.artifact, 202);
     const unknown = githubEffects(api(), { repoRoot: scratch, runDir: scratch, ref: "other" });
     assert.equal(await unknown.inspect?.(key, fixture), null);
+  });
+});
+
+describe("H3-11 and H3-14 GitHub boundaries", () => {
+  it("an inline reply's feedback item keeps its own identity and answers on the thread's first comment", async () => {
+    const posts: string[] = [];
+    const rows = [
+      {
+        id: 10,
+        pull_request_review_id: 1,
+        in_reply_to_id: null,
+        user: { login: OWNER },
+        body: "first",
+        path: GREETING,
+        line: 1,
+        html_url: "c10",
+      },
+      {
+        id: 11,
+        pull_request_review_id: 2,
+        in_reply_to_id: 10,
+        user: { login: OWNER },
+        body: "follow-up",
+        path: GREETING,
+        line: 1,
+        html_url: "c11",
+      },
+    ];
+    const api: GitHubApi = {
+      repository: REPOSITORY,
+      token: "t",
+      request<T>(method: string, path: string): Promise<T> {
+        if (method === "POST") {
+          posts.push(path);
+          return Promise.resolve({} as T);
+        }
+        if (path.includes("/pulls/7/comments")) {
+          return Promise.resolve((/[?&]page=1(&|$)/.test(path) ? rows : []) as T);
+        }
+        return Promise.resolve([] as T);
+      },
+    };
+    const comments = await githubFeedback(api).reviewComments(7);
+    const items = collect(
+      { review: null, reviews: [], reviewComments: comments, comments: [] },
+      () => true,
+      "<!-- pactwright-harness",
+    );
+    assert.deepEqual(
+      items.map((i) => [i.id, i.thread]),
+      [
+        ["review-comment:10", 10],
+        ["review-comment:11", 10],
+      ],
+    );
+    const effects = githubEffects(api, { repoRoot: scratch, runDir: scratch, ref: "main-line" });
+    await effects.execute("sha256:k", {
+      run: "r",
+      step: S02,
+      binding: { id: "b", digest: "d" },
+      candidate: "c",
+      outputs: [],
+      action: "pr-reply",
+      target: "t",
+      payload: { pull: 7, thread: items[1]?.thread ?? 0, body: "reply" },
+    } as unknown as EffectRequest);
+    assert.deepEqual(posts, [`/repos/${REPOSITORY}/pulls/7/comments/10/replies`]);
+  });
+
+  it("a saved state reports the expiry GitHub records for its artifact", async () => {
+    const dir = mkdtempSync(join(scratch, "upload-"));
+    writeFileSync(join(dir, "state.tar.gz"), "a");
+    writeFileSync(join(dir, "state.json"), "{}");
+    const api: GitHubApi = {
+      repository: REPOSITORY,
+      token: "t",
+      request<T>(_method: string, path: string): Promise<T> {
+        assert.equal(path, `/repos/${REPOSITORY}/actions/artifacts/4242`);
+        return Promise.resolve({
+          id: 4242,
+          name: "harness-h3-test-000003",
+          expired: false,
+          expires_at: "2026-12-30T10:00:00Z",
+          workflow_run: { id: 77 },
+        } as T);
+      },
+    };
+    const client = {
+      uploadArtifact: () => Promise.resolve({ id: 4242, size: 2 }),
+      downloadArtifact: () => Promise.reject(new Error("unused")),
+    } as unknown as NonNullable<Parameters<typeof githubStore>[1]["client"]>;
+    const saved = await githubStore(api, { currentRun: 77, ref: "main-line", client }).upload(
+      "h3-test",
+      3,
+      {
+        archive: join(dir, "state.tar.gz"),
+        manifest: join(dir, "state.json"),
+      },
+    );
+    assert.deepEqual(
+      [saved.id, saved.expiresAt, saved.workflowRun],
+      ["4242", "2026-12-30T10:00:00Z", 77],
+    );
+  });
+
+  it("a malformed dispatch is refused at the command line with every run field unknown", () => {
+    const dir = mkdtempSync(join(scratch, "cli-"));
+    const summaryFile = join(dir, "summary.md");
+    const outputFile = join(dir, "output");
+    const ran = spawnSync(
+      process.execPath,
+      ["--import", "tsx", join(here, "../src/cli.ts"), "workflow", "route"],
+      {
+        cwd: join(here, ".."),
+        encoding: "utf8",
+        env: {
+          PATH: process.env.PATH ?? "",
+          HARNESS_ACTION: "approve",
+          HARNESS_RUN: "Not A Run",
+          GITHUB_STEP_SUMMARY: summaryFile,
+          GITHUB_OUTPUT: outputFile,
+          GITHUB_REPOSITORY: REPOSITORY,
+          GITHUB_RUN_ID: "123",
+        },
+      },
+    );
+    assert.equal(ran.status, 2, ran.stderr);
+    const printed = JSON.parse(ran.stdout) as { summary: Summary };
+    const expected = refusedSummary(
+      "approve",
+      `https://github.com/${REPOSITORY}/actions/runs/123`,
+      printed.summary.diagnostics,
+    );
+    assert.deepEqual(checkSummary(printed.summary, expected), []);
+    for (const field of FIELDS.filter((f) => f !== "next"))
+      assert.equal(printed.summary[field], "unknown", field);
+    assert.match(printed.summary.diagnostics.join("\n"), /run Not A Run is not a run name/);
+    const rendered = readFileSync(summaryFile, "utf8");
+    assert.equal(rendered, renderSummary(printed.summary));
+    for (const row of [
+      "| Run | unknown |",
+      "| Accepted steps | unknown |",
+      "| Saved-state identity | unknown |",
+    ]) {
+      assert.ok(rendered.includes(row), row);
+    }
+    assert.match(readFileSync(outputFile, "utf8"), /^next=none$/m);
   });
 });
 
@@ -914,6 +1170,93 @@ describe("H3-08 operational steps", () => {
     assert.equal(w.github.branches.get(`harness/${w.run}`), published);
   });
 
+  it("a procedure in a fixture repository root runs there, and a later job restores and continues on the candidate", async () => {
+    // As the hosted template declares it: the registry root at a pinned revision of this repository.
+    const w = world(scratch);
+    await toPublished(w);
+    const extended = await settle(w, await dispatch(w, { action: "continue", through: S04 }));
+    assert.equal(
+      last(extended).summary.outcome,
+      "selection-accepted",
+      stringify(last(extended).summary),
+    );
+    assert.deepEqual((await factsOf(w)).accepted, [S01, S02, S03, S04]);
+    const dir = savedDir(w);
+    const [s03] = recordsOf<Decision & { decision: "accept" }>(w, "acceptance", dir).filter(
+      (d) => d.step === S03,
+    );
+    assert.ok(s03);
+    const files = execFileSync(
+      "git",
+      ["--git-dir", join(dir, "source.git"), "ls-tree", "--name-only", s03.candidate],
+      {
+        encoding: "utf8",
+      },
+    )
+      .trim()
+      .split("\n");
+    assert.deepEqual(
+      files,
+      ["README.md", "RELEASES.md", "record.mjs"],
+      "the workspace held the registry root",
+    );
+    // S03 and S04 ran in separate jobs: S04 restored the state S03's job saved.
+    const owners = eventsOf(w, dir).filter((e) => e.action === "owner");
+    const acceptedIn = (step: string): number | undefined => {
+      const seq =
+        eventsOf(w, dir).find((e) => e.action === "acceptance" && e.data.step === step)?.seq ?? 0;
+      return (owners.filter((o) => o.seq < seq).at(-1)?.data.github as { run_id: number } | null)
+        ?.run_id;
+    };
+    assert.notEqual(acceptedIn(S03), undefined);
+    assert.ok(eventsOf(w, dir).some((e) => e.action === "acceptance" && e.data.step === S04));
+    // The candidate's published head never holds the registry's files.
+    const head = w.github.branches.get(`harness/${w.run}`) ?? "";
+    assert.throws(() =>
+      execFileSync("git", ["cat-file", "-e", `${head}:record.mjs`], {
+        cwd: w.repo.root,
+        stdio: "ignore",
+      }),
+    );
+  });
+
+  it("hosted jobs fetch an operation target's pinned revision, from this repository or another", async () => {
+    // A server of two repositories, reached as GitHub's would be.
+    const server = mkdtempSync(join(scratch, "server-"));
+    const other = registryRepo(scratch);
+    mkdirSync(join(server, "sb-dev"));
+    execFileSync("git", ["clone", "-q", "--bare", other.root, join(server, "sb-dev/registry.git")]);
+    const root = mkdtempSync(join(scratch, "checkout-"));
+    execFileSync("git", ["init", "-q"], { cwd: root });
+    const resolve = targetRepositories(
+      { repository: REPOSITORY, token: "t", request: () => Promise.reject(new Error("no API")) },
+      {
+        root,
+        server: `file://${server}`,
+        header: "x-test: 1",
+        temp: mkdtempSync(join(scratch, "temp-")),
+      },
+    );
+    const fetched = await resolve("sb-dev/registry", other.head);
+    assert.ok(fetched);
+    assert.equal(
+      execFileSync("git", ["rev-parse", `${other.head}^{tree}`], {
+        cwd: fetched,
+        encoding: "utf8",
+      }).trim(),
+      execFileSync("git", ["rev-parse", `${other.head}^{tree}`], {
+        cwd: other.root,
+        encoding: "utf8",
+      }).trim(),
+    );
+    assert.equal(
+      await resolve("sb-dev/registry", "0".repeat(40)),
+      null,
+      "an absent revision is not available",
+    );
+    assert.equal(await resolve("sb-dev/missing", other.head), null);
+  });
+
   it("a procedure evaluated outside its declared target is not accepted", async () => {
     const w = world(scratch, { registry: true });
     await toS02(w);
@@ -1100,6 +1443,7 @@ describe("H3-10 status", () => {
     const w = world(scratch);
     await toPublished(w);
     const latest = w.store.latest(w.run);
+    const executed = w.github.executions.length;
     const archive = readFileSync(join(latest.dir, "state.tar.gz"));
     const reported = await dispatch(w, { action: "status" });
     assert.equal(reported.length, 1);
@@ -1108,7 +1452,7 @@ describe("H3-10 status", () => {
     assert.deepEqual(last(reported).summary.accepted, [S01]);
     assert.deepEqual(w.store.latest(w.run).sequence, latest.sequence);
     assert.deepEqual(readFileSync(join(latest.dir, "state.tar.gz")), archive);
-    assert.equal(w.github.executions.length, 3);
+    assert.equal(w.github.executions.length, executed, "status runs no effect");
   });
 
   it("refuses corrupt or stale state rather than presenting it", async () => {
@@ -1478,6 +1822,78 @@ describe("H3-14 one correction path for reviews and manual rounds", () => {
     );
   });
 
+  it("each published head gets one explicitly dispatched review, which pushes alone would not start", async () => {
+    const w = world(scratch);
+    const review = (commit: string): object => ({
+      workflow: "checkpoint-harness-verify.yml",
+      ref: `harness/${w.run}`,
+      commit,
+      inputs: { live: "false" },
+    });
+    await toPublished(w);
+    const initial = w.github.branches.get(`harness/${w.run}`) ?? "";
+    assert.deepEqual(w.github.dispatches, [review(initial)], "the initial publication");
+    const pull = w.github.pullOf(`harness/${w.run}`).number;
+    await settle(w, await dispatch(w, { action: "continue", through: S02 }));
+    const first = w.github.branches.get(`harness/${w.run}`) ?? "";
+    assert.deepEqual(w.github.dispatches, [review(initial), review(first)]);
+    // A round that only replies publishes nothing new and dispatches nothing.
+    w.github.comment(pull, OWNER, "[addressed] fine");
+    await settle(w, await dispatch(w, { action: "address-comments", pr: String(pull) }));
+    assert.equal(w.github.dispatches.length, 2);
+    // A correction publishes a new head, and that head is dispatched for review.
+    w.github.comment(pull, OWNER, `[actionable] cite the spec in ${GREETING}`);
+    await settle(w, await dispatch(w, { action: "address-comments", pr: String(pull) }));
+    const fixed = w.github.branches.get(`harness/${w.run}`) ?? "";
+    assert.notEqual(fixed, first);
+    assert.deepEqual(
+      w.github.dispatches.map((d) => d.commit),
+      [initial, first, fixed],
+    );
+    const receipts = recordsOf<{ key: string; receipt: { target: string } }>(w, "effect-receipt");
+    assert.equal(
+      receipts.filter((r) => r.receipt.target.includes("checkpoint-harness-verify.yml")).length,
+      3,
+    );
+  });
+
+  it("a follow-up comment in an inline thread is answered on the thread's first comment", async () => {
+    const w = world(scratch);
+    const pull = await toS02(w);
+    const opened = w.github.review(pull, OWNER, "", [
+      { path: GREETING, line: 1, body: "[addressed] the greeting is fine" },
+    ]);
+    await settle(
+      w,
+      await dispatch(
+        w,
+        { action: "address-comments", pr: String(pull), review: String(opened) },
+        { actor: "github-actions[bot]" },
+      ),
+    );
+    const root = w.github.reviewComments.find((c) => c.review === opened);
+    assert.ok(root);
+    const followUp = w.github.review(pull, OWNER, "", [
+      { path: GREETING, line: 1, body: "[declined] also rename it", inReplyTo: root.id },
+    ]);
+    const answered = await settle(
+      w,
+      await dispatch(
+        w,
+        { action: "address-comments", pr: String(pull), review: String(followUp) },
+        { actor: "github-actions[bot]" },
+      ),
+    );
+    assert.equal(last(answered).exit, 0, stringify(last(answered).summary));
+    assert.equal((await factsOf(w)).round?.complete, true);
+    const replies = w.github.reviewComments.filter((c) => c.author === "github-actions[bot]");
+    assert.equal(replies.length, 2);
+    assert.ok(
+      replies.every((r) => r.inReplyTo === root.id),
+      "both replies are on the thread's first comment",
+    );
+  });
+
   it("valid feedback is corrected; addressed, declined and blocked feedback get their disposition and reason", async () => {
     const w = world(scratch);
     const pull = await toS02(w);
@@ -1504,6 +1920,59 @@ describe("H3-14 one correction path for reviews and manual rounds", () => {
     assert.ok(bodies.some((b) => b.startsWith("**Corrected**") && b.includes(head)));
     assert.ok(bodies.some((b) => b.startsWith("**Blocked**")));
     assert.match(last(await dispatch(w, { action: "status" })).summary.next, /blocked feedback/);
+  });
+
+  it("a finding on an earlier output that the final step consumes is corrected by its owner, and every later step is renewed", async () => {
+    const w = world(scratch, { registry: true });
+    await toPublished(w);
+    const extended = await settle(w, await dispatch(w, { action: "continue", through: S04 }));
+    assert.equal(
+      last(extended).summary.outcome,
+      "selection-accepted",
+      stringify(last(extended).summary),
+    );
+    assert.deepEqual((await factsOf(w)).accepted, [S01, S02, S03, S04]);
+    const pull = w.github.pullOf(`harness/${w.run}`).number;
+    // S04 consumes S01's greeting, so the greeting is protected from S04 and owned by S01.
+    const review = w.github.review(pull, OWNER, "", [
+      { path: GREETING, line: 1, body: "[actionable] cite the specification in a comment" },
+    ]);
+    const routed = await settle(
+      w,
+      await dispatch(
+        w,
+        { action: "address-comments", pr: String(pull), review: String(review) },
+        { actor: "github-actions[bot]" },
+      ),
+    );
+    const [assessment] = recordsOf<Assessment>(w, "pr-assessment");
+    assert.equal(assessment?.dispositions[0]?.disposition, "actionable");
+    assert.equal(assessment?.correction?.step, S01, "the owner of the greeting corrects it");
+    // S01's corrected candidate is a new evaluation: its release is approved again.
+    const pending = pendingOf(last(routed));
+    await dispatch(w, { action: "approve", ...pending });
+    const done = await settle(w, await dispatch(w, { action: "continue" }));
+    assert.equal(last(done).summary.outcome, "selection-accepted", stringify(last(done).summary));
+    const facts = await factsOf(w);
+    assert.deepEqual(facts.accepted, [S01, S02, S03, S04]);
+    assert.equal(facts.round?.complete, true);
+    const events = eventsOf(w);
+    const assessed = events.find((e) => e.action === "pr-assessment")?.seq ?? Infinity;
+    for (const step of [S01, S02, S04]) {
+      assert.ok(
+        events.some((e) => e.action === "acceptance" && e.data.step === step && e.seq > assessed),
+        `${step} is accepted again after the assessment`,
+      );
+    }
+    // The published head carries the corrected greeting and the welcome built on it.
+    const head = w.github.branches.get(`harness/${w.run}`) ?? "";
+    const show = (path: string): string =>
+      execFileSync("git", ["show", `${head}:${path}`], { cwd: w.repo.root, encoding: "utf8" });
+    assert.match(show(GREETING), /Greets as HOSTED §1 says/);
+    assert.match(show(WELCOME), /import \{ greet \} from "\.\/greeting\.mjs"/);
+    const replies = w.github.reviewComments.filter((c) => c.author === "github-actions[bot]");
+    assert.equal(replies.length, 1);
+    assert.match(replies[0]?.body ?? "", /^\*\*Corrected\*\*/);
   });
 
   it("feedback that would change definitions, verifiers or the workflow is declined whatever the assessment", async () => {

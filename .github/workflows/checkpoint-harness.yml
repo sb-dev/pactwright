@@ -297,7 +297,8 @@ jobs:
     permissions:
       contents: write
       pull-requests: write
-      actions: read
+      # Dispatches the next review of each published head.
+      actions: write
     outputs:
       next: ${{ steps.effects.outputs.next }}
       dispatch_ref: ${{ steps.effects.outputs.dispatch_ref }}

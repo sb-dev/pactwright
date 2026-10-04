@@ -42,6 +42,8 @@ export type Review = {
 export type ReviewComment = {
   id: number;
   review: number | null;
+  /** The thread's first comment, for a reply in an existing thread; null for the first. */
+  inReplyTo: number | null;
   author: string;
   body: string;
   path: string;
@@ -169,7 +171,8 @@ export function collect(
           body: c.body,
           path: c.path,
           line: c.line,
-          thread: c.id,
+          // GitHub accepts replies only to a thread's first comment.
+          thread: c.inReplyTo ?? c.id,
           url: c.url,
         }),
       ),

@@ -9,6 +9,7 @@
 // acceptance.
 
 import assert from "node:assert/strict";
+import { execFileSync } from "node:child_process";
 import { mkdtempSync, readFileSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -155,9 +156,51 @@ describe("H3 hosted proof: one saved run across hosted jobs", () => {
       "a receipt read back after runner loss",
     );
     const actions = new Set(intents.map((i) => i.record.request.action));
-    for (const action of ["fixture-receipt", "push-branch", "open-pr", "pr-reply"]) {
+    for (const action of [
+      "fixture-receipt",
+      "push-branch",
+      "open-pr",
+      "pr-reply",
+      "review-dispatch",
+    ]) {
       assert.ok(actions.has(action), action);
     }
+  });
+
+  it("dispatched one review for every published head (H3 requirement 14)", async () => {
+    const intents = await records<{ request: { action: string; payload?: { commit?: string } } }>(
+      "effect-intent",
+    );
+    const receipts = await records<{ key: string; receipt: { details?: { commit?: string } } }>(
+      "effect-receipt",
+    );
+    const pushed = new Set(
+      receipts.flatMap((r) =>
+        typeof r.record.receipt.details?.commit === "string"
+          ? [r.record.receipt.details.commit]
+          : [],
+      ),
+    );
+    const reviewed = intents
+      .filter((i) => i.record.request.action === "review-dispatch")
+      .map((i) => i.record.request.payload?.commit);
+    assert.deepEqual([...new Set(reviewed)].sort(), [...pushed].sort());
+    assert.equal(new Set(reviewed).size, reviewed.length, "never dispatched twice for one head");
+  });
+
+  it("ran Step 3 in the registry root and restored it in a later job to continue (H3-08)", async () => {
+    const { dir } = await state;
+    const acceptances = await records<Decision & { decision: "accept" }>("acceptance");
+    const s03 = acceptances.filter((a) => a.record.step === "CP95-S03").at(-1);
+    const s04 = acceptances.filter((a) => a.record.step === "CP95-S04").at(-1);
+    assert.ok(s03 && s04);
+    const files = execFileSync(
+      "git",
+      ["--git-dir", join(dir, "source.git"), "ls-tree", "--name-only", s03.record.candidate],
+      { encoding: "utf8" },
+    );
+    assert.deepEqual(files.trim().split("\n"), ["README.md", "RELEASES.md", "record.mjs"]);
+    assert.notEqual(jobOf(await ownerAt(s04.event.seq)), jobOf(await ownerAt(s03.event.seq)));
   });
 
   it("published the selection and ran two correction rounds in separate hosted jobs (H3-13, H3-14)", async () => {

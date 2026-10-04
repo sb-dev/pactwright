@@ -5,8 +5,8 @@
 // and their feedback, and the external effects, each read back before its
 // receipt is recorded. Tests replace these boundaries with in-memory ones.
 
-import { execFileSync } from "node:child_process";
-import { mkdirSync, writeFileSync } from "node:fs";
+import { execFileSync, spawnSync } from "node:child_process";
+import { existsSync, mkdirSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 
 import { DefaultArtifactClient } from "@actions/artifact";
@@ -135,30 +135,46 @@ type RunRow = {
 };
 
 /**
- * Whether an artifact was uploaded by a dispatched run of this workflow in
- * this repository, on `ref`. Its author controls the workflow and harness
- * code of a run on any other branch, in a fork or for another event.
+ * Where an artifact came from: a dispatched run of this workflow in this
+ * repository on `ref` (trusted), or positively anything else (foreign).
+ * Its author controls the workflow and harness code of a run on any other
+ * branch, in a fork or for another event. A run that cannot be read is
+ * unknown, and an unknown artifact of a run is never skipped: it might be
+ * the run's latest state.
  */
-function trustedArtifacts(api: GitHubApi, ref: string): (row: ArtifactRow) => Promise<boolean> {
-  const runs = new Map<number, Promise<RunRow>>();
+export type Provenance = "trusted" | "foreign" | "unknown";
+
+function artifactProvenance(
+  api: GitHubApi,
+  ref: string,
+): (row: ArtifactRow) => Promise<Provenance> {
+  // Only runs read successfully are remembered; a failed read is tried again.
+  const runs = new Map<number, RunRow>();
   return async (row) => {
     const id = row.workflow_run?.id;
-    if (id === undefined || ref === "") return false;
-    if (!runs.has(id)) {
-      runs.set(id, api.request<RunRow>("GET", `/repos/${api.repository}/actions/runs/${id}`));
+    if (id === undefined) return "unknown";
+    let run = runs.get(id);
+    if (!run) {
+      try {
+        run = await api.request<RunRow>("GET", `/repos/${api.repository}/actions/runs/${id}`);
+      } catch {
+        return "unknown";
+      }
+      runs.set(id, run);
     }
-    try {
-      const run = await (runs.get(id) as Promise<RunRow>);
-      return (
-        run.path.split("@")[0] === WORKFLOW &&
-        run.event === "workflow_dispatch" &&
-        run.head_branch === ref &&
-        run.head_repository?.full_name === api.repository
-      );
-    } catch {
-      return false;
-    }
+    return ref !== "" &&
+      run.path.split("@")[0] === WORKFLOW &&
+      run.event === "workflow_dispatch" &&
+      run.head_branch === ref &&
+      run.head_repository?.full_name === api.repository
+      ? "trusted"
+      : "foreign";
   };
+}
+
+/** An artifact whose origin could not be established; nothing may rely on what is around it. */
+export class ProvenanceError extends Error {
+  override name = "ProvenanceError";
 }
 
 /**
@@ -171,10 +187,16 @@ function trustedArtifacts(api: GitHubApi, ref: string): (row: ArtifactRow) => Pr
  */
 export function githubStore(
   api: GitHubApi,
-  options: { currentRun: number; ref: string; retentionDays?: number },
+  options: {
+    currentRun: number;
+    ref: string;
+    retentionDays?: number;
+    /** The artifact client; the Actions runtime's by default. */
+    client?: Pick<DefaultArtifactClient, "uploadArtifact" | "downloadArtifact">;
+  },
 ): StateStore {
-  const client = new DefaultArtifactClient();
-  const trusted = trustedArtifacts(api, options.ref);
+  const client = options.client ?? new DefaultArtifactClient();
+  const provenance = artifactProvenance(api, options.ref);
   const [owner = "", repo = ""] = api.repository.split("/");
   return {
     async list(name) {
@@ -188,7 +210,14 @@ export function githubStore(
       const states: SavedState[] = [];
       for (const row of rows) {
         const match = pattern.exec(row.name);
-        if (!match || !(await trusted(row))) continue;
+        if (!match) continue;
+        const origin = await provenance(row);
+        if (origin === "unknown") {
+          throw new ProvenanceError(
+            `artifact ${row.id} (${row.name}): its workflow run cannot be read, so whether it is this run's state is unknown`,
+          );
+        }
+        if (origin === "foreign") continue;
         states.push({
           id: String(row.id),
           name,
@@ -222,14 +251,22 @@ export function githubStore(
       });
       if (uploaded.id === undefined)
         throw new Error(`${artifact}: the upload returned no artifact`);
+      // The saved state is what GitHub records for the artifact, its expiry included.
+      const row = await api.request<ArtifactRow>(
+        "GET",
+        `/repos/${api.repository}/actions/artifacts/${uploaded.id}`,
+      );
+      if (row.name !== artifact) {
+        throw new Error(`artifact ${uploaded.id} is ${row.name}, not the uploaded ${artifact}`);
+      }
       return {
-        id: String(uploaded.id),
+        id: String(row.id),
         name,
         sequence,
-        expired: false,
-        expiresAt: null,
-        url: `https://github.com/${api.repository}/actions/runs/${options.currentRun}/artifacts/${uploaded.id}`,
-        workflowRun: options.currentRun,
+        expired: row.expired,
+        expiresAt: row.expires_at,
+        url: `https://github.com/${api.repository}/actions/runs/${row.workflow_run?.id ?? options.currentRun}/artifacts/${row.id}`,
+        workflowRun: row.workflow_run?.id ?? options.currentRun,
       };
     },
   };
@@ -280,6 +317,7 @@ type ReviewRow = {
 type ReviewCommentRow = {
   id: number;
   pull_request_review_id: number | null;
+  in_reply_to_id?: number | null;
   user: { login: string } | null;
   body: string;
   path: string;
@@ -354,6 +392,7 @@ export function githubFeedback(api: GitHubApi): FeedbackSource {
       return rows.map((c) => ({
         id: c.id,
         review: c.pull_request_review_id,
+        inReplyTo: c.in_reply_to_id ?? null,
         author: login(c.user),
         body: c.body,
         path: c.path,
@@ -434,7 +473,7 @@ export function githubEffects(
     actor?: string;
   },
 ): EffectService {
-  const trusted = trustedArtifacts(api, options.ref);
+  const provenance = artifactProvenance(api, options.ref);
   const self = options.actor ?? "github-actions[bot]";
   const artifacts = new DefaultArtifactClient();
   const authHeader = `AUTHORIZATION: basic ${Buffer.from(`x-access-token:${api.token}`).toString("base64")}`;
@@ -486,16 +525,38 @@ export function githubEffects(
       `/repos/${api.repository}/actions/artifacts?name=${fixtureName(key)}`,
     );
     let row: ArtifactRow | undefined;
-    for (const r of rows.artifacts) if (!row && (await trusted(r))) row = r;
+    for (const r of rows.artifacts) {
+      const origin = await provenance(r);
+      if (origin === "unknown") {
+        throw new ProvenanceError(`artifact ${r.id} (${r.name}): its workflow run cannot be read`);
+      }
+      if (!row && origin === "trusted") row = r;
+    }
     return row
       ? receipt(key, request, `artifact ${row.id}`, { artifact: row.id, name: fixtureName(key) })
       : null;
+  };
+  // A dispatched review is the workflow run it started on the published head.
+  const reviewed = async (key: string, request: EffectRequest): Promise<Receipt | null> => {
+    const payload = request.payload ?? {};
+    const query = new URLSearchParams({
+      event: "workflow_dispatch",
+      branch: text(payload.ref),
+      head_sha: text(payload.commit),
+    });
+    const runs = await api.request<{ workflow_runs: { id: number; html_url: string }[] }>(
+      "GET",
+      `/repos/${api.repository}/actions/workflows/${encodeURIComponent(text(payload.workflow))}/runs?${query.toString()}`,
+    );
+    const run = runs.workflow_runs[0];
+    return run ? receipt(key, request, run.html_url, { run: run.id, url: run.html_url }) : null;
   };
   const inspectors: Record<string, (key: string, r: EffectRequest) => Promise<Receipt | null>> = {
     "push-branch": pushed,
     "open-pr": opened,
     "pr-reply": replied,
     "fixture-receipt": fixture,
+    "review-dispatch": reviewed,
   };
 
   return {
@@ -598,6 +659,21 @@ export function githubEffects(
           await artifacts.uploadArtifact(fixtureName(key), [file], dir);
           return fixture(key, request);
         }
+        case "review-dispatch": {
+          // The review runs on the published head only: a moved branch is not dispatched.
+          const head = await branchHead(api, text(payload.ref));
+          if (head !== payload.commit) {
+            throw new EffectRefused(
+              `${text(payload.ref)} is at ${head ?? "nothing"}, not the published ${text(payload.commit)}`,
+            );
+          }
+          await api.request(
+            "POST",
+            `/repos/${api.repository}/actions/workflows/${encodeURIComponent(text(payload.workflow))}/dispatches`,
+            { ref: text(payload.ref), inputs: payload.inputs ?? {} },
+          );
+          return reviewed(key, request);
+        }
         default:
           throw new EffectRefused(`no GitHub effect performs ${request.action}`);
       }
@@ -606,5 +682,63 @@ export function githubEffects(
       const inspector = inspectors[request.action];
       return inspector ? inspector(key, request) : Promise.resolve(null);
     },
+  };
+}
+
+/** Makes `commit` of `repository` present in the Git repository at `dir`, fetching it if absent. */
+export function fetchCommit(
+  dir: string,
+  server: string,
+  repository: string,
+  commit: string,
+  header: string,
+  shallow = false,
+): void {
+  const present = (): boolean =>
+    spawnSync("git", ["cat-file", "-e", `${commit}^{commit}`], { cwd: dir, stdio: "ignore" })
+      .status === 0;
+  if (present()) return;
+  const url = `${server}/${repository}.git`;
+  // The job's token reads this repository; another public repository reads without it.
+  for (const auth of [["-c", `http.extraheader=${header}`], []]) {
+    spawnSync(
+      "git",
+      [...auth, "fetch", "--quiet", ...(shallow ? ["--depth=1"] : []), url, commit],
+      {
+        cwd: dir,
+        stdio: "ignore",
+      },
+    );
+    if (present()) return;
+  }
+  throw new Error(`${repository} at ${commit} cannot be fetched`);
+}
+
+/**
+ * Where an operation target's pinned revision is read (T3.5 H3): this
+ * repository's own checkout, or a separate checkout below `temp` of another
+ * repository the job can read, fetched at exactly that revision. Candidate
+ * work only ever sees the snapshot the run imports from it.
+ */
+export function targetRepositories(
+  api: GitHubApi,
+  options: { root: string; server: string; header: string; temp: string },
+): (repository: string, revision: string) => Promise<string | null> {
+  return (repository, revision) => {
+    try {
+      if (repository === api.repository) {
+        fetchCommit(options.root, options.server, repository, revision, options.header);
+        return Promise.resolve(options.root);
+      }
+      const dir = join(options.temp, "targets", repository.replace("/", "--"));
+      if (!existsSync(join(dir, ".git"))) {
+        mkdirSync(dir, { recursive: true });
+        spawnSync("git", ["init", "--quiet"], { cwd: dir, stdio: "ignore" });
+      }
+      fetchCommit(dir, options.server, repository, revision, options.header, true);
+      return Promise.resolve(dir);
+    } catch {
+      return Promise.resolve(null);
+    }
   };
 }

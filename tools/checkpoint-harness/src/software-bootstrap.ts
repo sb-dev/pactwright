@@ -156,10 +156,11 @@ export type Binding = AutomatedBinding | ReviewBinding | ApprovalBinding;
 export const BINDINGS: readonly Binding[] = [];
 
 /**
- * The controller-owned binding of the H3 hosted fixture (CP95 under
+ * The controller-owned bindings of the H3 hosted fixture (CP95 under
  * test/fixtures): an owner approval whose effect is a fixture receipt, read
- * back from its Actions artifact. It proves approvals, denials and effect
- * recovery on hosted runners without a real release; no CP01 target names it.
+ * back from its Actions artifact, which proves approvals, denials and effect
+ * recovery on hosted runners without a real release; and the review of the
+ * welcome module built on the greeting. No CP01 target names either.
  */
 export const FIXTURE_BINDINGS: readonly Binding[] = [
   {
@@ -169,6 +170,15 @@ export const FIXTURE_BINDINGS: readonly Binding[] = [
     authority: "owner",
     subject: "the exact hosted fixture candidate, released as a fixture receipt",
     effect: { action: "fixture-receipt", target: "hosted-fixture/release" },
+  },
+  {
+    id: "hosted.welcome-review",
+    method: "review",
+    version: "1",
+    rubric: [
+      "The welcome module imports greet from the greeting module rather than repeating it.",
+      "welcome(name) returns greet(name) followed by ` Welcome aboard.` and nothing else.",
+    ],
   },
 ];
 

@@ -525,7 +525,9 @@ export async function runJob(
   return refuse([`${inputs.action} is not handled`]);
 
   async function start(): Promise<JobOutcome> {
-    if ((await services.store.list(inputs.run)).length > 0) {
+    const existing = await latestState(services.store, inputs.run);
+    if (existing.kind === "refused") return refuse(existing.diagnostics);
+    if (existing.kind === "found" || (await services.store.list(inputs.run)).length > 0) {
       return refuse([
         `${inputs.run} already has saved state; continue it instead of starting it again`,
       ]);

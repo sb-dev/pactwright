@@ -255,10 +255,11 @@ export type RunnerDeps = {
   /** The hosted job that owns what this controller journals (T3.5 H3). */
   github?: GithubOwner | null;
   /**
-   * Local repositories holding other repositories' revisions, by repository
-   * name, for operation targets outside `repoRoot` (T3.5 H3).
+   * A local repository holding `revision` of `repository`, for an operation
+   * target (T3.5 H3); null when it cannot be made available. Without it only
+   * `repoRoot`'s own repository is available.
    */
-  repositories?: Readonly<Record<string, string>>;
+  repositories?: (repository: string, revision: string) => Promise<string | null>;
 };
 
 export type SavePoint = "start" | "phase" | "effect" | "stop";
@@ -334,7 +335,11 @@ export type RunnerConfig = RunConfig & {
   workspace: { candidate_root: string; controller_root: string };
   permissions: WritePolicy & { approvers: Record<string, string[]> };
   /** Where the accepted selection is published for review (T3.5 H3). */
-  publication?: { pull_request: { title: string; draft: boolean; base?: string } };
+  publication?: {
+    pull_request: { title: string; draft: boolean; base?: string };
+    /** The review workflow dispatched on each published head. */
+    review?: { workflow: string; inputs?: Record<string, string> };
+  };
   verification?: {
     bindings?: string;
     dependencies?: {
@@ -1753,6 +1758,29 @@ function publicationAction(ctx: Ctx, s: State, accepted: Map<string, Acceptance>
     };
     return effectFor(ctx, s, request, "publication", null);
   }
+  // Pushes by the workflow token start no workflow: the next review of each
+  // published head is dispatched explicitly, once per head.
+  const review = ctx.config.publication?.review;
+  const head = assoc.head;
+  if (assoc.pull !== null && review && head && head.adopted === undefined) {
+    const request: EffectRequest = {
+      ...common,
+      action: "review-dispatch",
+      target: `${assoc.repository}/${review.workflow}@${assoc.branch}`,
+      payload: {
+        repository: assoc.repository,
+        workflow: review.workflow,
+        ref: assoc.branch,
+        commit: head.commit,
+        pull: assoc.pull.number,
+        inputs: review.inputs ?? {},
+      },
+    };
+    const dispatched = receipted(s).some(
+      (d) => d.request.action === "review-dispatch" && d.request.payload?.commit === head.commit,
+    );
+    if (!dispatched) return effectFor(ctx, s, request, "publication", null);
+  }
   if (assoc.pull === null) {
     const request: EffectRequest = {
       ...common,
@@ -1788,13 +1816,31 @@ function feedbackForbids(
   const policy = final ? policyFor(ctx, s, final, accepted) : EXIT_POLICY;
   const latest = integrated(accepted);
   const tree = latest ? treeEntries(ctx.run.dir, latest.candidate.tree) : new Map<string, string>();
+  // Authority no feedback changes: the definitions, configured protection,
+  // admitted verifiers, the workflow and binding declarations. An earlier
+  // step's accepted output is protected from the final step only because
+  // that step owns it; a finding on it routes there (`routeCorrection`).
+  const verifiers = final
+    ? protectedVerifierPaths(
+        ctx.declared(stepBase(ctx, final, accepted)).registry,
+        s.admissions,
+        final.id,
+      )
+    : [];
   const fixed = [
     ...ctx.plan.sources.map((x) => x.path),
-    ...policy.protected,
+    ...ctx.config.permissions.protected,
+    ...verifiers,
     ".github",
     ...(ctx.config.verification?.bindings === undefined ? [] : [ctx.config.verification.bindings]),
   ];
-  return (path) => within(path, fixed) || (tree.has(path) && !within(path, policy.writable));
+  const owned = new Set(
+    [...accepted.values()].flatMap((a) =>
+      a.decision.outputs.flatMap((o) => o.paths.map((p) => p.path)),
+    ),
+  );
+  return (path) =>
+    within(path, fixed) || (tree.has(path) && !within(path, policy.writable) && !owned.has(path));
 }
 
 /**
@@ -2712,7 +2758,10 @@ async function admit(
     if (error) diagnostics.add(`${name}: permissions: ${error}`);
   }
   for (const [target, declared] of Object.entries(config.operations?.targets ?? {})) {
-    for (const path of declared.writable) {
+    for (const path of [
+      ...declared.writable,
+      ...(declared.path === undefined ? [] : [declared.path]),
+    ]) {
       const error = policyPathError(path);
       if (error) diagnostics.add(`${name}: operations.targets.${target}: ${error}`);
     }
@@ -2889,15 +2938,18 @@ export async function startRun(
   // Each declared operation target is imported once, at its pinned revision.
   const targets: Record<string, SourceSnapshot> = {};
   for (const [name, target] of Object.entries(admitted.config.operations?.targets ?? {})) {
-    const from =
-      target.repository === admitted.config.repository.name
+    const from = deps.repositories
+      ? await deps.repositories(target.repository, target.revision)
+      : target.repository === admitted.config.repository.name
         ? deps.repoRoot
-        : deps.repositories?.[target.repository];
+        : null;
     const got = from
-      ? await importSource(run, from, target.revision)
+      ? await importSource(run, from, target.revision, target.path)
       : {
           ok: false as const,
-          diagnostics: [`${target.repository} is not available to this controller`],
+          diagnostics: [
+            `${target.repository} at ${target.revision} is not available to this controller`,
+          ],
         };
     if (!got.ok) {
       releaseRun(run);

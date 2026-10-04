@@ -1,8 +1,9 @@
 # The T3.5 H3 hosted-proof fixture (production readiness log §3 H3): runs
 # checkpoint CP95 of the harness tests on hosted runners, with live Claude
-# sessions, fixture effects, two pull-request correction rounds and the fault
-# input. It publishes to harness/<run> against the H3 implementation branch.
-# Not a Checkpoint 1 configuration.
+# sessions, fixture effects, an operational step in another repository root,
+# two pull-request correction rounds and the fault input. It publishes to
+# harness/<run> against the H3 implementation branch. Not a Checkpoint 1
+# configuration.
 repository:
   name: sb-dev/pactwright
   branch: ccr-60cac7b9-4pnn40
@@ -51,6 +52,23 @@ publication:
   pull_request:
     title: "H3 hosted fixture: harness publication"
     draft: true
+  # Each published head gets the repository's verification as its next review;
+  # the live Claude job is left out of it.
+  review:
+    workflow: checkpoint-harness-verify.yml
+    inputs:
+      live: "false"
+# CP95 Step 3 runs in the registry fixture: a repository root of its own,
+# pinned at a revision of this repository that holds it.
+operations:
+  targets:
+    registry:
+      repository: sb-dev/pactwright
+      revision: 5259bfd4e2d6d0f6a68f95076de26221b701f731
+      path: tools/checkpoint-harness/test/fixtures/checkpoint-harness/registry
+      writable: [RELEASES.md]
+  steps:
+    CP95-S03: registry
 job:
   # Short, so the first jobs yield and continue automatically.
   yield_after_seconds: 240

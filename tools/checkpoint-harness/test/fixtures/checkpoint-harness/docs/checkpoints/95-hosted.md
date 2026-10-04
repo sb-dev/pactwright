@@ -1,8 +1,8 @@
 # Checkpoint 95 — Hosted fixture
 
-The T3.5 H3 hosted-run fixture: one contract step and two reviewed
-operational steps kept in prose, the second run in another repository. Not a
-Pactwright checkpoint: its authority is the
+The T3.5 H3 hosted-run fixture: two contract steps, the second built on the
+first's output, and two reviewed operational steps kept in prose, the second
+run in another repository. Not a Pactwright checkpoint: its authority is the
 [hosted fixture specification](../specs/hosted-spec.md).
 
 ## Stage 1 — Greet
@@ -61,6 +61,14 @@ The last line of `RELEASES.md` is `released: CP95`.
 
 - the command exited 0 and printed the line it appended;
 - `RELEASES.md` keeps every earlier line.
+
+## Stage 4 — Welcome
+
+### Step 4 — Write the welcome module
+
+Contract: [CP95-S04](95-hosted/CP95-S04.yml). Deliverable: `welcome`, the
+module `tools/checkpoint-harness/test/fixtures/checkpoint-harness/hosted/work/welcome.mjs`,
+built on Step 1's greeting.
 
 ## Exit gate
 

@@ -312,17 +312,24 @@ export async function importSource(
   run: RunHandle,
   repoRoot: string,
   commit: string,
+  /** A directory of the revision to import as the root instead, such as a fixture repository. */
+  path?: string,
 ): Promise<{ ok: true; snapshot: SourceSnapshot } | { ok: false; diagnostics: string[] }> {
   const dir = mkdtempSync(join(tmpdir(), "pactwright-import-"));
+  const treeish = path === undefined ? commit : `${commit}:${path}`;
   try {
-    await exportRevision(repoRoot, commit, dir);
+    await exportRevision(repoRoot, treeish, dir);
     const none: WritePolicy = { writable: [], scratch: [], protected: [] };
-    const captured = captureSource(run.dir, dir, null, none, `base ${commit}`);
+    const captured = captureSource(run.dir, dir, null, none, `base ${treeish}`);
     if (!captured.ok) return captured;
-    const expected = execFileSync("git", ["rev-parse", `${commit}^{tree}`], {
-      cwd: repoRoot,
-      encoding: "utf8",
-    }).trim();
+    const expected = execFileSync(
+      "git",
+      ["rev-parse", path === undefined ? `${commit}^{tree}` : treeish],
+      {
+        cwd: repoRoot,
+        encoding: "utf8",
+      },
+    ).trim();
     if (captured.candidate.tree !== expected) {
       return {
         ok: false,

@@ -82,6 +82,16 @@
             "draft": { "type": "boolean" },
             "base": { "type": "string", "minLength": 1 }
           }
+        },
+        "review": {
+          "description": "The review workflow dispatched on the published head after each publication: a push by the workflow token starts no workflow, so the harness dispatches the next review itself.",
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["workflow"],
+          "properties": {
+            "workflow": { "type": "string", "pattern": "^[A-Za-z0-9._-]+\\.ya?ml$" },
+            "inputs": { "type": "object", "additionalProperties": { "type": "string" } }
+          }
         }
       }
     },

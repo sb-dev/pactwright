@@ -218,7 +218,19 @@ export type Latest =
  * older one. Both are refused.
  */
 export async function latestState(store: StateStore, name: string): Promise<Latest> {
-  const saved = firsts(await store.list(name));
+  let listed: SavedState[];
+  try {
+    listed = await store.list(name);
+  } catch (e) {
+    // A store that cannot say what it holds never yields an older state.
+    return {
+      kind: "refused",
+      diagnostics: [
+        `${name}: the saved states cannot be listed: ${e instanceof Error ? e.message : String(e)}`,
+      ],
+    };
+  }
+  const saved = firsts(listed);
   const latest = saved.at(-1);
   if (!latest) return { kind: "missing" };
   if (latest.expired) {

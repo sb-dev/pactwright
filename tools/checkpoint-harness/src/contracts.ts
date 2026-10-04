@@ -29,9 +29,15 @@ import {
 
 /**
  * Another repository an operational step runs in (T3.5 H3), at a pinned
- * revision, with the paths its procedure may change there.
+ * revision, with the paths its procedure may change there; `path` makes a
+ * directory of that revision the target's root, such as a fixture repository.
  */
-export type OperationTarget = { repository: string; revision: string; writable: string[] };
+export type OperationTarget = {
+  repository: string;
+  revision: string;
+  path?: string;
+  writable: string[];
+};
 
 /** The declared targets of operational steps; an undeclared step runs on the candidate. */
 export type Operations = {

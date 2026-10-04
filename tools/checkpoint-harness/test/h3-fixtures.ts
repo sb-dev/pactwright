@@ -74,9 +74,11 @@ export const H = "tools/checkpoint-harness/test/fixtures/checkpoint-harness";
 export const WORK = `${H}/hosted/work`;
 export const GREETING = `${WORK}/greeting.mjs`;
 export const STAMP = `${WORK}/STAMP.txt`;
+export const WELCOME = `${WORK}/welcome.mjs`;
 export const S01 = "CP95-S01";
 export const S02 = "CP95-S02";
 export const S03 = "CP95-S03";
+export const S04 = "CP95-S04";
 /** The repository CP95 Step 3 runs in, and the path of its release list there. */
 export const REGISTRY = "sb-dev/pactwright-registry";
 export const RELEASES = "RELEASES.md";
@@ -99,10 +101,14 @@ export type Repo = { root: string; head: string };
  * format schema and the hosted template retargeted at this branch; `edit`
  * changes the template first.
  */
-export function hostedRepo(scratch: string, edit: (template: string) => string = (t) => t): Repo {
+export function hostedRepo(
+  scratch: string,
+  edit: (template: string) => string = (t) => t,
+  registry: Repo | null = null,
+): Repo {
   const root = join(scratch, `repo-${randomUUID()}`);
   mkdirSync(join(root, H), { recursive: true });
-  for (const dir of ["docs", "hosted"]) {
+  for (const dir of ["docs", "hosted", "registry"]) {
     cpSync(join(repoRoot, H, dir), join(root, H, dir), { recursive: true });
   }
   mkdirSync(join(root, "docs/checkpoints"), { recursive: true });
@@ -110,15 +116,32 @@ export function hostedRepo(scratch: string, edit: (template: string) => string =
     join(repoRoot, "docs/checkpoints/contract.schema.json"),
     join(root, "docs/checkpoints/contract.schema.json"),
   );
-  mkdirSync(join(root, ".github/checkpoint-harness"), { recursive: true });
-  const template = readFileSync(
-    join(repoRoot, `.github/checkpoint-harness/${TEMPLATE}`),
-    "utf8",
-  ).replace(/branch: .*/, `branch: ${BRANCH}`);
-  writeFileSync(join(root, `.github/checkpoint-harness/${TEMPLATE}`), edit(template));
   git(root, ["init", "-q", "-b", BRANCH]);
   git(root, ["add", "-A"]);
   git(root, ["commit", "-q", "--no-gpg-sign", "-m", "fixture"]);
+  // Step 3's target, as the hosted template declares it: the registry fixture
+  // at a revision of this repository; or a separate registry repository.
+  const first = git(root, ["rev-parse", "HEAD"]);
+  const template = readFileSync(join(repoRoot, `.github/checkpoint-harness/${TEMPLATE}`), "utf8")
+    .replace(/branch: .*/, `branch: ${BRANCH}`)
+    .replace(/^operations:\n(?:[ #].*\n|\n)*/m, "");
+  const operations = registry
+    ? registryTarget(registry.head)
+    : `
+operations:
+  targets:
+    registry:
+      repository: ${REPOSITORY}
+      revision: ${first}
+      path: ${H}/registry
+      writable: [${RELEASES}]
+  steps:
+    ${S03}: registry
+`;
+  mkdirSync(join(root, ".github/checkpoint-harness"), { recursive: true });
+  writeFileSync(join(root, `.github/checkpoint-harness/${TEMPLATE}`), edit(template) + operations);
+  git(root, ["add", "-A"]);
+  git(root, ["commit", "-q", "--no-gpg-sign", "-m", "template"]);
   return { root, head: git(root, ["rev-parse", "HEAD"]) };
 }
 
@@ -250,7 +273,7 @@ export class FakeGitHub {
   jobs = new Map<string, string>();
   artifacts = new Set<string>();
   executions: { key: string; action: string }[] = [];
-  dispatches: Record<string, string>[] = [];
+  dispatches: { workflow: string; ref: string; commit: string; inputs: unknown }[] = [];
   private ids = 1000;
   constructor(readonly repo: Repo) {
     this.branches.set(BRANCH, repo.head);
@@ -280,7 +303,7 @@ export class FakeGitHub {
     pull: number,
     author: string,
     body: string,
-    inline: { path: string; line: number; body: string }[] = [],
+    inline: { path: string; line: number; body: string; inReplyTo?: number }[] = [],
   ): number {
     const id = this.id();
     this.reviews.push({
@@ -297,6 +320,7 @@ export class FakeGitHub {
         id: cid,
         pull,
         review: id,
+        inReplyTo: c.inReplyTo ?? null,
         author,
         body: c.body,
         path: c.path,
@@ -390,6 +414,14 @@ export class FakeGitHub {
             ? receipt(key, request, pull.url, { number: pull.number, url: pull.url })
             : null;
         }
+        case "review-dispatch": {
+          const found = this.dispatches.find(
+            (d) => d.workflow === p.workflow && d.ref === p.ref && d.commit === p.commit,
+          );
+          return found
+            ? receipt(key, request, `run ${found.workflow}`, { workflow: found.workflow })
+            : null;
+        }
         case "pr-reply": {
           const found = [...this.comments, ...this.reviewComments].find(
             (c) => c.author === "github-actions[bot]" && c.body.includes(`effect=${key}`),
@@ -457,15 +489,32 @@ export class FakeGitHub {
             });
             break;
           }
+          case "review-dispatch": {
+            this.dispatches.push({
+              workflow: String(p.workflow),
+              ref: String(p.ref),
+              commit: String(this.branches.get(String(p.ref)) ?? ""),
+              inputs: p.inputs ?? null,
+            });
+            break;
+          }
           case "pr-reply": {
             const id = this.id();
             const body = `${String(p.body)}\n\n<!-- pactwright-harness effect=${key} -->`;
             const pull = Number(p.pull);
             if (typeof p.thread === "number") {
+              // As GitHub, a reply goes only to a thread's first comment.
+              const root = this.reviewComments.find((c) => c.id === p.thread);
+              if (!root || root.inReplyTo !== null) {
+                return Promise.reject(
+                  new Error(`POST comments/${p.thread}/replies: 404 not a thread's first comment`),
+                );
+              }
               this.reviewComments.push({
                 id,
                 pull,
                 review: null,
+                inReplyTo: root.id,
                 author: "github-actions[bot]",
                 body,
                 path: "",
@@ -588,6 +637,22 @@ export function fixtureProducer(
     if (step.id === S03 && options.runCommands !== false) {
       await session.call("run_command", { argv: ["node", "record.mjs", "CP95"] });
     }
+    if (step.id === S04) {
+      const cited = findings.some((f) => f.location.includes("welcome.mjs"))
+        ? ["// Welcomes as HOSTED §4 says."]
+        : [];
+      const welcome = [
+        ...cited,
+        "// CP95 Step 4: the welcome of HOSTED §4, built on the greeting.",
+        'import { greet } from "./greeting.mjs";',
+        "",
+        "export function welcome(name) {",
+        "  return `${greet(name)} Welcome aboard.`;",
+        "}",
+        "",
+      ].join("\n");
+      return submit(session, { [WELCOME]: welcome }, { welcome: [WELCOME] });
+    }
     return submit(session, {}, {});
   });
 }
@@ -688,8 +753,7 @@ export function world(
   const dir = join(scratch, randomUUID());
   mkdirSync(dir);
   const registry = options.registry ? registryRepo(dir) : null;
-  const edit = options.edit ?? ((t: string) => t);
-  const repo = hostedRepo(dir, registry ? (t) => edit(t) + registryTarget(registry.head) : edit);
+  const repo = hostedRepo(dir, options.edit, registry);
   return {
     registry,
     contained: options.contained ?? false,
@@ -794,7 +858,14 @@ export async function job(
           },
     fence: (run) => (w.contained ? fenceWorkers(run) : Promise.resolve(0)),
     providers: { producer: w.producer, reviewer: w.reviewer },
-    ...(w.registry ? { repositories: { [REGISTRY]: w.registry.root } } : {}),
+    repositories: (repository, revision) =>
+      Promise.resolve(
+        repository === REGISTRY && w.registry?.head === revision
+          ? w.registry.root
+          : repository === REPOSITORY
+            ? checkout
+            : null,
+      ),
     crash: () => {
       throw new Crash("the runner was lost");
     },

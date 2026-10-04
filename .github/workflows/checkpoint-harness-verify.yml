@@ -18,6 +18,11 @@ on:
       - "tools/checkpoint-harness/**"
   workflow_dispatch:
     inputs:
+      live:
+        description: Run the live Claude job; the harness dispatches its reviews without it.
+        required: false
+        type: boolean
+        default: true
       h3_proof_run:
         description: H3 hosted proof — the run name whose latest saved state to check; empty skips it.
         required: false
@@ -75,7 +80,7 @@ jobs:
   # requests receive no secrets, so the job runs
   # only for this repository's branches; a missing secret fails it.
   live-claude:
-    if: github.event_name == 'workflow_dispatch' || github.event.pull_request.head.repo.full_name == github.repository
+    if: (github.event_name == 'workflow_dispatch' && inputs.live) || github.event.pull_request.head.repo.full_name == github.repository
     runs-on: ubuntu-24.04
     environment: claude-live
     timeout-minutes: 30
