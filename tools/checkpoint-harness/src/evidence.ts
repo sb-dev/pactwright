@@ -285,35 +285,17 @@ function takeOwnership(
   return handle;
 }
 
-/** The Actions job this process runs in, from the runner's environment; null elsewhere. */
-export function actionsJob(
-  env: Readonly<Record<string, string | undefined>> = process.env,
-): GithubOwner | null {
-  const runId = Number(env.GITHUB_RUN_ID);
-  const attempt = Number(env.GITHUB_RUN_ATTEMPT);
-  if (
-    env.GITHUB_ACTIONS !== "true" ||
-    !env.GITHUB_REPOSITORY ||
-    !env.GITHUB_JOB ||
-    !Number.isSafeInteger(runId) ||
-    !Number.isSafeInteger(attempt)
-  ) {
-    return null;
-  }
-  return {
-    repository: env.GITHUB_REPOSITORY,
-    run_id: runId,
-    run_attempt: attempt,
-    job: env.GITHUB_JOB,
-  };
-}
-
+/**
+ * This process as an owner. A hosted workflow job names its GitHub job
+ * explicitly; a process is never assumed to be the job whose environment
+ * it happens to run in, such as a test inside a CI job.
+ */
 const self = (
   github: GithubOwner | null | undefined,
 ): Pick<OwnerRecord, "host" | "pid" | "github"> => ({
   host: hostname(),
   pid: process.pid,
-  github: github === undefined ? actionsJob() : github,
+  github: github ?? null,
 });
 
 /**
