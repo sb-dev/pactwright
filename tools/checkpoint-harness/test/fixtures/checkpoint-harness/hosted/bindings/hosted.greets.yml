@@ -1,0 +1,9 @@
+# Delivered with the greeting capability (CP95-S01/AC01).
+id: hosted.greets
+method: automated
+version: "1"
+command: [node, tools/checkpoint-harness/test/fixtures/checkpoint-harness/hosted/verifiers/greet-subject.mjs]
+judge: [node, tools/checkpoint-harness/test/fixtures/checkpoint-harness/hosted/verifiers/greet-judge.mjs]
+files: [tools/checkpoint-harness/test/fixtures/checkpoint-harness/hosted/verifiers/greet-judge.mjs, tools/checkpoint-harness/test/fixtures/checkpoint-harness/hosted/verifiers/greet-subject.mjs]
+timeoutMs: 30000
+observations: [exit, stdout]

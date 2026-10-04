@@ -105,6 +105,11 @@ export type AgentRole = {
   limits: { attempts: number; wallTimeMs: number; maxTurns: number; maxBudgetUsd: number };
   credential: Secret;
   credentialKind: CredentialKind;
+  /**
+   * False for a role admitted without its credential (T3.5 H3): a job that
+   * never dispatches, such as an effects or operator job. It cannot dispatch.
+   */
+  dispatchable: boolean;
 };
 
 export type Finding = { rule: string; location: string; defect: string; correction: string };
@@ -115,7 +120,8 @@ export type Finding = { rule: string; location: string; defect: string; correcti
  * the controller's recorded evidence.
  */
 export type ReviewContext = {
-  kind: "candidate" | "adequacy";
+  /** A step candidate, a verifier's adequacy, or pull-request feedback (T3.5 H3). */
+  kind: "candidate" | "adequacy" | "feedback";
   rubric: { id: string; digest: string; items: readonly string[]; pass: string };
   subjects: string[];
   targets: VerificationTarget[];
@@ -158,6 +164,10 @@ export type Packet = {
     requirements: PlannedRequirement[];
     criteria: PlannedCriterion[];
     targets: VerificationTarget[];
+    /** The reviewed procedure's hash, for an operational step (T3.5 H3); its text is `PROCEDURE`. */
+    procedure?: string;
+    /** Where the procedure runs when it is not the candidate: the workspace holds that repository. */
+    target?: { name: string; repository: string; revision: string };
   };
   inherited: PreparedRun["inherited"];
   inputs: { sources: PlannedInput[]; accepted: AcceptedOutput[] };
@@ -184,7 +194,21 @@ export type Submission = {
   blockers: string[];
 };
 
-export type ToolCall = { tool: string; target: string; ok: boolean; detail: string };
+/**
+ * One tool call. A `run_command` call that ran also records its exit status
+ * and, when the caller stores evidence, its output's evidence references: the
+ * command and observation evidence of an operational step (T3.5 H3).
+ */
+export type ToolCall = {
+  tool: string;
+  target: string;
+  ok: boolean;
+  detail: string;
+  exit?: number | null;
+  timedOut?: boolean;
+  stdout?: string;
+  stderr?: string;
+};
 
 /** Redacted facts about one invocation. Assistant text is never recorded. */
 export type Observation = {
@@ -250,7 +274,8 @@ export const containedOps = (ws: Workspace): WorkspaceOps => ({
   exec: (argv, options) => exec(ws, argv, options),
 });
 
-export type ToolReply = { ok: boolean; text: string };
+/** A tool's reply; `ran` is the result of a command it ran in the workspace. */
+export type ToolReply = { ok: boolean; text: string; ran?: ExecResult };
 
 export type ToolDef = {
   name: string;
@@ -384,7 +409,12 @@ const validateDispatch = ajv.compile<DispatchConfig>(dispatchSchema as Record<st
 export function resolveRole(
   config: unknown,
   name: RoleName,
-  options: { skillsRoot: string; env: Readonly<Record<string, string | undefined>> },
+  options: {
+    skillsRoot: string;
+    env: Readonly<Record<string, string | undefined>>;
+    /** False admits the role without its credential, never to dispatch; true by default. */
+    requireCredential?: boolean;
+  },
 ): { ok: true; role: AgentRole } | { ok: false; diagnostics: string[] } {
   if (!validateDispatch(config)) {
     return {
@@ -399,7 +429,10 @@ export function resolveRole(
   const diagnostics: string[] = [];
   const variable = config.credentials.provider.slice("env:".length);
   const key = options.env[variable];
-  if (!key) diagnostics.push(`credentials.provider: ${variable} is not set; dispatch refused`);
+  const required = options.requireCredential ?? true;
+  if (!key && required) {
+    diagnostics.push(`credentials.provider: ${variable} is not set; dispatch refused`);
+  }
   const spend = config.budgets.provider_spend_limit;
   if (spend.turn_reservation_usd >= spend.usd) {
     diagnostics.push(
@@ -439,7 +472,7 @@ export function resolveRole(
       `roles.${name}.effort: ${role.model} does not accept effort ${role.effort}; it accepts ${levels.join(", ") || "no effort setting"}`,
     );
   }
-  if (diagnostics.length > 0 || !key) return { ok: false, diagnostics };
+  if (diagnostics.length > 0 || (!key && required)) return { ok: false, diagnostics };
   return {
     ok: true,
     role: {
@@ -454,8 +487,9 @@ export function resolveRole(
         maxTurns: role.max_turns,
         maxBudgetUsd: spend.usd - spend.turn_reservation_usd,
       },
-      credential: new Secret(key),
+      credential: new Secret(key ?? ""),
       credentialKind: config.credentials.kind ?? "api-key",
+      dispatchable: Boolean(key),
     },
   };
 }
@@ -465,6 +499,7 @@ const TEMPLATES: Record<RoleName, string> = {
     "You are the producer for one Pactwright checkpoint step. The user message is a JSON work packet: the step's exact requirements and acceptance criteria, its accepted inputs, the paths you may change and findings from earlier attempts.",
     "Work only through the mcp__workspace__ tools: read_file, search_files, write_file and run_command. They act inside an isolated workspace with no network. Change only the writable paths listed under effects; protected paths and every other path are read-only.",
     "Do not weaken or reinterpret a requirement. If a requirement is contradictory, needs authority you lack, or cannot be met within the permitted effects, report it as a blocker instead of guessing.",
+    "When step.procedure is present, the step is a reviewed operational procedure and its PROCEDURE requirement is the procedure's text: carry it out as written by running its commands with run_command in this workspace; when step.target is present, the workspace holds that repository at that revision rather than the candidate. The harness records each command, its exit status and its output as evidence; the step is accepted only on that evidence, checked against the procedure's expected result and checks.",
     "When the packet names verification.bindings, a target whose binding the harness lacks needs its verifier and a declaration at <bindings>/<binding-id>.yml (automated: id, method, version, command, judge, files, timeoutMs, observations, optional scratch and dependencies; review: id, method, version, rubric). The harness admits a declared binding before any of its results count; inherited criteria marked exit or after a step under inherited.applicability are not yet this step's to satisfy.",
     'Finish with the structured result: status "submitted" with the paths of each output you produced, a one-line summary of each changed path and any verifier you propose; or status "blocked" with the blockers. The result is a proposal. The harness checks the workspace, runs verification and obtains independent review; you cannot accept your own work.',
   ].join("\n\n"),
@@ -540,6 +575,16 @@ export function buildPacket(
       requirements: step.requirements,
       criteria: step.criteria,
       targets: step.targets,
+      ...(step.procedure ? { procedure: step.procedure.hash } : {}),
+      ...(step.procedure?.target
+        ? {
+            target: {
+              name: step.procedure.target.name,
+              repository: step.procedure.target.repository,
+              revision: step.procedure.target.revision,
+            },
+          }
+        : {}),
     },
     inherited: plan.inherited,
     inputs: { sources: step.inputs.filter((i) => i.kind === "source"), accepted },
@@ -784,6 +829,7 @@ export function workspaceTools(role: RoleName, ops: WorkspaceOps, policy: WriteP
           `stdout:\n${tail(result.stdout)}`,
           `stderr:\n${tail(result.stderr)}`,
         ].join("\n"),
+        ran: result,
       };
     },
   };
@@ -1136,7 +1182,11 @@ export async function invokeAgent(
   packet: Packet,
   workspace: WorkspaceOps,
   signal: AbortSignal,
-  options: { provider?: Provider } = {},
+  options: {
+    provider?: Provider;
+    /** Stores bytes as evidence and returns the reference: command output is then recorded. */
+    evidence?: (bytes: Buffer) => string;
+  } = {},
 ): Promise<AgentOutcome> {
   const started = Date.now();
   const observation: Observation = {
@@ -1181,13 +1231,23 @@ export async function invokeAgent(
       } catch (e) {
         reply = { ok: false, text: `${def.name} failed: ${e instanceof Error ? e.message : e}` };
       }
+      const { ran } = reply;
       observation.toolCalls.push({
         tool: def.name,
         target: targetOf(args),
         ok: reply.ok,
         detail: reply.ok ? "" : reply.text.slice(0, 500),
+        ...(ran && def.name === "run_command"
+          ? {
+              exit: ran.exitCode,
+              timedOut: ran.timedOut,
+              ...(options.evidence
+                ? { stdout: options.evidence(ran.stdout), stderr: options.evidence(ran.stderr) }
+                : {}),
+            }
+          : {}),
       });
-      return reply;
+      return { ok: reply.ok, text: reply.text };
     },
   }));
 
@@ -1221,6 +1281,13 @@ export async function invokeAgent(
   observation.settings = sha256(stringify(sessionSettings(request)));
   if (packet.role !== role.name) {
     return done({ outcome: "failed", reason: `packet is for ${packet.role}`, observation });
+  }
+  if (!role.dispatchable) {
+    return done({
+      outcome: "failed",
+      reason: "the role was admitted without its credential; this job cannot dispatch",
+      observation,
+    });
   }
   if (packet.attempt > role.limits.attempts) {
     return done({ outcome: "exhausted", limit: "attempts", observation });
@@ -1397,12 +1464,16 @@ export function recordInvocation(
   data: JsonObject = {},
 ): JournalEvent {
   const ref = putEvidence(run, stringify(outcome));
+  // Command output the invocation recorded is journaled with it.
+  const outputs = outcome.observation.toolCalls.flatMap((c) => [c.stdout, c.stderr]);
+  const recorded = [...new Set(outputs.filter((o): o is string => o !== undefined))].sort();
   return appendEvent(run, {
     action: "agent-invocation",
     attempt: outcome.observation.attempt,
-    evidence: [ref],
+    evidence: [ref, ...recorded.filter((r) => r !== ref)],
     data: {
       ...data,
+      record: ref,
       role: outcome.observation.role,
       outcome: outcome.outcome,
       session: outcome.observation.session,

@@ -1,0 +1,5 @@
+# Minimal conversion record: the fixture was written as a contract and a prose step; planning does not read crosswalk quotes.
+sources:
+  - source: docs/checkpoints/95-hosted.md@0000000
+    steps: [CP95-S01]
+entries: []

@@ -556,6 +556,25 @@ export async function fenceWorkers(run: string): Promise<number> {
 }
 
 /**
+ * Seals a snapshot as it is, without a workspace or an agent (T3.5 H3): a
+ * pull request's newer commits adopted into a correction. The diff against
+ * `base` is checked against `policy` as any candidate's is.
+ */
+export async function sealSnapshot(
+  run: RunHandle,
+  snapshot: SourceSnapshot,
+  against: { base: SourceSnapshot; policy: WritePolicy },
+): Promise<Capture> {
+  const dir = mkdtempSync(join(tmpdir(), "pactwright-adopt-"));
+  try {
+    await exportRevision(sourceGit(run.dir), snapshot.commit, dir);
+    return captureSource(run.dir, dir, against.base, against.policy, "candidate");
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
+}
+
+/**
  * Stops every writer of the workspace, then captures its files as a new
  * snapshot whose parent is `against.base`, checking the diff against
  * `against.policy`. Both default to the workspace's own; a workspace started

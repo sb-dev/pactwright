@@ -38,6 +38,11 @@
           "type": "integer",
           "minimum": 0
         },
+        "run_spend_usd": {
+          "description": "Optional spend limit of the whole run (T3.5 H3): an agent session starts only while reported costs, sessions of unknown cost and unresolved invocation allowances leave room for one more provider_spend_limit.usd.",
+          "type": "number",
+          "exclusiveMinimum": 0
+        },
         "provider_spend_limit": {
           "description": "Hard spend limit per invocation. The provider checks its estimate only after each turn, so turn_reservation_usd is held back for the turn that crosses the limit.",
           "type": "object",

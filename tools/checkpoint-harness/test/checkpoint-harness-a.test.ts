@@ -225,8 +225,8 @@ describe("T3-A contract loading and execution planning", () => {
   it("A02 selects only the first eligible step", async () => {
     const plan = await planOf(root, config(rev));
     assert.deepEqual(
-      plan.steps.map((s) => `${s.id}:${s.kind}`),
-      ["CP99-S01:contract", "CP99-S02:contract", "CP99-S03:contract", "CP99-S04:prose"],
+      plan.steps.map((s) => `${s.id}:${s.procedure ? "operational" : "contract"}`),
+      ["CP99-S01:contract", "CP99-S02:contract", "CP99-S03:contract", "CP99-S04:operational"],
     );
     assert.deepEqual(contract(plan, "CP99-S02").inputs, [
       { name: "parser", kind: "output", ref: "CP99-S01/config-parser" },
@@ -289,12 +289,44 @@ describe("T3-A contract loading and execution planning", () => {
       kind: "dispatch",
       step: "CP99-S03",
     });
-    // A reviewed unconverted step pauses the run once every earlier step is accepted.
+    // A reviewed operational step kept in prose is dispatched once every
+    // earlier step is accepted (Spec 00 §4, Q67), and is done only with its own
+    // current acceptance.
     const all = outputs(["CP99-S01", "CP99-S02", "CP99-S03"]);
     assert.deepEqual(nextEligible(plan, { outputs: all, capabilities: [reporting] }), {
-      kind: "unconverted",
+      kind: "dispatch",
       step: "CP99-S04",
     });
+    const s04 = contract(plan, "CP99-S04");
+    // The reviewed text is the stage heading, its introduction and the step section.
+    assert.equal(
+      s04.procedure?.text,
+      "## Stage 2 — Release\n\n### Step 4 — Release the fixture\n\n**Run**\n\nRelease the fixture by hand.",
+    );
+    assert.equal(s04.procedure.hash, plan.stepDefinitions["CP99-S04"]);
+    assert.deepEqual(s04.requires, ["CP99-S01", "CP99-S02", "CP99-S03"]);
+    assert.deepEqual(
+      s04.requirements.map((r) => [r.id, r.statement]),
+      [["PROCEDURE", s04.procedure.text]],
+    );
+    assert.deepEqual([s04.outputs, s04.targets], [[], []]);
+    const accepted04 = {
+      step: "CP99-S04",
+      definition: plan.stepDefinitions["CP99-S04"] ?? "",
+      definitions: plan.definitionsDigest,
+    };
+    assert.deepEqual(
+      nextEligible(plan, { outputs: all, capabilities: [reporting], steps: [accepted04] }),
+      { kind: "selection-accepted" },
+    );
+    assert.deepEqual(
+      nextEligible(plan, {
+        outputs: all,
+        capabilities: [reporting],
+        steps: [{ ...accepted04, definition: "sha256:older" }],
+      }),
+      { kind: "dispatch", step: "CP99-S04" },
+    );
     const through03 = await planOf(root, config(rev, "CP99-S03"));
     assert.deepEqual(nextEligible(through03, { outputs: all, capabilities: [reporting] }), {
       kind: "selection-accepted",
@@ -345,7 +377,7 @@ describe("T3-A contract loading and execution planning", () => {
     assert.deepEqual(nextEligible(canonical, reaccepted), { kind: "dispatch", step: "CP99-S01" });
   });
 
-  it("A02 plans Checkpoint 1 at HEAD and pauses at its first unconverted step", async () => {
+  it("A02 plans Checkpoint 1 at HEAD and dispatches its first operational step", async () => {
     const rev = head(repoRoot);
     const plan = await planOf(repoRoot, {
       ...config(rev, "CP01-S31"),
@@ -353,11 +385,11 @@ describe("T3-A contract loading and execution planning", () => {
     });
     assert.equal(plan.steps.length, 31);
     assert.deepEqual(nextEligible(plan, none), { kind: "dispatch", step: "CP01-S01" });
-    const converted = plan.steps.filter((s) => s.kind === "contract").map((s) => s.id);
+    const converted = plan.steps.filter((s) => s.procedure === undefined).map((s) => s.id);
     assert.equal(converted.length, 21);
     assert.deepEqual(
       nextEligible(plan, { outputs: acceptedOutputs(plan, converted), capabilities: [] }),
-      { kind: "unconverted", step: "CP01-S22" },
+      { kind: "dispatch", step: "CP01-S22" },
     );
     const s03 = contract(plan, "CP01-S03");
     assert.deepEqual(

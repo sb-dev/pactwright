@@ -50,9 +50,22 @@ export type JournalEvent = {
   prev: string | null;
 };
 
+/**
+ * The GitHub Actions job a hosted controller runs in (T3.5 H3): its liveness
+ * is that job's verified status, never the runner's host or process.
+ */
+export type GithubOwner = {
+  repository: string;
+  run_id: number;
+  run_attempt: number;
+  job: string;
+};
+
 export type OwnerRecord = {
   host: string;
   pid: number;
+  /** The hosted job that owns the epoch, when the controller runs in GitHub Actions. */
+  github?: GithubOwner | null;
   /** The previous segment and its valid byte length, fixed when this owner took over. */
   previous: { epoch: number; length: number } | null;
   /** Evidence reference of the previous segment's incomplete final line, if any. */
@@ -111,7 +124,9 @@ export type RecoverOptions = {
   /** Stops every worker of the run (its containers) before the new owner acts. */
   fence: (run: string) => Promise<unknown>;
   /** Liveness of an unreleased owner; defaults to a same-host process check. */
-  liveness?: (owner: OwnerRecord) => Liveness;
+  liveness?: (owner: OwnerRecord) => Liveness | Promise<Liveness>;
+  /** The hosted job of the new owner; defaults to the Actions environment. */
+  github?: GithubOwner | null;
 };
 
 /** Raised when a writer no longer owns the run. */
@@ -270,14 +285,43 @@ function takeOwnership(
   return handle;
 }
 
-const self = (): Pick<OwnerRecord, "host" | "pid"> => ({ host: hostname(), pid: process.pid });
+/** The Actions job this process runs in, from the runner's environment; null elsewhere. */
+export function actionsJob(
+  env: Readonly<Record<string, string | undefined>> = process.env,
+): GithubOwner | null {
+  const runId = Number(env.GITHUB_RUN_ID);
+  const attempt = Number(env.GITHUB_RUN_ATTEMPT);
+  if (
+    env.GITHUB_ACTIONS !== "true" ||
+    !env.GITHUB_REPOSITORY ||
+    !env.GITHUB_JOB ||
+    !Number.isSafeInteger(runId) ||
+    !Number.isSafeInteger(attempt)
+  ) {
+    return null;
+  }
+  return {
+    repository: env.GITHUB_REPOSITORY,
+    run_id: runId,
+    run_attempt: attempt,
+    job: env.GITHUB_JOB,
+  };
+}
+
+const self = (
+  github: GithubOwner | null | undefined,
+): Pick<OwnerRecord, "host" | "pid" | "github"> => ({
+  host: hostname(),
+  pid: process.pid,
+  github: github === undefined ? actionsJob() : github,
+});
 
 /**
  * Creates a controller-owned run directory: an immutable manifest, the first
  * journal segment, the evidence store and the bare repository that holds
  * source snapshots. `dir` must not exist.
  */
-export function createRun(dir: string): RunHandle {
+export function createRun(dir: string, github?: GithubOwner | null): RunHandle {
   mkdirSync(dir);
   for (const sub of ["journal", "evidence", "tmp"]) mkdirSync(join(dir, sub));
   const manifest: RunManifest = { format: 1, run: randomUUID(), created: new Date().toISOString() };
@@ -285,7 +329,7 @@ export function createRun(dir: string): RunHandle {
   execFileSync("git", ["init", "-q", "--bare", join(dir, "source.git")], { stdio: "ignore" });
   fsyncDir(dir);
   const run = takeOwnership(dir, manifest.run, 1, 1, null, {
-    ...self(),
+    ...self(github),
     previous: null,
     quarantined: null,
   });
@@ -544,12 +588,12 @@ export async function recoverRun(dir: string, options: RecoverOptions): Promise<
   const read = readRun(dir);
   if (!read.ok) return { kind: "paused", diagnostics: read.diagnostics };
   const { manifest, events, owner, tail, head, length } = read.records;
-  const liveness = owner.released ? "released" : (options.liveness ?? processLiveness)(owner);
+  const liveness = owner.released ? "released" : await (options.liveness ?? processLiveness)(owner);
   if (liveness !== "released" && liveness !== "dead") return { kind: "locked", owner, liveness };
 
   const quarantined = tail ? storeBlob(dir, tail) : null;
   const run = takeOwnership(dir, manifest.run, owner.epoch + 1, events.length + 1, head, {
-    ...self(),
+    ...self(options.github),
     previous: { epoch: owner.epoch, length },
     quarantined,
   });
@@ -579,6 +623,8 @@ export function runStatus(
         epoch: owner.epoch,
         host: owner.host,
         pid: owner.pid,
+        // A hosted owner also names its GitHub job (T3.5 H3).
+        ...(owner.github ? { github: owner.github } : {}),
         state: owner.released ? "released" : processLiveness(owner),
       },
       events: events.length,
@@ -619,6 +665,12 @@ export type EvaluationManifest = {
    * Null for a step's evaluation.
    */
   checkpoint: string | null;
+  /**
+   * Where an operational step's procedure ran (T3.5 H3): its lineage and the
+   * declared revision of another repository, or null on the candidate.
+   * Absent for every other step, so their digests are unchanged.
+   */
+  operation?: { target: string; revision: string | null };
 };
 
 /** An inherited target an evaluation leaves pending, by key, and the rule that defers it. */
