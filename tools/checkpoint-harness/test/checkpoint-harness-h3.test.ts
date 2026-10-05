@@ -1921,6 +1921,30 @@ describe("H3-14 one correction path for reviews and manual rounds", () => {
     assert.equal(rounds[1]?.dispositions[0]?.disposition, "declined");
   });
 
+  it("an inline comment GitHub shows on another line is not edited feedback", async () => {
+    const w = world(scratch);
+    const pull = await toS02(w);
+    const review = w.github.review(pull, OWNER, "", [
+      { path: GREETING, line: 1, body: "[addressed] fine" },
+    ]);
+    await dispatch(
+      w,
+      { action: "address-comments", pr: String(pull), review: String(review) },
+      { actor: "github-actions[bot]" },
+    );
+    const executions = w.github.executions.length;
+    // A later head moves the commented line, or outdates the comment; its text is unchanged.
+    for (const line of [3, null]) {
+      const inline = w.github.reviewComments.find((c) => c.review === review);
+      assert.ok(inline);
+      inline.line = line;
+      const skipped = await dispatch(w, { action: "address-comments", pr: String(pull) });
+      assert.match(last(skipped).summary.diagnostics.join("\n"), /no new or edited feedback/);
+    }
+    assert.equal(w.github.executions.length, executions);
+    assert.equal(recordsOf(w, "pr-feedback").length, 1);
+  });
+
   it("unauthorised triggers, another pull request and a changed scope are rejected; own replies start nothing", async () => {
     const w = world(scratch);
     const pull = await toS02(w);
