@@ -65,8 +65,7 @@ jobs:
   # only for this repository's branches; a missing secret fails it.
   live-claude:
     if: github.event_name == 'workflow_dispatch' || github.event.pull_request.head.repo.full_name == github.repository
-    # The paid Claude credential exists only as a secret of this environment,
-    # whose required reviewer approves each run before the token is released.
+    # The paid Claude credential exists only as a secret of this environment.
     environment: claude-live
     runs-on: ubuntu-24.04
     timeout-minutes: 30
