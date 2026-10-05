@@ -110,8 +110,13 @@ export function hostedRepo(
 ): Repo {
   const root = join(scratch, `repo-${randomUUID()}`);
   mkdirSync(join(root, H), { recursive: true });
+  // The tested checkout may be a fixture branch that already holds producer
+  // outputs; every world starts from the definitions alone, with no work done.
+  const work = join(repoRoot, WORK);
+  const definition = (path: string): boolean =>
+    !path.startsWith(`${work}/`) || path === join(work, ".gitkeep");
   for (const dir of ["docs", "hosted", "registry"]) {
-    cpSync(join(repoRoot, H, dir), join(root, H, dir), { recursive: true });
+    cpSync(join(repoRoot, H, dir), join(root, H, dir), { recursive: true, filter: definition });
   }
   mkdirSync(join(root, "docs/checkpoints"), { recursive: true });
   cpSync(
