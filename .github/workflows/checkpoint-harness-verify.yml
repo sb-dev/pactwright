@@ -1,6 +1,6 @@
-# Checkpoint harness verification (T3.5): the focused H1, H2 and H3 tests,
-# the accumulated harness tests, the Docker integration tests, the contract
-# check and the repository gate, on a GitHub-hosted runner, the H2 live Claude
+# Checkpoint harness verification (T3.5): the Docker integration tests, the
+# contract check and the repository gate, whose tests include the H1, H2 and
+# H3 tests, on a GitHub-hosted runner, the H2 live Claude
 # compatibility proof and, on request, the H3 hosted-proof assertions over a
 # hosted run's saved state. A pull request runs on its head commit, so the
 # evidence is bound to that SHA. This is not the H3 harness workflow and
@@ -55,17 +55,6 @@ jobs:
         run: pnpm install --frozen-lockfile
       - name: Tested commit
         run: git rev-parse HEAD
-      - name: H1 tests
-        working-directory: tools/checkpoint-harness
-        run: node --test --import tsx test/checkpoint-harness-h1.test.ts
-      - name: H2 tests
-        working-directory: tools/checkpoint-harness
-        run: node --test --import tsx test/checkpoint-harness-h2.test.ts
-      - name: H3 tests
-        working-directory: tools/checkpoint-harness
-        run: node --test --import tsx test/checkpoint-harness-h3.test.ts
-      - name: Harness tests
-        run: pnpm --filter @pactwright/checkpoint-harness test
       - name: Docker integration tests
         run: pnpm --filter @pactwright/checkpoint-harness test:integration
       - name: Contract check
