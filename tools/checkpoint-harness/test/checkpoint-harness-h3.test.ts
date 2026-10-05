@@ -66,6 +66,7 @@ import {
   type Decision,
 } from "../src/verification.js";
 import { treeFiles, type SealedCandidate } from "../src/workspace.js";
+import { scriptedAgent } from "./runner-fixtures.js";
 import { parseInputs } from "../src/workflow.js";
 import {
   BRANCH,
@@ -90,6 +91,7 @@ import {
   S04,
   savedDir,
   STAMP,
+  verdictFor,
   WELCOME,
   WORK,
   world,
@@ -946,6 +948,31 @@ describe("H3-05 approvals and denials are bound to the GitHub actor, request and
     assert.equal(w.github.executions.filter((e) => e.action === "fixture-receipt").length, 1);
     await dispatch(w, { action: "continue" });
     assert.equal(w.github.executions.filter((e) => e.action === "fixture-receipt").length, 1);
+  });
+
+  it("a requirement only an approval proves is the approver's: a strict reviewer cannot block its request", async () => {
+    const w = world(scratch);
+    const subjects: string[][] = [];
+    // A reviewer that, like the live one in h3-proof-6 (job 111651959214),
+    // cannot judge CP95-S01/R02 from the candidate and says so.
+    w.reviewer = scriptedAgent(({ packet }) => {
+      const verdict = verdictFor(packet);
+      subjects.push(packet.review?.subjects ?? []);
+      const strict = verdict.coverage.map((c) =>
+        c.subject === `${S01}/R02` ? { ...c, result: "not-assessed" as const } : c,
+      );
+      return { output: { ...verdict, coverage: strict } };
+    });
+    const pending = await toApproval(w);
+    // The step's common review, after the verifier's adequacy review.
+    const common = subjects.filter((x) => x.includes(`${S01}/greeting`));
+    assert.deepEqual(common, [[`${S01}/R01`, `${S01}/greeting`]]);
+    assert.match(pending.request, /^sha256:/);
+    // The approval still gates the step: unanswered, nothing is accepted.
+    assert.deepEqual((await factsOf(w)).accepted, []);
+    await dispatch(w, { action: "approve", ...pending });
+    await dispatch(w, { action: "continue" });
+    assert.deepEqual((await factsOf(w)).accepted, [S01]);
   });
 
   it("a denial is recorded; its effect never runs and the step stays unaccepted", async () => {
