@@ -117,8 +117,11 @@ export type RoundRecord = {
 /** Accounts GitHub marks as apps, such as the workflow token's `github-actions[bot]`. */
 export const isBot = (login: string): boolean => login.endsWith("[bot]");
 
+// The digest covers what an author can edit. An inline comment's line is
+// where GitHub shows it on the current head, so it moves with later commits
+// and is left out.
 const itemDigest = (item: Omit<FeedbackItem, "digest">): string =>
-  sha256(stringify({ body: item.body, path: item.path, line: item.line }) ?? "");
+  sha256(stringify({ body: item.body, path: item.path }) ?? "");
 
 const item = (fields: Omit<FeedbackItem, "digest">): FeedbackItem => ({
   ...fields,

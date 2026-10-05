@@ -588,6 +588,19 @@ export function githubEffects(
     const run = runs.workflow_runs[0];
     return run ? receipt(key, request, run.html_url, { run: run.id, url: run.html_url }) : null;
   };
+  // GitHub declined the write itself, for a cause the owner can fix: a
+  // permission, a setting or the target's state. Only the write is judged so:
+  // an error after it succeeded, such as reading it back, leaves it uncertain.
+  const write = async <T>(call: Promise<T>): Promise<T> => {
+    try {
+      return await call;
+    } catch (e) {
+      if (e instanceof GitHubError && DECLINED.has(e.status)) {
+        throw new EffectBlocked(`GitHub declined it: ${e.message}`);
+      }
+      throw e;
+    }
+  };
   // After a write, the receipt is what reading the target back finds once GitHub shows it.
   const readBack = (
     inspect: (key: string, r: EffectRequest) => Promise<Receipt | null>,
@@ -602,7 +615,7 @@ export function githubEffects(
     "review-dispatch": reviewed,
   };
 
-  const service: EffectService = {
+  return {
     async execute(key, request) {
       const payload = request.payload ?? {};
       switch (request.action) {
@@ -668,13 +681,15 @@ export function githubEffects(
         case "open-pr": {
           const existing = await opened(key, request);
           if (existing) return existing;
-          await api.request<Pull>("POST", `/repos/${api.repository}/pulls`, {
-            title: text(payload.title),
-            head: text(payload.head),
-            base: text(payload.base),
-            body: text(payload.body),
-            draft: payload.draft === true,
-          });
+          await write(
+            api.request<Pull>("POST", `/repos/${api.repository}/pulls`, {
+              title: text(payload.title),
+              head: text(payload.head),
+              base: text(payload.base),
+              body: text(payload.body),
+              draft: payload.draft === true,
+            }),
+          );
           // The receipt is what reading the target back finds, not the response.
           return readBack(opened, key, request);
         }
@@ -682,15 +697,19 @@ export function githubEffects(
           const body = `${text(payload.body)}\n\n${marker(key)}`;
           const pull = Number(payload.pull);
           if (typeof payload.thread === "number") {
-            await api.request<Comment>(
-              "POST",
-              `/repos/${api.repository}/pulls/${pull}/comments/${payload.thread}/replies`,
-              { body },
+            await write(
+              api.request<Comment>(
+                "POST",
+                `/repos/${api.repository}/pulls/${pull}/comments/${payload.thread}/replies`,
+                { body },
+              ),
             );
           } else {
-            await api.request<Comment>("POST", `/repos/${api.repository}/issues/${pull}/comments`, {
-              body,
-            });
+            await write(
+              api.request<Comment>("POST", `/repos/${api.repository}/issues/${pull}/comments`, {
+                body,
+              }),
+            );
           }
           return readBack(replied, key, request);
         }
@@ -710,10 +729,12 @@ export function githubEffects(
               `${text(payload.ref)} is at ${head ?? "nothing"}, not the published ${text(payload.commit)}`,
             );
           }
-          await api.request(
-            "POST",
-            `/repos/${api.repository}/actions/workflows/${encodeURIComponent(text(payload.workflow))}/dispatches`,
-            { ref: text(payload.ref), inputs: payload.inputs ?? {} },
+          await write(
+            api.request(
+              "POST",
+              `/repos/${api.repository}/actions/workflows/${encodeURIComponent(text(payload.workflow))}/dispatches`,
+              { ref: text(payload.ref), inputs: payload.inputs ?? {} },
+            ),
           );
           return readBack(reviewed, key, request);
         }
@@ -725,18 +746,6 @@ export function githubEffects(
       const inspector = inspectors[request.action];
       return inspector ? inspector(key, request) : Promise.resolve(null);
     },
-  };
-  return {
-    ...service,
-    // GitHub declined a write without performing it, for a cause the owner
-    // can fix: a permission, a setting or the target's state.
-    execute: (key, request) =>
-      service.execute(key, request).catch((e: unknown) => {
-        if (e instanceof GitHubError && DECLINED.has(e.status)) {
-          throw new EffectBlocked(`GitHub declined it: ${e.message}`);
-        }
-        throw e;
-      }),
   };
 }
 
