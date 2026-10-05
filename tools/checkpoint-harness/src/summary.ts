@@ -59,6 +59,8 @@ const reasonLine = (r: PauseReason): string =>
 /** The operator's next action, from the recorded stop. */
 export function nextAction(facts: RunFacts, handedTo: string | null): string {
   if (handedTo) return `none: the ${handedTo} job continues the run`;
+  // An approve, deny or amend job records its input; the run applies it when continued.
+  if (facts.unapplied) return `continue: the next job applies the recorded ${facts.unapplied}`;
   const pause = facts.pause ?? [];
   const codes = new Set(pause.map((r) => r.code));
   if (codes.has("yield")) return "none: a continuation is dispatched within the selection";
