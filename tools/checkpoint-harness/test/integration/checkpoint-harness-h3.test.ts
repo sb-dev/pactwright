@@ -26,6 +26,8 @@ import {
   recordsOf,
   S01,
   S02,
+  S03,
+  S04,
   savedDir,
   STAMP,
   world,
@@ -114,5 +116,29 @@ describe("H3-04 and H3-08 in containment", () => {
       for (const key of Object.keys(SECRETS)) delete process.env[key];
       Object.assign(process.env, saved);
     }
+  });
+
+  it("a procedure in another repository may write a file of its declared target, contained", async () => {
+    // Hosted run h3-proof-7, controller job 111700745348: the registry
+    // target's writable RELEASES.md is a file, and containment failed to open it.
+    const w = world(scratch, { contained: true, registry: true });
+    const started = await dispatch(w, { action: "start", config: "h3-fixture.yml" });
+    await dispatch(w, { action: "approve", ...pendingOf(started.at(-1) ?? assert.fail("no job")) });
+    let done = await dispatch(w, { action: "continue", through: S04 });
+    for (let i = 0; i < 10 && done.at(-1)?.next === "continue"; i++) {
+      done = await dispatch(w, { action: "continue" });
+    }
+    const summary = done.at(-1)?.summary;
+    assert.equal(summary?.outcome, "selection-accepted", stringify(summary));
+    assert.deepEqual(summary?.accepted, [S01, S02, S03, S04]);
+    const dir = savedDir(w);
+    const s03 = recordsOf<AgentOutcome>(w, "agent-invocation", dir)
+      .filter((o) => o.observation.role === "producer")
+      .map((o) => o.observation.toolCalls.filter((c) => c.tool === "run_command"))
+      .find((calls) => calls.some((c) => JSON.stringify(c).includes("record.mjs")));
+    assert.ok(
+      s03?.every((c) => c.exit === 0),
+      "the registry procedure ran and succeeded",
+    );
   });
 });

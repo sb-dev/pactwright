@@ -69,6 +69,7 @@ export function nextAction(facts: RunFacts, handedTo: string | null): string {
     return `approve or deny request ${pending.request} for candidate ${pending.candidate}`;
   }
   if (codes.has("exhausted")) return "amend the exhausted budget with a reason, or stop the run";
+  if (codes.has("effect-blocked")) return "fix the cause the named effect reports, then continue";
   if (codes.has("effect-refused") || codes.has("effect-uncertain") || codes.has("effect-invalid")) {
     return "inspect the named effect's target, then continue";
   }

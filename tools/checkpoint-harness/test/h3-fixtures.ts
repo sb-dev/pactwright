@@ -40,6 +40,7 @@ import type {
 } from "../src/pull-requests.js";
 import {
   containedProducer,
+  EffectBlocked,
   EffectRefused,
   type EffectRequest,
   type EffectService,
@@ -273,6 +274,8 @@ export class FakeGitHub {
   jobs = new Map<string, string>();
   artifacts = new Set<string>();
   executions: { key: string; action: string }[] = [];
+  /** Actions GitHub declines, as with Actions not permitted to open pull requests. */
+  blocked = new Set<string>();
   dispatches: { workflow: string; ref: string; commit: string; inputs: unknown }[] = [];
   private ids = 1000;
   constructor(readonly repo: Repo) {
@@ -436,6 +439,9 @@ export class FakeGitHub {
     };
     return {
       execute: (key, request) => {
+        if (this.blocked.has(request.action)) {
+          return Promise.reject(new EffectBlocked("GitHub declined it: 403 not permitted"));
+        }
         this.executions.push({ key, action: request.action });
         const p = request.payload ?? {};
         switch (request.action) {

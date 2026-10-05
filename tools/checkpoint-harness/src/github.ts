@@ -15,7 +15,7 @@ import stringify from "safe-stable-stringify";
 import type { Liveness, OwnerRecord } from "./evidence.js";
 import type { FeedbackSource } from "./pull-requests.js";
 import type { EffectRequest, EffectService, Receipt } from "./runner.js";
-import { EffectRefused } from "./runner.js";
+import { EffectBlocked, EffectRefused } from "./runner.js";
 import {
   ARCHIVE,
   MANIFEST,
@@ -92,6 +92,9 @@ async function pages<T, P>(api: GitHubApi, path: string, pick: (page: P) => T[])
     if (items.length < 100) return all;
   }
 }
+
+/** Statuses of a write GitHub declined without performing it. */
+const DECLINED = new Set([401, 403, 404, 422]);
 
 /** Waits the given milliseconds; injected so tests need not. */
 export type Wait = (ms: number) => Promise<void>;
@@ -599,7 +602,7 @@ export function githubEffects(
     "review-dispatch": reviewed,
   };
 
-  return {
+  const service: EffectService = {
     async execute(key, request) {
       const payload = request.payload ?? {};
       switch (request.action) {
@@ -722,6 +725,18 @@ export function githubEffects(
       const inspector = inspectors[request.action];
       return inspector ? inspector(key, request) : Promise.resolve(null);
     },
+  };
+  return {
+    ...service,
+    // GitHub declined a write without performing it, for a cause the owner
+    // can fix: a permission, a setting or the target's state.
+    execute: (key, request) =>
+      service.execute(key, request).catch((e: unknown) => {
+        if (e instanceof GitHubError && DECLINED.has(e.status)) {
+          throw new EffectBlocked(`GitHub declined it: ${e.message}`);
+        }
+        throw e;
+      }),
   };
 }
 

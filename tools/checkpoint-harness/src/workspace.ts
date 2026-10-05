@@ -12,6 +12,7 @@
 import { execFile, execFileSync, spawn } from "node:child_process";
 import { randomUUID } from "node:crypto";
 import {
+  existsSync,
   lchownSync,
   lstatSync,
   mkdirSync,
@@ -436,7 +437,8 @@ export async function createWorkspace(
   await exportRevision(sourceGit(run.dir), base.commit, root);
   const rootUser = process.getuid?.() === 0;
   for (const p of [...policy.writable, ...policy.scratch]) {
-    mkdirSync(join(root, p), { recursive: true });
+    // A writable file of the revision is mounted as itself; any other path as a directory.
+    if (!existsSync(join(root, p))) mkdirSync(join(root, p), { recursive: true });
     if (rootUser) chownTree(join(root, p), CANDIDATE_ID);
   }
   for (const m of mounts) mkdirSync(join(root, m.path), { recursive: true });
