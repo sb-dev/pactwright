@@ -1498,11 +1498,26 @@ export function reviewScope(
     );
     return proving.length === 0 || proving.some((t) => !deferred.has(targetKey(t)));
   };
+  // A requirement proved only by approval targets is judged by its approver:
+  // no candidate shows an approval before it is given, so the review leaves it out.
+  const byApproval = (
+    criteria: readonly { id: string; covers: readonly string[] }[],
+    proving: readonly VerificationTarget[],
+    requirement: string,
+  ): boolean => {
+    const covering = proving.filter((t) =>
+      criteria.some((c) => c.id === t.criterion && c.covers.includes(requirement)),
+    );
+    return covering.length > 0 && covering.every((t) => t.method === "approval");
+  };
   return {
     subjects: [
-      ...step.requirements.map((r) => `${step.id}/${r.id}`),
+      ...step.requirements
+        .filter((r) => !byApproval(step.criteria, step.targets, r.id))
+        .map((r) => `${step.id}/${r.id}`),
       ...plan.inherited.requirements
         .filter((r) => applies(r.id))
+        .filter((r) => !byApproval(plan.inherited.criteria, plan.inherited.targets, r.id))
         .map((r) => `${plan.checkpoint}/${r.id}`),
       ...step.outputs.map((o) => `${step.id}/${o.id}`),
     ],
