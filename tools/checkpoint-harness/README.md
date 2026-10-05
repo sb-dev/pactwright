@@ -99,6 +99,7 @@ An agent session reserves its spend allowance before it starts. A session lost w
 | Budget exhausted | Amend only the required limit and record the reason. Existing usage remains counted. |
 | Missing, corrupt or stale archive | Stop and investigate the named state. Do not silently start a fresh run or restore an older sequence. |
 | Uncertain external result | Read the target back. Retain a matching receipt; retry only when the target proves the action did not complete. |
+| Declined external effect | GitHub declined a write without performing it (for example, Actions may not create pull requests). Fix the named cause, then `continue`; the effect is read back and retried. |
 | Harness defect | Return the missing capability or design defect to T3.5, verify the corrected harness revision through T4, then resume T5. |
 
 ## Operational steps

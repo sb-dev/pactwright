@@ -38,7 +38,7 @@ import {
   WORKFLOW,
   type GitHubApi,
 } from "../src/github.js";
-import { pinned, type ConfigChange, type EffectRequest } from "../src/runner.js";
+import { EffectBlocked, pinned, type ConfigChange, type EffectRequest } from "../src/runner.js";
 import {
   APPLICABILITY,
   createRegistry,
@@ -1036,6 +1036,62 @@ describe("H3-05 approvals and denials are bound to the GitHub actor, request and
 });
 
 describe("H3-06 effects survive interruption without repetition", () => {
+  it("a write GitHub declines pauses with its cause, and a continuation after the fix performs it once", async () => {
+    // Hosted run h3-proof-7, effects job 111694905162: opening the pull
+    // request was declined while Actions could not create pull requests.
+    const w = world(scratch);
+    const pending = await toApproval(w);
+    await dispatch(w, { action: "approve", ...pending });
+    w.github.blocked.add("open-pr");
+    const blocked = last(await dispatch(w, { action: "continue" }));
+    assert.equal(blocked.exit, 0, "an orderly pause, not a crash");
+    assert.match(
+      stringify(blocked.summary.pause),
+      /effect-blocked .*open-pr .*was not performed: GitHub declined it/,
+    );
+    assert.equal(blocked.summary.next, "fix the cause the named effect reports, then continue");
+    assert.equal(w.github.pulls.size, 0);
+    w.github.blocked.delete("open-pr");
+    const continued = last(await dispatch(w, { action: "continue" }));
+    assert.equal(continued.summary.outcome, "selection-accepted", stringify(continued.summary));
+    assert.equal(w.github.pulls.size, 1);
+    assert.equal(w.github.executions.filter((e) => e.action === "open-pr").length, 1);
+  });
+
+  it("GitHub's refusal of a write is a declined effect; a server error is not", async () => {
+    const request = {
+      run: "r",
+      step: S01,
+      binding: { id: "b", digest: "d" },
+      candidate: "c",
+      outputs: [],
+      action: "open-pr",
+      target: "t",
+      payload: { head: "harness/r", base: BRANCH, title: "t", body: "b", draft: true },
+    } as unknown as EffectRequest;
+    const effects = (status: number) =>
+      githubEffects(
+        {
+          repository: REPOSITORY,
+          token: "t",
+          request<T>(method: string, path: string): Promise<T> {
+            if (method === "POST") {
+              return Promise.reject(new GitHubError(`POST ${path}: ${status} no`, status));
+            }
+            return Promise.resolve([] as T);
+          },
+        },
+        { repoRoot: scratch, runDir: scratch, ref: "main-line", wait: () => Promise.resolve() },
+      );
+    for (const status of [401, 403, 404, 422]) {
+      await assert.rejects(effects(status).execute("sha256:k", request), EffectBlocked);
+    }
+    await assert.rejects(
+      effects(502).execute("sha256:k", request),
+      (e) => !(e instanceof EffectBlocked),
+    );
+  });
+
   it("a runner lost after the intent, before the effect, runs it once on recovery", async () => {
     const w = world(scratch);
     const pending = await toApproval(w);

@@ -167,6 +167,15 @@ export class EffectRefused extends Error {
 }
 
 /**
+ * An effect the target declined without performing it, for a cause the
+ * operator can fix (a permission or setting): the run pauses, and once the
+ * cause is fixed a continuation reads the target back and retries it.
+ */
+export class EffectBlocked extends Error {
+  override name = "EffectBlocked";
+}
+
+/**
  * An external effect service. `execute` returns null when it sent the effect
  * but got no response, so its outcome is uncertain. `inspect` reads the
  * target back: the receipt of the effect with `key`, or null when there is
@@ -2392,6 +2401,17 @@ async function effect(
   try {
     executed = await service.execute(key, request);
   } catch (e) {
+    if (e instanceof EffectBlocked) {
+      // Not performed: the journaled intent makes the next pass read the target
+      // back and, finding nothing, retry it within the retry limit.
+      return pause(step, [
+        reason(
+          "effect-blocked",
+          key,
+          `${request.action} on ${request.target} was not performed: ${e.message}; fix the cause, then continue`,
+        ),
+      ]);
+    }
     if (!(e instanceof EffectRefused)) throw e;
     journal(
       ctx.run,
