@@ -13,6 +13,7 @@
     "test:live": "node --test --import tsx test/live/*.test.ts"
   },
   "dependencies": {
+    "@actions/artifact": "6.2.1",
     "@anthropic-ai/claude-agent-sdk": "0.3.283",
     "ajv": "^8.20.0",
     "commander": "^14.0.3",

@@ -18,17 +18,49 @@ import { x as extract } from "tar";
 
 import {
   anchors,
+  githubSlug,
   loadCheckpointDir,
+  proseText,
   type Contract,
+  type Section,
   type Criterion,
   type Method,
 } from "./checkpoint-contracts.js";
+
+/**
+ * Another repository an operational step runs in (T3.5 H3), at a pinned
+ * revision, with the paths its procedure may change there; `path` makes a
+ * directory of that revision the target's root, such as a fixture repository.
+ */
+export type OperationTarget = {
+  repository: string;
+  revision: string;
+  path?: string;
+  writable: string[];
+};
+
+/** The declared targets of operational steps; an undeclared step runs on the candidate. */
+export type Operations = {
+  targets: Record<string, OperationTarget>;
+  steps: Record<string, string>;
+};
+
+/** The lineage of the run's own candidate, published for review. */
+export const CANDIDATE = "candidate";
+
+/**
+ * The lineage a step's candidates belong to: its declared operation target,
+ * or the run's candidate. Steps of one lineage build on each other.
+ */
+export const lineageOf = (step: { procedure?: { target?: { name: string } } }): string =>
+  step.procedure?.target?.name ?? CANDIDATE;
 
 export type RunConfig = {
   repository: { name: string; branch: string; expected_head: string };
   checkpoint: string;
   definitions: { revision: string; review: string };
   selection: { through: string };
+  operations?: Operations;
   roles?: Record<string, unknown>;
   workspace?: Record<string, unknown>;
   permissions?: Record<string, unknown>;
@@ -59,12 +91,18 @@ export type ContractStep = {
   requirements: PlannedRequirement[];
   criteria: PlannedCriterion[];
   targets: VerificationTarget[];
+  /**
+   * Present for a reviewed operational step kept in prose (Spec 00 §4, Q67;
+   * T3.5 H3): its reviewed text and hash. The text is its one requirement,
+   * `PROCEDURE`; it has no outputs or own targets. It runs like a contract
+   * step once every earlier step is accepted, and is accepted only with
+   * recorded command and observation evidence.
+   */
+  procedure?: { hash: string; text: string; target?: OperationTarget & { name: string } };
 };
 
-/** A reviewed unconverted step: planned, never dispatched (Spec 00 §4). */
-export type ProseStep = { kind: "prose"; id: string; reviewedHash: string };
-
-export type PlannedStep = ContractStep | ProseStep;
+/** Every planned step is executable: a contract, or an operational step in reviewed prose. */
+export type PlannedStep = ContractStep;
 
 /**
  * When the targets of an inherited criterion apply (T3.5 H1; Spec 00 §4):
@@ -139,14 +177,18 @@ export type CapabilityReceipt = {
   evidence: Evidence;
 };
 
+/** A step's current acceptance, bound like an output; it is how a step without outputs counts. */
+export type AcceptedStep = { step: string; definition: string; definitions: string };
+
 export type Acceptances = {
   outputs: readonly AcceptedOutput[];
   capabilities: readonly CapabilityReceipt[];
+  /** Steps with a current acceptance; a step without outputs is done only with one. */
+  steps?: readonly AcceptedStep[];
 };
 
 export type Eligibility =
   | { kind: "dispatch"; step: string }
-  | { kind: "unconverted"; step: string }
   | { kind: "blocked"; step: string; unmet: string[] }
   | { kind: "selection-accepted" };
 
@@ -240,6 +282,30 @@ export async function prepareRun(config: unknown, options: PrepareOptions): Prom
   }
 }
 
+/**
+ * The step IDs of a checkpoint at a definitions revision, in checkpoint
+ * order, or null when the checkpoint does not load (T3.5 H3): the workflow's
+ * default and validated `through` boundaries.
+ */
+export async function stepOrder(
+  repoRoot: string,
+  revision: string,
+  checkpoint: string,
+): Promise<string[] | null> {
+  if (!(await isCommit(repoRoot, revision))) return null;
+  const root = mkdtempSync(join(tmpdir(), "pactwright-plan-"));
+  try {
+    await exportRevision(repoRoot, revision, root);
+    const dir = posix.dirname(posix.normalize(checkpoint));
+    if (!existsSync(join(root, checkpoint))) return null;
+    const loaded = loadCheckpointDir(root, dir, { skipSource: true });
+    if (loaded.errors.length > 0 || !loaded.checkpoint) return null;
+    return [...loaded.steps.keys(), ...Object.keys(loaded.checkpoint.prose_steps ?? {})].sort();
+  } finally {
+    rmSync(root, { recursive: true, force: true });
+  }
+}
+
 function plan(
   root: string,
   config: RunConfig,
@@ -264,8 +330,8 @@ function plan(
   const prose = checkpoint.prose_steps ?? {};
   const order = [...loaded.steps.keys(), ...Object.keys(prose)].sort();
 
-  // Edges point from a step to its prerequisites. An unconverted step waits
-  // for every earlier step (Spec 00 §4).
+  // Edges point from a step to its prerequisites. An operational step kept in
+  // prose waits for every earlier step (Spec 00 §4).
   const graph = new DirectedGraph();
   for (const sid of order) graph.addNode(sid);
   for (const [sid, doc] of loaded.steps) {
@@ -308,6 +374,14 @@ function plan(
       }
     }
   }
+  for (const [sid, target] of Object.entries(config.operations?.steps ?? {})) {
+    if (!(sid in prose)) {
+      diagnostics.push(`${name}: operations.steps ${sid} is not an operational step of ${cpid}`);
+    }
+    if (target === CANDIDATE || !config.operations?.targets[target]) {
+      diagnostics.push(`${name}: operations.steps ${sid} names no declared target: ${target}`);
+    }
+  }
   const through = config.selection.through;
   if (!graph.hasNode(through)) {
     diagnostics.push(`${name}: selection.through ${through} is not a step of ${cpid}`);
@@ -330,7 +404,18 @@ function plan(
     .filter((sid) => selected.has(sid))
     .map((sid): PlannedStep => {
       const doc = loaded.steps.get(sid);
-      if (!doc) return { kind: "prose", id: sid, reviewedHash: prose[sid] ?? "" };
+      if (!doc) {
+        const name = config.operations?.steps[sid];
+        const target = name === undefined ? undefined : config.operations?.targets[name];
+        return operational(
+          sid,
+          order,
+          prose[sid] ?? "",
+          loaded.sections,
+          `${dir}.md`,
+          target && name ? { name, ...target } : undefined,
+        );
+      }
       const criteria = criteriaOf(doc);
       return {
         kind: "contract",
@@ -402,24 +487,59 @@ function plan(
 }
 
 /**
+ * A reviewed prose step as an operational contract step (Spec 00 §4; T3.5
+ * H3): its reviewed section text is its one requirement, it requires every
+ * earlier step and it declares no outputs or own targets.
+ */
+function operational(
+  sid: string,
+  order: readonly string[],
+  hash: string,
+  sections: ReadonlyMap<number, Section>,
+  markdown: string,
+  target?: OperationTarget & { name: string },
+): ContractStep {
+  const section = sections.get(Number(sid.slice(-2)));
+  const text = section ? proseText(section) : "";
+  const heading = section?.heading.replace(/^### /, "") ?? sid;
+  return {
+    kind: "contract",
+    id: sid,
+    requires: order.filter((s) => s < sid),
+    inputs: [],
+    uses: [],
+    outputs: [],
+    requirements: [
+      { id: "PROCEDURE", source: [`${markdown}#${githubSlug(heading)}`], statement: text },
+    ],
+    criteria: [],
+    targets: [],
+    procedure: { hash, text, ...(target ? { target } : {}) },
+  };
+}
+
+/**
  * The first selected step, in checkpoint order, that is not yet accepted, and
  * whether it can be dispatched. A step is accepted when every declared output
  * has an accepted instance bound to the step's current definition and to the
- * current governing definition set. A record bound to an older step definition
- * or definition set is stale and counts as missing: a change to an inherited
- * requirement or a canonical source alters obligations without touching any
- * step file. Earlier steps are never skipped. Resources and authority are
- * checked at dispatch, not here.
+ * current governing definition set; a step without outputs, such as an
+ * operational step, needs its own current acceptance. A record bound to an
+ * older step definition or definition set is stale and counts as missing: a
+ * change to an inherited requirement or a canonical source alters obligations
+ * without touching any step file. Earlier steps are never skipped. Resources
+ * and authority are checked at dispatch, not here.
  */
 export function nextEligible(plan: PreparedRun, accepted: Acceptances): Eligibility {
   const current = (record: { step: string; definition: string; definitions: string }): boolean =>
     plan.stepDefinitions[record.step] === record.definition &&
     plan.definitionsDigest === record.definitions;
   for (const step of plan.steps) {
-    if (step.kind === "prose") return { kind: "unconverted", step: step.id };
-    const done = step.outputs.every(({ id }) =>
-      accepted.outputs.some((o) => o.step === step.id && o.output === id && current(o)),
-    );
+    const done =
+      step.outputs.length === 0
+        ? (accepted.steps ?? []).some((a) => a.step === step.id && current(a))
+        : step.outputs.every(({ id }) =>
+            accepted.outputs.some((o) => o.step === step.id && o.output === id && current(o)),
+          );
     if (done) continue;
     const unmet = step.uses
       .filter((c) => !accepted.capabilities.some((r) => r.capability === c && current(r)))
@@ -460,11 +580,10 @@ export function exitStep(plan: PreparedRun): ContractStep {
   };
 }
 
-/** A planned contract step by ID, the exit evaluation included. */
+/** A planned step by ID, the exit evaluation included. */
 export function plannedContract(plan: PreparedRun, id: string): ContractStep | undefined {
   if (id === exitId(plan)) return exitStep(plan);
-  const step = plan.steps.find((s) => s.id === id);
-  return step?.kind === "contract" ? step : undefined;
+  return plan.steps.find((s) => s.id === id);
 }
 
 /** A step's definition identity: its contract digest, or the definition set for the exit. */

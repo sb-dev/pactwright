@@ -12,6 +12,7 @@
 import { execFile, execFileSync, spawn } from "node:child_process";
 import { randomUUID } from "node:crypto";
 import {
+  existsSync,
   lchownSync,
   lstatSync,
   mkdirSync,
@@ -312,17 +313,24 @@ export async function importSource(
   run: RunHandle,
   repoRoot: string,
   commit: string,
+  /** A directory of the revision to import as the root instead, such as a fixture repository. */
+  path?: string,
 ): Promise<{ ok: true; snapshot: SourceSnapshot } | { ok: false; diagnostics: string[] }> {
   const dir = mkdtempSync(join(tmpdir(), "pactwright-import-"));
+  const treeish = path === undefined ? commit : `${commit}:${path}`;
   try {
-    await exportRevision(repoRoot, commit, dir);
+    await exportRevision(repoRoot, treeish, dir);
     const none: WritePolicy = { writable: [], scratch: [], protected: [] };
-    const captured = captureSource(run.dir, dir, null, none, `base ${commit}`);
+    const captured = captureSource(run.dir, dir, null, none, `base ${treeish}`);
     if (!captured.ok) return captured;
-    const expected = execFileSync("git", ["rev-parse", `${commit}^{tree}`], {
-      cwd: repoRoot,
-      encoding: "utf8",
-    }).trim();
+    const expected = execFileSync(
+      "git",
+      ["rev-parse", path === undefined ? `${commit}^{tree}` : treeish],
+      {
+        cwd: repoRoot,
+        encoding: "utf8",
+      },
+    ).trim();
     if (captured.candidate.tree !== expected) {
       return {
         ok: false,
@@ -429,7 +437,8 @@ export async function createWorkspace(
   await exportRevision(sourceGit(run.dir), base.commit, root);
   const rootUser = process.getuid?.() === 0;
   for (const p of [...policy.writable, ...policy.scratch]) {
-    mkdirSync(join(root, p), { recursive: true });
+    // A writable file of the revision is mounted as itself; any other path as a directory.
+    if (!existsSync(join(root, p))) mkdirSync(join(root, p), { recursive: true });
     if (rootUser) chownTree(join(root, p), CANDIDATE_ID);
   }
   for (const m of mounts) mkdirSync(join(root, m.path), { recursive: true });
@@ -553,6 +562,25 @@ export async function fenceWorkers(run: string): Promise<number> {
     .filter(Boolean);
   if (ids.length > 0) await docker(["rm", "--force", ...ids]);
   return ids.length;
+}
+
+/**
+ * Seals a snapshot as it is, without a workspace or an agent (T3.5 H3): a
+ * pull request's newer commits adopted into a correction. The diff against
+ * `base` is checked against `policy` as any candidate's is.
+ */
+export async function sealSnapshot(
+  run: RunHandle,
+  snapshot: SourceSnapshot,
+  against: { base: SourceSnapshot; policy: WritePolicy },
+): Promise<Capture> {
+  const dir = mkdtempSync(join(tmpdir(), "pactwright-adopt-"));
+  try {
+    await exportRevision(sourceGit(run.dir), snapshot.commit, dir);
+    return captureSource(run.dir, dir, against.base, against.policy, "candidate");
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
 }
 
 /**

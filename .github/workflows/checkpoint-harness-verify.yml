@@ -1,9 +1,10 @@
-# Checkpoint harness verification (T3.5): the focused H1 and H2 tests, the
-# accumulated harness tests, the Docker integration tests, the contract check
-# and the repository gate, on a GitHub-hosted runner, and the H2 live Claude
-# compatibility proof. A pull request runs on its head commit, so the evidence
-# is bound to that SHA. This is not the H3 harness workflow and grants no
-# checkpoint acceptance.
+# Checkpoint harness verification (T3.5): the Docker integration tests, the
+# contract check and the repository gate, whose tests include the H1, H2 and
+# H3 tests, on a GitHub-hosted runner, the H2 live Claude
+# compatibility proof and, on request, the H3 hosted-proof assertions over a
+# hosted run's saved state. A pull request runs on its head commit, so the
+# evidence is bound to that SHA. This is not the H3 harness workflow and
+# grants no checkpoint acceptance.
 name: Checkpoint harness verification
 
 on:
@@ -16,6 +17,16 @@ on:
       - "pnpm-workspace.yaml"
       - "tools/checkpoint-harness/**"
   workflow_dispatch:
+    inputs:
+      live:
+        description: Run the live Claude job; the harness dispatches its reviews without it.
+        required: false
+        type: boolean
+        default: true
+      h3_proof_run:
+        description: H3 hosted proof — the run name whose latest saved state to check; empty skips it.
+        required: false
+        type: string
 
 permissions:
   contents: read
@@ -44,14 +55,6 @@ jobs:
         run: pnpm install --frozen-lockfile
       - name: Tested commit
         run: git rev-parse HEAD
-      - name: H1 tests
-        working-directory: tools/checkpoint-harness
-        run: node --test --import tsx test/checkpoint-harness-h1.test.ts
-      - name: H2 tests
-        working-directory: tools/checkpoint-harness
-        run: node --test --import tsx test/checkpoint-harness-h2.test.ts
-      - name: Harness tests
-        run: pnpm --filter @pactwright/checkpoint-harness test
       - name: Docker integration tests
         run: pnpm --filter @pactwright/checkpoint-harness test:integration
       - name: Contract check
@@ -66,7 +69,7 @@ jobs:
   # requests receive no secrets, so the job runs
   # only for this repository's branches; a missing secret fails it.
   live-claude:
-    if: github.event_name == 'workflow_dispatch' || github.event.pull_request.head.repo.full_name == github.repository
+    if: (github.event_name == 'workflow_dispatch' && inputs.live) || github.event.pull_request.head.repo.full_name == github.repository
     runs-on: ubuntu-24.04
     environment: claude-live
     timeout-minutes: 30
@@ -94,3 +97,34 @@ jobs:
           PACTWRIGHT_LIVE_REVIEWER_MODEL: claude-opus-5-5
           PACTWRIGHT_LIVE_REVIEWER_EFFORT: low
         run: node --test --import tsx test/live/checkpoint-harness-claude.test.ts
+
+  # The H3 hosted-proof assertions (T3.5 H3) over the latest saved state of a
+  # hosted fixture run, found and checked as a harness job finds it: only
+  # artifacts of workflow_dispatch runs of checkpoint-harness.yml in this
+  # repository count. It reads artifacts and writes nothing.
+  h3-proof:
+    if: github.event_name == 'workflow_dispatch' && inputs.h3_proof_run != ''
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    permissions:
+      contents: read
+      actions: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413 # v6.1.0
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: 22
+          cache: pnpm
+      - name: Install
+        run: pnpm install --frozen-lockfile
+      - name: Tested commit
+        run: git rev-parse HEAD
+      - name: H3 hosted proof
+        working-directory: tools/checkpoint-harness
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+          PACTWRIGHT_H3_PROOF_RUN: ${{ inputs.h3_proof_run }}
+        run: node --test --import tsx test/hosted/checkpoint-harness-h3-proof.test.ts

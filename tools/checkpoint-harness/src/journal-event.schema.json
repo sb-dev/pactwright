@@ -54,6 +54,23 @@
           ]
         },
         "quarantined": { "oneOf": [{ "type": "null" }, { "$ref": "#/$defs/digest" }] },
+        "github": {
+          "description": "The GitHub Actions job that owns the epoch (T3.5 H3); its verified status, not the host or process, decides takeover.",
+          "oneOf": [
+            { "type": "null" },
+            {
+              "type": "object",
+              "additionalProperties": false,
+              "required": ["repository", "run_id", "run_attempt", "job"],
+              "properties": {
+                "repository": { "type": "string", "minLength": 1 },
+                "run_id": { "type": "integer", "minimum": 1 },
+                "run_attempt": { "type": "integer", "minimum": 1 },
+                "job": { "type": "string", "minLength": 1 }
+              }
+            }
+          ]
+        },
         "digest": {
           "$ref": "#/$defs/digest",
           "description": "SHA-256 of the key-ordered owner event without this field, published with the line."

@@ -218,9 +218,14 @@ export function stepSections(markdown: string): Map<number, Section> {
  * blank lines removed, joined by LF with no final newline.
  */
 export function proseHash(section: Section): string {
+  return `sha256:${createHash("sha256").update(proseText(section), "utf8").digest("hex")}`;
+}
+
+/** A step section's reviewed text, exactly as `proseHash` hashes it. */
+export function proseText(section: Section): string {
   const lines = [...section.intro, section.heading, ...section.lines].map((l) => l.trimEnd());
   while (lines.length > 0 && lines[lines.length - 1] === "") lines.pop();
-  return `sha256:${createHash("sha256").update(lines.join("\n"), "utf8").digest("hex")}`;
+  return lines.join("\n");
 }
 
 /** Splits prompt-style step prose (References/Run/Expected/Verify) into keyed units. */

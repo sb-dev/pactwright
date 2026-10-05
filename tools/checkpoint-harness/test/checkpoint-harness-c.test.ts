@@ -108,6 +108,7 @@ function role(
     skills: [{ name: "karpathy-guidelines", digest: sha256("skill"), text: "skill" }],
     limits: { attempts: 3, wallTimeMs: 5_000, maxTurns: 8, maxBudgetUsd: 1, ...limits },
     credential: new Secret(SECRET),
+    dispatchable: true,
     credentialKind,
   };
 }
@@ -1052,13 +1053,14 @@ describe("T3-C observations are redacted and journaled", () => {
     const run = createRun(join(scratch, "run-redacted"));
     const event = recordInvocation(run, outcome);
     assert.equal(event.action, "agent-invocation");
+    const [ref] = event.evidence;
     assert.deepEqual(event.data, {
+      record: ref,
       role: "producer",
       outcome: "failed",
       session: "session-1",
       settings: outcome.observation.settings,
     });
-    const [ref] = event.evidence;
     assert.ok(ref);
     assert.ok(!readEvidence(run.dir, ref).toString("utf8").includes(SECRET));
     const read = readRun(run.dir);

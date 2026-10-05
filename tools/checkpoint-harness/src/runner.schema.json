@@ -53,7 +53,7 @@
           "$ref": "#/$defs/paths"
         },
         "approvers": {
-          "description": "The operator accounts that hold each approval authority a binding names.",
+          "description": "The operator accounts that hold each approval authority a binding names. Two authorities are the harness's own (T3.5 H3): amend, who may amend the run, and feedback, whose pull-request reviews and comments start a correction round.",
           "type": "object",
           "additionalProperties": {
             "type": "array",
@@ -64,6 +64,50 @@
               "minLength": 1
             }
           }
+        }
+      }
+    },
+    "publication": {
+      "description": "Where the accepted selection is published for review (T3.5 H3): a pull request from harness/<run> to base (default repository.branch). Fixed for the run.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["pull_request"],
+      "properties": {
+        "pull_request": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["title", "draft"],
+          "properties": {
+            "title": { "type": "string", "minLength": 1 },
+            "draft": { "type": "boolean" },
+            "base": { "type": "string", "minLength": 1 }
+          }
+        },
+        "review": {
+          "description": "The review workflow dispatched on the published head after each publication: a push by the workflow token starts no workflow, so the harness dispatches the next review itself.",
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["workflow"],
+          "properties": {
+            "workflow": { "type": "string", "pattern": "^[A-Za-z0-9._-]+\\.ya?ml$" },
+            "inputs": { "type": "object", "additionalProperties": { "type": "string" } }
+          }
+        }
+      }
+    },
+    "job": {
+      "description": "Hosted job limits (T3.5 H3); they bound how long one job works, never the run's budgets or evidence.",
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "yield_after_seconds": {
+          "description": "Yield before the next action once this long has passed since the job started.",
+          "type": "integer",
+          "minimum": 1
+        },
+        "faults": {
+          "description": "Hosted fixture only: lets the fault dispatch input simulate runner loss around an effect.",
+          "type": "boolean"
         }
       }
     },

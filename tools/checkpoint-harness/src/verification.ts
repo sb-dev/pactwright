@@ -39,11 +39,15 @@ import {
   type ReviewContext,
   type ReviewVerdict,
   type Submission,
+  type ToolCall,
   type WorkspaceOps,
 } from "./claude.js";
 import {
+  CANDIDATE,
   definitionOf,
   exitId,
+  exitStep,
+  lineageOf,
   plannedContract,
   sha256,
   type AcceptedOutput,
@@ -68,6 +72,7 @@ import {
   adequacyRubric,
   bindingDigests,
   COMMON_RUBRIC,
+  FEEDBACK_RUBRIC,
   needsAdmission,
   type AutomatedBinding,
   type Registry,
@@ -405,7 +410,9 @@ const earlierSteps = (plan: PreparedRun, step: ContractStep): ContractStep[] =>
           0,
           plan.steps.findIndex((s) => s.id === step.id),
         )
-        .filter((s): s is ContractStep => s.kind === "contract");
+        .filter(
+          (s): s is ContractStep => s.kind === "contract" && lineageOf(s) === lineageOf(step),
+        );
 
 /**
  * Every target a step must satisfy: its own, the checkpoint's inherited ones
@@ -420,6 +427,9 @@ export const targetsOf = (
   step: ContractStep,
   pending: readonly Pending[] = [],
 ): VerificationTarget[] => {
+  // A procedure in another repository is judged on its own evidence: the
+  // candidate's checks do not apply there.
+  if (lineageOf(step) !== CANDIDATE) return [...step.targets];
   const deferred = new Set(pending.map((p) => p.target));
   return [
     ...step.targets,
@@ -440,7 +450,7 @@ export function pendingTargets(
   step: ContractStep,
   accepted: ReadonlySet<string>,
 ): Pending[] {
-  if (step.id === exitId(plan)) return [];
+  if (step.id === exitId(plan) || lineageOf(step) !== CANDIDATE) return [];
   return plan.inherited.targets.flatMap((t): Pending[] => {
     const rule = plan.inherited.applicability[t.criterion] ?? { kind: "step" };
     if (rule.kind === "exit") return [{ target: targetKey(t), rule: "exit" }];
@@ -1488,11 +1498,26 @@ export function reviewScope(
     );
     return proving.length === 0 || proving.some((t) => !deferred.has(targetKey(t)));
   };
+  // A requirement proved only by approval targets is judged by its approver:
+  // no candidate shows an approval before it is given, so the review leaves it out.
+  const byApproval = (
+    criteria: readonly { id: string; covers: readonly string[] }[],
+    proving: readonly VerificationTarget[],
+    requirement: string,
+  ): boolean => {
+    const covering = proving.filter((t) =>
+      criteria.some((c) => c.id === t.criterion && c.covers.includes(requirement)),
+    );
+    return covering.length > 0 && covering.every((t) => t.method === "approval");
+  };
   return {
     subjects: [
-      ...step.requirements.map((r) => `${step.id}/${r.id}`),
+      ...step.requirements
+        .filter((r) => !byApproval(step.criteria, step.targets, r.id))
+        .map((r) => `${step.id}/${r.id}`),
       ...plan.inherited.requirements
         .filter((r) => applies(r.id))
+        .filter((r) => !byApproval(plan.inherited.criteria, plan.inherited.targets, r.id))
         .map((r) => `${plan.checkpoint}/${r.id}`),
       ...step.outputs.map((o) => `${step.id}/${o.id}`),
     ],
@@ -1566,10 +1591,11 @@ export async function reviewCandidate(
   const identity = identityOf(run, input.attempt, input.manifest, input.candidate);
   const scope = reviewScope(input.plan, step, input.registry, input.manifest.pending);
   const { proofs, issues } = inventory(step, input.claims, candidateTree(run, input.candidate));
+  const events = committedEvents(run);
   // The evidence shown is this attempt's committed acceptance runs, never a caller's selection.
   const shown = journalRecords<Invocation>(
     run,
-    committedEvents(run),
+    events,
     "verifier-invocation",
     (e) =>
       e.attempt === identity.attempt &&
@@ -1596,6 +1622,74 @@ export async function reviewCandidate(
         verification: verificationSummary(shown),
         outputs: { proofs, issues },
         ...(checkpoint ? { checkpoint: checkpoint.record } : {}),
+        ...(step.procedure
+          ? {
+              operation: transcript(
+                run,
+                producerInvocation(run, events, step.id, identity.attempt),
+              ),
+            }
+          : {}),
+      },
+    },
+  });
+}
+
+/**
+ * Assesses a pull request's feedback (T3.5 H3): a fresh reviewer in a
+ * read-only workspace of the current candidate judges each feedback item, a
+ * subject, against the pinned requirements of every selected step under the
+ * feedback rubric. It uses the reviewer's own template and verdict rules; the
+ * packet is the checkpoint's integrated view, consuming every accepted output.
+ */
+export async function assessFeedback(
+  run: RunHandle,
+  input: {
+    plan: PreparedRun;
+    identity: Identity;
+    candidate: SealedCandidate;
+    accepted: readonly AcceptedOutput[];
+    feedback: { ref: string; pull: number; url: string | null; items: readonly Json[] };
+    subjects: readonly string[];
+    reviewer: ReviewerAccess;
+  },
+): Promise<Stored<ReviewRecord>> {
+  const step = exitStep(input.plan);
+  return runReview(run, {
+    plan: input.plan,
+    step,
+    identity: input.identity,
+    candidate: input.candidate,
+    accepted: input.accepted,
+    reviewer: input.reviewer,
+    shown: [],
+    outputs: [],
+    checkpoint: null,
+    context: {
+      kind: "feedback",
+      rubric: FEEDBACK_RUBRIC,
+      subjects: [...input.subjects],
+      targets: [],
+      bindings: [],
+      evidence: {
+        pullRequest: {
+          number: input.feedback.pull,
+          url: input.feedback.url,
+          snapshot: input.feedback.ref,
+        },
+        feedback: [...input.feedback.items],
+        requirements: input.plan.steps.map((s) => ({
+          step: s.id,
+          requirements: s.requirements.map((r) => ({
+            id: `${s.id}/${r.id}`,
+            statement: r.statement,
+          })),
+          outputs: s.outputs.map((o) => ({ id: `${s.id}/${o.id}`, meaning: o.meaning })),
+        })),
+        inherited: input.plan.inherited.requirements.map((r) => ({
+          id: `${input.plan.checkpoint}/${r.id}`,
+          statement: r.statement,
+        })),
       },
     },
   });
@@ -1635,7 +1729,56 @@ export type AcceptanceInput = {
    * the run's evidence; null or absent when there is none.
    */
   checkpoint?: GivenCheckpoint | null;
+  /**
+   * The attempt's producer invocation, the latest journaled: an operational
+   * step's command and observation evidence (T3.5 H3). Null when none ran.
+   */
+  producer?: Stored<AgentOutcome> | null;
 };
+
+/** The commands a producer invocation ran in its workspace, with their recorded output. */
+export const commandsOf = (outcome: AgentOutcome): ToolCall[] =>
+  outcome.observation.toolCalls.filter((c) => c.tool === "run_command" && c.exit !== undefined);
+
+const TRANSCRIPT_TAIL = 4096;
+
+/**
+ * An operational step's command transcript as the reviewer is shown it: each
+ * recorded command, its exit status and the tail of its recorded output.
+ */
+function transcript(run: RunHandle, producer: Stored<AgentOutcome> | null): Json {
+  const text = (ref: string | undefined): string =>
+    ref === undefined
+      ? "(not recorded)"
+      : readEvidence(run.dir, ref).toString("utf8").slice(-TRANSCRIPT_TAIL);
+  return {
+    invocation: producer?.ref ?? null,
+    commands: (producer ? commandsOf(producer.record) : []).map((c) => ({
+      command: c.target,
+      exit: c.exit ?? null,
+      timedOut: c.timedOut ?? false,
+      stdout: text(c.stdout),
+      stderr: text(c.stderr),
+    })),
+  };
+}
+
+/** The latest producer invocation journaled for an attempt of a step. */
+export function producerInvocation(
+  run: RunHandle,
+  events: readonly JournalEvent[],
+  step: string,
+  attempt: number,
+): Stored<AgentOutcome> | null {
+  return (
+    journalRecords<AgentOutcome>(
+      run,
+      events,
+      "agent-invocation",
+      (e) => e.attempt === attempt && e.data.role === "producer" && e.data.step === step,
+    ).at(-1) ?? null
+  );
+}
 
 /**
  * Decides one attempt from its evidence. A step is accepted only when every
@@ -2099,6 +2242,53 @@ export function decideAcceptance(input: AcceptanceInput): Decision {
     }
   }
 
+  // An operational step is accepted only on the command and observation
+  // evidence the controller recorded while its producer ran the procedure.
+  if (step.procedure) {
+    const subject = `${step.id}/PROCEDURE`;
+    // The procedure ran where the definitions and configuration declare.
+    const declared = { target: lineageOf(step), revision: step.procedure.target?.revision ?? null };
+    if (stringify(manifest.operation ?? null) !== stringify(declared)) {
+      reason(
+        "owner",
+        subject,
+        `the procedure was evaluated in ${stringify(manifest.operation ?? null)}, not its declared target ${stringify(declared)}`,
+        [subject],
+      );
+    }
+    const producer = input.producer ?? null;
+    const commands =
+      producer && intact(`producer ${producer.ref}`, producer) ? commandsOf(producer.record) : [];
+    const outputs = commands.flatMap((c) => [c.stdout, c.stderr]);
+    // A journaled reference is intact: readRun checks every evidence digest.
+    const recorded = (ref: string | undefined): ref is string =>
+      ref !== undefined && input.journaled.has(ref);
+    if (producer === null || commands.length === 0) {
+      correct(
+        {
+          rule: subject,
+          location: "the step's workspace",
+          defect: "no command of the procedure was executed, so there is no command evidence",
+          correction: "carry out the procedure by running its commands with run_command as written",
+        },
+        [subject],
+      );
+    } else if (!outputs.every(recorded)) {
+      correct(
+        {
+          rule: subject,
+          location: "the step's workspace",
+          defect: "the observation evidence of a command, its recorded output, is missing",
+          correction: "run the procedure's commands again so that their output is recorded",
+        },
+        [subject],
+      );
+    } else {
+      evidence.add(producer.ref);
+      for (const ref of outputs) if (ref !== undefined) evidence.add(ref);
+    }
+  }
+
   // The common review: the first complete verdict of this attempt binds.
   const { proofs, issues } = inventory(step, input.claims, tree);
   for (const i of issues) {
@@ -2248,6 +2438,7 @@ export function journalInput(
     approvals: load<Approval>("approval", (e) => e.evaluation === evaluation),
     journaled: new Set(events.flatMap((e) => e.evidence)),
     checkpoint: givenCheckpoint(run.dir, input.manifest.checkpoint),
+    producer: producerInvocation(run, events, input.step, input.attempt),
   };
 }
 
@@ -2264,7 +2455,14 @@ export function givenCheckpoint(dir: string, ref: string | null): GivenCheckpoin
 
 /** Inputs `recordDecision` reads from the run instead of taking them from its caller. */
 type FromJournal =
-  "tree" | "invocations" | "admissions" | "reviews" | "approvals" | "journaled" | "checkpoint";
+  | "tree"
+  | "invocations"
+  | "admissions"
+  | "reviews"
+  | "approvals"
+  | "journaled"
+  | "checkpoint"
+  | "producer";
 
 /**
  * Decides an attempt from the run's committed journal and records the

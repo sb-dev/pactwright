@@ -578,6 +578,7 @@ export function reviewerRole(): AgentRole {
     available: ["code-review-and-quality"],
     skills: [{ name: "code-review-and-quality", digest: sha256("skill"), text: "skill" }],
     limits: { attempts: 3, wallTimeMs: 5_000, maxTurns: 8, maxBudgetUsd: 1 },
+    dispatchable: true,
     credential: new Secret("sk-ant-test-reviewer"),
     credentialKind: "api-key",
   };

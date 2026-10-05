@@ -470,11 +470,16 @@ describe("T3-E approvals and effects", () => {
     assert.equal(approval?.actor, OWNER);
   });
 
-  it("after its effect, the next eligible step is unconverted and pauses the run", async () => {
+  it("after its effect, the operational step runs; without command evidence it is not accepted", async () => {
     const w = world();
     const service = receiptService();
+    // The operational step's producer runs no command: the local workspaces refuse them.
+    const producer = scriptedAgent((session) => {
+      const work = STEP_WORK[session.packet.step.id];
+      return work ? submit(session, work.files(), work.outputs) : submit(session, {}, {});
+    });
     const deps = testDeps(w.repo, {
-      producer: goodProducer(),
+      producer,
       reviewer: reviewer(),
       effects: service,
     });
@@ -490,10 +495,18 @@ describe("T3-E approvals and effects", () => {
       ).ok,
     );
     const result = await resumeRun(dir, deps);
-    assertPaused(result, { code: "unconverted", step: "CP98-S02" });
+    assertPaused(result, { code: "exhausted", step: "CP98-S02" });
     assert.ok(result.outcome === "paused");
     assert.deepEqual(result.accepted, ["CP98-S01"]);
     assert.equal(service.executions.length, 1);
+    const operational = producer.packets.filter((p) => p.step.id === "CP98-S02");
+    assert.equal(operational.length, 3);
+    assert.ok(operational.every((p) => p.step.procedure === p.step.definition));
+    assert.ok(
+      recordsOf<{ step: string; findings?: Finding[] }>(dir, "decision")
+        .filter((d) => d.step === "CP98-S02")
+        .every((d) => d.findings?.some((f) => /no command of the procedure/.test(f.defect))),
+    );
   });
 
   it("a denied approval runs no effect and keeps the step unaccepted", async () => {

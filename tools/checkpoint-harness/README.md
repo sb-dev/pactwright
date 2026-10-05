@@ -2,7 +2,7 @@
 
 The harness runs checkpoint work through produce → verify → review → correct → accept.
 
-GitHub Actions operation below is the interface specified by the [T3.5 production readiness](../../docs/research-logs/2026-09-30-cp01-task-3-5-harness-production-readiness.md). At baseline `5dccd16373d8988a7294548de6f9de61be48e33a`, the CLI exists; the hosted workflow, portable recovery and GitHub approval channel still require implementation. H1 adds production verification, described under [Production verification](#production-verification). H2 adds each role's model and effort, described under [Role model and effort](#role-model-and-effort).
+GitHub Actions operation below is the interface specified by the [T3.5 production readiness](../../docs/research-logs/2026-09-30-cp01-task-3-5-harness-production-readiness.md). H1 adds production verification, described under [Production verification](#production-verification). H2 adds each role's model and effort, described under [Role model and effort](#role-model-and-effort). H3 adds the hosted workflow, portable run state, GitHub-bound ownership and decisions, operational steps and pull-request correction rounds, described from [Workflow controls](#workflow-controls) to [Pull-request correction rounds](#pull-request-correction-rounds).
 
 For the S01 pilot and stage selections, use the [T5 run guide](../../docs/research-logs/2026-09-29-cp01-task-5-implementation-and-acceptance.md). The [T3 log](../../docs/research-logs/2026-09-26-cp01-task-3-harness-and-software-run-model.md) records the original design.
 
@@ -22,18 +22,38 @@ The durable run state contains the journal, evidence, candidate Git history, eff
 
 **T5 configuration file:** `.github/checkpoint-harness/cp01-t5.yml`
 
-H3 supplies the workflow named **Checkpoint harness** on the default branch and the complete configuration template. Operate it through **Actions → Checkpoint harness → Run workflow**.
+**Hosted fixture configuration:** `.github/checkpoint-harness/h3-fixture.yml` (checkpoint CP95, for the H3 hosted proof only)
+
+H3 supplies the workflow named **Checkpoint harness** and the complete configuration template. Operate it through **Actions → Checkpoint harness → Run workflow**, on the branch that holds the harness revision. Continuations and forwarded reviews are dispatched on the ref the run was started from.
 
 | Input | Use |
 | --- | --- |
-| `action` | `start`, `continue`, `approve`, `deny`, `amend` or `status`. |
-| `run` | Stable identifier for the full harness execution, such as `cp01-t5`. |
-| `through` | Optional boundary for `start` or `continue`. A new T5 run defaults to `CP01-S01`; an existing run keeps its saved boundary when omitted. |
+| `action` | `start`, `continue`, `approve`, `deny`, `amend`, `status` or `address-comments`. |
+| `run` | Stable name of the full harness execution, such as `cp01-t5`: lower-case letters, digits and `-`, at most 40 characters. |
+| `through` | Optional boundary for `start` or `continue`. A new run defaults to the checkpoint's first step; an existing run keeps its saved boundary when omitted. |
 | `request` | Exact pending request from the summary, for `approve` or `deny`. |
-| `config_revision` | Commit containing the revised configuration, for `amend`. |
+| `candidate` | The candidate commit that request names, for `approve` or `deny`. |
+| `config` | The template file in `.github/checkpoint-harness`, for `start`. |
+| `config_revision` | Full commit SHA containing the revised template, for `amend`. |
 | `reason` | Explanation recorded with an amendment. |
+| `pr` | The run's pull request number, for `address-comments`. |
+| `review` | One submitted review to address, for `address-comments`; empty collects all authorised feedback. |
+| `fault` | Hosted fixture only: `crash-after-intent` or `crash-after-effect[:ACTION]`. A template without `job.faults: true` refuses it. |
 
-The committed template omits `selection.through`. The workflow combines dispatch inputs with saved state and supplies the resolved selection to the harness. A blank continuation must not reset the boundary to S01.
+The committed template omits `selection.through`, `repository.expected_head` and `workspace`. At `start`, the workflow reads the template at the dispatched commit, resolves the branch head and the boundary, and records the result as the run's configuration. Later jobs use the saved configuration only. A blank continuation never resets the boundary.
+
+### Jobs and credentials
+
+| Job | Holds | Does |
+| --- | --- | --- |
+| `route` | Read-only token. No provider credential. | Validates the dispatch, restores the latest state, records approvals, amendments and feedback, and runs work that needs neither an agent nor an external effect. |
+| `controller` | The `claude-live` environment's provider secret. Read-only token. | Agent sessions and contained candidate work. The environment's reviewer approves each job. |
+| `effects` | Contents and pull-request write. No provider credential. | Publication, replies and fixture effects, each read back. It runs no candidate code. |
+| `continue` | Actions write. No checkout. | Dispatches the next `continue` after a planned yield or a hand-off, unless another run of the workflow is waiting. |
+| `forward` | Actions write. No checkout. | Dispatches `address-comments` for a review submitted on a `harness/RUN` pull request of this repository. |
+| `check` | Read-only token. | Validates the configuration templates of a pull request that changes them. |
+
+Every job after `route` checks out the controller commit the run was started with; a job of another harness revision refuses the run. Candidate code runs only in T3 containment and never sees a token, a provider credential or the Docker socket.
 
 ### Start and continue
 
@@ -45,13 +65,15 @@ A job can stop at selection acceptance, an operator pause or a planned yield bef
 
 ### Approve or amend
 
-For `approve` or `deny`, inspect the pending request and candidate in the summary. The workflow records the authenticated GitHub actor against that request. An approval is not permission for a different candidate or effect.
+For `approve` or `deny`, copy the pending request and candidate from the summary. The workflow records the GitHub actor who triggered the dispatch against that request. An actor outside the binding's authority in `permissions.approvers`, a decided or superseded request and another candidate are refused, and nothing is recorded. An approval is not permission for a different candidate or effect. A denial is recorded; its effect never runs and the step is not accepted.
 
-For `amend`, commit the configuration change, supply its `config_revision` and a reason, then continue the run. Later jobs use the saved effective configuration, not an unrecorded edit on a branch. Role, effort, skill, verifier, policy or definition changes re-evaluate affected evidence. Existing receipts are retained.
+For `amend`, commit the template change, supply its `config_revision` and a reason, then continue the run. The actor must be in `permissions.approvers.amend`; a hosted run whose configuration names no such list is never amended. The revision must descend from the run's recorded configuration revision. The repository, checkpoint, approvers, publication and operations cannot be amended within a run. Later jobs use the saved effective configuration, not an unrecorded edit on a branch. Role, effort, skill, verifier, policy or definition changes re-evaluate affected evidence. Existing receipts and counters are retained.
 
 ### Read the result
 
-The summary shows the run identifier, selected boundary, accepted steps, model/effort, reported spending and unresolved reservations, pause reason and next action. It links evidence, any candidate PR, and saved-state identity and expiry.
+The job summary shows the run name and identifier, selected boundary, accepted steps, requested and reported model and effort, reported spending and unresolved reservations, pause reason and next action. It links the job and the saved state, lists evidence records by path in that state, and shows the saved-state identity and expiry and any pull request. Each job compares every field with the state it saved and fails on a mismatch. A job refused before restoring state, malformed inputs included, reports every run field as `unknown`. The saved state's expiry is the one GitHub records for its artifact.
+
+`status` restores the latest state and reports it. It saves nothing and takes no ownership.
 
 `selection-accepted` means the requested selection is accepted. A green job or successful artifact upload does not mean the checkpoint is complete. Final completion also requires its exit evaluation.
 
@@ -59,9 +81,15 @@ Every `run` and `resume` result carries `checkpoint`: `complete`, the checkpoint
 
 ## Save and recover
 
-H3 stores consistent state as immutable Actions artifacts with increasing sequence numbers. Save after durable phases, before an external action and before a planned yield. Retain the state for the full execution; an end-of-job upload alone cannot protect against runner loss.
+H3 stores the run state as immutable Actions artifacts named `harness-RUN-NNNNNN`, with increasing sequence numbers. Each holds `state.tar.gz` (the run directory) and `state.json` (name, sequence, journal head, pinned controller commit and archive digest). A job saves after each durable phase, before an agent session or external effect, and before a planned yield. Artifacts follow the repository's retention; the latest state must not expire during a run.
 
-Use one concurrency group per run with `cancel-in-progress: false`. Recovery also checks the recorded GitHub workflow/job/attempt and saved sequence. An active or unknown owner cannot be replaced merely because another runner has a different hostname or process ID.
+A run is operated from the branch it was started on. Only artifacts of `workflow_dispatch` runs of this workflow in this repository, on that branch, count; a dispatch on another branch is refused. An artifact of the run whose workflow run cannot be read refuses the job: the harness never falls back to an older state. The route job checks that the dispatched commit's history carries the run's pinned controller commit before it runs that code. Protect the branch: whoever can push to it controls the harness code.
+
+A save that finds the same or a later sequence fails, so two controllers cannot both write the run. If two writers race past that check, the first save of the sequence stands and the later writer stops.
+
+The workflow allows one run per run name at a time, with `cancel-in-progress: false`. GitHub keeps one pending run per group: a newer dispatch for the same run replaces an older pending one, so wait for a dispatch to start before sending the next. A continuation is not dispatched while another dispatch of the run waits. Each owner record names its GitHub repository, workflow run, attempt and job. A new job takes over only an owner that released the run or whose job has completed; an active or unknown owner is refused.
+
+An agent session reserves its spend allowance before it starts. A session lost with its runner stays reserved and counted. `budgets.run_spend_usd`, when set, pauses the run before a session it cannot cover.
 
 | Condition | Action |
 | --- | --- |
@@ -71,9 +99,48 @@ Use one concurrency group per run with `cancel-in-progress: false`. Recovery als
 | Budget exhausted | Amend only the required limit and record the reason. Existing usage remains counted. |
 | Missing, corrupt or stale archive | Stop and investigate the named state. Do not silently start a fresh run or restore an older sequence. |
 | Uncertain external result | Read the target back. Retain a matching receipt; retry only when the target proves the action did not complete. |
+| Declined external effect | GitHub declined a write without performing it (for example, Actions may not create pull requests). Fix the named cause, then `continue`; the effect is read back and retried. |
 | Harness defect | Return the missing capability or design defect to T3.5, verify the corrected harness revision through T4, then resume T5. |
 
-Operational steps use their declared repository or fixture. The harness retains evidence links when work lands or the target changes, and reruns affected checks. Reviewed prose does not require conversion before execution; missing required execution evidence still prevents acceptance.
+## Operational steps
+
+A step kept in reviewed prose runs as an operational step. Its reviewed section text is its one requirement, `PROCEDURE`. The producer carries the procedure out with `run_command`. The controller records each command, its exit status and its output. The step is accepted only when a command ran, its output is in the journal, the run used the declared target and a fresh review finds the expected result. Prose whose hash differs from `prose_steps`, or a step with neither a contract nor a hash, fails planning and never runs.
+
+By default a procedure runs on the candidate and can land a revision; later steps build on it and rerun earlier automated checks. A configuration can declare another repository instead:
+
+```yaml
+operations:
+  targets:
+    TARGET_NAME:
+      repository: OWNER/REPOSITORY
+      revision: FULL_COMMIT_SHA
+      path: DIRECTORY # optional: this directory of the revision is the target's root
+      writable: [PATH, ...]
+  steps:
+    STEP_ID: TARGET_NAME
+```
+
+The route job fetches the pinned revision at `start`: from this repository's checkout, or into a separate checkout of another repository the job's token can read. The run imports it as the target's base; candidate work only ever sees that snapshot. Its steps build on each other, never on the candidate; the candidate's checks do not run there, and the candidate's evidence stays current. A repository the job cannot read refuses the start. A procedure that needs the network, a registry or another repository's merge cannot run in containment: its producer reports `blocked` and the run pauses for the owner (CP01 S28–S30).
+
+The hosted fixture runs CP95 Step 3 in `test/fixtures/checkpoint-harness/registry`, a repository root of its own pinned at a revision of this repository.
+
+## Pull-request correction rounds
+
+When the selection is accepted, the `effects` job pushes the integrated candidate to `harness/RUN` as one deterministic commit whose parent is the run's recorded source head, and opens a pull request against `publication.pull_request.base`, else the run's branch. Each later accepted candidate becomes one commit on top of the published head. The branch is never force-pushed; a branch that moved elsewhere refuses the push.
+
+A push by the workflow token starts no workflow. With `publication.review: {workflow: FILE, inputs: {...}}`, the `effects` job dispatches that workflow on `harness/RUN` once for each published head and reads its run back. The hosted fixture dispatches `checkpoint-harness-verify.yml` without its live job.
+
+Run `address-comments` with `run` and `pr` to address feedback. A review submitted on the pull request by a member of `permissions.approvers.feedback` is forwarded to the same action with `review`. A person who dispatches a round must hold that authority too; a dismissed review starts nothing. A review submitted while a round is open is recorded and starts the next round when that one completes. Both paths:
+
+1. restore the run and check the pull request number, repository, base branch and `harness/RUN` head branch;
+2. collect the review (body and inline comments), or for a manual round every authorised review, inline comment and conversation comment; the harness's own replies and app accounts are ignored;
+3. resume an unfinished round, skip feedback already disposed of, and assess edited feedback again;
+4. adopt newer commits on the head that build on the published commit and stay within the write policy; a diverged head pauses the round;
+5. assess each item with a fresh reviewer: `actionable`, `already-addressed`, `declined` or `blocked`, with a reason; feedback that would change definitions, verifiers, the workflow or the configuration is declined;
+6. correct actionable feedback through the final step's next attempt: produce, seal, verify, review and decide again, within the same budgets;
+7. push the fixing commit on the current head, reply to each item with its disposition, the fixing commit and its checks, and read both back before recording the round. An inline comment is answered in its thread, on the thread's first comment. A receipt is what reading the target back finds: the branch head, the open pull request, a reply carrying the effect's marker written by the workflow's own account, or a fixture artifact from this run's branch.
+
+A fixing commit or a reply alone never restores acceptance. The reviewer resolves threads and decides acceptance.
 
 ## Production verification
 
@@ -155,7 +222,7 @@ roles:
 
 ## Internal CLI reference
 
-These are the existing CLI entry points used inside workflow jobs. `FILE` and `DIR` denote resolved absolute paths supplied by the workflow, not operator shell variables.
+The workflow jobs run `harness workflow check|prepare|route|controller|effects`, which read the dispatch inputs from `HARNESS_*` variables. The entry points below operate a local run directory. `FILE` and `DIR` denote resolved absolute paths, not operator shell variables.
 
 ```text
 pnpm --filter @pactwright/checkpoint-harness harness plan --config FILE
@@ -173,4 +240,4 @@ pnpm --filter @pactwright/checkpoint-harness harness status --run DIR
 | `approve`, `amend` | Decision or amendment recorded. | Request refused. | — |
 | `status` | Recorded facts printed. | Invalid or corrupt run. | — |
 
-`run` and `resume` print the result as JSON, with progress on stderr. `status` reads records without writing them. The workflow translates dispatch actions into these operations; H3 supplies the cross-runner state and GitHub identity support that the baseline CLI lacks.
+`run` and `resume` print the result as JSON, with progress on stderr. `status` reads records without writing them. A workflow job exits 0 when the run stops in order (selection accepted, a pause, a yield or a hand-off) and non-zero when it refuses the dispatch or the state.

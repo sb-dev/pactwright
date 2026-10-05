@@ -1,0 +1,396 @@
+# Checkpoint harness (T3.5 H3; Spec 00 §4; T5 run guide §§3–7). Runs the
+# checkpoint harness on GitHub-hosted runners from one saved run state.
+#
+# A dispatch runs a chain of jobs over that state:
+#   route       read-only token, no provider credential: validates the
+#               dispatch, restores the latest state, records approvals,
+#               amendments and pull-request feedback, and runs the work that
+#               needs neither an agent nor an external effect;
+#   controller  the claude-live environment's provider credential, read-only
+#               token: agent sessions and contained candidate work;
+#   effects     repository and pull-request write, no provider credential, no
+#               candidate execution: publication and replies, each read back;
+#   continue    dispatches the next job of a yielded or handed-off run.
+# Every job checks out the controller commit the run is pinned to, saves the
+# state after each durable phase and before each effect, and reports what the
+# state records. A green job or a saved artifact is never acceptance.
+#
+# A submitted review on a harness pull request is forwarded as an
+# address-comments dispatch, so reviews and manual rounds take one path.
+name: Checkpoint harness
+# The run name leads the title, so a continuation can tell this run's waiting
+# dispatches from other runs'.
+run-name: >-
+  ${{ github.event_name == 'workflow_dispatch' && format('harness {0} {1}', inputs.run, inputs.action)
+  || format('Checkpoint harness {0}', github.event_name) }}
+
+on:
+  workflow_dispatch:
+    inputs:
+      action:
+        description: What to do with the run.
+        required: true
+        type: choice
+        options: [start, continue, approve, deny, amend, status, address-comments]
+      run:
+        description: The run name, such as cp01-t5.
+        required: true
+        type: string
+      through:
+        description: start/continue — the last step of the selection; empty keeps the saved one.
+        required: false
+        type: string
+      request:
+        description: approve/deny — the exact pending request from the summary.
+        required: false
+        type: string
+      candidate:
+        description: approve/deny — the candidate commit that request names.
+        required: false
+        type: string
+      config:
+        description: start — the configuration template in .github/checkpoint-harness.
+        required: false
+        type: string
+        default: cp01-t5.yml
+      config_revision:
+        description: amend — the commit holding the revised template.
+        required: false
+        type: string
+      reason:
+        description: amend — why the configuration changes.
+        required: false
+        type: string
+      pr:
+        description: address-comments — the run's pull request number.
+        required: false
+        type: string
+      review:
+        description: address-comments — one submitted review to address; empty collects all feedback.
+        required: false
+        type: string
+      fault:
+        description: Hosted fixture only — crash-after-intent or crash-after-effect[:action].
+        required: false
+        type: string
+  pull_request_review:
+    types: [submitted]
+  pull_request:
+    paths:
+      - ".github/workflows/checkpoint-harness.yml"
+      - ".github/checkpoint-harness/**"
+      - "tools/checkpoint-harness/src/**"
+
+permissions: {}
+
+concurrency:
+  # One run of the harness at a time per run name; never cancel a writer.
+  # A review event only forwards a dispatch: its own group never replaces a
+  # run's pending dispatch.
+  group: >-
+    ${{ github.event_name == 'workflow_dispatch' && format('checkpoint-harness-harness/{0}', inputs.run)
+    || github.event_name == 'pull_request_review' && format('checkpoint-harness-review-{0}', github.event.review.id)
+    || format('checkpoint-harness-check-{0}', github.ref) }}
+  cancel-in-progress: false
+
+jobs:
+  # Validates the configuration templates of a changed workflow; no secrets.
+  check:
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413 # v6.1.0
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: 22
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - name: Check the configuration templates
+        run: pnpm --filter @pactwright/checkpoint-harness harness workflow check
+
+  # Forwards a submitted review on a harness pull request to the one
+  # correction path. It runs no repository code and holds no secret.
+  forward:
+    if: >-
+      github.event_name == 'pull_request_review'
+      && startsWith(github.event.pull_request.head.ref, 'harness/')
+      && github.event.pull_request.head.repo.full_name == github.repository
+      && !endsWith(github.event.review.user.login, '[bot]')
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    permissions:
+      actions: write
+    steps:
+      - uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # v9.0.0
+        env:
+          HEAD_REF: ${{ github.event.pull_request.head.ref }}
+          BASE_REF: ${{ github.event.pull_request.base.ref }}
+          PULL: ${{ github.event.pull_request.number }}
+          REVIEW: ${{ github.event.review.id }}
+        with:
+          script: |
+            const run = process.env.HEAD_REF.slice("harness/".length);
+            if (!/^[a-z0-9][a-z0-9-]{0,39}$/.test(run)) throw new Error(`not a harness run branch: ${process.env.HEAD_REF}`);
+            await github.rest.actions.createWorkflowDispatch({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              workflow_id: "checkpoint-harness.yml",
+              ref: process.env.BASE_REF,
+              inputs: { action: "address-comments", run, pr: process.env.PULL, review: process.env.REVIEW },
+            });
+            core.notice(`forwarded review ${process.env.REVIEW} on #${process.env.PULL} to run ${run}`);
+
+  route:
+    if: github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 120
+    permissions:
+      contents: read
+      actions: read
+      pull-requests: read
+    outputs:
+      next: ${{ steps.route.outputs.next }}
+      dispatch_ref: ${{ steps.route.outputs.dispatch_ref }}
+      dispatch_pr: ${{ steps.route.outputs.dispatch_pr }}
+      dispatch_review: ${{ steps.route.outputs.dispatch_review }}
+      controller: ${{ steps.prepare.outputs.controller }}
+    env:
+      HARNESS_ACTION: ${{ inputs.action }}
+      HARNESS_RUN: ${{ inputs.run }}
+      HARNESS_THROUGH: ${{ inputs.through }}
+      HARNESS_REQUEST: ${{ inputs.request }}
+      HARNESS_CANDIDATE: ${{ inputs.candidate }}
+      HARNESS_CONFIG: ${{ inputs.config }}
+      HARNESS_CONFIG_REVISION: ${{ inputs.config_revision }}
+      HARNESS_REASON: ${{ inputs.reason }}
+      HARNESS_PR: ${{ inputs.pr }}
+      HARNESS_REVIEW: ${{ inputs.review }}
+      HARNESS_FAULT: ${{ inputs.fault }}
+      HARNESS_DISPATCH_REF: ${{ github.ref_name }}
+      HARNESS_JOB_TIMEOUT_MINUTES: "120"
+    steps:
+      - id: clock
+        run: echo "started=$(date +%s)" >> "$GITHUB_OUTPUT"
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          path: trusted
+          # prepare checks that this commit's history carries the pinned controller.
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413 # v6.1.0
+        with:
+          package_json_file: trusted/package.json
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: 22
+          cache: pnpm
+          cache-dependency-path: trusted/pnpm-lock.yaml
+      - name: Install the dispatched controller
+        working-directory: trusted
+        run: pnpm install --frozen-lockfile
+      - name: Export the artifact runtime to the controller
+        uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # v9.0.0
+        with:
+          script: |
+            core.setSecret(process.env.ACTIONS_RUNTIME_TOKEN);
+            core.exportVariable("ACTIONS_RUNTIME_TOKEN", process.env.ACTIONS_RUNTIME_TOKEN);
+            core.exportVariable("ACTIONS_RESULTS_URL", process.env.ACTIONS_RESULTS_URL);
+      - name: Find the pinned controller
+        id: prepare
+        working-directory: trusted
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        run: pnpm --filter @pactwright/checkpoint-harness harness workflow prepare
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          path: controller
+          ref: ${{ steps.prepare.outputs.controller }}
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Install the pinned controller
+        working-directory: controller
+        run: pnpm install --frozen-lockfile
+      - name: Route
+        id: route
+        working-directory: controller
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+          HARNESS_JOB_STARTED: ${{ steps.clock.outputs.started }}
+        run: pnpm --filter @pactwright/checkpoint-harness harness workflow route
+
+  controller:
+    needs: route
+    if: needs.route.outputs.next == 'controller'
+    runs-on: ubuntu-24.04
+    environment: claude-live
+    # Each controller job needs an environment approval: run long, and yield
+    # before the limit with time to save (job.yield_after_seconds bounds it).
+    timeout-minutes: 330
+    permissions:
+      contents: read
+      actions: read
+      pull-requests: read
+    outputs:
+      next: ${{ steps.controller.outputs.next }}
+      dispatch_ref: ${{ steps.controller.outputs.dispatch_ref }}
+      dispatch_pr: ${{ steps.controller.outputs.dispatch_pr }}
+      dispatch_review: ${{ steps.controller.outputs.dispatch_review }}
+    env:
+      HARNESS_ACTION: ${{ inputs.action }}
+      HARNESS_RUN: ${{ inputs.run }}
+      HARNESS_PR: ${{ inputs.pr }}
+      HARNESS_REVIEW: ${{ inputs.review }}
+      HARNESS_DISPATCH_REF: ${{ github.ref_name }}
+      HARNESS_JOB_TIMEOUT_MINUTES: "330"
+    steps:
+      - id: clock
+        run: echo "started=$(date +%s)" >> "$GITHUB_OUTPUT"
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          path: controller
+          ref: ${{ needs.route.outputs.controller }}
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413 # v6.1.0
+        with:
+          package_json_file: controller/package.json
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: 22
+          cache: pnpm
+          cache-dependency-path: controller/pnpm-lock.yaml
+      - name: Install the pinned controller
+        working-directory: controller
+        run: pnpm install --frozen-lockfile
+      - name: Export the artifact runtime to the controller
+        uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # v9.0.0
+        with:
+          script: |
+            core.setSecret(process.env.ACTIONS_RUNTIME_TOKEN);
+            core.exportVariable("ACTIONS_RUNTIME_TOKEN", process.env.ACTIONS_RUNTIME_TOKEN);
+            core.exportVariable("ACTIONS_RESULTS_URL", process.env.ACTIONS_RESULTS_URL);
+      - name: Controller
+        id: controller
+        working-directory: controller
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+          HARNESS_JOB_STARTED: ${{ steps.clock.outputs.started }}
+          # The template's credentials.provider names which one the run uses.
+          CLAUDE_CODE_OAUTH_TOKEN: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+        run: pnpm --filter @pactwright/checkpoint-harness harness workflow controller
+
+  effects:
+    needs: [route, controller]
+    if: >-
+      always() && needs.route.result == 'success'
+      && (needs.route.outputs.next == 'effects'
+      || needs.controller.result == 'success' && needs.controller.outputs.next == 'effects')
+    runs-on: ubuntu-24.04
+    timeout-minutes: 60
+    permissions:
+      contents: write
+      pull-requests: write
+      # Dispatches the next review of each published head.
+      actions: write
+    outputs:
+      next: ${{ steps.effects.outputs.next }}
+      dispatch_ref: ${{ steps.effects.outputs.dispatch_ref }}
+      dispatch_pr: ${{ steps.effects.outputs.dispatch_pr }}
+      dispatch_review: ${{ steps.effects.outputs.dispatch_review }}
+    env:
+      HARNESS_ACTION: ${{ inputs.action }}
+      HARNESS_RUN: ${{ inputs.run }}
+      HARNESS_PR: ${{ inputs.pr }}
+      HARNESS_REVIEW: ${{ inputs.review }}
+      HARNESS_FAULT: ${{ inputs.fault }}
+      HARNESS_DISPATCH_REF: ${{ github.ref_name }}
+      HARNESS_JOB_TIMEOUT_MINUTES: "60"
+    steps:
+      - id: clock
+        run: echo "started=$(date +%s)" >> "$GITHUB_OUTPUT"
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          path: controller
+          ref: ${{ needs.route.outputs.controller }}
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413 # v6.1.0
+        with:
+          package_json_file: controller/package.json
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: 22
+          cache: pnpm
+          cache-dependency-path: controller/pnpm-lock.yaml
+      - name: Install the pinned controller
+        working-directory: controller
+        run: pnpm install --frozen-lockfile
+      - name: Export the artifact runtime to the controller
+        uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # v9.0.0
+        with:
+          script: |
+            core.setSecret(process.env.ACTIONS_RUNTIME_TOKEN);
+            core.exportVariable("ACTIONS_RUNTIME_TOKEN", process.env.ACTIONS_RUNTIME_TOKEN);
+            core.exportVariable("ACTIONS_RESULTS_URL", process.env.ACTIONS_RESULTS_URL);
+      - name: Effects
+        id: effects
+        working-directory: controller
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+          HARNESS_JOB_STARTED: ${{ steps.clock.outputs.started }}
+        run: pnpm --filter @pactwright/checkpoint-harness harness workflow effects
+
+  # Dispatches the run's continuation after a planned yield or a hand-off to
+  # a controller job, unless another run of this workflow is already waiting:
+  # a newer pending run would replace it in the concurrency group.
+  continue:
+    needs: [route, controller, effects]
+    if: >-
+      always()
+      && (needs.route.outputs.next == 'continue'
+      || needs.controller.outputs.next == 'continue'
+      || needs.effects.outputs.next == 'continue')
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    permissions:
+      actions: write
+    steps:
+      - uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # v9.0.0
+        env:
+          RUN: ${{ inputs.run }}
+          REF: ${{ needs.effects.outputs.dispatch_ref || needs.controller.outputs.dispatch_ref || needs.route.outputs.dispatch_ref }}
+          PULL: ${{ needs.effects.outputs.dispatch_pr || needs.controller.outputs.dispatch_pr || needs.route.outputs.dispatch_pr }}
+          REVIEW: ${{ needs.effects.outputs.dispatch_review || needs.controller.outputs.dispatch_review || needs.route.outputs.dispatch_review }}
+        with:
+          script: |
+            const { owner, repo } = context.repo;
+            const { RUN: run, REF: ref, PULL: pr, REVIEW: review } = process.env;
+            // A newer pending run in the group would replace a waiting
+            // dispatch of this run: never dispatch over one.
+            const waiting = [];
+            for (const status of ["queued", "waiting", "pending", "requested"]) {
+              const { data } = await github.rest.actions.listWorkflowRuns({
+                owner, repo, workflow_id: "checkpoint-harness.yml", status, per_page: 100,
+              });
+              waiting.push(...data.workflow_runs.filter(
+                (r) => r.id !== context.runId && r.display_title.startsWith(`harness ${run} `),
+              ));
+            }
+            if (waiting.length > 0) {
+              core.warning(`${run} was not continued: its dispatch ${waiting[0].id} is waiting; dispatch continue when it ends`);
+              return;
+            }
+            const inputs = review
+              ? { action: "address-comments", run, pr, review }
+              : { action: "continue", run };
+            await github.rest.actions.createWorkflowDispatch({
+              owner, repo, workflow_id: "checkpoint-harness.yml", ref, inputs,
+            });
+            core.notice(`dispatched ${inputs.action} for ${run} on ${ref}`);

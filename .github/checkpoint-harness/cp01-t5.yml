@@ -1,0 +1,99 @@
+# Checkpoint 1 Task 5 run configuration template (T5 run guide §3.2; T3.5 H3).
+#
+# The Checkpoint harness workflow composes the effective configuration from
+# this file at `start`: it resolves repository.expected_head, and
+# definitions.revision unless set here, to the branch head; supplies
+# selection.through (CP01-S01 unless the dispatch names a boundary) and
+# runner-local workspace roots; and records the result in the run's saved
+# state. Later jobs restore that state. An edit here takes effect only through
+# the workflow's `amend` action with this file's new commit and a reason.
+#
+# Review every value before the first dispatch; values marked "operator" are
+# T5 choices H3 does not prove.
+repository:
+  name: sb-dev/pactwright
+  branch: refactor/pactwright-v2
+checkpoint: docs/checkpoints/01-self-hosted-delivery/checkpoint.yml
+definitions:
+  review: T2 review of Checkpoint 1 (PR #53) and the Q67 decision approved on PR #60
+roles:
+  producer:
+    adapter: claude-sdk
+    model: claude-opus-5-5
+    effort: high
+    skills: []
+    max_turns: 100
+  reviewer:
+    adapter: claude-sdk
+    model: claude-opus-5-5
+    effort: high
+    skills: []
+    max_turns: 100
+credentials:
+  kind: api-key
+  provider: env:ANTHROPIC_API_KEY
+budgets:
+  # Operator: limits per step, per session and for the whole run.
+  attempts: 5
+  retries: 3
+  wall_time_seconds: 3600
+  provider_spend_limit:
+    usd: 20
+    turn_reservation_usd: 2
+  run_spend_usd: 1500
+permissions:
+  # Operator: what a CP01 producer may change, and what stays protected.
+  writable:
+    - .github
+    - .pactwright
+    - CHANGELOG.md
+    - README.md
+    - docs
+    - eslint.config.js
+    - examples
+    - package.json
+    - packages
+    - pnpm-lock.yaml
+    - pnpm-workspace.yaml
+    - scripts
+    - src
+    - tests
+    - tsconfig.build.json
+    - tsconfig.json
+    - turbo.json
+  scratch: []
+  protected:
+    - .github/checkpoint-harness
+    - .github/workflows/checkpoint-harness-verify.yml
+    - .github/workflows/checkpoint-harness.yml
+    - docs/checkpoints
+    - docs/research-logs
+    - docs/specs
+  approvers:
+    owner: [sb-dev]
+    amend: [sb-dev]
+    feedback: [sb-dev]
+verification:
+  # Operator: where CP01 capabilities declare their verifier bindings, and how
+  # their dependencies are prepared (H1 README, Production verification).
+  bindings: tests/harness-bindings
+  dependencies:
+    inputs: [package.json, packages, pnpm-lock.yaml, pnpm-workspace.yaml, tools]
+    command: [npx, --yes, pnpm@11.7.0, install, --frozen-lockfile, --ignore-scripts]
+    outputs: [node_modules, packages/standard/node_modules]
+    network: bridge
+    timeout_ms: 900000
+publication:
+  pull_request:
+    title: "CP01 T5: harness-accepted selection"
+    draft: true
+  # A push by the workflow token starts no workflow: each published head,
+  # initial or corrected, gets the repository's verification as its next
+  # review, dispatched by the harness. The live Claude job is left out.
+  review:
+    workflow: checkpoint-harness-verify.yml
+    inputs:
+      live: "false"
+job:
+  # Yield well before the controller job's 330-minute limit.
+  yield_after_seconds: 18000
