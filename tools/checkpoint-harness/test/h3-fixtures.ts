@@ -47,6 +47,7 @@ import {
   type Receipt,
   type Workspaces,
 } from "../src/runner.js";
+import { GitHubError } from "../src/github.js";
 import { createRegistry, FIXTURE_BINDINGS } from "../src/software-bootstrap.js";
 import type { SavedState, StateFiles, StateStore } from "../src/state.js";
 import { containedWorkspaces } from "../src/verification.js";
@@ -276,6 +277,8 @@ export class FakeGitHub {
   executions: { key: string; action: string }[] = [];
   /** Actions GitHub declines, as with Actions not permitted to open pull requests. */
   blocked = new Set<string>();
+  /** Actions GitHub performs but then declines to show, as a read-back answered 403. */
+  unreadable = new Set<string>();
   dispatches: { workflow: string; ref: string; commit: string; inputs: unknown }[] = [];
   private ids = 1000;
   constructor(readonly repo: Repo) {
@@ -396,6 +399,7 @@ export class FakeGitHub {
       reference,
       ...(details ? { details } : {}),
     });
+    const denied = (): GitHubError => new GitHubError("GET: 403 not accessible", 403);
     const read = (key: string, request: EffectRequest): Receipt | null => {
       const p = request.payload ?? {};
       switch (request.action) {
@@ -541,10 +545,14 @@ export class FakeGitHub {
           default:
             this.artifacts.add(key);
         }
+        if (this.unreadable.has(request.action)) return Promise.reject(denied());
         if (options.lost?.has(request.action)) return Promise.resolve(null);
         return Promise.resolve(read(key, request));
       },
-      inspect: (key, request) => Promise.resolve(read(key, request)),
+      inspect: (key, request) =>
+        this.unreadable.has(request.action)
+          ? Promise.reject(denied())
+          : Promise.resolve(read(key, request)),
     };
   }
 }

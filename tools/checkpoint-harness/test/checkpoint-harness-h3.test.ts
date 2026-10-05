@@ -1092,6 +1092,76 @@ describe("H3-06 effects survive interruption without repetition", () => {
     );
   });
 
+  it("a write GitHub performed stays uncertain when reading it back is declined, and is found later", async () => {
+    // Review 5412894516: only the write itself is a declined effect.
+    const request = {
+      run: "r",
+      step: S01,
+      binding: { id: "b", digest: "d" },
+      candidate: "c",
+      outputs: [],
+      action: "pr-reply",
+      target: "t",
+      payload: { pull: 7, body: "**Declined**" },
+    } as unknown as EffectRequest;
+    const posted: { id: number; body: string; user: { login: string }; html_url: string }[] = [];
+    let readable = false;
+    const effects = githubEffects(
+      {
+        repository: REPOSITORY,
+        token: "t",
+        request<T>(method: string, path: string, body?: unknown): Promise<T> {
+          if (method === "POST") {
+            const id = posted.length + 1;
+            const text = (body as { body: string }).body;
+            posted.push({
+              id,
+              body: text,
+              user: { login: "github-actions[bot]" },
+              html_url: `c${id}`,
+            });
+            return Promise.resolve({} as T);
+          }
+          if (!readable) {
+            return Promise.reject(new GitHubError(`GET ${path}: 403 not accessible`, 403));
+          }
+          return Promise.resolve((path.includes("/issues/7/comments") ? posted : []) as T);
+        },
+      },
+      { repoRoot: scratch, runDir: scratch, ref: "main-line", wait: () => Promise.resolve() },
+    );
+    await assert.rejects(
+      effects.execute("sha256:k", request),
+      (e) => e instanceof GitHubError && !(e instanceof EffectBlocked),
+    );
+    assert.equal(posted.length, 1);
+    readable = true;
+    assert.equal((await effects.inspect?.("sha256:k", request))?.reference, "c1");
+    assert.equal(posted.length, 1);
+  });
+
+  it("an effect whose read-back fails after the write is reconciled by the next job, not repeated", async () => {
+    const w = world(scratch);
+    const pending = await toApproval(w);
+    await dispatch(w, { action: "approve", ...pending });
+    w.github.unreadable.add("open-pr");
+    // The effects job stops on the failed read, never reporting the write as not performed.
+    await assert.rejects(dispatch(w, { action: "continue" }), GitHubError);
+    assert.equal(w.github.pulls.size, 1);
+    w.github.unreadable.delete("open-pr");
+    const continued = last(await dispatch(w, { action: "continue" }));
+    assert.equal(continued.summary.outcome, "selection-accepted", stringify(continued.summary));
+    assert.doesNotMatch(stringify(continued.summary), /not performed/);
+    assert.equal(w.github.executions.filter((e) => e.action === "open-pr").length, 1);
+    const key = w.github.executions.find((e) => e.action === "open-pr")?.key;
+    assert.deepEqual(
+      recordsOf<{ key: string; reconciled: boolean }>(w, "effect-receipt")
+        .filter((r) => r.key === key)
+        .map((r) => r.reconciled),
+      [true],
+    );
+  });
+
   it("a runner lost after the intent, before the effect, runs it once on recovery", async () => {
     const w = world(scratch);
     const pending = await toApproval(w);
