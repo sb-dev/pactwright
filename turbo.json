@@ -9,6 +9,7 @@
     "//#lint": { "cache": false },
     "//#typecheck:root": { "cache": false },
     "//#test:root": { "cache": false },
-    "//#build:root": { "outputs": ["dist/**"] }
+    "//#build:root": { "outputs": ["dist/**"] },
+    "//#verify:build:root": { "outputs": ["dist/**"] }
   }
 }

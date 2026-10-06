@@ -46,6 +46,8 @@ tools/checkpoint-harness/test/
   checkpoint-harness-h1.test.ts
   checkpoint-harness-h2.test.ts
   checkpoint-harness-h3.test.ts
+  checkpoint-harness-h3-operations.test.ts
+  checkpoint-harness-h3-pr.test.ts
   integration/
   live/
 ```
@@ -157,7 +159,7 @@ The **controller** is the trusted harness process inside a GitHub Actions job. I
 
 Do not introduce a separate PR-fixing harness, scheduler or state model. Reuse T3 configuration, correction, review, amendment and effect boundaries. Explicitly dispatch a further GHA review where token-generated changes do not trigger it; do not assume pushes or replies restart the loop.
 
-**Acceptance — automated assertions in `test/checkpoint-harness-h3.test.ts` plus a hosted fixture:**
+**Acceptance — automated assertions in `test/checkpoint-harness-h3*.test.ts` plus a hosted fixture:**
 
 Each semicolon-separated case below needs its own asserted result and valid control where rejection is required. Exercise every operator action through the workflow dispatch path in the hosted fixture; retain workflow/job IDs and observations for each case. Summary checks must compare fields with saved state, not just check that labels exist.
 

@@ -10,12 +10,24 @@ name: Checkpoint harness verification
 on:
   pull_request:
     paths:
-      - ".github/workflows/checkpoint-harness-verify.yml"
-      - "docs/checkpoints/**"
+      - ".github/workflows/**"
+      - ".github/checkpoint-harness/**"
+      - ".claude/skills/**"
+      - "docs/**"
+      - "src/**"
+      - "scripts/**"
+      - "tests/**"
+      - "packages/**"
       - "package.json"
       - "pnpm-lock.yaml"
       - "pnpm-workspace.yaml"
-      - "tools/checkpoint-harness/**"
+      - ".npmrc"
+      - "tools/**"
+      - "turbo.json"
+      - "tsconfig*.json"
+      - "eslint.config.*"
+      - ".prettier*"
+      - ".gitignore"
   workflow_dispatch:
     inputs:
       live:
@@ -36,6 +48,28 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  live-changes:
+    if: github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    outputs:
+      live: ${{ steps.paths.outputs.live }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Select live-provider checks
+        id: paths
+        shell: bash
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+        run: |
+          git diff --name-only --no-renames -z "$BASE_SHA...$HEAD_SHA" |
+            node scripts/live-claude-paths.mjs >> "$GITHUB_OUTPUT"
+
   verify:
     runs-on: ubuntu-24.04
     timeout-minutes: 60
@@ -67,9 +101,16 @@ jobs:
   # subscription token. The token is a secret of the claude-live environment,
   # whose required reviewer approves each run in the web UI. Fork pull
   # requests receive no secrets, so the job runs
-  # only for this repository's branches; a missing secret fails it.
+  # only for this repository's branches and provider-affecting changes, or
+  # an explicit manual request; a missing secret fails it.
   live-claude:
-    if: (github.event_name == 'workflow_dispatch' && inputs.live) || github.event.pull_request.head.repo.full_name == github.repository
+    needs: live-changes
+    if: >-
+      !cancelled() &&
+      ((github.event_name == 'workflow_dispatch' && inputs.live) ||
+       (github.event_name == 'pull_request' &&
+        github.event.pull_request.head.repo.full_name == github.repository &&
+        needs.live-changes.outputs.live == 'true'))
     runs-on: ubuntu-24.04
     environment: claude-live
     timeout-minutes: 30

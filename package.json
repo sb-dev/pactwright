@@ -42,6 +42,7 @@
   "scripts": {
     "build": "turbo run build build:root",
     "build:root": "tsc -p tsconfig.build.json",
+    "verify:build:root": "node --import tsx scripts/build-root.ts",
     "prepack": "pnpm build",
     "pactwright": "node dist/cli.js",
     "contracts:check": "pnpm --filter @pactwright/checkpoint-harness contracts:check",
@@ -52,7 +53,7 @@
     "typecheck:root": "tsc --noEmit",
     "test": "turbo run test test:root",
     "test:root": "node --test --import tsx tests/*.test.ts",
-    "verify": "turbo run format:check lint typecheck typecheck:root test test:root build"
+    "verify": "turbo run format:check lint typecheck typecheck:root test test:root build verify:build:root"
   },
   "dependencies": {
     "js-yaml": "^4.1.0"

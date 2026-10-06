@@ -959,24 +959,40 @@ export function savedDir(w: World): string {
   return dir;
 }
 
+/** Inspect one saved snapshot, then remove the extraction even if an assertion fails. */
+export function inspectSaved<T>(w: World, inspect: (dir: string) => T): T {
+  const dir = savedDir(w);
+  try {
+    return inspect(dir);
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
+}
+
 /** The facts of the latest saved state, as a fresh runner would read them. */
 export async function factsOf(w: World): Promise<RunFacts> {
   const registry = createRegistry([...FIXTURE_BINDINGS]);
   assert.ok(registry.ok);
-  const read = await runFacts(savedDir(w), {
-    repoRoot: w.repo.root,
-    skillsRoot,
-    env: {},
-    applicability: APPLICABILITY,
-    registry: registry.registry,
-    harness: "h3-test",
-  });
-  assert.ok(read.ok, read.ok ? "" : read.diagnostics.join("; "));
-  return read.facts;
+  const dir = savedDir(w);
+  try {
+    const read = await runFacts(dir, {
+      repoRoot: w.repo.root,
+      skillsRoot,
+      env: {},
+      applicability: APPLICABILITY,
+      registry: registry.registry,
+      harness: "h3-test",
+    });
+    assert.ok(read.ok, read.ok ? "" : read.diagnostics.join("; "));
+    return read.facts;
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
 }
 
 /** The records of `action` in the latest saved state, in journal order. */
-export function recordsOf<T>(w: World, action: string, dir = savedDir(w)): T[] {
+export function recordsOf<T>(w: World, action: string, dir?: string): T[] {
+  if (dir === undefined) return inspectSaved(w, (saved) => recordsOf<T>(w, action, saved));
   const read = readRun(dir);
   assert.ok(read.ok, read.ok ? "" : read.diagnostics.join("; "));
   return read.records.events
@@ -989,7 +1005,8 @@ export function recordsOf<T>(w: World, action: string, dir = savedDir(w)): T[] {
 }
 
 /** The journal events of the latest saved state. */
-export function eventsOf(w: World, dir = savedDir(w)): JournalEvent[] {
+export function eventsOf(w: World, dir?: string): JournalEvent[] {
+  if (dir === undefined) return inspectSaved(w, (saved) => eventsOf(w, saved));
   const read = readRun(dir);
   assert.ok(read.ok, read.ok ? "" : read.diagnostics.join("; "));
   return read.records.events;
