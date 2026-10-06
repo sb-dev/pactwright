@@ -1306,12 +1306,12 @@ export async function invokeAgent(
   const onCancel = (): void => stop({ kind: "cancel" });
   signal.addEventListener("abort", onCancel);
   const timer = setTimeout(() => stop({ kind: "time" }), role.limits.wallTimeMs);
-  const events = (options.provider ?? sdkProvider)(request)[Symbol.asyncIterator]();
+  let events: AsyncIterator<ProviderEvent> | undefined;
 
   // Authentication and the effective session are checked before a result
   // can count, so a provider must report them first and in this order.
   const order = ["account", "init", "result"] as const;
-  const decide = async (): Promise<AgentOutcome> => {
+  const decide = async (events: AsyncIterator<ProviderEvent>): Promise<AgentOutcome> => {
     for (let stage = 0; ; stage++) {
       let next: IteratorResult<ProviderEvent> | Stop;
       try {
@@ -1393,14 +1393,16 @@ export async function invokeAgent(
     }
   };
   try {
-    return done(await decide());
+    // Provider construction can throw too; it must share the session's cleanup.
+    events = (options.provider ?? sdkProvider)(request)[Symbol.asyncIterator]();
+    return done(await decide(events));
   } finally {
     closed = true;
     clearTimeout(timer);
     signal.removeEventListener("abort", onCancel);
     abort.abort();
     // A provider that ignores the abort cannot delay the outcome.
-    void events.return?.().catch(() => undefined);
+    void events?.return?.().catch(() => undefined);
   }
 }
 

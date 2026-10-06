@@ -10,12 +10,23 @@ name: Checkpoint harness verification
 on:
   pull_request:
     paths:
-      - ".github/workflows/checkpoint-harness-verify.yml"
-      - "docs/checkpoints/**"
+      - ".github/workflows/**"
+      - ".github/checkpoint-harness/**"
+      - ".claude/skills/**"
+      - "docs/**"
+      - "src/**"
+      - "scripts/**"
+      - "tests/**"
+      - "packages/**"
       - "package.json"
       - "pnpm-lock.yaml"
       - "pnpm-workspace.yaml"
-      - "tools/checkpoint-harness/**"
+      - "tools/**"
+      - "turbo.json"
+      - "tsconfig*.json"
+      - "eslint.config.*"
+      - ".prettier*"
+      - ".gitignore"
   workflow_dispatch:
     inputs:
       live:
