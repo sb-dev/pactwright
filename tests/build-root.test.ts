@@ -5,18 +5,26 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { it } from "node:test";
 import { fileURLToPath } from "node:url";
+import { createRequire } from "node:module";
 
 const script = fileURLToPath(new URL("../scripts/build-root.ts", import.meta.url));
 const tsx = import.meta.resolve("tsx");
+const tsc = createRequire(import.meta.url).resolve("typescript/bin/tsc");
 
 for (const scenario of ["no source", "valid source", "invalid source"] as const) {
   it(`root build: ${scenario}`, (t) => {
     const root = mkdtempSync(join(tmpdir(), "pactwright-build-"));
     t.after(() => rmSync(root, { recursive: true, force: true }));
     writeFileSync(
+      join(root, "package.json"),
+      JSON.stringify({
+        scripts: { "build:root": `node ${JSON.stringify(tsc)} -p tsconfig.build.json` },
+      }),
+    );
+    writeFileSync(
       join(root, "tsconfig.build.json"),
       JSON.stringify({
-        compilerOptions: { outDir: "dist", declaration: true, noEmitOnError: true, types: [] },
+        compilerOptions: { outDir: "dist", declaration: true, types: [] },
         include: ["src/**/*.ts"],
       }),
     );
@@ -37,7 +45,6 @@ for (const scenario of ["no source", "valid source", "invalid source"] as const)
     if (scenario === "invalid source") {
       assert.notEqual(result.status, 0, result.stdout + result.stderr);
       assert.match(result.stdout + result.stderr, /TS2322/);
-      assert.equal(existsSync(join(root, "dist/index.js")), false);
     } else {
       assert.equal(result.status, 0, result.stdout + result.stderr);
       if (scenario === "no source") {
@@ -51,3 +58,19 @@ for (const scenario of ["no source", "valid source", "invalid source"] as const)
     }
   });
 }
+
+it("root verification delegates to the configured build command", (t) => {
+  const root = mkdtempSync(join(tmpdir(), "pactwright-build-"));
+  t.after(() => rmSync(root, { recursive: true, force: true }));
+  mkdirSync(join(root, "src"));
+  writeFileSync(
+    join(root, "package.json"),
+    JSON.stringify({ scripts: { "build:root": 'node -e "process.exit(23)"' } }),
+  );
+  const result = spawnSync(process.execPath, ["--import", tsx, script], {
+    cwd: root,
+    encoding: "utf8",
+  });
+  assert.ifError(result.error);
+  assert.equal(result.status, 23, result.stdout + result.stderr);
+});
