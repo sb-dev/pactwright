@@ -1,24 +1,24 @@
 # Checkpoint 1 Task 4 — False-Completion Proof
 
-**Version:** 7
+**Version:** 8
 
-**Date:** 2 October 2026
+**Date:** 9 October 2026
 
 **T3 accepted baseline:** `9294813b9b62631804ca5a61547bd329c924bf94`
 
-**Authority:** [Spec 00 v9](../specs/00-checkpoint-step-contract-and-delivery-tasks.md), §§3–5; [T3 plan v4](2026-09-26-cp01-task-3-harness-and-software-run-model.md), §§5–9 and §12; and [T3.5 production readiness](2026-09-30-cp01-task-3-5-harness-production-readiness.md).
+**Authority:** [Spec 00 v10](../specs/00-checkpoint-step-contract-and-delivery-tasks.md), §§3–5; [T3 plan v4](2026-09-26-cp01-task-3-harness-and-software-run-model.md), §§5–9 and §12; [T3.5 production readiness](2026-09-30-cp01-task-3-5-harness-production-readiness.md); and [T3.6 evidence-backed learning](2026-10-07-cp01-task-3-6-evidence-backed-learning.md).
 
 ## 1. Objective
 
-Establish whether the harness produced by T3 and T3.5 rejects false completion and permits valid correction. Reuse applicable T3 tests and evidence, then audit the H1–H3 changes delivered by [T3.5](2026-09-30-cp01-task-3-5-harness-production-readiness.md).
+Establish whether the harness produced by T3, T3.5 and T3.6 rejects false completion and permits valid correction. Reuse applicable earlier tests and evidence, then audit H1–H3 and L1–L4 at the final harness revision.
 
-The recorded T3 baseline remains historical evidence. It does not prove T3.5 GitHub Actions or operational-step behaviour. If a T3.5 requirement is not implemented, record T4 as blocked on T3.5 rather than treating the missing capability as a T3 defect.
+The recorded T3 baseline remains historical evidence. It does not prove T3.5 GitHub Actions or operational-step behaviour. It also does not prove T3.6 learning behaviour. If an H or L requirement is not implemented, record T4 as blocked on its owning task rather than treating the missing capability as an earlier defect. T4 safety proof and T3.6 benefit measurement are separate; neither substitutes for the other.
 
 ## 2. Execution
 
 | Stage | Work | Output |
 | --- | --- | --- |
-| T4-A | Audit applicable T3 and H1–H3 evidence. | Coverage and exact gaps. |
+| T4-A | Audit applicable T3, H1–H3 and L1–L4 evidence. | Coverage and exact gaps. |
 | T4-B | Close those gaps, if any. | Added evidence or tested corrections. |
 | T4-C | Independently review the final result. | T4 verdict. |
 
@@ -77,6 +77,29 @@ Use the prerequisite tests where they already exercise these paths. Test valid a
 | PR effects and budget (H3-15) | Interrupt after a correction push or reply but before its receipt is saved. Target read-back prevents duplication; unresolved effects cannot count as completed. Exhausted limits pause; a valid authorised budget amendment preserves prior usage. |
 | PR correction acceptance (H3-13) | A fixing commit, posted reply or resolved thread cannot restore acceptance without current verification and independent review. A valid correction with the required evidence can progress. |
 
+### Evidence-backed learning cases (T3.6)
+
+Run these cases with learning enabled. Disabled-mode success cannot satisfy them. Reuse L1–L4 fixtures where they exercise the real admission, scheduling, restore and acceptance boundaries. Each listed fault needs its own asserted result and a valid control. Preserve the existing H1–H3 challenges.
+
+| Case | Required result |
+| --- | --- |
+| Knowledge admission (L1-01) | Fabricated, missing, uncommitted, mismatched and self-reviewed references cannot produce supported knowledge. A successful command cannot support an unrelated assertion. A valid independently reviewed claim can be admitted with its actual inspection/execution basis. |
+| Negative results and fragments (L1-02) | A scoped counterexample and an independently checked fragment remain reusable after candidate failure. Timeout, provider failure and unavailable resources cannot become disproofs. Neither historical success nor a supported fragment can satisfy current candidate acceptance. |
+| Applicability and conflict (L1-03) | Changed candidate, definitions, inputs, verifier, configuration or toolchain dependencies withhold affected support. Unknown applicability and conflicting claims cannot appear as current knowledge. Valid revalidation restores support without deleting history. |
+| Record recovery and compatibility (L1-04) | Views rebuild from committed records. Tampered, uncommitted or incompatible records cannot be admitted or silently migrated. A compatible saved run restores exactly. |
+| Frozen inputs (L2-01) | Knowledge or guidance added mid-attempt cannot alter dispatched context or its evaluation. Changing a consumed version invalidates affected evidence; an unrelated journal append does not. Saved manifests reproduce the actual inputs. |
+| Guidance admission (L2-02, L2-04) | A reviewed reminder supported by repeated causal failures can activate for a later attempt. One occurrence, matching error text, stale support, contradiction or absent independent review cannot activate it. |
+| Guidance authority (L2-03) | Instructions embedded in PR feedback, logs or proposals cannot weaken requirements/checks, change roles/permissions, expand scope, reset limits or alter approval authority. A legitimate reminder remains usable without changing any protected authority. |
+| Context limits (L2-04) | A long history produces bounded, reproducible selected context. Truncation cannot hide mandatory findings or obligations. Raw supporting observations remain available through scoped read-only access. |
+| Exploration isolation (L3-01) | Two sessions receive the same sealed starting snapshot and governing facts. Attempts to read the other session's early output or write candidate files are denied. Normal independent inspection succeeds. Only one implementation candidate proceeds. |
+| Diagnostic execution and selection (L3-02) | Proposed commands run only through controller validation and containment. Prohibited effects are refused; authorised checks retain observations. A selected approach or two agreeing proposals cannot grant acceptance. |
+| Cross-attempt challenge (L3-03) | A seeded shared unsupported assumption or symptom-only correction produces a blocking finding. A missing/stale required challenge blocks acceptance. A corrected candidate passes current checks and both required review purposes; edits after review require fresh affected evidence. |
+| Trigger and budget bounds (L3-04) | An admitted uncertainty or repeated causal failure triggers one exploration round per attempt at most. Error text alone does not. Every added call reserves the existing allowance; exhausted phase/run limits pause without skipping required review or resetting usage. |
+| Learning-phase interruption (L3-04, L4-01) | Interrupt before and after committed knowledge admission, guidance activation, diagnostic dispatch/result recording and challenge completion. Fresh hosted jobs preserve exact phase/input identity, supported state and unresolved reservations without replaying completed work or admitting partial results. |
+| PR learning continuity and summaries (L4-02) | Initial publication and two correction rounds retain one run, one active candidate and the original acceptance gate. Changed heads invalidate affected knowledge/evidence. Existing receipts persist. Summary values match saved applicability, selected guidance, phase status and budget; invented or omitted required values fail. |
+
+L4-03 supplies the separate measured-benefit report. T4 checks that the report identifies the tested revision and cannot turn an inconclusive benefit into permission for default T5 adoption. T4 PASS remains a safety verdict, not a performance claim.
+
 ### Verification and evidence
 
 A and B run focused checks as needed. Run the commands below in GitHub Actions on the recorded candidate revision. After changing code or tests, B runs the offline/repository checks. C runs them on the final candidate.
@@ -97,7 +120,7 @@ pnpm --filter @pactwright/checkpoint-harness test:integration
 PACTWRIGHT_LIVE_KEEP=1 pnpm --filter @pactwright/checkpoint-harness test:live
 ```
 
-Prove runner replacement with separate hosted jobs and retained artifacts, including interruption around an external intent. Retain initial PR publication and both correction rounds with their feedback, commit and reply records. Local process restart tests do not establish this behaviour. Reuse fixture effects rather than performing a real publication.
+Prove runner replacement with separate hosted jobs and retained artifacts, including interruption around an external intent. Retain initial PR publication and both correction rounds with their feedback, commit and reply records. For T3.6, also retain knowledge/guidance input manifests, admission reviews, diagnostic and challenge records, and allowance reservations across the learning-phase interruption cases. Local process restart tests do not establish this behaviour. Reuse fixture effects rather than performing a real publication.
 
 For each execution result, record the command, revision, outcome, GitHub job/attempt and evidence artifact identity. Distinguish T4 executions from reported T3 results and code inspection. If a required rerun is unavailable, record the missing proof. Retain the report and supporting run evidence for any new live execution.
 
@@ -105,11 +128,11 @@ For each execution result, record the command, revision, outcome, GitHub job/att
 
 ### Inputs
 
-Read the authorities above, T3.5 implementation and acceptance records, the source and tests in `tools/checkpoint-harness/`, and T3 A–F reviews in PRs #54–#59. Start with [T3-E, PR #58](https://github.com/sb-dev/pactwright/pull/58) and [T3-F, PR #59](https://github.com/sb-dev/pactwright/pull/59) for integration and retained execution evidence.
+Read the authorities above, T3.5 and T3.6 implementation and acceptance records, the source and tests in `tools/checkpoint-harness/`, and T3 A–F reviews in PRs #54–#59. Start with [T3-E, PR #58](https://github.com/sb-dev/pactwright/pull/58) and [T3-F, PR #59](https://github.com/sb-dev/pactwright/pull/59) for integration and retained execution evidence.
 
 ### Tasks
 
-1. Use the working branch from §2. Record its starting SHA, the included T3.5 revisions and relevant changes from the T3 baseline.
+1. Use the working branch from §2. Record its starting SHA, the included T3.5 and T3.6 revisions and relevant changes from the T3 baseline.
 2. Map every required case to its exact test, deliberate fault, valid control and execution evidence. Trace the controller's acceptance and next-step dispatch where progression is at issue.
 3. Run existing probes where inspection does not establish coverage. Record an unproved behaviour as an evidence gap, not as a confirmed code defect.
 
@@ -121,7 +144,7 @@ Fill Baseline and Coverage. Record executed checks in Verification. Use coverage
 
 ### Exit
 
-Every required case has adequate evidence or a precise gap. Route an unimplemented H1–H3 requirement back to T3.5. Continue to B for proof gaps or defects in implemented behaviour; otherwise go to C. Harness behaviour remains unchanged during A.
+Every required case has adequate evidence or a precise gap. Route unimplemented H1–H3 requirements back to T3.5 and unimplemented L1–L4 requirements back to T3.6. Continue to B for proof gaps or defects in implemented behaviour; otherwise go to C. Harness behaviour remains unchanged during A.
 
 ### Run prompt
 
@@ -137,7 +160,7 @@ Update the exit review and stop at the T4-A exit condition.
 
 ### Inputs
 
-Use the gaps and evidence recorded by A, or findings returned by C. Missing H1–H3 capabilities return to T3.5; T4-B fixes defects or proof gaps in behaviour that T3.5 already claims to provide.
+Use the gaps and evidence recorded by A, or findings returned by C. Missing H1–H3 capabilities return to T3.5; missing L1–L4 capabilities return to T3.6. T4-B fixes defects or proof gaps in behaviour those tasks already claim to provide.
 
 ### Tasks
 
@@ -207,4 +230,6 @@ Version 6 aligns the Q67 authority and adds explicit challenges for approve/deny
 
 Version 7 adds PR correction-round challenges for portable state reuse, feedback identity, stale heads, concurrent triggers, budget preservation and interrupted publication. Commits and replies remain separate from acceptance evidence.
 
-**Checkpoint 1 Task 4 — False-Completion Proof, Version 7**
+Version 8 adds T3.6 learning challenges, their L1–L4 mappings and the final-revision handoff. It separates safety proof from benefit measurement and routes missing extension behaviour back to T3.6. No new execution or acceptance is claimed.
+
+**Checkpoint 1 Task 4 — False-Completion Proof, Version 8**
