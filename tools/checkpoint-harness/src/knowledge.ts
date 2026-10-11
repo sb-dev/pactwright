@@ -487,73 +487,113 @@ export function knowledgeView(dir: string, controller: string): Read<KnowledgeVi
   };
 }
 
+/** Which supported entries hold, and with what effect, when `correctors` are the current entries. */
+type Settled = {
+  correctedBy: Map<string, string[]>;
+  applicable: Set<string>;
+  conflicts: Map<string, string[]>;
+  current: Set<string>;
+};
+
 /**
  * Supported entries as they apply to a target. A supported revision holds at
  * the target when it matches it in every part of its scope. A correction
- * supersedes a revision it is bound to only where the correcting revision
- * holds too. An entry is current when a holding revision is not superseded
- * there, superseded when every holding revision is, and otherwise
- * historical. Two current entries conflict only through a recorded
- * contradiction whose own revision is live at the target; both are withheld
- * until a reviewed correction supersedes one side. A claim's kind alone never
- * makes a conflict, and rejected or proposed entries are never current.
+ * supersedes a revision it is bound to only where its own revision holds and
+ * its entry is current. An entry is applicable when a holding revision is not
+ * superseded; two applicable entries conflict through a recorded
+ * contradiction whose own revision is applicable, and both are withheld.
+ * Current entries are the applicable ones without a conflict.
+ *
+ * Because a correction counts only from a current entry, current support is
+ * a fixed point: starting with no correction in effect, each round applies
+ * the corrections of the previous round's current entries. Relations that
+ * never settle leave current only the entries current in every round of
+ * their cycle; the rest are withheld. A claim's kind alone never makes a
+ * conflict, and rejected or proposed entries are never current. An entry
+ * whose holding revisions are all superseded is reported as superseded, and
+ * one with no holding revision as historical.
  */
 export function applicability(view: KnowledgeView, target: KnowledgeTarget): Applicability {
-  const result: Applicability = { current: [], historical: [], withheld: [], superseded: [] };
   const supported = view.entries.flatMap((e) =>
     e.revisions
       .filter((r) => r.admission?.disposition === "supported")
       .map((r) => ({ entry: e.entry, r, ...scopeDiff(r.scope, target) })),
   );
-  const holds = new Set(
-    supported
-      .filter((x) => x.changed.length === 0 && x.unknown.length === 0)
-      .map((x) => x.r.proposal),
-  );
-  // The corrections that hold here, by the revision each supersedes.
-  const correctedBy = new Map<string, string[]>();
-  for (const { entry, r } of supported) {
-    if (!holds.has(r.proposal)) continue;
-    for (const rel of r.admission?.relations ?? []) {
-      if (rel.relation !== "supersedes") continue;
-      for (const ref of rel.revisions)
-        correctedBy.set(ref, [...(correctedBy.get(ref) ?? []), entry]);
+  const holding = supported.filter((x) => x.changed.length === 0 && x.unknown.length === 0);
+
+  const settle = (correctors: ReadonlySet<string>): Settled => {
+    const correctedBy = new Map<string, string[]>();
+    for (const { entry, r } of holding) {
+      if (!correctors.has(entry)) continue;
+      for (const rel of r.admission?.relations ?? []) {
+        if (rel.relation !== "supersedes") continue;
+        for (const ref of rel.revisions) {
+          correctedBy.set(ref, [...(correctedBy.get(ref) ?? []), entry]);
+        }
+      }
     }
+    const live = holding.filter((x) => !correctedBy.has(x.r.proposal));
+    const applicable = new Set(live.map((x) => x.entry));
+    const conflicts = new Map<string, string[]>();
+    const add = (a: string, b: string): void => {
+      if (!conflicts.get(a)?.includes(b)) conflicts.set(a, [...(conflicts.get(a) ?? []), b]);
+    };
+    for (const { entry, r } of live) {
+      for (const rel of r.admission?.relations ?? []) {
+        if (rel.relation !== "contradicts" || !applicable.has(rel.entry)) continue;
+        add(entry, rel.entry);
+        add(rel.entry, entry);
+      }
+    }
+    const current = new Set([...applicable].filter((e) => !conflicts.has(e)));
+    return { correctedBy, applicable, conflicts, current };
+  };
+
+  const key = (set: ReadonlySet<string>): string => [...set].sort().join(" ");
+  const rounds: Set<string>[] = [];
+  let correctors = new Set<string>();
+  let settled = settle(correctors);
+  for (;;) {
+    rounds.push(correctors);
+    const seen = rounds.findIndex((round) => key(round) === key(settled.current));
+    if (seen === rounds.length - 1) break;
+    if (seen >= 0) {
+      // A cycle: only entries current in every round of it stay current.
+      const cycle = rounds.slice(seen);
+      correctors = new Set(
+        [...settled.current].filter((e) => cycle.every((round) => round.has(e))),
+      );
+      const stable = correctors;
+      settled = settle(correctors);
+      settled.current = new Set([...settled.current].filter((e) => stable.has(e)));
+      break;
+    }
+    correctors = settled.current;
+    settled = settle(correctors);
   }
-  const live = new Set([...holds].filter((ref) => !correctedBy.has(ref)));
-  const applicable: KnowledgeEntry[] = [];
-  for (const entry of view.entries) {
-    const mine = supported.filter((x) => x.entry === entry.entry);
+
+  const result: Applicability = { current: [], historical: [], withheld: [], superseded: [] };
+  const order = view.entries.map((e) => e.entry);
+  const inOrder = (ids: readonly string[]): string[] => order.filter((id) => ids.includes(id));
+  for (const id of order) {
+    const mine = supported.filter((x) => x.entry === id);
     if (mine.length === 0) continue;
-    const holding = mine.filter((x) => holds.has(x.r.proposal));
-    if (holding.some((x) => live.has(x.r.proposal))) {
-      applicable.push(entry);
-    } else if (holding.length > 0) {
-      const by = holding.flatMap((x) => correctedBy.get(x.r.proposal) ?? []);
-      result.superseded.push({ entry: entry.entry, by: [...new Set(by)].sort() });
+    const holds = holding.filter((x) => x.entry === id);
+    if (settled.current.has(id)) {
+      result.current.push(id);
+    } else if (settled.applicable.has(id)) {
+      result.withheld.push({ entry: id, conflicts: inOrder(settled.conflicts.get(id) ?? []) });
+    } else if (holds.length > 0) {
+      const by = holds.flatMap((x) => settled.correctedBy.get(x.r.proposal) ?? []);
+      result.superseded.push({ entry: id, by: inOrder(by) });
     } else {
       const last = mine.at(-1);
       result.historical.push({
-        entry: entry.entry,
+        entry: id,
         changed: last?.changed ?? [],
         unknown: last?.unknown ?? [],
       });
     }
-  }
-  const contradicts = (a: KnowledgeEntry, b: KnowledgeEntry): boolean =>
-    a.revisions.some(
-      (r) =>
-        live.has(r.proposal) &&
-        (r.admission?.relations ?? []).some(
-          (rel) => rel.relation === "contradicts" && rel.entry === b.entry,
-        ),
-    );
-  for (const entry of applicable) {
-    const conflicts = applicable
-      .filter((other) => contradicts(entry, other) || contradicts(other, entry))
-      .map((other) => other.entry);
-    if (conflicts.length > 0) result.withheld.push({ entry: entry.entry, conflicts });
-    else result.current.push(entry.entry);
   }
   return result;
 }

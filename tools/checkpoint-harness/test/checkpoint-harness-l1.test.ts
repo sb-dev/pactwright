@@ -38,6 +38,7 @@ import {
   entryId,
   knowledgeView,
   proposeKnowledge,
+  type ClaimKind,
   type KnowledgeAdmission,
   type KnowledgeProposal,
   type KnowledgeTarget,
@@ -1029,6 +1030,121 @@ describe("T3.6 L1-03 applicability, revalidation and conflicts", () => {
       current: [n],
       historical: [{ entry: c, changed: ["candidate"], unknown: [] }],
       withheld: [],
+      superseded: [],
+    });
+  });
+
+  it("lets a correction take effect only from a current entry, so a withheld correction suppresses nothing", async () => {
+    const run = await reopen(w);
+    const t1 = targetOf(run.dir, 1);
+    const target = passedTarget(run.dir);
+    const review = candidateReview(run.dir, 1);
+    const inspectedClaim = (
+      assertion: string,
+      kind: ClaimKind,
+      fields: Partial<KnowledgeProposal>,
+    ) =>
+      proposal(run, {
+        attempt: 1,
+        claim: { assertion, target, kind },
+        observations: [{ ref: review.ref, basis: "inspected" }],
+        ...fields,
+      });
+    const b = proposeAndAdmit(run, fragment(run));
+    supported(b, "executed");
+    const B = b.record.entry;
+    const a = proposeAndAdmit(
+      run,
+      inspectedClaim("The case is accepted only by accident of field order.", "counterexample", {
+        supersedes: [B],
+      }),
+    );
+    supported(a, "inspected");
+    const A = a.record.entry;
+    assert.deepEqual(applicability(view(run.dir), t1), {
+      current: [A],
+      historical: [],
+      withheld: [],
+      superseded: [{ entry: B, by: [A] }],
+    });
+
+    // A correction contradicted by another claim is withheld and supersedes nothing.
+    const c = proposeAndAdmit(
+      run,
+      inspectedClaim("The case is accepted whatever the field order.", "positive", {
+        contradicts: [A],
+      }),
+    );
+    supported(c, "inspected");
+    const C = c.record.entry;
+    assert.deepEqual(applicability(view(run.dir), t1), {
+      current: [B],
+      historical: [],
+      withheld: [
+        { entry: A, conflicts: [C] },
+        { entry: C, conflicts: [A] },
+      ],
+      superseded: [],
+    });
+
+    // Resolving the conflict in the correction's favour restores its supersession.
+    const d = proposeAndAdmit(
+      run,
+      inspectedClaim("Field order decides whether the case is accepted.", "counterexample", {
+        supersedes: [C],
+      }),
+    );
+    supported(d, "inspected");
+    const D = d.record.entry;
+    assert.deepEqual(applicability(view(run.dir), t1), {
+      current: [A, D],
+      historical: [],
+      withheld: [],
+      superseded: [
+        { entry: B, by: [A] },
+        { entry: C, by: [D] },
+      ],
+    });
+  });
+
+  it("withholds every entry of a relation cycle that never settles", async () => {
+    const run = await reopen(w);
+    const t1 = targetOf(run.dir, 1);
+    const target = passedTarget(run.dir);
+    const review = candidateReview(run.dir, 1);
+    const b = proposeAndAdmit(run, fragment(run));
+    const B = b.record.entry;
+    const x = proposeAndAdmit(
+      run,
+      proposal(run, {
+        attempt: 1,
+        claim: { assertion: "Corrects the claim about the case.", target, kind: "counterexample" },
+        observations: [{ ref: review.ref, basis: "inspected" }],
+        supersedes: [B],
+      }),
+    );
+    const X = x.record.entry;
+    // Corrects X and contradicts B: in force, X's correction lapses and B returns, which withholds it.
+    const y = proposeAndAdmit(
+      run,
+      proposal(run, {
+        attempt: 1,
+        claim: { assertion: "Corrects the correction.", target, kind: "counterexample" },
+        observations: [{ ref: review.ref, basis: "inspected" }],
+        supersedes: [X],
+        contradicts: [B],
+      }),
+    );
+    const Y = y.record.entry;
+    for (const admitted of [b, x, y]) assert.equal(admitted.record.disposition, "supported");
+    assert.deepEqual(applicability(view(run.dir), t1), {
+      current: [],
+      historical: [],
+      withheld: [
+        { entry: B, conflicts: [Y] },
+        { entry: X, conflicts: [] },
+        { entry: Y, conflicts: [B] },
+      ],
       superseded: [],
     });
   });
