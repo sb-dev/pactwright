@@ -43,9 +43,11 @@ import {
   guidanceStatus,
   guidanceSubjects,
   knowledgeView,
+  learningBytes,
   learningInputs,
   learningViews,
   proposeGuidance,
+  readableRecords,
   selectContext,
   type ContextLimits,
   type ContextManifest,
@@ -1302,9 +1304,7 @@ describe("T3.6 L2-04 bounded context and withheld guidance", () => {
     // The byte limit bounds the serialised items: room for the reminder alone keeps out every claim.
     const inputs = learningInputs(dir, selected);
     assert.ok(inputs.ok);
-    const room = Buffer.byteLength(
-      stringify({ knowledge: [], guidance: inputs.value.guidance }) ?? "",
-    );
+    const room = learningBytes([], inputs.value.guidance);
     const tight = selectAt(w, dir, 3, { entries: 4, guidance: 1, bytes: room });
     assert.deepEqual([tight.knowledge, tight.guidance.map((g) => g.id)], [[], [ids.reminders[2]]]);
     assert.equal(
@@ -1315,7 +1315,7 @@ describe("T3.6 L2-04 bounded context and withheld guidance", () => {
     assert.deepEqual([none.knowledge, none.guidance, none.omitted.length], [[], [], 7]);
   });
 
-  it("never cuts findings, requirements or review subjects, and keeps omitted records readable", async () => {
+  it("never cuts findings, requirements or review subjects, and exposes nothing it omitted", async () => {
     const w = await world(scratch, {
       faults: 3,
       learning: { reminder_chars: 400, context: { entries: 0, guidance: 0, bytes: 1 } },
@@ -1353,12 +1353,11 @@ describe("T3.6 L2-04 bounded context and withheld guidance", () => {
       [packet.step.requirements, packet.step.criteria, packet.step.targets],
       [step.requirements, step.criteria, step.targets],
     );
-    // The omitted claim's proposal and original observation stay readable.
-    const [claim] = committed<{ observations: { ref: string }[] }>(dir, "knowledge-proposal");
-    assert.ok(claim);
-    for (const ref of [claim.ref, ...claim.record.observations.map((o) => o.ref)]) {
-      assert.ok(packet.records?.includes(ref), `${ref} is readable`);
-    }
+    // The producer learns only how many candidates were left out, and can read none of them.
+    assert.deepEqual(packet.learning.omitted, [{ reason: "limit", count: 2 }]);
+    assert.equal(packet.records, undefined);
+    const [producer] = producers(dir, 3);
+    assert.ok(!producer?.record.observation.tools?.includes("mcp__workspace__read_evidence"));
     // Review obligations are not bounded: the reminder's reviewer was shown every subject.
     const [reminderProposal] = committed<GuidanceProposal>(dir, "guidance-proposal");
     assert.ok(reminderProposal);
@@ -1369,6 +1368,108 @@ describe("T3.6 L2-04 bounded context and withheld guidance", () => {
           stringify(p.review.subjects) === stringify(guidanceSubjects(reminderProposal.record)),
       ),
     );
+  });
+
+  it("bounds what the producer sees and can read however long the history; selected evidence stays readable", async () => {
+    const { w } = b;
+    const dir = branch(w, b.stopped2);
+    // A long history: a claim about attempt 1, ten claims about attempt 2 and five reminders.
+    const history = await between(dir, (run) => {
+      const acceptance = (attempt: number) =>
+        committed<Invocation>(
+          dir,
+          "verifier-invocation",
+          (f) => f.record.attempt === attempt && f.record.stage === "acceptance",
+        ).flatMap((inv) =>
+          inv.record.results
+            .filter((r) => r.outcome === "passed")
+            .map((r) => ({ ref: inv.ref, target: targetKey(r.target) })),
+        );
+      const claim = (attempt: number, p: { ref: string; target: string }) =>
+        proposeAndAdmit(
+          run,
+          proposal(run, {
+            attempt,
+            claim: {
+              assertion: `Attempt ${attempt} passes ${p.target}.`,
+              target: p.target,
+              kind: "positive",
+            },
+            observations: [{ ref: p.ref, basis: "executed" }],
+          }),
+        ).record;
+      const [old] = acceptance(1);
+      assert.ok(old);
+      const earlier = claim(1, old);
+      const passed = acceptance(2);
+      assert.ok(passed.length >= 10);
+      const claims = passed.slice(0, 10).map((p) => claim(2, p));
+      const reminders = [1, 2, 3, 4, 5].map(
+        (n) => admitReminder(w, run, reminder(run, { cause: `recurring cause ${n}` })).record,
+      );
+      return { earlier, claims, reminders, oldObservation: old.ref };
+    });
+    for (const a of [history.earlier, ...history.claims]) assert.equal(a.disposition, "supported");
+    const omittedProposals = [history.earlier.proposal, ...history.claims.map((c) => c.proposal)];
+    let seen: Packet | undefined;
+    const replies: { ref: string; ok: boolean }[] = [];
+    w.script.during = async (session) => {
+      if (session.packet.attempt !== 3 || seen) return;
+      seen = session.packet;
+      const selected = session.packet.learning?.knowledge.map((k) => k.revision) ?? [];
+      const left = omittedProposals.filter((ref) => !selected.includes(ref));
+      const observation = session.packet.learning?.knowledge[0]?.observations[0]?.ref ?? "";
+      for (const ref of [left[0] ?? "", history.oldObservation, observation]) {
+        replies.push({ ref, ok: (await session.call("read_evidence", { ref })).ok });
+      }
+    };
+    try {
+      stopped(await resume(w, dir, 3));
+    } finally {
+      delete w.script.during;
+    }
+    const third = frozen(dir, 3);
+    // The manifest keeps the whole audit.
+    const reasons = (kind: string) =>
+      third.omitted
+        .filter((o) => o.kind === kind)
+        .map((o) => o.reason)
+        .sort();
+    assert.deepEqual(
+      [third.knowledge.length, third.guidance.length],
+      [LEARNING.context.entries, LEARNING.context.guidance],
+    );
+    assert.deepEqual(reasons("guidance"), ["limit", "limit", "limit"]);
+    assert.deepEqual(reasons("knowledge"), ["historical", ...Array<string>(6).fill("limit")]);
+    // The producer sees the selection and a count per reason, and can read only the selection's records.
+    assert.ok(seen?.learning);
+    assert.deepEqual(seen.learning.omitted, [
+      { reason: "limit", count: 9 },
+      { reason: "historical", count: 1 },
+    ]);
+    assert.deepEqual(
+      seen.records,
+      readableRecords(seen.learning.knowledge, seen.learning.guidance),
+    );
+    assert.ok(
+      learningBytes(seen.learning.knowledge, seen.learning.guidance) <= LEARNING.context.bytes,
+    );
+    for (const ref of omittedProposals.filter(
+      (r) => !seen?.learning?.knowledge.some((k) => k.revision === r),
+    )) {
+      assert.ok(!seen.records?.includes(ref), `${ref} is not readable`);
+    }
+    assert.ok(!seen.records?.includes(history.oldObservation));
+    const [left, old, selected] = replies;
+    assert.deepEqual(
+      [left?.ok, old?.ok, selected?.ok],
+      [false, false, true],
+      "omitted records are refused; a selected item's observation is readable",
+    );
+    // Governing content is complete.
+    const [production] = startsOf(dir, 3);
+    assert.deepEqual(seen.findings, production?.production.findings);
+    assert.deepEqual(seen.step.requirements, libraryStep(w).requirements);
   });
 
   it("withholds and reports stale, contradictory and withdrawn guidance; a newer version restores it", async () => {

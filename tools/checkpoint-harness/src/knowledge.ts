@@ -1672,27 +1672,66 @@ export type KnowledgeItem = {
   observations: { ref: string; basis: Basis }[];
 };
 
-/** A consumed reminder as the producer sees it. */
+/** A consumed reminder as the producer sees it, with the reviewed failures it cites. */
 export type GuidanceItem = {
   guidance: string;
   version: string;
   rule: string;
   cause: string;
   reminder: string;
+  occurrences: string[];
 };
+
+const REASONS: readonly OmissionReason[] = [
+  "limit",
+  "later-attempt",
+  "historical",
+  "withheld",
+  "superseded",
+  "stale",
+  "withdrawn",
+  "rejected",
+  "proposed",
+];
 
 /**
  * The learning inputs of a producer packet, rebuilt from a frozen manifest:
- * the consumed items, the omissions and the evidence references the
- * producer may read.
+ * the consumed items, how many candidates were omitted for each reason, and
+ * the records the consumed items make readable. What was omitted stays in
+ * the manifest and the operator's view; the producer sees only the counts.
  */
 export type LearningInputs = {
   manifest: string;
   knowledge: KnowledgeItem[];
   guidance: GuidanceItem[];
-  omitted: { kind: "knowledge" | "guidance"; id: string; reason: OmissionReason }[];
+  omitted: { reason: OmissionReason; count: number }[];
   evidence: string[];
 };
+
+/** The records consumed items make readable: each consumed revision and the records it cites. */
+export const readableRecords = (
+  knowledge: readonly KnowledgeItem[],
+  guidance: readonly GuidanceItem[],
+): string[] =>
+  [
+    ...new Set([
+      ...knowledge.flatMap((k) => [k.revision, ...k.observations.map((o) => o.ref)]),
+      ...guidance.flatMap((g) => [g.version, ...g.occurrences]),
+    ]),
+  ].sort();
+
+/**
+ * What the configured byte limit bounds (T3.6 L2): the consumed items and
+ * every record reference they make readable, serialised. Nothing else in the
+ * learning section varies with the run's history.
+ */
+export const learningBytes = (
+  knowledge: readonly KnowledgeItem[],
+  guidance: readonly GuidanceItem[],
+): number =>
+  Buffer.byteLength(
+    stringify({ knowledge, guidance, records: readableRecords(knowledge, guidance) }) ?? "",
+  );
 
 export const contextDigest = (manifest: ContextManifest): string =>
   sha256(stringify(manifest) ?? "");
@@ -1714,7 +1753,7 @@ const knowledgeItem = (
 
 const guidanceItem = (
   versionRef: string,
-  p: Pick<GuidanceProposal, "guidance">,
+  p: Pick<GuidanceProposal, "guidance" | "occurrences">,
   id: string,
 ): GuidanceItem => ({
   guidance: id,
@@ -1722,6 +1761,7 @@ const guidanceItem = (
   rule: p.guidance.rule,
   cause: p.guidance.cause,
   reminder: p.guidance.text ?? "",
+  occurrences: [...new Set(p.occurrences.map((o) => o.review))],
 });
 
 const itemDigest = (item: KnowledgeItem | GuidanceItem): string => sha256(stringify(item) ?? "");
@@ -1736,10 +1776,10 @@ const NEGATIVE_FIRST: Record<ClaimKind, number> = {
  * The bounded, deterministic learning context of a step's next attempt
  * (T3.6 L2): its current reminders, newest admission first, then its current
  * knowledge, negative results first and newest admission first, each while
- * the count limits and the byte limit of the serialised items allow. Every
- * other candidate of the step is recorded as omitted, with why. Requirements,
- * findings and other packet content are not part of the selection and are
- * never cut.
+ * the count limits and the byte limit of `learningBytes` allow. Every other
+ * candidate of the step is recorded as omitted, with why, in the manifest
+ * only. Requirements, findings and other packet content are not part of the
+ * selection and are never cut.
  */
 export function selectContext(
   views: LearningViews,
@@ -1759,10 +1799,8 @@ export function selectContext(
   const omitted: Omission[] = [];
   const knowledge: { item: ContextItem; content: KnowledgeItem }[] = [];
   const guidance: { item: ContextItem; content: GuidanceItem }[] = [];
-  const bytes = (k: readonly KnowledgeItem[], g: readonly GuidanceItem[]): number =>
-    Buffer.byteLength(stringify({ knowledge: k, guidance: g }) ?? "");
   const fits = (k: readonly KnowledgeItem[], g: readonly GuidanceItem[]): boolean =>
-    bytes(k, g) <= input.limits.bytes;
+    learningBytes(k, g) <= input.limits.bytes;
 
   // Guidance: current reminders of earlier attempts, then everything else as omitted.
   const status = guidanceStatus(views.guidance, input.guidance);
@@ -1795,7 +1833,10 @@ export function selectContext(
     }
     const content = guidanceItem(
       version,
-      { guidance: { rule: entry.rule, cause: entry.cause, text: v.text } },
+      {
+        guidance: { rule: entry.rule, cause: entry.cause, text: v.text },
+        occurrences: v.occurrences,
+      },
       id,
     );
     const next = [...guidance.map((g) => g.content), content];
@@ -1955,7 +1996,6 @@ const parseAs = <T>(dir: string, ref: string): T | undefined => parse(dir, ref) 
  */
 export function learningInputs(dir: string, manifest: ContextManifest): Read<LearningInputs> {
   const diagnostics: string[] = [];
-  const evidence = new Set<string>();
   const knowledge: KnowledgeItem[] = [];
   for (const item of manifest.knowledge) {
     const p = parseAs<KnowledgeProposal>(dir, item.proposal);
@@ -1978,8 +2018,6 @@ export function learningInputs(dir: string, manifest: ContextManifest): Read<Lea
       continue;
     }
     knowledge.push(content);
-    evidence.add(item.proposal);
-    for (const o of p.observations) evidence.add(o.ref);
   }
   const guidance: GuidanceItem[] = [];
   for (const item of manifest.guidance) {
@@ -2004,16 +2042,6 @@ export function learningInputs(dir: string, manifest: ContextManifest): Read<Lea
       continue;
     }
     guidance.push(content);
-    evidence.add(item.proposal);
-    for (const o of p.occurrences) evidence.add(o.review);
-  }
-  for (const o of manifest.omitted) {
-    if (o.proposal === null) continue;
-    evidence.add(o.proposal);
-    if (o.kind === "knowledge") {
-      for (const x of parseAs<KnowledgeProposal>(dir, o.proposal)?.observations ?? [])
-        evidence.add(x.ref);
-    }
   }
   if (diagnostics.length > 0) return { ok: false, diagnostics };
   return {
@@ -2022,8 +2050,11 @@ export function learningInputs(dir: string, manifest: ContextManifest): Read<Lea
       manifest: contextDigest(manifest),
       knowledge,
       guidance,
-      omitted: manifest.omitted.map(({ kind, id, reason }) => ({ kind, id, reason })),
-      evidence: [...evidence].sort(),
+      omitted: REASONS.flatMap((reason) => {
+        const count = manifest.omitted.filter((o) => o.reason === reason).length;
+        return count > 0 ? [{ reason, count }] : [];
+      }),
+      evidence: readableRecords(knowledge, guidance),
     },
   };
 }

@@ -56,7 +56,7 @@
       }
     },
     "learning": {
-      "description": "Evidence-backed learning (T3.6 L2, evidence-backed learning log §§2.2 and 2.5). Absent: no knowledge or guidance is selected and every packet and evaluation is as before. Present: each production attempt freezes a bounded selection of the step's current knowledge and guidance before dispatch. The limits bound the packet's learning section only; requirements, criteria, targets and findings are never cut.",
+      "description": "Evidence-backed learning (T3.6 L2, evidence-backed learning log §§2.2 and 2.5). Absent: no knowledge or guidance is selected and every packet and evaluation is as before. Present: each production attempt freezes a bounded selection of the step's current knowledge and guidance before dispatch. The limits bound what the producer sees and can read of it; omissions stay in the frozen manifest, and requirements, criteria, targets and findings are never cut.",
       "type": "object",
       "additionalProperties": false,
       "required": ["reminder_chars", "context"],
@@ -82,7 +82,7 @@
               "minimum": 0
             },
             "bytes": {
-              "description": "Most bytes of the packet's serialised learning section.",
+              "description": "Most bytes of the consumed items and the record references they make readable, serialised. Omitted candidates reach the producer only as a count per reason.",
               "type": "integer",
               "minimum": 1
             }
