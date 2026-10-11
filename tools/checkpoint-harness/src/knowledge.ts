@@ -1,0 +1,738 @@
+// T3.6 L1: knowledge records and their derived views (evidence-backed
+// learning log §2.1, with the applicability rules of §2.2; Spec 00 §4). An
+// agent proposes one claim about an evaluated candidate, citing original
+// observations by reference. A separate reviewer invocation assesses it. The
+// controller admits it only when every cited observation is committed
+// evidence of the claimed evaluation, an executed basis is a verifier result
+// for the claimed target, the scope matches that evaluation and the review
+// is independent; admission is derived here, never supplied by a caller.
+// Views are derived from committed journal events and immutable evidence
+// alone and are never saved. Nothing here produces an AcceptedOutput, and
+// the acceptance decision reads none of these records. Records carry their
+// format and the controller identity that wrote them; another format or
+// controller refuses the run rather than migrating it.
+
+import { Ajv2020 } from "ajv/dist/2020.js";
+import stringify from "safe-stable-stringify";
+
+import type { AgentOutcome } from "./claude.js";
+import { sha256 } from "./contracts.js";
+import {
+  appendEvent,
+  putEvidence,
+  readEvidence,
+  readRun,
+  type EvaluationManifest,
+  type JournalEvent,
+  type RunHandle,
+} from "./evidence.js";
+import { targetKey, type Invocation, type Stored } from "./verification.js";
+import { treeEntries, type SourceSnapshot } from "./workspace.js";
+
+export const KNOWLEDGE_FORMAT = 1;
+
+export type ClaimKind = "positive" | "failed-approach" | "counterexample";
+export type Basis = "reported" | "inspected" | "executed";
+
+/** One precise assertion about a requirement or target key, and what kind of result it states. */
+export type Claim = { assertion: string; target: string; kind: ClaimKind };
+
+/**
+ * What a claim relies on: the repository, the definition set, the full
+ * candidate or, narrowed with the claim's review, the tree entries of the
+ * paths it depends on, and further dependencies by the names
+ * `evaluationDependencies` gives them.
+ */
+export type KnowledgeScope = {
+  repository: string;
+  definitions: string;
+  candidate: SourceSnapshot | { paths: Record<string, string> };
+  dependencies: Record<string, string>;
+};
+
+/** An agent's proposal, as the controller records it. `proposer` is its agent-invocation record. */
+export type KnowledgeProposal = {
+  format: typeof KNOWLEDGE_FORMAT;
+  controller: string;
+  run: string;
+  step: string;
+  attempt: number;
+  /** The evaluation whose candidate the claim describes. */
+  evaluation: string;
+  round: number | null;
+  claim: Claim;
+  observations: { ref: string; basis: Basis }[];
+  scope: KnowledgeScope;
+  proposer: string;
+  /** Entries this one corrects; they stop being current once it is supported. */
+  supersedes: string[];
+};
+
+/** The controller's admission of one proposal; `basis` is the strongest verified observation's. */
+export type KnowledgeAdmission = {
+  format: typeof KNOWLEDGE_FORMAT;
+  controller: string;
+  run: string;
+  entry: string;
+  proposal: string;
+  review: string | null;
+  disposition: "supported" | "rejected";
+  basis: "inspected" | "executed" | null;
+  reasons: string[];
+};
+
+/** One evaluated attempt and the decision journaled for it, if any. */
+export type AttemptRecord = {
+  step: string;
+  attempt: number;
+  evaluation: string;
+  candidate: string;
+  decision: "accept" | "correct" | "pause" | null;
+  record: string | null;
+};
+
+export type Revision = Omit<
+  KnowledgeProposal,
+  "format" | "controller" | "run" | "step" | "claim"
+> & {
+  proposal: string;
+  admission:
+    | (Omit<KnowledgeAdmission, "format" | "controller" | "run" | "entry" | "proposal"> & {
+        record: string;
+      })
+    | null;
+};
+
+export type KnowledgeEntry = {
+  entry: string;
+  step: string;
+  claim: Claim;
+  disposition: "proposed" | "supported" | "rejected" | "superseded";
+  supersededBy: string[];
+  /** Every proposal of the entry, in journal order. */
+  revisions: Revision[];
+};
+
+export type KnowledgeView = {
+  format: typeof KNOWLEDGE_FORMAT;
+  run: string;
+  controller: string;
+  attempts: AttemptRecord[];
+  entries: KnowledgeEntry[];
+};
+
+/** The candidate and dependencies knowledge is applied to. */
+export type KnowledgeTarget = {
+  repository: string;
+  definitions: string;
+  candidate: SourceSnapshot;
+  tree: ReadonlyMap<string, string>;
+  dependencies: Readonly<Record<string, string>>;
+};
+
+/** Supported entries for a target: current, historical for a changed or unknown dependency, or withheld for a conflict. */
+export type Applicability = {
+  current: string[];
+  historical: { entry: string; changed: string[]; unknown: string[] }[];
+  withheld: { entry: string; conflicts: string[] }[];
+};
+
+export type Read<T> = { ok: true; value: T } | { ok: false; diagnostics: string[] };
+
+const PROPOSAL = "knowledge-proposal";
+const ADMISSION = "knowledge-admission";
+const NEGATIVE: readonly ClaimKind[] = ["failed-approach", "counterexample"];
+const PROVIDER_FAILURES = new Set(["failed", "cancelled", "exhausted"]);
+
+const DIGEST = { type: "string", pattern: "^sha256:[0-9a-f]{64}$" };
+const TEXT = { type: "string", minLength: 1 };
+const COUNT = { type: "integer", minimum: 1 };
+const DIGESTS = { type: "array", uniqueItems: true, items: DIGEST };
+const object = (properties: Record<string, unknown>): Record<string, unknown> => ({
+  type: "object",
+  additionalProperties: false,
+  required: Object.keys(properties),
+  properties,
+});
+
+const ajv = new Ajv2020({ allErrors: true });
+const validateProposal = ajv.compile<KnowledgeProposal>(
+  object({
+    format: { const: KNOWLEDGE_FORMAT },
+    controller: TEXT,
+    run: TEXT,
+    step: TEXT,
+    attempt: COUNT,
+    evaluation: DIGEST,
+    round: { oneOf: [COUNT, { type: "null" }] },
+    claim: object({
+      assertion: TEXT,
+      target: TEXT,
+      kind: { enum: ["positive", "failed-approach", "counterexample"] },
+    }),
+    observations: {
+      type: "array",
+      items: object({ ref: DIGEST, basis: { enum: ["reported", "inspected", "executed"] } }),
+    },
+    scope: object({
+      repository: TEXT,
+      definitions: TEXT,
+      candidate: {
+        oneOf: [
+          object({ commit: TEXT, tree: TEXT }),
+          object({ paths: { type: "object", minProperties: 1, additionalProperties: TEXT } }),
+        ],
+      },
+      dependencies: { type: "object", additionalProperties: TEXT },
+    }),
+    proposer: DIGEST,
+    supersedes: DIGESTS,
+  }),
+);
+const validateAdmission = ajv.compile<KnowledgeAdmission>(
+  object({
+    format: { const: KNOWLEDGE_FORMAT },
+    controller: TEXT,
+    run: TEXT,
+    entry: DIGEST,
+    proposal: DIGEST,
+    review: { oneOf: [DIGEST, { type: "null" }] },
+    disposition: { enum: ["supported", "rejected"] },
+    basis: { type: ["string", "null"], enum: ["inspected", "executed", null] },
+    reasons: { type: "array", items: TEXT },
+  }),
+);
+
+/** A stable entry identity: the run, the step and the claim, so a revalidation keeps it. */
+export const entryId = (p: Pick<KnowledgeProposal, "run" | "step" | "claim">): string =>
+  sha256(stringify({ run: p.run, step: p.step, claim: p.claim }) ?? "");
+
+/**
+ * Every dependency an evaluation records besides its source and definitions,
+ * by name: what a claim's scope may rely on.
+ */
+export function evaluationDependencies(m: EvaluationManifest): Record<string, string> {
+  const deps: Record<string, string> = {
+    harness: m.harness,
+    "run-model": m.runModel,
+    configuration: m.configuration,
+    toolchain: m.toolchain.profile,
+    [`step:${m.step.id}`]: m.step.definition,
+  };
+  if (m.toolchain.lockfile !== null) deps.lockfile = m.toolchain.lockfile;
+  if (m.rubric !== null) deps.rubric = m.rubric;
+  if (m.checkpoint !== null) deps.checkpoint = m.checkpoint;
+  if (m.operation) deps[`operation:${m.operation.target}`] = m.operation.revision ?? "candidate";
+  for (const [id, digest] of Object.entries(m.verifiers)) deps[`verifier:${id}`] = digest;
+  for (const [name, digest] of Object.entries(m.skills)) deps[`skill:${name}`] = digest;
+  for (const i of m.inputs) deps[`input:${i.step}/${i.output}`] = i.evaluation;
+  return deps;
+}
+
+/** The target of an evaluation's candidate in a run directory. */
+export const knowledgeTarget = (
+  dir: string,
+  repository: string,
+  m: EvaluationManifest,
+): KnowledgeTarget => ({
+  repository,
+  definitions: m.definitions,
+  candidate: { commit: m.source.commit, tree: m.source.tree },
+  tree: treeEntries(dir, m.source.tree),
+  dependencies: evaluationDependencies(m),
+});
+
+/** The parts of a scope the target changes, and the dependencies it does not know. */
+export function scopeDiff(
+  scope: KnowledgeScope,
+  target: KnowledgeTarget,
+): { changed: string[]; unknown: string[] } {
+  const changed: string[] = [];
+  const unknown: string[] = [];
+  if (scope.repository !== target.repository) changed.push("repository");
+  if (scope.definitions !== target.definitions) changed.push("definitions");
+  if ("paths" in scope.candidate) {
+    for (const [path, entry] of Object.entries(scope.candidate.paths)) {
+      if (target.tree.get(path) !== entry) changed.push(`path:${path}`);
+    }
+  } else if (
+    scope.candidate.commit !== target.candidate.commit ||
+    scope.candidate.tree !== target.candidate.tree
+  ) {
+    changed.push("candidate");
+  }
+  for (const [name, digest] of Object.entries(scope.dependencies)) {
+    const now = target.dependencies[name];
+    if (now === undefined) unknown.push(name);
+    else if (now !== digest) changed.push(name);
+  }
+  return { changed: changed.sort(), unknown: unknown.sort() };
+}
+
+type Committed<T> = Stored<T> & { seq: number };
+
+type Records = {
+  events: JournalEvent[];
+  proposals: Committed<KnowledgeProposal>[];
+  admissions: Committed<KnowledgeAdmission>[];
+};
+
+function parse(dir: string, ref: string): unknown {
+  try {
+    return JSON.parse(readEvidence(dir, ref).toString("utf8"));
+  } catch {
+    return undefined;
+  }
+}
+
+/**
+ * The run's committed events and knowledge records. A corrupt run, a record
+ * of another format or controller, a malformed record and an unknown
+ * knowledge action are refused; nothing is skipped or migrated.
+ */
+function readRecords(dir: string, controller: string): Read<Records> {
+  const read = readRun(dir);
+  if (!read.ok) return read;
+  const { events } = read.records;
+  const run = read.records.manifest.run;
+  const records: Records = { events, proposals: [], admissions: [] };
+  const diagnostics: string[] = [];
+  for (const e of events) {
+    if (!e.action.startsWith("knowledge-")) continue;
+    const at = `event ${e.seq} (${e.action})`;
+    const ref = e.data.record;
+    if (e.action !== PROPOSAL && e.action !== ADMISSION) {
+      diagnostics.push(`${at}: not a knowledge record of format ${KNOWLEDGE_FORMAT}`);
+      continue;
+    }
+    if (typeof ref !== "string" || e.evidence[0] !== ref) {
+      diagnostics.push(`${at}: names no record`);
+      continue;
+    }
+    const record = parse(dir, ref) as Partial<KnowledgeProposal> | undefined;
+    if (record?.format !== KNOWLEDGE_FORMAT) {
+      diagnostics.push(
+        `${at}: knowledge record format ${String(record?.format)} is not supported; a run is never migrated`,
+      );
+      continue;
+    }
+    if (record.controller !== controller) {
+      diagnostics.push(
+        `${at}: written by controller ${String(record.controller)}, not ${controller}`,
+      );
+      continue;
+    }
+    if (record.run !== run) {
+      diagnostics.push(`${at}: names run ${String(record.run)}, not ${run}`);
+      continue;
+    }
+    if (e.action === PROPOSAL) {
+      if (!validateProposal(record) || e.data.entry !== entryId(record)) {
+        diagnostics.push(`${at}: not a valid knowledge proposal`);
+      } else records.proposals.push({ seq: e.seq, ref, record });
+      continue;
+    }
+    const proposal = records.proposals.find(
+      (p) => p.ref === (record as { proposal?: unknown }).proposal,
+    );
+    if (!validateAdmission(record) || !proposal || record.entry !== entryId(proposal.record)) {
+      diagnostics.push(`${at}: not a valid admission of a committed proposal`);
+    } else if (records.admissions.some((a) => a.record.proposal === record.proposal)) {
+      diagnostics.push(`${at}: admits proposal ${record.proposal} again`);
+    } else records.admissions.push({ seq: e.seq, ref, record });
+  }
+  return diagnostics.length > 0 ? { ok: false, diagnostics } : { ok: true, value: records };
+}
+
+/** The attempt history: every journaled evaluation and the latest decision on it. */
+function attemptsOf(dir: string, events: readonly JournalEvent[]): AttemptRecord[] {
+  return events.flatMap((e): AttemptRecord[] => {
+    if (e.action !== "evaluation" || e.attempt === null || e.evaluation === null) return [];
+    const step = String(e.data.step);
+    const record = parse(dir, String(e.data.record)) as { manifest: EvaluationManifest };
+    const decided = [...events]
+      .reverse()
+      .find(
+        (d) =>
+          (d.action === "decision" || d.action === "acceptance") &&
+          d.seq > e.seq &&
+          d.data.step === step &&
+          d.attempt === e.attempt &&
+          d.evaluation === e.evaluation,
+      );
+    return [
+      {
+        step,
+        attempt: e.attempt,
+        evaluation: e.evaluation,
+        candidate: record.manifest.source.commit,
+        decision: (decided?.data.decision as AttemptRecord["decision"] | undefined) ?? null,
+        record: decided?.evidence[0] ?? null,
+      },
+    ];
+  });
+}
+
+/**
+ * The run's attempt history and knowledge entries, derived from its
+ * committed records alone. Read-only: a refusal leaves the run untouched.
+ */
+export function knowledgeView(dir: string, controller: string): Read<KnowledgeView> {
+  const read = readRecords(dir, controller);
+  if (!read.ok) return read;
+  const { events, proposals, admissions } = read.value;
+  const entries = new Map<string, KnowledgeEntry>();
+  for (const { ref, record: p } of proposals) {
+    const id = entryId(p);
+    const a = admissions.find((x) => x.record.proposal === ref);
+    const entry = entries.get(id) ?? {
+      entry: id,
+      step: p.step,
+      claim: p.claim,
+      disposition: "proposed",
+      supersededBy: [],
+      revisions: [],
+    };
+    entry.revisions.push({
+      proposal: ref,
+      attempt: p.attempt,
+      evaluation: p.evaluation,
+      round: p.round,
+      observations: p.observations,
+      scope: p.scope,
+      proposer: p.proposer,
+      supersedes: p.supersedes,
+      admission: a
+        ? {
+            record: a.ref,
+            review: a.record.review,
+            disposition: a.record.disposition,
+            basis: a.record.basis,
+            reasons: a.record.reasons,
+          }
+        : null,
+    });
+    entries.set(id, entry);
+  }
+  for (const entry of entries.values()) {
+    for (const r of entry.revisions) {
+      if (r.admission?.disposition !== "supported") continue;
+      for (const id of r.supersedes) entries.get(id)?.supersededBy.push(entry.entry);
+    }
+  }
+  for (const entry of entries.values()) {
+    const admitted = entry.revisions.flatMap((r) => (r.admission ? [r.admission] : []));
+    entry.supersededBy = [...new Set(entry.supersededBy)].sort();
+    entry.disposition =
+      entry.supersededBy.length > 0
+        ? "superseded"
+        : admitted.some((a) => a.disposition === "supported")
+          ? "supported"
+          : admitted.length > 0
+            ? "rejected"
+            : "proposed";
+  }
+  return {
+    ok: true,
+    value: {
+      format: KNOWLEDGE_FORMAT,
+      run: events[0]?.run ?? "",
+      controller,
+      attempts: attemptsOf(dir, events),
+      entries: [...entries.values()],
+    },
+  };
+}
+
+/**
+ * Supported entries as they apply to a target. An entry is current when one
+ * of its supported revisions matches the target in every part of its scope;
+ * otherwise it is historical. Current entries that contradict each other on
+ * one target, a positive result against a counterexample, are withheld until
+ * a reviewed entry supersedes one of them. Rejected, proposed and superseded
+ * entries are never current.
+ */
+export function applicability(view: KnowledgeView, target: KnowledgeTarget): Applicability {
+  const result: Applicability = { current: [], historical: [], withheld: [] };
+  const applicable: KnowledgeEntry[] = [];
+  for (const entry of view.entries) {
+    if (entry.disposition !== "supported") continue;
+    const diffs = entry.revisions
+      .filter((r) => r.admission?.disposition === "supported")
+      .map((r) => scopeDiff(r.scope, target));
+    if (diffs.some((d) => d.changed.length === 0 && d.unknown.length === 0)) {
+      applicable.push(entry);
+    } else {
+      result.historical.push({
+        entry: entry.entry,
+        ...(diffs.at(-1) ?? { changed: [], unknown: [] }),
+      });
+    }
+  }
+  for (const entry of applicable) {
+    const conflicts = applicable
+      .filter(
+        (other) =>
+          other.claim.target === entry.claim.target &&
+          ((entry.claim.kind === "positive" && other.claim.kind === "counterexample") ||
+            (entry.claim.kind === "counterexample" && other.claim.kind === "positive")),
+      )
+      .map((other) => other.entry);
+    if (conflicts.length > 0) result.withheld.push({ entry: entry.entry, conflicts });
+    else result.current.push(entry.entry);
+  }
+  return result;
+}
+
+/**
+ * Journals a proposal as an agent made it. Only its shape, run and
+ * controller are checked here; admission decides whether it is supported.
+ * A malformed proposal, or one for a run whose knowledge records this
+ * controller cannot read, is refused before anything is written.
+ */
+export function proposeKnowledge(
+  run: RunHandle,
+  proposal: KnowledgeProposal,
+): Stored<KnowledgeProposal> {
+  if (!validateProposal(proposal)) {
+    const [error] = validateProposal.errors ?? [];
+    throw new Error(
+      `invalid knowledge proposal: ${error?.instancePath || "/"} ${error?.message ?? ""}`,
+    );
+  }
+  if (proposal.run !== run.run) {
+    throw new Error(`the proposal names run ${proposal.run}, not ${run.run}`);
+  }
+  const read = readRecords(run.dir, proposal.controller);
+  if (!read.ok) throw new Error(read.diagnostics.join("\n"));
+  const ref = putEvidence(run, stringify(proposal));
+  appendEvent(run, {
+    action: PROPOSAL,
+    attempt: proposal.attempt,
+    evaluation: proposal.evaluation,
+    evidence: [ref],
+    data: { record: ref, entry: entryId(proposal), step: proposal.step },
+  });
+  return { ref, record: proposal };
+}
+
+/** Why a committed proposal cannot be supported, and the basis it would be supported on. */
+function assess(
+  dir: string,
+  records: Records,
+  proposal: Committed<KnowledgeProposal>,
+  review: string | null,
+): { reasons: string[]; basis: KnowledgeAdmission["basis"] } {
+  const { events } = records;
+  const p = proposal.record;
+  const entry = entryId(p);
+  const before = events.filter((e) => e.seq < proposal.seq && !e.action.startsWith("knowledge-"));
+  const typed = (ref: string, among: readonly JournalEvent[]): JournalEvent | undefined =>
+    among.find((e) => e.data.record === ref);
+  const reasons: string[] = [];
+
+  const evaluation = before.find(
+    (e) =>
+      e.action === "evaluation" &&
+      e.evaluation === p.evaluation &&
+      e.attempt === p.attempt &&
+      e.data.step === p.step,
+  );
+  const started = before.find((e) => e.action === "run-start");
+  if (!evaluation || !started) {
+    reasons.push(`${p.step} attempt ${p.attempt} has no committed evaluation ${p.evaluation}`);
+  } else {
+    const { manifest } = parse(dir, String(evaluation.data.record)) as {
+      manifest: EvaluationManifest;
+    };
+    const { config } = parse(dir, String(started.data.record)) as {
+      config: { repository: { name: string } };
+    };
+    const diff = scopeDiff(p.scope, knowledgeTarget(dir, config.repository.name, manifest));
+    if (diff.changed.length > 0 || diff.unknown.length > 0) {
+      reasons.push(
+        `the scope is not the evaluation's: changed ${diff.changed.join(", ") || "nothing"}; unknown ${diff.unknown.join(", ") || "nothing"}`,
+      );
+    }
+  }
+  if (
+    p.round !== null &&
+    !before.some((e) => e.action === "pr-round" && e.data.round === p.round)
+  ) {
+    reasons.push(`pull-request round ${p.round} is not committed`);
+  }
+  const known = new Set(
+    records.proposals.filter((x) => x.seq < proposal.seq).map((x) => entryId(x.record)),
+  );
+  for (const id of p.supersedes) {
+    if (id === entry || !known.has(id)) {
+      reasons.push(`supersedes ${id}, which is not an earlier entry`);
+    }
+  }
+
+  // Each observation is committed evidence of the claimed evaluation; an
+  // executed one is an admitted verifier's result for the claimed target.
+  let basis: KnowledgeAdmission["basis"] = null;
+  if (p.observations.length === 0) reasons.push("the claim cites no observation");
+  for (const { ref, basis: declared } of p.observations) {
+    const at = `observation ${ref}`;
+    const listing = typed(ref, before) ?? before.find((e) => e.evidence.includes(ref));
+    if (!listing) {
+      const later = events.find((e) => e.evidence.includes(ref));
+      const why = later?.action.startsWith("knowledge-")
+        ? "is a knowledge record, not an original observation"
+        : later
+          ? "was committed after the proposal"
+          : stored(dir, ref)
+            ? "is not committed"
+            : "is not in the evidence store";
+      reasons.push(`${at} ${why}`);
+      continue;
+    }
+    if (
+      (listing.attempt !== null && listing.attempt !== p.attempt) ||
+      (listing.evaluation !== null && listing.evaluation !== p.evaluation)
+    ) {
+      reasons.push(`${at} belongs to attempt ${listing.attempt} evaluation ${listing.evaluation}`);
+      continue;
+    }
+    const record = listing.data.record === ref ? parse(dir, ref) : undefined;
+    const negative = NEGATIVE.includes(p.claim.kind);
+    if (listing.action === "agent-invocation" && record !== undefined) {
+      const outcome = (record as AgentOutcome).outcome;
+      if (negative && PROVIDER_FAILURES.has(outcome)) {
+        reasons.push(
+          `${at} is a provider outcome "${outcome}": an execution problem, not a disproof`,
+        );
+        continue;
+      }
+    }
+    const invocation =
+      listing.action === "verifier-invocation" ? (record as Invocation | undefined) : undefined;
+    const result = invocation?.results.find((r) => targetKey(r.target) === p.claim.target);
+    const timedOut = invocation?.subjects.some((s) => s.target === p.claim.target && s.timedOut);
+    if (
+      negative &&
+      result &&
+      (result.outcome === "unavailable" || result.outcome === "invalid" || timedOut)
+    ) {
+      reasons.push(
+        `${at} is an execution problem for ${p.claim.target} (${timedOut ? "timed out" : result.outcome}), not a disproof`,
+      );
+      continue;
+    }
+    if (declared === "executed") {
+      const expected = negative ? "failed" : "passed";
+      const wrong = !invocation
+        ? "is not a verifier invocation, so it executed nothing for the claim"
+        : invocation.stage !== "acceptance"
+          ? "is a provisional run of an unadmitted verifier"
+          : !result
+            ? `has no result for ${p.claim.target}`
+            : result.outcome !== expected
+              ? `${result.outcome} ${p.claim.target}; the claim needs ${expected}`
+              : null;
+      if (wrong) reasons.push(`${at} ${wrong}`);
+      else basis = "executed";
+    } else if (declared === "inspected" && basis === null) basis = "inspected";
+  }
+  if (p.observations.length > 0 && p.observations.every((o) => o.basis === "reported")) {
+    reasons.push(
+      "no observation is inspected or executed; reported observations remain historical context",
+    );
+  }
+
+  // The proposer and the reviewer are separate committed invocations and sessions.
+  const proposer = typed(
+    p.proposer,
+    before.filter((e) => e.action === "agent-invocation"),
+  );
+  if (!proposer) reasons.push(`the proposer invocation ${p.proposer} is not committed`);
+  const reviewed =
+    review === null
+      ? undefined
+      : typed(
+          review,
+          events.filter((e) => e.action === "agent-invocation" && e.seq > proposal.seq),
+        );
+  if (review === null) {
+    reasons.push("the claim has no independent review");
+  } else if (!reviewed) {
+    reasons.push(`the review ${review} is not a committed invocation after the proposal`);
+  } else if (reviewed.data.proposal !== proposal.ref) {
+    reasons.push(`the review ${review} assessed another proposal`);
+  } else {
+    const outcome = parse(dir, review) as AgentOutcome;
+    const session = outcome.observation.session;
+    if (review === p.proposer || session === null || session === proposer?.data.session) {
+      reasons.push(`the review ${review} is not independent of the proposer`);
+    } else if (outcome.outcome !== "reviewed" || outcome.observation.role !== "reviewer") {
+      reasons.push(
+        `the review ${review} is a ${outcome.observation.role} ${outcome.outcome} outcome, not a review`,
+      );
+    } else {
+      const { verdict } = outcome;
+      const covered = verdict.coverage.some((c) => c.subject === entry && c.result === "satisfied");
+      if (
+        verdict.verdict !== "pass" ||
+        !covered ||
+        verdict.blockers.length > 0 ||
+        verdict.findings.some((f) => f.severity === "blocking")
+      ) {
+        reasons.push(`the review ${review} does not find the claim supported`);
+      }
+    }
+  }
+  return { reasons, basis: reasons.length === 0 ? basis : null };
+}
+
+const stored = (dir: string, ref: string): boolean => {
+  try {
+    readEvidence(dir, ref);
+    return true;
+  } catch {
+    return false;
+  }
+};
+
+/**
+ * Admits a committed proposal: derives `supported` or `rejected`, with
+ * every reason, from the run's committed records and journals it. A
+ * proposal that is not committed, is already admitted, or belongs to a run
+ * this controller cannot read is refused without writing anything.
+ */
+export function admitKnowledge(
+  run: RunHandle,
+  input: { proposal: string; review: string | null; controller: string },
+): Read<Stored<KnowledgeAdmission>> {
+  const read = readRecords(run.dir, input.controller);
+  if (!read.ok) return read;
+  const proposal = read.value.proposals.find((p) => p.ref === input.proposal);
+  if (!proposal) {
+    return { ok: false, diagnostics: [`${input.proposal} is not a committed knowledge proposal`] };
+  }
+  if (read.value.admissions.some((a) => a.record.proposal === input.proposal)) {
+    return { ok: false, diagnostics: [`${input.proposal} is already admitted`] };
+  }
+  const { reasons, basis } = assess(run.dir, read.value, proposal, input.review);
+  const admission: KnowledgeAdmission = {
+    format: KNOWLEDGE_FORMAT,
+    controller: input.controller,
+    run: run.run,
+    entry: entryId(proposal.record),
+    proposal: proposal.ref,
+    review: input.review,
+    disposition: reasons.length === 0 ? "supported" : "rejected",
+    basis,
+    reasons,
+  };
+  const ref = putEvidence(run, stringify(admission));
+  appendEvent(run, {
+    action: ADMISSION,
+    attempt: proposal.record.attempt,
+    evaluation: proposal.record.evaluation,
+    evidence: [ref, proposal.ref],
+    data: { record: ref, entry: admission.entry, disposition: admission.disposition },
+  });
+  return { ok: true, value: { ref, record: admission } };
+}

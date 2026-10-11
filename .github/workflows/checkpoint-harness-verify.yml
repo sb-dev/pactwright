@@ -93,8 +93,16 @@ jobs:
         run: pnpm --filter @pactwright/checkpoint-harness test:integration
       - name: Contract check
         run: pnpm contracts:check
+      # T3.6 §4: the repository gate without cached results, and the pull
+      # request's whitespace check.
       - name: Repository gate
-        run: pnpm verify
+        run: pnpm verify --force
+      - name: Whitespace check
+        if: github.event_name == 'pull_request'
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+        run: git diff --check "$BASE_SHA...$HEAD_SHA"
 
   # The live Claude adapter test with distinct admitted producer and reviewer
   # settings (T3.5 H2). It spends at most about 2 USD per run on the owner's
