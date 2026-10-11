@@ -1034,6 +1034,107 @@ describe("T3.6 L1-03 applicability, revalidation and conflicts", () => {
     assert.deepEqual(applicability(view(run.dir), t1), all);
   });
 
+  it("applies a relation only where the revision recording it holds, so revalidated revisions stay current", async () => {
+    const run = await reopen(w);
+    const target = passedTarget(run.dir);
+    const [t1, t2] = [targetOf(run.dir, 1), targetOf(run.dir, 2)];
+    const positiveAt = (attempt: number): KnowledgeProposal =>
+      proposal(run, {
+        attempt,
+        claim: { assertion: "The parser accepts this well-formed case.", target, kind: "positive" },
+        observations: [{ ref: invocationFor(run.dir, attempt, target).ref, basis: "executed" }],
+      });
+    const negativeAt = (attempt: number, fields: Partial<KnowledgeProposal> = {}) =>
+      proposal(run, {
+        attempt,
+        claim: {
+          assertion: "The parser rejects this well-formed case.",
+          target,
+          kind: "counterexample",
+        },
+        observations: [{ ref: candidateReview(run.dir, attempt).ref, basis: "inspected" }],
+        ...fields,
+      });
+
+    // (1) A contradiction established at attempt 1 withholds both claims there.
+    const positive = proposeAndAdmit(run, positiveAt(1));
+    supported(positive, "executed");
+    const p = positive.record.entry;
+    const negative = proposeAndAdmit(run, negativeAt(1, { contradicts: [p] }));
+    supported(negative, "inspected");
+    const n = negative.record.entry;
+    const [p1] = view(run.dir).entries[0]?.revisions ?? [];
+    assert.deepEqual(negative.record.relations, [
+      { relation: "contradicts", entry: p, revisions: [p1?.proposal] },
+    ]);
+    const conflictAt1 = {
+      current: [],
+      historical: [],
+      withheld: [
+        { entry: p, conflicts: [n] },
+        { entry: n, conflicts: [p] },
+      ],
+    };
+    assert.deepEqual(applicability(view(run.dir), t1), conflictAt1);
+
+    // (2) Both are revalidated at attempt 2 without renewing the relation.
+    supported(proposeAndAdmit(run, positiveAt(2)), "executed");
+    supported(proposeAndAdmit(run, negativeAt(2)), "inspected");
+
+    // (3) The old contradiction stays at attempt 1's scope.
+    assert.deepEqual(applicability(view(run.dir), t2), {
+      current: [p, n],
+      historical: [],
+      withheld: [],
+    });
+    assert.deepEqual(applicability(view(run.dir), t1), conflictAt1);
+
+    // A correction admitted at attempt 1 supersedes only the revision it was admitted against.
+    const correction = proposeAndAdmit(
+      run,
+      proposal(run, {
+        attempt: 1,
+        claim: {
+          assertion: "The first attempt's parser accepts this case; rejecting it was wrong.",
+          target,
+          kind: "positive",
+        },
+        observations: [{ ref: invocationFor(run.dir, 1, target).ref, basis: "executed" }],
+        supersedes: [n],
+      }),
+    );
+    supported(correction, "executed");
+    const c = correction.record.entry;
+    const v = view(run.dir);
+    const negativeEntry = v.entries.find((e) => e.entry === n);
+    assert.deepEqual(correction.record.relations, [
+      { relation: "supersedes", entry: n, revisions: [negativeEntry?.revisions[0]?.proposal] },
+    ]);
+    assert.deepEqual(
+      [
+        negativeEntry?.disposition,
+        negativeEntry?.revisions.map((r) => [r.attempt, r.admission?.disposition, r.supersededBy]),
+      ],
+      [
+        "supported",
+        [
+          [1, "supported", [c]],
+          [2, "supported", []],
+        ],
+      ],
+    );
+    assert.deepEqual(applicability(v, t2), {
+      current: [p, n],
+      historical: [{ entry: c, changed: ["candidate"], unknown: [] }],
+      withheld: [],
+    });
+    assert.deepEqual(applicability(v, t1), {
+      current: [p, c],
+      historical: [{ entry: n, changed: ["candidate"], unknown: [] }],
+      withheld: [],
+    });
+  });
+
   for (const negative of ["counterexample", "failed-approach"] as const) {
     it(`withholds a positive claim and a ${negative} it is reviewed to contradict, until a reviewed correction supersedes it`, async () => {
       const run = await reopen(w);

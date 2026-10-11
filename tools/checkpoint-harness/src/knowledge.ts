@@ -9,7 +9,8 @@
 // inspection and the review justify narrowing it, every contradiction or
 // correction it records relates exact entries about the same target and
 // scope, and the review is independent and assesses each of those; admission
-// is derived here, never supplied by a caller.
+// is derived here, never supplied by a caller, and binds each relation to the
+// related revisions that hold at that scope.
 // Views are derived from committed journal events and immutable evidence
 // alone and are never saved. Nothing here produces an AcceptedOutput, and
 // the acceptance decision reads none of these records. Records carry their
@@ -70,8 +71,18 @@ export type KnowledgeProposal = {
   proposer: string;
   /** Entries whose claims this one contradicts at the same target and scope. */
   contradicts: string[];
-  /** Entries this one corrects; they stop being current once it is supported. */
+  /** Entries this one corrects at this evaluation's scope. */
   supersedes: string[];
+};
+
+/**
+ * A relation the controller admitted: the related entry and the exact
+ * revisions of it that hold at the admitted proposal's evaluation scope.
+ */
+export type Relation = {
+  relation: "contradicts" | "supersedes";
+  entry: string;
+  revisions: string[];
 };
 
 /** The controller's admission of one proposal; `basis` is the strongest verified observation's. */
@@ -84,6 +95,8 @@ export type KnowledgeAdmission = {
   review: string | null;
   disposition: "supported" | "rejected";
   basis: "inspected" | "executed" | null;
+  /** The bound relations of a supported proposal; none when rejected. */
+  relations: Relation[];
   reasons: string[];
 };
 
@@ -107,6 +120,8 @@ export type Revision = Omit<
         record: string;
       })
     | null;
+  /** Entries whose supported corrections bind this revision. */
+  supersededBy: string[];
 };
 
 export type KnowledgeEntry = {
@@ -206,6 +221,14 @@ const validateAdmission = ajv.compile<KnowledgeAdmission>(
     review: { oneOf: [DIGEST, { type: "null" }] },
     disposition: { enum: ["supported", "rejected"] },
     basis: { type: ["string", "null"], enum: ["inspected", "executed", null] },
+    relations: {
+      type: "array",
+      items: object({
+        relation: { enum: ["contradicts", "supersedes"] },
+        entry: DIGEST,
+        revisions: { ...DIGESTS, minItems: 1 },
+      }),
+    },
     reasons: { type: "array", items: TEXT },
   }),
 );
@@ -416,29 +439,36 @@ export function knowledgeView(dir: string, controller: string): Read<KnowledgeVi
             review: a.record.review,
             disposition: a.record.disposition,
             basis: a.record.basis,
+            relations: a.record.relations,
             reasons: a.record.reasons,
           }
         : null,
+      supersededBy: [],
     });
     entries.set(id, entry);
   }
+  // A supported correction supersedes only the revisions it was admitted against.
+  const revisions = new Map(
+    [...entries.values()].flatMap((e) => e.revisions.map((r) => [r.proposal, r] as const)),
+  );
   for (const entry of entries.values()) {
     for (const r of entry.revisions) {
-      if (r.admission?.disposition !== "supported") continue;
-      for (const id of r.supersedes) entries.get(id)?.supersededBy.push(entry.entry);
+      for (const rel of r.admission?.relations ?? []) {
+        if (rel.relation !== "supersedes") continue;
+        for (const ref of rel.revisions) revisions.get(ref)?.supersededBy.push(entry.entry);
+      }
     }
   }
   for (const entry of entries.values()) {
-    const admitted = entry.revisions.flatMap((r) => (r.admission ? [r.admission] : []));
-    entry.supersededBy = [...new Set(entry.supersededBy)].sort();
-    entry.disposition =
-      entry.supersededBy.length > 0
+    const supported = entry.revisions.filter((r) => r.admission?.disposition === "supported");
+    entry.supersededBy = [...new Set(entry.revisions.flatMap((r) => r.supersededBy))].sort();
+    entry.disposition = supported.some((r) => r.supersededBy.length === 0)
+      ? "supported"
+      : supported.length > 0
         ? "superseded"
-        : admitted.some((a) => a.disposition === "supported")
-          ? "supported"
-          : admitted.length > 0
-            ? "rejected"
-            : "proposed";
+        : entry.revisions.some((r) => r.admission)
+          ? "rejected"
+          : "proposed";
   }
   return {
     ok: true,
@@ -453,33 +483,44 @@ export function knowledgeView(dir: string, controller: string): Read<KnowledgeVi
 }
 
 /**
- * Supported entries as they apply to a target. An entry is current when one
- * of its supported revisions matches the target in every part of its scope;
- * otherwise it is historical. Current entries joined by a contradiction that
- * a supported revision records are withheld until a reviewed entry supersedes
- * one side; a claim's kind alone never makes a conflict. Rejected, proposed
- * and superseded entries are never current.
+ * Supported entries as they apply to a target. Only a supported revision
+ * that no correction supersedes counts. An entry is current when one such
+ * revision matches the target in every part of its scope; otherwise it is
+ * historical. Two current entries conflict only through a recorded
+ * contradiction whose own revision holds at the target; both are withheld
+ * until a reviewed correction supersedes one side. A claim's kind alone never makes a
+ * conflict. Rejected, proposed and superseded entries are never current.
  */
 export function applicability(view: KnowledgeView, target: KnowledgeTarget): Applicability {
   const result: Applicability = { current: [], historical: [], withheld: [] };
   const applicable: KnowledgeEntry[] = [];
+  const holding = new Set<string>();
   for (const entry of view.entries) {
     if (entry.disposition !== "supported") continue;
-    const diffs = entry.revisions
-      .filter((r) => r.admission?.disposition === "supported")
-      .map((r) => scopeDiff(r.scope, target));
-    if (diffs.some((d) => d.changed.length === 0 && d.unknown.length === 0)) {
+    const live = entry.revisions.filter(
+      (r) => r.admission?.disposition === "supported" && r.supersededBy.length === 0,
+    );
+    const diffs = live.map((r) => ({ r, ...scopeDiff(r.scope, target) }));
+    const holds = diffs.filter((d) => d.changed.length === 0 && d.unknown.length === 0);
+    for (const { r } of holds) holding.add(r.proposal);
+    if (holds.length > 0) {
       applicable.push(entry);
     } else {
+      const last = diffs.at(-1);
       result.historical.push({
         entry: entry.entry,
-        ...(diffs.at(-1) ?? { changed: [], unknown: [] }),
+        changed: last?.changed ?? [],
+        unknown: last?.unknown ?? [],
       });
     }
   }
   const contradicts = (a: KnowledgeEntry, b: KnowledgeEntry): boolean =>
     a.revisions.some(
-      (r) => r.admission?.disposition === "supported" && r.contradicts.includes(b.entry),
+      (r) =>
+        holding.has(r.proposal) &&
+        (r.admission?.relations ?? []).some(
+          (rel) => rel.relation === "contradicts" && rel.entry === b.entry,
+        ),
     );
   for (const entry of applicable) {
     const conflicts = applicable
@@ -543,7 +584,7 @@ function assess(
   records: Records,
   proposal: Committed<KnowledgeProposal>,
   review: string | null,
-): { reasons: string[]; basis: KnowledgeAdmission["basis"] } {
+): { reasons: string[]; basis: KnowledgeAdmission["basis"]; relations: Relation[] } {
   const { events } = records;
   const p = proposal.record;
   const entry = entryId(p);
@@ -596,6 +637,7 @@ function assess(
     ...p.contradicts.map((id) => ["contradicts", id] as const),
     ...p.supersedes.map((id) => ["supersedes", id] as const),
   ];
+  const bound: Relation[] = [];
   for (const [relation, id] of relations) {
     const revisions = records.proposals.filter(
       (x) =>
@@ -612,14 +654,15 @@ function assess(
       reasons.push(
         `${relation} ${id}, a claim about ${first.record.step} ${first.record.claim.target}, not ${p.step} ${p.claim.target}`,
       );
-    } else if (
-      target &&
-      !revisions.some((x) => {
-        const diff = scopeDiff(x.record.scope, target as KnowledgeTarget);
+    } else if (target) {
+      const at = target;
+      const holding = revisions.filter((x) => {
+        const diff = scopeDiff(x.record.scope, at);
         return diff.changed.length === 0 && diff.unknown.length === 0;
-      })
-    ) {
-      reasons.push(`${relation} ${id}, which does not hold at this evaluation's scope`);
+      });
+      if (holding.length === 0) {
+        reasons.push(`${relation} ${id}, which does not hold at this evaluation's scope`);
+      } else bound.push({ relation, entry: id, revisions: holding.map((x) => x.ref) });
     }
   }
 
@@ -793,7 +836,8 @@ function assess(
       }
     }
   }
-  return { reasons, basis: reasons.length === 0 ? basis : null };
+  const ok = reasons.length === 0;
+  return { reasons, basis: ok ? basis : null, relations: ok ? bound : [] };
 }
 
 const stored = (dir: string, ref: string): boolean => {
@@ -824,7 +868,7 @@ export function admitKnowledge(
   if (read.value.admissions.some((a) => a.record.proposal === input.proposal)) {
     return { ok: false, diagnostics: [`${input.proposal} is already admitted`] };
   }
-  const { reasons, basis } = assess(run.dir, read.value, proposal, input.review);
+  const { reasons, basis, relations } = assess(run.dir, read.value, proposal, input.review);
   const admission: KnowledgeAdmission = {
     format: KNOWLEDGE_FORMAT,
     controller: input.controller,
@@ -834,6 +878,7 @@ export function admitKnowledge(
     review: input.review,
     disposition: reasons.length === 0 ? "supported" : "rejected",
     basis,
+    relations,
     reasons,
   };
   const ref = putEvidence(run, stringify(admission));
