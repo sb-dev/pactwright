@@ -653,6 +653,14 @@ export type EvaluationManifest = {
    * Absent for every other step, so their digests are unchanged.
    */
   operation?: { target: string; revision: string | null };
+  /**
+   * The learning context the evaluated attempt consumed (T3.6 L2): the digest
+   * of its frozen manifest, which names each consumed revision, and the
+   * consumed items no longer current. Absent for an attempt that consumed
+   * none, so other digests are unchanged; a consumed item going stale makes a
+   * new evaluation, while an unrelated journal record changes nothing.
+   */
+  context?: { manifest: string; stale: string[] };
 };
 
 /** An inherited target an evaluation leaves pending, by key, and the rule that defers it. */

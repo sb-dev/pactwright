@@ -69,7 +69,8 @@
         }
       }
     },
-    "job": { "type": "object" }
+    "job": { "type": "object" },
+    "learning": { "type": "object" }
   },
   "$defs": {
     "commit": { "type": "string", "pattern": "^[0-9a-f]{40}$" }

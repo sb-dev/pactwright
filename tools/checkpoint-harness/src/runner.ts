@@ -31,6 +31,7 @@ import {
   buildPacket,
   containedOps,
   invokeAgent,
+  LEARNING_PURPOSES,
   recordInvocation,
   resolveRole,
   type AgentOutcome,
@@ -88,6 +89,19 @@ import {
   type RunHandle,
 } from "./evidence.js";
 import {
+  consumedStale,
+  contextDigest,
+  knowledgeTarget,
+  learningInputs,
+  learningViews,
+  selectContext,
+  type ContextLimits,
+  type ContextManifest,
+  type LearningInputs,
+  type LearningViews,
+  type Read,
+} from "./knowledge.js";
+import {
   adequacyRubric,
   bindingDigests,
   COMMON_RUBRIC,
@@ -102,6 +116,7 @@ import {
   checkVerdict,
   committedEvents,
   givenCheckpoint,
+  guidanceTarget,
   inventory,
   negatives,
   pendingTargets,
@@ -359,6 +374,8 @@ export type RunnerConfig = RunConfig & {
       timeout_ms: number;
     };
   };
+  /** Evidence-backed learning (T3.6 L2): absent, no attempt consumes learning context. */
+  learning?: { reminder_chars: number; context: ContextLimits };
 };
 
 /**
@@ -409,6 +426,12 @@ type Production = {
    * sealed without an agent, with the claims of the step's last acceptance.
    */
   adopt?: { claims: Submission["outputs"] };
+  /**
+   * The attempt's frozen learning context (T3.6 L2), selected before its
+   * start is journaled. Retries of the attempt reuse it, so records added
+   * during the attempt never enter it.
+   */
+  context?: ContextManifest;
 };
 
 type Phase = "produce" | "admit" | "verify" | "review" | "assess";
@@ -452,6 +475,8 @@ type State = {
   events: JournalEvent[];
   starts: Fact<Start>[];
   producers: Fact<AgentOutcome>[];
+  /** The recorded sessions of the learning purposes (T3.6 L2). */
+  learning: Fact<AgentOutcome>[];
   rejections: Fact<{ step: string; attempt: number; diagnostics: string[] }>[];
   evaluations: Fact<EvaluationRecord>[];
   admissions: Fact<Admission>[];
@@ -618,10 +643,13 @@ function facts<T>(dir: string, events: readonly JournalEvent[], action: string):
 
 function readState(run: Pick<RunHandle, "dir">, events: JournalEvent[]): State {
   const load = <T>(action: string): Fact<T>[] => facts<T>(run.dir, events, action);
+  const sessions = load<AgentOutcome>("agent-invocation");
+  const purposes: readonly unknown[] = LEARNING_PURPOSES;
   return {
     events,
     starts: load<Start>("start"),
-    producers: load<AgentOutcome>("agent-invocation").filter((f) => f.data.role === "producer"),
+    producers: sessions.filter((f) => f.data.role === "producer"),
+    learning: sessions.filter((f) => purposes.includes(f.data.purpose)),
     rejections: load("seal-rejected"),
     evaluations: load<EvaluationRecord>("evaluation"),
     admissions: load<Admission>("verifier-admission"),
@@ -683,12 +711,16 @@ function acceptances(ctx: Ctx, s: State): Map<string, Acceptance> {
         (e) => e.evaluation === decision.evaluation && e.record.step === decision.step,
       );
       if (!ev) throw new Error(`acceptance ${d.ref} names no journaled evaluation`);
-      const manifest = manifestOf(
-        ctx,
-        step,
-        current,
-        ev.record.candidate,
-        acceptedBefore(s, ev.seq),
+      const manifest = withContext(
+        manifestOf(ctx, step, current, ev.record.candidate, acceptedBefore(s, ev.seq)),
+        contextOf(
+          ctx,
+          s,
+          step,
+          current,
+          decision.attempt,
+          productionOf(s, step.id, decision.attempt),
+        ),
       );
       if (!manifest || evaluationDigest(manifest) !== decision.evaluation) continue;
       current.set(step.id, {
@@ -962,6 +994,135 @@ function manifestOf(
   };
 }
 
+/** An evaluation manifest with the consumed learning context of its attempt, when it has one (T3.6 L2). */
+const withContext = (
+  manifest: EvaluationManifest | null,
+  context: EvaluationManifest["context"],
+): EvaluationManifest | null => (manifest && context ? { ...manifest, context } : manifest);
+
+/** The production an attempt of a step started with: its first start's. */
+const productionOf = (s: State, step: string, attempt: number): Production | null =>
+  s.starts.find(
+    (f) => f.record.phase === "produce" && f.record.step === step && f.record.attempt === attempt,
+  )?.record.production ?? null;
+
+/** Whether this run selects or has consumed learning context (T3.6 L2). */
+const learningInUse = (ctx: Ctx, s: State): boolean =>
+  ctx.config.learning !== undefined || s.starts.some((f) => f.record.production?.context);
+
+const views = new WeakMap<State, Map<number, Read<LearningViews>>>();
+
+/**
+ * The run's knowledge and guidance, read once per state from its committed
+ * events, up to `cutoff`; this controller's identity pins their records.
+ */
+function viewsOf(ctx: Ctx, s: State, cutoff = Number.POSITIVE_INFINITY): Read<LearningViews> {
+  let memo = views.get(s);
+  if (!memo) views.set(s, (memo = new Map()));
+  const found = memo.get(cutoff);
+  if (found) return found;
+  const read = learningViews(ctx.run.dir, ctx.deps.harness, {
+    events: s.events,
+    ...(cutoff === Number.POSITIVE_INFINITY ? {} : { cutoff }),
+  });
+  memo.set(cutoff, read);
+  return read;
+}
+
+/**
+ * The consumed learning context of an attempt in its evaluation identity
+ * (T3.6 L2): the frozen manifest's digest and the consumed items no longer
+ * current where they were selected. That target is recomputed now from the
+ * production's starting snapshot, so a changed dependency counts. Learning
+ * records count up to the attempt's first `correct` decision, so later
+ * records never reopen a decided attempt; an undecided or accepted attempt
+ * sees them all. An unreadable record set makes every consumed item stale.
+ */
+function contextOf(
+  ctx: Ctx,
+  s: State,
+  step: ContractStep,
+  accepted: Map<string, Acceptance>,
+  attempt: number,
+  production: Production | null,
+): EvaluationManifest["context"] {
+  const frozen = production?.context;
+  if (!frozen) return undefined;
+  const consumed = [...frozen.knowledge, ...frozen.guidance].map((i) => i.id);
+  const digest = contextDigest(frozen);
+  if (consumed.length === 0) return { manifest: digest, stale: [] };
+  const started = s.starts.find(
+    (f) =>
+      f.record.phase === "produce" && f.record.step === step.id && f.record.attempt === attempt,
+  );
+  const corrected = s.decisions.find(
+    (d) =>
+      d.record.step === step.id && d.record.attempt === attempt && d.record.decision === "correct",
+  );
+  const read = viewsOf(ctx, s, corrected?.seq);
+  const from = manifestOf(
+    ctx,
+    step,
+    accepted,
+    production.from,
+    acceptedBefore(s, started?.seq ?? Number.POSITIVE_INFINITY),
+  );
+  const stale =
+    read.ok && from
+      ? consumedStale(
+          read.value,
+          frozen,
+          knowledgeTarget(ctx.run.dir, ctx.config.repository.name, from),
+          guidanceTarget(ctx.plan, step),
+        )
+      : [...new Set(consumed)].sort();
+  return { manifest: digest, stale };
+}
+
+/**
+ * The learning context a new attempt freezes (T3.6 L2), when the run
+ * configures learning: the step's current knowledge and guidance where the
+ * attempt starts, within the configured limits. Unreadable learning records
+ * pause the step for its owner; nothing is selected around them.
+ */
+function selection(
+  ctx: Ctx,
+  s: State,
+  step: ContractStep,
+  accepted: Map<string, Acceptance>,
+  attempt: number,
+  from: SourceSnapshot,
+): ContextManifest | Stop | undefined {
+  const limits = ctx.config.learning?.context;
+  if (!limits) return undefined;
+  const read = viewsOf(ctx, s);
+  if (!read.ok) {
+    return pause(
+      step.id,
+      read.diagnostics.map((d) => reason("owner", step.id, `learning records: ${d}`)),
+    );
+  }
+  const manifest = manifestOf(
+    ctx,
+    step,
+    accepted,
+    from,
+    acceptedBefore(s, Number.POSITIVE_INFINITY),
+  );
+  if (!manifest) {
+    return pause(step.id, [reason("owner", step.id, "an input has no current acceptance")]);
+  }
+  return selectContext(read.value, {
+    controller: ctx.deps.harness,
+    run: ctx.run.run,
+    step: step.id,
+    attempt,
+    limits,
+    knowledge: knowledgeTarget(ctx.run.dir, ctx.config.repository.name, manifest),
+    guidance: guidanceTarget(ctx.plan, step),
+  });
+}
+
 /**
  * The checkpoint evidence the exit evaluation is given (T3.5 H1), from the
  * controller's records alone: each planned step's current acceptance, the
@@ -1117,6 +1278,9 @@ function newAttempt(
   const base = stepBase(ctx, step, accepted);
   const blocked = readiness(ctx, s, step, accepted, base);
   if (blocked.length > 0) return pause(step.id, blocked);
+  // An adoption runs no agent, so it consumes no learning context.
+  const context = adopt ? undefined : selection(ctx, s, step, accepted, attempt, snapshotOf(from));
+  if (context && "kind" in context) return context;
   return {
     kind: "produce",
     step,
@@ -1127,6 +1291,7 @@ function newAttempt(
       policy: policyFor(ctx, s, step, accepted),
       findings,
       ...(adopt ? { adopt } : {}),
+      ...(context ? { context } : {}),
     },
   };
 }
@@ -1313,13 +1478,10 @@ function evaluationAction(
     );
   }
   const checkpoint = production ? null : checkpointEvidence(ctx, s, accepted);
-  const manifest = manifestOf(
-    ctx,
-    step,
-    accepted,
-    record.candidate,
-    acceptedBefore(s, latest.seq),
-    checkpoint,
+  const context = contextOf(ctx, s, step, accepted, attempt, production);
+  const manifest = withContext(
+    manifestOf(ctx, step, accepted, record.candidate, acceptedBefore(s, latest.seq), checkpoint),
+    context,
   );
   if (!manifest) throw new Error(`${step.id}: an input has no current acceptance`);
   const evaluation = evaluationDigest(manifest);
@@ -1327,13 +1489,16 @@ function evaluationAction(
   // at the exit, checkpoint evidence makes a new evaluation of the same
   // candidate; earlier records stay.
   if (evaluation !== latest.evaluation) {
-    const now = manifestOf(
-      ctx,
-      step,
-      accepted,
-      record.candidate,
-      acceptedBefore(s, Number.POSITIVE_INFINITY),
-      checkpoint,
+    const now = withContext(
+      manifestOf(
+        ctx,
+        step,
+        accepted,
+        record.candidate,
+        acceptedBefore(s, Number.POSITIVE_INFINITY),
+        checkpoint,
+      ),
+      context,
     );
     if (!now) throw new Error(`${step.id}: an input has no current acceptance`);
     return {
@@ -1611,6 +1776,12 @@ function stepAction(
     return pause(step.id, [
       reason("exhausted", step.id, `the producer exhausted its ${outcome.limit} limit`),
     ]);
+  }
+  // A retry reuses the attempt's frozen learning context; once an item it
+  // consumed is no longer current, a new attempt selects afresh instead
+  // (T3.6 L2).
+  if ((contextOf(ctx, s, step, accepted, attempt, production)?.stale.length ?? 0) > 0) {
+    return newAttempt(ctx, s, step, accepted, attempt + 1, production.from, production.findings);
   }
   // Interrupted, failed, cancelled, submitted without a sealed candidate, or
   // stopped by a limit or blocker that a later amendment addressed.
@@ -1980,6 +2151,15 @@ function roundAction(ctx: Ctx, s: State, accepted: Map<string, Acceptance>): Act
 }
 
 function nextAction(ctx: Ctx, s: State): Action {
+  if (learningInUse(ctx, s)) {
+    const read = viewsOf(ctx, s);
+    if (!read.ok) {
+      return pause(
+        null,
+        read.diagnostics.map((d) => reason("owner", "learning", `learning records: ${d}`)),
+      );
+    }
+  }
   const accepted = acceptances(ctx, s);
   // An accepted step's approved effects complete before any later step.
   for (const a of [...accepted.values()].sort((x, y) => x.seq - y.seq)) {
@@ -2206,6 +2386,7 @@ export function spending(s: State): {
   const costs = [
     ...s.producers.map((f) => f.record.observation.usage.costUsd),
     ...s.reviews.map((f) => f.record.outcome.observation.usage.costUsd),
+    ...s.learning.map((f) => f.record.observation.usage.costUsd),
   ];
   return {
     reported: costs.reduce<number>((n, c) => (typeof c === "number" ? n + c : n), 0),
@@ -2289,12 +2470,23 @@ async function produce(
     return undefined;
   }
   const bindings = ctx.config.verification?.bindings;
+  let learning: LearningInputs | undefined;
+  if (production.context) {
+    const inputs = learningInputs(run.dir, production.context);
+    if (!inputs.ok)
+      return pause(
+        step.id,
+        inputs.diagnostics.map((d) => reason("owner", step.id, d)),
+      );
+    learning = inputs.value;
+  }
   const built = buildPacket(plan, step.id, roles.producer, {
     attempt,
     accepted: acceptedOutputs(accepted),
     policy: production.policy,
     findings: production.findings,
     ...(bindings === undefined ? {} : { bindings }),
+    ...(learning ? { learning } : {}),
   });
   if (!built.ok)
     return pause(
@@ -2311,6 +2503,13 @@ async function produce(
     const outcome = await invokeAgent(roles.producer, built.packet, ws, deps.signal, {
       ...(provider ? { provider } : {}),
       evidence: (bytes) => putEvidence(run, bytes),
+      records: (ref) => {
+        try {
+          return readEvidence(run.dir, ref);
+        } catch {
+          return null;
+        }
+      },
     });
     recordInvocation(run, outcome, { step: step.id });
     if (outcome.outcome !== "submitted") return undefined;
@@ -2325,12 +2524,15 @@ async function produce(
       );
       return undefined;
     }
-    const manifest = manifestOf(
-      ctx,
-      step,
-      accepted,
-      captured.candidate,
-      acceptedBefore(s, Number.POSITIVE_INFINITY),
+    const manifest = withContext(
+      manifestOf(
+        ctx,
+        step,
+        accepted,
+        captured.candidate,
+        acceptedBefore(s, Number.POSITIVE_INFINITY),
+      ),
+      contextOf(ctx, readState(run, committedEvents(run)), step, accepted, attempt, production),
     );
     if (!manifest) throw new Error(`${step.id}: an input has no current acceptance`);
     const record: EvaluationRecord = {
@@ -3342,6 +3544,22 @@ export type RunFacts = {
   } | null;
   /** Evidence of each current acceptance: the acceptance record and what it counted. */
   evidence: { step: string; acceptance: string; refs: string[] }[];
+  /**
+   * Evidence-backed learning (T3.6 L2), null when the run uses none: the
+   * recorded learning sessions and, per production attempt, the frozen
+   * context it consumed and what it left out. Consumption is never acceptance.
+   */
+  learning: {
+    sessions: number;
+    contexts: {
+      step: string;
+      attempt: number;
+      manifest: string;
+      knowledge: string[];
+      guidance: string[];
+      omitted: { kind: string; id: string; reason: string }[];
+    }[];
+  } | null;
 };
 
 /**
@@ -3518,6 +3736,32 @@ export async function runFacts(
         acceptance: a.ref,
         refs: [...a.decision.evidence],
       })),
+      learning:
+        learningInUse(ctx, s) || s.learning.length > 0
+          ? {
+              sessions: s.learning.length,
+              contexts: s.starts.flatMap((f, i) => {
+                const context = f.record.production?.context;
+                const first = s.starts.findIndex((g) => g.record.key === f.record.key) === i;
+                return context && first
+                  ? [
+                      {
+                        step: context.step,
+                        attempt: context.attempt,
+                        manifest: contextDigest(context),
+                        knowledge: context.knowledge.map((k) => k.id),
+                        guidance: context.guidance.map((g) => g.id),
+                        omitted: context.omitted.map(({ kind, id, reason }) => ({
+                          kind,
+                          id,
+                          reason,
+                        })),
+                      },
+                    ]
+                  : [];
+              }),
+            }
+          : null,
     },
   };
 }

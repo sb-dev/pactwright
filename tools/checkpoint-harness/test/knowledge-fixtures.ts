@@ -81,7 +81,7 @@ export type LearningRun = { dir: string; repo: Repo; scratch: string; plan: Prep
 export const LIBRARY_FILES = workOf(LIBRARY).outputs["config-library"] ?? [];
 
 /** Read-only reviewer workspaces that serve the sealed snapshot's files. */
-const snapshotReviewers =
+export const snapshotReviewers =
   (dir: string): OpenWorkspace =>
   (snapshot) =>
     Promise.resolve({
