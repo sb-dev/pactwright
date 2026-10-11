@@ -128,7 +128,9 @@ export type KnowledgeEntry = {
   entry: string;
   step: string;
   claim: Claim;
-  disposition: "proposed" | "supported" | "rejected" | "superseded";
+  /** Supersession is evaluated per target, in `applicability`. */
+  disposition: "proposed" | "supported" | "rejected";
+  /** Entries whose supported corrections bind any revision of this one. */
   supersededBy: string[];
   /** Every proposal of the entry, in journal order. */
   revisions: Revision[];
@@ -151,11 +153,16 @@ export type KnowledgeTarget = {
   dependencies: Readonly<Record<string, string>>;
 };
 
-/** Supported entries for a target: current, historical for a changed or unknown dependency, or withheld for a conflict. */
+/**
+ * Supported entries for a target: current, historical for a changed or
+ * unknown dependency, withheld for a conflict, or superseded by a correction
+ * that holds at the target.
+ */
 export type Applicability = {
   current: string[];
   historical: { entry: string; changed: string[]; unknown: string[] }[];
   withheld: { entry: string; conflicts: string[] }[];
+  superseded: { entry: string; by: string[] }[];
 };
 
 export type Read<T> = { ok: true; value: T } | { ok: false; diagnostics: string[] };
@@ -447,7 +454,8 @@ export function knowledgeView(dir: string, controller: string): Read<KnowledgeVi
     });
     entries.set(id, entry);
   }
-  // A supported correction supersedes only the revisions it was admitted against.
+  // A supported correction binds only the revisions it was admitted against;
+  // where it supersedes them is decided per target.
   const revisions = new Map(
     [...entries.values()].flatMap((e) => e.revisions.map((r) => [r.proposal, r] as const)),
   );
@@ -460,15 +468,12 @@ export function knowledgeView(dir: string, controller: string): Read<KnowledgeVi
     }
   }
   for (const entry of entries.values()) {
-    const supported = entry.revisions.filter((r) => r.admission?.disposition === "supported");
     entry.supersededBy = [...new Set(entry.revisions.flatMap((r) => r.supersededBy))].sort();
-    entry.disposition = supported.some((r) => r.supersededBy.length === 0)
+    entry.disposition = entry.revisions.some((r) => r.admission?.disposition === "supported")
       ? "supported"
-      : supported.length > 0
-        ? "superseded"
-        : entry.revisions.some((r) => r.admission)
-          ? "rejected"
-          : "proposed";
+      : entry.revisions.some((r) => r.admission)
+        ? "rejected"
+        : "proposed";
   }
   return {
     ok: true,
@@ -483,30 +488,51 @@ export function knowledgeView(dir: string, controller: string): Read<KnowledgeVi
 }
 
 /**
- * Supported entries as they apply to a target. Only a supported revision
- * that no correction supersedes counts. An entry is current when one such
- * revision matches the target in every part of its scope; otherwise it is
+ * Supported entries as they apply to a target. A supported revision holds at
+ * the target when it matches it in every part of its scope. A correction
+ * supersedes a revision it is bound to only where the correcting revision
+ * holds too. An entry is current when a holding revision is not superseded
+ * there, superseded when every holding revision is, and otherwise
  * historical. Two current entries conflict only through a recorded
- * contradiction whose own revision holds at the target; both are withheld
- * until a reviewed correction supersedes one side. A claim's kind alone never makes a
- * conflict. Rejected, proposed and superseded entries are never current.
+ * contradiction whose own revision is live at the target; both are withheld
+ * until a reviewed correction supersedes one side. A claim's kind alone never
+ * makes a conflict, and rejected or proposed entries are never current.
  */
 export function applicability(view: KnowledgeView, target: KnowledgeTarget): Applicability {
-  const result: Applicability = { current: [], historical: [], withheld: [] };
+  const result: Applicability = { current: [], historical: [], withheld: [], superseded: [] };
+  const supported = view.entries.flatMap((e) =>
+    e.revisions
+      .filter((r) => r.admission?.disposition === "supported")
+      .map((r) => ({ entry: e.entry, r, ...scopeDiff(r.scope, target) })),
+  );
+  const holds = new Set(
+    supported
+      .filter((x) => x.changed.length === 0 && x.unknown.length === 0)
+      .map((x) => x.r.proposal),
+  );
+  // The corrections that hold here, by the revision each supersedes.
+  const correctedBy = new Map<string, string[]>();
+  for (const { entry, r } of supported) {
+    if (!holds.has(r.proposal)) continue;
+    for (const rel of r.admission?.relations ?? []) {
+      if (rel.relation !== "supersedes") continue;
+      for (const ref of rel.revisions)
+        correctedBy.set(ref, [...(correctedBy.get(ref) ?? []), entry]);
+    }
+  }
+  const live = new Set([...holds].filter((ref) => !correctedBy.has(ref)));
   const applicable: KnowledgeEntry[] = [];
-  const holding = new Set<string>();
   for (const entry of view.entries) {
-    if (entry.disposition !== "supported") continue;
-    const live = entry.revisions.filter(
-      (r) => r.admission?.disposition === "supported" && r.supersededBy.length === 0,
-    );
-    const diffs = live.map((r) => ({ r, ...scopeDiff(r.scope, target) }));
-    const holds = diffs.filter((d) => d.changed.length === 0 && d.unknown.length === 0);
-    for (const { r } of holds) holding.add(r.proposal);
-    if (holds.length > 0) {
+    const mine = supported.filter((x) => x.entry === entry.entry);
+    if (mine.length === 0) continue;
+    const holding = mine.filter((x) => holds.has(x.r.proposal));
+    if (holding.some((x) => live.has(x.r.proposal))) {
       applicable.push(entry);
+    } else if (holding.length > 0) {
+      const by = holding.flatMap((x) => correctedBy.get(x.r.proposal) ?? []);
+      result.superseded.push({ entry: entry.entry, by: [...new Set(by)].sort() });
     } else {
-      const last = diffs.at(-1);
+      const last = mine.at(-1);
       result.historical.push({
         entry: entry.entry,
         changed: last?.changed ?? [],
@@ -517,7 +543,7 @@ export function applicability(view: KnowledgeView, target: KnowledgeTarget): App
   const contradicts = (a: KnowledgeEntry, b: KnowledgeEntry): boolean =>
     a.revisions.some(
       (r) =>
-        holding.has(r.proposal) &&
+        live.has(r.proposal) &&
         (r.admission?.relations ?? []).some(
           (rel) => rel.relation === "contradicts" && rel.entry === b.entry,
         ),

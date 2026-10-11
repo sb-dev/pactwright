@@ -635,6 +635,7 @@ describe("T3.6 L1-02 negative results and fragments", () => {
       current: [counter.record.entry, useful.record.entry],
       historical: [],
       withheld: [],
+      superseded: [],
     });
     assert.deepEqual(applicability(v, targetOf(run.dir, 2)), {
       current: [],
@@ -643,6 +644,7 @@ describe("T3.6 L1-02 negative results and fragments", () => {
         { entry: useful.record.entry, changed: ["candidate"], unknown: [] },
       ],
       withheld: [],
+      superseded: [],
     });
   });
 
@@ -763,7 +765,7 @@ describe("T3.6 L1-03 applicability, revalidation and conflicts", () => {
     const at = (target: KnowledgeTarget) => applicability(view(run.dir), target);
     const t1 = targetOf(run.dir, 1);
     const t2 = targetOf(run.dir, 2);
-    assert.deepEqual(at(t1), { current: [id], historical: [], withheld: [] });
+    assert.deepEqual(at(t1), { current: [id], historical: [], withheld: [], superseded: [] });
 
     const changedDependency = (name: string): KnowledgeTarget => ({
       ...t1,
@@ -780,7 +782,12 @@ describe("T3.6 L1-03 applicability, revalidation and conflicts", () => {
     for (const [name, target] of changes) {
       assert.deepEqual(
         at(target),
-        { current: [], historical: [{ entry: id, changed: [name], unknown: [] }], withheld: [] },
+        {
+          current: [],
+          historical: [{ entry: id, changed: [name], unknown: [] }],
+          withheld: [],
+          superseded: [],
+        },
         name,
       );
     }
@@ -790,6 +797,7 @@ describe("T3.6 L1-03 applicability, revalidation and conflicts", () => {
       current: [],
       historical: [{ entry: id, changed: [], unknown: ["verifier:library.accepts"] }],
       withheld: [],
+      superseded: [],
     });
 
     // Revalidation needs fresh evidence of the new candidate and its own review.
@@ -807,8 +815,8 @@ describe("T3.6 L1-03 applicability, revalidation and conflicts", () => {
     assert.deepEqual(at(t2).current, []);
 
     supported(proposeAndAdmit(run, revalidate(invocationFor(run.dir, 2, target).ref)), "executed");
-    assert.deepEqual(at(t2), { current: [id], historical: [], withheld: [] });
-    assert.deepEqual(at(t1), { current: [id], historical: [], withheld: [] });
+    assert.deepEqual(at(t2), { current: [id], historical: [], withheld: [], superseded: [] });
+    assert.deepEqual(at(t1), { current: [id], historical: [], withheld: [], superseded: [] });
     const entry = view(run.dir).entries.find((e) => e.entry === id);
     assert.deepEqual(
       entry?.revisions.map((r) => [r.attempt, r.admission?.disposition]),
@@ -881,6 +889,7 @@ describe("T3.6 L1-03 applicability, revalidation and conflicts", () => {
       current: [n],
       historical: [{ entry: f, changed: ["harness"], unknown: [] }],
       withheld: [],
+      superseded: [],
     });
     assert.deepEqual(applicability(view(run.dir), changed("verifier:library.accepts")), {
       current: [],
@@ -889,6 +898,7 @@ describe("T3.6 L1-03 applicability, revalidation and conflicts", () => {
         { entry: f, changed: ["verifier:library.accepts"], unknown: [] },
       ],
       withheld: [],
+      superseded: [],
     });
   });
 
@@ -925,6 +935,7 @@ describe("T3.6 L1-03 applicability, revalidation and conflicts", () => {
       current: [id],
       historical: [],
       withheld: [],
+      superseded: [],
     });
 
     const edited = new Map(t2.tree).set(path, `100644 ${"0".repeat(40)}`);
@@ -932,6 +943,7 @@ describe("T3.6 L1-03 applicability, revalidation and conflicts", () => {
       current: [],
       historical: [{ entry: id, changed: [`path:${path}`], unknown: [] }],
       withheld: [],
+      superseded: [],
     });
     rejected(
       proposeAndAdmit(run, narrowed({ [path]: entryAt1 }, "Unreviewed narrowing.")),
@@ -954,6 +966,71 @@ describe("T3.6 L1-03 applicability, revalidation and conflicts", () => {
       /the scope is not the evaluation's: changed path:src\/absent\.mjs; unknown nothing/,
       /the scope keeps paths the inspection did not read: src\/absent\.mjs/,
     );
+  });
+
+  it("applies a correction only where the correcting revision holds, so a narrower claim stays current elsewhere", async () => {
+    const run = await reopen(w);
+    const [t1, t2] = [targetOf(run.dir, 1), targetOf(run.dir, 2)];
+    const path = "src/config.d.ts";
+    const entryAt1 = t1.tree.get(path);
+    assert.ok(entryAt1);
+    assert.equal(t2.tree.get(path), entryAt1);
+    const review = candidateReview(run.dir, 1);
+    const target = `${LIBRARY}/R01`;
+    const narrow = proposeAndAdmit(
+      run,
+      proposal(run, {
+        attempt: 1,
+        claim: {
+          assertion: "The declarations type parseConfig's result.",
+          target,
+          kind: "positive",
+        },
+        observations: [{ ref: review.ref, basis: "inspected" }],
+        scope: {
+          ...fullScope(run.dir, manifestOf(run.dir, 1)),
+          candidate: { paths: { [path]: entryAt1 } },
+        },
+      }),
+      (s) =>
+        reviewSession(run, s, { verdict: supportingVerdict(entryId(s.record), { scope: true }) }),
+    );
+    supported(narrow, "inspected");
+    const n = narrow.record.entry;
+    // A correction proved only for the first candidate.
+    const correction = proposeAndAdmit(
+      run,
+      proposal(run, {
+        attempt: 1,
+        claim: {
+          assertion: "At the first candidate, parseConfig's declared result omits a field.",
+          target,
+          kind: "counterexample",
+        },
+        observations: [{ ref: review.ref, basis: "inspected" }],
+        supersedes: [n],
+      }),
+    );
+    supported(correction, "inspected");
+    const c = correction.record.entry;
+    const v = view(run.dir);
+    const narrowed = v.entries.find((e) => e.entry === n);
+    assert.deepEqual(correction.record.relations, [
+      { relation: "supersedes", entry: n, revisions: [narrowed?.revisions[0]?.proposal] },
+    ]);
+    assert.deepEqual([narrowed?.disposition, narrowed?.supersededBy], ["supported", [c]]);
+    assert.deepEqual(applicability(v, t1), {
+      current: [c],
+      historical: [],
+      withheld: [],
+      superseded: [{ entry: n, by: [c] }],
+    });
+    assert.deepEqual(applicability(v, t2), {
+      current: [n],
+      historical: [{ entry: c, changed: ["candidate"], unknown: [] }],
+      withheld: [],
+      superseded: [],
+    });
   });
 
   it("records conflicts and corrections only as reviewed relations between claims about one target and scope", async () => {
@@ -987,7 +1064,7 @@ describe("T3.6 L1-03 applicability, revalidation and conflicts", () => {
     for (const a of [failed, compatible, unrelated])
       assert.equal(a.record.disposition, "supported");
     const [f, c, u] = [failed.record.entry, compatible.record.entry, unrelated.record.entry];
-    const all = { current: [f, c, u], historical: [], withheld: [] };
+    const all = { current: [f, c, u], historical: [], withheld: [], superseded: [] };
     assert.deepEqual(applicability(view(run.dir), t1), all);
 
     // Relations to claims about another target or scope, or not supported, are refused.
@@ -1074,6 +1151,7 @@ describe("T3.6 L1-03 applicability, revalidation and conflicts", () => {
         { entry: p, conflicts: [n] },
         { entry: n, conflicts: [p] },
       ],
+      superseded: [],
     };
     assert.deepEqual(applicability(view(run.dir), t1), conflictAt1);
 
@@ -1086,6 +1164,7 @@ describe("T3.6 L1-03 applicability, revalidation and conflicts", () => {
       current: [p, n],
       historical: [],
       withheld: [],
+      superseded: [],
     });
     assert.deepEqual(applicability(view(run.dir), t1), conflictAt1);
 
@@ -1127,11 +1206,13 @@ describe("T3.6 L1-03 applicability, revalidation and conflicts", () => {
       current: [p, n],
       historical: [{ entry: c, changed: ["candidate"], unknown: [] }],
       withheld: [],
+      superseded: [],
     });
     assert.deepEqual(applicability(v, t1), {
       current: [p, c],
-      historical: [{ entry: n, changed: ["candidate"], unknown: [] }],
+      historical: [],
       withheld: [],
+      superseded: [{ entry: n, by: [c] }],
     });
   });
 
@@ -1176,6 +1257,7 @@ describe("T3.6 L1-03 applicability, revalidation and conflicts", () => {
           { entry: c, conflicts: [m] },
           { entry: m, conflicts: [c] },
         ],
+        superseded: [],
       };
       assert.deepEqual(applicability(view(run.dir), t1), conflict);
 
@@ -1201,7 +1283,12 @@ describe("T3.6 L1-03 applicability, revalidation and conflicts", () => {
       supported(resolved, "executed");
       const r = resolved.record.entry;
       const v = view(run.dir);
-      assert.deepEqual(applicability(v, t1), { current: [c, u, r], historical: [], withheld: [] });
+      assert.deepEqual(applicability(v, t1), {
+        current: [c, u, r],
+        historical: [],
+        withheld: [],
+        superseded: [{ entry: m, by: [r] }],
+      });
       assert.deepEqual(
         v.entries.map((e) => [
           e.entry,
@@ -1212,7 +1299,7 @@ describe("T3.6 L1-03 applicability, revalidation and conflicts", () => {
         [
           [c, "supported", [], ["supported"]],
           [u, "supported", [], ["supported"]],
-          [m, "superseded", [r], ["supported"]],
+          [m, "supported", [r], ["supported"]],
           [r, "supported", [], ["rejected", "supported"]],
         ],
       );
