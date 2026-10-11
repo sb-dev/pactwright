@@ -2,10 +2,12 @@
 // learning log §2.1, with the applicability rules of §2.2; Spec 00 §4). An
 // agent proposes one claim about an evaluated candidate, citing original
 // observations by reference. A separate reviewer invocation assesses it. The
-// controller admits it only when every cited observation is committed
-// evidence of the claimed evaluation, an executed basis is a verifier result
-// for the claimed target, the scope matches that evaluation and the review
-// is independent; admission is derived here, never supplied by a caller.
+// controller admits it only when every cited observation is a committed
+// record of the claimed evaluation, an executed basis is a verifier result
+// for the claimed target, an inspected basis is a candidate review that read
+// the source, the scope keeps the evaluation's dependencies unless an
+// inspection and the review justify narrowing it, and the review is
+// independent; admission is derived here, never supplied by a caller.
 // Views are derived from committed journal events and immutable evidence
 // alone and are never saved. Nothing here produces an AcceptedOutput, and
 // the acceptance decision reads none of these records. Records carry their
@@ -26,7 +28,7 @@ import {
   type JournalEvent,
   type RunHandle,
 } from "./evidence.js";
-import { targetKey, type Invocation, type Stored } from "./verification.js";
+import { targetKey, type Invocation, type ReviewRecord, type Stored } from "./verification.js";
 import { treeEntries, type SourceSnapshot } from "./workspace.js";
 
 export const KNOWLEDGE_FORMAT = 1;
@@ -448,9 +450,9 @@ export function knowledgeView(dir: string, controller: string): Read<KnowledgeVi
  * Supported entries as they apply to a target. An entry is current when one
  * of its supported revisions matches the target in every part of its scope;
  * otherwise it is historical. Current entries that contradict each other on
- * one target, a positive result against a counterexample, are withheld until
- * a reviewed entry supersedes one of them. Rejected, proposed and superseded
- * entries are never current.
+ * one target, a positive result against a counterexample or failed approach,
+ * are withheld until a reviewed entry supersedes one side. Rejected, proposed
+ * and superseded entries are never current.
  */
 export function applicability(view: KnowledgeView, target: KnowledgeTarget): Applicability {
   const result: Applicability = { current: [], historical: [], withheld: [] };
@@ -474,8 +476,7 @@ export function applicability(view: KnowledgeView, target: KnowledgeTarget): App
       .filter(
         (other) =>
           other.claim.target === entry.claim.target &&
-          ((entry.claim.kind === "positive" && other.claim.kind === "counterexample") ||
-            (entry.claim.kind === "counterexample" && other.claim.kind === "positive")),
+          NEGATIVE.includes(other.claim.kind) !== NEGATIVE.includes(entry.claim.kind),
       )
       .map((other) => other.entry);
     if (conflicts.length > 0) result.withheld.push({ entry: entry.entry, conflicts });
@@ -516,6 +517,13 @@ export function proposeKnowledge(
   return { ref, record: proposal };
 }
 
+/** The record an event journals: `data.record`, else its first evidence. */
+const recordOf = (e: JournalEvent): string | undefined =>
+  typeof e.data.record === "string" ? e.data.record : e.evidence[0];
+
+/** The coverage subject a review uses to assess a scope narrower than its evaluation's. */
+export const scopeSubject = (entry: string): string => `${entry}/scope`;
+
 /** Why a committed proposal cannot be supported, and the basis it would be supported on. */
 function assess(
   dir: string,
@@ -531,6 +539,7 @@ function assess(
     among.find((e) => e.data.record === ref);
   const reasons: string[] = [];
 
+  // The scope is the evaluation's, or a narrowing of it: fewer dependencies or candidate paths.
   const evaluation = before.find(
     (e) =>
       e.action === "evaluation" &&
@@ -539,6 +548,7 @@ function assess(
       e.data.step === p.step,
   );
   const started = before.find((e) => e.action === "run-start");
+  let dependencies: Record<string, string> = {};
   if (!evaluation || !started) {
     reasons.push(`${p.step} attempt ${p.attempt} has no committed evaluation ${p.evaluation}`);
   } else {
@@ -548,13 +558,20 @@ function assess(
     const { config } = parse(dir, String(started.data.record)) as {
       config: { repository: { name: string } };
     };
-    const diff = scopeDiff(p.scope, knowledgeTarget(dir, config.repository.name, manifest));
+    const target = knowledgeTarget(dir, config.repository.name, manifest);
+    dependencies = target.dependencies;
+    const diff = scopeDiff(p.scope, target);
     if (diff.changed.length > 0 || diff.unknown.length > 0) {
       reasons.push(
         `the scope is not the evaluation's: changed ${diff.changed.join(", ") || "nothing"}; unknown ${diff.unknown.join(", ") || "nothing"}`,
       );
     }
   }
+  const omitted = Object.keys(dependencies)
+    .filter((name) => !Object.hasOwn(p.scope.dependencies, name))
+    .sort();
+  const paths = "paths" in p.scope.candidate ? Object.keys(p.scope.candidate.paths).sort() : [];
+  const narrowed = omitted.length > 0 || paths.length > 0;
   if (
     p.round !== null &&
     !before.some((e) => e.action === "pr-round" && e.data.round === p.round)
@@ -570,13 +587,19 @@ function assess(
     }
   }
 
-  // Each observation is committed evidence of the claimed evaluation; an
-  // executed one is an admitted verifier's result for the claimed target.
+  // Each observation is a typed record of the claimed evaluation, committed
+  // before the proposal. A child output, such as a run's stdout, is judged by
+  // the invocation that owns it. An executed observation is an admitted
+  // verifier's result for the claimed target; an inspected one is a
+  // candidate review whose recorded tool calls read the candidate's source.
   let basis: KnowledgeAdmission["basis"] = null;
+  const executed = new Set<string>();
+  const read = new Set<string>();
   if (p.observations.length === 0) reasons.push("the claim cites no observation");
   for (const { ref, basis: declared } of p.observations) {
     const at = `observation ${ref}`;
-    const listing = typed(ref, before) ?? before.find((e) => e.evidence.includes(ref));
+    const listing =
+      before.find((e) => recordOf(e) === ref) ?? before.find((e) => e.evidence.includes(ref));
     if (!listing) {
       const later = events.find((e) => e.evidence.includes(ref));
       const why = later?.action.startsWith("knowledge-")
@@ -596,7 +619,9 @@ function assess(
       reasons.push(`${at} belongs to attempt ${listing.attempt} evaluation ${listing.evaluation}`);
       continue;
     }
-    const record = listing.data.record === ref ? parse(dir, ref) : undefined;
+    const owner = recordOf(listing);
+    const child = owner !== ref;
+    const record = owner === undefined ? undefined : parse(dir, owner);
     const negative = NEGATIVE.includes(p.claim.kind);
     if (listing.action === "agent-invocation" && record !== undefined) {
       const outcome = (record as AgentOutcome).outcome;
@@ -621,6 +646,10 @@ function assess(
       );
       continue;
     }
+    if (child && declared !== "reported") {
+      reasons.push(`${at} is output of ${owner}; cite that record as the observation`);
+      continue;
+    }
     if (declared === "executed") {
       const expected = negative ? "failed" : "passed";
       const wrong = !invocation
@@ -633,12 +662,49 @@ function assess(
               ? `${result.outcome} ${p.claim.target}; the claim needs ${expected}`
               : null;
       if (wrong) reasons.push(`${at} ${wrong}`);
-      else basis = "executed";
-    } else if (declared === "inspected" && basis === null) basis = "inspected";
+      else {
+        basis = "executed";
+        executed.add(`verifier:${invocation?.binding ?? ""}`);
+      }
+    } else if (declared === "inspected") {
+      const reviewed = listing.action === "review" ? (record as ReviewRecord) : undefined;
+      const reads = (reviewed?.outcome.observation.toolCalls ?? []).filter(
+        (c) => c.tool === "read_file" && c.ok,
+      );
+      if (reviewed?.kind !== "candidate" || reviewed.outcome.outcome !== "reviewed") {
+        reasons.push(
+          `${at} is not a recorded source inspection: it is no completed candidate review`,
+        );
+      } else if (reads.length === 0) {
+        reasons.push(`${at} records no read of the candidate's source`);
+      } else {
+        for (const c of reads) read.add(c.target);
+        basis ??= "inspected";
+      }
+    }
   }
   if (p.observations.length > 0 && p.observations.every((o) => o.basis === "reported")) {
     reasons.push(
       "no observation is inspected or executed; reported observations remain historical context",
+    );
+  }
+
+  // An executed result always depends on its verifier and toolchain. Any
+  // other narrowing needs a source inspection of the paths it keeps and the
+  // review's explicit assessment of the narrower scope.
+  const kept = [...executed, "toolchain", "lockfile"].filter(
+    (name) => executed.size > 0 && omitted.includes(name),
+  );
+  if (kept.length > 0) {
+    reasons.push(`the scope omits ${kept.join(", ")}, on which its executed observations depend`);
+  }
+  if (narrowed && read.size === 0) {
+    reasons.push(
+      `the scope is narrower than its evaluation (omits ${omitted.join(", ") || "nothing"}; paths ${paths.join(", ") || "none"}) without a source inspection`,
+    );
+  } else if (paths.some((path) => !read.has(path))) {
+    reasons.push(
+      `the scope keeps paths the inspection did not read: ${paths.filter((path) => !read.has(path)).join(", ")}`,
     );
   }
 
@@ -672,14 +738,17 @@ function assess(
       );
     } else {
       const { verdict } = outcome;
-      const covered = verdict.coverage.some((c) => c.subject === entry && c.result === "satisfied");
+      const covers = (subject: string): boolean =>
+        verdict.coverage.some((c) => c.subject === subject && c.result === "satisfied");
       if (
         verdict.verdict !== "pass" ||
-        !covered ||
+        !covers(entry) ||
         verdict.blockers.length > 0 ||
         verdict.findings.some((f) => f.severity === "blocking")
       ) {
         reasons.push(`the review ${review} does not find the claim supported`);
+      } else if (narrowed && !covers(scopeSubject(entry))) {
+        reasons.push(`the review ${review} does not assess the narrower scope`);
       }
     }
   }

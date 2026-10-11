@@ -2,8 +2,10 @@
 // first library attempt fails one boundary target and is corrected, copies
 // of it reopened by a new controller epoch for knowledge records, proposals
 // that cite its committed observations, and separate proposer and reviewer
-// sessions recorded as the runner records agent invocations. Support comes
-// only from admitKnowledge; nothing here writes an admission.
+// sessions recorded as the runner records agent invocations. The run's
+// candidate reviews read the sealed candidate's library files, so they are
+// recorded source inspections. Support comes only from admitKnowledge;
+// nothing here writes an admission.
 
 import assert from "node:assert/strict";
 import { randomUUID } from "node:crypto";
@@ -36,6 +38,7 @@ import {
   evaluationDependencies,
   knowledgeTarget,
   proposeKnowledge,
+  scopeSubject,
   type Claim,
   type KnowledgeAdmission,
   type KnowledgeProposal,
@@ -43,19 +46,27 @@ import {
   type KnowledgeTarget,
 } from "../src/knowledge.js";
 import { startRun } from "../src/runner.js";
-import { targetKey, type Invocation, type Stored } from "../src/verification.js";
+import {
+  targetKey,
+  type Invocation,
+  type OpenWorkspace,
+  type ReviewRecord,
+  type Stored,
+} from "../src/verification.js";
+import { treeFiles } from "../src/workspace.js";
 import {
   assertAccepted,
   bootstrapConfig,
   bootstrapProducer,
   bootstrapRegistry,
   bootstrapRepo,
-  bootstrapReviewer,
   eventsOf,
   injectedFirst,
   LIBRARY,
+  workOf,
 } from "./bootstrap-fixtures.js";
-import { testDeps, type Repo } from "./runner-fixtures.js";
+import { scriptedAgent, testDeps, type Repo, type ScriptedAgent } from "./runner-fixtures.js";
+import { approveAll } from "./verification-fixtures.js";
 
 /** The controller identity of the fixture run and of its knowledge records. */
 export const CONTROLLER = "t3-6-l1-test";
@@ -65,6 +76,43 @@ export const BOUNDARY = `${LIBRARY}/AC03/port-above-highest/automated/library.re
 
 export type LearningRun = { dir: string; repo: Repo; scratch: string; plan: PreparedRun };
 
+/** The library's files, which every candidate review reads. */
+export const LIBRARY_FILES = workOf(LIBRARY).outputs["config-library"] ?? [];
+
+/** Read-only reviewer workspaces that serve the sealed snapshot's files. */
+const snapshotReviewers =
+  (dir: string): OpenWorkspace =>
+  (snapshot) =>
+    Promise.resolve({
+      snapshot,
+      readFile: (path) => {
+        const bytes = treeFiles(dir, snapshot.tree, path).get(path);
+        return Promise.resolve(
+          bytes ? { ok: true, bytes } : { ok: false, reason: `${path}: no such file` },
+        );
+      },
+      writeFile: () => Promise.resolve({ ok: false, reason: "Read-only file system" }),
+      exec: () =>
+        Promise.resolve({
+          exitCode: 1,
+          stdout: Buffer.alloc(0),
+          stderr: Buffer.alloc(0),
+          timedOut: false,
+        }),
+      close: () => Promise.resolve(),
+    });
+
+/** The bootstrap reviewer, reading the library's source before each candidate verdict. */
+const inspectingReviewer = (): ScriptedAgent =>
+  scriptedAgent(async (session) => {
+    if (session.packet.review?.kind === "candidate") {
+      for (const path of LIBRARY_FILES) {
+        assert.ok((await session.call("read_file", { path })).ok, `the review reads ${path}`);
+      }
+    }
+    return { output: approveAll(session.packet) };
+  });
+
 /** CP97 through its library step: attempt 1 fails BOUNDARY and is corrected, attempt 2 is accepted. */
 export async function learningRun(scratch: string): Promise<LearningRun> {
   const dir = join(scratch, randomUUID());
@@ -73,15 +121,18 @@ export async function learningRun(scratch: string): Promise<LearningRun> {
   const config = bootstrapConfig(repo, dir, { through: LIBRARY });
   const prepared = await prepareRun(config, { repoRoot: repo.root });
   assert.ok(prepared.ok, prepared.ok ? "" : prepared.diagnostics.join("\n"));
-  const result = await startRun(
-    config,
-    testDeps(repo, {
-      producer: bootstrapProducer(injectedFirst),
-      reviewer: bootstrapReviewer(false),
-      registry: bootstrapRegistry(),
-      harness: CONTROLLER,
-    }),
-  );
+  const deps = testDeps(repo, {
+    producer: bootstrapProducer(injectedFirst),
+    reviewer: inspectingReviewer(),
+    registry: bootstrapRegistry(),
+    harness: CONTROLLER,
+  });
+  const workspaces = deps.workspaces;
+  deps.workspaces = (run, root) => ({
+    ...workspaces(run, root),
+    reviewer: snapshotReviewers(run.dir),
+  });
+  const result = await startRun(config, deps);
   return { dir: assertAccepted(result, [LIBRARY]), repo, scratch: dir, plan: prepared.plan };
 }
 
@@ -135,6 +186,17 @@ export function evaluationOf(dir: string, attempt: number): Evaluated {
 export const targetOf = (dir: string, attempt: number): KnowledgeTarget =>
   knowledgeTarget(dir, repositoryOf(dir), evaluationOf(dir, attempt).record.manifest);
 
+/** The candidate review of `attempt`: a recorded source inspection of its library files. */
+export function candidateReview(dir: string, attempt: number): Found<ReviewRecord> {
+  const [found] = committed<ReviewRecord>(
+    dir,
+    "review",
+    (f) => f.event.attempt === attempt && f.record.kind === "candidate",
+  );
+  assert.ok(found, `attempt ${attempt}'s candidate was reviewed`);
+  return found;
+}
+
 /** The acceptance-stage verifier invocation of `attempt` with a result for `target`. */
 export function invocationFor(dir: string, attempt: number, target: string): Found<Invocation> {
   const [found] = committed<Invocation>(
@@ -162,24 +224,19 @@ export function passedTarget(dir: string, binding = "library.accepts"): string {
   return targetKey(passed.target);
 }
 
-/** The scope of an evaluation's whole candidate, relying on the named dependencies. */
+/** An evaluation's whole scope: its candidate and every dependency it records, but `omit`. */
 export function fullScope(
   dir: string,
   manifest: EvaluationManifest,
-  names: readonly string[] = [],
+  omit: readonly string[] = [],
 ): KnowledgeScope {
   const deps = evaluationDependencies(manifest);
+  for (const name of omit) assert.ok(deps[name], `the evaluation records ${name}`);
   return {
     repository: repositoryOf(dir),
     definitions: manifest.definitions,
     candidate: { commit: manifest.source.commit, tree: manifest.source.tree },
-    dependencies: Object.fromEntries(
-      names.map((n) => {
-        const digest = deps[n];
-        assert.ok(digest, `the evaluation records ${n}`);
-        return [n, digest];
-      }),
-    ),
+    dependencies: Object.fromEntries(Object.entries(deps).filter(([n]) => !omit.includes(n))),
   };
 }
 
@@ -220,16 +277,29 @@ export const proposerSession = (run: RunHandle, attempt = 2, session = randomUUI
     observation: sessionObservation(run.dir, "reviewer", attempt, session),
   });
 
-/** A verdict that finds `entry` supported. */
-export const supportingVerdict = (entry: string): ReviewVerdict => ({
+/** A verdict that finds `entry` supported and, with `scope`, its narrower scope justified. */
+export const supportingVerdict = (
+  entry: string,
+  options: { scope?: boolean; basis?: "executed" | "inspection" } = {},
+): ReviewVerdict => ({
   verdict: "pass",
   coverage: [
     {
       subject: entry,
       result: "satisfied",
-      basis: "inspection",
+      basis: options.basis ?? "inspection",
       note: "The cited observations establish the claim at its scope and no further.",
     },
+    ...(options.scope
+      ? [
+          {
+            subject: scopeSubject(entry),
+            result: "satisfied" as const,
+            basis: "inspection" as const,
+            note: "The inspected source shows the claim does not rely on the omitted dependencies.",
+          },
+        ]
+      : []),
   ],
   targets: [],
   findings: [],
@@ -298,15 +368,32 @@ export function proposeAndAdmit(
   return admitted.value;
 }
 
-/** A verifier invocation journaled as the verification path journals one. */
-export function journalInvocation(run: RunHandle, record: Invocation): string {
+/** Journals a record as the verification path does: the record first, then the evidence it owns. */
+export function journalRecord(
+  run: RunHandle,
+  action: "verifier-invocation" | "review",
+  record: { attempt: number; evaluation: string },
+  owned: readonly string[] = [],
+): string {
   const ref = putEvidence(run, stringify(record));
   appendEvent(run, {
-    action: "verifier-invocation",
+    action,
     attempt: record.attempt,
     evaluation: record.evaluation,
-    evidence: [ref],
-    data: { record: ref, binding: record.binding, stage: record.stage },
+    evidence: [ref, ...new Set(owned.filter((r) => r !== ref))],
+    data: { record: ref },
   });
   return ref;
 }
+
+/** A verifier invocation, with its runs' output, journaled as the verification path journals one. */
+export const journalInvocation = (run: RunHandle, record: Invocation): string =>
+  journalRecord(
+    run,
+    "verifier-invocation",
+    record,
+    [...record.subjects, ...(record.judge ? [record.judge] : [])].flatMap((r) => [
+      r.stdout,
+      r.stderr,
+    ]),
+  );

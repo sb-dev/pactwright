@@ -50,19 +50,23 @@ import {
   targetKey,
   type Decision,
   type Invocation,
+  type ReviewRecord,
   type Stored,
 } from "../src/verification.js";
 import type { WritePolicy } from "../src/workspace.js";
 import { bootstrapRegistry, LIBRARY } from "./bootstrap-fixtures.js";
 import {
   BOUNDARY,
+  candidateReview,
   committed,
   CONTROLLER,
   evaluationOf,
   fullScope,
   invocationFor,
   journalInvocation,
+  journalRecord,
   learningRun,
+  LIBRARY_FILES,
   passedTarget,
   proposal,
   proposeAndAdmit,
@@ -103,11 +107,6 @@ function fragment(run: RunHandle, fields: Partial<KnowledgeProposal> = {}): Know
       kind: "positive",
     },
     observations: [{ ref: invocationFor(run.dir, 1, target).ref, basis: "executed" }],
-    scope: fullScope(run.dir, manifestOf(run.dir, 1), [
-      "verifier:library.accepts",
-      "toolchain",
-      "configuration",
-    ]),
     ...fields,
   });
 }
@@ -125,7 +124,6 @@ function counterexample(
       kind: "counterexample",
     },
     observations: [{ ref: invocationFor(run.dir, 1, BOUNDARY).ref, basis: "executed" }],
-    scope: fullScope(run.dir, manifestOf(run.dir, 1), ["verifier:library.rejects"]),
     ...fields,
   });
 }
@@ -167,8 +165,7 @@ describe("T3.6 L1-01 knowledge admission", () => {
     const run = await reopen(w);
     supported(proposeAndAdmit(run, fragment(run)), "executed");
 
-    const [review] = committed(run.dir, "review", (f) => f.event.attempt === 1);
-    assert.ok(review, "the first attempt's candidate was reviewed");
+    const review = candidateReview(run.dir, 1);
     const inspected = proposeAndAdmit(
       run,
       fragment(run, {
@@ -182,7 +179,7 @@ describe("T3.6 L1-01 knowledge admission", () => {
     );
     supported(inspected, "inspected");
 
-    // A verifier result cited as inspected stays inspected.
+    // A reviewer that calls its assessment executed does not upgrade an inspection.
     const target = passedTarget(run.dir);
     const executed = invocationFor(run.dir, 1, target).ref;
     supported(
@@ -194,8 +191,12 @@ describe("T3.6 L1-01 knowledge admission", () => {
             target,
             kind: "positive",
           },
-          observations: [{ ref: executed, basis: "inspected" }],
+          observations: [{ ref: review.ref, basis: "inspected" }],
         }),
+        (s) =>
+          reviewSession(run, s, {
+            verdict: supportingVerdict(entryId(s.record), { basis: "executed" }),
+          }),
       ),
       "inspected",
     );
@@ -218,6 +219,59 @@ describe("T3.6 L1-01 knowledge admission", () => {
     assert.deepEqual(
       entry.revisions.map((r) => r.observations.map((o) => o.basis)),
       [["inspected", "executed", "reported"]],
+    );
+  });
+
+  it("refuses a relabelled report, verifier result or unread review as source inspection", async () => {
+    const run = await reopen(w);
+    const target = passedTarget(run.dir);
+    const review = candidateReview(run.dir, 1);
+    const reads = review.record.outcome.observation.toolCalls.filter((c) => c.tool === "read_file");
+    assert.deepEqual(
+      reads.map((c) => [c.target, c.ok]),
+      LIBRARY_FILES.map((path) => [path, true]),
+    );
+    const unreadReview: ReviewRecord = {
+      ...review.record,
+      outcome: {
+        ...review.record.outcome,
+        observation: { ...review.record.outcome.observation, toolCalls: [] },
+      },
+    };
+    const unread = journalRecord(run, "review", unreadReview);
+    const cases: [string, string, RegExp][] = [
+      [
+        "the failed candidate's producer report",
+        producerOf(run.dir, 1).ref,
+        /is not a recorded source inspection/,
+      ],
+      [
+        "a verifier result",
+        invocationFor(run.dir, 1, target).ref,
+        /is not a recorded source inspection/,
+      ],
+      ["a review that read nothing", unread, /records no read of the candidate's source/],
+    ];
+    for (const [name, ref, reason] of cases) {
+      const claim = {
+        assertion: `${name}: this case is parsed.`,
+        target,
+        kind: "positive" as const,
+      };
+      rejected(
+        proposeAndAdmit(run, fragment(run, { claim, observations: [{ ref, basis: "inspected" }] })),
+        reason,
+      );
+    }
+    supported(
+      proposeAndAdmit(
+        run,
+        fragment(run, {
+          claim: { assertion: "A read review: this case is parsed.", target, kind: "positive" },
+          observations: [{ ref: review.ref, basis: "inspected" }],
+        }),
+      ),
+      "inspected",
     );
   });
 
@@ -388,16 +442,16 @@ describe("T3.6 L1-01 knowledge admission", () => {
       ],
       [
         "another candidate's scope",
-        { scope: fullScope(run.dir, manifestOf(run.dir, 2), ["verifier:library.accepts"]) },
+        { scope: fullScope(run.dir, manifestOf(run.dir, 2)) },
         /the scope is not the evaluation's: changed candidate; unknown nothing/,
       ],
       [
         "a dependency the evaluation does not record",
         {
-          scope: {
-            ...fullScope(run.dir, manifestOf(run.dir, 1)),
-            dependencies: { "verifier:no.such-binding": sha256("no binding") },
-          },
+          scope: (({ dependencies, ...scope }) => ({
+            ...scope,
+            dependencies: { ...dependencies, "verifier:no.such-binding": sha256("no binding") },
+          }))(fullScope(run.dir, manifestOf(run.dir, 1))),
         },
         /unknown verifier:no\.such-binding/,
       ],
@@ -607,12 +661,16 @@ describe("T3.6 L1-02 negative results and fragments", () => {
         "the verifier did not run: the workspace could not be opened",
       ),
     }));
+    // Each variant's own run output is evidence it owns, judged by that invocation.
+    const invalidOutput = putEvidence(run, "the judge was stopped before it wrote a report");
     const invalid = variant((inv) => ({
+      judge: inv.judge && { ...inv.judge, stdout: invalidOutput },
       results: at(inv, "invalid", `the judge timed out after 30000 ms`),
     }));
+    const timedOutOutput = putEvidence(run, "partial output before the timeout");
     const timedOut = variant((inv) => ({
       subjects: inv.subjects.map((s) =>
-        s.target === BOUNDARY ? { ...s, timedOut: true, exit: null } : s,
+        s.target === BOUNDARY ? { ...s, timedOut: true, exit: null, stdout: timedOutOutput } : s,
       ),
       results: inv.results.map((r) =>
         targetKey(r.target) === BOUNDARY
@@ -651,9 +709,34 @@ describe("T3.6 L1-02 negative results and fragments", () => {
         /execution problem .*\(timed out\), not a disproof/,
       ],
       [
+        "timed-out subject output",
+        [{ ref: timedOutOutput, basis: "executed" }],
+        /execution problem .*\(timed out\), not a disproof/,
+      ],
+      [
+        "timed-out subject output inspected",
+        [{ ref: timedOutOutput, basis: "inspected" }],
+        /execution problem .*\(timed out\), not a disproof/,
+      ],
+      [
+        "invalid judge output",
+        [{ ref: invalidOutput, basis: "executed" }],
+        /execution problem .*\(invalid\), not a disproof/,
+      ],
+      [
         "provider failure",
         [{ ref: provider, basis: "inspected" }],
         /provider outcome "failed": an execution problem, not a disproof/,
+      ],
+      [
+        "the scoped failure's own output",
+        [
+          {
+            ref: real.subjects.find((s) => s.target === BOUNDARY)?.stdout ?? "",
+            basis: "executed",
+          },
+        ],
+        /is output of .*; cite that record as the observation/,
       ],
     ];
     for (const kind of ["counterexample", "failed-approach"] as const) {
@@ -716,11 +799,7 @@ describe("T3.6 L1-03 applicability, revalidation and conflicts", () => {
         attempt: 2,
         claim: original.claim,
         observations: [{ ref, basis: "executed" }],
-        scope: fullScope(run.dir, manifestOf(run.dir, 2), [
-          "verifier:library.accepts",
-          "toolchain",
-          "configuration",
-        ]),
+        scope: fullScope(run.dir, manifestOf(run.dir, 2)),
       });
     const stale = proposeAndAdmit(run, revalidate(invocationFor(run.dir, 1, target).ref));
     rejected(stale, /belongs to attempt 1 evaluation /);
@@ -741,18 +820,91 @@ describe("T3.6 L1-03 applicability, revalidation and conflicts", () => {
     );
   });
 
-  it("keeps a reviewed narrower scope current across unrelated candidate changes", async () => {
+  it("keeps an executed claim's verifier and toolchain, and narrows other dependencies only with inspection and review", async () => {
+    const run = await reopen(w);
+    const target = passedTarget(run.dir);
+    const executed = { ref: invocationFor(run.dir, 1, target).ref, basis: "executed" as const };
+    const review = candidateReview(run.dir, 1);
+    const inspected = { ref: review.ref, basis: "inspected" as const };
+    const narrowedBy = (omit: string[], observations: KnowledgeProposal["observations"]) =>
+      fragment(run, {
+        claim: {
+          assertion: `Without ${omit.join(", ")}: this case is parsed.`,
+          target,
+          kind: "positive",
+        },
+        observations,
+        scope: fullScope(run.dir, manifestOf(run.dir, 1), omit),
+      });
+    const scopeReviewed = (s: Stored<KnowledgeProposal>) =>
+      reviewSession(run, s, { verdict: supportingVerdict(entryId(s.record), { scope: true }) });
+
+    // The verifier and toolchain an executed result came from are never excluded.
+    for (const name of ["verifier:library.accepts", "toolchain"]) {
+      rejected(
+        proposeAndAdmit(run, narrowedBy([name], [executed])),
+        new RegExp(`the scope omits ${name}, on which its executed observations depend`),
+        /narrower than its evaluation .* without a source inspection/,
+        /does not assess the narrower scope/,
+      );
+      rejected(
+        proposeAndAdmit(run, narrowedBy([name], [executed, inspected]), scopeReviewed),
+        new RegExp(`the scope omits ${name}, on which its executed observations depend`),
+      );
+    }
+    // Any other exclusion needs a source inspection and the review's assessment of the scope.
+    rejected(
+      proposeAndAdmit(run, narrowedBy(["harness"], [executed]), scopeReviewed),
+      /the scope is narrower than its evaluation \(omits harness; paths none\) without a source inspection/,
+    );
+    rejected(
+      proposeAndAdmit(run, narrowedBy(["harness"], [executed, inspected])),
+      /does not assess the narrower scope/,
+    );
+
+    // A reviewed narrower scope survives a change it excludes, not one it keeps.
+    const narrow = proposeAndAdmit(
+      run,
+      narrowedBy(["harness", "run-model"], [executed, inspected]),
+      scopeReviewed,
+    );
+    supported(narrow, "executed");
+    const full = proposeAndAdmit(run, fragment(run));
+    supported(full, "executed");
+    const t1 = targetOf(run.dir, 1);
+    const changed = (name: string): KnowledgeTarget => ({
+      ...t1,
+      dependencies: { ...t1.dependencies, [name]: sha256(`changed ${name}`) },
+    });
+    const [n, f] = [narrow.record.entry, full.record.entry];
+    assert.deepEqual(applicability(view(run.dir), changed("harness")), {
+      current: [n],
+      historical: [{ entry: f, changed: ["harness"], unknown: [] }],
+      withheld: [],
+    });
+    assert.deepEqual(applicability(view(run.dir), changed("verifier:library.accepts")), {
+      current: [],
+      historical: [
+        { entry: n, changed: ["verifier:library.accepts"], unknown: [] },
+        { entry: f, changed: ["verifier:library.accepts"], unknown: [] },
+      ],
+      withheld: [],
+    });
+  });
+
+  it("keeps a reviewed narrower candidate scope current across unrelated candidate changes", async () => {
     const run = await reopen(w);
     const t1 = targetOf(run.dir, 1);
     const t2 = targetOf(run.dir, 2);
     const path = "src/config.d.ts";
     const entryAt1 = t1.tree.get(path);
-    assert.ok(entryAt1);
+    assert.ok(entryAt1 && LIBRARY_FILES.includes(path));
     assert.equal(t2.tree.get(path), entryAt1);
     assert.notEqual(t1.candidate.commit, t2.candidate.commit);
+    const unreadPath = [...t1.tree.keys()].find((p) => !LIBRARY_FILES.includes(p));
+    assert.ok(unreadPath);
 
-    const [review] = committed(run.dir, "review", (f) => f.event.attempt === 1);
-    assert.ok(review);
+    const review = candidateReview(run.dir, 1);
     const narrowed = (paths: Record<string, string>, assertion: string) =>
       proposal(run, {
         attempt: 1,
@@ -760,9 +912,12 @@ describe("T3.6 L1-03 applicability, revalidation and conflicts", () => {
         observations: [{ ref: review.ref, basis: "inspected" }],
         scope: { ...fullScope(run.dir, manifestOf(run.dir, 1)), candidate: { paths } },
       });
+    const scopeReviewed = (s: Stored<KnowledgeProposal>) =>
+      reviewSession(run, s, { verdict: supportingVerdict(entryId(s.record), { scope: true }) });
     const narrow = proposeAndAdmit(
       run,
       narrowed({ [path]: entryAt1 }, "The declarations type parseConfig's result."),
+      scopeReviewed,
     );
     supported(narrow, "inspected");
     const id = narrow.record.entry;
@@ -779,74 +934,116 @@ describe("T3.6 L1-03 applicability, revalidation and conflicts", () => {
       withheld: [],
     });
     rejected(
-      proposeAndAdmit(run, narrowed({ "src/absent.mjs": entryAt1 }, "An absent file is typed.")),
-      /the scope is not the evaluation's: changed path:src\/absent\.mjs; unknown nothing/,
+      proposeAndAdmit(run, narrowed({ [path]: entryAt1 }, "Unreviewed narrowing.")),
+      /does not assess the narrower scope/,
     );
-  });
-
-  it("withholds conflicting claims without deleting history until a reviewed supersession resolves them", async () => {
-    const run = await reopen(w);
-    const counter = proposeAndAdmit(run, counterexample(run));
-    const mistaken = proposeAndAdmit(
-      run,
-      counterexample(run, {
-        claim: {
-          assertion: "The first attempt's parser rejects a port above the highest valid port.",
-          target: BOUNDARY,
-          kind: "positive",
-        },
-        observations: [{ ref: producerOf(run.dir, 1).ref, basis: "inspected" }],
-      }),
-    );
-    supported(counter, "executed");
-    supported(mistaken, "inspected");
-    const [c, m] = [counter.record.entry, mistaken.record.entry];
-    const t1 = targetOf(run.dir, 1);
-    const conflict = {
-      current: [],
-      historical: [],
-      withheld: [
-        { entry: c, conflicts: [m] },
-        { entry: m, conflicts: [c] },
-      ],
-    };
-    assert.deepEqual(applicability(view(run.dir), t1), conflict);
-
-    const correction = (supersedes: string[]) =>
-      counterexample(run, {
-        claim: {
-          assertion: "Letting the highest-port boundary through was a failed approach.",
-          target: BOUNDARY,
-          kind: "failed-approach",
-        },
-        supersedes,
-      });
-    // An unreviewed correction resolves nothing.
     rejected(
-      proposeAndAdmit(run, correction([m]), () => null),
-      /has no independent review/,
+      proposeAndAdmit(
+        run,
+        narrowed({ [unreadPath]: t1.tree.get(unreadPath) ?? "" }, "An unread file."),
+        scopeReviewed,
+      ),
+      new RegExp(`the scope keeps paths the inspection did not read: ${unreadPath}`),
     );
-    assert.deepEqual(applicability(view(run.dir), t1), conflict);
-
-    const resolved = proposeAndAdmit(run, correction([m]));
-    supported(resolved, "executed");
-    const r = resolved.record.entry;
-    const v = view(run.dir);
-    assert.deepEqual(applicability(v, t1), { current: [c, r], historical: [], withheld: [] });
-    assert.deepEqual(
-      v.entries.map((e) => [
-        e.entry,
-        e.disposition,
-        e.supersededBy,
-        e.revisions.map((x) => x.admission?.disposition),
-      ]),
-      [
-        [c, "supported", [], ["supported"]],
-        [m, "superseded", [r], ["supported"]],
-        [r, "supported", [], ["rejected", "supported"]],
-      ],
+    rejected(
+      proposeAndAdmit(
+        run,
+        narrowed({ "src/absent.mjs": entryAt1 }, "An absent file is typed."),
+        scopeReviewed,
+      ),
+      /the scope is not the evaluation's: changed path:src\/absent\.mjs; unknown nothing/,
+      /the scope keeps paths the inspection did not read: src\/absent\.mjs/,
     );
   });
+
+  for (const negative of ["counterexample", "failed-approach"] as const) {
+    it(`withholds a positive claim and a contradicting ${negative} without deleting history until a reviewed supersession resolves them`, async () => {
+      const run = await reopen(w);
+      const failure = proposeAndAdmit(
+        run,
+        counterexample(run, {
+          claim: {
+            assertion: "The first attempt's parser accepts a port above the highest valid port.",
+            target: BOUNDARY,
+            kind: negative,
+          },
+        }),
+      );
+      const unrelated = proposeAndAdmit(run, fragment(run));
+      supported(failure, "executed");
+      supported(unrelated, "executed");
+      const t1 = targetOf(run.dir, 1);
+      const [c, u] = [failure.record.entry, unrelated.record.entry];
+      // A negative result and a positive claim about another target do not conflict.
+      assert.deepEqual(applicability(view(run.dir), t1), {
+        current: [c, u],
+        historical: [],
+        withheld: [],
+      });
+
+      const review = candidateReview(run.dir, 1);
+      const mistaken = proposeAndAdmit(
+        run,
+        counterexample(run, {
+          claim: {
+            assertion: "The first attempt's parser rejects a port above the highest valid port.",
+            target: BOUNDARY,
+            kind: "positive",
+          },
+          observations: [{ ref: review.ref, basis: "inspected" }],
+        }),
+      );
+      supported(mistaken, "inspected");
+      const m = mistaken.record.entry;
+      const conflict = {
+        current: [u],
+        historical: [],
+        withheld: [
+          { entry: c, conflicts: [m] },
+          { entry: m, conflicts: [c] },
+        ],
+      };
+      assert.deepEqual(applicability(view(run.dir), t1), conflict);
+
+      // Each proposal of the correction comes from its own proposer session.
+      const correction = (): KnowledgeProposal =>
+        counterexample(run, {
+          claim: {
+            assertion:
+              "Letting the highest-port boundary through is a defect of the first attempt.",
+            target: BOUNDARY,
+            kind: negative === "counterexample" ? "failed-approach" : "counterexample",
+          },
+          supersedes: [m],
+        });
+      // An unreviewed correction resolves nothing.
+      rejected(
+        proposeAndAdmit(run, correction(), () => null),
+        /has no independent review/,
+      );
+      assert.deepEqual(applicability(view(run.dir), t1), conflict);
+
+      const resolved = proposeAndAdmit(run, correction());
+      supported(resolved, "executed");
+      const r = resolved.record.entry;
+      const v = view(run.dir);
+      assert.deepEqual(applicability(v, t1), { current: [c, u, r], historical: [], withheld: [] });
+      assert.deepEqual(
+        v.entries.map((e) => [
+          e.entry,
+          e.disposition,
+          e.supersededBy,
+          e.revisions.map((x) => x.admission?.disposition),
+        ]),
+        [
+          [c, "supported", [], ["supported"]],
+          [u, "supported", [], ["supported"]],
+          [m, "superseded", [r], ["supported"]],
+          [r, "supported", [], ["rejected", "supported"]],
+        ],
+      );
+    });
+  }
 });
 
 describe("T3.6 L1-04 record recovery and compatibility", () => {
