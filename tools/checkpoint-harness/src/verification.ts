@@ -32,12 +32,14 @@ import {
   buildPacket,
   containedOps,
   invokeAgent,
+  recordInvocation,
   type AgentOutcome,
   type AgentRole,
   type Finding,
   type Provider,
   type ReviewContext,
   type ReviewVerdict,
+  type Proposals,
   type Submission,
   type ToolCall,
   type WorkspaceOps,
@@ -69,10 +71,35 @@ import {
   type RunHandle,
 } from "./evidence.js";
 import {
+  admitGuidance,
+  admitKnowledge,
+  applicability,
+  entryId,
+  evaluationDependencies,
+  evaluationScope,
+  guidanceId,
+  guidanceStatus,
+  guidanceSubjects,
+  knowledgeTarget,
+  learningViews,
+  proposeGuidance,
+  proposeKnowledge,
+  relationSubject,
+  scopeSubject,
+  type GuidanceAdmission,
+  type GuidanceProposal,
+  type GuidanceTarget,
+  type KnowledgeAdmission,
+  type KnowledgeProposal,
+  type Read,
+} from "./knowledge.js";
+import {
   adequacyRubric,
   bindingDigests,
   COMMON_RUBRIC,
   FEEDBACK_RUBRIC,
+  GUIDANCE_RUBRIC,
+  KNOWLEDGE_RUBRIC,
   needsAdmission,
   type AutomatedBinding,
   type Registry,
@@ -2546,4 +2573,509 @@ export function protectedVerifierPaths(
       ];
     }),
   );
+}
+
+// T3.6 L2: the learning purposes' sessions (evidence-backed learning log
+// §§2.1, 2.2 and 2.5). A proposer, with the reviewer's read-only settings,
+// studies a failed attempt's committed records and proposes claims and
+// reminders; the controller journals each well-formed proposal against that
+// evaluation. A separate reviewer session then assesses one proposal, and
+// the controller admits it from the committed records alone. None of these
+// sessions is a `review` record: acceptance never reads them.
+
+/** The rules a reminder may name for a step: its review subjects and every target key it is judged on. */
+export function guidanceRules(plan: PreparedRun, step: ContractStep): string[] {
+  return unique([
+    ...step.requirements.map((r) => `${step.id}/${r.id}`),
+    ...step.outputs.map((o) => `${step.id}/${o.id}`),
+    ...plan.inherited.requirements.map((r) => `${plan.checkpoint}/${r.id}`),
+    ...targetsOf(plan, step).map(targetKey),
+  ]);
+}
+
+/** The step, definitions, rubric and rules guidance of `step` is judged against now. */
+export const guidanceTarget = (plan: PreparedRun, step: ContractStep): GuidanceTarget => ({
+  step: step.id,
+  definitions: plan.definitionsDigest,
+  definition: definitionOf(plan, step.id),
+  rubric: COMMON_RUBRIC.digest,
+  rules: guidanceRules(plan, step),
+});
+
+/**
+ * A record as shown to a learning session: parsed when it is JSON, else its
+ * text, cut at 4 KiB. A reference the store lacks is shown as missing; the
+ * controller's admission refuses it.
+ */
+function shown(run: RunHandle, ref: string): Json {
+  let text: string;
+  try {
+    text = readEvidence(run.dir, ref).toString("utf8");
+  } catch {
+    return "[not in the evidence store]";
+  }
+  try {
+    return JSON.parse(text) as Json;
+  } catch {
+    return text.length > 4096 ? `${text.slice(0, 4096)}\n[truncated]` : text;
+  }
+}
+
+const readRecord =
+  (run: RunHandle) =>
+  (ref: string): Buffer | null => {
+    try {
+      return readEvidence(run.dir, ref);
+    } catch {
+      return null;
+    }
+  };
+
+/** The evaluation event of a step's attempt, and its record. */
+function evaluationRecord(
+  run: RunHandle,
+  events: readonly JournalEvent[],
+  step: string,
+  attempt: number,
+  evaluation: string,
+): { candidate: SealedCandidate; manifest: EvaluationManifest } {
+  const [found] = journalRecords<{ candidate: SealedCandidate; manifest: EvaluationManifest }>(
+    run,
+    events,
+    "evaluation",
+    (e) => e.data.step === step && e.attempt === attempt && e.evaluation === evaluation,
+  );
+  if (!found)
+    throw new Error(`${step} attempt ${attempt} has no committed evaluation ${evaluation}`);
+  return found.record;
+}
+
+/** Runs one read-only learning session on `candidate` and journals it with `data`. */
+async function learningSession(
+  run: RunHandle,
+  input: {
+    plan: PreparedRun;
+    step: string;
+    attempt: number;
+    candidate: SealedCandidate;
+    accepted: readonly AcceptedOutput[];
+    reviewer: ReviewerAccess;
+    review?: ReviewContext;
+    proposal?: Parameters<typeof buildPacket>[3]["proposal"];
+    records: readonly string[];
+    data: JsonObject;
+  },
+): Promise<{ ref: string; outcome: AgentOutcome }> {
+  const { reviewer } = input;
+  if (reviewer.role.name !== "reviewer")
+    throw new Error("learning sessions need the reviewer role");
+  const built = buildPacket(input.plan, input.step, reviewer.role, {
+    attempt: input.attempt,
+    accepted: input.accepted,
+    policy: READ_ONLY,
+    candidate: input.candidate,
+    records: input.records,
+    ...(input.review ? { review: input.review } : {}),
+    ...(input.proposal ? { proposal: input.proposal } : {}),
+  });
+  if (!built.ok) throw new Error(built.diagnostics.join("\n"));
+  const ws = await reviewer.open(input.candidate);
+  let outcome: AgentOutcome;
+  try {
+    if (!sameSnapshot(ws.snapshot, input.candidate)) {
+      throw new Error(
+        `the learning workspace holds ${ws.snapshot.commit}, not the candidate ${input.candidate.commit}`,
+      );
+    }
+    outcome = await invokeAgent(reviewer.role, built.packet, ws, reviewer.signal, {
+      ...(reviewer.provider ? { provider: reviewer.provider } : {}),
+      records: readRecord(run),
+    });
+  } finally {
+    await ws.close().catch(() => undefined);
+  }
+  const event = recordInvocation(run, outcome, input.data);
+  return { ref: String(event.data.record), outcome };
+}
+
+export type LearningProposals = {
+  /** The proposer's journaled invocation. */
+  invocation: string;
+  outcome: AgentOutcome["outcome"];
+  knowledge: string[];
+  guidance: string[];
+  /** Proposed items the controller refused to journal, with why. */
+  refused: string[];
+};
+
+/**
+ * A learning proposer's session on a failed attempt's sealed candidate (T3.6
+ * L2): it is shown the evaluation's committed observations, the step's
+ * reviewed failures and its knowledge and guidance, and may read each listed
+ * record. Every well-formed proposal is journaled against the evaluation,
+ * with the evaluation's whole scope; admission decides support later.
+ */
+export async function proposeLearning(
+  run: RunHandle,
+  input: {
+    plan: PreparedRun;
+    step: string;
+    attempt: number;
+    evaluation: string;
+    accepted: readonly AcceptedOutput[];
+    controller: string;
+    repository: string;
+    reminderChars: number;
+    reviewer: ReviewerAccess;
+  },
+): Promise<LearningProposals> {
+  const step = contractStep(input.plan, input.step);
+  const events = committedEvents(run);
+  const { candidate, manifest } = evaluationRecord(
+    run,
+    events,
+    step.id,
+    input.attempt,
+    input.evaluation,
+  );
+  const thisEvaluation = (e: JournalEvent): boolean =>
+    e.attempt === input.attempt && e.evaluation === input.evaluation;
+  const invocations = journalRecords<Invocation>(
+    run,
+    events,
+    "verifier-invocation",
+    (e) => thisEvaluation(e) && e.data.stage === "acceptance",
+  );
+  const reviews = journalRecords<ReviewRecord>(run, events, "review", thisEvaluation);
+  const producer = producerInvocation(run, events, step.id, input.attempt);
+  // The step's reviewed failures: each candidate review's blocking findings, by index.
+  const evaluations = new Set(
+    events
+      .filter((e) => e.action === "evaluation" && e.data.step === step.id && e.attempt !== null)
+      .map((e) => `${e.attempt}/${e.evaluation}`),
+  );
+  const failures = journalRecords<ReviewRecord>(
+    run,
+    events,
+    "review",
+    (e) => evaluations.has(`${e.attempt}/${e.evaluation}`) && (e.attempt ?? 0) <= input.attempt,
+  ).flatMap(({ ref, record }) =>
+    record.kind === "candidate" && record.outcome.outcome === "reviewed"
+      ? [
+          {
+            review: ref,
+            attempt: record.attempt,
+            findings: record.outcome.verdict.findings.flatMap((f, index) =>
+              f.severity === "blocking"
+                ? [{ index, rule: f.rule, location: f.location, defect: f.defect }]
+                : [],
+            ),
+          },
+        ].filter((x) => x.findings.length > 0)
+      : [],
+  );
+  const views = learningViews(run.dir, input.controller, { events });
+  if (!views.ok) throw new Error(views.diagnostics.join("\n"));
+  const target = knowledgeTarget(run.dir, input.repository, manifest);
+  const applies = applicability(views.value.knowledge, target);
+  const statusOf = (entry: string): string =>
+    applies.current.includes(entry)
+      ? "current"
+      : applies.withheld.some((x) => x.entry === entry)
+        ? "withheld"
+        : applies.superseded.some((x) => x.entry === entry)
+          ? "superseded"
+          : applies.historical.some((x) => x.entry === entry)
+            ? "historical"
+            : "unsupported";
+  const knowledge = views.value.knowledge.entries
+    .filter((e) => e.step === step.id)
+    .map((e) => ({
+      entry: e.entry,
+      claim: e.claim,
+      status: statusOf(e.entry),
+      revision: e.revisions.at(-1)?.proposal ?? null,
+    }));
+  const status = guidanceStatus(views.value.guidance, guidanceTarget(input.plan, step));
+  const guidanceState = (id: string): string =>
+    status.current.some((x) => x.guidance === id)
+      ? "current"
+      : status.withheld.some((x) => x.guidance === id)
+        ? "withheld"
+        : status.stale.some((x) => x.guidance === id)
+          ? "stale"
+          : status.withdrawn.some((x) => x.guidance === id)
+            ? "withdrawn"
+            : "unsupported";
+  const guidance = views.value.guidance.entries
+    .filter((e) => e.step === step.id)
+    .map((e) => ({
+      guidance: e.guidance,
+      rule: e.rule,
+      cause: e.cause,
+      text: e.versions.at(-1)?.text ?? null,
+      status: guidanceState(e.guidance),
+      version: e.versions.at(-1)?.proposal ?? null,
+    }));
+  const observations: Json[] = [
+    ...invocations.map(({ ref, record }) => ({
+      ref,
+      action: "verifier-invocation",
+      binding: record.binding,
+      results: verificationSummary([{ ref, record }]),
+    })),
+    ...reviews.map(({ ref, record }) => ({
+      ref,
+      action: "review",
+      kind: record.kind,
+      verdict:
+        record.outcome.outcome === "reviewed" ? (record.outcome.verdict as unknown as Json) : null,
+    })),
+    ...(producer
+      ? [
+          {
+            ref: producer.ref,
+            action: "agent-invocation",
+            outcome: producer.record.outcome,
+            commands: commandsOf(producer.record).map((c) => ({
+              command: c.target,
+              exit: c.exit ?? null,
+            })),
+          },
+        ]
+      : []),
+  ];
+  const records = unique([
+    ...invocations.map((i) => i.ref),
+    ...reviews.map((r) => r.ref),
+    ...(producer ? [producer.ref] : []),
+    ...failures.map((f) => f.review),
+    ...knowledge.flatMap((k) => (k.revision ? [k.revision] : [])),
+    ...guidance.flatMap((g) => (g.version ? [g.version] : [])),
+  ]);
+  const session = await learningSession(run, {
+    plan: input.plan,
+    step: step.id,
+    attempt: input.attempt,
+    candidate,
+    accepted: input.accepted,
+    reviewer: input.reviewer,
+    proposal: {
+      evaluation: input.evaluation,
+      observations,
+      failures,
+      knowledge: knowledge as unknown as Json,
+      guidance,
+      limits: { reminderChars: input.reminderChars },
+    },
+    records,
+    data: { step: step.id, purpose: "learning-proposal", evaluation: input.evaluation },
+  });
+  const result: LearningProposals = {
+    invocation: session.ref,
+    outcome: session.outcome.outcome,
+    knowledge: [],
+    guidance: [],
+    refused: [],
+  };
+  if (session.outcome.outcome !== "proposed") return result;
+  const proposals: Proposals = session.outcome.proposals;
+  const base = {
+    format: 1 as const,
+    controller: input.controller,
+    run: run.run,
+    step: step.id,
+    attempt: input.attempt,
+    evaluation: input.evaluation,
+    round: null,
+    proposer: session.ref,
+  };
+  for (const [i, k] of proposals.knowledge.entries()) {
+    const proposal: KnowledgeProposal = {
+      ...base,
+      claim: { assertion: k.assertion, target: k.target, kind: k.kind },
+      observations: k.observations,
+      scope: evaluationScope(input.repository, manifest),
+      contradicts: k.contradicts,
+      supersedes: k.supersedes,
+    };
+    try {
+      result.knowledge.push(proposeKnowledge(run, proposal).ref);
+    } catch (e) {
+      result.refused.push(`knowledge ${i}: ${message(e)}`);
+    }
+  }
+  for (const [i, g] of proposals.guidance.entries()) {
+    const proposal: GuidanceProposal = {
+      ...base,
+      guidance: { rule: g.rule, cause: g.cause, text: g.text },
+      reason: g.reason,
+      occurrences: g.occurrences,
+      contradicts: g.contradicts,
+    };
+    try {
+      result.guidance.push(proposeGuidance(run, proposal).ref);
+    } catch (e) {
+      result.refused.push(`guidance ${i}: ${message(e)}`);
+    }
+  }
+  return result;
+}
+
+export type LearningReview = {
+  /** The reviewer's journaled invocation. */
+  review: string;
+  outcome: AgentOutcome["outcome"];
+  /** The controller's admission, once the session returned a review; null otherwise, so the review can be repeated. */
+  admission: Read<Stored<KnowledgeAdmission | GuidanceAdmission>> | null;
+};
+
+/**
+ * The independent review of one committed knowledge or guidance proposal
+ * (T3.6 L2): a fresh reviewer session on the proposal's candidate, shown the
+ * proposal, its original records and the entries it relates to, under the
+ * knowledge or guidance rubric, with each subject admission needs. A
+ * completed review is admitted by the controller from the committed records.
+ */
+export async function reviewLearning(
+  run: RunHandle,
+  input: {
+    plan: PreparedRun;
+    proposal: string;
+    accepted: readonly AcceptedOutput[];
+    controller: string;
+    reminderChars: number;
+    reviewer: ReviewerAccess;
+  },
+): Promise<LearningReview> {
+  const events = committedEvents(run);
+  const event = events.find(
+    (e) =>
+      (e.action === "knowledge-proposal" || e.action === "guidance-proposal") &&
+      e.data.record === input.proposal,
+  );
+  if (!event) throw new Error(`${input.proposal} is not a committed proposal`);
+  const views = learningViews(run.dir, input.controller, { events });
+  if (!views.ok) throw new Error(views.diagnostics.join("\n"));
+  const knowledge = event.action === "knowledge-proposal";
+  const record = JSON.parse(readEvidence(run.dir, input.proposal).toString("utf8")) as
+    KnowledgeProposal | GuidanceProposal;
+  const step = contractStep(input.plan, record.step);
+  const { candidate, manifest } = evaluationRecord(
+    run,
+    events,
+    step.id,
+    record.attempt,
+    record.evaluation,
+  );
+  let context: ReviewContext;
+  let records: string[];
+  if (knowledge) {
+    const p = record as KnowledgeProposal;
+    const entry = entryId(p);
+    const omitted = Object.keys(evaluationDependencies(manifest)).some(
+      (name) => !Object.hasOwn(p.scope.dependencies, name),
+    );
+    const narrowed = omitted || "paths" in p.scope.candidate;
+    const relations = [
+      ...p.contradicts.map((id) => ["contradicts", id] as const),
+      ...p.supersedes.map((id) => ["supersedes", id] as const),
+    ];
+    const related = views.value.knowledge.entries.filter((e) =>
+      relations.some(([, id]) => id === e.entry),
+    );
+    context = {
+      kind: "knowledge",
+      rubric: KNOWLEDGE_RUBRIC,
+      subjects: [
+        entry,
+        ...(narrowed ? [scopeSubject(entry)] : []),
+        ...relations.map(([relation, id]) => relationSubject(entry, relation, id)),
+      ],
+      targets: [],
+      bindings: [],
+      evidence: {
+        proposal: input.proposal,
+        claim: p.claim,
+        scope: p.scope as unknown as Json,
+        observations: p.observations.map((o) => ({
+          ref: o.ref,
+          basis: o.basis,
+          record: shown(run, o.ref),
+        })),
+        related: related.map((e) => ({
+          entry: e.entry,
+          claim: e.claim,
+          revisions: e.revisions.map((r) => r.proposal),
+        })),
+      },
+    };
+    records = unique([
+      ...p.observations.map((o) => o.ref),
+      ...related.flatMap((e) => e.revisions.map((r) => r.proposal)),
+    ]);
+  } else {
+    const p = record as GuidanceProposal;
+    const related = views.value.guidance.entries.filter((e) => p.contradicts.includes(e.guidance));
+    context = {
+      kind: "guidance",
+      rubric: GUIDANCE_RUBRIC,
+      subjects: guidanceSubjects(p),
+      targets: [],
+      bindings: [],
+      evidence: {
+        proposal: input.proposal,
+        guidance: { id: guidanceId(p), ...p.guidance },
+        reason: p.reason,
+        occurrences: p.occurrences.map((o, index) => ({
+          subject: `${guidanceId(p)}/occurrence/${index}`,
+          review: o.review,
+          finding: o.finding,
+          record: shown(run, o.review),
+        })),
+        related: related.map((e) => ({
+          guidance: e.guidance,
+          rule: e.rule,
+          cause: e.cause,
+          text: e.versions.at(-1)?.text ?? null,
+        })),
+      },
+    };
+    records = unique([
+      ...p.occurrences.map((o) => o.review),
+      ...related.flatMap((e) => e.versions.map((v) => v.proposal)),
+    ]);
+  }
+  const session = await learningSession(run, {
+    plan: input.plan,
+    step: step.id,
+    attempt: record.attempt,
+    candidate,
+    accepted: input.accepted,
+    reviewer: input.reviewer,
+    review: context,
+    records,
+    data: {
+      step: step.id,
+      purpose: knowledge ? "knowledge-review" : "guidance-review",
+      proposal: input.proposal,
+    },
+  });
+  if (session.outcome.outcome !== "reviewed") {
+    return { review: session.ref, outcome: session.outcome.outcome, admission: null };
+  }
+  const admission = knowledge
+    ? admitKnowledge(run, {
+        proposal: input.proposal,
+        review: session.ref,
+        controller: input.controller,
+      })
+    : admitGuidance(run, {
+        proposal: input.proposal,
+        review: session.ref,
+        controller: input.controller,
+        rules: guidanceRules(input.plan, step),
+        reminderChars: input.reminderChars,
+      });
+  return { review: session.ref, outcome: session.outcome.outcome, admission };
 }

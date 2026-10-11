@@ -13,8 +13,10 @@
 // containment, a denied write to a protected path, the effective session
 // (tools, MCP server, authentication, model), and a fresh read-only reviewer
 // session on the sealed candidate. Each session runs with its role's admitted
-// model and effort and reports applying exactly them. No outcome here is
-// acceptance.
+// model and effort and reports applying exactly them. T3.6 L2 adds fresh
+// reviewer-role sessions of the three learning purposes: a learning proposal,
+// a knowledge review and a guidance review, each with read_evidence limited
+// to the records its packet lists. No outcome here is acceptance.
 
 import assert from "node:assert/strict";
 import { execFileSync } from "node:child_process";
@@ -33,9 +35,19 @@ import {
   type AgentOutcome,
   type AgentRole,
   type Finding,
+  type ProposalContext,
+  type ReviewContext,
 } from "../../src/claude.js";
-import { prepareRun, type PreparedRun } from "../../src/contracts.js";
-import { createRun, readRun, releaseRun, type RunHandle } from "../../src/evidence.js";
+import { prepareRun, sha256, type PreparedRun } from "../../src/contracts.js";
+import {
+  createRun,
+  readEvidence,
+  readRun,
+  releaseRun,
+  type RunHandle,
+} from "../../src/evidence.js";
+import { GUIDANCE_RUBRIC, KNOWLEDGE_RUBRIC } from "../../src/software-bootstrap.js";
+import { checkVerdict } from "../../src/verification.js";
 import {
   createWorkspace,
   fence,
@@ -313,6 +325,140 @@ describe("T3-C live: one real producer and a fresh read-only reviewer", () => {
       assert.deepEqual(o.skills.selected, ["code-review-and-quality"]);
     } finally {
       await fence(ws);
+    }
+  });
+
+  it("fresh learning sessions return each purpose's structured result (T3.6 L2)", async () => {
+    assert.ok(candidate && produced, "the producer step ran");
+    const readOnly: WritePolicy = { writable: [], scratch: [], protected: [] };
+    const read = readRun(run.dir);
+    assert.ok(read.ok);
+    const record = String(
+      read.records.events.find((e) => e.action === "agent-invocation")?.data.record ?? "",
+    );
+    assert.match(record, /^sha256:/, "the producer's session is a committed record");
+    const records = (ref: string): Buffer | null => {
+      try {
+        return readEvidence(run.dir, ref);
+      } catch {
+        return null;
+      }
+    };
+    const entry = sha256("live knowledge entry");
+    const guidance = sha256("live guidance");
+    const proposal: ProposalContext = {
+      evaluation: sha256("live evaluation"),
+      observations: [{ ref: record, action: "agent-invocation", outcome: produced.outcome }],
+      failures: [],
+      knowledge: [],
+      guidance: [],
+      limits: { reminderChars: 300 },
+    };
+    const knowledge: ReviewContext = {
+      kind: "knowledge",
+      rubric: KNOWLEDGE_RUBRIC,
+      subjects: [entry],
+      targets: [],
+      bindings: [],
+      evidence: {
+        proposal: entry,
+        claim: {
+          assertion: "src/lib.ts exports answer as 43.",
+          target: "CP99-S01/R01",
+          kind: "positive",
+        },
+        observations: [
+          { ref: record, basis: "reported", record: "the producer's recorded session" },
+        ],
+        related: [],
+      },
+    };
+    const reminder: ReviewContext = {
+      kind: "guidance",
+      rubric: GUIDANCE_RUBRIC,
+      subjects: [
+        guidance,
+        `${guidance}/authority`,
+        `${guidance}/occurrence/0`,
+        `${guidance}/occurrence/1`,
+      ],
+      targets: [],
+      bindings: [],
+      evidence: {
+        proposal: guidance,
+        guidance: {
+          id: guidance,
+          rule: "CP99-S01/R01",
+          cause: "the exported value was not checked",
+          text: "Before submitting, read src/lib.ts back and check the exported value.",
+        },
+        reason: "two attempts left the value unchecked",
+        occurrences: [0, 1].map((i) => ({
+          subject: `${guidance}/occurrence/${i}`,
+          review: record,
+          finding: i,
+          record: "the producer's recorded session",
+        })),
+        related: [],
+      },
+    };
+    const sessions: { purpose: string; proposal?: ProposalContext; review?: ReviewContext }[] = [
+      { purpose: "learning-proposal", proposal },
+      { purpose: "knowledge-review", review: knowledge },
+      { purpose: "guidance-review", review: reminder },
+    ];
+    const seen = new Set([produced.observation.session]);
+    for (const s of sessions) {
+      const ws = await createWorkspace(run, {
+        base: { commit: candidate.commit, tree: candidate.tree },
+        root: join(scratch, `learning-${s.purpose}`),
+        policy: readOnly,
+      });
+      try {
+        const built = buildPacket(plan, "CP99-S01", reviewer, {
+          attempt: 1,
+          accepted: [],
+          policy: readOnly,
+          candidate,
+          records: [record],
+          ...(s.proposal ? { proposal: s.proposal } : {}),
+          ...(s.review ? { review: s.review } : {}),
+        });
+        assert.ok(built.ok);
+        const outcome = await invokeAgent(
+          reviewer,
+          built.packet,
+          containedOps(ws),
+          AbortSignal.timeout(900_000),
+          { records },
+        );
+        process.stdout.write(`# ${s.purpose}: ${JSON.stringify(outcome)}\n`);
+        const o = outcome.observation;
+        assert.equal(
+          outcome.outcome,
+          s.proposal ? "proposed" : "reviewed",
+          JSON.stringify(outcome),
+        );
+        assert.ok(o.session && !seen.has(o.session), "a fresh session");
+        seen.add(o.session);
+        assert.equal(o.model.reported, reviewer.model);
+        assert.deepEqual(o.effort, { configured: reviewer.effort, reported: [reviewer.effort] });
+        assert.deepEqual(o.tools, [
+          "StructuredOutput",
+          "mcp__workspace__read_evidence",
+          "mcp__workspace__read_file",
+          "mcp__workspace__search_files",
+        ]);
+        assert.ok(
+          o.toolCalls.every((c) => ["read_file", "search_files", "read_evidence"].includes(c.tool)),
+        );
+        if (s.review) {
+          const checked = checkVerdict(outcome, { subjects: s.review.subjects, targets: [] });
+          assert.ok(checked.ok, checked.ok ? "" : checked.issues.join("; "));
+        }
+      } finally {
+        await fence(ws);
+      }
     }
     releaseRun(run);
   });
