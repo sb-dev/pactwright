@@ -38,6 +38,7 @@ import {
   evaluationDependencies,
   knowledgeTarget,
   proposeKnowledge,
+  relationSubject,
   scopeSubject,
   type Claim,
   type KnowledgeAdmission,
@@ -277,10 +278,17 @@ export const proposerSession = (run: RunHandle, attempt = 2, session = randomUUI
     observation: sessionObservation(run.dir, "reviewer", attempt, session),
   });
 
-/** A verdict that finds `entry` supported and, with `scope`, its narrower scope justified. */
+/**
+ * A verdict that finds `entry` supported and, with `scope`, its narrower
+ * scope justified; with `relations`, each recorded contradiction or correction.
+ */
 export const supportingVerdict = (
   entry: string,
-  options: { scope?: boolean; basis?: "executed" | "inspection" } = {},
+  options: {
+    scope?: boolean;
+    basis?: "executed" | "inspection";
+    relations?: readonly (readonly ["contradicts" | "supersedes", string])[];
+  } = {},
 ): ReviewVerdict => ({
   verdict: "pass",
   coverage: [
@@ -300,23 +308,37 @@ export const supportingVerdict = (
           },
         ]
       : []),
+    ...(options.relations ?? []).map(([relation, other]) => ({
+      subject: relationSubject(entry, relation, other),
+      result: "satisfied" as const,
+      basis: "inspection" as const,
+      note: `The cited observations show this claim ${relation} ${other} at the same scope.`,
+    })),
   ],
   targets: [],
   findings: [],
   blockers: [],
 });
 
-/** A separate reviewer session assessing `proposal`; returns its record reference. */
+/**
+ * A separate reviewer session assessing `proposal`; returns its record
+ * reference. By default its verdict covers the proposal's recorded relations.
+ */
 export function reviewSession(
   run: RunHandle,
   proposal: Stored<KnowledgeProposal>,
   options: { session?: string; verdict?: ReviewVerdict; for?: string; attempt?: number } = {},
 ): string {
+  const { contradicts, supersedes } = proposal.record;
+  const relations = [
+    ...contradicts.map((id) => ["contradicts", id] as const),
+    ...supersedes.map((id) => ["supersedes", id] as const),
+  ];
   return recordSession(
     run,
     {
       outcome: "reviewed",
-      verdict: options.verdict ?? supportingVerdict(entryId(proposal.record)),
+      verdict: options.verdict ?? supportingVerdict(entryId(proposal.record), { relations }),
       observation: sessionObservation(
         run.dir,
         "reviewer",
@@ -347,6 +369,7 @@ export function proposal(
     round: null,
     scope: fullScope(run.dir, evaluated.record.manifest),
     proposer: fields.proposer ?? proposerSession(run),
+    contradicts: [],
     supersedes: [],
     ...fields,
   };

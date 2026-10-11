@@ -459,7 +459,7 @@ describe("T3.6 L1-01 knowledge admission", () => {
       [
         "an unknown superseded entry",
         { supersedes: [sha256("no entry")] },
-        /which is not an earlier entry/,
+        /supersedes .*, which is not a supported earlier entry/,
       ],
     ];
     for (const [name, fields, reason] of cases) {
@@ -956,8 +956,86 @@ describe("T3.6 L1-03 applicability, revalidation and conflicts", () => {
     );
   });
 
+  it("records conflicts and corrections only as reviewed relations between claims about one target and scope", async () => {
+    const run = await reopen(w);
+    const review = candidateReview(run.dir, 1);
+    const t1 = targetOf(run.dir, 1);
+    const failed = proposeAndAdmit(
+      run,
+      counterexample(run, {
+        claim: {
+          assertion: "The first attempt's upper-bound check lets the highest-port case through.",
+          target: BOUNDARY,
+          kind: "failed-approach",
+        },
+      }),
+    );
+    // A compatible positive claim about the same target: no relation, no conflict.
+    const compatible = proposeAndAdmit(
+      run,
+      counterexample(run, {
+        claim: {
+          assertion:
+            "The first attempt's parser reads the port as an integer before its range check.",
+          target: BOUNDARY,
+          kind: "positive",
+        },
+        observations: [{ ref: review.ref, basis: "inspected" }],
+      }),
+    );
+    const unrelated = proposeAndAdmit(run, fragment(run));
+    for (const a of [failed, compatible, unrelated])
+      assert.equal(a.record.disposition, "supported");
+    const [f, c, u] = [failed.record.entry, compatible.record.entry, unrelated.record.entry];
+    const all = { current: [f, c, u], historical: [], withheld: [] };
+    assert.deepEqual(applicability(view(run.dir), t1), all);
+
+    // Relations to claims about another target or scope, or not supported, are refused.
+    const boundary = (assertion: string, fields: Partial<KnowledgeProposal>) =>
+      counterexample(run, {
+        claim: { assertion, target: BOUNDARY, kind: "counterexample" },
+        ...fields,
+      });
+    rejected(
+      proposeAndAdmit(run, boundary("Supersedes an unrelated claim.", { supersedes: [u] })),
+      new RegExp(
+        `supersedes ${u}, a claim about ${LIBRARY} ${passedTarget(run.dir)}, not ${LIBRARY} ${BOUNDARY}`,
+      ),
+    );
+    rejected(
+      proposeAndAdmit(run, boundary("Contradicts an unrelated claim.", { contradicts: [u] })),
+      new RegExp(`contradicts ${u}, a claim about`),
+    );
+    const pending = proposeKnowledge(run, boundary("Not yet admitted.", {}));
+    rejected(
+      proposeAndAdmit(
+        run,
+        boundary("Supersedes a pending claim.", { supersedes: [entryId(pending.record)] }),
+      ),
+      /which is not a supported earlier entry/,
+    );
+    const later = proposal(run, {
+      attempt: 2,
+      claim: { assertion: "Attempt 2 contradicts attempt 1.", target: BOUNDARY, kind: "positive" },
+      observations: [{ ref: invocationFor(run.dir, 2, BOUNDARY).ref, basis: "executed" }],
+      contradicts: [f],
+    });
+    rejected(
+      proposeAndAdmit(run, later),
+      new RegExp(`contradicts ${f}, which does not hold at this evaluation's scope`),
+    );
+    // A relation the review does not assess is refused too.
+    rejected(
+      proposeAndAdmit(run, boundary("Unassessed correction.", { supersedes: [c] }), (s) =>
+        reviewSession(run, s, { verdict: supportingVerdict(entryId(s.record)) }),
+      ),
+      new RegExp(`does not assess that the entry supersedes ${c}`),
+    );
+    assert.deepEqual(applicability(view(run.dir), t1), all);
+  });
+
   for (const negative of ["counterexample", "failed-approach"] as const) {
-    it(`withholds a positive claim and a contradicting ${negative} without deleting history until a reviewed supersession resolves them`, async () => {
+    it(`withholds a positive claim and a ${negative} it is reviewed to contradict, until a reviewed correction supersedes it`, async () => {
       const run = await reopen(w);
       const failure = proposeAndAdmit(
         run,
@@ -974,12 +1052,6 @@ describe("T3.6 L1-03 applicability, revalidation and conflicts", () => {
       supported(unrelated, "executed");
       const t1 = targetOf(run.dir, 1);
       const [c, u] = [failure.record.entry, unrelated.record.entry];
-      // A negative result and a positive claim about another target do not conflict.
-      assert.deepEqual(applicability(view(run.dir), t1), {
-        current: [c, u],
-        historical: [],
-        withheld: [],
-      });
 
       const review = candidateReview(run.dir, 1);
       const mistaken = proposeAndAdmit(
@@ -991,6 +1063,7 @@ describe("T3.6 L1-03 applicability, revalidation and conflicts", () => {
             kind: "positive",
           },
           observations: [{ ref: review.ref, basis: "inspected" }],
+          contradicts: [c],
         }),
       );
       supported(mistaken, "inspected");

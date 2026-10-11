@@ -6,8 +6,10 @@
 // record of the claimed evaluation, an executed basis is a verifier result
 // for the claimed target, an inspected basis is a candidate review that read
 // the source, the scope keeps the evaluation's dependencies unless an
-// inspection and the review justify narrowing it, and the review is
-// independent; admission is derived here, never supplied by a caller.
+// inspection and the review justify narrowing it, every contradiction or
+// correction it records relates exact entries about the same target and
+// scope, and the review is independent and assesses each of those; admission
+// is derived here, never supplied by a caller.
 // Views are derived from committed journal events and immutable evidence
 // alone and are never saved. Nothing here produces an AcceptedOutput, and
 // the acceptance decision reads none of these records. Records carry their
@@ -66,6 +68,8 @@ export type KnowledgeProposal = {
   observations: { ref: string; basis: Basis }[];
   scope: KnowledgeScope;
   proposer: string;
+  /** Entries whose claims this one contradicts at the same target and scope. */
+  contradicts: string[];
   /** Entries this one corrects; they stop being current once it is supported. */
   supersedes: string[];
 };
@@ -188,6 +192,7 @@ const validateProposal = ajv.compile<KnowledgeProposal>(
       dependencies: { type: "object", additionalProperties: TEXT },
     }),
     proposer: DIGEST,
+    contradicts: DIGESTS,
     supersedes: DIGESTS,
   }),
 );
@@ -403,6 +408,7 @@ export function knowledgeView(dir: string, controller: string): Read<KnowledgeVi
       observations: p.observations,
       scope: p.scope,
       proposer: p.proposer,
+      contradicts: p.contradicts,
       supersedes: p.supersedes,
       admission: a
         ? {
@@ -449,9 +455,9 @@ export function knowledgeView(dir: string, controller: string): Read<KnowledgeVi
 /**
  * Supported entries as they apply to a target. An entry is current when one
  * of its supported revisions matches the target in every part of its scope;
- * otherwise it is historical. Current entries that contradict each other on
- * one target, a positive result against a counterexample or failed approach,
- * are withheld until a reviewed entry supersedes one side. Rejected, proposed
+ * otherwise it is historical. Current entries joined by a contradiction that
+ * a supported revision records are withheld until a reviewed entry supersedes
+ * one side; a claim's kind alone never makes a conflict. Rejected, proposed
  * and superseded entries are never current.
  */
 export function applicability(view: KnowledgeView, target: KnowledgeTarget): Applicability {
@@ -471,13 +477,13 @@ export function applicability(view: KnowledgeView, target: KnowledgeTarget): App
       });
     }
   }
+  const contradicts = (a: KnowledgeEntry, b: KnowledgeEntry): boolean =>
+    a.revisions.some(
+      (r) => r.admission?.disposition === "supported" && r.contradicts.includes(b.entry),
+    );
   for (const entry of applicable) {
     const conflicts = applicable
-      .filter(
-        (other) =>
-          other.claim.target === entry.claim.target &&
-          NEGATIVE.includes(other.claim.kind) !== NEGATIVE.includes(entry.claim.kind),
-      )
+      .filter((other) => contradicts(entry, other) || contradicts(other, entry))
       .map((other) => other.entry);
     if (conflicts.length > 0) result.withheld.push({ entry: entry.entry, conflicts });
     else result.current.push(entry.entry);
@@ -524,6 +530,13 @@ const recordOf = (e: JournalEvent): string | undefined =>
 /** The coverage subject a review uses to assess a scope narrower than its evaluation's. */
 export const scopeSubject = (entry: string): string => `${entry}/scope`;
 
+/** The coverage subject a review uses to assess a recorded contradiction or correction. */
+export const relationSubject = (
+  entry: string,
+  relation: "contradicts" | "supersedes",
+  other: string,
+): string => `${entry}/${relation}/${other}`;
+
 /** Why a committed proposal cannot be supported, and the basis it would be supported on. */
 function assess(
   dir: string,
@@ -548,7 +561,7 @@ function assess(
       e.data.step === p.step,
   );
   const started = before.find((e) => e.action === "run-start");
-  let dependencies: Record<string, string> = {};
+  let target: KnowledgeTarget | null = null;
   if (!evaluation || !started) {
     reasons.push(`${p.step} attempt ${p.attempt} has no committed evaluation ${p.evaluation}`);
   } else {
@@ -558,8 +571,7 @@ function assess(
     const { config } = parse(dir, String(started.data.record)) as {
       config: { repository: { name: string } };
     };
-    const target = knowledgeTarget(dir, config.repository.name, manifest);
-    dependencies = target.dependencies;
+    target = knowledgeTarget(dir, config.repository.name, manifest);
     const diff = scopeDiff(p.scope, target);
     if (diff.changed.length > 0 || diff.unknown.length > 0) {
       reasons.push(
@@ -567,7 +579,7 @@ function assess(
       );
     }
   }
-  const omitted = Object.keys(dependencies)
+  const omitted = Object.keys(target?.dependencies ?? {})
     .filter((name) => !Object.hasOwn(p.scope.dependencies, name))
     .sort();
   const paths = "paths" in p.scope.candidate ? Object.keys(p.scope.candidate.paths).sort() : [];
@@ -578,12 +590,36 @@ function assess(
   ) {
     reasons.push(`pull-request round ${p.round} is not committed`);
   }
-  const known = new Set(
-    records.proposals.filter((x) => x.seq < proposal.seq).map((x) => entryId(x.record)),
-  );
-  for (const id of p.supersedes) {
-    if (id === entry || !known.has(id)) {
-      reasons.push(`supersedes ${id}, which is not an earlier entry`);
+  // A contradiction or correction relates this claim to a supported earlier
+  // claim about the same step and target that holds at this evaluation.
+  const relations = [
+    ...p.contradicts.map((id) => ["contradicts", id] as const),
+    ...p.supersedes.map((id) => ["supersedes", id] as const),
+  ];
+  for (const [relation, id] of relations) {
+    const revisions = records.proposals.filter(
+      (x) =>
+        x.seq < proposal.seq &&
+        entryId(x.record) === id &&
+        records.admissions.some(
+          (a) => a.record.proposal === x.ref && a.record.disposition === "supported",
+        ),
+    );
+    const [first] = revisions;
+    if (id === entry || !first) {
+      reasons.push(`${relation} ${id}, which is not a supported earlier entry`);
+    } else if (first.record.step !== p.step || first.record.claim.target !== p.claim.target) {
+      reasons.push(
+        `${relation} ${id}, a claim about ${first.record.step} ${first.record.claim.target}, not ${p.step} ${p.claim.target}`,
+      );
+    } else if (
+      target &&
+      !revisions.some((x) => {
+        const diff = scopeDiff(x.record.scope, target as KnowledgeTarget);
+        return diff.changed.length === 0 && diff.unknown.length === 0;
+      })
+    ) {
+      reasons.push(`${relation} ${id}, which does not hold at this evaluation's scope`);
     }
   }
 
@@ -749,6 +785,11 @@ function assess(
         reasons.push(`the review ${review} does not find the claim supported`);
       } else if (narrowed && !covers(scopeSubject(entry))) {
         reasons.push(`the review ${review} does not assess the narrower scope`);
+      }
+      for (const [relation, id] of relations) {
+        if (!covers(relationSubject(entry, relation, id))) {
+          reasons.push(`the review ${review} does not assess that the entry ${relation} ${id}`);
+        }
       }
     }
   }
