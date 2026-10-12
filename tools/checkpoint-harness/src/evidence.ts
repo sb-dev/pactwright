@@ -661,6 +661,13 @@ export type EvaluationManifest = {
    * new evaluation, while an unrelated journal record changes nothing.
    */
   context?: { manifest: string; stale: string[] };
+  /**
+   * The exploration routing the evaluated attempt followed (T3.6 L3), by
+   * record reference. Its acceptance then needs a current cross-attempt
+   * challenge. Absent for an attempt that followed none, so other digests
+   * are unchanged.
+   */
+  exploration?: string;
 };
 
 /** An inherited target an evaluation leaves pending, by key, and the rule that defers it. */

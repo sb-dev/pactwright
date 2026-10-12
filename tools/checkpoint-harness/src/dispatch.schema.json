@@ -87,6 +87,25 @@
               "minimum": 1
             }
           }
+        },
+        "phases": {
+          "description": "The runner's learning phases (T3.6 L3, evidence-backed learning log §§2.3, 2.4 and 2.6). Absent: the runner schedules none, as under L2, and the run cannot satisfy T3.6 feature proof. Present: after an attempt is decided `correct`, a proposal session and an independent review of each proposal; before the next attempt, at most one exploration round when a reviewed choice or a reviewed failure repeated across two correction attempts calls for one; and, after an explored attempt's independent review, the cross-attempt challenge its acceptance then needs. Every session reserves its allowance under the existing budgets. Whether learning and its phases are configured is fixed for the run.",
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["exploration_rounds", "check_timeout_seconds"],
+          "properties": {
+            "exploration_rounds": {
+              "description": "Most exploration rounds the whole run may hold. A trigger once they are used pauses the run as exhausted; it is never skipped.",
+              "type": "integer",
+              "minimum": 0
+            },
+            "check_timeout_seconds": {
+              "description": "Longest time one diagnostic check may run, within run_command's limit.",
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 600
+            }
+          }
         }
       }
     }

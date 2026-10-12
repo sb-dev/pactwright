@@ -31,10 +31,13 @@ import stringify from "safe-stable-stringify";
 import {
   buildPacket,
   containedOps,
+  DIAGNOSTIC_BRIEFINGS,
   invokeAgent,
   recordInvocation,
   type AgentOutcome,
   type AgentRole,
+  type DiagnosticSide,
+  type ExplorationInputs,
   type Finding,
   type Provider,
   type ReviewContext,
@@ -81,26 +84,31 @@ import {
   guidanceStatus,
   guidanceSubjects,
   knowledgeTarget,
+  learningInputs,
   learningViews,
   proposeGuidance,
   proposeKnowledge,
   relationSubject,
   scopeSubject,
+  type ContextManifest,
   type GuidanceAdmission,
   type GuidanceProposal,
   type GuidanceTarget,
   type KnowledgeAdmission,
   type KnowledgeProposal,
+  type LearningInputs,
   type Read,
 } from "./knowledge.js";
 import {
   adequacyRubric,
   bindingDigests,
+  CHALLENGE_RUBRIC,
   COMMON_RUBRIC,
   FEEDBACK_RUBRIC,
   GUIDANCE_RUBRIC,
   KNOWLEDGE_RUBRIC,
   needsAdmission,
+  SELECTION_RUBRIC,
   type AutomatedBinding,
   type Registry,
   type RegistryEntry,
@@ -193,6 +201,12 @@ export type ReviewRecord = Identity & {
   packet: string;
   /** The checkpoint evidence the reviewer was shown, for the exit evaluation; else null. */
   checkpoint: string | null;
+  /**
+   * The committed records the reviewer was given and could read, frozen at
+   * dispatch: a cross-attempt challenge's history (T3.6 L3). Absent for
+   * every other review.
+   */
+  records?: string[];
   outcome: AgentOutcome;
 };
 
@@ -1147,16 +1161,21 @@ async function runReview(
     /** The checkpoint evidence the context shows, for the exit evaluation. */
     checkpoint: string | null;
     reviewer: ReviewerAccess;
+    /** Committed records the reviewer may read with read_evidence (T3.6 L3); none by default. */
+    records?: readonly string[];
   },
 ): Promise<Stored<ReviewRecord>> {
   const { identity, reviewer } = input;
   if (reviewer.role.name !== "reviewer") throw new Error("review needs the reviewer role");
+  // In the given order: a challenge's binding review comes first.
+  const records = input.records ? [...new Set(input.records)] : undefined;
   const built = buildPacket(input.plan, input.step.id, reviewer.role, {
     attempt: identity.attempt,
     accepted: input.accepted,
     policy: READ_ONLY,
     candidate: input.candidate,
     review: input.context,
+    ...(records ? { records } : {}),
   });
   if (!built.ok) throw new Error(built.diagnostics.join("\n"));
   const ws = await reviewer.open(input.candidate);
@@ -1168,13 +1187,10 @@ async function runReview(
         `the reviewer workspace holds ${ws.snapshot.commit}, not the candidate ${input.candidate.commit}`,
       );
     }
-    outcome = await invokeAgent(
-      reviewer.role,
-      built.packet,
-      ws,
-      reviewer.signal,
-      reviewer.provider ? { provider: reviewer.provider } : {},
-    );
+    outcome = await invokeAgent(reviewer.role, built.packet, ws, reviewer.signal, {
+      ...(reviewer.provider ? { provider: reviewer.provider } : {}),
+      ...(records ? { records: readRecord(run) } : {}),
+    });
   } finally {
     await ws.close().catch((e: unknown) => {
       cleanup = message(e);
@@ -1189,13 +1205,21 @@ async function runReview(
     rubric: input.context.rubric.digest,
     packet: built.digest,
     checkpoint: input.checkpoint,
+    ...(records ? { records } : {}),
     outcome,
   } satisfies ReviewRecord);
-  journal(run, "review", identity, stored.ref, [...input.shown, input.checkpoint], {
-    kind: input.context.kind,
-    outcome: outcome.outcome,
-    session: outcome.observation.session,
-  });
+  journal(
+    run,
+    "review",
+    identity,
+    stored.ref,
+    [...input.shown, input.checkpoint, ...(records ?? [])],
+    {
+      kind: input.context.kind,
+      outcome: outcome.outcome,
+      session: outcome.observation.session,
+    },
+  );
   return stored;
 }
 
@@ -2332,6 +2356,7 @@ export function decideAcceptance(input: AcceptanceInput): Decision {
   const scope = reviewScope(plan, step, registry, manifest.pending);
   let verdict: ReviewVerdict | null = null;
   let bound: ReviewRecord | null = null;
+  let boundRef: string | null = null;
   const protocol: string[] = [];
   for (const stored of input.reviews) {
     const label = `review ${stored.ref}`;
@@ -2358,6 +2383,7 @@ export function decideAcceptance(input: AcceptanceInput): Decision {
       }
     }
     bound = stored.record;
+    boundRef = stored.ref;
     evidence.add(stored.ref);
     break;
   }
@@ -2418,6 +2444,82 @@ export function decideAcceptance(input: AcceptanceInput): Decision {
       // The reviewer must have been shown exactly these paths and contents.
       if (bound.outputs.some((q) => stringify(q) === stringify(p))) provenOutputs.push(p);
       else reason("retry", `${step.id}/${p.output}`, "the review was shown other paths for it");
+    }
+  }
+
+  // T3.6 L3: an attempt that followed an exploration is accepted only with a
+  // current cross-attempt challenge of this evaluation that was given its
+  // binding review. Its findings correct like the common review's.
+  if (manifest.exploration !== undefined) {
+    const subjects = challengeSubjects(step.id);
+    let challenged: ReviewVerdict | null = null;
+    let found = false;
+    const issues: string[] = [];
+    for (const stored of input.reviews) {
+      const label = `challenge ${stored.ref}`;
+      if (stored.record.kind !== "challenge" || !current(label, stored)) continue;
+      if (stored.record.rubric !== CHALLENGE_RUBRIC.digest) {
+        reason("retry", label, "it applied another rubric than the challenge rubric");
+        continue;
+      }
+      if (boundRef === null || stored.record.records?.[0] !== boundRef) {
+        issues.push(`${label} was not given the binding review`);
+        continue;
+      }
+      const checked = checkVerdict(stored.record.outcome, { subjects, targets: [] });
+      if (!checked.ok) {
+        const negative = negatives(stored.record.outcome);
+        if (negative.length === 0) {
+          issues.push(...checked.issues);
+          continue;
+        }
+        reason(
+          "owner",
+          "challenge",
+          `an incomplete challenge judged against: ${negative.join("; ")}`,
+        );
+      } else {
+        challenged = checked.verdict;
+        if (checked.conflicts.length > 0) {
+          reason(
+            "owner",
+            "challenge",
+            `the challenge contradicts itself: ${checked.conflicts.join("; ")}`,
+          );
+        }
+      }
+      found = true;
+      evidence.add(stored.ref);
+      break;
+    }
+    if (!found) {
+      reason(
+        "retry",
+        "challenge",
+        issues.length > 0
+          ? `no complete cross-attempt challenge: ${issues.join("; ")}`
+          : "the required cross-attempt challenge is missing",
+      );
+    } else if (challenged?.verdict === "blocked") {
+      reason("owner", "challenge", `the challenge is blocked: ${challenged.blockers.join("; ")}`);
+    } else if (challenged) {
+      for (const s of unassessed(challenged)) {
+        reason("owner", s, "the cross-attempt challenge could not assess it");
+      }
+      const blocking = blockingFindings(challenged);
+      for (const f of blocking) correct(f, linksOf(f.rule));
+      for (const c of challenged.coverage) {
+        if (c.result !== "unsatisfied" || blocking.some((f) => f.rule === c.subject)) continue;
+        correct(
+          {
+            rule: c.subject,
+            location: "cross-attempt challenge",
+            defect: c.note || "not met",
+            correction: `meet ${c.subject}`,
+          },
+          [],
+        );
+      }
     }
   }
 
@@ -2662,6 +2764,10 @@ async function learningSession(
     reviewer: ReviewerAccess;
     review?: ReviewContext;
     proposal?: Parameters<typeof buildPacket>[3]["proposal"];
+    /** A diagnostic session's context, findings and frozen learning inputs (T3.6 L3). */
+    diagnosis?: Parameters<typeof buildPacket>[3]["diagnosis"];
+    findings?: readonly Finding[];
+    learning?: LearningInputs;
     records: readonly string[];
     data: JsonObject;
   },
@@ -2677,6 +2783,9 @@ async function learningSession(
     records: input.records,
     ...(input.review ? { review: input.review } : {}),
     ...(input.proposal ? { proposal: input.proposal } : {}),
+    ...(input.diagnosis ? { diagnosis: input.diagnosis } : {}),
+    ...(input.findings ? { findings: input.findings } : {}),
+    ...(input.learning ? { learning: input.learning } : {}),
   });
   if (!built.ok) throw new Error(built.diagnostics.join("\n"));
   const ws = await reviewer.open(input.candidate);
@@ -2727,6 +2836,8 @@ export async function proposeLearning(
     repository: string;
     reminderChars: number;
     reviewer: ReviewerAccess;
+    /** The runner's phase key, journaled with the session (T3.6 L3). */
+    key?: string;
   },
 ): Promise<LearningProposals> {
   const step = contractStep(input.plan, input.step);
@@ -2869,7 +2980,12 @@ export async function proposeLearning(
       limits: { reminderChars: input.reminderChars },
     },
     records,
-    data: { step: step.id, purpose: "learning-proposal", evaluation: input.evaluation },
+    data: {
+      step: step.id,
+      purpose: "learning-proposal",
+      evaluation: input.evaluation,
+      ...(input.key ? { key: input.key } : {}),
+    },
   });
   const result: LearningProposals = {
     invocation: session.ref,
@@ -2946,6 +3062,8 @@ export async function reviewLearning(
     controller: string;
     reminderChars: number;
     reviewer: ReviewerAccess;
+    /** The runner's phase key, journaled with the session (T3.6 L3). */
+    key?: string;
   },
 ): Promise<LearningReview> {
   const events = committedEvents(run);
@@ -3059,23 +3177,819 @@ export async function reviewLearning(
       step: step.id,
       purpose: knowledge ? "knowledge-review" : "guidance-review",
       proposal: input.proposal,
+      ...(input.key ? { key: input.key } : {}),
     },
   });
   if (session.outcome.outcome !== "reviewed") {
     return { review: session.ref, outcome: session.outcome.outcome, admission: null };
   }
-  const admission = knowledge
-    ? admitKnowledge(run, {
-        proposal: input.proposal,
-        review: session.ref,
-        controller: input.controller,
-      })
-    : admitGuidance(run, {
-        proposal: input.proposal,
-        review: session.ref,
-        controller: input.controller,
-        rules: guidanceRules(input.plan, step),
-        reminderChars: input.reminderChars,
-      });
+  const admission = admitLearning(run, { ...input, review: session.ref });
   return { review: session.ref, outcome: session.outcome.outcome, admission };
+}
+
+/**
+ * The controller's admission of a committed proposal from its committed
+ * review (T3.6 L2), without a session: a review whose admission was lost
+ * with its runner is admitted from the journal, never reviewed again (T3.6 L3).
+ */
+export function admitLearning(
+  run: RunHandle,
+  input: {
+    plan: PreparedRun;
+    proposal: string;
+    review: string;
+    controller: string;
+    reminderChars: number;
+  },
+): Read<Stored<KnowledgeAdmission | GuidanceAdmission>> {
+  const event = committedEvents(run).find(
+    (e) =>
+      (e.action === "knowledge-proposal" || e.action === "guidance-proposal") &&
+      e.data.record === input.proposal,
+  );
+  if (!event) throw new Error(`${input.proposal} is not a committed proposal`);
+  if (event.action === "knowledge-proposal") {
+    return admitKnowledge(run, {
+      proposal: input.proposal,
+      review: input.review,
+      controller: input.controller,
+    });
+  }
+  const record = JSON.parse(
+    readEvidence(run.dir, input.proposal).toString("utf8"),
+  ) as GuidanceProposal;
+  return admitGuidance(run, {
+    proposal: input.proposal,
+    review: input.review,
+    controller: input.controller,
+    rules: guidanceRules(input.plan, contractStep(input.plan, record.step)),
+    reminderChars: input.reminderChars,
+  });
+}
+
+// T3.6 L3: exploration and cross-attempt review (evidence-backed learning
+// log §§2.3–2.4). Before a production attempt that a reviewed choice or a
+// reviewed failure repeated across two correction attempts calls for, the
+// controller records the trigger and freezes what both diagnoses are shown.
+// Two fresh read-only sessions then study the same sealed candidate in turn,
+// and neither is shown the other's result. A proposed check runs only after
+// the controller validates it, on a fresh read-only copy of that candidate
+// in the existing containment. A separate reviewer compares the diagnoses;
+// the controller validates its recommendation and routes the attempt.
+// Selection accepts nothing. After the independent review of the routed
+// attempt's candidate, a cross-attempt challenge reviews it against the
+// step's history, and its acceptance needs that challenge.
+
+/** One reviewed blocking finding a trigger rests on: its review record and index. */
+export type Occurrence = { attempt: number; review: string; finding: number };
+
+/**
+ * Why a step's next attempt is explored: a reviewed blocking finding naming
+ * an unresolved choice, or one rule's reviewed blocking failure in two
+ * consecutive correction attempts that were correcting it. `cause` is the
+ * latest occurrence's choice or defect, as the review recorded it.
+ */
+export type Trigger = {
+  kind: "choice" | "repeated";
+  rule: string;
+  cause: string;
+  occurrences: Occurrence[];
+};
+
+/** The format of the exploration records (T3.6 L3); another format is refused, never migrated. */
+export const EXPLORATION_FORMAT = 1;
+
+/** An exploration round's opening record, journaled before any of its sessions. */
+export type ExplorationStart = {
+  format: typeof EXPLORATION_FORMAT;
+  controller: string;
+  run: string;
+  step: string;
+  /** The production attempt the exploration precedes. */
+  attempt: number;
+  /** The run's count of exploration rounds, this one included. */
+  round: number;
+  trigger: Trigger;
+  /** The sealed candidate both diagnoses inspect; the attempt starts from it. */
+  candidate: SealedCandidate;
+  /** The findings the attempt corrects. */
+  findings: Finding[];
+  /** The diagnoses' frozen learning context; null when the run selects none. */
+  context: ContextManifest | null;
+  /** Further records both diagnoses may read: the trigger's reviews and the decided attempt's observations. */
+  records: string[];
+  limits: { checkTimeoutSeconds: number };
+};
+
+/**
+ * A diagnosis's check: refused by the controller with its reasons, run in a
+ * fresh read-only workspace of the explored candidate, or unavailable when
+ * that workspace could not run it. No prepared dependencies are mounted.
+ */
+export type ExplorationCheck = {
+  format: typeof EXPLORATION_FORMAT;
+  controller: string;
+  run: string;
+  step: string;
+  attempt: number;
+  exploration: string;
+  side: DiagnosticSide;
+  /** The diagnostic session's journaled invocation. */
+  diagnosis: string;
+  argv: string[];
+  timeoutSeconds: number | null;
+  outcome: "ran" | "refused" | "unavailable";
+  reasons: string[];
+  ran: (RunRecord & { durationMs: number }) | null;
+  cleanup: string | null;
+};
+
+/**
+ * The controller's routing of an explored attempt: the diagnosis the
+ * selection review recommended once its references and scope check out, or
+ * `blocked` with the reasons and no winner.
+ */
+export type ExplorationRouting = {
+  format: typeof EXPLORATION_FORMAT;
+  controller: string;
+  run: string;
+  step: string;
+  attempt: number;
+  exploration: string;
+  /** The selection review's journaled invocation. */
+  selection: string;
+  outcome: "selected" | "blocked";
+  selected: {
+    side: DiagnosticSide;
+    diagnosis: string;
+    approach: string;
+    assumptions: string[];
+    evidence: string[];
+    check: string | null;
+  } | null;
+  reasons: string[];
+};
+
+const EXPLORATION_ACTIONS = ["exploration-start", "exploration-check", "exploration-routing"];
+
+export type ExplorationRecords = {
+  starts: (Stored<ExplorationStart> & { seq: number })[];
+  checks: (Stored<ExplorationCheck> & { seq: number })[];
+  routings: (Stored<ExplorationRouting> & { seq: number })[];
+};
+
+/**
+ * The run's committed exploration records. Another format, another
+ * controller or an unknown `exploration-*` action refuses them all; nothing
+ * is migrated or written.
+ */
+export function explorationRecords(
+  run: RunHandle,
+  events: readonly JournalEvent[],
+  controller: string,
+): Read<ExplorationRecords> {
+  const diagnostics: string[] = [];
+  const value: ExplorationRecords = { starts: [], checks: [], routings: [] };
+  for (const e of events) {
+    if (!e.action.startsWith("exploration-")) continue;
+    if (!EXPLORATION_ACTIONS.includes(e.action)) {
+      diagnostics.push(`event ${e.seq}: unknown exploration record ${e.action}`);
+      continue;
+    }
+    const ref = e.data.record;
+    let record: { format?: unknown; controller?: unknown };
+    try {
+      if (typeof ref !== "string") throw new Error("names no record");
+      record = JSON.parse(readEvidence(run.dir, ref).toString("utf8")) as typeof record;
+    } catch (err) {
+      diagnostics.push(`event ${e.seq}: ${e.action} ${message(err)}`);
+      continue;
+    }
+    if (record.format !== EXPLORATION_FORMAT) {
+      diagnostics.push(
+        `event ${e.seq}: ${e.action} format ${String(record.format)} is not supported`,
+      );
+    } else if (record.controller !== controller) {
+      diagnostics.push(
+        `event ${e.seq}: ${e.action} was written by controller ${String(record.controller)}, not ${controller}`,
+      );
+    } else {
+      const stored = { ref: ref as string, seq: e.seq, record };
+      if (e.action === "exploration-start")
+        value.starts.push(stored as Stored<ExplorationStart> & { seq: number });
+      else if (e.action === "exploration-check")
+        value.checks.push(stored as Stored<ExplorationCheck> & { seq: number });
+      else value.routings.push(stored as Stored<ExplorationRouting> & { seq: number });
+    }
+  }
+  return diagnostics.length > 0 ? { ok: false, diagnostics } : { ok: true, value };
+}
+
+/** Journals an exploration record against the attempt it precedes. */
+function journalExploration(
+  run: RunHandle,
+  action: (typeof EXPLORATION_ACTIONS)[number],
+  record: { step: string; attempt: number },
+  more: readonly string[],
+  data: JsonObject,
+): string {
+  const ref = putEvidence(run, stringify(record));
+  appendEvent(run, {
+    action,
+    attempt: record.attempt,
+    evidence: [ref, ...unique(more.filter((m) => m !== ref))],
+    data: { ...data, step: record.step, record: ref },
+  });
+  return ref;
+}
+
+/** Opens an exploration round: its trigger, candidate and frozen inputs, before any session. */
+export function recordExploration(run: RunHandle, record: ExplorationStart, key: string): string {
+  return journalExploration(run, "exploration-start", record, record.records, {
+    key,
+    round: record.round,
+    trigger: record.trigger.kind,
+  });
+}
+
+/** The subjects of an exploration's selection review: one per diagnosis. */
+export const selectionSubjects = (exploration: string): string[] => [
+  `${exploration}/approach`,
+  `${exploration}/alternative`,
+];
+
+/** The subjects of a step's cross-attempt challenge (CHALLENGE_RUBRIC). */
+export const challengeSubjects = (step: string): string[] => [
+  `${step}/challenge/assumptions`,
+  `${step}/challenge/symptom`,
+  `${step}/challenge/evidence`,
+];
+
+/** The learning inputs an exploration froze, rebuilt from its manifest. */
+function explorationLearning(
+  run: RunHandle,
+  exploration: Stored<ExplorationStart>,
+): LearningInputs | undefined {
+  const { context } = exploration.record;
+  if (!context) return undefined;
+  const inputs = learningInputs(run.dir, context);
+  if (!inputs.ok) throw new Error(inputs.diagnostics.join("\n"));
+  return inputs.value;
+}
+
+/**
+ * One diagnostic session of an exploration round (T3.6 L3): a fresh
+ * reviewer-role session in a fresh read-only workspace of the explored
+ * candidate. Its packet is built from the exploration record alone, so both
+ * sides get the same requirements, findings, learning context and readable
+ * records, and neither can be shown the other's result. Only the side and
+ * its briefing differ.
+ */
+export async function diagnose(
+  run: RunHandle,
+  input: {
+    plan: PreparedRun;
+    exploration: Stored<ExplorationStart>;
+    side: DiagnosticSide;
+    accepted: readonly AcceptedOutput[];
+    reviewer: ReviewerAccess;
+    key: string;
+  },
+): Promise<{ ref: string; outcome: AgentOutcome }> {
+  const { exploration, side } = input;
+  const e = exploration.record;
+  const learning = explorationLearning(run, exploration);
+  return learningSession(run, {
+    plan: input.plan,
+    step: e.step,
+    attempt: e.attempt,
+    candidate: e.candidate,
+    accepted: input.accepted,
+    reviewer: input.reviewer,
+    diagnosis: {
+      side,
+      briefing: DIAGNOSTIC_BRIEFINGS[side],
+      exploration: exploration.ref,
+      trigger: e.trigger as unknown as Json,
+      limits: e.limits,
+    },
+    findings: e.findings,
+    ...(learning ? { learning } : {}),
+    records: e.records,
+    data: {
+      step: e.step,
+      purpose: `diagnostic-${side}`,
+      exploration: exploration.ref,
+      key: input.key,
+    },
+  });
+}
+
+/** The most argv entries and characters per entry a diagnostic check may have. */
+const CHECK_ARGS = 32;
+const CHECK_ARG_CHARS = 4096;
+
+/**
+ * Validates and runs one diagnosis's check (T3.6 L3). The controller refuses
+ * a check whose session did not complete as this exploration's diagnosis of
+ * that side, an argv outside its limits, or a timeout outside the run's
+ * check limit; a refused check never runs. A valid one runs once, in a fresh
+ * read-only workspace of the explored candidate opened with the verifier's
+ * containment — no writable or scratch path, no network, no credential —
+ * and its output is retained as evidence. It never touches the candidate.
+ */
+export async function diagnosticCheck(
+  run: RunHandle,
+  input: {
+    exploration: Stored<ExplorationStart>;
+    side: DiagnosticSide;
+    /** The diagnostic session's committed invocation event. */
+    diagnosis: JournalEvent;
+    open: OpenWorkspace;
+    key: string;
+  },
+): Promise<Stored<ExplorationCheck>> {
+  const { exploration, side, diagnosis } = input;
+  const e = exploration.record;
+  const ref = typeof diagnosis.data.record === "string" ? diagnosis.data.record : "";
+  const reasons: string[] = [];
+  let outcome: AgentOutcome | null = null;
+  try {
+    outcome = JSON.parse(readEvidence(run.dir, ref).toString("utf8")) as AgentOutcome;
+  } catch {
+    reasons.push(`${ref || "the diagnosis"} is not a committed record`);
+  }
+  if (
+    diagnosis.action !== "agent-invocation" ||
+    diagnosis.data.exploration !== exploration.ref ||
+    diagnosis.data.purpose !== `diagnostic-${side}`
+  ) {
+    reasons.push(`the invocation is not this exploration's ${side} diagnosis`);
+  }
+  const check = outcome?.outcome === "diagnosed" ? outcome.diagnosis.check : null;
+  if (outcome && outcome.outcome !== "diagnosed") {
+    reasons.push(`the diagnosis did not complete: ${outcome.outcome}`);
+  } else if (outcome && !check) reasons.push("the diagnosis proposed no check");
+  const argv = check ? [...check.argv] : [];
+  const timeout = check ? check.timeout_seconds : null;
+  if (check) {
+    if (argv.length === 0 || argv.length > CHECK_ARGS) {
+      reasons.push(`argv has ${argv.length} entries; 1 to ${CHECK_ARGS} are allowed`);
+    }
+    if (argv[0] !== undefined && argv[0].trim() === "") reasons.push("argv names no program");
+    for (const [i, arg] of argv.entries()) {
+      if (arg.length > CHECK_ARG_CHARS) {
+        reasons.push(`argv[${i}] has ${arg.length} characters; at most ${CHECK_ARG_CHARS}`);
+      }
+      if (arg.includes("\0")) reasons.push(`argv[${i}] holds a NUL character`);
+    }
+    const limit = e.limits.checkTimeoutSeconds;
+    if (!Number.isInteger(timeout) || timeout === null || timeout < 1 || timeout > limit) {
+      reasons.push(`timeout ${String(timeout)} s is outside 1 to ${limit} s`);
+    }
+  }
+  const base = {
+    format: EXPLORATION_FORMAT,
+    controller: e.controller,
+    run: run.run,
+    step: e.step,
+    attempt: e.attempt,
+    exploration: exploration.ref,
+    side,
+    diagnosis: ref,
+    argv,
+    timeoutSeconds: timeout,
+  } as const;
+  let record: ExplorationCheck;
+  if (reasons.length > 0) {
+    record = { ...base, outcome: "refused", reasons, ran: null, cleanup: null };
+  } else {
+    let ran: (RunRecord & { durationMs: number }) | null = null;
+    let error: string | null = null;
+    let cleanup: string | null = null;
+    let ws: ContainedWorkspace | null = null;
+    try {
+      ws = await input.open(e.candidate);
+      if (!sameSnapshot(ws.snapshot, e.candidate)) {
+        throw new Error(`the workspace holds ${ws.snapshot.commit}, not ${e.candidate.commit}`);
+      }
+      const started = Date.now();
+      const result = await ws.exec(argv, { timeoutMs: (timeout ?? 1) * 1000 });
+      ran = {
+        argv,
+        exit: result.exitCode,
+        timedOut: result.timedOut,
+        stdout: putEvidence(run, result.stdout),
+        stderr: putEvidence(run, result.stderr),
+        durationMs: Date.now() - started,
+      };
+    } catch (err) {
+      error = message(err);
+    } finally {
+      await ws?.close().catch((err: unknown) => {
+        cleanup = message(err);
+      });
+    }
+    record = {
+      ...base,
+      outcome: ran ? "ran" : "unavailable",
+      reasons: error ? [error] : [],
+      ran,
+      cleanup,
+    };
+  }
+  const stored = store(run, record);
+  journalExploration(
+    run,
+    "exploration-check",
+    record,
+    [stored.ref, ...(record.ran ? [record.ran.stdout, record.ran.stderr] : [])],
+    { key: input.key, side, exploration: exploration.ref, outcome: record.outcome },
+  );
+  return stored;
+}
+
+/** A diagnosis as the selection reviewer is shown it. */
+const diagnosisShown = (side: DiagnosticSide, ref: string, outcome: AgentOutcome): Json => ({
+  side,
+  invocation: ref,
+  outcome: outcome.outcome,
+  ...(outcome.outcome === "diagnosed"
+    ? { diagnosis: outcome.diagnosis as unknown as Json }
+    : outcome.outcome === "failed" || outcome.outcome === "cancelled"
+      ? { reason: outcome.reason }
+      : {}),
+});
+
+const CHECK_TAIL = 4096;
+
+/** A check record as the selection and challenge reviewers are shown it. */
+function checkShown(run: RunHandle, check: Stored<ExplorationCheck>): Json {
+  const tail = (r: string): string => readEvidence(run.dir, r).toString("utf8").slice(-CHECK_TAIL);
+  const c = check.record;
+  return {
+    side: c.side,
+    record: check.ref,
+    argv: c.argv,
+    outcome: c.outcome,
+    reasons: c.reasons,
+    ...(c.ran
+      ? {
+          exit: c.ran.exit,
+          timedOut: c.ran.timedOut,
+          stdout: tail(c.ran.stdout),
+          stderr: tail(c.ran.stderr),
+        }
+      : {}),
+  };
+}
+
+/**
+ * The selection review of an exploration round (T3.6 L3): a fresh
+ * reviewer-role session, after both diagnoses and their checks, judging each
+ * diagnosis under the selection rubric and recommending one or none.
+ */
+export async function selectApproach(
+  run: RunHandle,
+  input: {
+    plan: PreparedRun;
+    exploration: Stored<ExplorationStart>;
+    diagnoses: { side: DiagnosticSide; ref: string; outcome: AgentOutcome }[];
+    checks: Stored<ExplorationCheck>[];
+    accepted: readonly AcceptedOutput[];
+    reviewer: ReviewerAccess;
+    key: string;
+  },
+): Promise<{ ref: string; outcome: AgentOutcome; records: string[] }> {
+  const { exploration } = input;
+  const e = exploration.record;
+  const records = selectionRecords(exploration, input.diagnoses, input.checks);
+  const session = await learningSession(run, {
+    plan: input.plan,
+    step: e.step,
+    attempt: e.attempt,
+    candidate: e.candidate,
+    accepted: input.accepted,
+    reviewer: input.reviewer,
+    review: {
+      kind: "selection",
+      rubric: SELECTION_RUBRIC,
+      subjects: selectionSubjects(exploration.ref),
+      targets: [],
+      bindings: [],
+      evidence: {
+        exploration: exploration.ref,
+        trigger: e.trigger as unknown as Json,
+        findings: e.findings as unknown as Json,
+        diagnoses: input.diagnoses.map((d) => diagnosisShown(d.side, d.ref, d.outcome)),
+        checks: input.checks.map((c) => checkShown(run, c)),
+      },
+    },
+    records,
+    data: {
+      step: e.step,
+      purpose: "exploration-selection",
+      exploration: exploration.ref,
+      key: input.key,
+    },
+  });
+  return { ...session, records };
+}
+
+/** What a selection reviewer may read: the exploration's records, both diagnoses and the checks with their output. */
+const selectionRecords = (
+  exploration: Stored<ExplorationStart>,
+  diagnoses: readonly { ref: string }[],
+  checks: readonly Stored<ExplorationCheck>[],
+): string[] =>
+  unique([
+    exploration.ref,
+    ...exploration.record.records,
+    ...diagnoses.map((d) => d.ref),
+    ...checks.flatMap((c) => [
+      c.ref,
+      ...(c.record.ran ? [c.record.ran.stdout, c.record.ran.stderr] : []),
+    ]),
+  ]);
+
+/**
+ * The controller's routing of an explored attempt (T3.6 L3) from the
+ * committed selection review. It selects the recommended diagnosis only when
+ * the verdict is complete and consistent, the recommended side completed its
+ * diagnosis without blockers and its subject is satisfied, and every cited
+ * reference is a record the reviewer was given or a path of the explored
+ * candidate. Anything else is `blocked`, with the reasons and no winner.
+ */
+export function routeExploration(
+  run: RunHandle,
+  input: {
+    exploration: Stored<ExplorationStart>;
+    selection: { ref: string; outcome: AgentOutcome };
+    diagnoses: { side: DiagnosticSide; ref: string; outcome: AgentOutcome }[];
+    checks: Stored<ExplorationCheck>[];
+    key: string;
+  },
+): Stored<ExplorationRouting> {
+  const { exploration, selection } = input;
+  const e = exploration.record;
+  const reasons: string[] = [];
+  let selected: ExplorationRouting["selected"] = null;
+  const subjects = selectionSubjects(exploration.ref);
+  const checked = checkVerdict(selection.outcome, { subjects, targets: [] });
+  if (!checked.ok) reasons.push(`the selection review is incomplete: ${checked.issues.join("; ")}`);
+  else if (checked.verdict.verdict === "blocked") {
+    reasons.push(`the selection review is blocked: ${checked.verdict.blockers.join("; ")}`);
+  } else if (checked.conflicts.length > 0) {
+    reasons.push(`the selection review contradicts itself: ${checked.conflicts.join("; ")}`);
+  } else {
+    const rec = checked.verdict.recommendation;
+    if (!rec) reasons.push("the selection review recommends nothing");
+    else if (rec.select === "none") reasons.push(`no diagnosis is selected: ${rec.reason}`);
+    else {
+      const side = rec.select;
+      const diagnosis = input.diagnoses.find((d) => d.side === side);
+      const coverage = checked.verdict.coverage.find(
+        (c) => c.subject === `${exploration.ref}/${side}`,
+      );
+      if (!diagnosis || diagnosis.outcome.outcome !== "diagnosed") {
+        reasons.push(`the ${side} diagnosis did not complete`);
+      } else if (diagnosis.outcome.diagnosis.blockers.length > 0) {
+        reasons.push(
+          `the ${side} diagnosis is blocked: ${diagnosis.outcome.diagnosis.blockers.join("; ")}`,
+        );
+      } else if (coverage?.result !== "satisfied") {
+        reasons.push(`the recommended ${side} diagnosis is ${coverage?.result ?? "not assessed"}`);
+      }
+      const shown = new Set(selectionRecords(exploration, input.diagnoses, input.checks));
+      const tree = candidateTree(run, e.candidate);
+      if (rec.evidence.length === 0) reasons.push("the recommendation cites no evidence");
+      for (const ref of rec.evidence) {
+        if (!shown.has(ref) && !tree.has(ref)) {
+          reasons.push(
+            `the recommendation cites ${ref}, which is neither a record it was given nor a path of the candidate`,
+          );
+        }
+      }
+      if (reasons.length === 0 && diagnosis?.outcome.outcome === "diagnosed") {
+        const d = diagnosis.outcome.diagnosis;
+        selected = {
+          side,
+          diagnosis: diagnosis.ref,
+          approach: d.approach,
+          assumptions: d.assumptions,
+          evidence: rec.evidence,
+          check: input.checks.find((c) => c.record.side === side)?.ref ?? null,
+        };
+      }
+    }
+  }
+  const record: ExplorationRouting = {
+    format: EXPLORATION_FORMAT,
+    controller: e.controller,
+    run: run.run,
+    step: e.step,
+    attempt: e.attempt,
+    exploration: exploration.ref,
+    selection: selection.ref,
+    outcome: selected ? "selected" : "blocked",
+    selected,
+    reasons,
+  };
+  const stored = store(run, record);
+  journalExploration(run, "exploration-routing", record, [stored.ref, selection.ref], {
+    key: input.key,
+    exploration: exploration.ref,
+    outcome: record.outcome,
+  });
+  return stored;
+}
+
+/** What a producer is shown of the exploration its attempt follows. */
+export function explorationInputs(
+  run: RunHandle,
+  routing: Stored<ExplorationRouting>,
+): ExplorationInputs {
+  const r = routing.record;
+  const check = r.selected?.check
+    ? (JSON.parse(readEvidence(run.dir, r.selected.check).toString("utf8")) as ExplorationCheck)
+    : null;
+  return {
+    routing: routing.ref,
+    outcome: r.outcome,
+    approach: r.selected
+      ? {
+          side: r.selected.side,
+          approach: r.selected.approach,
+          assumptions: r.selected.assumptions,
+          evidence: r.selected.evidence,
+          check: check
+            ? { argv: check.argv, outcome: check.outcome, exit: check.ran?.exit ?? null }
+            : null,
+        }
+      : null,
+    reasons: r.reasons,
+  };
+}
+
+/**
+ * The cross-attempt challenge of a candidate (T3.6 L3; evidence-backed
+ * learning log §2.4): after its binding independent review, a fresh
+ * reviewer judges it under the challenge rubric against the step's earlier
+ * attempts, their original records, the exploration it followed and the
+ * pull request's correction records routed to the step. The records it is
+ * given are frozen in the review record and readable with read_evidence;
+ * the binding review comes first. The review is bound to the evaluation, so
+ * a later evaluation needs a new challenge.
+ */
+export async function challengeCandidate(
+  run: RunHandle,
+  input: {
+    plan: PreparedRun;
+    step: string;
+    candidate: SealedCandidate;
+    attempt: number;
+    manifest: EvaluationManifest;
+    accepted: readonly AcceptedOutput[];
+    reviewer: ReviewerAccess;
+    /** The binding independent review of this evaluation. */
+    review: Stored<ReviewRecord>;
+  },
+): Promise<Stored<ReviewRecord>> {
+  const step = contractStep(input.plan, input.step);
+  const identity = identityOf(run, input.attempt, input.manifest, input.candidate);
+  const events = committedEvents(run);
+  const mine = (e: JournalEvent): boolean => e.data.step === step.id;
+  const earlier = (e: JournalEvent): boolean =>
+    mine(e) && e.attempt !== null && e.attempt < input.attempt;
+  const verdictOf = (outcome: AgentOutcome): Json =>
+    outcome.outcome === "reviewed"
+      ? (outcome.verdict as unknown as Json)
+      : { outcome: outcome.outcome };
+  const evaluations = journalRecords<{ candidate: SealedCandidate }>(
+    run,
+    events,
+    "evaluation",
+    earlier,
+  );
+  const evaluationOf = new Map(
+    events
+      .filter((e) => e.action === "evaluation" && earlier(e))
+      .map((e) => [String(e.data.record), `${e.attempt}/${e.evaluation}`]),
+  );
+  const ofEarlier = (e: JournalEvent): boolean =>
+    e.attempt !== null &&
+    e.attempt < input.attempt &&
+    [...evaluationOf.values()].includes(`${e.attempt}/${e.evaluation}`);
+  const reviews = journalRecords<ReviewRecord>(run, events, "review", ofEarlier);
+  // Decisions journal their record as their evidence.
+  const decisions = events
+    .filter((e) => (e.action === "decision" || e.action === "acceptance") && ofEarlier(e))
+    .flatMap((e) => {
+      const ref = e.evidence[0];
+      return ref === undefined
+        ? []
+        : [{ ref, record: JSON.parse(readEvidence(run.dir, ref).toString("utf8")) as Decision }];
+    });
+  const producers = journalRecords<AgentOutcome>(
+    run,
+    events,
+    "agent-invocation",
+    (e) => earlier(e) && e.data.role === "producer" && e.data.purpose === undefined,
+  );
+  const verifications = journalRecords<Invocation>(
+    run,
+    events,
+    "verifier-invocation",
+    (e) => ofEarlier(e) && e.data.stage === "acceptance",
+  );
+  const explored = events.filter(
+    (e) => mine(e) && EXPLORATION_ACTIONS.includes(e.action) && (e.attempt ?? 0) <= input.attempt,
+  );
+  const diagnoses = events.filter(
+    (e) =>
+      e.action === "agent-invocation" &&
+      typeof e.data.exploration === "string" &&
+      explored.some((x) => x.data.record === e.data.exploration),
+  );
+  const pull = events.filter(
+    (e) => e.action === "pr-feedback" || e.action === "pr-assessment" || e.action === "pr-round",
+  );
+  const assessments = journalRecords<{ correction: { step: string } | null }>(
+    run,
+    events,
+    "pr-assessment",
+    () => true,
+  ).filter((a) => a.record.correction?.step === step.id);
+  const records = [
+    input.review.ref,
+    ...unique([
+      ...evaluations.map((e) => e.ref),
+      ...reviews.map((r) => r.ref),
+      ...decisions.map((d) => d.ref),
+      ...producers.map((p) => p.ref),
+      ...verifications.map((v) => v.ref),
+      ...explored.map((e) => String(e.data.record)),
+      ...diagnoses.map((e) => String(e.data.record)),
+      ...pull.map((e) => String(e.data.record)),
+    ]).filter((r) => r !== input.review.ref),
+  ];
+  return runReview(run, {
+    plan: input.plan,
+    step,
+    identity,
+    candidate: input.candidate,
+    accepted: input.accepted,
+    reviewer: input.reviewer,
+    shown: [],
+    outputs: [],
+    checkpoint: null,
+    records,
+    context: {
+      kind: "challenge",
+      rubric: CHALLENGE_RUBRIC,
+      subjects: challengeSubjects(step.id),
+      targets: [],
+      bindings: [],
+      evidence: {
+        review: { record: input.review.ref, verdict: verdictOf(input.review.record.outcome) },
+        exploration: input.manifest.exploration ?? null,
+        attempts: evaluations.map((ev) => {
+          const at = evaluationOf.get(ev.ref) ?? "";
+          const [attempt, evaluation] = at.split("/");
+          const same = (r: { attempt: number; evaluation: string }): boolean =>
+            String(r.attempt) === attempt && r.evaluation === evaluation;
+          return {
+            attempt: Number(attempt),
+            evaluation: evaluation ?? "",
+            record: ev.ref,
+            candidate: ev.record.candidate.commit,
+            reviews: reviews
+              .filter((r) => same(r.record))
+              .map((r) => ({
+                record: r.ref,
+                kind: r.record.kind,
+                verdict: verdictOf(r.record.outcome),
+              })),
+            decisions: decisions
+              .filter((d) => same(d.record))
+              .map((d) => ({
+                record: d.ref,
+                decision: d.record.decision,
+                findings:
+                  d.record.decision === "correct" ? (d.record.findings as unknown as Json) : [],
+              })),
+          };
+        }),
+        explorations: explored.map((e) => ({
+          action: e.action,
+          attempt: e.attempt,
+          record: String(e.data.record),
+        })),
+        pullRequest: assessments.map((a) => ({
+          record: a.ref,
+          correction: a.record.correction as unknown as Json,
+        })),
+      },
+    },
+  });
 }
