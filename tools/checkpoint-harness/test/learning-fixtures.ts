@@ -46,6 +46,7 @@ import {
   scriptedAgent,
   submit,
   testDeps,
+  type Reply,
   type Repo,
   type ScriptedAgent,
   type Session,
@@ -81,6 +82,8 @@ export type Script = {
   challenge?: (session: Session) => Promise<ReviewVerdict> | ReviewVerdict;
   /** A candidate review's verdict instead of the source-reading default. */
   review?: (session: Session) => Promise<ReviewVerdict | null> | ReviewVerdict | null;
+  /** A proposal or knowledge or guidance review session's reply instead of its result, e.g. a provider stop. */
+  learningReply?: (session: Session) => Promise<Reply | undefined> | Reply | undefined;
 };
 
 export type World = {
@@ -213,6 +216,14 @@ export async function world(
       const verdict = await script.review(session);
       if (verdict) return { output: verdict };
     }
+    if (
+      packet.proposal ||
+      packet.review?.kind === "knowledge" ||
+      packet.review?.kind === "guidance"
+    ) {
+      const reply = await script.learningReply?.(session);
+      if (reply) return reply;
+    }
     if (packet.proposal) {
       const proposed = script.proposals?.(packet) ?? EMPTY;
       return typeof proposed === "string" ? { raw: proposed } : { output: proposed };
@@ -242,9 +253,11 @@ export function depsOf(
     progress?: (event: JournalEvent) => void;
     /** Producer writes outside the policy reach the workspace; only the seal catches them. */
     bypass?: boolean;
+    /** The run's cancellation, for a test that cancels it inside a session. */
+    controller?: AbortController;
   } = {},
 ): RunnerDeps {
-  const controller = new AbortController();
+  const controller = options.controller ?? new AbortController();
   const deps = testDeps(w.repo, {
     producer: w.producer,
     reviewer: w.reviewer,

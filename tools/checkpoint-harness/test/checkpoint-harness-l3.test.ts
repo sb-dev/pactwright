@@ -18,7 +18,14 @@ import { after, before, describe, it } from "node:test";
 
 import stringify from "safe-stable-stringify";
 
-import type { AgentOutcome, Diagnosis, Packet, ReviewVerdict, ToolReply } from "../src/claude.js";
+import type {
+  AgentOutcome,
+  Diagnosis,
+  Packet,
+  Proposals,
+  ReviewVerdict,
+  ToolReply,
+} from "../src/claude.js";
 import { CHALLENGE_RUBRIC, COMMON_RUBRIC } from "../src/software-bootstrap.js";
 import {
   appendEvent,
@@ -266,6 +273,32 @@ const withCheck = (approach: string, check: Diagnosis["check"]): Diagnosis => ({
   ...plainDiagnosis(approach),
   check,
 });
+
+/** A proposal of the decided attempt's boundary counterexample, citing its failed check. */
+function boundaryProposal(packet: Packet): Proposals {
+  const observations = (packet.proposal?.observations ?? []) as {
+    ref: string;
+    action: string;
+    results?: { target: string; outcome: string }[];
+  }[];
+  const failed = observations.find((o) =>
+    o.results?.some((r) => r.target === BOUNDARY && r.outcome === "failed"),
+  );
+  assert.ok(failed);
+  return {
+    knowledge: [
+      {
+        assertion: `Attempt ${packet.attempt}'s parser accepts port 65536.`,
+        target: BOUNDARY,
+        kind: "counterexample",
+        observations: [{ ref: failed.ref, basis: "executed" }],
+        contradicts: [],
+        supersedes: [],
+      },
+    ],
+    guidance: [],
+  };
+}
 
 const pinnedConfig = (dir: string): Record<string, unknown> => {
   const [started] = committed<{ config: Record<string, unknown> }>(dir, "run-start");
@@ -1386,6 +1419,123 @@ describe("T3.6 L3-04 budgets, limits and recovery", () => {
     }
   });
 
+  it("a failed, cancelled or exhausted proposal or proposal review runs again or waits under its key, and is never skipped", async () => {
+    const phases = {
+      propose: { purpose: "learning-proposal", success: "proposed", what: "learning proposal" },
+      support: { purpose: "knowledge-review", success: "reviewed", what: "proposal review" },
+    } as const;
+    const base = eventsOf(stopped3).at(-1)?.seq ?? 0;
+    for (const [phase, { purpose, success, what }] of Object.entries(phases)) {
+      const targeted = (packet: Packet): boolean =>
+        phase === "propose" ? packet.proposal !== undefined : packet.review?.kind === "knowledge";
+      for (const fault of ["failed", "cancelled", "exhausted"] as const) {
+        const label = `${phase}, ${fault}`;
+        const dir = branch(w, stopped3);
+        const sessions = () => sessionsOf(dir, purpose).filter((f) => f.event.seq > base);
+        const outcomes = () => sessions().map((f) => f.record.outcome);
+        const keyed = () => {
+          const keys = startsOf(dir, phase)
+            .filter((e) => e.seq > base)
+            .map((e) =>
+              String(
+                committed<{ key: string }>(dir, "start", (f) => f.event.seq === e.seq)[0]?.record
+                  .key,
+              ),
+            );
+          return keys.filter((k) => k === keys[0]);
+        };
+        const cancel = new AbortController();
+        let injected = false;
+        await withScript(
+          {
+            proposals: boundaryProposal,
+            learningReply: async (session) => {
+              if (injected || !targeted(session.packet)) return undefined;
+              injected = true;
+              if (fault === "failed") return { raw: "not json" };
+              if (fault === "exhausted") return { subtype: "error_max_turns" };
+              // The run is cancelled while the session runs.
+              const { signal } = session.request.abort;
+              cancel.abort();
+              if (!signal.aborted) {
+                await new Promise((resolve) => signal.addEventListener("abort", resolve));
+              }
+              return { raw: "" };
+            },
+          },
+          async () => {
+            const first = await resumeRun(dir, depsOf(w, { controller: cancel }));
+            if (fault === "cancelled") {
+              stopped(first);
+              assert.deepEqual(outcomes(), ["cancelled"], label);
+            } else if (fault === "exhausted") {
+              assertPaused(first, { code: "exhausted", step: LIBRARY });
+              assert.ok(first.outcome === "paused");
+              assert.equal(
+                first.reasons[0]?.detail,
+                `the ${what} exhausted its turns limit`,
+                label,
+              );
+              // Without an amendment it stays paused and nothing runs again.
+              assertPaused(await resume(w, dir), { code: "exhausted", step: LIBRARY });
+              assert.deepEqual([outcomes(), keyed().length], [["exhausted"], 1], label);
+              const amended = await amend(dir, (c) => {
+                phasesOf(c).exploration_rounds = 3;
+              });
+              assert.ok(amended.ok, label);
+            }
+            if (fault === "failed") assertAccepted(first, [LIBRARY]);
+            else {
+              assert.deepEqual(explorationsIn(dir), [], `${label}: nothing after it ran`);
+              assert.deepEqual(produced(dir, 4), [], label);
+              assertAccepted(await resume(w, dir), [LIBRARY]);
+            }
+          },
+        );
+        // The same key ran once more, as a counted retry, to its expected outcome.
+        assert.deepEqual(outcomes(), [fault, success], label);
+        assert.equal(keyed().length, 2, `${label}: one counted retry`);
+        const done = sessions().at(-1);
+        assert.ok(done);
+        const [exploration] = explorationsIn(dir);
+        const [production] = produced(dir, 4);
+        assert.ok(exploration && production, label);
+        assert.ok(done.event.seq < exploration.event.seq, `${label}: before the exploration`);
+        assert.ok(done.event.seq < production.event.seq, `${label}: before attempt 4`);
+        if (phase === "support") {
+          const admissions = eventsOf(dir).filter(
+            (e) => e.action === "knowledge-admission" && e.seq > base,
+          );
+          assert.equal(admissions.length, 1, `${label}: admitted once`);
+          assert.ok((admissions[0]?.seq ?? 0) > done.event.seq, label);
+        }
+        assert.deepEqual(unresolvedKeys(dir), [], label);
+      }
+
+      // Control: a fault in every session stops at the step's retry limit, unskipped.
+      const dir = branch(w, stopped3);
+      await withScript(
+        {
+          proposals: boundaryProposal,
+          learningReply: (session) => (targeted(session.packet) ? { raw: "not json" } : undefined),
+        },
+        async () => {
+          const result = await resume(w, dir);
+          assertPaused(result, { code: "retries", step: LIBRARY });
+        },
+      );
+      const retries = (pinnedConfig(dir).budgets as { retries: number }).retries;
+      assert.deepEqual(
+        sessionsOf(dir, purpose)
+          .filter((f) => f.event.seq > base)
+          .map((f) => f.record.outcome),
+        Array.from({ length: retries + 1 }, () => "failed"),
+        phase,
+      );
+      assert.deepEqual([explorationsIn(dir), produced(dir, 4)], [[], []], phase);
+    }
+  });
+
   it("refuses an amendment of the learning mode and incompatible exploration records; a compatible archive restores them", async () => {
     const dir = branch(w, final);
     const before = eventsOf(dir).length;
@@ -1534,30 +1684,7 @@ describe("T3.6 L3 recheck of earlier behaviour", () => {
 
   it("the runner proposes after each corrected attempt, reviews and admits each proposal, and resumes an admission without a second review", async () => {
     const wk = await world(scratch, { faults: 3, learning: PHASED });
-    wk.script.proposals = (packet) => {
-      const observations = (packet.proposal?.observations ?? []) as {
-        ref: string;
-        action: string;
-        results?: { target: string; outcome: string }[];
-      }[];
-      const failed = observations.find((o) =>
-        o.results?.some((r) => r.target === BOUNDARY && r.outcome === "failed"),
-      );
-      assert.ok(failed);
-      return {
-        knowledge: [
-          {
-            assertion: `Attempt ${packet.attempt}'s parser accepts port 65536.`,
-            target: BOUNDARY,
-            kind: "counterexample",
-            observations: [{ ref: failed.ref, basis: "executed" }],
-            contradicts: [],
-            supersedes: [],
-          },
-        ],
-        guidance: [],
-      };
-    };
+    wk.script.proposals = boundaryProposal;
     let crashed = false;
     const progress = (event: JournalEvent): void => {
       if (

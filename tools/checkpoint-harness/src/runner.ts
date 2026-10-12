@@ -1412,9 +1412,6 @@ function explorationsOf(ctx: Ctx, s: State): Read<ExplorationRecords> {
 
 const SIDES: readonly DiagnosticSide[] = ["approach", "alternative"];
 
-/** A session that ran to an outcome: anything but a cancellation, which the next run repeats. */
-const completed = (f: Fact<AgentOutcome>): boolean => f.record.outcome !== "cancelled";
-
 /**
  * The learning phases due before attempt `attempt` of `step` once
  * `decided`, the previous attempt's `correct` decision, is journaled (T3.6
@@ -1423,10 +1420,11 @@ const completed = (f: Fact<AgentOutcome>): boolean => f.record.outcome !== "canc
  * controller's admission, of each of the step's proposals; then, when a
  * trigger calls for one, the attempt's single exploration round — its
  * record, both diagnoses, their checks, the selection review and the
- * routing. Each phase is complete once its result is journaled and is never
- * repeated; an interrupted, failed or cancelled required session runs again
- * as a counted retry. The result is the next phase, a pause, or the routing
- * the attempt follows.
+ * routing. Every session is required: each phase is complete once its
+ * session's result is journaled with its expected outcome, and is never
+ * repeated; an interrupted, failed or cancelled session runs again as a
+ * counted retry, and an exhausted one waits for an amendment. The result is
+ * the next phase, a pause, or the routing the attempt follows.
  */
 function learningAction(
   ctx: Ctx,
@@ -1438,24 +1436,43 @@ function learningAction(
 ): Action | { ready: true; exploration?: string } {
   const phases = ctx.config.learning?.phases;
   if (!phases) return { ready: true };
+  // What a required session's latest outcome calls for: to run, when there
+  // is none or it failed or was cancelled (a counted retry); to wait for an
+  // amendment, after it exhausted a limit; else nothing more.
+  const due = (f: Fact<AgentOutcome> | undefined, what: string): "run" | Stop | "done" => {
+    if (!f || f.record.outcome === "failed" || f.record.outcome === "cancelled") return "run";
+    if (f.record.outcome !== "exhausted") return "done";
+    return amendedSince(s, f.seq)
+      ? "run"
+      : pause(step.id, [
+          reason("exhausted", step.id, `the ${what} exhausted its ${f.record.limit} limit`),
+        ]);
+  };
   const { evaluation } = decided.record;
-  const proposed = s.learning.some(
-    (f) =>
-      f.data.purpose === "learning-proposal" && f.data.evaluation === evaluation && completed(f),
-  );
-  if (!proposed) return { kind: "propose", step, attempt: decided.record.attempt, evaluation };
+  const proposer = s.learning
+    .filter((f) => f.data.purpose === "learning-proposal" && f.data.evaluation === evaluation)
+    .at(-1);
+  const proposing = due(proposer, "learning proposal");
+  if (proposing === "run") {
+    return { kind: "propose", step, attempt: decided.record.attempt, evaluation };
+  }
+  if (proposing !== "done") return proposing;
   for (const e of s.events) {
     if (e.action !== "knowledge-proposal" && e.action !== "guidance-proposal") continue;
     if (e.data.step !== step.id || typeof e.data.record !== "string") continue;
     const proposal = e.data.record;
-    const review = s.learning.filter((f) => f.data.proposal === proposal && completed(f)).at(-1);
-    if (!review) return { kind: "support", step, attempt: e.attempt ?? attempt, proposal };
+    const review = s.learning.filter((f) => f.data.proposal === proposal).at(-1);
+    const supporting = due(review, "proposal review");
+    if (supporting === "run") {
+      return { kind: "support", step, attempt: e.attempt ?? attempt, proposal };
+    }
+    if (supporting !== "done") return supporting;
     const admitted = s.events.some(
       (a) =>
         (a.action === "knowledge-admission" || a.action === "guidance-admission") &&
         a.evidence[1] === proposal,
     );
-    if (review.record.outcome === "reviewed" && !admitted) {
+    if (review?.record.outcome === "reviewed" && !admitted) {
       return { kind: "admit-learning", step, proposal, review: review.ref };
     }
   }
@@ -1519,18 +1536,6 @@ function learningAction(
     s.learning
       .filter((f) => f.data.exploration === opened.ref && f.data.purpose === purpose)
       .at(-1);
-  // What a required session's latest outcome calls for: to run, when there
-  // is none or it failed or was cancelled (a counted retry); to wait for an
-  // amendment, after it exhausted a limit; else nothing more.
-  const due = (f: Fact<AgentOutcome> | undefined, what: string): "run" | Stop | "done" => {
-    if (!f || f.record.outcome === "failed" || f.record.outcome === "cancelled") return "run";
-    if (f.record.outcome !== "exhausted") return "done";
-    return amendedSince(s, f.seq)
-      ? "run"
-      : pause(step.id, [
-          reason("exhausted", step.id, `the ${what} exhausted its ${f.record.limit} limit`),
-        ]);
-  };
   for (const side of SIDES) {
     const next = due(sessionOf(`diagnostic-${side}`), `${side} diagnosis`);
     if (next === "run") return { kind: "diagnose", step, attempt, exploration, side };
