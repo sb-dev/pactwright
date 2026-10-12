@@ -15,8 +15,10 @@ import { join } from "node:path";
 import {
   resolveRole,
   type AgentRole,
+  type Diagnosis,
   type Packet,
   type Proposals,
+  type Recommendation,
   type ReviewVerdict,
 } from "../src/claude.js";
 import { prepareRun, type PreparedRun } from "../src/contracts.js";
@@ -71,6 +73,14 @@ export type Script = {
   proposals?: (packet: Packet) => Proposals | string;
   /** A knowledge or guidance reviewer's verdict; passes every subject by default. */
   verdict?: (packet: Packet) => ReviewVerdict;
+  /** A diagnostic session's result (T3.6 L3); a string is returned as raw output. */
+  diagnose?: (session: Session) => Promise<Diagnosis | string> | Diagnosis | string;
+  /** A selection review's verdict (T3.6 L3); by default both pass and the approach is selected. */
+  select?: (session: Session) => Promise<ReviewVerdict> | ReviewVerdict;
+  /** A cross-attempt challenge's verdict (T3.6 L3); passes every subject by default. */
+  challenge?: (session: Session) => Promise<ReviewVerdict> | ReviewVerdict;
+  /** A candidate review's verdict instead of the source-reading default. */
+  review?: (session: Session) => Promise<ReviewVerdict | null> | ReviewVerdict | null;
 };
 
 export type World = {
@@ -135,6 +145,31 @@ export function faultVerdict(packet: Packet): ReviewVerdict {
 
 const EMPTY: Proposals = { knowledge: [], guidance: [] };
 
+/** A diagnosis without a check, citing the library source (T3.6 L3). */
+export const plainDiagnosis = (approach: string): Diagnosis => ({
+  approach,
+  assumptions: [],
+  evidence: ["src/config.mjs"],
+  check: null,
+  blockers: [],
+});
+
+/** A selection verdict passing both diagnoses and recommending `select`, citing `evidence`. */
+export function selectionVerdict(
+  packet: Packet,
+  recommendation: Partial<Recommendation> = {},
+): ReviewVerdict {
+  return {
+    ...approveAll(packet),
+    recommendation: {
+      select: "approach",
+      reason: "its check observes the boundary",
+      evidence: ["src/config.mjs"],
+      ...recommendation,
+    },
+  };
+}
+
 /** A CP97 library world with learning configured; nothing has run yet. */
 export async function world(
   scratch: string,
@@ -163,6 +198,21 @@ export async function world(
   });
   const reviewer = scriptedAgent(async (session) => {
     const { packet } = session;
+    if (packet.diagnosis) {
+      const diagnosis =
+        (await script.diagnose?.(session)) ?? plainDiagnosis(`${packet.diagnosis.side} approach`);
+      return typeof diagnosis === "string" ? { raw: diagnosis } : { output: diagnosis };
+    }
+    if (packet.review?.kind === "selection") {
+      return { output: (await script.select?.(session)) ?? selectionVerdict(packet) };
+    }
+    if (packet.review?.kind === "challenge") {
+      return { output: (await script.challenge?.(session)) ?? approveAll(packet) };
+    }
+    if (packet.review?.kind === "candidate" && script.review) {
+      const verdict = await script.review(session);
+      if (verdict) return { output: verdict };
+    }
     if (packet.proposal) {
       const proposed = script.proposals?.(packet) ?? EMPTY;
       return typeof proposed === "string" ? { raw: proposed } : { output: proposed };
@@ -187,7 +237,12 @@ export async function world(
 /** The runner's test boundaries for a world; with `stopAfter`, the run stops after that attempt's decision. */
 export function depsOf(
   w: World,
-  options: { stopAfter?: number; progress?: (event: JournalEvent) => void } = {},
+  options: {
+    stopAfter?: number;
+    progress?: (event: JournalEvent) => void;
+    /** Producer writes outside the policy reach the workspace; only the seal catches them. */
+    bypass?: boolean;
+  } = {},
 ): RunnerDeps {
   const controller = new AbortController();
   const deps = testDeps(w.repo, {
@@ -196,6 +251,7 @@ export function depsOf(
     registry: bootstrapRegistry(),
     harness: CONTROLLER,
     signal: controller.signal,
+    ...(options.bypass ? { bypass: true } : {}),
     progress: (event) => {
       options.progress?.(event);
       if (event.action === "decision" && event.attempt === options.stopAfter) controller.abort();

@@ -105,8 +105,9 @@ jobs:
         run: git diff --check "$BASE_SHA...$HEAD_SHA"
 
   # The live Claude adapter test with distinct admitted producer and reviewer
-  # settings (T3.5 H2) and the learning purposes' sessions (T3.6 L2). It
-  # spends at most about 5 USD per run on the owner's subscription token. The token is a secret of the claude-live environment,
+  # settings (T3.5 H2), the learning purposes' sessions (T3.6 L2) and the
+  # exploration purposes' sessions (T3.6 L3). It spends at most about 9 USD
+  # per run on the owner's subscription token. The token is a secret of the claude-live environment,
   # whose required reviewer approves each run in the web UI. Fork pull
   # requests receive no secrets, so the job runs
   # only for this repository's branches and provider-affecting changes, or

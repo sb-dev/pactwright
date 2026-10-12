@@ -30,12 +30,15 @@ import stringify from "safe-stable-stringify";
 import {
   buildPacket,
   containedOps,
+  EXPLORATION_PURPOSES,
   invokeAgent,
   LEARNING_PURPOSES,
   recordInvocation,
   resolveRole,
   type AgentOutcome,
   type AgentRole,
+  type DiagnosticSide,
+  type ExplorationInputs,
   type Finding,
   type Provider,
   type RoleName,
@@ -104,6 +107,7 @@ import {
 import {
   adequacyRubric,
   bindingDigests,
+  CHALLENGE_RUBRIC,
   COMMON_RUBRIC,
   declaredRegistry,
   needsAdmission,
@@ -111,21 +115,35 @@ import {
   type Registry,
 } from "./software-bootstrap.js";
 import {
+  admitLearning,
   admitVerifier,
   assessFeedback,
+  challengeCandidate,
+  challengeSubjects,
   checkVerdict,
   committedEvents,
+  diagnose,
+  diagnosticCheck,
+  explorationInputs,
+  explorationRecords,
+  EXPLORATION_FORMAT,
   givenCheckpoint,
   guidanceTarget,
   inventory,
   negatives,
   pendingTargets,
+  proposeLearning,
   protectedVerifierPaths,
   recordApproval,
   recordDecision,
+  recordExploration,
   reviewCandidate,
+  reviewLearning,
   reviewScope,
+  routeExploration,
   runnableBindings,
+  selectApproach,
+  selectionSubjects,
   targetKey,
   targetsOf,
   verifyCandidate,
@@ -134,12 +152,16 @@ import {
   type CheckpointEvidence,
   type Decision,
   type DependencySpec,
+  type ExplorationRecords,
+  type ExplorationStart,
   type Invocation,
+  type Occurrence,
   type OpenWorkspace,
   type OutputProof,
   type PrepareDependencies,
   type ReviewerAccess,
   type ReviewRecord,
+  type Trigger,
 } from "./verification.js";
 import {
   createWorkspace,
@@ -375,7 +397,12 @@ export type RunnerConfig = RunConfig & {
     };
   };
   /** Evidence-backed learning (T3.6 L2): absent, no attempt consumes learning context. */
-  learning?: { reminder_chars: number; context: ContextLimits };
+  learning?: {
+    reminder_chars: number;
+    context: ContextLimits;
+    /** The runner's learning phases (T3.6 L3): absent, it schedules none. */
+    phases?: { exploration_rounds: number; check_timeout_seconds: number };
+  };
 };
 
 /**
@@ -432,9 +459,25 @@ type Production = {
    * during the attempt never enter it.
    */
   context?: ContextManifest;
+  /**
+   * The exploration routing the attempt follows (T3.6 L3), by record. A
+   * restart of the attempt's work carries it, as it carries the findings.
+   */
+  exploration?: string;
 };
 
-type Phase = "produce" | "admit" | "verify" | "review" | "assess";
+type Phase =
+  | "produce"
+  | "admit"
+  | "verify"
+  | "review"
+  | "assess"
+  | "propose"
+  | "support"
+  | "diagnose"
+  | "check"
+  | "select"
+  | "challenge";
 
 /**
  * Journaled before a phase runs; a second start of the same key is a retry.
@@ -475,7 +518,7 @@ type State = {
   events: JournalEvent[];
   starts: Fact<Start>[];
   producers: Fact<AgentOutcome>[];
-  /** The recorded sessions of the learning purposes (T3.6 L2). */
+  /** The recorded sessions of the learning (T3.6 L2) and exploration (T3.6 L3) purposes. */
   learning: Fact<AgentOutcome>[];
   rejections: Fact<{ step: string; attempt: number; diagnostics: string[] }>[];
   evaluations: Fact<EvaluationRecord>[];
@@ -531,6 +574,46 @@ type Action =
   | { kind: "decide"; ev: Evaluated }
   | { kind: "request"; ev: Evaluated; targets: VerificationTarget[] }
   | { kind: "assess"; snapshot: Fact<FeedbackSnapshot>; step: string; attempt: number }
+  // T3.6 L3: the learning phases before an attempt, and the challenge after its review.
+  | { kind: "propose"; step: ContractStep; attempt: number; evaluation: string }
+  | { kind: "support"; step: ContractStep; attempt: number; proposal: string }
+  | { kind: "admit-learning"; step: ContractStep; proposal: string; review: string }
+  | {
+      kind: "explore";
+      step: ContractStep;
+      attempt: number;
+      trigger: Trigger;
+      candidate: SealedCandidate;
+      findings: Finding[];
+      round: number;
+      /** The decided evaluation the attempt corrects, whose observations the diagnoses may read. */
+      evaluation: string;
+      decidedAttempt: number;
+    }
+  | {
+      kind: "diagnose";
+      step: ContractStep;
+      attempt: number;
+      exploration: Fact<ExplorationStart>;
+      side: DiagnosticSide;
+    }
+  | {
+      kind: "check";
+      step: ContractStep;
+      attempt: number;
+      exploration: Fact<ExplorationStart>;
+      side: DiagnosticSide;
+      diagnosis: JournalEvent;
+    }
+  | { kind: "select"; step: ContractStep; attempt: number; exploration: Fact<ExplorationStart> }
+  | {
+      kind: "route";
+      step: ContractStep;
+      attempt: number;
+      exploration: Fact<ExplorationStart>;
+      selection: Fact<AgentOutcome>;
+    }
+  | { kind: "challenge"; ev: Evaluated; review: Fact<ReviewRecord> }
   | {
       kind: "round";
       snapshot: Fact<FeedbackSnapshot>;
@@ -644,7 +727,7 @@ function facts<T>(dir: string, events: readonly JournalEvent[], action: string):
 function readState(run: Pick<RunHandle, "dir">, events: JournalEvent[]): State {
   const load = <T>(action: string): Fact<T>[] => facts<T>(run.dir, events, action);
   const sessions = load<AgentOutcome>("agent-invocation");
-  const purposes: readonly unknown[] = LEARNING_PURPOSES;
+  const purposes: readonly unknown[] = [...LEARNING_PURPOSES, ...EXPLORATION_PURPOSES];
   return {
     events,
     starts: load<Start>("start"),
@@ -711,16 +794,11 @@ function acceptances(ctx: Ctx, s: State): Map<string, Acceptance> {
         (e) => e.evaluation === decision.evaluation && e.record.step === decision.step,
       );
       if (!ev) throw new Error(`acceptance ${d.ref} names no journaled evaluation`);
+      const production = productionOf(s, step.id, decision.attempt);
       const manifest = withContext(
         manifestOf(ctx, step, current, ev.record.candidate, acceptedBefore(s, ev.seq)),
-        contextOf(
-          ctx,
-          s,
-          step,
-          current,
-          decision.attempt,
-          productionOf(s, step.id, decision.attempt),
-        ),
+        contextOf(ctx, s, step, current, decision.attempt, production),
+        production,
       );
       if (!manifest || evaluationDigest(manifest) !== decision.evaluation) continue;
       current.set(step.id, {
@@ -994,11 +1072,23 @@ function manifestOf(
   };
 }
 
-/** An evaluation manifest with the consumed learning context of its attempt, when it has one (T3.6 L2). */
+/**
+ * An evaluation manifest with the consumed learning context of its attempt
+ * (T3.6 L2) and the exploration routing it followed (T3.6 L3), when it has
+ * them.
+ */
 const withContext = (
   manifest: EvaluationManifest | null,
   context: EvaluationManifest["context"],
-): EvaluationManifest | null => (manifest && context ? { ...manifest, context } : manifest);
+  production: Production | null,
+): EvaluationManifest | null =>
+  manifest
+    ? {
+        ...manifest,
+        ...(context ? { context } : {}),
+        ...(production?.exploration ? { exploration: production.exploration } : {}),
+      }
+    : manifest;
 
 /** The production an attempt of a step started with: its first start's. */
 const productionOf = (s: State, step: string, attempt: number): Production | null =>
@@ -1254,7 +1344,12 @@ function readiness(
   return reasons;
 }
 
-/** A new attempt of a step, if its budget and dispatch readiness allow one. */
+/**
+ * A new attempt of a step, if its budget and dispatch readiness allow one.
+ * After a `correct` decision (`learn.decided`), the run's learning phases
+ * come first (T3.6 L3); a restart of an attempt's work carries the
+ * exploration it followed (`learn.exploration`) instead.
+ */
 function newAttempt(
   ctx: Ctx,
   s: State,
@@ -1264,6 +1359,7 @@ function newAttempt(
   from: SourceSnapshot,
   findings: Finding[],
   adopt?: Production["adopt"],
+  learn: { decided?: Fact<Decision>; exploration?: string | undefined } = {},
 ): Action {
   const limit = ctx.config.budgets.attempts;
   if (attempt > limit) {
@@ -1278,6 +1374,12 @@ function newAttempt(
   const base = stepBase(ctx, step, accepted);
   const blocked = readiness(ctx, s, step, accepted, base);
   if (blocked.length > 0) return pause(step.id, blocked);
+  let exploration = learn.exploration;
+  if (!adopt && exploration === undefined && learn.decided && ctx.config.learning?.phases) {
+    const next = learningAction(ctx, s, step, attempt, findings, learn.decided);
+    if (!("ready" in next)) return next;
+    exploration = next.exploration;
+  }
   // An adoption runs no agent, so it consumes no learning context.
   const context = adopt ? undefined : selection(ctx, s, step, accepted, attempt, snapshotOf(from));
   if (context && "kind" in context) return context;
@@ -1292,7 +1394,292 @@ function newAttempt(
       findings,
       ...(adopt ? { adopt } : {}),
       ...(context ? { context } : {}),
+      ...(exploration ? { exploration } : {}),
     },
+  };
+}
+
+const explorations = new WeakMap<State, Read<ExplorationRecords>>();
+
+/** The run's exploration records (T3.6 L3), read once per state; this controller's identity pins them. */
+function explorationsOf(ctx: Ctx, s: State): Read<ExplorationRecords> {
+  const found = explorations.get(s);
+  if (found) return found;
+  const read = explorationRecords(ctx.run, s.events, ctx.deps.harness);
+  explorations.set(s, read);
+  return read;
+}
+
+const SIDES: readonly DiagnosticSide[] = ["approach", "alternative"];
+
+/** A session that ran to an outcome: anything but a cancellation, which the next run repeats. */
+const completed = (f: Fact<AgentOutcome>): boolean => f.record.outcome !== "cancelled";
+
+/**
+ * The learning phases due before attempt `attempt` of `step` once
+ * `decided`, the previous attempt's `correct` decision, is journaled (T3.6
+ * L3; evidence-backed learning log §§2.3 and 2.6), in order: a proposal
+ * session on the decided evaluation; an independent review, then the
+ * controller's admission, of each of the step's proposals; then, when a
+ * trigger calls for one, the attempt's single exploration round — its
+ * record, both diagnoses, their checks, the selection review and the
+ * routing. Each phase is complete once its result is journaled and is never
+ * repeated; an interrupted, failed or cancelled required session runs again
+ * as a counted retry. The result is the next phase, a pause, or the routing
+ * the attempt follows.
+ */
+function learningAction(
+  ctx: Ctx,
+  s: State,
+  step: ContractStep,
+  attempt: number,
+  findings: Finding[],
+  decided: Fact<Decision>,
+): Action | { ready: true; exploration?: string } {
+  const phases = ctx.config.learning?.phases;
+  if (!phases) return { ready: true };
+  const { evaluation } = decided.record;
+  const proposed = s.learning.some(
+    (f) =>
+      f.data.purpose === "learning-proposal" && f.data.evaluation === evaluation && completed(f),
+  );
+  if (!proposed) return { kind: "propose", step, attempt: decided.record.attempt, evaluation };
+  for (const e of s.events) {
+    if (e.action !== "knowledge-proposal" && e.action !== "guidance-proposal") continue;
+    if (e.data.step !== step.id || typeof e.data.record !== "string") continue;
+    const proposal = e.data.record;
+    const review = s.learning.filter((f) => f.data.proposal === proposal && completed(f)).at(-1);
+    if (!review) return { kind: "support", step, attempt: e.attempt ?? attempt, proposal };
+    const admitted = s.events.some(
+      (a) =>
+        (a.action === "knowledge-admission" || a.action === "guidance-admission") &&
+        a.evidence[1] === proposal,
+    );
+    if (review.record.outcome === "reviewed" && !admitted) {
+      return { kind: "admit-learning", step, proposal, review: review.ref };
+    }
+  }
+
+  const read = explorationsOf(ctx, s);
+  if (!read.ok) {
+    return pause(
+      step.id,
+      read.diagnostics.map((d) => reason("owner", step.id, `exploration records: ${d}`)),
+    );
+  }
+  const opened = read.value.starts.find(
+    (x) => x.record.step === step.id && x.record.attempt === attempt,
+  );
+  if (!opened) {
+    const trigger = triggerOf(s, step, decided);
+    // Without a new round, a correction of an explored attempt follows the
+    // same exploration, so its acceptance needs a challenge too.
+    if (!trigger) {
+      const carried = productionOf(s, step.id, decided.record.attempt)?.exploration;
+      return carried ? { ready: true, exploration: carried } : { ready: true };
+    }
+    const used = read.value.starts.length;
+    if (used >= phases.exploration_rounds) {
+      return pause(step.id, [
+        reason(
+          "exhausted",
+          step.id,
+          `the run's ${phases.exploration_rounds} exploration rounds are used; attempt ${attempt} needs one for the ${trigger.kind} trigger on ${trigger.rule}: ${trigger.cause}`,
+        ),
+      ]);
+    }
+    const ev = s.evaluations.find(
+      (x) =>
+        x.record.step === step.id &&
+        x.record.attempt === decided.record.attempt &&
+        x.evaluation === evaluation,
+    );
+    if (!ev) throw new Error(`${step.id}: decision ${decided.ref} names no journaled evaluation`);
+    return {
+      kind: "explore",
+      step,
+      attempt,
+      trigger,
+      candidate: ev.record.candidate,
+      findings,
+      round: used + 1,
+      evaluation,
+      decidedAttempt: decided.record.attempt,
+    };
+  }
+  const exploration: Fact<ExplorationStart> = {
+    seq: opened.seq,
+    ref: opened.ref,
+    attempt,
+    evaluation: null,
+    data: {},
+    record: opened.record,
+  };
+  const sessionOf = (purpose: string): Fact<AgentOutcome> | undefined =>
+    s.learning
+      .filter((f) => f.data.exploration === opened.ref && f.data.purpose === purpose)
+      .at(-1);
+  // What a required session's latest outcome calls for: to run, when there
+  // is none or it failed or was cancelled (a counted retry); to wait for an
+  // amendment, after it exhausted a limit; else nothing more.
+  const due = (f: Fact<AgentOutcome> | undefined, what: string): "run" | Stop | "done" => {
+    if (!f || f.record.outcome === "failed" || f.record.outcome === "cancelled") return "run";
+    if (f.record.outcome !== "exhausted") return "done";
+    return amendedSince(s, f.seq)
+      ? "run"
+      : pause(step.id, [
+          reason("exhausted", step.id, `the ${what} exhausted its ${f.record.limit} limit`),
+        ]);
+  };
+  for (const side of SIDES) {
+    const next = due(sessionOf(`diagnostic-${side}`), `${side} diagnosis`);
+    if (next === "run") return { kind: "diagnose", step, attempt, exploration, side };
+    if (next !== "done") return next;
+  }
+  for (const side of SIDES) {
+    const d = sessionOf(`diagnostic-${side}`);
+    const check = d?.record.outcome === "diagnosed" ? d.record.diagnosis.check : null;
+    if (!d || !check) continue;
+    if (
+      read.value.checks.some((c) => c.record.exploration === opened.ref && c.record.side === side)
+    ) {
+      continue;
+    }
+    const diagnosis = s.events.find((e) => e.seq === d.seq);
+    if (!diagnosis) throw new Error(`${step.id}: diagnosis ${d.ref} is not journaled`);
+    return { kind: "check", step, attempt, exploration, side, diagnosis };
+  }
+  const selection = sessionOf("exploration-selection");
+  const selecting = due(selection, "selection review");
+  if (selecting !== "run" && selecting !== "done") return selecting;
+  // As for a common review, only an incomplete verdict without a negative
+  // judgement is reviewed again.
+  const incomplete =
+    selection?.record.outcome === "reviewed" &&
+    !checkVerdict(selection.record, { subjects: selectionSubjects(opened.ref), targets: [] }).ok &&
+    negatives(selection.record).length === 0;
+  if (selecting === "run" || !selection || incomplete) {
+    return { kind: "select", step, attempt, exploration };
+  }
+  const routing = read.value.routings.find((r) => r.record.exploration === opened.ref);
+  if (!routing) return { kind: "route", step, attempt, exploration, selection };
+  if (routing.record.outcome === "blocked" && !amendedSince(s, routing.seq)) {
+    return pause(
+      step.id,
+      routing.record.reasons.map((r) =>
+        reason(
+          "owner",
+          `${step.id}/exploration`,
+          `no approach was selected for attempt ${attempt}: ${r}`,
+        ),
+      ),
+    );
+  }
+  return { ready: true, exploration: routing.ref };
+}
+
+/** A finding as a decision counts it: its rule, location, defect and correction. */
+const findingKey = (f: Finding): string =>
+  stringify({ rule: f.rule, location: f.location, defect: f.defect, correction: f.correction }) ??
+  "";
+
+/**
+ * The reviewed blocking findings a `correct` decision counted: each blocking
+ * finding of a review of the given kinds of the decided evaluation that the
+ * decision lists among its findings.
+ */
+function reviewedFindings(
+  s: State,
+  decided: Fact<Decision>,
+  kinds: readonly ReviewRecord["kind"][],
+): (Occurrence & { rule: string; defect: string; choice: string | undefined })[] {
+  const d = decided.record;
+  if (d.decision !== "correct") return [];
+  const counted = new Set(d.findings.map(findingKey));
+  return s.reviews
+    .filter(
+      (r) =>
+        kinds.includes(r.record.kind) &&
+        r.attempt === d.attempt &&
+        r.evaluation === d.evaluation &&
+        r.record.outcome.outcome === "reviewed",
+    )
+    .flatMap((r) =>
+      r.record.outcome.outcome === "reviewed"
+        ? r.record.outcome.verdict.findings.flatMap((f, finding) =>
+            f.severity === "blocking" && counted.has(findingKey(f))
+              ? [
+                  {
+                    attempt: d.attempt,
+                    review: r.ref,
+                    finding,
+                    rule: f.rule,
+                    defect: f.defect,
+                    choice: f.choice,
+                  },
+                ]
+              : [],
+          )
+        : [],
+    );
+}
+
+/**
+ * Why the attempt after `decided` is explored, if at all (T3.6 L3;
+ * evidence-backed learning log §2.3): a reviewed blocking finding the
+ * decision counted that names an unresolved choice; else one rule's reviewed
+ * blocking failure in the step's two latest attempts, each a correction
+ * attempt that was correcting that rule. Verifier output, optional findings,
+ * equal text under another rule and a single occurrence never trigger.
+ */
+function triggerOf(s: State, step: ContractStep, decided: Fact<Decision>): Trigger | null {
+  const latest = reviewedFindings(s, decided, ["candidate", "challenge"]);
+  const choice = latest.find((f) => (f.choice ?? "").trim() !== "");
+  if (choice) {
+    return {
+      kind: "choice",
+      rule: choice.rule,
+      cause: choice.choice ?? "",
+      occurrences: [{ attempt: choice.attempt, review: choice.review, finding: choice.finding }],
+    };
+  }
+  const k = decided.record.attempt;
+  const previous = s.decisions
+    .filter(
+      (d) =>
+        d.record.step === step.id && d.record.attempt === k - 1 && d.record.decision === "correct",
+    )
+    .at(-1);
+  if (!previous) return null;
+  const correcting = (attempt: number): Set<string> =>
+    new Set((productionOf(s, step.id, attempt)?.findings ?? []).map((f) => f.rule));
+  const [now, before] = [correcting(k), correcting(k - 1)];
+  const earlier = reviewedFindings(s, previous, ["candidate"]);
+  const rules = [
+    ...new Set(
+      reviewedFindings(s, decided, ["candidate"])
+        .map((f) => f.rule)
+        .filter((r) => now.has(r) && before.has(r) && earlier.some((f) => f.rule === r)),
+    ),
+  ].sort();
+  const rule = rules[0];
+  if (rule === undefined) return null;
+  const at = (list: typeof latest): Occurrence & { defect: string } => {
+    const f = list.find((x) => x.rule === rule);
+    if (!f) throw new Error(`no reviewed finding on ${rule}`);
+    return f;
+  };
+  const first = at(earlier);
+  const second = at(reviewedFindings(s, decided, ["candidate"]));
+  return {
+    kind: "repeated",
+    rule,
+    cause: second.defect,
+    occurrences: [first, second].map(({ attempt, review, finding }) => ({
+      attempt,
+      review,
+      finding,
+    })),
   };
 }
 
@@ -1475,6 +1862,8 @@ function evaluationAction(
       attempt + 1,
       production.base,
       carry(production.findings, sealFindings(violations)),
+      undefined,
+      { exploration: production.exploration },
     );
   }
   const checkpoint = production ? null : checkpointEvidence(ctx, s, accepted);
@@ -1482,6 +1871,7 @@ function evaluationAction(
   const manifest = withContext(
     manifestOf(ctx, step, accepted, record.candidate, acceptedBefore(s, latest.seq), checkpoint),
     context,
+    production,
   );
   if (!manifest) throw new Error(`${step.id}: an input has no current acceptance`);
   const evaluation = evaluationDigest(manifest);
@@ -1499,6 +1889,7 @@ function evaluationAction(
         checkpoint,
       ),
       context,
+      production,
     );
     if (!now) throw new Error(`${step.id}: an input has no current acceptance`);
     return {
@@ -1585,6 +1976,41 @@ function evaluationAction(
     }
     return { kind: "review", ev };
   }
+  // T3.6 L3: an attempt that followed an exploration is challenged across
+  // attempts once its independent review binds, and before its decision.
+  if (manifest.exploration !== undefined) {
+    const bound = reviews.find(
+      (r) => checkVerdict(r.record.outcome, scope).ok || negatives(r.record.outcome).length > 0,
+    );
+    if (!bound) throw new Error(`${step.id}: no binding review of ${evaluation}`);
+    const subjects = challengeSubjects(step.id);
+    const challenges = s.reviews.filter(
+      (r) =>
+        r.record.kind === "challenge" &&
+        thisEvaluation(r) &&
+        r.record.rubric === CHALLENGE_RUBRIC.digest &&
+        r.record.records?.[0] === bound.ref,
+    );
+    const challenged = challenges.some(
+      (r) =>
+        checkVerdict(r.record.outcome, { subjects, targets: [] }).ok ||
+        negatives(r.record.outcome).length > 0,
+    );
+    if (!challenged) {
+      const last = challenges.at(-1);
+      const outcome = last?.record.outcome;
+      if (outcome?.outcome === "exhausted" && !amendedSince(s, last?.seq ?? 0)) {
+        return pause(step.id, [
+          reason(
+            "exhausted",
+            step.id,
+            `the challenge reviewer exhausted its ${outcome.limit} limit`,
+          ),
+        ]);
+      }
+      return { kind: "challenge", ev, review: bound };
+    }
+  }
 
   const decision = s.decisions.filter(thisEvaluation).at(-1);
   const approvedSince = s.approvals.some(
@@ -1600,7 +2026,9 @@ function evaluationAction(
   }
   if (d.decision === "correct") {
     return production
-      ? newAttempt(ctx, s, step, accepted, attempt + 1, record.candidate, d.findings)
+      ? newAttempt(ctx, s, step, accepted, attempt + 1, record.candidate, d.findings, undefined, {
+          decided: decision,
+        })
       : correctExit(ctx, s, accepted, d.findings);
   }
   const requests = s.requests.filter((r) => r.evaluation === evaluation);
@@ -1760,6 +2188,8 @@ function stepAction(
       attempt + 1,
       production.from,
       carry(production.findings, sealFindings(rejected.record.diagnostics)),
+      undefined,
+      { exploration: production.exploration },
     );
   }
   const produced = s.producers
@@ -1781,7 +2211,17 @@ function stepAction(
   // consumed is no longer current, a new attempt selects afresh instead
   // (T3.6 L2).
   if ((contextOf(ctx, s, step, accepted, attempt, production)?.stale.length ?? 0) > 0) {
-    return newAttempt(ctx, s, step, accepted, attempt + 1, production.from, production.findings);
+    return newAttempt(
+      ctx,
+      s,
+      step,
+      accepted,
+      attempt + 1,
+      production.from,
+      production.findings,
+      undefined,
+      { exploration: production.exploration },
+    );
   }
   // Interrupted, failed, cancelled, submitted without a sealed candidate, or
   // stopped by a limit or blocker that a later amendment addressed.
@@ -2160,6 +2600,16 @@ function nextAction(ctx: Ctx, s: State): Action {
       );
     }
   }
+  // Exploration records of another format or controller are refused, never migrated (T3.6 L3).
+  if (s.events.some((e) => e.action.startsWith("exploration-"))) {
+    const read = explorationsOf(ctx, s);
+    if (!read.ok) {
+      return pause(
+        null,
+        read.diagnostics.map((d) => reason("owner", "exploration", `exploration records: ${d}`)),
+      );
+    }
+  }
   const accepted = acceptances(ctx, s);
   // An accepted step's approved effects complete before any later step.
   for (const a of [...accepted.values()].sort((x, y) => x.seq - y.seq)) {
@@ -2226,6 +2676,43 @@ function phaseOf(
         attempt: action.attempt,
         key: `assess/${action.snapshot.record.round}/${action.snapshot.ref}`,
       };
+    // T3.6 L3: the learning phases, each keyed by what it works on.
+    case "propose":
+      return {
+        phase: "propose",
+        step: action.step.id,
+        attempt: action.attempt,
+        key: `propose/${action.step.id}/${action.evaluation}`,
+      };
+    case "support":
+      return {
+        phase: "support",
+        step: action.step.id,
+        attempt: action.attempt,
+        key: `support/${action.step.id}/${action.proposal}`,
+      };
+    case "diagnose":
+    case "check":
+      return {
+        phase: action.kind,
+        step: action.step.id,
+        attempt: action.attempt,
+        key: `${action.kind}/${action.step.id}/${action.attempt}/${action.side}`,
+      };
+    case "select":
+      return {
+        phase: "select",
+        step: action.step.id,
+        attempt: action.attempt,
+        key: `select/${action.step.id}/${action.attempt}`,
+      };
+    case "challenge":
+      return {
+        phase: "challenge",
+        step: action.ev.step.id,
+        attempt: action.ev.attempt,
+        key: `challenge/${action.ev.step.id}/${action.ev.evaluation}`,
+      };
     default:
       return null;
   }
@@ -2286,8 +2773,14 @@ function needs(action: Action): (keyof Capabilities)[] {
       return ["agents", "candidates"];
     case "review":
     case "assess":
+    case "propose":
+    case "support":
+    case "diagnose":
+    case "select":
+    case "challenge":
       return ["agents"];
     case "verify":
+    case "check":
       return ["candidates"];
     case "effect":
       return ["effects"];
@@ -2322,7 +2815,17 @@ function reviewerAccess(ctx: Ctx): ReviewerAccess {
 }
 
 /** The phases that dispatch an agent session and reserve its allowance. */
-const AGENT_PHASES: ReadonlySet<Phase> = new Set(["produce", "admit", "review", "assess"]);
+const AGENT_PHASES: ReadonlySet<Phase> = new Set([
+  "produce",
+  "admit",
+  "review",
+  "assess",
+  "propose",
+  "support",
+  "diagnose",
+  "select",
+  "challenge",
+]);
 
 /** The invocation allowance a phase reserves: the per-invocation spend limit. An adoption runs no agent. */
 const allowanceOf = (ctx: Ctx, phase: Phase, production: Production | null): number | null =>
@@ -2480,6 +2983,19 @@ async function produce(
       );
     learning = inputs.value;
   }
+  let exploration: ExplorationInputs | undefined;
+  if (production.exploration) {
+    const read = explorationsOf(ctx, s);
+    const routing = read.ok
+      ? read.value.routings.find((r) => r.ref === production.exploration)
+      : undefined;
+    if (!routing) {
+      return pause(step.id, [
+        reason("owner", step.id, `exploration routing ${production.exploration} is not readable`),
+      ]);
+    }
+    exploration = explorationInputs(run, routing);
+  }
   const built = buildPacket(plan, step.id, roles.producer, {
     attempt,
     accepted: acceptedOutputs(accepted),
@@ -2487,6 +3003,7 @@ async function produce(
     findings: production.findings,
     ...(bindings === undefined ? {} : { bindings }),
     ...(learning ? { learning } : {}),
+    ...(exploration ? { exploration } : {}),
   });
   if (!built.ok)
     return pause(
@@ -2533,6 +3050,7 @@ async function produce(
         acceptedBefore(s, Number.POSITIVE_INFINITY),
       ),
       contextOf(ctx, readState(run, committedEvents(run)), step, accepted, attempt, production),
+      production,
     );
     if (!manifest) throw new Error(`${step.id}: an input has no current acceptance`);
     const record: EvaluationRecord = {
@@ -2628,6 +3146,188 @@ async function effect(
   return executed ? receipt(executed, false) : undefined;
 }
 
+/**
+ * Performs one learning phase or record (T3.6 L3). Each session phase's
+ * start reserves its allowance first; the records — an exploration's
+ * opening, a routing and an admission from a committed review — run no
+ * session and reserve nothing.
+ */
+async function learn(
+  ctx: Ctx,
+  s: State,
+  action: Extract<
+    Action,
+    {
+      kind:
+        | "propose"
+        | "support"
+        | "admit-learning"
+        | "explore"
+        | "diagnose"
+        | "check"
+        | "select"
+        | "route"
+        | "challenge";
+    }
+  >,
+): Promise<Stop | undefined> {
+  const { run, plan } = ctx;
+  const learning = ctx.config.learning;
+  if (!learning?.phases) throw new Error(`${action.kind}: the run configures no learning phases`);
+  const controller = ctx.deps.harness;
+  const accepted = (): AcceptedOutput[] => acceptedOutputs(acceptances(ctx, s));
+  const key = phaseOf(action)?.key ?? "";
+  const explored = (exploration: Fact<ExplorationStart>) => {
+    const read = explorationsOf(ctx, s);
+    if (!read.ok) throw new Error(read.diagnostics.join("\n"));
+    const diagnoses = SIDES.flatMap((side) => {
+      const f = s.learning
+        .filter(
+          (x) => x.data.exploration === exploration.ref && x.data.purpose === `diagnostic-${side}`,
+        )
+        .at(-1);
+      return f ? [{ side, ref: f.ref, outcome: f.record }] : [];
+    });
+    const checks = read.value.checks.filter((c) => c.record.exploration === exploration.ref);
+    return { diagnoses, checks };
+  };
+  switch (action.kind) {
+    case "propose":
+      await start(ctx, action, null);
+      await proposeLearning(run, {
+        plan,
+        step: action.step.id,
+        attempt: action.attempt,
+        evaluation: action.evaluation,
+        accepted: accepted(),
+        controller,
+        repository: ctx.config.repository.name,
+        reminderChars: learning.reminder_chars,
+        reviewer: reviewerAccess(ctx),
+        key,
+      });
+      return undefined;
+    case "support":
+      await start(ctx, action, null);
+      await reviewLearning(run, {
+        plan,
+        proposal: action.proposal,
+        accepted: accepted(),
+        controller,
+        reminderChars: learning.reminder_chars,
+        reviewer: reviewerAccess(ctx),
+        key,
+      });
+      return undefined;
+    case "admit-learning":
+      admitLearning(run, {
+        plan,
+        proposal: action.proposal,
+        review: action.review,
+        controller,
+        reminderChars: learning.reminder_chars,
+      });
+      return undefined;
+    case "explore": {
+      // Freeze what both diagnoses are shown before either starts.
+      const context = selection(
+        ctx,
+        s,
+        action.step,
+        acceptances(ctx, s),
+        action.attempt,
+        snapshotOf(action.candidate),
+      );
+      if (context && "kind" in context) return context;
+      const decided = (e: JournalEvent): boolean =>
+        e.data.step === action.step.id &&
+        e.attempt === action.decidedAttempt &&
+        e.evaluation === action.evaluation;
+      const records = [
+        ...action.trigger.occurrences.map((o) => o.review),
+        ...s.events
+          .filter((e) => e.action === "verifier-invocation" && decided(e))
+          .map((e) => String(e.data.record)),
+        ...s.producers
+          .filter((p) => p.data.step === action.step.id && p.attempt === action.decidedAttempt)
+          .map((p) => p.ref),
+      ];
+      const record: ExplorationStart = {
+        format: EXPLORATION_FORMAT,
+        controller,
+        run: run.run,
+        step: action.step.id,
+        attempt: action.attempt,
+        round: action.round,
+        trigger: action.trigger,
+        candidate: action.candidate,
+        findings: action.findings,
+        context: context ?? null,
+        records: [...new Set(records)].sort(),
+        limits: { checkTimeoutSeconds: learning.phases.check_timeout_seconds },
+      };
+      recordExploration(run, record, `explore/${action.step.id}/${action.attempt}`);
+      return undefined;
+    }
+    case "diagnose":
+      await start(ctx, action, null);
+      await diagnose(run, {
+        plan,
+        exploration: action.exploration,
+        side: action.side,
+        accepted: accepted(),
+        reviewer: reviewerAccess(ctx),
+        key,
+      });
+      return undefined;
+    case "check":
+      await start(ctx, action, null);
+      await diagnosticCheck(run, {
+        exploration: action.exploration,
+        side: action.side,
+        diagnosis: action.diagnosis,
+        open: ctx.workspaces.verifier,
+        key,
+      });
+      return undefined;
+    case "select": {
+      await start(ctx, action, null);
+      await selectApproach(run, {
+        plan,
+        exploration: action.exploration,
+        ...explored(action.exploration),
+        accepted: accepted(),
+        reviewer: reviewerAccess(ctx),
+        key,
+      });
+      return undefined;
+    }
+    case "route":
+      routeExploration(run, {
+        exploration: action.exploration,
+        selection: { ref: action.selection.ref, outcome: action.selection.record },
+        ...explored(action.exploration),
+        key: `route/${action.step.id}/${action.attempt}`,
+      });
+      return undefined;
+    case "challenge": {
+      const { ev } = action;
+      await start(ctx, action, null);
+      await challengeCandidate(run, {
+        plan,
+        step: ev.step.id,
+        candidate: ev.record.candidate,
+        attempt: ev.attempt,
+        manifest: ev.record.manifest,
+        accepted: accepted(),
+        reviewer: reviewerAccess(ctx),
+        review: action.review,
+      });
+      return undefined;
+    }
+  }
+}
+
 async function perform(ctx: Ctx, s: State, action: Action): Promise<Stop | undefined> {
   const { run, plan } = ctx;
   switch (action.kind) {
@@ -2706,6 +3406,16 @@ async function perform(ctx: Ctx, s: State, action: Action): Promise<Stop | undef
       });
       return undefined;
     }
+    case "propose":
+    case "support":
+    case "admit-learning":
+    case "explore":
+    case "diagnose":
+    case "check":
+    case "select":
+    case "route":
+    case "challenge":
+      return learn(ctx, s, action);
     case "decide": {
       const { ev } = action;
       const declared = ctx.declared(ev.record.candidate);
@@ -3368,6 +4078,15 @@ const FIXED = [
   "/operations",
 ];
 
+/**
+ * A run's learning mode (T3.6 L3): none, learning context only (L2), or
+ * context with the runner's learning phases.
+ */
+function learningMode(config: unknown): "none" | "context" | "phases" {
+  const learning = (config as { learning?: { phases?: unknown } } | null)?.learning;
+  return learning === undefined ? "none" : learning.phases === undefined ? "context" : "phases";
+}
+
 /** Whether `ancestor` is `revision` or an ancestor of it in the repository. */
 function descends(repoRoot: string, ancestor: string, revision: string): boolean {
   try {
@@ -3465,6 +4184,14 @@ export async function amendRun(
       `${fixed.map((c) => c.path).join(", ")} cannot be amended within a run; start a new run`,
     );
   }
+  // Whether the run learns, and whether it schedules learning phases, is
+  // fixed when it starts (T3.6 L3; evidence-backed learning log §2.6).
+  const [was, now] = [learningMode(before.config), learningMode(config)];
+  if (was !== now) {
+    return refuse(
+      `the learning mode cannot be amended within a run (${was} to ${now}); start a new run`,
+    );
+  }
   const admitted = await admit(config, deps, "amendment");
   if (!admitted.ok) return admitted;
   const taken = await takeReleased(dir, deps.github);
@@ -3558,6 +4285,29 @@ export type RunFacts = {
       knowledge: string[];
       guidance: string[];
       omitted: { kind: string; id: string; reason: string }[];
+    }[];
+    /**
+     * Each exploration round (T3.6 L3): its trigger, the outcome of each
+     * diagnosis and check, and its routing, or null while none is recorded.
+     * Selection is never acceptance.
+     */
+    explorations: {
+      step: string;
+      attempt: number;
+      record: string;
+      round: number;
+      trigger: { kind: string; rule: string };
+      diagnoses: { side: string; outcome: string }[];
+      checks: { side: string; outcome: string }[];
+      routing: { record: string; outcome: string } | null;
+    }[];
+    /** Each recorded cross-attempt challenge (T3.6 L3) and its verdict, or its outcome without one. */
+    challenges: {
+      step: string;
+      attempt: number;
+      evaluation: string;
+      review: string;
+      verdict: string;
     }[];
   } | null;
 };
@@ -3760,6 +4510,44 @@ export async function runFacts(
                     ]
                   : [];
               }),
+              explorations: (() => {
+                const read = explorationsOf(ctx, s);
+                if (!read.ok) return [];
+                return read.value.starts.map((x) => ({
+                  step: x.record.step,
+                  attempt: x.record.attempt,
+                  record: x.ref,
+                  round: x.record.round,
+                  trigger: { kind: x.record.trigger.kind, rule: x.record.trigger.rule },
+                  diagnoses: SIDES.flatMap((side) => {
+                    const f = s.learning
+                      .filter(
+                        (l) =>
+                          l.data.exploration === x.ref && l.data.purpose === `diagnostic-${side}`,
+                      )
+                      .at(-1);
+                    return f ? [{ side, outcome: f.record.outcome }] : [];
+                  }),
+                  checks: read.value.checks
+                    .filter((c) => c.record.exploration === x.ref)
+                    .map((c) => ({ side: c.record.side, outcome: c.record.outcome })),
+                  routing: ((r) => (r ? { record: r.ref, outcome: r.record.outcome } : null))(
+                    read.value.routings.find((r) => r.record.exploration === x.ref),
+                  ),
+                }));
+              })(),
+              challenges: s.reviews
+                .filter((r) => r.record.kind === "challenge")
+                .map((r) => ({
+                  step: s.evaluations.find((e) => e.evaluation === r.evaluation)?.record.step ?? "",
+                  attempt: r.record.attempt,
+                  evaluation: r.record.evaluation,
+                  review: r.ref,
+                  verdict:
+                    r.record.outcome.outcome === "reviewed"
+                      ? r.record.outcome.verdict.verdict
+                      : r.record.outcome.outcome,
+                })),
             }
           : null,
     },

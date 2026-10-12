@@ -16,7 +16,10 @@
 // model and effort and reports applying exactly them. T3.6 L2 adds fresh
 // reviewer-role sessions of the three learning purposes: a learning proposal,
 // a knowledge review and a guidance review, each with read_evidence limited
-// to the records its packet lists. No outcome here is acceptance.
+// to the records its packet lists. T3.6 L3 adds the exploration purposes: two
+// diagnostic sessions on the same sealed candidate, the selection review that
+// compares them and the cross-attempt challenge. No outcome here is
+// acceptance.
 
 import assert from "node:assert/strict";
 import { execFileSync } from "node:child_process";
@@ -29,11 +32,13 @@ import { fileURLToPath } from "node:url";
 import {
   buildPacket,
   containedOps,
+  DIAGNOSTIC_BRIEFINGS,
   invokeAgent,
   recordInvocation,
   resolveRole,
   type AgentOutcome,
   type AgentRole,
+  type DiagnosticSide,
   type Finding,
   type ProposalContext,
   type ReviewContext,
@@ -46,8 +51,13 @@ import {
   releaseRun,
   type RunHandle,
 } from "../../src/evidence.js";
-import { GUIDANCE_RUBRIC, KNOWLEDGE_RUBRIC } from "../../src/software-bootstrap.js";
-import { checkVerdict } from "../../src/verification.js";
+import {
+  CHALLENGE_RUBRIC,
+  GUIDANCE_RUBRIC,
+  KNOWLEDGE_RUBRIC,
+  SELECTION_RUBRIC,
+} from "../../src/software-bootstrap.js";
+import { challengeSubjects, checkVerdict, selectionSubjects } from "../../src/verification.js";
 import {
   createWorkspace,
   fence,
@@ -460,6 +470,156 @@ describe("T3-C live: one real producer and a fresh read-only reviewer", () => {
         await fence(ws);
       }
     }
+  });
+
+  it("fresh exploration sessions return each purpose's structured result (T3.6 L3)", async () => {
+    assert.ok(candidate && produced, "the producer step ran");
+    const sealed = candidate;
+    const readOnly: WritePolicy = { writable: [], scratch: [], protected: [] };
+    const read = readRun(run.dir);
+    assert.ok(read.ok);
+    const record = String(
+      read.records.events.find((e) => e.action === "agent-invocation")?.data.record ?? "",
+    );
+    assert.match(record, /^sha256:/, "the producer's session is a committed record");
+    const records = (ref: string): Buffer | null => {
+      try {
+        return readEvidence(run.dir, ref);
+      } catch {
+        return null;
+      }
+    };
+    const exploration = sha256("live exploration");
+    const trigger = {
+      kind: "repeated",
+      rule: "CP99-S01/R01",
+      cause: "the exported value was not checked before submission",
+      occurrences: [
+        { attempt: 1, review: record, finding: 0 },
+        { attempt: 2, review: record, finding: 0 },
+      ],
+    };
+    const finding: Finding = {
+      rule: "CP99-S01/R01",
+      location: "src/lib.ts:1",
+      defect: "the exported value is not the one the step requires",
+      correction: "export the value the step's requirement names",
+    };
+    const seen = new Set([produced.observation.session]);
+    /** One fresh reviewer-role session on a read-only workspace of the sealed candidate. */
+    const session = async (
+      label: string,
+      options: Parameters<typeof buildPacket>[3],
+    ): Promise<AgentOutcome> => {
+      const ws = await createWorkspace(run, {
+        base: { commit: sealed.commit, tree: sealed.tree },
+        root: join(scratch, `exploration-${label}`),
+        policy: readOnly,
+      });
+      try {
+        const built = buildPacket(plan, "CP99-S01", reviewer, options);
+        assert.ok(built.ok);
+        const outcome = await invokeAgent(
+          reviewer,
+          built.packet,
+          containedOps(ws),
+          AbortSignal.timeout(900_000),
+          { records },
+        );
+        process.stdout.write(`# ${label}: ${JSON.stringify(outcome)}\n`);
+        const o = outcome.observation;
+        assert.ok(o.session && !seen.has(o.session), `${label}: a fresh session`);
+        seen.add(o.session);
+        assert.equal(o.model.reported, reviewer.model);
+        assert.deepEqual(o.effort, { configured: reviewer.effort, reported: [reviewer.effort] });
+        assert.deepEqual(o.tools, [
+          "StructuredOutput",
+          "mcp__workspace__read_evidence",
+          "mcp__workspace__read_file",
+          "mcp__workspace__search_files",
+        ]);
+        assert.ok(
+          o.toolCalls.every((c) => ["read_file", "search_files", "read_evidence"].includes(c.tool)),
+        );
+        return outcome;
+      } finally {
+        await fence(ws);
+      }
+    };
+    const base = {
+      attempt: 1,
+      accepted: [],
+      policy: readOnly,
+      candidate: sealed,
+      records: [record],
+    };
+    const diagnoses: { side: DiagnosticSide; outcome: AgentOutcome }[] = [];
+    for (const side of ["approach", "alternative"] as const) {
+      const outcome = await session(`diagnostic-${side}`, {
+        ...base,
+        findings: [finding],
+        diagnosis: {
+          side,
+          briefing: DIAGNOSTIC_BRIEFINGS[side],
+          exploration,
+          trigger,
+          limits: { checkTimeoutSeconds: 30 },
+        },
+      });
+      assert.equal(outcome.outcome, "diagnosed", JSON.stringify(outcome));
+      assert.ok(outcome.outcome === "diagnosed");
+      assert.ok(outcome.diagnosis.approach.trim() !== "");
+      diagnoses.push({ side, outcome });
+    }
+    const selection: ReviewContext = {
+      kind: "selection",
+      rubric: SELECTION_RUBRIC,
+      subjects: selectionSubjects(exploration),
+      targets: [],
+      bindings: [],
+      evidence: {
+        exploration,
+        trigger,
+        findings: [finding],
+        diagnoses: diagnoses.map((d) => ({
+          side: d.side,
+          invocation: record,
+          outcome: d.outcome.outcome,
+          diagnosis: d.outcome.outcome === "diagnosed" ? d.outcome.diagnosis : null,
+        })),
+        checks: [],
+      },
+    };
+    const selected = await session("exploration-selection", { ...base, review: selection });
+    assert.equal(selected.outcome, "reviewed", JSON.stringify(selected));
+    assert.ok(selected.outcome === "reviewed");
+    assert.ok(
+      ["approach", "alternative", "none"].includes(selected.verdict.recommendation?.select ?? ""),
+      "the selection names its recommendation",
+    );
+    const checkedSelection = checkVerdict(selected, { subjects: selection.subjects, targets: [] });
+    assert.ok(checkedSelection.ok, checkedSelection.ok ? "" : checkedSelection.issues.join("; "));
+    const challenge: ReviewContext = {
+      kind: "challenge",
+      rubric: CHALLENGE_RUBRIC,
+      subjects: challengeSubjects("CP99-S01"),
+      targets: [],
+      bindings: [],
+      evidence: {
+        review: { record, verdict: { verdict: "pass" } },
+        exploration,
+        attempts: [{ attempt: 1, record, findings: [finding] }],
+        explorations: [],
+        pullRequest: [],
+      },
+    };
+    const challenged = await session("cross-attempt-challenge", { ...base, review: challenge });
+    assert.equal(challenged.outcome, "reviewed", JSON.stringify(challenged));
+    const checkedChallenge = checkVerdict(challenged, {
+      subjects: challenge.subjects,
+      targets: [],
+    });
+    assert.ok(checkedChallenge.ok, checkedChallenge.ok ? "" : checkedChallenge.issues.join("; "));
     releaseRun(run);
   });
 });
