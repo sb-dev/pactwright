@@ -1,0 +1,7 @@
+# Checkpoint 84 — T3.6 L4 comparison task cp84-flag. Not a Pactwright checkpoint.
+format: 2
+checkpoint: CP84
+run_model: software-bootstrap
+sources:
+  CHECKPOINT: ../84-flag.md
+  TASK: ../../specs/task-spec.md

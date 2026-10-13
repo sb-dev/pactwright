@@ -1,0 +1,23 @@
+{
+  "module": "work/normalize.mjs",
+  "cases": [
+    {
+      "args": [
+        "  Ada  "
+      ],
+      "stdout": "\"Ada\"\n"
+    },
+    {
+      "args": [
+        "\tAda\n"
+      ],
+      "stdout": "\"Ada\"\n"
+    },
+    {
+      "args": [
+        " Ada　"
+      ],
+      "stdout": "\"Ada\"\n"
+    }
+  ]
+}

@@ -1,0 +1,20 @@
+# CP84 Step 1 — Write the flag parser
+id: CP84-S01
+requires: []
+outputs:
+  flag: >-
+    The module `work/flag.mjs` of TASK §1. It exports `parseFlag`. Run as a
+    program with one argument, it prints the JSON encoding of its result for
+    that argument and a newline, and exits 0.
+requirements:
+  R01:
+    source: [TASK#1]
+    statement: "The flag parser shall return true for true, yes, on or 1 and false for false, no, off or 0, in any letter case, and null for any other text."
+acceptance:
+  AC01:
+    covers: [R01]
+    cases: [table]
+    given: "Flag words in mixed case and texts that are not flags."
+    when: The module runs as a program with each text.
+    then: "It prints the JSON true, false or null for each text and exits 0."
+    verify: {automated: [task.cases]}

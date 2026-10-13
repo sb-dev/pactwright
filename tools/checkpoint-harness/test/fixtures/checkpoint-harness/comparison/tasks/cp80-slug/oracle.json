@@ -1,0 +1,47 @@
+{
+  "module": "work/slug.mjs",
+  "cases": [
+    {
+      "args": [
+        "Hello World"
+      ],
+      "stdout": "\"hello-world\"\n"
+    },
+    {
+      "args": [
+        "  A--B  "
+      ],
+      "stdout": "\"a-b\"\n"
+    },
+    {
+      "args": [
+        "Rock & Roll!"
+      ],
+      "stdout": "\"rock-roll\"\n"
+    },
+    {
+      "args": [
+        "Café au lait"
+      ],
+      "stdout": "\"caf-au-lait\"\n"
+    },
+    {
+      "args": [
+        "---"
+      ],
+      "stdout": "\"\"\n"
+    },
+    {
+      "args": [
+        "X1 y2"
+      ],
+      "stdout": "\"x1-y2\"\n"
+    },
+    {
+      "args": [
+        "MiXeD_case.v2"
+      ],
+      "stdout": "\"mixed-case-v2\"\n"
+    }
+  ]
+}

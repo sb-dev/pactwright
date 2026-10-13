@@ -1,0 +1,17 @@
+{
+  "id": "cp86-csv",
+  "set": "held-out",
+  "category": "recovery",
+  "module": "work/csv.mjs",
+  "fn": "splitCsv",
+  "checkpoint": "docs/checkpoints/86-csv/checkpoint.yml",
+  "step": "CP86-S01",
+  "output": "splitter",
+  "injected": [
+    "injected/attempt-1.mjs"
+  ],
+  "interrupt": {
+    "attempt": 2,
+    "phase": "produce"
+  }
+}

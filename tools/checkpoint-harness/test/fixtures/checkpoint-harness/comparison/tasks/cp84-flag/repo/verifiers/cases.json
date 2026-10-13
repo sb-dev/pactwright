@@ -1,0 +1,23 @@
+{
+  "module": "work/flag.mjs",
+  "cases": [
+    {
+      "args": [
+        "true"
+      ],
+      "stdout": "true\n"
+    },
+    {
+      "args": [
+        "FALSE"
+      ],
+      "stdout": "false\n"
+    },
+    {
+      "args": [
+        "maybe"
+      ],
+      "stdout": "null\n"
+    }
+  ]
+}

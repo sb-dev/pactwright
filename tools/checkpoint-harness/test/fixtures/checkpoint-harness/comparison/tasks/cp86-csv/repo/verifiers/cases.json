@@ -1,0 +1,17 @@
+{
+  "module": "work/csv.mjs",
+  "cases": [
+    {
+      "args": [
+        "a,b,c"
+      ],
+      "stdout": "[\"a\",\"b\",\"c\"]\n"
+    },
+    {
+      "args": [
+        "\"a,b\",c"
+      ],
+      "stdout": "[\"a,b\",\"c\"]\n"
+    }
+  ]
+}

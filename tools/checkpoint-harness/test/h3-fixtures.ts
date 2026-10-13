@@ -757,6 +757,8 @@ export type World = {
   contained: boolean;
   /** The controller environment each job runs with. */
   env: Record<string, string>;
+  /** Reviewer workspaces of a run that serve the candidate's files (T3.6 L4); none serve files by default. */
+  reviewers?: (run: RunHandle) => Workspaces["reviewer"];
 };
 
 export function world(
@@ -873,7 +875,7 @@ export async function job(
         : {
             producer: commandProducers(run, root),
             verifier: localWorkspaces(run, root),
-            reviewer: reviewerWorkspaces(),
+            reviewer: w.reviewers?.(run) ?? reviewerWorkspaces(),
           },
     fence: (run) => (w.contained ? fenceWorkers(run) : Promise.resolve(0)),
     providers: { producer: w.producer, reviewer: w.reviewer },

@@ -1,0 +1,7 @@
+# Checkpoint 82 — T3.6 L4 comparison task cp82-title. Not a Pactwright checkpoint.
+format: 2
+checkpoint: CP82
+run_model: software-bootstrap
+sources:
+  CHECKPOINT: ../82-title.md
+  TASK: ../../specs/task-spec.md

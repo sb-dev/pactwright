@@ -1,0 +1,20 @@
+# CP82 Step 1 — Write the title-case module
+id: CP82-S01
+requires: []
+outputs:
+  title: >-
+    The module `work/title.mjs` of TASK §1. It exports `titleCase`. Run as a
+    program with one argument, it prints the JSON encoding of its result for
+    that argument and a newline, and exits 0.
+requirements:
+  R01:
+    source: [TASK#1]
+    statement: "The title-case module shall upper-case the first character of each space-separated word of a text and lower-case its other characters, keeping the spaces."
+acceptance:
+  AC01:
+    covers: [R01]
+    cases: [table]
+    given: "Texts of space-separated words in mixed case."
+    when: The module runs as a program with each text.
+    then: "It prints the JSON string of each text's title case and exits 0."
+    verify: {automated: [task.cases]}

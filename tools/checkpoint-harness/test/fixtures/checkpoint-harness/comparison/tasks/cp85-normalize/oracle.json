@@ -1,0 +1,47 @@
+{
+  "module": "work/normalize.mjs",
+  "cases": [
+    {
+      "args": [
+        "  Ada  "
+      ],
+      "stdout": "\"Ada\"\n"
+    },
+    {
+      "args": [
+        "\tAda\n"
+      ],
+      "stdout": "\"Ada\"\n"
+    },
+    {
+      "args": [
+        " Ada　"
+      ],
+      "stdout": "\"Ada\"\n"
+    },
+    {
+      "args": [
+        "Ada  \t Lovelace"
+      ],
+      "stdout": "\"Ada Lovelace\"\n"
+    },
+    {
+      "args": [
+        "a  b"
+      ],
+      "stdout": "\"a b\"\n"
+    },
+    {
+      "args": [
+        "a b"
+      ],
+      "stdout": "\"a b\"\n"
+    },
+    {
+      "args": [
+        "\n"
+      ],
+      "stdout": "\"\"\n"
+    }
+  ]
+}

@@ -1,0 +1,7 @@
+# Checkpoint 80 — T3.6 L4 comparison task cp80-slug. Not a Pactwright checkpoint.
+format: 2
+checkpoint: CP80
+run_model: software-bootstrap
+sources:
+  CHECKPOINT: ../80-slug.md
+  TASK: ../../specs/task-spec.md

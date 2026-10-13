@@ -1,0 +1,65 @@
+{
+  "module": "work/port.mjs",
+  "cases": [
+    {
+      "args": [
+        "80"
+      ],
+      "stdout": "80\n"
+    },
+    {
+      "args": [
+        "1"
+      ],
+      "stdout": "1\n"
+    },
+    {
+      "args": [
+        "65535"
+      ],
+      "stdout": "65535\n"
+    },
+    {
+      "args": [
+        "65536"
+      ],
+      "stdout": "null\n"
+    },
+    {
+      "args": [
+        "99999"
+      ],
+      "stdout": "null\n"
+    },
+    {
+      "args": [
+        "0"
+      ],
+      "stdout": "null\n"
+    },
+    {
+      "args": [
+        "080"
+      ],
+      "stdout": "null\n"
+    },
+    {
+      "args": [
+        "+80"
+      ],
+      "stdout": "null\n"
+    },
+    {
+      "args": [
+        " 80"
+      ],
+      "stdout": "null\n"
+    },
+    {
+      "args": [
+        "x"
+      ],
+      "stdout": "null\n"
+    }
+  ]
+}

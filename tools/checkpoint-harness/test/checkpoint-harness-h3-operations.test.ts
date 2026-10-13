@@ -953,6 +953,7 @@ describe("H3-11 summaries agree with recorded state", () => {
       saved: null,
       pullRequest: null,
       round: { round: 9 },
+      learning: { mode: "phases" },
     };
     for (const field of FIELDS) {
       const wrong = { ...reported, [field]: falsified[field] } as Summary;
@@ -974,6 +975,8 @@ describe("H3-11 summaries agree with recorded state", () => {
     assert.deepEqual(reported.roles, facts.roles);
     assert.equal(facts.roles.reviewer.effort.reported, "not-reported");
     assert.ok(reported.saved !== "unknown" && reported.saved !== null);
+    // A run without learning reports it explicitly, never by omission (T3.6 L4).
+    assert.deepEqual(reported.learning, { mode: "none" });
   });
 
   it("a refusal before restore reports every run field unknown and no acceptance", () => {

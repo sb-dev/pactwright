@@ -1,0 +1,20 @@
+# CP80 Step 1 — Write the slug module
+id: CP80-S01
+requires: []
+outputs:
+  slug: >-
+    The module `work/slug.mjs` of TASK §1. It exports `slugify`. Run as a
+    program with one argument, it prints the JSON encoding of its result for
+    that argument and a newline, and exits 0.
+requirements:
+  R01:
+    source: [TASK#1]
+    statement: "The slug module shall return the lower-case ASCII letters and digits of a text, with each run of other characters between them replaced by one hyphen and no leading or trailing hyphen."
+acceptance:
+  AC01:
+    covers: [R01]
+    cases: [table]
+    given: "Texts with spaces, punctuation and mixed case."
+    when: The module runs as a program with each text.
+    then: "It prints the JSON string of each text's slug and exits 0."
+    verify: {automated: [task.cases]}

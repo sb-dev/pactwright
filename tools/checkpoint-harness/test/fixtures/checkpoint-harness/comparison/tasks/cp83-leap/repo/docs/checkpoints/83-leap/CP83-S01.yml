@@ -1,0 +1,20 @@
+# CP83 Step 1 — Write the leap-year module
+id: CP83-S01
+requires: []
+outputs:
+  leap: >-
+    The module `work/leap.mjs` of TASK §1. It exports `isLeapYear`. Run as a
+    program with one argument, it prints the JSON encoding of its result for
+    that argument and a newline, and exits 0.
+requirements:
+  R01:
+    source: [TASK#1]
+    statement: "The leap-year module shall report whether a year is a Gregorian leap year: divisible by 4, except years divisible by 100 that are not divisible by 400."
+acceptance:
+  AC01:
+    covers: [R01]
+    cases: [table]
+    given: "Ordinary, leap and century years."
+    when: The module runs as a program with each text.
+    then: "It prints the JSON true or false for each year and exits 0."
+    verify: {automated: [task.cases]}

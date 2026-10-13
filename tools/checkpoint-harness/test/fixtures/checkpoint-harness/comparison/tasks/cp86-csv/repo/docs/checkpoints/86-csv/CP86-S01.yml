@@ -1,0 +1,20 @@
+# CP86 Step 1 — Write the CSV line splitter
+id: CP86-S01
+requires: []
+outputs:
+  splitter: >-
+    The module `work/csv.mjs` of TASK §1. It exports `splitCsv`. Run as a
+    program with one argument, it prints the JSON encoding of its result for
+    that argument and a newline, and exits 0.
+requirements:
+  R01:
+    source: [TASK#1]
+    statement: "The CSV splitter shall return the fields of a CSV line in order, where a field enclosed in double quotes may hold commas and a doubled double quote stands for one double quote."
+acceptance:
+  AC01:
+    covers: [R01]
+    cases: [table]
+    given: "Lines with plain fields, quoted fields holding commas and doubled quotes."
+    when: The module runs as a program with each text.
+    then: "It prints the JSON array of each line's fields and exits 0."
+    verify: {automated: [task.cases]}

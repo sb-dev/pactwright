@@ -45,6 +45,7 @@ import {
   type Submission,
   type WorkspaceOps,
 } from "./claude.js";
+import type { Injection } from "./fixture.js";
 import {
   CANDIDATE,
   coversCheckpoint,
@@ -376,8 +377,8 @@ export type RunnerConfig = RunConfig & {
     provider_spend_limit: { usd: number; turn_reservation_usd: number };
     run_spend_usd?: number;
   };
-  /** Hosted job limits (T3.5 H3). */
-  job?: { yield_after_seconds?: number; faults?: boolean };
+  /** Hosted job limits (T3.5 H3), and a hosted fixture's faults and injected producer attempts (T3.6 L4). */
+  job?: { yield_after_seconds?: number; faults?: boolean; inject?: Injection[] };
   workspace: { candidate_root: string; controller_root: string };
   permissions: WritePolicy & { approvers: Record<string, string[]> };
   /** Where the accepted selection is published for review (T3.5 H3). */
@@ -4074,14 +4075,42 @@ export async function approveRequest(
   return { ok: true, approval: stored.ref };
 }
 
-/** Configuration that identifies the run itself; changing it needs a new run. */
+/**
+ * Configuration that identifies the run itself; changing it needs a new run.
+ * A hosted fixture's faults and injected attempts (T3.6 L4) are fixed too, so
+ * no run can be amended into a fixture.
+ */
 const FIXED = [
   "/repository",
   "/checkpoint",
   "/permissions/approvers",
   "/publication",
   "/operations",
+  "/job/faults",
+  "/job/inject",
 ];
+
+/** The value at a JSON pointer below `value`, or undefined. */
+const valueAt = (value: unknown, pointer: string): unknown =>
+  pointer
+    .split("/")
+    .slice(1)
+    .reduce<unknown>(
+      (v, key) =>
+        typeof v === "object" && v !== null ? (v as Record<string, unknown>)[key] : undefined,
+      value,
+    );
+
+/** Whether a change touches a fixed pointer, at it, below it, or by replacing an object that holds it. */
+const touchesFixed = (c: ConfigChange): boolean =>
+  FIXED.some(
+    (f) =>
+      c.path === f ||
+      c.path.startsWith(`${f}/`) ||
+      (f.startsWith(`${c.path}/`) &&
+        stringify(valueAt(c.old, f.slice(c.path.length))) !==
+          stringify(valueAt(c.new, f.slice(c.path.length)))),
+  );
 
 /**
  * A run's learning mode (T3.6 L3): none, learning context only (L2), or
@@ -4181,9 +4210,7 @@ export async function amendRun(
   if (before.revision !== null && !selectionOnly && input.revision === undefined) {
     return refuse("the amendment names no configuration revision");
   }
-  const fixed = changes.filter((c) =>
-    FIXED.some((f) => c.path === f || c.path.startsWith(`${f}/`)),
-  );
+  const fixed = changes.filter(touchesFixed);
   if (fixed.length > 0) {
     return refuse(
       `${fixed.map((c) => c.path).join(", ")} cannot be amended within a run; start a new run`,
@@ -4223,6 +4250,49 @@ export async function amendRun(
   );
   releaseRun(taken.run);
   return { ok: true, amendment: ref, changes };
+}
+
+/** The phase keys of learning sessions (T3.6 L3): their unresolved starts are learning reservations. */
+const LEARNING_KEYS = ["propose/", "support/", "diagnose/", "select/", "challenge/"];
+
+/** The run's knowledge entries and reminders by disposition, or "unavailable" when unreadable. */
+function learningRecords(ctx: Ctx, s: State): NonNullable<RunFacts["learning"]>["records"] {
+  const read = viewsOf(ctx, s);
+  if (!read.ok) return "unavailable";
+  const count = (entries: readonly { disposition: "proposed" | "supported" | "rejected" }[]) => ({
+    proposed: entries.filter((e) => e.disposition === "proposed").length,
+    supported: entries.filter((e) => e.disposition === "supported").length,
+    rejected: entries.filter((e) => e.disposition === "rejected").length,
+  });
+  return {
+    knowledge: count(read.value.knowledge.entries),
+    guidance: count(read.value.guidance.entries),
+  };
+}
+
+/** What the learning sessions and their unresolved starts used (T3.6 L4). */
+function learningUsage(
+  s: State,
+  unresolved: { key: string; allowance: number }[],
+): NonNullable<RunFacts["learning"]>["usage"] {
+  const observations = [
+    ...s.learning.map((f) => f.record.observation),
+    ...s.reviews
+      .filter((r) => r.record.kind === "challenge")
+      .map((r) => r.record.outcome.observation),
+  ];
+  const open = unresolved.filter((u) => LEARNING_KEYS.some((k) => u.key.startsWith(k)));
+  const sum = (values: (number | "unknown" | null)[]): number =>
+    values.reduce<number>((n, v) => (typeof v === "number" ? n + v : n), 0);
+  return {
+    sessions: observations.length,
+    turns: sum(observations.map((o) => o.turns)),
+    outputTokens: sum(observations.map((o) => o.usage.outputTokens)),
+    reportedUsd: sum(observations.map((o) => o.usage.costUsd)),
+    unknownSessions: observations.filter((o) => o.usage.costUsd === "unknown").length,
+    unresolved: open.length,
+    reservedUsd: open.reduce((n, u) => n + u.allowance, 0),
+  };
 }
 
 /** What a run's records say now (T3.5 H3): the facts a workflow summary reports. */
@@ -4282,7 +4352,34 @@ export type RunFacts = {
    * context it consumed and what it left out. Consumption is never acceptance.
    */
   learning: {
+    /** Whether the run learns, frozen when it starts (T3.6 §2.6). */
+    mode: "none" | "context" | "phases";
     sessions: number;
+    /**
+     * The run's knowledge entries and reminders by disposition (T3.6 L4), or
+     * "unavailable" when its learning records cannot be read. A supported
+     * entry is reusable knowledge, never acceptance.
+     */
+    records:
+      | {
+          knowledge: { proposed: number; supported: number; rejected: number };
+          guidance: { proposed: number; supported: number; rejected: number };
+        }
+      | "unavailable";
+    /**
+     * What the learning sessions used (T3.6 L4): the proposal, proposal
+     * review, diagnostic, selection and challenge sessions, and the learning
+     * phases started without a recorded result.
+     */
+    usage: {
+      sessions: number;
+      turns: number;
+      outputTokens: number;
+      reportedUsd: number;
+      unknownSessions: number;
+      unresolved: number;
+      reservedUsd: number;
+    };
     contexts: {
       step: string;
       attempt: number;
@@ -4435,7 +4532,11 @@ export async function runFacts(
       accepted: ctx.plan.steps.filter((x) => accepted.has(x.id)).map((x) => x.id),
       checkpoint: checkpointStatus(ctx, s, accepted),
       roles: {
-        producer: roleFacts("producer", s.producers.at(-1)?.record),
+        // An injected fixture attempt (T3.6 L4) reports no model of its own.
+        producer: roleFacts(
+          "producer",
+          s.producers.filter((f) => f.record.observation.fixture === undefined).at(-1)?.record,
+        ),
         reviewer: roleFacts("reviewer", reviewOutcomes.at(-1)),
       },
       spending: {
@@ -4494,7 +4595,10 @@ export async function runFacts(
       learning:
         learningInUse(ctx, s) || s.learning.length > 0
           ? {
+              mode: learningMode(ctx.config),
               sessions: s.learning.length,
+              records: learningRecords(ctx, s),
+              usage: learningUsage(s, spent.unresolved),
               contexts: s.starts.flatMap((f, i) => {
                 const context = f.record.production?.context;
                 const first = s.starts.findIndex((g) => g.record.key === f.record.key) === i;

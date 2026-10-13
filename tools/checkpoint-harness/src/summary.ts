@@ -50,8 +50,75 @@ export type Summary = {
       }
     | null
     | Unknown;
+  /**
+   * Evidence-backed learning (T3.6 §2.6, L4): the run's mode, its knowledge
+   * and reminders by disposition, each step's latest frozen context, its
+   * explorations and challenges, and what the learning sessions used. A run
+   * that does not learn reports mode none; unreadable records are reported
+   * unavailable. Knowledge reuse, guidance and selection are never acceptance.
+   */
+  learning: Learning | Unknown;
   diagnostics: string[];
 };
+
+type Learning =
+  | { mode: "none" }
+  | {
+      mode: "context" | "phases";
+      records: NonNullable<RunFacts["learning"]>["records"];
+      contexts: {
+        step: string;
+        attempt: number;
+        manifest: string;
+        knowledge: string[];
+        guidance: string[];
+        omitted: Record<string, number>;
+      }[];
+      explorations: {
+        step: string;
+        attempt: number;
+        round: number;
+        trigger: string;
+        diagnoses: string[];
+        checks: string[];
+        routing: string;
+      }[];
+      challenges: { step: string; attempt: number; verdict: string }[];
+      usage: NonNullable<RunFacts["learning"]>["usage"];
+    };
+
+/** The learning facts as the summary reports them: each step's latest context, and counts of omissions by reason. */
+function learningOf(facts: RunFacts): Learning {
+  const l = facts.learning;
+  if (!l || l.mode === "none") return { mode: "none" };
+  const latest = new Map(l.contexts.map((c) => [c.step, c]));
+  return {
+    mode: l.mode,
+    records: l.records,
+    contexts: [...latest.values()].map((c) => ({
+      step: c.step,
+      attempt: c.attempt,
+      manifest: c.manifest,
+      knowledge: c.knowledge,
+      guidance: c.guidance,
+      omitted: c.omitted.reduce<Record<string, number>>(
+        (n, o) => ({ ...n, [o.reason]: (n[o.reason] ?? 0) + 1 }),
+        {},
+      ),
+    })),
+    explorations: l.explorations.map((x) => ({
+      step: x.step,
+      attempt: x.attempt,
+      round: x.round,
+      trigger: `${x.trigger.kind} on ${x.trigger.rule}`,
+      diagnoses: x.diagnoses.map((d) => `${d.side}: ${d.outcome}`),
+      checks: x.checks.map((c) => `${c.side}: ${c.outcome}`),
+      routing: x.routing?.outcome ?? "none",
+    })),
+    challenges: l.challenges.map((c) => ({ step: c.step, attempt: c.attempt, verdict: c.verdict })),
+    usage: l.usage,
+  };
+}
 
 const reasonLine = (r: PauseReason): string =>
   `${r.code} ${r.subject}: ${r.detail}${r.request ? ` (request ${r.request})` : ""}`;
@@ -157,6 +224,7 @@ export function summarize(input: {
           replies: facts.round.replies,
         }
       : null,
+    learning: learningOf(facts),
     diagnostics: input.diagnostics ?? [],
   };
 }
@@ -178,6 +246,7 @@ export function refusedSummary(action: string, job: string, diagnostics: string[
     saved: UNKNOWN,
     pullRequest: UNKNOWN,
     round: UNKNOWN,
+    learning: UNKNOWN,
     diagnostics,
   };
 }
@@ -196,6 +265,7 @@ export const FIELDS = [
   "saved",
   "pullRequest",
   "round",
+  "learning",
 ] as const;
 
 /**
@@ -303,12 +373,60 @@ export function renderSummary(summary: Summary): string {
     );
     row("Reply receipts", r.replies.map((x) => `${x.item}: ${x.reference}`).join("; ") || "none");
   }
+  renderLearning(summary.learning, row);
   lines.push(
     "",
-    "A green job or a saved artifact is not acceptance. Only `Checkpoint complete: yes` reports checkpoint completion.",
+    "A green job or a saved artifact is not acceptance. Only `Checkpoint complete: yes` reports checkpoint completion. Knowledge reuse, guidance and exploration selection are not acceptance.",
   );
   if (summary.diagnostics.length > 0) {
     lines.push("", "## Diagnostics", "", ...summary.diagnostics.map((d) => `- ${d}`));
   }
   return `${lines.join("\n")}\n`;
+}
+
+/** The learning rows of a summary (T3.6 L4). */
+function renderLearning(
+  learning: Summary["learning"],
+  row: (label: string, value: string) => void,
+): void {
+  if (learning === UNKNOWN) return row("Learning", "unknown");
+  if (learning.mode === "none") return row("Learning", "none: the run does not learn");
+  const counts = (c: { proposed: number; supported: number; rejected: number }): string =>
+    `${c.supported} supported, ${c.rejected} rejected, ${c.proposed} proposed`;
+  row(
+    "Learning",
+    `mode ${learning.mode}; ${
+      learning.records === "unavailable"
+        ? "learning records unavailable"
+        : `knowledge ${counts(learning.records.knowledge)}; guidance ${counts(learning.records.guidance)}`
+    }`,
+  );
+  for (const c of learning.contexts) {
+    const omitted = Object.entries(c.omitted)
+      .map(([reason, n]) => `${reason} ${n}`)
+      .join(", ");
+    row(
+      `Learning context ${c.step}`,
+      `attempt ${c.attempt} (${c.manifest}): knowledge ${c.knowledge.join(", ") || "none"}; guidance ${c.guidance.join(", ") || "none"}; omitted ${omitted || "none"}`,
+    );
+  }
+  row(
+    "Explorations",
+    learning.explorations
+      .map(
+        (x) =>
+          `${x.step} attempt ${x.attempt} round ${x.round}: ${x.trigger}; diagnoses ${x.diagnoses.join(", ") || "none"}; checks ${x.checks.join(", ") || "none"}; routing ${x.routing}`,
+      )
+      .join("; ") || "none",
+  );
+  row(
+    "Challenges",
+    learning.challenges.map((c) => `${c.step} attempt ${c.attempt}: ${c.verdict}`).join("; ") ||
+      "none",
+  );
+  const u = learning.usage;
+  row(
+    "Learning usage",
+    `${u.sessions} sessions, ${u.turns} turns, ${u.outputTokens} output tokens, ${u.reportedUsd.toFixed(4)} USD API-price equivalent reported, ${u.unknownSessions} of unknown cost; ${u.unresolved} unresolved, ${u.reservedUsd.toFixed(2)} USD reserved`,
+  );
 }

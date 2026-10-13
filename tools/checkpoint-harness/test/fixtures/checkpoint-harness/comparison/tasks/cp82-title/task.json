@@ -1,0 +1,11 @@
+{
+  "id": "cp82-title",
+  "set": "held-out",
+  "category": "ordinary",
+  "module": "work/title.mjs",
+  "fn": "titleCase",
+  "checkpoint": "docs/checkpoints/82-title/checkpoint.yml",
+  "step": "CP82-S01",
+  "output": "title",
+  "injected": []
+}

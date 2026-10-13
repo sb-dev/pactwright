@@ -1,0 +1,23 @@
+{
+  "module": "work/slug.mjs",
+  "cases": [
+    {
+      "args": [
+        "Hello World"
+      ],
+      "stdout": "\"hello-world\"\n"
+    },
+    {
+      "args": [
+        "  A--B  "
+      ],
+      "stdout": "\"a-b\"\n"
+    },
+    {
+      "args": [
+        "Rock & Roll!"
+      ],
+      "stdout": "\"rock-roll\"\n"
+    }
+  ]
+}

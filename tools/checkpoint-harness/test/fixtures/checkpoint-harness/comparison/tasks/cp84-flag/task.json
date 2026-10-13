@@ -1,0 +1,13 @@
+{
+  "id": "cp84-flag",
+  "set": "held-out",
+  "category": "misleading-feedback",
+  "module": "work/flag.mjs",
+  "fn": "parseFlag",
+  "checkpoint": "docs/checkpoints/84-flag/checkpoint.yml",
+  "step": "CP84-S01",
+  "output": "flag",
+  "injected": [
+    "injected/attempt-1.mjs"
+  ]
+}

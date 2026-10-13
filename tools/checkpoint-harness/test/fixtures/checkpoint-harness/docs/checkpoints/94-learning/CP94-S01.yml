@@ -1,0 +1,21 @@
+# CP94 Step 1 — Write the name module
+id: CP94-S01
+requires: []
+outputs:
+  name: >-
+    The name module
+    `tools/checkpoint-harness/test/fixtures/checkpoint-harness/learning/work/name.mjs`
+    of LEARNING §1. It exports `NAME`. Run as a program, it prints the name
+    and a newline and exits 0.
+requirements:
+  R01:
+    source: [LEARNING#1]
+    statement: The name module shall name the fixture `Pactwright`.
+acceptance:
+  AC01:
+    covers: [R01]
+    cases: [printed]
+    given: The name module.
+    when: It runs as a program.
+    then: It prints `Pactwright` and a newline and exits 0.
+    verify: {automated: [learning.names]}

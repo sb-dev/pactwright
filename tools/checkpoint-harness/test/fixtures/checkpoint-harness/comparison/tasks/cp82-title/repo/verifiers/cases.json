@@ -1,0 +1,17 @@
+{
+  "module": "work/title.mjs",
+  "cases": [
+    {
+      "args": [
+        "hello world"
+      ],
+      "stdout": "\"Hello World\"\n"
+    },
+    {
+      "args": [
+        "mIXed CASE"
+      ],
+      "stdout": "\"Mixed Case\"\n"
+    }
+  ]
+}

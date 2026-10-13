@@ -1,0 +1,41 @@
+{
+  "module": "work/title.mjs",
+  "cases": [
+    {
+      "args": [
+        "hello world"
+      ],
+      "stdout": "\"Hello World\"\n"
+    },
+    {
+      "args": [
+        "mIXed CASE"
+      ],
+      "stdout": "\"Mixed Case\"\n"
+    },
+    {
+      "args": [
+        "a"
+      ],
+      "stdout": "\"A\"\n"
+    },
+    {
+      "args": [
+        ""
+      ],
+      "stdout": "\"\"\n"
+    },
+    {
+      "args": [
+        "ONE two THREE"
+      ],
+      "stdout": "\"One Two Three\"\n"
+    },
+    {
+      "args": [
+        "élan vital"
+      ],
+      "stdout": "\"Élan Vital\"\n"
+    }
+  ]
+}

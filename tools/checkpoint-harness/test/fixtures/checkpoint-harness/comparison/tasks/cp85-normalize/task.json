@@ -1,0 +1,17 @@
+{
+  "id": "cp85-normalize",
+  "set": "held-out",
+  "category": "stale-knowledge",
+  "module": "work/normalize.mjs",
+  "fn": "normalize",
+  "checkpoint": "docs/checkpoints/85-normalize/checkpoint.yml",
+  "step": "CP85-S01",
+  "output": "normalizer",
+  "injected": [
+    "injected/attempt-1.mjs",
+    "injected/attempt-2.mjs"
+  ],
+  "amend": {
+    "after": 2
+  }
+}

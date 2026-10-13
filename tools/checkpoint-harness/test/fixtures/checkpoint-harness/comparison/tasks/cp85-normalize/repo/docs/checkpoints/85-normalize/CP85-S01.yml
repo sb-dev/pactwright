@@ -1,0 +1,20 @@
+# CP85 Step 1 — Write the normaliser
+id: CP85-S01
+requires: []
+outputs:
+  normalizer: >-
+    The module `work/normalize.mjs` of TASK §1. It exports `normalize`. Run as a
+    program with one argument, it prints the JSON encoding of its result for
+    that argument and a newline, and exits 0.
+requirements:
+  R01:
+    source: [TASK#1]
+    statement: "The normaliser shall remove every leading and trailing whitespace character of a text, including Unicode space separators, and keep the characters between them unchanged."
+acceptance:
+  AC01:
+    covers: [R01]
+    cases: [table]
+    given: "Texts with leading and trailing spaces, tabs and Unicode space separators."
+    when: The module runs as a program with each text.
+    then: "It prints the JSON string of each normalised text and exits 0."
+    verify: {automated: [task.cases]}

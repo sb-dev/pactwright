@@ -1,0 +1,65 @@
+{
+  "module": "work/leap.mjs",
+  "cases": [
+    {
+      "args": [
+        "2024"
+      ],
+      "stdout": "true\n"
+    },
+    {
+      "args": [
+        "2023"
+      ],
+      "stdout": "false\n"
+    },
+    {
+      "args": [
+        "1900"
+      ],
+      "stdout": "false\n"
+    },
+    {
+      "args": [
+        "2000"
+      ],
+      "stdout": "true\n"
+    },
+    {
+      "args": [
+        "2100"
+      ],
+      "stdout": "false\n"
+    },
+    {
+      "args": [
+        "2400"
+      ],
+      "stdout": "true\n"
+    },
+    {
+      "args": [
+        "1600"
+      ],
+      "stdout": "true\n"
+    },
+    {
+      "args": [
+        "1700"
+      ],
+      "stdout": "false\n"
+    },
+    {
+      "args": [
+        "4"
+      ],
+      "stdout": "true\n"
+    },
+    {
+      "args": [
+        "1"
+      ],
+      "stdout": "false\n"
+    }
+  ]
+}

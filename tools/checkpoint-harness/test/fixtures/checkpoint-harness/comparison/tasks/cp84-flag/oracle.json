@@ -1,0 +1,65 @@
+{
+  "module": "work/flag.mjs",
+  "cases": [
+    {
+      "args": [
+        "true"
+      ],
+      "stdout": "true\n"
+    },
+    {
+      "args": [
+        "FALSE"
+      ],
+      "stdout": "false\n"
+    },
+    {
+      "args": [
+        "maybe"
+      ],
+      "stdout": "null\n"
+    },
+    {
+      "args": [
+        "Yes"
+      ],
+      "stdout": "true\n"
+    },
+    {
+      "args": [
+        "no"
+      ],
+      "stdout": "false\n"
+    },
+    {
+      "args": [
+        "ON"
+      ],
+      "stdout": "true\n"
+    },
+    {
+      "args": [
+        "off"
+      ],
+      "stdout": "false\n"
+    },
+    {
+      "args": [
+        "1"
+      ],
+      "stdout": "true\n"
+    },
+    {
+      "args": [
+        "0"
+      ],
+      "stdout": "false\n"
+    },
+    {
+      "args": [
+        ""
+      ],
+      "stdout": "null\n"
+    }
+  ]
+}

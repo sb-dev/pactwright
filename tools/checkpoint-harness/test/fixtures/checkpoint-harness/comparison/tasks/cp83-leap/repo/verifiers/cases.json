@@ -1,0 +1,29 @@
+{
+  "module": "work/leap.mjs",
+  "cases": [
+    {
+      "args": [
+        "2024"
+      ],
+      "stdout": "true\n"
+    },
+    {
+      "args": [
+        "2023"
+      ],
+      "stdout": "false\n"
+    },
+    {
+      "args": [
+        "1900"
+      ],
+      "stdout": "false\n"
+    },
+    {
+      "args": [
+        "2000"
+      ],
+      "stdout": "true\n"
+    }
+  ]
+}
