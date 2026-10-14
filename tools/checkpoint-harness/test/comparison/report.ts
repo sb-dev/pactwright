@@ -2,9 +2,11 @@
 // pinned decision rules applied to every retained run of a set. Results of
 // another protocol digest are refused. A (task, repeat) counts in the paired
 // totals only when all three arms have a final run that is not missing, an
-// error or an infrastructure failure; every other run is still listed. The
-// result is a benefit, a regression or inconclusive, with its reasons; a
-// bounded fixture study cannot establish a general performance gain.
+// error or an infrastructure failure; every other run is still listed, and
+// any planned (task, repeat) without a complete pair keeps the result from
+// being a benefit. The result is a benefit, a regression or inconclusive,
+// with its reasons; a bounded fixture study cannot establish a general
+// performance gain.
 
 import { mkdirSync, readdirSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
@@ -71,15 +73,21 @@ export function decide(
       const runs = ARMS.map((arm) =>
         final.find((r) => r.task === task && r.repeat === repeat && r.arm === arm),
       );
+      const absent = ARMS.filter((_, i) => runs[i] === undefined);
       const bad = runs.find(
-        (r) => !r || EXCLUDED.has(r.outcome) || r.reasons.some((x) => x.startsWith("missing:")),
+        (r) =>
+          r !== undefined &&
+          (EXCLUDED.has(r.outcome) || r.reasons.some((x) => x.startsWith("missing:"))),
       );
-      if (bad === undefined) pairs.push({ task, repeat });
+      if (absent.length === 0 && bad === undefined) pairs.push({ task, repeat });
       else
         missing.push({
           task,
           repeat,
-          why: bad ? `${bad.arm} ${bad.outcome}: ${bad.reasons[0] ?? ""}` : "no run",
+          why:
+            absent.length > 0
+              ? `no run of ${absent.join(", ")}`
+              : `${bad?.arm} ${bad?.outcome}: ${bad?.reasons[0] ?? ""}`,
         });
     }
   }
@@ -165,9 +173,10 @@ export function decide(
       );
     }
   }
-  for (const t of tasks) {
-    if (pairs.filter((p) => p.task === t).length < 2)
-      reasons.push(`${t} has fewer than two complete paired repeats`);
+  // A benefit is never drawn from an incomplete experiment: every planned
+  // (task, repeat) of the set must be a complete pair.
+  for (const m of missing) {
+    reasons.push(`${m.task} repeat ${m.repeat} has no complete paired run (${m.why})`);
   }
   return reasons.length === 0
     ? {

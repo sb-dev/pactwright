@@ -334,6 +334,33 @@ describe("T3.6 L4 comparison decision rules", () => {
     assert.equal(decide(better, protocol, digest, set).result, "benefit");
   });
 
+  it("keeps a benefit inconclusive unless every planned repeat is a complete pair", () => {
+    const better = runs((arm, task, repeat) =>
+      arm !== "E" && task === "cp83-leap" && repeat < 3 ? "exhausted" : "valid",
+    );
+    // Control: all three repeats of every task paired.
+    assert.equal(decide(better, protocol, digest, set).result, "benefit");
+    // Two complete pairs out of three for cp84-flag: D's third run is missing.
+    const incomplete = better.filter(
+      (r) => !(r.arm === "D" && r.task === "cp84-flag" && r.repeat === 3),
+    );
+    const verdict = decide(incomplete, protocol, digest, set);
+    assert.equal(verdict.result, "inconclusive");
+    assert.deepEqual(verdict.reasons, [
+      "cp84-flag repeat 3 has no complete paired run (no run of D)",
+    ]);
+    assert.equal(verdict.pairs.filter((p) => p.task === "cp84-flag").length, 2);
+    // The same with an error run in place of the missing one.
+    const errored = better.map((r) =>
+      r.arm === "D" && r.task === "cp84-flag" && r.repeat === 3
+        ? { ...r, outcome: "error" as const, reasons: ["driver failed"] }
+        : r,
+    );
+    assert.deepEqual(decide(errored, protocol, digest, set).reasons, [
+      "cp84-flag repeat 3 has no complete paired run (D error: driver failed)",
+    ]);
+  });
+
   it("reports equal arms as inconclusive", () => {
     const verdict = decide(
       runs(() => "valid"),
@@ -387,7 +414,7 @@ describe("T3.6 L4 comparison decision rules", () => {
     assert.equal(digest, loadProtocol().digest);
     assert.match(
       readFileSync(join(REPO, "tools/checkpoint-harness/test/comparison/protocol.yml"), "utf8"),
-      /^version: 1$/m,
+      /^version: 2$/m,
     );
   });
 });

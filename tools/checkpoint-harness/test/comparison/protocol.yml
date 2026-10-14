@@ -3,7 +3,7 @@
 # in every result, and the report refuses results of another digest. Nothing
 # here changes after results are seen; a change is a new protocol version,
 # and the results of the old one are reported as they are.
-version: 1
+version: 2
 
 # The arms. B is the harness before T3.6; D and E are the revision under
 # test, without and with learning. Each run is its own run directory and
@@ -97,7 +97,8 @@ decision:
   # by at least valid_margin, or repeated failed approaches at most
   # repeated_ratio of the other arm's (which has at least repeated_minimum)
   # with valid outcomes not lower; no held-out task with fewer valid
-  # outcomes; median turns and median wall-clock time within these ratios.
+  # outcomes; median turns and median wall-clock time within these ratios;
+  # and every planned (task, repeat) a complete pair of all three arms.
   valid_margin: 2
   repeated_ratio: 0.67
   repeated_minimum: 3
@@ -108,7 +109,8 @@ decision:
 
 # A (task, repeat) whose run in any arm failed on infrastructure is run
 # again as a whole, at most this many times; otherwise it is reported
-# missing and left out of the paired totals, never replaced by another.
+# missing and left out of the paired totals, never replaced by another, and
+# the set's result cannot be a benefit.
 infrastructure:
   reruns: 2
 # A shard (one task of a set) starts no further run once its runs used this
