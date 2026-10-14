@@ -21,6 +21,12 @@
     },
     {
       "args": [
+        "positive"
+      ],
+      "stdout": "1\n"
+    },
+    {
+      "args": [
         "Positive"
       ],
       "stdout": "1\n"
@@ -39,13 +45,19 @@
     },
     {
       "args": [
-        "MINUS"
+        "Minus"
       ],
       "stdout": "-1\n"
     },
     {
       "args": [
-        "Negative"
+        "negative"
+      ],
+      "stdout": "-1\n"
+    },
+    {
+      "args": [
+        "NEGATIVE"
       ],
       "stdout": "-1\n"
     },
@@ -90,6 +102,12 @@
         "POSITIVE"
       ],
       "stdout": "1\n"
+    },
+    {
+      "args": [
+        "MINUS"
+      ],
+      "stdout": "-1\n"
     },
     {
       "args": [

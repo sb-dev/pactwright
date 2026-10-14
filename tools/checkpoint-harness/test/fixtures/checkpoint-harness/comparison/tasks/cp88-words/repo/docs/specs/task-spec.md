@@ -5,5 +5,7 @@ a Pactwright specification.
 
 ## 1. Behaviour
 
-A word is a maximal run of characters other than the space character U+0020.
-The word count of a text is its number of words.
+A word is a maximal run of characters that are not whitespace. Whitespace is
+every character JavaScript's String.prototype.trim removes: spaces, tabs, line
+breaks and the Unicode space separators, such as U+00A0. The word count of a
+text is its number of words.

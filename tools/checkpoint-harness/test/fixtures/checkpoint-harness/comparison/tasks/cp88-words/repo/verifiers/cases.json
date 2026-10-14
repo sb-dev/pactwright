@@ -27,13 +27,31 @@
     },
     {
       "args": [
-        "Ada Lovelace"
+        "a\tb"
+      ],
+      "stdout": "2\n"
+    },
+    {
+      "args": [
+        "a\nb c"
+      ],
+      "stdout": "3\n"
+    },
+    {
+      "args": [
+        " x　y"
       ],
       "stdout": "2\n"
     },
     {
       "args": [
         " "
+      ],
+      "stdout": "0\n"
+    },
+    {
+      "args": [
+        "\t\n"
       ],
       "stdout": "0\n"
     },

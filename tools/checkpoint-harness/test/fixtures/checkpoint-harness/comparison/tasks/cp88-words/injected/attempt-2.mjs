@@ -1,6 +1,6 @@
 // INJECTED FAULT (T3.6 L4 fixture)
 export function countWords(text) {
-  return text.trim().split(" ").length;
+  return text.split(/\s/).length;
 }
 
 if (process.argv[1] === new URL(import.meta.url).pathname) {

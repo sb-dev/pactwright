@@ -7,7 +7,7 @@
 
 import { execFileSync } from "node:child_process";
 import { createHash } from "node:crypto";
-import { cpSync, existsSync, mkdirSync, readdirSync, readFileSync } from "node:fs";
+import { cpSync, mkdirSync, readdirSync, readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -65,8 +65,6 @@ export type Task = {
   output: string;
   /** Injected faults, served as producer attempts 1, 2, … in every arm. */
   injected: string[];
-  /** Definitions amended after this attempt's decision (stale knowledge). */
-  amend?: { after: number };
   /** The arm's process is killed after this attempt's phase starts, then resumed (recovery). */
   interrupt?: { attempt: number; phase: string };
 };
@@ -112,8 +110,8 @@ const git = (cwd: string, args: string[]): string =>
     stdio: ["ignore", "pipe", "pipe"],
   }).trim();
 
-/** A task repository on branch `task`, and the amended definitions' commit when the task amends them. */
-export type TaskRepo = { root: string; branch: string; head: string; amended: string | null };
+/** A task repository on branch `task`. */
+export type TaskRepo = { root: string; branch: string; head: string };
 
 /** Builds the task's repository at `root`; the same commits every time. */
 export function taskRepo(task: Task, root: string): TaskRepo {
@@ -130,31 +128,12 @@ export function taskRepo(task: Task, root: string): TaskRepo {
   git(root, ["init", "-q", "-b", "task"]);
   git(root, ["add", "-A"]);
   git(root, ["commit", "-q", "--no-gpg-sign", "-m", `task ${task.id}`]);
-  const head = git(root, ["rev-parse", "HEAD"]);
-  let amended: string | null = null;
-  if (existsSync(join(dir, "amended"))) {
-    git(root, ["checkout", "-q", "-b", "amended"]);
-    cpSync(join(dir, "amended"), root, { recursive: true });
-    git(root, ["add", "-A"]);
-    git(root, ["commit", "-q", "--no-gpg-sign", "-m", `amended definitions of ${task.id}`]);
-    amended = git(root, ["rev-parse", "HEAD"]);
-    git(root, ["checkout", "-q", "task"]);
-  }
-  return { root, branch: "task", head, amended };
+  return { root, branch: "task", head: git(root, ["rev-parse", "HEAD"]) };
 }
 
 /** A task repository built earlier, for resuming its run. */
 export function openTaskRepo(root: string): TaskRepo {
-  const amended = execFileSync("git", ["branch", "--list", "amended"], {
-    cwd: root,
-    encoding: "utf8",
-  }).trim();
-  return {
-    root,
-    branch: "task",
-    head: git(root, ["rev-parse", "task"]),
-    amended: amended ? git(root, ["rev-parse", "amended"]) : null,
-  };
+  return { root, branch: "task", head: git(root, ["rev-parse", "task"]) };
 }
 
 /** The run configuration of an arm: the protocol's settings, with learning only for E. */

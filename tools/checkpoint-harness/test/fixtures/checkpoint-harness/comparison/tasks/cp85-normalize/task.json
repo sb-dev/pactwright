@@ -10,8 +10,5 @@
   "injected": [
     "injected/attempt-1.mjs",
     "injected/attempt-2.mjs"
-  ],
-  "amend": {
-    "after": 2
-  }
+  ]
 }

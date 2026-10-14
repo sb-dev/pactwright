@@ -15,7 +15,6 @@ import { parseArgs } from "node:util";
 import stringify from "safe-stable-stringify";
 
 import type { Provider } from "../../src/claude.js";
-import type { JournalEvent } from "../../src/evidence.js";
 import { injecting } from "../../src/fixture.js";
 import type { RunnerDeps, RunResult, Workspaces } from "../../src/runner.js";
 import type * as Runner from "../../src/runner.js";
@@ -63,7 +62,6 @@ export type ArmResult = {
   run: string | null;
   reasons: { code: string; subject: string; detail: string }[];
   diagnostics: string[];
-  amended: boolean;
   harness: string;
 };
 
@@ -104,16 +102,7 @@ export async function runArm(o: ArmOptions): Promise<ArmResult> {
   const registry = m.bootstrap.createRegistry([]);
   if (!registry.ok) throw new Error(registry.diagnostics.join("\n"));
   const { injections, sources } = injectionsOf(o.task);
-  const abort = new AbortController();
-  let amendDue = false;
-  const progress = (e: JournalEvent): void => {
-    const { amend } = o.task;
-    if (amend && repo.amended && e.action === "decision" && e.attempt === amend.after) {
-      amendDue = true;
-      abort.abort();
-    }
-  };
-  const deps = (signal: AbortSignal): RunnerDeps => ({
+  const deps: RunnerDeps = {
     repoRoot: repo.root,
     skillsRoot: join(REPO, ".claude/skills"),
     env: o.env,
@@ -130,12 +119,11 @@ export async function runArm(o: ArmOptions): Promise<ArmResult> {
       })),
     effects: null,
     fence: o.fence ?? m.workspace.fenceWorkers,
-    signal,
+    signal: new AbortController().signal,
     providers: {
       producer: injecting(injections, sources, o.providers?.producer ?? m.claude.sdkProvider),
       ...(o.providers?.reviewer ? { reviewer: o.providers.reviewer } : {}),
     },
-    progress,
     // A recovery task loses its runner right after the boundary's start is
     // journaled, before its session runs, as a hosted runner can be lost.
     save: (run, why) => {
@@ -153,44 +141,10 @@ export async function runArm(o: ArmOptions): Promise<ArmResult> {
       return Promise.resolve();
     },
     ...(o.liveness ? { liveness: o.liveness } : {}),
-  });
-  let result = o.resume
-    ? await m.runner.resumeRun(o.resume, deps(abort.signal))
-    : await m.runner.startRun(config, deps(abort.signal));
-  let amended = false;
-  // Stale knowledge: the task's definitions change after the named decision.
-  if (amendDue && result.outcome === "paused" && repo.amended) {
-    const recorded = await m.runner.amendRun(
-      result.dir,
-      {
-        config: {
-          ...config,
-          definitions: { revision: repo.amended, review: "amended task definitions" },
-        },
-        reason: `the task's definitions are amended after attempt ${o.task.amend?.after ?? 0}'s decision`,
-        actor: "comparison",
-      },
-      {
-        repoRoot: repo.root,
-        skillsRoot: join(REPO, ".claude/skills"),
-        env: o.env,
-        applicability: m.bootstrap.APPLICABILITY,
-      },
-    );
-    if (!recorded.ok) {
-      return {
-        outcome: "invalid",
-        dir: result.dir,
-        run: result.run,
-        reasons: [],
-        diagnostics: recorded.diagnostics,
-        amended,
-        harness,
-      };
-    }
-    amended = true;
-    result = await m.runner.resumeRun(result.dir, deps(new AbortController().signal));
-  }
+  };
+  const result = o.resume
+    ? await m.runner.resumeRun(o.resume, deps)
+    : await m.runner.startRun(config, deps);
   return {
     outcome: result.outcome,
     dir: result.outcome === "invalid" ? null : result.dir,
@@ -200,7 +154,6 @@ export async function runArm(o: ArmOptions): Promise<ArmResult> {
         ? result.reasons.map(({ code, subject, detail }) => ({ code, subject, detail }))
         : [],
     diagnostics: result.outcome === "invalid" ? result.diagnostics : [],
-    amended,
     harness,
   };
 }

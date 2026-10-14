@@ -15,6 +15,12 @@
     },
     {
       "args": [
+        "yes"
+      ],
+      "stdout": "true\n"
+    },
+    {
+      "args": [
         "Yes"
       ],
       "stdout": "true\n"
@@ -22,6 +28,12 @@
     {
       "args": [
         "on"
+      ],
+      "stdout": "true\n"
+    },
+    {
+      "args": [
+        "ON"
       ],
       "stdout": "true\n"
     },
@@ -39,19 +51,31 @@
     },
     {
       "args": [
-        "FALSE"
+        "False"
       ],
       "stdout": "false\n"
     },
     {
       "args": [
-        "No"
+        "no"
       ],
       "stdout": "false\n"
     },
     {
       "args": [
-        "OFF"
+        "NO"
+      ],
+      "stdout": "false\n"
+    },
+    {
+      "args": [
+        "off"
+      ],
+      "stdout": "false\n"
+    },
+    {
+      "args": [
+        "Off"
       ],
       "stdout": "false\n"
     },

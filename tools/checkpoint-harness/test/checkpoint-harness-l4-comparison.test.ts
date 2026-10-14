@@ -1,7 +1,7 @@
 // T3.6 L4 comparison tooling (evidence-backed learning log §4, L4-03): the
 // task starts every arm shares, one arm's run with its injected attempts, a
-// recovery interruption and a definitions amendment, the measurements and
-// oracle read from a run's records, and the pinned decision rules. Sessions
+// recovery interruption, the measurements and oracle read from a run's
+// records, and the pinned decision rules. Sessions
 // are scripted and candidate work runs as local processes; the live
 // comparison runs only in the comparison workflow, and nothing here is a
 // comparison result.
@@ -162,7 +162,6 @@ describe("T3.6 L4 comparison tasks", () => {
       const a = taskRepo(task, join(scratch, `${id}-a`));
       const b = taskRepo(task, join(scratch, `${id}-b`));
       assert.equal(a.head, b.head, `${id}: a deterministic start`);
-      assert.equal(a.amended, b.amended);
       const roots = { candidate: "/c", controller: "/r" };
       const [cb, cd, ce] = (["B", "D", "E"] as const).map((arm) =>
         configFor(protocol, task, arm, a, roots),
@@ -250,31 +249,6 @@ describe("T3.6 L4 comparison arm runs", () => {
       produced.length,
       2,
       "the interrupted attempt's start is retained and its session runs once more",
-    );
-  });
-
-  it("amends a stale-knowledge task's definitions after the named decision, then continues the run", async () => {
-    const task = loadTask("cp85-normalize");
-    const work = join(scratch, "normalize-E");
-    mkdirSync(work);
-    const result = await run(task, "E", work);
-    assert.equal(result.outcome, "selection-accepted", JSON.stringify(result));
-    assert.ok(result.amended && result.dir);
-    const read = readRun(result.dir);
-    assert.ok(read.ok);
-    const amendment = read.records.events.findIndex((e) => e.action === "amendment");
-    const decision2 = read.records.events.findIndex(
-      (e) => e.action === "decision" && e.attempt === 2,
-    );
-    assert.ok(
-      amendment > decision2 && decision2 >= 0,
-      "the amendment follows attempt 2's decision",
-    );
-    const usage = measure(result.dir, task);
-    assert.ok(!("error" in usage));
-    assert.equal(
-      runOracle(result.dir, task, usage.accepted, join(work, "oracle"), local).oracle,
-      "passed",
     );
   });
 });
@@ -414,7 +388,7 @@ describe("T3.6 L4 comparison decision rules", () => {
     assert.equal(digest, loadProtocol().digest);
     assert.match(
       readFileSync(join(REPO, "tools/checkpoint-harness/test/comparison/protocol.yml"), "utf8"),
-      /^version: 3$/m,
+      /^version: 4$/m,
     );
   });
 });

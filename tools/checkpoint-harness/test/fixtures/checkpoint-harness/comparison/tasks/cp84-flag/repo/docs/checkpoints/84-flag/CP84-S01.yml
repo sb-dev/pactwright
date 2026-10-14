@@ -14,7 +14,7 @@ acceptance:
   AC01:
     covers: [R01]
     cases: [table]
-    given: "Every flag word in more than one letter case, and texts that are not flags: other words, prefixes, numbers, spaced words and the empty text."
+    given: "Every flag word, each word of letters in at least two letter cases, and texts that are not flags: other words, prefixes, numbers, spaced words and the empty text."
     when: The module runs as a program with each text.
     then: "It prints the JSON true, false or null for each text and exits 0."
     verify: {automated: [task.cases]}

@@ -3,7 +3,7 @@
 # in every result, and the report refuses results of another digest. Nothing
 # here changes after results are seen; a change is a new protocol version,
 # and the results of the old one are reported as they are.
-version: 3
+version: 4
 
 # The arms. B is the harness before T3.6; D and E are the revision under
 # test, without and with learning. Each run is its own run directory and

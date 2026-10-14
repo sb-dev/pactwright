@@ -9,12 +9,12 @@ outputs:
 requirements:
   R01:
     source: [TASK#1]
-    statement: "The word counter shall return the number of maximal runs of characters other than the space character in a text."
+    statement: "The word counter shall return the number of maximal runs of non-whitespace characters in a text, where whitespace includes spaces, tabs, line breaks and Unicode space separators."
 acceptance:
   AC01:
     covers: [R01]
     cases: [table]
-    given: "Texts with single and repeated spaces, leading and trailing spaces, one word, and texts of spaces only or empty."
+    given: "Texts with single and repeated spaces, tabs, line breaks and Unicode space separators between and around words, one word, and texts of whitespace only or empty."
     when: The module runs as a program with each text.
     then: "It prints the JSON word count of each text and exits 0."
     verify: {automated: [task.cases]}

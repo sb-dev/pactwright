@@ -9,12 +9,12 @@ outputs:
 requirements:
   R01:
     source: [TASK#1]
-    statement: "The normaliser shall remove every leading and trailing whitespace character of a text, including tabs, line breaks and Unicode space separators."
+    statement: "The normaliser shall remove every leading and trailing whitespace character of a text, including tabs, line breaks and Unicode space separators, and replace each run of whitespace characters between two other characters with one space."
 acceptance:
   AC01:
     covers: [R01]
     cases: [table]
-    given: "Texts with leading and trailing spaces, tabs, line breaks and Unicode space separators, with single spaces between words, and texts of whitespace only."
+    given: "Texts with leading, trailing and inner whitespace: single and repeated spaces, tabs, line breaks and Unicode space separators, and texts of whitespace only or empty."
     when: The module runs as a program with each text.
     then: "It prints the JSON string of each normalised text and exits 0."
     verify: {automated: [task.cases]}

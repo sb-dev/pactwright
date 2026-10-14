@@ -27,24 +27,6 @@
     },
     {
       "args": [
-        "Ada Lovelace"
-      ],
-      "stdout": "2\n"
-    },
-    {
-      "args": [
-        " "
-      ],
-      "stdout": "0\n"
-    },
-    {
-      "args": [
-        ""
-      ],
-      "stdout": "0\n"
-    },
-    {
-      "args": [
         "a\tb"
       ],
       "stdout": "2\n"
@@ -63,15 +45,51 @@
     },
     {
       "args": [
-        "\t"
+        " "
       ],
       "stdout": "0\n"
+    },
+    {
+      "args": [
+        "\t\n"
+      ],
+      "stdout": "0\n"
+    },
+    {
+      "args": [
+        ""
+      ],
+      "stdout": "0\n"
+    },
+    {
+      "args": [
+        "Ada Lovelace"
+      ],
+      "stdout": "2\n"
     },
     {
       "args": [
         "one\r\ntwo"
       ],
       "stdout": "2\n"
+    },
+    {
+      "args": [
+        "\t"
+      ],
+      "stdout": "0\n"
+    },
+    {
+      "args": [
+        "x  y  z"
+      ],
+      "stdout": "3\n"
+    },
+    {
+      "args": [
+        " word "
+      ],
+      "stdout": "1\n"
     }
   ]
 }

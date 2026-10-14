@@ -21,27 +21,39 @@
     },
     {
       "args": [
-        "\r\nAda  "
-      ],
-      "stdout": "\"Ada\"\n"
-    },
-    {
-      "args": [
         "Ada Lovelace"
       ],
       "stdout": "\"Ada Lovelace\"\n"
     },
     {
       "args": [
-        "  Ada Lovelace\t"
+        "Ada   Lovelace"
       ],
       "stdout": "\"Ada Lovelace\"\n"
     },
     {
       "args": [
-        "Ada"
+        "Ada  \t Lovelace"
       ],
-      "stdout": "\"Ada\"\n"
+      "stdout": "\"Ada Lovelace\"\n"
+    },
+    {
+      "args": [
+        "a  b"
+      ],
+      "stdout": "\"a b\"\n"
+    },
+    {
+      "args": [
+        "p\tq"
+      ],
+      "stdout": "\"p q\"\n"
+    },
+    {
+      "args": [
+        "a\nb"
+      ],
+      "stdout": "\"a b\"\n"
     },
     {
       "args": [
