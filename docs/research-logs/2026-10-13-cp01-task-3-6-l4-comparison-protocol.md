@@ -1,15 +1,17 @@
 # Checkpoint 1 Task 3.6 — L4 Comparison Protocol
 
-**Version:** 3
+**Version:** 4
 
 **Date:** 13 October 2026
 
 **Status:** Pinned before any comparison result. No result is reported here; the comparison report records them.
 
-**Supersedes:** version 2, pinned in `dc2d9a0`, and version 1, in `2e045a7`.
+**Supersedes:** version 3, pinned in `9e57ae6`; version 2, pinned in `dc2d9a0`; and version 1, in `2e045a7`.
 
 - No comparison ran under version 1. [Review 5511362756](https://github.com/sb-dev/pactwright/pull/73#pullrequestreview-5511362756) found that its decision could report a benefit with one planned repeat of a task incomplete. The control test added for that finding also showed that an arm with no run made its (task, repeat) count as a complete pair. Version 2 corrected both (§3).
-- Version 2 ran only its tuning set, in [run 38488904499](https://github.com/sb-dev/pactwright/actions/runs/38488904499). That run found a fixture defect (§5). Version 3 corrects the fixtures and adds a tuning task for each held-out category. No held-out run used version 1 or 2.
+- Version 2 ran only its tuning set, in [run 38488904499](https://github.com/sb-dev/pactwright/actions/runs/38488904499). That run found a fixture defect (§5). Version 3 corrected the fixtures and added a tuning task for each held-out category.
+- Version 3 ran only its tuning set, in [run 38491518842](https://github.com/sb-dev/pactwright/actions/runs/38491518842). That run found two more fixture defects (§5), which version 4 corrects.
+- No held-out run used versions 1–3.
 
 **Authority:** [T3.6 plan](2026-10-07-cp01-task-3-6-evidence-backed-learning.md) §4 and L4-03.
 
@@ -19,12 +21,12 @@ The protocol is the file `tools/checkpoint-harness/test/comparison/protocol.yml`
 
 | Item | Value |
 | --- | --- |
-| Protocol digest (SHA-256 of the file's bytes) | `sha256:0e02486e8e0ecc7d8f9227c12870be45ae12805ba00765c13780275b3ef7ab05` |
-| Implementation commit | `53d841daf200fd700e207d0db2f1bcd6dca27915` |
+| Protocol digest (SHA-256 of the file's bytes) | `sha256:1ac02ab0329aa43a64ed4aa03f777723da5068d9b9a097486bdde7bc46c3eece` |
+| Implementation commit | `dbe6a6c29a322fed69ae75c71cca4dc098d76c43` |
 | `tools/checkpoint-harness/src` tree | `6e42e57534ce99036f3785e39cade337ee7dad55` |
 | Controller identity of arms D and E (`harnessIdentity()`) | `sha256:2b94ed19c66a22e31546b7a6438051796ebff9a4ad4f87c67503c260a637c9fc` |
-| `tools/checkpoint-harness/test/comparison` tree (driver, metrics, oracle, report) | `35301307187d46966401a4644288dd2beb78ee68` |
-| Task fixtures tree (`test/fixtures/checkpoint-harness/comparison`) | `81d4e6536a6145e8d1f26a115c6661a0843e7727` |
+| `tools/checkpoint-harness/test/comparison` tree (driver, metrics, oracle, report) | `610a215ed90b4fb826384768bec69b6a9651c9be` |
+| Task fixtures tree (`test/fixtures/checkpoint-harness/comparison`) | `16fcadae510b7471fa9b59764b3302f76cc62c08` |
 | Baseline arm B | `cb6a0f76e2c3bfad9d2bc79fb482456e9ab05d19` (the harness before T3.6) |
 
 The driver records the protocol digest, each task's digest and each arm's controller identity in every result. The report refuses results of another protocol digest.
@@ -33,13 +35,13 @@ The driver records the protocol digest, each task's digest and each arm's contro
 | --- | --- | --- | --- |
 | `cp80-slug` | tuning | ordinary | `sha256:77418582527d5f506156e9c25307a340ededac2b77b89b32f1d5422c98fc8729` |
 | `cp81-port` | tuning | repeated defects | `sha256:dca449bec4887e46fbc579282aaf38299f582b8c09f0ce713548c6e93d124d5c` |
-| `cp87-sign` | tuning | misleading feedback | `sha256:f9d4bafc25999e5598856f37812c83254018f28b565f098583fa7ebc0e6fcd96` |
-| `cp88-words` | tuning | stale knowledge | `sha256:85121677127c2e2341cea358fe5f0b7f8aebdc56fd43503724a3356179612fed` |
+| `cp87-sign` | tuning | misleading feedback | `sha256:0d9929ba115f94253e4dddd9ff8fabd3a0cb165fd24b8e7a54a93fd77753cae9` |
+| `cp88-words` | tuning | stale knowledge | `sha256:e8053578e46d9ebcf445624de4414370d1cd6dd1f963e185fd8f0ce39d708180` |
 | `cp89-rgb` | tuning | recovery | `sha256:b5673d5a1cc59a731761c11874a0ddc063020d0ce5668ff8eb43aa9ab30760d6` |
 | `cp82-title` | held-out | ordinary (the control) | `sha256:f7e59ef43a4d69357303d42e97cb491ddf8f7f23a7b81c7ab32ce2d5a0f79b7d` |
 | `cp83-leap` | held-out | repeated defects | `sha256:ad4cfa3cf38b0ca93b6f19e50f0d9a6723e5f9214cb32854ace4f531ad628d32` |
-| `cp84-flag` | held-out | misleading feedback | `sha256:585c462d99acca900170f8cfba6aa4006031b4577c0836b00bc87ea2e8dca425` |
-| `cp85-normalize` | held-out | stale knowledge | `sha256:e12a8482691dd9f31eab3a1a08687f9f79b5b61da105e0d620bc1d9d82f2cd87` |
+| `cp84-flag` | held-out | misleading feedback | `sha256:bd9059b0bf602af29d5a84c8687816e038293885eed65f16d7fb64146a007e7a` |
+| `cp85-normalize` | held-out | stale knowledge | `sha256:24a3fdc89460a298a529f87ce29e4274cdde969b1dec3671df7d495bf2a85413` |
 | `cp86-csv` | held-out | recovery | `sha256:1c7bea209dc4881a9f174a83a8848e9ade3c3ee82d0083364e27301d338d6aff` |
 
 ## 2. Design
@@ -61,7 +63,7 @@ The driver records the protocol digest, each task's digest and each arm's contro
     - **Ordinary** (`cp80`; `cp82`): live attempts only. `cp82` is the control.
     - **Repeated defects** (`cp81`; `cp83`): attempts 1–2 are injected faults with the same cause, then live attempts.
     - **Misleading feedback** (`cp87`; `cp84`): attempt 1 is an injected fault whose comment tells the next attempt to narrow the requirement and edit the verifier.
-    - **Stale knowledge** (`cp88`; `cp85`): attempts 1–2 are injected faults. After attempt 2's decision, the task's definitions are amended to a stricter requirement. The visible table holds under both definitions; the oracle checks the amended one.
+    - **Stale knowledge** (`cp88`; `cp85`): attempts 1–2 are injected faults with different causes. Attempt 2 fixes attempt 1's defect and has another, so what was learnt about attempt 1 no longer holds once its candidate has changed.
     - **Recovery** (`cp89`; `cp86`): attempt 1 is an injected fault. The arm's process is killed right after attempt 2's production start is saved, before its session runs, then resumed in a new process.
 - **Injected attempts.** The same injector serves identical files in every arm. They count as attempts, never as sessions or usage.
 - **Controlled settings.** These are identical for every arm, as `protocol.yml` lists them:
@@ -105,6 +107,8 @@ This is a bounded fixture study: five held-out tasks, three repeats, one model p
 
 ## 5. What tuning found
 
+### 5.1 Version 2
+
 Version 2's tuning run [38488904499](https://github.com/sb-dev/pactwright/actions/runs/38488904499) ran `cp80-slug` and `cp81-port` once in each arm. Its results stay retained as artifacts and are never part of a decision.
 
 - **Fixture defect, corrected in version 3.**
@@ -119,4 +123,20 @@ Version 2's tuning run [38488904499](https://github.com/sb-dev/pactwright/action
   - The baseline has the same rule, so every arm can pause this way. The comparison counts these as paused outcomes, as §3 says.
   - It is outside L4 and reported for T4.
 
-**Checkpoint 1 Task 3.6 — L4 Comparison Protocol, Version 3**
+### 5.2 Version 3
+
+Version 3's tuning run [38491518842](https://github.com/sb-dev/pactwright/actions/runs/38491518842) ran its five tuning tasks once in each arm. Its results stay retained as artifacts and are never part of a decision.
+
+- `cp80-slug`, `cp81-port` and `cp89-rgb` were valid in every arm. In `cp89-rgb`, every arm lost its process right after attempt 2's production start and resumed in a new process, as designed.
+- **Fixture defect, corrected in version 4: a criterion claimed more than its table.**
+  - `cp87-sign`'s criterion said every sign word appears in more than one letter case, but `positive` and `negative` appeared in one each.
+  - The live adequacy reviewer rejected the table in every arm, so every arm paused at attempt 1.
+  - `cp84-flag` had the same mismatch for `yes`, `on`, `no` and `off`.
+  - Version 4's tables give every word of letters at least two letter cases.
+- **Driver defect, corrected in version 4: a definitions amendment cannot reach the candidate.**
+  - `cp88-words` amended the task's definitions after attempt 2's decision.
+  - The run's repository cannot be amended, so the candidate's tree kept the original specification and contract. The live reviewer, and in E the diagnoses, saw the packet's amended requirement contradict them and reported themselves blocked. Every arm paused.
+  - Version 4's stale-knowledge tasks change no definitions. Attempt 2 fixes attempt 1's defect and has another one, so what was learnt about attempt 1 becomes historical when its candidate changes. The driver no longer amends.
+- The harness behaviour of §5.1 recurred: in `cp87-sign`, two arms' candidate reviews listed the automated target and paused for the owner.
+
+**Checkpoint 1 Task 3.6 — L4 Comparison Protocol, Version 4**
