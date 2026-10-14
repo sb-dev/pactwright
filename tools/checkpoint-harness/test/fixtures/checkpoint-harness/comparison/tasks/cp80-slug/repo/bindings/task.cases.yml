@@ -1,9 +1,0 @@
-# Delivered with the task (AC01).
-id: task.cases
-method: automated
-version: "1"
-command: [node, verifiers/table-subject.mjs, verifiers/cases.json]
-judge: [node, verifiers/table-judge.mjs, verifiers/cases.json]
-files: [verifiers/cases.json, verifiers/table-judge.mjs, verifiers/table-subject.mjs]
-timeoutMs: 60000
-observations: [exit, stdout]

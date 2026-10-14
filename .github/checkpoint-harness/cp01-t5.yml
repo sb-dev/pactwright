@@ -64,7 +64,6 @@ permissions:
   scratch: []
   protected:
     - .github/checkpoint-harness
-    - .github/workflows/checkpoint-harness-comparison.yml
     - .github/workflows/checkpoint-harness-verify.yml
     - .github/workflows/checkpoint-harness.yml
     - docs/checkpoints

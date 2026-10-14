@@ -4,6 +4,8 @@
 
 **Status:** Result of the pinned comparison at the evidence revision. It is evidence for review, not acceptance of L4, T4 or T5.
 
+**Tooling:** the comparison driver, task fixtures and workflow named here exist at revision `73293a85182e19e0de36520c0b1b829295cbca1c`, where every digest below can be checked. They were removed from the branch afterwards, because the small synthetic tasks could not measure learning's value; the owner intends to assess learning in T5 instead, which needs an explicit amendment of the T3.6 rollout decision (T3.6 plan §4).
+
 **Authority:** [T3.6 plan](2026-10-07-cp01-task-3-6-evidence-backed-learning.md) §4 and L4-03; [comparison protocol, version 5](2026-10-13-cp01-task-3-6-l4-comparison-protocol.md).
 
 ## 1. What ran

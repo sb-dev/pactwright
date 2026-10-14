@@ -6,6 +6,8 @@
 
 **Status:** Pinned before any version 5 result. No result is reported here; the comparison report records them.
 
+**Tooling:** the comparison driver, task fixtures and workflow named here exist at revision `73293a85182e19e0de36520c0b1b829295cbca1c`, where every digest below can be checked. They were removed from the branch afterwards, because the small synthetic tasks could not measure learning's value; the owner intends to assess learning in T5 instead, which needs an explicit amendment of the T3.6 rollout decision (T3.6 plan §4).
+
 **Supersedes:** version 4, pinned in `3dde90b`; version 3, pinned in `9e57ae6`; version 2, pinned in `dc2d9a0`; and version 1, in `2e045a7`.
 
 - No comparison ran under version 1. [Review 5511362756](https://github.com/sb-dev/pactwright/pull/73#pullrequestreview-5511362756) found that its decision could report a benefit with one planned repeat of a task incomplete. The control test added for that finding also showed that an arm with no run made its (task, repeat) count as a complete pair. Version 2 corrected both (§3).

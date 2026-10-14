@@ -1,5 +1,0 @@
-# Minimal conversion record: the task was written as a contract step; planning does not read crosswalk quotes.
-sources:
-  - source: docs/checkpoints/84-flag.md@0000000
-    steps: [CP84-S01]
-entries: []

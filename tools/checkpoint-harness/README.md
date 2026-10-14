@@ -271,9 +271,7 @@ The L4 proof runs CP94 through `l4-fixture.yml` on hosted runners, from the bran
 
 ### Learning comparison
 
-**Workflow file:** `.github/workflows/checkpoint-harness-comparison.yml`
-
-The comparison compares the harness before T3.6 (arm B), this revision without learning (D) and with learning (E) under the protocol pinned in `test/comparison/protocol.yml`. Dispatch it with `set: tuning` or `set: held-out`. Each task of the set runs in its own job of the `claude-live` environment: every repeat runs the three arms in the pinned rotated order, each arm from its own source tree, from a deterministic task repository, with byte-identical injected attempts. A hidden oracle, never in the task repository, checks what each run accepted, in the containment image without network. The report job applies the pinned decision rules to every retained run and reports a benefit, a regression or an inconclusive result. Failures, pauses and exhausted budgets are results; a run that failed on infrastructure is rerun as a whole, at most as the protocol allows, and the earlier one is kept, marked superseded.
+The T3.6 L4 comparison of the harness before T3.6, this revision without learning and with learning ran at revision `73293a8`, which holds its driver, task fixtures and workflow. Its protocol and result are in `docs/research-logs/2026-10-13-cp01-task-3-6-l4-comparison-protocol.md` and `docs/research-logs/2026-10-14-cp01-task-3-6-l4-comparison-report.md`. The tooling was removed afterwards because its small synthetic tasks could not measure learning's value.
 
 ## Internal CLI reference
 

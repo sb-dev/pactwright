@@ -1,7 +1,0 @@
-# Checkpoint 86 — T3.6 L4 comparison task cp86-csv. Not a Pactwright checkpoint.
-format: 2
-checkpoint: CP86
-run_model: software-bootstrap
-sources:
-  CHECKPOINT: ../86-csv.md
-  TASK: ../../specs/task-spec.md
