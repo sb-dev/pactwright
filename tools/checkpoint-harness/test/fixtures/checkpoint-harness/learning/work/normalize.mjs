@@ -7,6 +7,7 @@ export function normalize(text) {
   return String(text).trim();
 }
 
+// Run as a program: print the normalised first argument (LEARNING §2).
 if (process.argv[1] === new URL(import.meta.url).pathname) {
   console.log(normalize(process.argv[2] ?? ""));
 }
