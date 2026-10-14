@@ -1,0 +1,8 @@
+# Checkpoint 94 — the T3.6 L4 hosted learning fixture: two contract steps.
+# Not a Pactwright checkpoint.
+format: 2
+checkpoint: CP94
+run_model: software-bootstrap
+sources:
+  CHECKPOINT: ../94-learning.md
+  LEARNING: ../../specs/learning-spec.md

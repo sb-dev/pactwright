@@ -106,8 +106,42 @@
           "minimum": 1
         },
         "faults": {
-          "description": "Hosted fixture only: lets the fault dispatch input simulate runner loss around an effect.",
+          "description": "Hosted fixture only: lets the fault dispatch input simulate runner loss around an effect, or after a save that records a chosen event (T3.6 L4).",
           "type": "boolean"
+        },
+        "inject": {
+          "description": "Hosted fixture only (T3.6 L4): producer attempts served by fixed fixture files instead of a provider session, each labelled as injected in its observation. Every source must start with the injected-fault header.",
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["step", "attempt", "files", "outputs"],
+            "properties": {
+              "step": { "type": "string", "pattern": "^CP[0-9]{2}-S[0-9]{2}$" },
+              "attempt": { "type": "integer", "minimum": 1 },
+              "files": {
+                "description": "Candidate path to the repository source written there, read at the run's definitions revision.",
+                "type": "object",
+                "minProperties": 1,
+                "additionalProperties": { "type": "string", "minLength": 1 }
+              },
+              "outputs": {
+                "description": "Each output the attempt claims, with its paths.",
+                "type": "object",
+                "additionalProperties": {
+                  "type": "array",
+                  "items": { "type": "string", "minLength": 1 }
+                }
+              }
+            }
+          }
+        }
+      },
+      "dependentSchemas": {
+        "inject": {
+          "required": ["faults"],
+          "properties": { "faults": { "const": true } }
         }
       }
     },

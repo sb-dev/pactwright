@@ -70,7 +70,7 @@ on:
         required: false
         type: string
       fault:
-        description: Hosted fixture only — crash-after-intent or crash-after-effect[:action].
+        description: Hosted fixture only — crash-after-intent or crash-after-effect[:action], or crash-after-save:event[:detail].
         required: false
         type: string
   pull_request_review:
@@ -246,6 +246,8 @@ jobs:
       HARNESS_RUN: ${{ inputs.run }}
       HARNESS_PR: ${{ inputs.pr }}
       HARNESS_REVIEW: ${{ inputs.review }}
+      # A hosted fixture's crash-after-save fault can end this job too (T3.6 L4).
+      HARNESS_FAULT: ${{ inputs.fault }}
       HARNESS_DISPATCH_REF: ${{ github.ref_name }}
       HARNESS_JOB_TIMEOUT_MINUTES: "330"
     steps:

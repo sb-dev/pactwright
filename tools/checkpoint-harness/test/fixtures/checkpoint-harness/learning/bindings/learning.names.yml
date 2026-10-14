@@ -1,0 +1,9 @@
+# Delivered with the name capability (CP94-S01/AC01).
+id: learning.names
+method: automated
+version: "1"
+command: [node, tools/checkpoint-harness/test/fixtures/checkpoint-harness/learning/verifiers/name-subject.mjs]
+judge: [node, tools/checkpoint-harness/test/fixtures/checkpoint-harness/learning/verifiers/name-judge.mjs]
+files: [tools/checkpoint-harness/test/fixtures/checkpoint-harness/learning/verifiers/name-judge.mjs, tools/checkpoint-harness/test/fixtures/checkpoint-harness/learning/verifiers/name-subject.mjs]
+timeoutMs: 30000
+observations: [exit, stdout]

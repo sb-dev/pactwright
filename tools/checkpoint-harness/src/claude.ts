@@ -387,6 +387,8 @@ export type Observation = {
   };
   turns: number | null;
   durationMs: number;
+  /** The fixture injection that served this session instead of a model (T3.6 L4); absent for a provider session. */
+  fixture?: string;
 };
 
 export type AgentOutcome =
@@ -462,6 +464,8 @@ export type ProviderEvent =
       plugins: string[];
       permissionMode: string;
       apiKeySource: string;
+      /** Set only by a fixture injection (T3.6 L4): what served the session instead of a model. */
+      fixture?: string;
     }
   | {
       type: "result";
@@ -1829,6 +1833,7 @@ export async function invokeAgent(
       } else if (event.type === "init") {
         observation.session = event.session;
         observation.model.reported = event.model;
+        if (event.fixture !== undefined) observation.fixture = event.fixture;
         observation.tools = [...event.tools].sort();
         const errors = initErrors(event, role, tools);
         if (errors.length > 0) {

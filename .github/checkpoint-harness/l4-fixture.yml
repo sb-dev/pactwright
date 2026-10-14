@@ -1,0 +1,97 @@
+# The T3.6 L4 hosted learning fixture (evidence-backed learning log §3
+# T3.6-L4): runs checkpoint CP94 of the harness tests on hosted runners with
+# live Claude sessions, learning with its phases, fixture effects, fixture
+# faults, two pull-request correction rounds and injected producer attempts.
+# Step 2's attempts 1-3 are injected fixture faults that fail the same case
+# for the same cause; every other session is a live one. It publishes to
+# harness/<run> against the L4 implementation branch. Not a Checkpoint 1
+# configuration.
+repository:
+  name: sb-dev/pactwright
+  branch: ccr-98e0f430-3tbeyy
+checkpoint: tools/checkpoint-harness/test/fixtures/checkpoint-harness/docs/checkpoints/94-learning/checkpoint.yml
+definitions:
+  review: CP94 hosted learning fixture; authority T3.6 plan v1 §3 T3.6-L4
+roles:
+  producer:
+    adapter: claude-sdk
+    model: claude-sonnet-5
+    effort: medium
+    skills: [karpathy-guidelines]
+    skill_digests:
+      karpathy-guidelines: sha256:6e22cc54cb02a5e98ae42d06d9d7292db0c1b43894831b32879beb0166b2aea7
+    max_turns: 40
+  reviewer:
+    adapter: claude-sdk
+    model: claude-opus-5-5
+    effort: medium
+    skills: [code-review-and-quality]
+    skill_digests:
+      code-review-and-quality: sha256:8f3cabca581bbf7cb5f0add3f7454e7a4523f9d4353a6a4a217e6fa515309612
+    max_turns: 30
+credentials:
+  kind: oauth-token
+  provider: env:CLAUDE_CODE_OAUTH_TOKEN
+budgets:
+  attempts: 8
+  retries: 8
+  wall_time_seconds: 900
+  provider_spend_limit:
+    usd: 2
+    turn_reservation_usd: 0.25
+  run_spend_usd: 60
+permissions:
+  writable: [tools/checkpoint-harness/test/fixtures/checkpoint-harness/learning/work]
+  scratch: []
+  protected: []
+  approvers:
+    owner: [sb-dev]
+    amend: [sb-dev]
+    feedback: [sb-dev]
+verification:
+  bindings: tools/checkpoint-harness/test/fixtures/checkpoint-harness/learning/bindings
+publication:
+  pull_request:
+    title: "L4 hosted learning fixture: harness publication"
+    draft: true
+  # Each published head gets the repository's verification as its next review;
+  # the live Claude job is left out of it.
+  review:
+    workflow: checkpoint-harness-verify.yml
+    inputs:
+      live: "false"
+learning:
+  reminder_chars: 400
+  context:
+    entries: 6
+    guidance: 2
+    bytes: 16384
+  phases:
+    exploration_rounds: 2
+    check_timeout_seconds: 60
+job:
+  # Long, so each dispatched fault fires in the job it was dispatched for.
+  yield_after_seconds: 10800
+  faults: true
+  inject:
+    - step: CP94-S02
+      attempt: 1
+      files:
+        tools/checkpoint-harness/test/fixtures/checkpoint-harness/learning/work/normalize.mjs: tools/checkpoint-harness/test/fixtures/checkpoint-harness/learning/injected/attempt-1.mjs
+      outputs:
+        normalizer:
+          [tools/checkpoint-harness/test/fixtures/checkpoint-harness/learning/work/normalize.mjs]
+    - step: CP94-S02
+      attempt: 2
+      files:
+        tools/checkpoint-harness/test/fixtures/checkpoint-harness/learning/work/normalize.mjs: tools/checkpoint-harness/test/fixtures/checkpoint-harness/learning/injected/attempt-2.mjs
+      outputs:
+        normalizer:
+          [tools/checkpoint-harness/test/fixtures/checkpoint-harness/learning/work/normalize.mjs]
+    - step: CP94-S02
+      attempt: 3
+      files:
+        tools/checkpoint-harness/test/fixtures/checkpoint-harness/learning/work/normalize.mjs: tools/checkpoint-harness/test/fixtures/checkpoint-harness/learning/injected/attempt-3.mjs
+      outputs:
+        normalizer:
+          [tools/checkpoint-harness/test/fixtures/checkpoint-harness/learning/work/normalize.mjs]

@@ -23,13 +23,16 @@ import { join } from "node:path";
 import yaml from "js-yaml";
 
 import { stepOrder } from "./contracts.js";
+import { sdkProvider } from "./claude.js";
 import {
   readRun,
   type GithubOwner,
+  type JournalEvent,
   type Liveness,
   type OwnerRecord,
   type RunHandle,
 } from "./evidence.js";
+import { injectedSources, injecting, type Injection } from "./fixture.js";
 import type { FeedbackSource } from "./pull-requests.js";
 import {
   addressComments,
@@ -198,7 +201,11 @@ export function parseInputs(
   };
   const pr = number("pr");
   const review = number("review");
-  const fault = check("fault", /^crash-after-(intent|effect)(:[a-z-]+)?$/, "a fixture fault");
+  const fault = check(
+    "fault",
+    /^crash-after-(intent|effect)(:[a-z-]+)?$|^crash-after-save:[a-z-]+(:[a-z-]+)?$/,
+    "a fixture fault",
+  );
   const typed = action as WorkflowAction;
   if (typed === "approve" || typed === "deny") {
     if (!request) errors.push(`${typed} needs request`);
@@ -268,15 +275,20 @@ export async function runJob(
   });
 
   // The saver: one new sequence per changed journal, refused when another
-  // controller saved the run first.
+  // controller saved the run first. A `crash-after-save` fixture fault ends
+  // the job as a lost runner would, right after the first save that records
+  // a matching event (T3.6 L4).
   let sequence = 0;
   let journalSeq = -1;
   let saves = 0;
+  const crashAfter = savedFault(inputs.fault);
+  let crashed = false;
   const save = async (run: { dir: string }): Promise<void> => {
     const read = readRun(run.dir);
     if (!read.ok) throw new Error(read.diagnostics.join("; "));
     const seq = read.records.events.at(-1)?.seq ?? 0;
     if (seq === journalSeq) return;
+    const before = journalSeq;
     const configured = pinned(run.dir, read.records.events);
     const controller = configured?.hosted?.controller ?? ctx.sha;
     const packed = await packState(run.dir, join(paths.scratch, `save-${saves++}`), {
@@ -288,7 +300,46 @@ export async function runJob(
     sequence += 1;
     journalSeq = seq;
     savedJournal = { seq, head: read.records.head };
+    if (
+      crashAfter &&
+      !crashed &&
+      read.records.events.some((e) => e.seq > before && crashAfter(e))
+    ) {
+      crashed = true;
+      services.crash();
+    }
   };
+
+  // A hosted fixture's injected producer attempts (T3.6 L4), read at the
+  // run's definitions revision once the configuration is known.
+  let injected: { injections: Injection[]; sources: ReadonlyMap<string, string> } | null = null;
+  async function prepareInjection(config: {
+    job?: { faults?: boolean; inject?: Injection[] };
+    definitions: { revision: string };
+  }): Promise<string[]> {
+    const injections = config.job?.inject;
+    if (!injections) return [];
+    if (config.job?.faults !== true) return ["job.inject needs a template with job.faults: true"];
+    const { revision } = config.definitions;
+    await services.fetch(revision);
+    const read = injectedSources(injections, (source) =>
+      git(paths.repoRoot, ["show", `${revision}:${source}`]),
+    );
+    if (!read.ok) return read.diagnostics;
+    injected = { injections, sources: read.sources };
+    return [];
+  }
+  const providers = (): RunnerDeps["providers"] | undefined =>
+    injected
+      ? {
+          ...services.providers,
+          producer: injecting(
+            injected.injections,
+            injected.sources,
+            services.providers?.producer ?? sdkProvider,
+          ),
+        }
+      : services.providers;
 
   const deps = (dir: string | null): RunnerDeps => ({
     repoRoot: paths.repoRoot,
@@ -314,7 +365,7 @@ export async function runJob(
     },
     requireCredential: kind === "controller",
     github: owner,
-    ...(services.providers ? { providers: services.providers } : {}),
+    ...((p) => (p ? { providers: p } : {}))(providers()),
     ...(services.repositories ? { repositories: services.repositories } : {}),
   });
 
@@ -450,6 +501,11 @@ export async function runJob(
   if (inputs.fault && !faultAllowed(dir)) {
     return refuse([`fault ${inputs.fault} needs a template with job.faults: true`]);
   }
+  const configured = pinned(dir, readEvents(dir));
+  if (configured) {
+    const problems = await prepareInjection(configured.config);
+    if (problems.length > 0) return refuse(problems);
+  }
 
   if (kind !== "route") {
     return finished(await resumeRun(dir, deps(dir)));
@@ -546,6 +602,8 @@ export async function runJob(
     if (inputs.fault && job?.faults !== true) {
       return refuse([`fault ${inputs.fault} needs a template with job.faults: true`]);
     }
+    const problems = await prepareInjection(composed as Parameters<typeof prepareInjection>[0]);
+    if (problems.length > 0) return refuse(problems);
     const result = await startRun(composed, deps(null), {
       configName: file,
       hosted: {
@@ -729,6 +787,21 @@ export function faulty(
 }
 
 /**
+ * The events a `crash-after-save:EVENT[:DETAIL]` fixture fault ends a job
+ * after (T3.6 L4): the journal action EVENT, and DETAIL, when given, as the
+ * event's phase, purpose, role, kind or disposition. Null for another fault.
+ */
+export function savedFault(fault: string | undefined): ((e: JournalEvent) => boolean) | null {
+  const match = /^crash-after-save:([a-z-]+)(?::([a-z-]+))?$/.exec(fault ?? "");
+  if (!match) return null;
+  const [, action, detail] = match;
+  return (e) =>
+    e.action === action &&
+    (detail === undefined ||
+      ["phase", "purpose", "role", "kind", "disposition"].some((k) => e.data[k] === detail));
+}
+
+/**
  * Checks a job's summary against the state it saved, restored afresh: every
  * field the summary reports must be what that state records (T3.5 H3).
  */
@@ -793,40 +866,59 @@ export async function checkTemplates(repoRoot: string, skillsRoot: string): Prom
       diagnostics.push(`${file}: not a configuration mapping`);
       continue;
     }
-    const template = t as Record<string, unknown>;
-    const repository = template.repository as Record<string, unknown> | undefined;
-    if (
-      "selection" in template ||
-      "workspace" in template ||
-      repository?.expected_head !== undefined
-    ) {
-      diagnostics.push(`${file}: a template names neither selection, workspace nor expected_head`);
-      continue;
-    }
-    const definitions = (template.definitions ?? {}) as Record<string, unknown>;
-    const revision = typeof definitions.revision === "string" ? definitions.revision : head;
-    const checkpoint = typeof template.checkpoint === "string" ? template.checkpoint : "";
-    const order = await stepOrder(repoRoot, revision, checkpoint);
-    if (!order?.[0]) {
-      diagnostics.push(`${file}: ${checkpoint} does not load at ${revision}`);
-      continue;
-    }
-    const composed = {
-      ...template,
-      repository: { ...repository, expected_head: head },
-      definitions: { ...definitions, revision },
-      selection: { through: order[0] },
-      workspace: {
-        candidate_root: "/tmp/harness-check/workspaces",
-        controller_root: "/tmp/harness-check/runs",
-      },
-    };
-    const checked = await checkConfiguration(
-      composed,
-      { repoRoot, skillsRoot, env: {}, applicability: APPLICABILITY, requireCredential: false },
-      file,
+    diagnostics.push(
+      ...(await checkTemplate(repoRoot, skillsRoot, file, t as Record<string, unknown>, head)),
     );
-    if (!checked.ok) diagnostics.push(...checked.diagnostics);
   }
   return diagnostics;
+}
+
+/**
+ * Checks one template mapping as `start` would compose it at `head`; the
+ * template check runs it for every committed template, and a test for
+ * settings a template keeps in reserve (T3.6 L4).
+ */
+export async function checkTemplate(
+  repoRoot: string,
+  skillsRoot: string,
+  file: string,
+  template: Record<string, unknown>,
+  head: string,
+): Promise<string[]> {
+  const repository = template.repository as Record<string, unknown> | undefined;
+  if (
+    "selection" in template ||
+    "workspace" in template ||
+    repository?.expected_head !== undefined
+  ) {
+    return [`${file}: a template names neither selection, workspace nor expected_head`];
+  }
+  const definitions = (template.definitions ?? {}) as Record<string, unknown>;
+  const revision = typeof definitions.revision === "string" ? definitions.revision : head;
+  const checkpoint = typeof template.checkpoint === "string" ? template.checkpoint : "";
+  const order = await stepOrder(repoRoot, revision, checkpoint);
+  if (!order?.[0]) return [`${file}: ${checkpoint} does not load at ${revision}`];
+  const composed = {
+    ...template,
+    repository: { ...repository, expected_head: head },
+    definitions: { ...definitions, revision },
+    selection: { through: order[0] },
+    workspace: {
+      candidate_root: "/tmp/harness-check/workspaces",
+      controller_root: "/tmp/harness-check/runs",
+    },
+  };
+  const checked = await checkConfiguration(
+    composed,
+    { repoRoot, skillsRoot, env: {}, applicability: APPLICABILITY, requireCredential: false },
+    file,
+  );
+  if (!checked.ok) return checked.diagnostics;
+  // A hosted fixture's injected attempts (T3.6 L4) must read and carry the header.
+  const injections = (template.job as { inject?: Injection[] } | undefined)?.inject;
+  if (!injections) return [];
+  const read = injectedSources(injections, (source) =>
+    git(repoRoot, ["show", `${revision}:${source}`]),
+  );
+  return read.ok ? [] : read.diagnostics.map((d) => `${file}: ${d}`);
 }

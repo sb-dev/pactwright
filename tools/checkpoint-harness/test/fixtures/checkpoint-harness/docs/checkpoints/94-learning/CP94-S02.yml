@@ -1,0 +1,21 @@
+# CP94 Step 2 — Write the normaliser
+id: CP94-S02
+requires: [CP94-S01]
+outputs:
+  normalizer: >-
+    The normaliser module
+    `tools/checkpoint-harness/test/fixtures/checkpoint-harness/learning/work/normalize.mjs`
+    of LEARNING §2. It exports `normalize(text)`. Run as a program with one
+    argument, it prints the normalised text and a newline and exits 0.
+requirements:
+  R01:
+    source: [LEARNING#2]
+    statement: The normaliser shall remove every leading and trailing whitespace character of its text, including tabs, line breaks and Unicode space separators such as U+00A0 and U+3000, and keep the characters between them unchanged.
+acceptance:
+  AC01:
+    covers: [R01]
+    cases: [whitespace]
+    given: Texts holding `Ada` between spaces, tabs, line breaks, U+00A0, U+2003 and U+3000.
+    when: The normaliser program runs with each text.
+    then: It prints `Ada` and a newline for each and exits 0.
+    verify: {automated: [learning.normalizes]}

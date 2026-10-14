@@ -1,0 +1,9 @@
+# Delivered with the normaliser capability (CP94-S02/AC01).
+id: learning.normalizes
+method: automated
+version: "1"
+command: [node, tools/checkpoint-harness/test/fixtures/checkpoint-harness/learning/verifiers/normalize-subject.mjs]
+judge: [node, tools/checkpoint-harness/test/fixtures/checkpoint-harness/learning/verifiers/normalize-judge.mjs]
+files: [tools/checkpoint-harness/test/fixtures/checkpoint-harness/learning/verifiers/normalize-judge.mjs, tools/checkpoint-harness/test/fixtures/checkpoint-harness/learning/verifiers/normalize-subject.mjs]
+timeoutMs: 30000
+observations: [exit, stdout]

@@ -2,7 +2,7 @@
 
 The harness runs checkpoint work through produce → verify → review → correct → accept.
 
-GitHub Actions operation below is the interface specified by the [T3.5 production readiness](../../docs/research-logs/2026-09-30-cp01-task-3-5-harness-production-readiness.md). H1 adds production verification, described under [Production verification](#production-verification). H2 adds each role's model and effort, described under [Role model and effort](#role-model-and-effort). H3 adds the hosted workflow, portable run state, GitHub-bound ownership and decisions, operational steps and pull-request correction rounds, described from [Workflow controls](#workflow-controls) to [Pull-request correction rounds](#pull-request-correction-rounds).
+GitHub Actions operation below is the interface specified by the [T3.5 production readiness](../../docs/research-logs/2026-09-30-cp01-task-3-5-harness-production-readiness.md). H1 adds production verification, described under [Production verification](#production-verification). H2 adds each role's model and effort, described under [Role model and effort](#role-model-and-effort). H3 adds the hosted workflow, portable run state, GitHub-bound ownership and decisions, operational steps and pull-request correction rounds, described from [Workflow controls](#workflow-controls) to [Pull-request correction rounds](#pull-request-correction-rounds). The [T3.6 evidence-backed learning](../../docs/research-logs/2026-10-07-cp01-task-3-6-evidence-backed-learning.md) extension is described under [Evidence-backed learning](#evidence-backed-learning).
 
 For the S01 pilot and stage selections, use the [T5 run guide](../../docs/research-logs/2026-09-29-cp01-task-5-implementation-and-acceptance.md). The [T3 log](../../docs/research-logs/2026-09-26-cp01-task-3-harness-and-software-run-model.md) records the original design.
 
@@ -22,7 +22,7 @@ The durable run state contains the journal, evidence, candidate Git history, eff
 
 **T5 configuration file:** `.github/checkpoint-harness/cp01-t5.yml`
 
-**Hosted fixture configuration:** `.github/checkpoint-harness/h3-fixture.yml` (checkpoint CP95, for the H3 hosted proof only)
+**Hosted fixture configurations:** `.github/checkpoint-harness/h3-fixture.yml` (checkpoint CP95, for the H3 hosted proof only) and `.github/checkpoint-harness/l4-fixture.yml` (checkpoint CP94, for the T3.6 L4 hosted learning proof only)
 
 H3 supplies the workflow named **Checkpoint harness** and the complete configuration template. Operate it through **Actions → Checkpoint harness → Run workflow**, on the branch that holds the harness revision. Continuations and forwarded reviews are dispatched on the ref the run was started from.
 
@@ -38,7 +38,7 @@ H3 supplies the workflow named **Checkpoint harness** and the complete configura
 | `reason` | Explanation recorded with an amendment. |
 | `pr` | The run's pull request number, for `address-comments`. |
 | `review` | One submitted review to address, for `address-comments`; empty collects all authorised feedback. |
-| `fault` | Hosted fixture only: `crash-after-intent` or `crash-after-effect[:ACTION]`. A template without `job.faults: true` refuses it. |
+| `fault` | Hosted fixture only: `crash-after-intent` or `crash-after-effect[:ACTION]` around an effect, or `crash-after-save:EVENT[:DETAIL]` after a save (see [Fixture faults and injected attempts](#fixture-faults-and-injected-attempts)). A template without `job.faults: true` refuses it. |
 
 The committed template omits `selection.through`, `repository.expected_head` and `workspace`. At `start`, the workflow reads the template at the dispatched commit, resolves the branch head and the boundary, and records the result as the run's configuration. Later jobs use the saved configuration only. A blank continuation never resets the boundary.
 
@@ -100,6 +100,7 @@ An agent session reserves its spend allowance before it starts. A session lost w
 | Missing, corrupt or stale archive | Stop and investigate the named state. Do not silently start a fresh run or restore an older sequence. |
 | Uncertain external result | Read the target back. Retain a matching receipt; retry only when the target proves the action did not complete. |
 | Declined external effect | GitHub declined a write without performing it (for example, Actions may not create pull requests). Fix the named cause, then `continue`; the effect is read back and retried. |
+| Runner lost in a learning phase | `continue` restores the last valid state. A learning session lost after its start runs again under its phase key as a counted retry; its allowance stays reserved. A phase whose result was saved never runs again. |
 | Harness defect | Return the missing capability or design defect to T3.5, verify the corrected harness revision through T4, then resume T5. |
 
 ## Operational steps
@@ -219,6 +220,58 @@ roles:
 - **Amendment.** Amending a model or effort re-verifies and re-reviews each accepted evaluation on the same candidate. The candidate is not produced again, so its producer's original settings remain in that invocation's record. Admitted verifiers are pinned by digest and are not reviewed again. Approvals are requested again for the new evaluation, but an effect with a receipt never runs again.
 - **Budgets.** Effort does not change limits. Attempts, retries and recorded usage persist across an amendment. Lowering effort after a spend stop reruns the same attempt as a counted retry.
 - **Existing runs.** A run started before H2 has no effort in its saved configuration. Amend it with each role's effort before resuming.
+
+## Evidence-backed learning
+
+T3.6 lets later attempts of a step use earlier evidence of the same run, including its correction rounds. The run's `learning` section turns it on:
+
+```yaml
+learning:
+  reminder_chars: POSITIVE_INTEGER # longest admitted reminder
+  context:
+    entries: INTEGER # knowledge entries one attempt may consume
+    guidance: INTEGER # reminders one attempt may consume
+    bytes: POSITIVE_INTEGER # bound on the consumed learning context
+  phases: # optional: proposals, exploration and challenge
+    exploration_rounds: INTEGER # exploration rounds for the whole run
+    check_timeout_seconds: POSITIVE_INTEGER # longest diagnostic check
+```
+
+- **Mode.** Without `learning` the run does not learn. With `learning` and no `phases`, each attempt consumes a frozen selection of supported knowledge and reminders. With `phases`, the runner also proposes, reviews and admits knowledge and reminders, explores, and challenges. The mode is fixed when the run starts; an amendment that changes it is refused, so a different mode needs a new run. The limits can be amended.
+- **Phases.** After a `correct` decision, before the next attempt, the runner runs: a proposal session; an independent review and the controller's admission of each proposal; and, when a reviewed choice or the same rule failing in two consecutive correction attempts calls for it, one exploration round (two isolated diagnoses, their checks, a selection review and the controller's routing). An explored attempt's acceptance needs a current cross-attempt challenge. A pull-request round's first correction attempt follows no decision of its own, so learning phases run only after one of its attempts is decided `correct`.
+- **Authority.** Supported knowledge, reminders and a selected approach are context for the producer. They never accept a candidate, change requirements, checks, roles, permissions, limits or approval authority, and the acceptance gate is unchanged.
+- **Budgets.** Every learning session reserves the per-invocation allowance before it starts and counts against the step's retries and the run's spend limit, like any session.
+- **Recovery and compatibility.** Learning records and frozen manifests are part of the saved state. A restored run continues each phase under its key; records of another format or controller pause the run for its owner and are never migrated.
+
+### Learning in the job summary
+
+Each job summary has a learning section. A run without learning reports it as `none`; a refusal before restore reports it `unknown`. Otherwise it shows:
+
+- the mode, and the run's knowledge entries and reminders by disposition (`unavailable` when the records cannot be read);
+- each step's latest frozen context: its attempt and manifest digest, the consumed knowledge and reminders, and how many items were left out and why (`historical`, `withheld`, `stale`, `limit` and so on);
+- each exploration (trigger, diagnoses, checks, routing) and each challenge verdict;
+- the learning sessions' usage: sessions, model turns, output tokens, the API-price equivalent the SDK reports (not a bill) and unresolved reservations.
+
+The job checks every one of these values against the state it saved. Knowledge reuse, guidance and exploration selection are never reported as acceptance.
+
+### T5 adoption
+
+`cp01-t5.yml` does not enable learning. Its reserved `learning` block stays commented out until T4 passes for the resulting harness revision and the T3.6 L4 comparison report shows a supported benefit; adopting it is an explicit, reviewed amendment of that rollout decision, and a new run. The harness tests validate the reserved values against the template.
+
+### Fixture faults and injected attempts
+
+These exist for the hosted fixtures. A template without `job.faults: true` refuses them, and neither can be amended into or out of a run.
+
+- **`crash-after-save:EVENT[:DETAIL]`** ends the job as a lost runner would, right after the first save that records a journal event `EVENT` whose phase, purpose, role, kind or disposition is `DETAIL`. `start:PHASE` loses the runner after a session's start is saved, before it runs; a result event loses it after the result is saved. Every job of the dispatch receives the fault.
+- **`job.inject`** lists producer attempts that fixed fixture files serve instead of a provider session: `{step, attempt, files: {CANDIDATE_PATH: SOURCE}, outputs}`. Each source is read at the run's definitions revision and must start with `// INJECTED FAULT (T3.6 L4 fixture)`. The files go through the session's own `write_file` tool, so the write policy, seal, verifiers and reviews treat them as any producer's work. The observation names the injection in `fixture` and reports no turns, tokens or cost; it repeats the configured model only because the dispatch check requires every session to report it. The summary's reported producer model ignores injected attempts.
+
+### Hosted learning proof
+
+The L4 proof runs CP94 through `l4-fixture.yml` on hosted runners, from the branch that holds the harness revision. Step 2's attempts 1–3 are injected faults that fail the same case for the same cause; every other session is live. Dispatch, one at a time, `start config=l4-fixture.yml through=CP94-S02` and then `continue`, each with one fault from `FAULTS` in `test/l4-proof.ts`, then a plain `continue` to publication. Then submit a review with an actionable inline comment (round 1, forwarded), and add conversation comments and dispatch `address-comments` with `fault: crash-after-effect:pr-reply`, then `continue` (round 2). Finally run **Checkpoint harness verification** with `l4_proof_run` set to the run name; it applies the assertions of `test/l4-proof.ts` to the final saved state. `test/checkpoint-harness-l4.test.ts` rehearses the same sequence in process; that rehearsal is not hosted evidence.
+
+### Learning comparison
+
+The T3.6 L4 comparison of the harness before T3.6, this revision without learning and with learning ran at revision `73293a8`, which holds its driver, task fixtures and workflow. Its protocol and result are in `docs/research-logs/2026-10-13-cp01-task-3-6-l4-comparison-protocol.md` and `docs/research-logs/2026-10-14-cp01-task-3-6-l4-comparison-report.md`. The tooling was removed afterwards because its small synthetic tasks could not measure learning's value.
 
 ## Internal CLI reference
 

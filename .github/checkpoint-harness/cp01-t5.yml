@@ -97,3 +97,20 @@ publication:
 job:
   # Yield well before the controller job's 330-minute limit.
   yield_after_seconds: 18000
+# BEGIN learning (not adopted)
+# Evidence-backed learning (T3.6) stays off for T5. It is adopted only after
+# T4 PASS for the resulting harness revision and a supported benefit in the
+# T3.6 L4 comparison report, by an explicit, reviewed amendment of this
+# rollout decision that uncomments the block below. The learning mode cannot
+# be amended within a run, so adoption takes a new run. The harness tests
+# validate these values against this template.
+# learning:
+#   reminder_chars: 400
+#   context:
+#     entries: 8
+#     guidance: 3
+#     bytes: 32768
+#   phases:
+#     exploration_rounds: 3
+#     check_timeout_seconds: 300
+# END learning
