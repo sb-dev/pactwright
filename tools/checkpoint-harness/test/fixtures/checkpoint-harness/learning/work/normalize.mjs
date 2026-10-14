@@ -1,6 +1,9 @@
 import { fileURLToPath } from "node:url";
 import { realpathSync } from "node:fs";
 
+// Removes exactly the leading and trailing characters that
+// String.prototype.trim removes: spaces, tabs, line breaks and Unicode
+// space separators such as U+00A0 and U+3000 (LEARNING §2).
 export function normalize(text) {
   return String(text).trim();
 }
