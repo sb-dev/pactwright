@@ -74,17 +74,21 @@ The thresholds and the fixtures are those pinned before the version 5 runs. Noth
 ## 4. Analysis (not part of the decision)
 
 - **Where every pause happened.**
-  - All 9 paused runs (B 3, D 3, E 3) paused at attempt 1, which was an injected attempt in every case.
-  - None had a live attempt, and none had a learning session.
+  - All 9 paused runs (B 3, D 3, E 3) paused at an injected attempt, before any live attempt. None had a learning session.
+  - 8 paused at attempt 1.
+  - `cp85-normalize` repeat 1 in B paused at attempt 2, its second injected attempt, after an incomplete review. B has no learning phases.
   - Attempt 1 runs the same code in D and E: no learning context exists yet, and learning phases run only after a decision.
 - **Why they paused.** The causes apply to every arm:
   - **Incomplete reviews (8 runs).** The live reviewer listed the automated table target under `targets`. The harness rejects such a verdict as incomplete, and one that judged against the candidate pauses for the owner (protocol §5.1; T4 observation 2 on #73).
   - **Rejected `cp85-normalize` table (3 runs).** The live adequacy reviewer rejected the table, so the run paused for the owner (§5 below).
   - Two runs had both causes.
 - **`cp83-leap`.** E's two pauses there (repeats 1 and 3) were attempt-1 pauses from incomplete reviews, as was B's in repeat 1.
-- **Past attempt 1.** Every run that passed attempt 1 was valid, in every arm (B 12 of 12, D 12 of 12, E 12 of 12). No E run paused at an exploration routing.
+- **Past attempt 1.**
+  - B: 13 runs passed attempt 1, and 12 of them were valid. The other is the attempt-2 pause above.
+  - D: 12 of 12 valid. E: 12 of 12 valid.
+  - Every run that reached a live attempt was valid, in every arm. No E run paused at an exploration routing.
 - **What the comparison shows.**
-  - The comparison detected no effect of learning on whether a task completes. The per-task differences lie in attempt-1 pauses that learning does not reach.
+  - The comparison detected no effect of learning on whether a task completes. The differences between E and D lie in attempt-1 pauses that learning does not reach.
   - It does show what learning added. Against D:
     - median sessions: 1.75 times;
     - median turns and median time: about 1.55 times each;
@@ -98,7 +102,7 @@ The thresholds and the fixtures are those pinned before the version 5 runs. Noth
 
 Version 4's held-out run exposed the defect. Version 5 keeps the fixtures unchanged, so nothing is tuned on held-out results (protocol, held-out tasks already seen).
 
-In version 5, the live adequacy reviewer rejected the table in 3 of 15 runs, one or more in each arm: B repeat 3, D repeat 2 and E repeat 1. A later protocol would write such characters as `\u` escapes.
+In version 5, the live adequacy reviewer rejected the table in 3 of 15 runs, one in each arm: B repeat 3, D repeat 2 and E repeat 1. A later protocol would write such characters as `\u` escapes.
 
 ## 6. Tuning (version 5)
 
@@ -130,7 +134,7 @@ Version 4 ran the same tasks, settings and rules at revision `3dde90be8b59c78890
   - API-price equivalent: 3.28, 3.51, 6.36.
 - **Why version 5 superseded it.** The hosted learning proof then found that the controller refused a selection review citing a candidate path with a line. Commit `8d6d88f` changed that, and with it the revision under test.
 
-No version 4 run paused at an exploration routing, so that change does not explain the different decisions. Both decisions rest on a few attempt-1 pauses that every arm shares and learning does not reach:
+No version 4 run paused at an exploration routing, so that change does not explain the different decisions. Both decisions rest on a few pauses at injected attempts, before any live attempt or learning session, that every arm shares. In both versions, E's and D's pauses were all at attempt 1:
 - version 4: E 5 against D 3;
 - version 5: 3 each.
 
