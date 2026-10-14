@@ -112,8 +112,10 @@ Version 2's tuning run [38488904499](https://github.com/sb-dev/pactwright/action
   - A rejected verifier outside the producer's writable paths pauses the run, so all three arms paused at attempt 1.
   - Version 3's tables cover every kind of input each specification names. A reference solution passes every visible and oracle case, every injected attempt fails the visible table, and each stale-knowledge table holds under both definitions.
 - **Harness behaviour, unchanged.**
-  - In 3 of the 6 candidate reviews, the live reviewer listed the automated table target under `targets`, which holds only review targets.
-  - The harness rejects such a verdict as incomplete. One that judged against the candidate binds, so the run pauses for the owner (`an incomplete review judged against`). This paused `cp80-slug` in B and D.
+  - In 5 of the 9 candidate reviews, the live reviewer listed the automated table target under `targets`, which holds only review targets.
+  - The harness rejects such a verdict as incomplete.
+    - Three judged against the candidate. Such a verdict binds, so the run paused for the owner (`an incomplete review judged against`): `cp80-slug` in B and D, and `cp81-port` in D.
+    - Two were passes, in `cp80-slug` E's attempt 2. The harness discarded them and asked again, at the cost of a session each.
   - The baseline has the same rule, so every arm can pause this way. The comparison counts these as paused outcomes, as §3 says.
   - It is outside L4 and reported for T4.
 
