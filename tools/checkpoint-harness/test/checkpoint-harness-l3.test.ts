@@ -43,6 +43,7 @@ import {
   diagnosticCheck,
   explorationRecords,
   journalInput,
+  candidateTree,
   routeExploration,
   selectionSubjects,
   type Decision,
@@ -52,6 +53,7 @@ import {
   type OpenWorkspace,
   type ReviewRecord,
 } from "../src/verification.js";
+import { treeFiles } from "../src/workspace.js";
 import {
   assertAccepted,
   assertPaused,
@@ -798,6 +800,34 @@ describe("T3.6 L3-02 contained checks and selection", () => {
         /cites sha256:invented, which is neither a record it was given nor a path/,
       );
       blocked({ ...verdict, recommendation: { ...rec, evidence: [] } }, /cites no evidence/);
+      // A candidate path may carry a line or line range the file has.
+      const { tree } = exploration.record.candidate;
+      const [path, lines] = [...candidateTree(run, exploration.record.candidate).keys()]
+        .map((p) => [p, treeFiles(run.dir, tree, p).get(p)] as const)
+        .filter(([, b]) => b !== undefined && b.at(-1) === 0x0a)
+        .map(([p, b]) => [p, (b?.toString("utf8").split("\n").length ?? 1) - 1] as const)
+        .find(([, n]) => n >= 2) ?? ["", 0];
+      assert.ok(lines >= 2, "the candidate has a file of two or more lines");
+      const citing = (ref: string): ReviewVerdict => ({
+        ...verdict,
+        recommendation: { ...rec, evidence: [...rec.evidence, ref] },
+      });
+      for (const ref of [`${path}:1`, `${path}:${lines}`, `${path}:1-${lines}`]) {
+        const r = route(citing(ref));
+        assert.equal(r.outcome, "selected", ref);
+        assert.ok(r.selected?.evidence.includes(ref), ref);
+      }
+      blocked(
+        citing(`${path}:${lines + 1}`),
+        new RegExp(`but ${path} has no such lines \\(it has ${lines}\\)`),
+      );
+      blocked(
+        citing(`${path}:2-1`),
+        new RegExp(`but ${path} has no such lines \\(it has ${lines}\\)`),
+      );
+      for (const ref of [`${path}:0`, `${path}:x`, `${path}:`, "missing.mjs:1"]) {
+        blocked(citing(ref), /which is neither a record it was given nor a path/);
+      }
       blocked(
         {
           ...verdict,

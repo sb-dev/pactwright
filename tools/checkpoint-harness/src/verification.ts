@@ -122,6 +122,7 @@ import {
   profileDigest,
   subsetSnapshot,
   treeEntries,
+  treeFiles,
   type Mount,
   type SealedCandidate,
   type SourceSnapshot,
@@ -3717,8 +3718,10 @@ const selectionRecords = (
  * committed selection review. It selects the recommended diagnosis only when
  * the verdict is complete and consistent, the recommended side completed its
  * diagnosis without blockers and its subject is satisfied, and every cited
- * reference is a record the reviewer was given or a path of the explored
- * candidate. Anything else is `blocked`, with the reasons and no winner.
+ * reference is a record the reviewer was given, a path of the explored
+ * candidate, or such a path with a line (`path:N`) or line range
+ * (`path:N-M`) the file has. Anything else is `blocked`, with the reasons and
+ * no winner.
  */
 export function routeExploration(
   run: RunHandle,
@@ -3764,9 +3767,28 @@ export function routeExploration(
       const tree = candidateTree(run, e.candidate);
       if (rec.evidence.length === 0) reasons.push("the recommendation cites no evidence");
       for (const ref of rec.evidence) {
-        if (!shown.has(ref) && !tree.has(ref)) {
+        if (shown.has(ref) || tree.has(ref)) continue;
+        const lines = /^(.+):([1-9]\d*)(?:-([1-9]\d*))?$/.exec(ref);
+        const path = lines?.[1] ?? "";
+        const file =
+          lines && tree.has(path)
+            ? treeFiles(run.dir, e.candidate.tree, path).get(path)
+            : undefined;
+        if (!lines || !file) {
           reasons.push(
             `the recommendation cites ${ref}, which is neither a record it was given nor a path of the candidate`,
+          );
+          continue;
+        }
+        const count =
+          file.length === 0
+            ? 0
+            : file.toString("utf8").split("\n").length - (file.at(-1) === 0x0a ? 1 : 0);
+        const first = Number(lines[2]);
+        const last = Number(lines[3] ?? lines[2]);
+        if (first > last || last > count) {
+          reasons.push(
+            `the recommendation cites ${ref}, but ${path} has no such lines (it has ${count})`,
           );
         }
       }

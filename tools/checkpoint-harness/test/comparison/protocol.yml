@@ -2,8 +2,10 @@
 # Pinned before any comparison result: the driver records this file's digest
 # in every result, and the report refuses results of another digest. Nothing
 # here changes after results are seen; a change is a new protocol version,
-# and the results of the old one are reported as they are.
-version: 4
+# and the results of the old one are reported as they are. Version 5
+# changes only the revision under test; its tasks, settings and rules are
+# version 4's.
+version: 5
 
 # The arms. B is the harness before T3.6; D and E are the revision under
 # test, without and with learning. Each run is its own run directory and
