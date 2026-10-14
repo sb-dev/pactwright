@@ -1,0 +1,17 @@
+{
+  "id": "cp89-rgb",
+  "set": "tuning",
+  "category": "recovery",
+  "module": "work/rgb.mjs",
+  "fn": "parseRgb",
+  "checkpoint": "docs/checkpoints/89-rgb/checkpoint.yml",
+  "step": "CP89-S01",
+  "output": "colour",
+  "injected": [
+    "injected/attempt-1.mjs"
+  ],
+  "interrupt": {
+    "attempt": 2,
+    "phase": "produce"
+  }
+}

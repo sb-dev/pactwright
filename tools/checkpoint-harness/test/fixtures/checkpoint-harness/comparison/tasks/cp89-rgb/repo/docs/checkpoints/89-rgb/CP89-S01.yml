@@ -1,0 +1,20 @@
+# CP89 Step 1 — Write the colour parser
+id: CP89-S01
+requires: []
+outputs:
+  colour: >-
+    The module `work/rgb.mjs` of TASK §1. It exports `parseRgb`. Run as a
+    program with one argument, it prints the JSON encoding of its result for
+    that argument and a newline, and exits 0.
+requirements:
+  R01:
+    source: [TASK#1]
+    statement: "The colour parser shall return the red, green and blue components of a text that is # followed by exactly six hexadecimal digits in any letter case, and null for any other text."
+acceptance:
+  AC01:
+    covers: [R01]
+    cases: [table]
+    given: "Colours in lower, upper and mixed case, including black and white, and texts that are not colours: without #, too short, too long, with non-hexadecimal digits, spaced or empty."
+    when: The module runs as a program with each text.
+    then: "It prints the JSON array of each colour's components, or null, and exits 0."
+    verify: {automated: [task.cases]}

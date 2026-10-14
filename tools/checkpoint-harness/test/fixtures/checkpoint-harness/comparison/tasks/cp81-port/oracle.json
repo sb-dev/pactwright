@@ -15,6 +15,12 @@
     },
     {
       "args": [
+        "443"
+      ],
+      "stdout": "443\n"
+    },
+    {
+      "args": [
         "65535"
       ],
       "stdout": "65535\n"
@@ -27,13 +33,13 @@
     },
     {
       "args": [
-        "99999"
+        "0"
       ],
       "stdout": "null\n"
     },
     {
       "args": [
-        "0"
+        "00"
       ],
       "stdout": "null\n"
     },
@@ -51,13 +57,85 @@
     },
     {
       "args": [
+        "-1"
+      ],
+      "stdout": "null\n"
+    },
+    {
+      "args": [
         " 80"
       ],
       "stdout": "null\n"
     },
     {
       "args": [
+        "80 "
+      ],
+      "stdout": "null\n"
+    },
+    {
+      "args": [
+        "8.0"
+      ],
+      "stdout": "null\n"
+    },
+    {
+      "args": [
+        "1e3"
+      ],
+      "stdout": "null\n"
+    },
+    {
+      "args": [
+        ""
+      ],
+      "stdout": "null\n"
+    },
+    {
+      "args": [
         "x"
+      ],
+      "stdout": "null\n"
+    },
+    {
+      "args": [
+        "10"
+      ],
+      "stdout": "10\n"
+    },
+    {
+      "args": [
+        "1000"
+      ],
+      "stdout": "1000\n"
+    },
+    {
+      "args": [
+        "65534"
+      ],
+      "stdout": "65534\n"
+    },
+    {
+      "args": [
+        "99999"
+      ],
+      "stdout": "null\n"
+    },
+    {
+      "args": [
+        "0x50"
+      ],
+      "stdout": "null\n"
+    },
+    {
+      "args": [
+        "٨٠"
+      ],
+      "stdout": "null\n"
+    },
+    {
+      "args": [
+        "8 0"
       ],
       "stdout": "null\n"
     }

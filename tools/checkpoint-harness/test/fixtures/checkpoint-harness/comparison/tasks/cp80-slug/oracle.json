@@ -21,9 +21,33 @@
     },
     {
       "args": [
+        "X1 y2"
+      ],
+      "stdout": "\"x1-y2\"\n"
+    },
+    {
+      "args": [
+        "2024 Q1"
+      ],
+      "stdout": "\"2024-q1\"\n"
+    },
+    {
+      "args": [
+        "MiXeD_case.v2"
+      ],
+      "stdout": "\"mixed-case-v2\"\n"
+    },
+    {
+      "args": [
         "Café au lait"
       ],
       "stdout": "\"caf-au-lait\"\n"
+    },
+    {
+      "args": [
+        "abc"
+      ],
+      "stdout": "\"abc\"\n"
     },
     {
       "args": [
@@ -33,15 +57,51 @@
     },
     {
       "args": [
-        "X1 y2"
+        ""
       ],
-      "stdout": "\"x1-y2\"\n"
+      "stdout": "\"\"\n"
     },
     {
       "args": [
-        "MiXeD_case.v2"
+        "!!a!!"
       ],
-      "stdout": "\"mixed-case-v2\"\n"
+      "stdout": "\"a\"\n"
+    },
+    {
+      "args": [
+        "ÀB"
+      ],
+      "stdout": "\"b\"\n"
+    },
+    {
+      "args": [
+        "a\tb\nc"
+      ],
+      "stdout": "\"a-b-c\"\n"
+    },
+    {
+      "args": [
+        "Ünïcödé 9"
+      ],
+      "stdout": "\"n-c-d-9\"\n"
+    },
+    {
+      "args": [
+        "ONE  two   3"
+      ],
+      "stdout": "\"one-two-3\"\n"
+    },
+    {
+      "args": [
+        "_"
+      ],
+      "stdout": "\"\"\n"
+    },
+    {
+      "args": [
+        "z"
+      ],
+      "stdout": "\"z\"\n"
     }
   ]
 }

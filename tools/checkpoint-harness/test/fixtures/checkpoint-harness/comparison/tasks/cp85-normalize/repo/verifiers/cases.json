@@ -18,6 +18,42 @@
         " Ada　"
       ],
       "stdout": "\"Ada\"\n"
+    },
+    {
+      "args": [
+        "\r\nAda  "
+      ],
+      "stdout": "\"Ada\"\n"
+    },
+    {
+      "args": [
+        "Ada Lovelace"
+      ],
+      "stdout": "\"Ada Lovelace\"\n"
+    },
+    {
+      "args": [
+        "  Ada Lovelace\t"
+      ],
+      "stdout": "\"Ada Lovelace\"\n"
+    },
+    {
+      "args": [
+        "Ada"
+      ],
+      "stdout": "\"Ada\"\n"
+    },
+    {
+      "args": [
+        "   "
+      ],
+      "stdout": "\"\"\n"
+    },
+    {
+      "args": [
+        ""
+      ],
+      "stdout": "\"\"\n"
     }
   ]
 }

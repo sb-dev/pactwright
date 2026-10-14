@@ -1,0 +1,77 @@
+{
+  "module": "work/words.mjs",
+  "cases": [
+    {
+      "args": [
+        "a b c"
+      ],
+      "stdout": "3\n"
+    },
+    {
+      "args": [
+        "one"
+      ],
+      "stdout": "1\n"
+    },
+    {
+      "args": [
+        "a  b"
+      ],
+      "stdout": "2\n"
+    },
+    {
+      "args": [
+        "  a  "
+      ],
+      "stdout": "1\n"
+    },
+    {
+      "args": [
+        "Ada Lovelace"
+      ],
+      "stdout": "2\n"
+    },
+    {
+      "args": [
+        " "
+      ],
+      "stdout": "0\n"
+    },
+    {
+      "args": [
+        ""
+      ],
+      "stdout": "0\n"
+    },
+    {
+      "args": [
+        "a\tb"
+      ],
+      "stdout": "2\n"
+    },
+    {
+      "args": [
+        "a\nb c"
+      ],
+      "stdout": "3\n"
+    },
+    {
+      "args": [
+        " x　y"
+      ],
+      "stdout": "2\n"
+    },
+    {
+      "args": [
+        "\t"
+      ],
+      "stdout": "0\n"
+    },
+    {
+      "args": [
+        "one\r\ntwo"
+      ],
+      "stdout": "2\n"
+    }
+  ]
+}

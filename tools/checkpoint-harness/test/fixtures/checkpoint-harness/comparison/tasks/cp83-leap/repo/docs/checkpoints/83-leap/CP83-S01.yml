@@ -14,7 +14,7 @@ acceptance:
   AC01:
     covers: [R01]
     cases: [table]
-    given: "Ordinary, leap and century years."
+    given: "Ordinary years, leap years, century years and years divisible by 400."
     when: The module runs as a program with each text.
     then: "It prints the JSON true or false for each year and exits 0."
     verify: {automated: [task.cases]}

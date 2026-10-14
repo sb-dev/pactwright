@@ -18,6 +18,48 @@
         "Rock & Roll!"
       ],
       "stdout": "\"rock-roll\"\n"
+    },
+    {
+      "args": [
+        "X1 y2"
+      ],
+      "stdout": "\"x1-y2\"\n"
+    },
+    {
+      "args": [
+        "2024 Q1"
+      ],
+      "stdout": "\"2024-q1\"\n"
+    },
+    {
+      "args": [
+        "MiXeD_case.v2"
+      ],
+      "stdout": "\"mixed-case-v2\"\n"
+    },
+    {
+      "args": [
+        "Café au lait"
+      ],
+      "stdout": "\"caf-au-lait\"\n"
+    },
+    {
+      "args": [
+        "abc"
+      ],
+      "stdout": "\"abc\"\n"
+    },
+    {
+      "args": [
+        "---"
+      ],
+      "stdout": "\"\"\n"
+    },
+    {
+      "args": [
+        ""
+      ],
+      "stdout": "\"\"\n"
     }
   ]
 }

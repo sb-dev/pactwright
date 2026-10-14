@@ -5,6 +5,7 @@ a Pactwright specification.
 
 ## 1. Behaviour
 
-The slug of a text is its lower-case ASCII letters and digits; each run of any
-other characters between two of them becomes one hyphen, and characters before
-the first or after the last letter or digit are dropped.
+The slug of a text is made from its ASCII letters, lower-cased, and its ASCII
+digits, in order. Each run of other characters between two of them becomes one
+hyphen, and other characters before the first or after the last of them are
+dropped. A text with no ASCII letter or digit has the empty slug.

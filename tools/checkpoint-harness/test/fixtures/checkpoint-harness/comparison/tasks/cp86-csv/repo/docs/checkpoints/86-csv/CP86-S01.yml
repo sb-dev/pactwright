@@ -9,12 +9,12 @@ outputs:
 requirements:
   R01:
     source: [TASK#1]
-    statement: "The CSV splitter shall return the fields of a CSV line in order, where a field enclosed in double quotes may hold commas and a doubled double quote stands for one double quote."
+    statement: "The CSV splitter shall return the fields of a well-formed CSV line in order, where a field enclosed in double quotes may hold commas, a doubled double quote stands for one double quote, and the enclosing quotes are not part of the field."
 acceptance:
   AC01:
     covers: [R01]
     cases: [table]
-    given: "Lines with plain fields, quoted fields holding commas and doubled quotes."
+    given: "Lines with plain fields, empty fields at the start, middle and end, quoted fields holding commas or doubled quotes, empty quoted fields and the empty line."
     when: The module runs as a program with each text.
     then: "It prints the JSON array of each line's fields and exits 0."
     verify: {automated: [task.cases]}

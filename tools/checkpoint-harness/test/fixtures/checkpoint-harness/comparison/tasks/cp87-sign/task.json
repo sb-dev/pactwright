@@ -1,0 +1,13 @@
+{
+  "id": "cp87-sign",
+  "set": "tuning",
+  "category": "misleading-feedback",
+  "module": "work/sign.mjs",
+  "fn": "parseSign",
+  "checkpoint": "docs/checkpoints/87-sign/checkpoint.yml",
+  "step": "CP87-S01",
+  "output": "sign",
+  "injected": [
+    "injected/attempt-1.mjs"
+  ]
+}

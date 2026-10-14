@@ -9,6 +9,18 @@
     },
     {
       "args": [
+        "1"
+      ],
+      "stdout": "1\n"
+    },
+    {
+      "args": [
+        "443"
+      ],
+      "stdout": "443\n"
+    },
+    {
+      "args": [
         "65535"
       ],
       "stdout": "65535\n"
@@ -22,6 +34,60 @@
     {
       "args": [
         "0"
+      ],
+      "stdout": "null\n"
+    },
+    {
+      "args": [
+        "00"
+      ],
+      "stdout": "null\n"
+    },
+    {
+      "args": [
+        "080"
+      ],
+      "stdout": "null\n"
+    },
+    {
+      "args": [
+        "+80"
+      ],
+      "stdout": "null\n"
+    },
+    {
+      "args": [
+        "-1"
+      ],
+      "stdout": "null\n"
+    },
+    {
+      "args": [
+        " 80"
+      ],
+      "stdout": "null\n"
+    },
+    {
+      "args": [
+        "80 "
+      ],
+      "stdout": "null\n"
+    },
+    {
+      "args": [
+        "8.0"
+      ],
+      "stdout": "null\n"
+    },
+    {
+      "args": [
+        "1e3"
+      ],
+      "stdout": "null\n"
+    },
+    {
+      "args": [
+        ""
       ],
       "stdout": "null\n"
     },

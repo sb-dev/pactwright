@@ -3,7 +3,7 @@
 # in every result, and the report refuses results of another digest. Nothing
 # here changes after results are seen; a change is a new protocol version,
 # and the results of the old one are reported as they are.
-version: 2
+version: 3
 
 # The arms. B is the harness before T3.6; D and E are the revision under
 # test, without and with learning. Each run is its own run directory and
@@ -14,14 +14,15 @@ arms:
   D: { tree: current, learning: false }
   E: { tree: current, learning: true }
 
-# Tuning tasks shake out the driver and fixtures; they tune no parameter and
-# are never part of the decision. Held-out tasks decide. Repeat k runs the
+# Tuning tasks shake out the driver and fixtures, one of each held-out
+# category; they tune no parameter and are never part of the decision.
+# Held-out tasks decide. Repeat k runs the
 # three arms back to back in the order rotate([B, D, E], k), from the same
 # deterministic task repository.
 sets:
   tuning:
     repeats: 1
-    tasks: [cp80-slug, cp81-port]
+    tasks: [cp80-slug, cp81-port, cp87-sign, cp88-words, cp89-rgb]
   held-out:
     repeats: 3
     tasks: [cp82-title, cp83-leap, cp84-flag, cp85-normalize, cp86-csv]

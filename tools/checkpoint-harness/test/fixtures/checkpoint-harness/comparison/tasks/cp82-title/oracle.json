@@ -21,12 +21,6 @@
     },
     {
       "args": [
-        ""
-      ],
-      "stdout": "\"\"\n"
-    },
-    {
-      "args": [
         "ONE two THREE"
       ],
       "stdout": "\"One Two Three\"\n"
@@ -36,6 +30,54 @@
         "élan vital"
       ],
       "stdout": "\"Élan Vital\"\n"
+    },
+    {
+      "args": [
+        "1st PLACE"
+      ],
+      "stdout": "\"1st Place\"\n"
+    },
+    {
+      "args": [
+        "o'NEIL"
+      ],
+      "stdout": "\"O'neil\"\n"
+    },
+    {
+      "args": [
+        ""
+      ],
+      "stdout": "\"\"\n"
+    },
+    {
+      "args": [
+        "ÉCOLE"
+      ],
+      "stdout": "\"École\"\n"
+    },
+    {
+      "args": [
+        "q"
+      ],
+      "stdout": "\"Q\"\n"
+    },
+    {
+      "args": [
+        "dOG cAT bIRD"
+      ],
+      "stdout": "\"Dog Cat Bird\"\n"
+    },
+    {
+      "args": [
+        "x y z"
+      ],
+      "stdout": "\"X Y Z\"\n"
+    },
+    {
+      "args": [
+        "ñandú"
+      ],
+      "stdout": "\"Ñandú\"\n"
     }
   ]
 }

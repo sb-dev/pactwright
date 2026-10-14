@@ -5,5 +5,6 @@ a Pactwright specification.
 
 ## 1. Behaviour
 
-A port is written as decimal digits only, with no sign, space or leading zero,
-and lies from 1 to 65535. Any other text is not a port.
+A port is written as ASCII decimal digits only, with no sign, space, decimal
+point, exponent or leading zero, and lies from 1 to 65535. Any other text,
+including the empty text, is not a port.

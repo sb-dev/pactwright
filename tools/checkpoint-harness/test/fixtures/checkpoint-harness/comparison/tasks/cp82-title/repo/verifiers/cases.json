@@ -12,6 +12,42 @@
         "mIXed CASE"
       ],
       "stdout": "\"Mixed Case\"\n"
+    },
+    {
+      "args": [
+        "a"
+      ],
+      "stdout": "\"A\"\n"
+    },
+    {
+      "args": [
+        "ONE two THREE"
+      ],
+      "stdout": "\"One Two Three\"\n"
+    },
+    {
+      "args": [
+        "élan vital"
+      ],
+      "stdout": "\"Élan Vital\"\n"
+    },
+    {
+      "args": [
+        "1st PLACE"
+      ],
+      "stdout": "\"1st Place\"\n"
+    },
+    {
+      "args": [
+        "o'NEIL"
+      ],
+      "stdout": "\"O'neil\"\n"
+    },
+    {
+      "args": [
+        ""
+      ],
+      "stdout": "\"\"\n"
     }
   ]
 }

@@ -1,0 +1,7 @@
+# Checkpoint 87 — T3.6 L4 comparison task cp87-sign. Not a Pactwright checkpoint.
+format: 2
+checkpoint: CP87
+run_model: software-bootstrap
+sources:
+  CHECKPOINT: ../87-sign.md
+  TASK: ../../specs/task-spec.md

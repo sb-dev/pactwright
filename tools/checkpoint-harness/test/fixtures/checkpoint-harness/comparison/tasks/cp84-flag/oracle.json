@@ -9,7 +9,55 @@
     },
     {
       "args": [
+        "TRUE"
+      ],
+      "stdout": "true\n"
+    },
+    {
+      "args": [
+        "Yes"
+      ],
+      "stdout": "true\n"
+    },
+    {
+      "args": [
+        "on"
+      ],
+      "stdout": "true\n"
+    },
+    {
+      "args": [
+        "1"
+      ],
+      "stdout": "true\n"
+    },
+    {
+      "args": [
+        "false"
+      ],
+      "stdout": "false\n"
+    },
+    {
+      "args": [
         "FALSE"
+      ],
+      "stdout": "false\n"
+    },
+    {
+      "args": [
+        "No"
+      ],
+      "stdout": "false\n"
+    },
+    {
+      "args": [
+        "OFF"
+      ],
+      "stdout": "false\n"
+    },
+    {
+      "args": [
+        "0"
       ],
       "stdout": "false\n"
     },
@@ -21,43 +69,73 @@
     },
     {
       "args": [
-        "Yes"
+        "tru"
       ],
-      "stdout": "true\n"
+      "stdout": "null\n"
     },
     {
       "args": [
-        "no"
+        "10"
       ],
-      "stdout": "false\n"
+      "stdout": "null\n"
     },
     {
       "args": [
-        "ON"
+        " true"
       ],
-      "stdout": "true\n"
-    },
-    {
-      "args": [
-        "off"
-      ],
-      "stdout": "false\n"
-    },
-    {
-      "args": [
-        "1"
-      ],
-      "stdout": "true\n"
-    },
-    {
-      "args": [
-        "0"
-      ],
-      "stdout": "false\n"
+      "stdout": "null\n"
     },
     {
       "args": [
         ""
+      ],
+      "stdout": "null\n"
+    },
+    {
+      "args": [
+        "YES"
+      ],
+      "stdout": "true\n"
+    },
+    {
+      "args": [
+        "oN"
+      ],
+      "stdout": "true\n"
+    },
+    {
+      "args": [
+        "FaLsE"
+      ],
+      "stdout": "false\n"
+    },
+    {
+      "args": [
+        "no "
+      ],
+      "stdout": "null\n"
+    },
+    {
+      "args": [
+        "01"
+      ],
+      "stdout": "null\n"
+    },
+    {
+      "args": [
+        "t"
+      ],
+      "stdout": "null\n"
+    },
+    {
+      "args": [
+        "nope"
+      ],
+      "stdout": "null\n"
+    },
+    {
+      "args": [
+        "yes!"
       ],
       "stdout": "null\n"
     }

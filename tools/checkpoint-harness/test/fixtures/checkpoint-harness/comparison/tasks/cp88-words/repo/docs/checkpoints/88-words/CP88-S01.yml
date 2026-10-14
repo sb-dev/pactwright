@@ -1,0 +1,20 @@
+# CP88 Step 1 — Write the word counter
+id: CP88-S01
+requires: []
+outputs:
+  counter: >-
+    The module `work/words.mjs` of TASK §1. It exports `countWords`. Run as a
+    program with one argument, it prints the JSON encoding of its result for
+    that argument and a newline, and exits 0.
+requirements:
+  R01:
+    source: [TASK#1]
+    statement: "The word counter shall return the number of maximal runs of characters other than the space character in a text."
+acceptance:
+  AC01:
+    covers: [R01]
+    cases: [table]
+    given: "Texts with single and repeated spaces, leading and trailing spaces, one word, and texts of spaces only or empty."
+    when: The module runs as a program with each text.
+    then: "It prints the JSON word count of each text and exits 0."
+    verify: {automated: [task.cases]}

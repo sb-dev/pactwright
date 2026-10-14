@@ -1,0 +1,7 @@
+# Checkpoint 88 — T3.6 L4 comparison task cp88-words. Not a Pactwright checkpoint.
+format: 2
+checkpoint: CP88
+run_model: software-bootstrap
+sources:
+  CHECKPOINT: ../88-words.md
+  TASK: ../../specs/task-spec.md

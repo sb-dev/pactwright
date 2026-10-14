@@ -21,6 +21,42 @@
     },
     {
       "args": [
+        "\r\nAda  "
+      ],
+      "stdout": "\"Ada\"\n"
+    },
+    {
+      "args": [
+        "Ada Lovelace"
+      ],
+      "stdout": "\"Ada Lovelace\"\n"
+    },
+    {
+      "args": [
+        "  Ada Lovelace\t"
+      ],
+      "stdout": "\"Ada Lovelace\"\n"
+    },
+    {
+      "args": [
+        "Ada"
+      ],
+      "stdout": "\"Ada\"\n"
+    },
+    {
+      "args": [
+        "   "
+      ],
+      "stdout": "\"\"\n"
+    },
+    {
+      "args": [
+        ""
+      ],
+      "stdout": "\"\"\n"
+    },
+    {
+      "args": [
         "Ada  \t Lovelace"
       ],
       "stdout": "\"Ada Lovelace\"\n"
@@ -33,15 +69,27 @@
     },
     {
       "args": [
-        "a b"
+        "p\tq"
       ],
-      "stdout": "\"a b\"\n"
+      "stdout": "\"p q\"\n"
+    },
+    {
+      "args": [
+        "x   y"
+      ],
+      "stdout": "\"x y\"\n"
     },
     {
       "args": [
         "\n"
       ],
       "stdout": "\"\"\n"
+    },
+    {
+      "args": [
+        "a\nb\nc"
+      ],
+      "stdout": "\"a b c\"\n"
     }
   ]
 }

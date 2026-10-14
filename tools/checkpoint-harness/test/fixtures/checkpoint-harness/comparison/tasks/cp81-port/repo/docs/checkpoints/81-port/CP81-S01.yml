@@ -9,12 +9,12 @@ outputs:
 requirements:
   R01:
     source: [TASK#1]
-    statement: "The port parser shall return the port number of a text that is a port, from 1 to 65535 in decimal digits without sign, space or leading zero, and null for any other text."
+    statement: "The port parser shall return the port number of a text that is a port, from 1 to 65535 in ASCII decimal digits without sign, space, decimal point, exponent or leading zero, and null for any other text."
 acceptance:
   AC01:
     covers: [R01]
     cases: [table]
-    given: "Texts that are ports and texts that are not."
+    given: "Texts that are ports, including both ends of the range, and texts that are not: out of range, signed, spaced, with a leading zero, a decimal point or an exponent, empty or not numeric."
     when: The module runs as a program with each text.
     then: "It prints the JSON of each text's port or null and exits 0."
     verify: {automated: [task.cases]}

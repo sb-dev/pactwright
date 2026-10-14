@@ -5,5 +5,6 @@ a Pactwright specification.
 
 ## 1. Behaviour
 
-A flag is one of the words true, yes, on or 1, which mean true, or false, no,
-off or 0, which mean false, in any letter case. Any other text is not a flag.
+A flag is exactly one of the words true, yes, on or 1, which mean true, or
+false, no, off or 0, which mean false, in any letter case. Any other text,
+including a flag word with spaces around it, is not a flag.

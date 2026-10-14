@@ -9,12 +9,12 @@ outputs:
 requirements:
   R01:
     source: [TASK#1]
-    statement: "The title-case module shall upper-case the first character of each space-separated word of a text and lower-case its other characters, keeping the spaces."
+    statement: "The title-case module shall upper-case the first character of each space-separated word of a text and lower-case its other characters, keeping the spaces, and return the empty text for the empty text."
 acceptance:
   AC01:
     covers: [R01]
     cases: [table]
-    given: "Texts of space-separated words in mixed case."
+    given: "Texts of one or more space-separated words in mixed case, words starting with a digit or holding non-ASCII letters, and the empty text."
     when: The module runs as a program with each text.
     then: "It prints the JSON string of each text's title case and exits 0."
     verify: {automated: [task.cases]}

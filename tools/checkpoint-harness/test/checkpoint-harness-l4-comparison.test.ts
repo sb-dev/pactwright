@@ -414,7 +414,7 @@ describe("T3.6 L4 comparison decision rules", () => {
     assert.equal(digest, loadProtocol().digest);
     assert.match(
       readFileSync(join(REPO, "tools/checkpoint-harness/test/comparison/protocol.yml"), "utf8"),
-      /^version: 2$/m,
+      /^version: 3$/m,
     );
   });
 });
