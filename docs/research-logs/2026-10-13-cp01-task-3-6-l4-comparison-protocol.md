@@ -1,17 +1,21 @@
 # Checkpoint 1 Task 3.6 — L4 Comparison Protocol
 
-**Version:** 4
+**Version:** 5
 
-**Date:** 13 October 2026
+**Date:** 14 October 2026
 
-**Status:** Pinned before any comparison result. No result is reported here; the comparison report records them.
+**Status:** Pinned before any version 5 result. No result is reported here; the comparison report records them.
 
-**Supersedes:** version 3, pinned in `9e57ae6`; version 2, pinned in `dc2d9a0`; and version 1, in `2e045a7`.
+**Supersedes:** version 4, pinned in `3dde90b`; version 3, pinned in `9e57ae6`; version 2, pinned in `dc2d9a0`; and version 1, in `2e045a7`.
 
 - No comparison ran under version 1. [Review 5511362756](https://github.com/sb-dev/pactwright/pull/73#pullrequestreview-5511362756) found that its decision could report a benefit with one planned repeat of a task incomplete. The control test added for that finding also showed that an arm with no run made its (task, repeat) count as a complete pair. Version 2 corrected both (§3).
 - Version 2 ran only its tuning set, in [run 38488904499](https://github.com/sb-dev/pactwright/actions/runs/38488904499). That run found a fixture defect (§5). Version 3 corrected the fixtures and added a tuning task for each held-out category.
 - Version 3 ran only its tuning set, in [run 38491518842](https://github.com/sb-dev/pactwright/actions/runs/38491518842). That run found two more fixture defects (§5), which version 4 corrects.
 - No held-out run used versions 1–3.
+- Version 4 ran its tuning set in [run 38525130338](https://github.com/sb-dev/pactwright/actions/runs/38525130338) and its held-out set in [run 38527563605](https://github.com/sb-dev/pactwright/actions/runs/38527563605), at revision `3dde90b`. The comparison report records its result, which stays as it is.
+- The hosted learning proof then showed that the controller refused a selection review citing a candidate path with a line, such as `normalize.mjs:5`, and paused the run. Commit `8d6d88f` accepts such a citation when the file has those lines. Version 5 runs version 4's tasks, settings and rules on that revision.
+
+**Held-out tasks already seen.** Version 4 ran the held-out tasks, and its results were read before version 5 was pinned. Version 5 changes no task, fixture, driver, setting or threshold, so nothing is tuned on those results. The `cp85-normalize` table defect that version 4's held-out run exposed (comparison report §5) stays unchanged for the same reason.
 
 **Authority:** [T3.6 plan](2026-10-07-cp01-task-3-6-evidence-backed-learning.md) §4 and L4-03.
 
@@ -21,15 +25,15 @@ The protocol is the file `tools/checkpoint-harness/test/comparison/protocol.yml`
 
 | Item | Value |
 | --- | --- |
-| Protocol digest (SHA-256 of the file's bytes) | `sha256:1ac02ab0329aa43a64ed4aa03f777723da5068d9b9a097486bdde7bc46c3eece` |
-| Implementation commit | `dbe6a6c29a322fed69ae75c71cca4dc098d76c43` |
-| `tools/checkpoint-harness/src` tree | `6e42e57534ce99036f3785e39cade337ee7dad55` |
-| Controller identity of arms D and E (`harnessIdentity()`) | `sha256:2b94ed19c66a22e31546b7a6438051796ebff9a4ad4f87c67503c260a637c9fc` |
-| `tools/checkpoint-harness/test/comparison` tree (driver, metrics, oracle, report) | `610a215ed90b4fb826384768bec69b6a9651c9be` |
-| Task fixtures tree (`test/fixtures/checkpoint-harness/comparison`) | `16fcadae510b7471fa9b59764b3302f76cc62c08` |
+| Protocol digest (SHA-256 of the file's bytes) | `sha256:4becd9031f57f8e05f9cc541d096a64f82a48ebda74c8f5a8f945c274e0def17` |
+| Implementation commit | `8d6d88f621fb6c00867f06ec5d83d8921de93500` |
+| `tools/checkpoint-harness/src` tree | `4ad4e421d6ae2e5355891ab6f2667b7d3e3122d9` |
+| Controller identity of arms D and E (`harnessIdentity()`) | `sha256:eada55ef10b58c50bc07cbe7c0bd342e2a5c8162bf6c6fb165857cdefd39addd` |
+| `tools/checkpoint-harness/test/comparison` tree (driver, metrics, oracle, report) | `fed8134bdbb0922088dcc4dde441088fb5a46757` |
+| Task fixtures tree (`test/fixtures/checkpoint-harness/comparison`) | `16fcadae510b7471fa9b59764b3302f76cc62c08` (version 4's) |
 | Baseline arm B | `cb6a0f76e2c3bfad9d2bc79fb482456e9ab05d19` (the harness before T3.6) |
 
-The driver records the protocol digest, each task's digest and each arm's controller identity in every result. The report refuses results of another protocol digest.
+The driver records the protocol digest, each task's digest and each arm's controller identity in every result. The report refuses results of another protocol digest. The task digests are version 4's.
 
 | Task | Set | Category | Task digest |
 | --- | --- | --- | --- |
@@ -99,7 +103,7 @@ The rules are those of `protocol.yml`, applied by `test/comparison/report.ts`.
   - A (task, repeat) with an infrastructure failure in any arm is rerun as a whole, at most twice. The earlier runs stay in the results, marked superseded.
   - A shard stops starting runs once its runs used 300 live sessions; the runs not started are reported missing.
   - A (task, repeat) still incomplete after its reruns, or never started, keeps the result from being a benefit.
-- **Tuning.** Tuning tunes no parameter and decides nothing. It shakes out the driver and fixtures. A defect it finds is fixed in the driver or fixtures, and the protocol is pinned again with a new version before any held-out run.
+- **Tuning.** Tuning tunes no parameter and decides nothing. It shakes out the driver and fixtures. A defect it finds is fixed in the driver or fixtures, and the protocol is pinned again with a new version before any held-out run. Version 5 runs its tuning set on its revision before its held-out set.
 
 ## 4. Limits
 
@@ -139,4 +143,8 @@ Version 3's tuning run [38491518842](https://github.com/sb-dev/pactwright/action
   - Version 4's stale-knowledge tasks change no definitions. Attempt 2 fixes attempt 1's defect and has another one, so what was learnt about attempt 1 becomes historical when its candidate changes. The driver no longer amends.
 - The harness behaviour of §5.1 recurred: in `cp87-sign`, two arms' candidate reviews listed the automated target and paused for the owner.
 
-**Checkpoint 1 Task 3.6 — L4 Comparison Protocol, Version 4**
+### 5.3 Version 4
+
+Version 4's tuning run [38525130338](https://github.com/sb-dev/pactwright/actions/runs/38525130338) found no driver or fixture defect (comparison report §6), so its held-out set ran.
+
+**Checkpoint 1 Task 3.6 — L4 Comparison Protocol, Version 5**
