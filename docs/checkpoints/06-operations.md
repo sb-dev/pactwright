@@ -1,8 +1,8 @@
 # Pactwright — Checkpoint 6 — Operations
 
-**Version:** 16  
-**Entry condition:** Checkpoint 5 is accepted.  
-**Release:** `0.0.7`  
+**Version:** 16\
+**Entry condition:** Checkpoint 5 is accepted.\
+**Release:** `0.0.7`\
 **Exit capability:** Pactwright and Kakeibo can record real software exposure, predeclare controlled comparisons as immutable Experiments, collect bounded operational evidence, create durable Observations, route every canonical Observation through Project Intelligence, and prove governed corrective candidates without turning Operations into a telemetry store or second roadmap.
 
 ## 1. Goal

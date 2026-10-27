@@ -17,16 +17,16 @@ In pairwise comparison, LLMs systematically prefer responses in certain position
 async def position_swap_comparison(response_a, response_b, prompt, criteria):
     # Pass 1: Original order
     result_ab = await compare(response_a, response_b, prompt, criteria)
-    
+
     # Pass 2: Swapped order
     result_ba = await compare(response_b, response_a, prompt, criteria)
-    
+
     # Map second result (A in second position → B in first)
     result_ba_mapped = {
         'winner': {'A': 'B', 'B': 'A', 'TIE': 'TIE'}[result_ba['winner']],
         'confidence': result_ba['confidence']
     }
-    
+
     # Consistency check
     if result_ab['winner'] == result_ba_mapped['winner']:
         return {
@@ -58,12 +58,12 @@ async def multi_shuffle_comparison(response_a, response_b, prompt, criteria, n_s
             r = await compare(response_b, response_a, prompt, criteria)
             r['winner'] = {'A': 'B', 'B': 'A', 'TIE': 'TIE'}[r['winner']]
         results.append(r)
-    
+
     # Majority vote
     winners = [r['winner'] for r in results]
     final_winner = max(set(winners), key=winners.count)
     agreement = winners.count(final_winner) / len(winners)
-    
+
     return {
         'winner': final_winner,
         'confidence': agreement,
@@ -98,7 +98,7 @@ CRITICAL EVALUATION GUIDELINES:
 def length_normalized_score(score, response_length, target_length=500):
     """Adjust score based on response length."""
     length_ratio = response_length / target_length
-    
+
     if length_ratio > 2.0:
         # Penalize excessively long responses
         penalty = (length_ratio - 2.0) * 0.1
@@ -175,7 +175,7 @@ Detailed explanations receive higher scores even when the extra detail is irrele
 async def relevance_weighted_evaluation(response, prompt, criteria):
     # First, assess relevance of each segment
     relevance_scores = await assess_relevance(response, prompt)
-    
+
     # Weight evaluation by relevance
     segments = split_into_segments(response)
     weighted_scores = []
@@ -183,7 +183,7 @@ async def relevance_weighted_evaluation(response, prompt, criteria):
         if relevance > 0.5:  # Only count relevant segments
             score = await evaluate_segment(segment, prompt, criteria)
             weighted_scores.append(score * relevance)
-    
+
     return sum(weighted_scores) / len(weighted_scores)
 ```
 
@@ -223,7 +223,7 @@ For each claim in the response:
 2. Note if evidence or sources are provided
 3. Score based on verifiability, not confidence
 
-IMPORTANT: Confident claims without evidence should NOT receive higher scores than 
+IMPORTANT: Confident claims without evidence should NOT receive higher scores than
 hedged claims with evidence.
 ```
 
@@ -235,15 +235,15 @@ Add a fact-checking step before scoring:
 async def fact_checked_evaluation(response, prompt, criteria):
     # Extract claims
     claims = await extract_claims(response)
-    
+
     # Fact-check each claim
     fact_check_results = await asyncio.gather(*[
         verify_claim(claim) for claim in claims
     ])
-    
+
     # Adjust score based on fact-check results
     accuracy_factor = sum(r['verified'] for r in fact_check_results) / len(fact_check_results)
-    
+
     base_score = await evaluate(response, prompt, criteria)
     return base_score * (0.7 + 0.3 * accuracy_factor)  # At least 70% of score
 ```
@@ -256,17 +256,17 @@ Monitor for systematic biases in production:
 class BiasMonitor:
     def __init__(self):
         self.evaluations = []
-    
+
     def record(self, evaluation):
         self.evaluations.append(evaluation)
-    
+
     def detect_position_bias(self):
         """Detect if first position wins more often than expected."""
         first_wins = sum(1 for e in self.evaluations if e['first_position_winner'])
         expected = len(self.evaluations) * 0.5
         z_score = (first_wins - expected) / (expected * 0.5) ** 0.5
         return {'bias_detected': abs(z_score) > 2, 'z_score': z_score}
-    
+
     def detect_length_bias(self):
         """Detect if longer responses score higher."""
         from scipy.stats import spearmanr
@@ -285,4 +285,3 @@ class BiasMonitor:
 | Self-enhancement | Cross-model evaluation | Anonymization | Model comparison study |
 | Verbosity | Relevance weighting | Rubric penalties | Relevance scoring |
 | Authority | Evidence requirement | Fact-checking layer | Confidence-accuracy correlation |
-

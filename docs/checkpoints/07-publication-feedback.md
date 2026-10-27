@@ -1,8 +1,8 @@
 # Pactwright — Checkpoint 7 — Publication Feedback
 
-**Version:** 13  
-**Entry condition:** Checkpoint 6 is accepted.  
-**Release:** `0.0.8`  
+**Version:** 13\
+**Entry condition:** Checkpoint 6 is accepted.\
+**Release:** `0.0.8`\
 **Exit capability:** Operations observes canonical Publications through the registered exposure contract, and Pactwright completes a real evidence-supported corrective Delivery, human-approved revised Asset and actual new Publication while preserving every subsystem's ownership and historical records.
 
 ## 1. Goal

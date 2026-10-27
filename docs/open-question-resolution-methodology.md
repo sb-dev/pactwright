@@ -1,7 +1,7 @@
 # Pactwright — Open Question Resolution Methodology
 
-**Version:** 2  
-**Date:** 24 September 2026  
+**Version:** 2\
+**Date:** 24 September 2026\
 **Purpose:** Resolve related open questions together and apply the necessary specification and acceptance changes before implementation.
 
 ## 1. Scope and authority

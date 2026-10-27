@@ -207,16 +207,16 @@ What type of evaluation task?
 ```python
 def validate_automated_eval(automated_scores, human_scores, criteria):
     results = {}
-    
+
     # Overall correlation
     results['overall_spearman'] = spearmans_rho(automated_scores, human_scores)
-    
+
     # Per-criterion agreement
     for criterion in criteria:
         auto_crit = [s[criterion] for s in automated_scores]
         human_crit = [s[criterion] for s in human_scores]
         results[f'{criterion}_spearman'] = spearmans_rho(auto_crit, human_crit)
-    
+
     return results
 ```
 
@@ -235,7 +235,7 @@ def compare_models(model_a_outputs, model_b_outputs, prompts):
     for a, b, p in zip(model_a_outputs, model_b_outputs, prompts):
         comparison = await compare_with_position_swap(a, b, p)
         results.append(comparison)
-    
+
     return {
         'a_wins': sum(1 for r in results if r['winner'] == 'A'),
         'b_wins': sum(1 for r in results if r['winner'] == 'B'),
@@ -257,24 +257,24 @@ def compare_models(model_a_outputs, model_b_outputs, prompts):
 class QualityMonitor:
     def __init__(self, window_size=100):
         self.window = deque(maxlen=window_size)
-    
+
     def add_evaluation(self, automated, human_spot_check=None):
         self.window.append({
             'automated': automated,
             'human': human_spot_check,
             'length': len(automated['response'])
         })
-    
+
     def get_metrics(self):
         # Filter to evaluations with human spot-checks
         with_human = [e for e in self.window if e['human'] is not None]
-        
+
         if len(with_human) < 10:
             return {'insufficient_data': True}
-        
+
         auto_scores = [e['automated']['score'] for e in with_human]
         human_scores = [e['human']['score'] for e in with_human]
-        
+
         return {
             'correlation': spearmans_rho(auto_scores, human_scores),
             'mean_difference': np.mean([a - h for a, h in zip(auto_scores, human_scores)]),
@@ -328,4 +328,3 @@ class QualityMonitor:
 - All metrics within acceptable ranges
 - Monitor "Clarity" criterion - lower agreement may indicate need for rubric refinement
 ```
-

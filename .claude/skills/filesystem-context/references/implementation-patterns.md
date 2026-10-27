@@ -16,27 +16,27 @@ from pathlib import Path
 
 class ScratchPadManager:
     """Manages temporary file storage for agent context offloading."""
-    
+
     def __init__(self, base_path: str = "scratch", token_threshold: int = 2000):
         self.base_path = Path(base_path)
         self.base_path.mkdir(parents=True, exist_ok=True)
         self.token_threshold = token_threshold
         self.manifest = {}
-    
+
     def should_offload(self, content: str) -> bool:
         """Determine if content exceeds threshold for offloading."""
         # Rough token estimate: 1 token ≈ 4 characters
         estimated_tokens = len(content) // 4
         return estimated_tokens > self.token_threshold
-    
+
     def offload(self, content: str, source: str, summary: str = None) -> dict:
         """Write content to file, return reference."""
         timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
         filename = f"{source}_{timestamp}.txt"
         file_path = self.base_path / filename
-        
+
         file_path.write_text(content)
-        
+
         reference = {
             "type": "file_reference",
             "path": str(file_path),
@@ -45,28 +45,28 @@ class ScratchPadManager:
             "size_chars": len(content),
             "summary": summary or self._extract_summary(content)
         }
-        
+
         self.manifest[filename] = reference
         return reference
-    
+
     def _extract_summary(self, content: str, max_chars: int = 500) -> str:
         """Extract first meaningful content as summary."""
         lines = content.strip().split('\n')
         summary_lines = []
         char_count = 0
-        
+
         for line in lines:
             if char_count + len(line) > max_chars:
                 break
             summary_lines.append(line)
             char_count += len(line)
-        
+
         return '\n'.join(summary_lines)
-    
+
     def cleanup(self, max_age_hours: int = 24):
         """Remove scratch files older than threshold."""
         cutoff = datetime.now().timestamp() - (max_age_hours * 3600)
-        
+
         for file_path in self.base_path.glob("*.txt"):
             if file_path.stat().st_mtime < cutoff:
                 file_path.unlink()
@@ -103,7 +103,7 @@ class AgentPlan:
     objective: str
     steps: List[PlanStep] = field(default_factory=list)
     status: str = "in_progress"
-    
+
     def save(self, path: str = "scratch/current_plan.yaml"):
         """Persist plan to filesystem."""
         data = {
@@ -121,13 +121,13 @@ class AgentPlan:
         }
         with open(path, 'w') as f:
             yaml.dump(data, f, default_flow_style=False)
-    
+
     @classmethod
     def load(cls, path: str = "scratch/current_plan.yaml") -> "AgentPlan":
         """Load plan from filesystem."""
         with open(path, 'r') as f:
             data = yaml.safe_load(f)
-        
+
         plan = cls(objective=data["objective"], status=data.get("status", "in_progress"))
         for step_data in data.get("steps", []):
             plan.steps.append(PlanStep(
@@ -137,14 +137,14 @@ class AgentPlan:
                 notes=step_data.get("notes")
             ))
         return plan
-    
+
     def current_step(self) -> Optional[PlanStep]:
         """Get the first non-completed step."""
         for step in self.steps:
             if step.status != StepStatus.COMPLETED:
                 return step
         return None
-    
+
     def complete_step(self, step_id: int, notes: str = None):
         """Mark step as completed."""
         for step in self.steps:
@@ -166,17 +166,17 @@ import json
 
 class AgentWorkspace:
     """Manages file-based workspace for an agent."""
-    
+
     def __init__(self, agent_id: str, base_path: str = "workspace/agents"):
         self.agent_id = agent_id
         self.path = Path(base_path) / agent_id
         self.path.mkdir(parents=True, exist_ok=True)
-        
+
         # Standard files
         self.findings_file = self.path / "findings.md"
         self.status_file = self.path / "status.json"
         self.log_file = self.path / "activity.log"
-    
+
     def write_finding(self, content: str, append: bool = True):
         """Write or append a finding."""
         mode = 'a' if append else 'w'
@@ -184,7 +184,7 @@ class AgentWorkspace:
             if append:
                 f.write(f"\n---\n## {datetime.now().isoformat()}\n\n")
             f.write(content)
-    
+
     def update_status(self, status: str, progress: float = None, details: dict = None):
         """Update agent status for coordinator visibility."""
         status_data = {
@@ -195,12 +195,12 @@ class AgentWorkspace:
             "details": details or {}
         }
         self.status_file.write_text(json.dumps(status_data, indent=2))
-    
+
     def log(self, message: str):
         """Append to activity log."""
         with open(self.log_file, 'a') as f:
             f.write(f"[{datetime.now().isoformat()}] {message}\n")
-    
+
     def read_peer_findings(self, peer_id: str) -> str:
         """Read findings from another agent's workspace."""
         peer_path = self.path.parent / peer_id / "findings.md"
@@ -211,10 +211,10 @@ class AgentWorkspace:
 
 class CoordinatorWorkspace:
     """Coordinator that reads from sub-agent workspaces."""
-    
+
     def __init__(self, base_path: str = "workspace/agents"):
         self.base_path = Path(base_path)
-    
+
     def get_all_statuses(self) -> dict:
         """Collect status from all sub-agents."""
         statuses = {}
@@ -224,7 +224,7 @@ class CoordinatorWorkspace:
                 if status_file.exists():
                     statuses[agent_dir.name] = json.loads(status_file.read_text())
         return statuses
-    
+
     def aggregate_findings(self) -> str:
         """Combine all agent findings into synthesis."""
         findings = []
@@ -254,11 +254,11 @@ class SkillMetadata:
 
 class SkillLoader:
     """Manages dynamic loading of agent skills."""
-    
+
     def __init__(self, skills_path: str = "skills"):
         self.skills_path = Path(skills_path)
         self.skill_index = self._build_index()
-    
+
     def _build_index(self) -> dict:
         """Build index of available skills from SKILL.md frontmatter."""
         index = {}
@@ -270,7 +270,7 @@ class SkillLoader:
                     if metadata:
                         index[metadata.name] = metadata
         return index
-    
+
     def _parse_frontmatter(self, path: Path) -> Optional[SkillMetadata]:
         """Extract YAML frontmatter from skill file."""
         content = path.read_text()
@@ -285,20 +285,20 @@ class SkillLoader:
                     triggers=frontmatter.get('triggers', [])
                 )
         return None
-    
+
     def get_static_context(self) -> str:
         """Generate minimal static context listing available skills."""
         lines = ["Available skills (load with read_file when relevant):"]
         for name, meta in self.skill_index.items():
             lines.append(f"- {name}: {meta.description[:100]}")
         return "\n".join(lines)
-    
+
     def load_skill(self, name: str) -> str:
         """Load full skill content."""
         if name in self.skill_index:
             return Path(self.skill_index[name].path).read_text()
         raise ValueError(f"Unknown skill: {name}")
-    
+
     def find_relevant_skills(self, query: str) -> List[str]:
         """Find skills that might be relevant to a query."""
         query_lower = query.lower()
@@ -323,23 +323,23 @@ import re
 
 class TerminalCapture:
     """Captures and persists terminal output for agent access."""
-    
+
     def __init__(self, terminals_path: str = "terminals"):
         self.terminals_path = Path(terminals_path)
         self.terminals_path.mkdir(parents=True, exist_ok=True)
         self.session_counter = 0
-    
+
     def run_command(self, command: str, capture: bool = True) -> dict:
         """Run command and optionally capture output to file."""
         self.session_counter += 1
-        
+
         result = subprocess.run(
             command,
             shell=True,
             capture_output=True,
             text=True
         )
-        
+
         output = {
             "command": command,
             "exit_code": result.returncode,
@@ -347,17 +347,17 @@ class TerminalCapture:
             "stderr": result.stderr,
             "timestamp": datetime.now().isoformat()
         }
-        
+
         if capture:
             output["file"] = self._persist_output(output)
-        
+
         return output
-    
+
     def _persist_output(self, output: dict) -> str:
         """Write output to terminal file."""
         filename = f"{self.session_counter}.txt"
         file_path = self.terminals_path / filename
-        
+
         content = f"""---
 command: {output['command']}
 exit_code: {output['exit_code']}
@@ -372,16 +372,16 @@ timestamp: {output['timestamp']}
 """
         file_path.write_text(content)
         return str(file_path)
-    
+
     def grep_terminals(self, pattern: str, context_lines: int = 3) -> List[dict]:
         """Search all terminal outputs for pattern."""
         matches = []
         regex = re.compile(pattern, re.IGNORECASE)
-        
+
         for term_file in self.terminals_path.glob("*.txt"):
             content = term_file.read_text()
             lines = content.split('\n')
-            
+
             for i, line in enumerate(lines):
                 if regex.search(line):
                     start = max(0, i - context_lines)
@@ -391,7 +391,7 @@ timestamp: {output['timestamp']}
                         "line_number": i + 1,
                         "context": '\n'.join(lines[start:end])
                     })
-        
+
         return matches
 ```
 
@@ -407,40 +407,40 @@ from typing import Any
 
 class PreferenceStore:
     """Guarded storage for agent-learned preferences."""
-    
+
     MAX_ENTRIES = 100
     MAX_VALUE_LENGTH = 1000
-    
+
     def __init__(self, path: str = "agent/preferences.yaml"):
         self.path = Path(path)
         self.path.parent.mkdir(parents=True, exist_ok=True)
         self.preferences = self._load()
-    
+
     def _load(self) -> dict:
         """Load preferences from file."""
         if self.path.exists():
             return yaml.safe_load(self.path.read_text()) or {}
         return {}
-    
+
     def _save(self):
         """Persist preferences to file."""
         self.path.write_text(yaml.dump(self.preferences, default_flow_style=False))
-    
+
     def remember(self, key: str, value: Any, source: str = "user"):
         """Store a preference with validation."""
         # Validate key
         if not key or len(key) > 100:
             raise ValueError("Invalid key length")
-        
+
         # Validate value
         value_str = str(value)
         if len(value_str) > self.MAX_VALUE_LENGTH:
             raise ValueError(f"Value exceeds max length of {self.MAX_VALUE_LENGTH}")
-        
+
         # Check entry limit
         if len(self.preferences) >= self.MAX_ENTRIES and key not in self.preferences:
             raise ValueError(f"Max entries ({self.MAX_ENTRIES}) reached")
-        
+
         # Store with metadata
         self.preferences[key] = {
             "value": value,
@@ -448,18 +448,18 @@ class PreferenceStore:
             "updated_at": datetime.now().isoformat()
         }
         self._save()
-    
+
     def recall(self, key: str, default: Any = None) -> Any:
         """Retrieve a preference."""
         entry = self.preferences.get(key)
         if entry:
             return entry["value"]
         return default
-    
+
     def list_all(self) -> dict:
         """Get all preferences for context injection."""
         return {k: v["value"] for k, v in self.preferences.items()}
-    
+
     def forget(self, key: str):
         """Remove a preference."""
         if key in self.preferences:
@@ -474,32 +474,32 @@ Combining patterns in an agent harness:
 ```python
 class FilesystemContextAgent:
     """Agent with filesystem-based context management."""
-    
+
     def __init__(self):
         self.scratch = ScratchPadManager()
         self.skills = SkillLoader()
         self.preferences = PreferenceStore()
         self.workspace = AgentWorkspace("main_agent")
-    
+
     def handle_tool_output(self, tool_name: str, output: str) -> str:
         """Process tool output, offloading if necessary."""
         if self.scratch.should_offload(output):
             ref = self.scratch.offload(output, source=tool_name)
             return f"[{tool_name} output saved to {ref['path']}. Summary: {ref['summary'][:200]}]"
         return output
-    
+
     def get_system_prompt(self) -> str:
         """Build system prompt with dynamic skill references."""
         base_prompt = "You are a helpful assistant."
         skill_context = self.skills.get_static_context()
         user_prefs = self.preferences.list_all()
-        
+
         pref_section = ""
         if user_prefs:
             pref_section = "\n\nUser preferences:\n" + "\n".join(
                 f"- {k}: {v}" for k, v in user_prefs.items()
             )
-        
+
         return f"{base_prompt}\n\n{skill_context}{pref_section}"
 ```
 
@@ -546,4 +546,3 @@ Target benchmarks:
 - Static context ratio < 20%
 - Offload savings > 50% for tool-heavy workflows
 - Retrieval precision > 70% (loaded content is relevant)
-

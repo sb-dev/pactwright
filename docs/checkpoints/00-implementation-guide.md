@@ -1,6 +1,6 @@
 # Pactwright — Implementation Guide
 
-**Version:** 19  
+**Version:** 19\
 **Status:** Checkpoint index, engineering standard and release model
 
 ## Purpose

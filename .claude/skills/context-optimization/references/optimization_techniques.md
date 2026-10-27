@@ -44,14 +44,14 @@ Not all observations should be masked equally. Consider masking observations tha
 def selective_mask(observations: List[Dict], current_task: Dict) -> List[Dict]:
     """
     Selectively mask observations based on relevance.
-    
+
     Returns observations with mask field indicating masked content.
     """
     masked = []
-    
+
     for obs in observations:
         relevance = calculate_relevance(obs, current_task)
-        
+
         if relevance < 0.3 and obs["age"] > 3:
             # Low relevance and old - mask
             masked.append({
@@ -65,7 +65,7 @@ def selective_mask(observations: List[Dict], current_task: Dict) -> List[Dict]:
                 **obs,
                 "masked": False
             })
-    
+
     return masked
 ```
 
@@ -112,20 +112,20 @@ Partition work across sub-agents to prevent any single context from growing too 
 def plan_partitioning(task: Dict, context_limit: int) -> Dict:
     """
     Plan how to partition a task based on context limits.
-    
+
     Returns partitioning strategy and subtask definitions.
     """
     estimated_context = estimate_task_context(task)
-    
+
     if estimated_context <= context_limit:
         return {
             "strategy": "single_agent",
             "subtasks": [task]
         }
-    
+
     # Plan multi-agent approach
     subtasks = decompose_task(task)
-    
+
     return {
         "strategy": "multi_agent",
         "subtasks": subtasks,
@@ -206,18 +206,18 @@ class OptimizingAgent:
     def __init__(self, context_limit: int = 80000):
         self.context_limit = context_limit
         self.optimizer = ContextOptimizer()
-    
+
     def process(self, user_input: str, context: Dict) -> Dict:
         # Check if optimization needed
         if self.optimizer.should_compact(context):
             context = self.optimizer.compact(context)
-        
+
         # Process with optimized context
         response = self._call_model(user_input, context)
-        
+
         # Track metrics
         self.optimizer.record_metrics(context, response)
-        
+
         return response
 ```
 
@@ -230,17 +230,17 @@ class MemoryAwareOptimizer:
     def __init__(self, memory_system, context_limit: int):
         self.memory = memory_system
         self.limit = context_limit
-    
+
     def optimize_context(self, current_context: Dict, task: str) -> Dict:
         # Check if information is in memory
         relevant_memories = self.memory.retrieve(task)
-        
+
         # Move information to memory if not needed in context
         for mem in relevant_memories:
             if mem["importance"] < threshold:
                 current_context = remove_from_context(current_context, mem)
                 # Keep reference that memory can be retrieved
-        
+
         return current_context
 ```
 
@@ -269,4 +269,3 @@ KV-cache optimization should improve cost and latency:
 - 70%+ cache hit rate for stable workloads
 - 50%+ cost reduction from cache hits
 - 40%+ latency reduction from cache hits
-

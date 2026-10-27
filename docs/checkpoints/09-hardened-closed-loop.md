@@ -1,8 +1,8 @@
 # Pactwright — Checkpoint 9 — Hardened Closed Loop
 
-**Version:** 12  
-**Entry condition:** Checkpoint 8 is accepted.  
-**Release:** `0.0.10`  
+**Version:** 12\
+**Entry condition:** Checkpoint 8 is accepted.\
+**Release:** `0.0.10`\
 **Exit capability:** The complete first-party Pactwright system is evaluated, failure-hardened, publicly documented and repeatedly proven in closed loops on Pactwright and Kakeibo, including permanent Experiment regression coverage and a production Kei defect learning loop, without expanding semantics beyond observed need.
 
 ## 1. Goal
