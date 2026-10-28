@@ -1,8 +1,8 @@
 # Pactwright — Checkpoint 2 — Remote Delivery
 
-**Version:** 18  
-**Entry condition:** Checkpoint 1 is accepted and Pactwright can self-host core Delivery.  
-**Release:** `0.0.3`  
+**Version:** 18\
+**Entry condition:** Checkpoint 1 is accepted and Pactwright can self-host core Delivery.\
+**Release:** `0.0.3`\
 **Exit capability:** Pactwright and Kakeibo can initialise, execute, evaluate and project Contract-driven Delivery through GitHub using one deterministic profile-composition/reconciliation model while repository canonical state remains authoritative.
 
 ## 1. Goal

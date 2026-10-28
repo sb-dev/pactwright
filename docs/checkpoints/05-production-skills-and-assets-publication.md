@@ -1,8 +1,8 @@
 # Pactwright — Checkpoint 5 — Production Skills + Assets / Publication
 
-**Version:** 14  
-**Entry condition:** Checkpoint 4 is accepted.  
-**Release:** `0.0.6`  
+**Version:** 14\
+**Entry condition:** Checkpoint 4 is accepted.\
+**Release:** `0.0.6`\
 **Exit capability:** Pactwright and Kakeibo can resolve exact external Production Skills and Production Extension Packs through the selected Agent Pack during normal Delivery, then turn successful Delivery Evidence into exact human-approved Assets and real Publications without introducing a second production lifecycle.
 
 ## 1. Goal

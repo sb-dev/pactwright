@@ -1,8 +1,8 @@
 # Pactwright — Checkpoint 8 — Full Project Operating Surface
 
-**Version:** 14  
-**Entry condition:** Checkpoint 7 is accepted and all first-party graph semantics, including Operations Experiment, exist.  
-**Release:** `0.0.9`  
+**Version:** 14\
+**Entry condition:** Checkpoint 7 is accepted and all first-party graph semantics, including Operations Experiment, exist.\
+**Release:** `0.0.9`\
 **Exit capability:** Pactwright and Kakeibo prove the complete configured operating surface, including the controlled Experiment lineage, through the existing five workflows and one shared Project, with deterministic generation, ownership-safe reconciliation, exact runtime provenance and no transfer of canonical authority to GitHub.
 
 ## 1. Goal

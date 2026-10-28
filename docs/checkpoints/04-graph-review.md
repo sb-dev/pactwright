@@ -1,8 +1,8 @@
 # Pactwright — Checkpoint 4 — Graph Review
 
-**Version:** 15  
-**Entry condition:** Checkpoint 3 is accepted.  
-**Release:** `0.0.5`  
+**Version:** 15\
+**Entry condition:** Checkpoint 3 is accepted.\
+**Release:** `0.0.5`\
 **Exit capability:** Pactwright and Kakeibo can run reproducible specialist Graph Reviews over registered Project Graph state, retain immutable Review Execution provenance, route every successful Finding through Project Intelligence, and turn accepted Project Intelligence consequences motivated by Findings into normal governed Delivery.
 
 ## 1. Goal

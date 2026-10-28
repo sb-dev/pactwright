@@ -1,8 +1,8 @@
 # Pactwright — Checkpoint 1 — Self-Hosted Delivery
 
-**Version:** 31  
-**Entry condition:** No installable Pactwright runtime exists.  
-**Release:** `0.0.2` (corrective; `0.0.1` was published against version 12 of this runbook, the version tagged `v0.0.1`, and remains the released baseline)  
+**Version:** 31\
+**Entry condition:** No installable Pactwright runtime exists.\
+**Release:** `0.0.2` (corrective; `0.0.1` was published against version 12 of this runbook, the version tagged `v0.0.1`, and remains the released baseline)\
 **Exit capability:** Pactwright is installable, upgradeable, can govern one complete Contract-driven Delivery in its own repository and in Kakeibo, can compare an Agent Pack candidate against a released baseline, and requires no manual Project Graph coherence work.
 
 ## 1. Goal

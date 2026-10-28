@@ -97,7 +97,7 @@ Let's use our benefit of hindsight now in 6 sections:
 5. Give out grades to specific people for their comments.
 6. At the end, give a final score (from 0-10).
 
-As for the format of Section 5, use the header "Final grades" and follow it 
+As for the format of Section 5, use the header "Final grades" and follow it
 with simply an unordered list in the format of "name: grade (optional comment)".
 
 Please follow the format exactly because I will be parsing it programmatically.
@@ -118,7 +118,7 @@ def parse_grades(text: str) -> dict[str, dict]:
     # Match "Final grades" with optional section number or markdown
     pattern = r'(?:^|\n)(?:\d+[\.\)]\s*)?(?:#+ *)?Final grades\s*\n'
     match = re.search(pattern, text, re.IGNORECASE)
-    
+
     # Handle both ASCII and Unicode minus signs
     line_pattern = r'^[\-\*]\s*([^:]+):\s*([A-F][+\-−]?)(?:\s*\(([^)]+)\))?'
 ```
@@ -385,4 +385,3 @@ Multi-agent requires high-value tasks to justify the cost.
 4. **Premature optimization**: Adding complexity before basic functionality works.
 
 5. **Ignoring economics**: Token costs compound quickly; estimation and tracking are essential.
-

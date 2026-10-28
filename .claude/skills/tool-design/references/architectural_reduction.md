@@ -108,16 +108,16 @@ def create_execute_tool(sandbox):
         name="execute_command",
         description="""
         Execute a bash command in the sandbox environment.
-        
+
         Use standard Unix tools to explore and understand the data layer:
         - ls: List directory contents
         - cat: Read file contents
         - grep: Search for patterns
         - find: Locate files
-        
+
         The sandbox contains the semantic layer documentation:
         - /data/entities/*.yaml: Entity definitions
-        - /data/measures/*.yaml: Measure calculations  
+        - /data/measures/*.yaml: Measure calculations
         - /data/joins/*.yaml: Join relationships
         - /docs/*.md: Additional documentation
         """,
@@ -203,8 +203,3 @@ Architectural reduction is not universally applicable, but the principle challen
 - Vercel Engineering: "We removed 80% of our agent's tools" (December 2025)
 - AI SDK ToolLoopAgent documentation
 - Vercel Sandbox documentation
-
-
-
-
-

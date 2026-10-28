@@ -135,13 +135,13 @@ def calculate_overall_score(dimension_scores, rubric):
     """Calculate weighted overall score from dimension scores."""
     total_weight = 0
     weighted_sum = 0
-    
+
     for dimension, score in dimension_scores.items():
         if dimension in rubric:
             weight = rubric[dimension]["weight"]
             weighted_sum += score * weight
             total_weight += weight
-    
+
     return weighted_sum / total_weight if total_weight > 0 else 0
 ```
 
@@ -153,17 +153,17 @@ class TestSet:
         self.name = name
         self.tests = []
         self.tags = {}
-    
+
     def add_test(self, test_case):
         """Add test case to test set."""
         self.tests.append(test_case)
-        
+
         # Index by tags
         for tag in test_case.get("tags", []):
             if tag not in self.tags:
                 self.tags[tag] = []
             self.tags[tag].append(len(self.tests) - 1)
-    
+
     def filter(self, **criteria):
         """Filter tests by criteria."""
         filtered = []
@@ -176,7 +176,7 @@ class TestSet:
             if match:
                 filtered.append(test)
         return filtered
-    
+
     def get_complexity_distribution(self):
         """Get distribution of tests by complexity."""
         distribution = {}
@@ -195,78 +195,78 @@ class EvaluationRunner:
         self.rubric = rubric
         self.agent = agent
         self.results = []
-    
+
     def run_all(self, verbose=False):
         """Run evaluation on all tests."""
         self.results = []
-        
+
         for i, test in enumerate(self.test_set.tests):
             if verbose:
                 print(f"Running test {i+1}/{len(self.test_set.tests)}")
-            
+
             result = self.run_test(test)
             self.results.append(result)
-        
+
         return self.summarize()
-    
+
     def run_test(self, test):
         """Run single evaluation test."""
         # Get agent output
         output = self.agent.run(test["input"])
-        
+
         # Evaluate
         evaluation = self.evaluate_output(output, test)
-        
+
         return {
             "test": test,
             "output": output,
             "evaluation": evaluation
         }
-    
+
     def evaluate_output(self, output, test):
         """Evaluate agent output against test."""
         ground_truth = test.get("expected", {})
-        
+
         dimension_scores = {}
         for dimension, config in self.rubric.items():
             score = self.evaluate_dimension(
                 output, ground_truth, dimension, config
             )
             dimension_scores[dimension] = score
-        
+
         overall = calculate_overall_score(dimension_scores, self.rubric)
-        
+
         return {
             "overall_score": overall,
             "dimension_scores": dimension_scores,
             "passed": overall >= 0.7
         }
-    
+
     def summarize(self):
         """Summarize evaluation results."""
         if not self.results:
             return {"error": "No results"}
-        
+
         passed = sum(1 for r in self.results if r["evaluation"]["passed"])
-        
+
         dimension_totals = {}
         for dimension in self.rubric.keys():
             dimension_totals[dimension] = {
                 "total": 0,
                 "count": 0
             }
-        
+
         for result in self.results:
             for dimension, score in result["evaluation"]["dimension_scores"].items():
                 if dimension in dimension_totals:
                     dimension_totals[dimension]["total"] += score
                     dimension_totals[dimension]["count"] += 1
-        
+
         dimension_averages = {}
         for dimension, data in dimension_totals.items():
             if data["count"] > 0:
                 dimension_averages[dimension] = data["total"] / data["count"]
-        
+
         return {
             "total_tests": len(self.results),
             "passed": passed,
@@ -274,7 +274,7 @@ class EvaluationRunner:
             "pass_rate": passed / len(self.results) if self.results else 0,
             "dimension_averages": dimension_averages,
             "failures": [
-                r for r in self.results 
+                r for r in self.results
                 if not r["evaluation"]["passed"]
             ]
         }
@@ -291,14 +291,14 @@ class ProductionMonitor:
             "pass_rate_warning": 0.85,
             "pass_rate_critical": 0.70
         }
-    
+
     def sample_and_evaluate(self, query, output):
         """Sample production interaction for evaluation."""
         if random.random() > self.sample_rate:
             return None
-        
+
         evaluation = evaluate_output(output, {}, EVALUATION_RUBRIC)
-        
+
         sample = {
             "query": query[:200],
             "output_preview": output[:200],
@@ -306,27 +306,27 @@ class ProductionMonitor:
             "passed": evaluation["passed"],
             "timestamp": current_timestamp()
         }
-        
+
         self.samples.append(sample)
         return sample
-    
+
     def get_metrics(self):
         """Calculate current metrics from samples."""
         if not self.samples:
             return {"status": "insufficient_data"}
-        
+
         passed = sum(1 for s in self.samples if s["passed"])
         pass_rate = passed / len(self.samples)
-        
+
         avg_score = sum(s["score"] for s in self.samples) / len(self.samples)
-        
+
         return {
             "sample_count": len(self.samples),
             "pass_rate": pass_rate,
             "average_score": avg_score,
             "status": self._get_status(pass_rate)
         }
-    
+
     def _get_status(self, pass_rate):
         """Get status based on pass rate."""
         if pass_rate < self.alert_thresholds["pass_rate_critical"]:
@@ -336,4 +336,3 @@ class ProductionMonitor:
         else:
             return "healthy"
 ```
-

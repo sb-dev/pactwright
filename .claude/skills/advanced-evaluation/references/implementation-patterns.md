@@ -27,7 +27,7 @@ def validate_input(response, prompt, criteria):
         raise ValueError("Prompt cannot be empty")
     if not criteria or len(criteria) == 0:
         raise ValueError("At least one criterion required")
-    
+
     # Normalize weights
     total_weight = sum(c.get('weight', 1) for c in criteria)
     for c in criteria:
@@ -42,10 +42,10 @@ Criteria should be loaded from configuration, not hardcoded:
 class CriteriaLoader:
     def __init__(self, rubric_path=None):
         self.rubrics = self._load_rubrics(rubric_path)
-    
+
     def get_criteria(self, task_type):
         return self.rubrics.get(task_type, self.default_criteria)
-    
+
     def get_rubric(self, criterion_name):
         return self.rubrics.get(criterion_name, {}).get('levels', [])
 ```
@@ -58,14 +58,14 @@ The scoring layer handles the actual LLM call:
 async def score_response(response, prompt, criteria, rubric, model):
     system_prompt = build_system_prompt(criteria, rubric)
     user_prompt = build_user_prompt(response, prompt, criteria)
-    
+
     result = await generate_text(
         model=model,
         system=system_prompt,
         prompt=user_prompt,
         temperature=0.3  # Lower temperature for consistency
     )
-    
+
     return parse_scores(result.text)
 ```
 
@@ -77,13 +77,13 @@ For pairwise comparison, always include position swapping:
 async def compare_with_bias_mitigation(response_a, response_b, prompt, criteria, model):
     # First pass: A first
     pass1 = await compare_pair(response_a, response_b, prompt, criteria, model)
-    
+
     # Second pass: B first
     pass2 = await compare_pair(response_b, response_a, prompt, criteria, model)
-    
+
     # Map pass2 winner back
     pass2_mapped = map_winner(pass2.winner)  # A→B, B→A, TIE→TIE
-    
+
     # Check consistency
     if pass1.winner == pass2_mapped:
         return {
@@ -146,13 +146,13 @@ async def poll_evaluation(response, prompt, criteria, models):
         score_with_model(response, prompt, criteria, model)
         for model in models
     ])
-    
+
     # Aggregate scores
     aggregated = aggregate_scores(results)
-    
+
     # Calculate agreement
     agreement = calculate_agreement(results)
-    
+
     return {
         'scores': aggregated,
         'agreement': agreement,
@@ -178,18 +178,18 @@ Confidence scores should be calibrated to actual reliability:
 ```python
 def calibrate_confidence(raw_confidence, position_consistent, evidence_count):
     """Calibrate confidence based on multiple signals."""
-    
+
     # Base confidence from model output
     calibrated = raw_confidence
-    
+
     # Position consistency is a strong signal
     if not position_consistent:
         calibrated *= 0.6  # Significant reduction
-    
+
     # More evidence = higher confidence
     evidence_factor = min(evidence_count / 3, 1.0)  # Cap at 3 pieces
     calibrated *= (0.7 + 0.3 * evidence_factor)
-    
+
     return min(calibrated, 0.99)  # Never 100% confident
 ```
 
@@ -259,7 +259,7 @@ async def evaluate_with_retry(response, prompt, criteria, max_retries=3):
                 return result
         except TransientError:
             await asyncio.sleep(2 ** attempt)  # Exponential backoff
-    
+
     raise EvaluationError("Max retries exceeded")
 ```
 
@@ -290,7 +290,7 @@ async def test_full_evaluation_pipeline():
         prompt="At what temperature does water boil?",
         criteria=[{"name": "Accuracy", "description": "Factual correctness", "weight": 1}]
     )
-    
+
     assert result.success
     assert len(result.scores) == 1
     assert result.scores[0].score >= 4  # Should score high for accurate response
@@ -308,8 +308,7 @@ async def test_position_bias_mitigation():
         criteria=["quality"],
         swap_positions=True
     )
-    
+
     assert result.winner == "TIE"
     assert result.consistent == True
 ```
-

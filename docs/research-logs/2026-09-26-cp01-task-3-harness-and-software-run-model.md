@@ -1,9 +1,9 @@
 # Checkpoint 1 Task 3 — Harness and Software Run Model
 
-**Version:** 4  
-**Date:** 26 September 2026  
-**Branch analysed:** `refactor/pactwright-v2`  
-**Inspected revision:** `10ffb890b1eb8c0338b339cbb07788a006c76318`  
+**Version:** 4\
+**Date:** 26 September 2026\
+**Branch analysed:** `refactor/pactwright-v2`\
+**Inspected revision:** `10ffb890b1eb8c0338b339cbb07788a006c76318`\
 **Authority:** [Spec 00 v5](../specs/00-checkpoint-step-contract-and-delivery-tasks.md), §§1–6, and [Checkpoint 1 v30](../checkpoints/01-self-hosted-delivery.md). This is a T3 implementation plan, not a change to product semantics or a progress record.
 
 ## 1. Purpose and entry conditions

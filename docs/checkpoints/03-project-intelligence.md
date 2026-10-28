@@ -1,8 +1,8 @@
 # Pactwright — Checkpoint 3 — Project Intelligence
 
-**Version:** 14  
-**Entry condition:** Checkpoint 2 is accepted.  
-**Release:** `0.0.4`  
+**Version:** 14\
+**Entry condition:** Checkpoint 2 is accepted.\
+**Release:** `0.0.4`\
 **Exit capability:** Project Intelligence can cold-start Pactwright and Kakeibo, govern durable project knowledge, contribute bounded context, compose into the established GitHub integration and derive one dependency-aware Intent roadmap without automatically creating Delivery work.
 
 ## 1. Goal
