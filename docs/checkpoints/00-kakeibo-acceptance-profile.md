@@ -1,6 +1,6 @@
 # Pactwright — Kakeibo System-Level Acceptance Profile
 
-**Version:** 2  
+**Version:** 3\
 **Status:** Cross-owner checkpoint acceptance profile  
 **Date:** 2026-09-02
 
@@ -624,7 +624,7 @@ At least one accepted finding must complete Review → PI → governed Delivery.
 
 ### Goal
 
-Prove Creative Delivery against a public-facing Kakeibo claim whose grounding depends on a real, inspectable bounded Kei implementation.
+Prove normal Delivery using Production Skills against a public-facing Kakeibo claim whose grounding depends on a real, inspectable bounded Kei implementation.
 
 Checkpoint 5 establishes the **offline/repository half** of the Kei engineering lifecycle before publishing a Kakeibo Kei-related public Asset.
 
@@ -705,7 +705,7 @@ A prompt-only behaviour change requires a new Kei release version; do not mutate
 
 ### Required Kakeibo Delivery B — grounded public Asset
 
-Only after the implementation/evaluation foundation is accepted, use Creative Delivery to create a real Kakeibo public Asset explaining or demonstrating Kei.
+Only after the implementation/evaluation foundation is accepted, use normal Delivery with relevant Production Skills to produce the output for a real Kakeibo public Asset explaining or demonstrating Kei.
 
 Ground public claims in:
 
@@ -728,7 +728,7 @@ Verify:
 - no raw production financial trace is published;
 - external prompt/evaluation dashboards are supplementary, never the sole canonical behaviour source.
 
-Then human-approve and publish the exact Asset through normal Review & Creative semantics.
+Then human-approve the exact output as an Asset and record its actual publication through Assets / Publication semantics.
 
 ### Out of scope for Checkpoint 5
 
@@ -1311,4 +1311,4 @@ The Kakeibo proving project is doing its job when materially richer product requ
 
 The controlled-production need justified generic `Experiment` semantics because it introduced a reusable missing Operations responsibility.
 
-The Open-Source Project Organisation v3 update does not cross that threshold. Its requirements are correctly expressed as Kakeibo repository, governance, deployment, security, contribution and public-product acceptance using Pactwright's existing Delivery, Review, Creative, Operations and Project Intelligence capabilities.
+The Open-Source Project Organisation v3 update does not cross that threshold. Its requirements are correctly expressed as Kakeibo repository, governance, deployment, security, contribution and public-product acceptance using Pactwright's existing Delivery, Graph Review, Assets / Publication, Operations and Project Intelligence capabilities.
