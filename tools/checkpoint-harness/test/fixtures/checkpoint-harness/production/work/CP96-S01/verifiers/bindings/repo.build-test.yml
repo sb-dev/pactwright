@@ -1,0 +1,12 @@
+# The repository gate (CP96/AC01): build output in an empty scratch dist/,
+# dependencies prepared from the lockfile.
+id: repo.build-test
+method: automated
+version: "1"
+command: [node, verifiers/repo-subject.mjs]
+judge: [node, verifiers/repo-judge.mjs]
+files: [verifiers/repo-judge.mjs, verifiers/repo-subject.mjs]
+timeoutMs: 120000
+observations: [build, test, dependency, distBefore]
+scratch: [dist]
+dependencies: true

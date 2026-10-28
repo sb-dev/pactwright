@@ -1,0 +1,20 @@
+# Checkpoint 99 — a format-2 fixture for harness planning tests. Not a Pactwright checkpoint.
+format: 2
+checkpoint: CP99
+run_model: software-bootstrap
+sources:
+  CHECKPOINT: ../99-fixture.md
+  FIX: ../../specs/fixture-spec.md
+prose_steps:
+  CP99-S04: sha256:6d32a409089dcd7aa661e2bc05a9659da24e8ceb8c9cd14be4ae0689368e1975
+requirements:
+  R01:
+    source: [CHECKPOINT#exit-gate]
+    statement: Every step candidate shall keep the fixture repository gate passing.
+acceptance:
+  AC01:
+    covers: [R01]
+    given: A step candidate.
+    when: The candidate revision is verified.
+    then: The fixture repository gate passes.
+    verify: {automated: [repo.verify]}

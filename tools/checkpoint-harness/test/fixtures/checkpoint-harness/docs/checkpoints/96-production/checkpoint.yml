@@ -1,0 +1,38 @@
+# Checkpoint 96 — the T3.5 H1 fixture. Its shared requirements apply at three
+# points: every step (R01), from the acceptance of Step 1 (R02) and the
+# checkpoint exit (R03); the tests supply those applicability rules.
+format: 2
+checkpoint: CP96
+run_model: software-bootstrap
+sources:
+  CHECKPOINT: ../96-production.md
+  PROD: ../../specs/production-spec.md
+requirements:
+  R01:
+    source: [PROD#3]
+    statement: Every step candidate shall keep the repository gate passing on its own source and locked dependencies.
+  R02:
+    source: [PROD#4]
+    statement: From the acceptance of Step 1, every step candidate shall record its change in changes/CHANGELOG.md.
+  R03:
+    source: [CHECKPOINT#exit-gate]
+    statement: The checkpoint closes only when the exit check confirms that the changelog names every step.
+acceptance:
+  AC01:
+    covers: [R01]
+    given: A step candidate.
+    when: The repository gate builds and tests the candidate with its prepared dependencies.
+    then: The build and the tests pass on the candidate's own source.
+    verify: {automated: [repo.build-test]}
+  AC02:
+    covers: [R02]
+    given: A step candidate after the acceptance of Step 1.
+    when: Its changes/CHANGELOG.md is read.
+    then: The changelog has at least one entry, and every entry names a step of CP96.
+    verify: {automated: [changelog.current]}
+  AC03:
+    covers: [R03]
+    given: The integrated candidate.
+    when: The checkpoint exit gate is evaluated.
+    then: The changelog names every step, and independent review confirms the exit gate.
+    verify: {automated: [checkpoint.exit-check], review: [checkpoint.exit-review]}

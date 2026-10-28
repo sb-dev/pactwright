@@ -1,0 +1,58 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Checkpoint harness binding declaration",
+  "description": "A verifier binding delivered with a capability in the candidate (T3.5 H1): one YAML file `<verification.bindings>/<id>.yml` per binding. It is the binding's definition as the code-owned registry holds it. A declared binding counts only after the harness admits it. Approval bindings name an authority and an effect and stay controller-owned.",
+  "type": "object",
+  "required": ["id", "method", "version"],
+  "properties": {
+    "id": { "type": "string", "pattern": "^[a-z0-9]+(-[a-z0-9]+)*(\\.[a-z0-9]+(-[a-z0-9]+)*)+$" },
+    "method": { "enum": ["automated", "review"] },
+    "version": { "type": "string", "minLength": 1 }
+  },
+  "oneOf": [
+    {
+      "additionalProperties": false,
+      "required": ["command", "judge", "files", "timeoutMs", "observations"],
+      "properties": {
+        "id": true,
+        "method": { "const": "automated" },
+        "version": true,
+        "command": { "$ref": "#/$defs/argv" },
+        "judge": { "$ref": "#/$defs/argv" },
+        "files": { "$ref": "#/$defs/strings" },
+        "timeoutMs": { "type": "integer", "minimum": 1 },
+        "observations": { "$ref": "#/$defs/strings" },
+        "scratch": {
+          "description": "Paths the subject may write, created empty in each workspace and never sealed: build output.",
+          "$ref": "#/$defs/strings"
+        },
+        "dependencies": {
+          "description": "Whether the subject runs with the run's prepared dependencies mounted read-only.",
+          "type": "boolean"
+        }
+      }
+    },
+    {
+      "additionalProperties": false,
+      "required": ["rubric"],
+      "properties": {
+        "id": true,
+        "method": { "const": "review" },
+        "version": true,
+        "rubric": { "type": "array", "$ref": "#/$defs/strings", "minItems": 1 }
+      }
+    }
+  ],
+  "$defs": {
+    "argv": {
+      "type": "array",
+      "minItems": 1,
+      "items": { "type": "string", "minLength": 1 }
+    },
+    "strings": {
+      "type": "array",
+      "uniqueItems": true,
+      "items": { "type": "string", "minLength": 1 }
+    }
+  }
+}

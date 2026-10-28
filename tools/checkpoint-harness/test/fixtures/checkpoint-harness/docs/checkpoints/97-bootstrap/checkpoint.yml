@@ -1,0 +1,17 @@
+# Checkpoint 97 — the format-2 fixture of the T3-F bootstrap demonstration. Not a Pactwright checkpoint.
+format: 2
+checkpoint: CP97
+run_model: software-bootstrap
+sources:
+  BOOT: ../../specs/bootstrap-spec.md
+requirements:
+  R01:
+    source: [BOOT#exit-gate]
+    statement: Every step candidate shall keep the fixture repository gate passing.
+acceptance:
+  AC01:
+    covers: [R01]
+    given: A step candidate.
+    when: The candidate revision is verified.
+    then: The fixture repository gate passes.
+    verify: {automated: [repo.verify]}

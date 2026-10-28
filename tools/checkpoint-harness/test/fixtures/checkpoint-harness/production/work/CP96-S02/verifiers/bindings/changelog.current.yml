@@ -1,0 +1,9 @@
+# CP96/AC02, which applies from the acceptance of Step 1.
+id: changelog.current
+method: automated
+version: "1"
+command: [node, verifiers/changelog-subject.mjs]
+judge: [node, verifiers/changelog-judge.mjs]
+files: [verifiers/changelog-judge.mjs, verifiers/changelog-subject.mjs]
+timeoutMs: 30000
+observations: [steps]

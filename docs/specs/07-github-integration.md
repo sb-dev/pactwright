@@ -211,7 +211,7 @@ specs/**
 
 must be routed to the validators owning the changed canonical records and relationships.
 
-`specs/graph/edges.yml` is shared graph storage. Changes to it are routed by edge type and endpoints rather than path alone. Cross-graph relationships may require multiple validators.
+`specs/graph/edges.yml` contains only core lineage tuples and is routed to core validation. Each Extension's registered relation tuples and same-type supersession of its own nodes live in `specs/extensions/<id>/edges.yml`, under Core section 54. Route an Extension edge change to the relation's owner (the endpoint-type owner for `supersedes`) and, for cross-graph relationships, also to the endpoint owners. Determine affected tuples from both sides of an edit/deletion, not just the new file. The shared graph API does not imply a shared physical edge file. Invalid placement is a validation failure, not permission to reroute or move the data.
 
 Where automatic continuation is configured, GitHub may invoke:
 
@@ -316,7 +316,7 @@ Fields are derived and regenerable. Editing them does not silently mutate canoni
 When Project Intelligence is enabled, changes to:
 
 ```text
-docs/project-intelligence/sources/**
+specs/extensions/project-intelligence/sources/**
 ```
 
 run the Project Intelligence capture/validation path.
@@ -343,11 +343,11 @@ Duplicate or irrelevant material may stop cheaply. Class 0/1 mutations remain bo
 Changes proposing canonical Intelligence mutations under:
 
 ```text
-docs/project-intelligence/domains/**
-docs/project-intelligence/knowledge/**
+specs/extensions/project-intelligence/domains/**
+specs/extensions/project-intelligence/knowledge/**
 ```
 
-or Intelligence-owned shared relationships run:
+or `specs/extensions/project-intelligence/edges.yml` and relevant cross-owner relationships routed under section 7 run:
 
 ```text
 pactwright intelligence validate
@@ -547,7 +547,7 @@ Every Finding from a successful review must be handed to Project Intelligence th
 
 A failed hand-off leaves the successful Finding valid and retryable. GitHub must not rerun the review merely to retry Source hand-off.
 
-A failed Review Execution records failure provenance and emits no Findings.
+Graph Review resolves its complete replay base before an attempt or any execution effect. An unavailable base is a preflight refusal: report it without creating a Review Execution, invoking an agent or emitting Findings. Once preflight succeeds, a failed Review Execution records failure provenance against that base and emits no Findings. Newly written provenance must be committed before another pinned execution; workflows must not auto-commit merely to conceal a dirty-base refusal.
 
 For a pinned rerun, GitHub invokes the Graph Review operation and lets Pactwright reconstruct and verify the recorded replay base. GitHub must not substitute the workflow's current checkout or current environment if that reconstruction fails.
 
@@ -562,7 +562,7 @@ Relevant managed/validated Graph Review state includes:
 docs/graph-review/reports/**
 ```
 
-plus shared Project Graph relationships affected by Graph Review-owned semantics.
+plus `specs/extensions/graph-review/edges.yml` for its declared canonical relations, and endpoint-owner validators for cross-graph relations under section 7. This does not turn Review Execution provenance or derived reports into canonical records.
 
 The shared Project may expose:
 
@@ -601,8 +601,8 @@ Relevant paths include:
 
 ```text
 assets/**
-docs/assets-publication/assets/**
-docs/assets-publication/publications/**
+specs/extensions/assets-publication/assets/**
+specs/extensions/assets-publication/publications/**
 ```
 
 Asset validation checks at least:
@@ -764,7 +764,9 @@ Raw operational payloads must not be written into the Project Graph or GitHub pr
 Changes to:
 
 ```text
-docs/operations/observations/**
+specs/extensions/operations/observations/**
+specs/extensions/operations/deployments/**
+specs/extensions/operations/edges.yml
 ```
 
 validate:
@@ -1266,4 +1268,4 @@ while preserving the sourced GitHub behaviours under their new owners.
 
 ---
 
-**Pactwright GitHub Integration v1**
+**Pactwright GitHub Integration v2**

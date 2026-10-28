@@ -1,4 +1,0 @@
-edges:
-  - source: intent-x-1111
-    type: selects
-    target: contract-x-3333

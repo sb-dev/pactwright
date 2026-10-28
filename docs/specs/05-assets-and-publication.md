@@ -591,12 +591,13 @@ Conceptually:
 assets/
   ...
 
-docs/assets-publication/
+specs/extensions/assets-publication/
 ├── assets/
-└── publications/
+├── publications/
+└── edges.yml
 ```
 
-Exact paths may evolve.
+Canonical roots and relation-owned edge placement follow Core section 54. Record subpaths are part of the versioned Extension declaration; layout changes use explicit migration rather than a second shared edge file. Asset bytes retain their separate storage rules below.
 
 Canonical Extension state consists of:
 
@@ -818,4 +819,4 @@ Assets / Publication is therefore a small post-Delivery semantic layer rather th
 
 ---
 
-**Pactwright Assets and Publication v1**
+**Pactwright Assets and Publication v2**

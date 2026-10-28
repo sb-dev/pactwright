@@ -438,7 +438,7 @@ Historical Sources remain traceable even when resulting Knowledge is superseded 
 
 # 13. Relationships and Delivery Obligations
 
-Project Intelligence uses the shared typed-edge graph.
+Project Intelligence uses the shared typed-edge graph API. Its physical canonical records and relation-owned tuples follow Core section 54's owner-separated stores. `supersedes` is inherited from Core section 15, not a Project Intelligence-owned relation to re-register: it links a new node to one prior node of the same registered type, with no self-link, cycle, split or merge. Plural alternative replacements require new domain work, not branching supersession.
 
 Core intelligence relations are:
 
@@ -450,7 +450,6 @@ constrains
 affects
 requires-delivery
 satisfied-by
-supersedes
 retracts
 informs-only
 ```
@@ -884,23 +883,25 @@ When enabled, Project Intelligence keeps canonical records and derived reports s
 Conceptually:
 
 ```text
-docs/project-intelligence/
+specs/extensions/project-intelligence/
 ├── sources/
 ├── domains/
 ├── knowledge/<domain>/
-└── reports/
-    ├── onboarding.md
-    ├── domain-map.md
-    ├── freshness.md
-    ├── intent-roadmap.md
-    └── failed-ingestion.md
+└── edges.yml
+
+docs/project-intelligence/reports/
+├── onboarding.md
+├── domain-map.md
+├── freshness.md
+├── intent-roadmap.md
+└── failed-ingestion.md
 ```
 
 Canonical records are Sources, Domain Definitions, Knowledge and typed relationships.
 
 Reports are deterministic derived views over a Project Graph revision and must not become hand-maintained second sources of truth.
 
-Exact paths may evolve without changing these ownership rules.
+Canonical roots and edge placement follow Core section 54; declared relative record paths belong to the versioned Extension format in Spec 02 section 11. Changing persisted layout requires explicit migration. Derived report paths do not grant canonical ownership.
 
 ---
 
@@ -1092,4 +1093,4 @@ while updating integration boundaries:
 
 ---
 
-**Pactwright Project Intelligence v1**
+**Pactwright Project Intelligence v2**

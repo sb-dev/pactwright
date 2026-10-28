@@ -1,0 +1,54 @@
+# CP97 Step 2 — Build the command
+id: CP97-S02
+requires: [CP97-S01]
+inputs:
+  library: CP97-S01/config-library
+outputs:
+  config-command: >-
+    The command of BOOT §2, `src/cli.mjs`, run as `node src/cli.mjs FILE`.
+requirements:
+  R01:
+    source: [BOOT#2]
+    statement: >-
+      For a file holding a valid configuration, the command shall print the
+      normalised configuration as JSON on stdout and exit 0.
+  R02:
+    source: [BOOT#2]
+    statement: >-
+      For a file holding an invalid configuration, or a path it cannot read,
+      the command shall print a diagnostic on stderr, print nothing on
+      stdout, exit nonzero and leave the path unchanged.
+  R03:
+    source: [BOOT#2]
+    statement: >-
+      The command shall validate through the accepted library and restate
+      none of its rules.
+acceptance:
+  AC01:
+    covers: [R01]
+    cases: [valid, trimmed-label]
+    given: A file holding a valid configuration of the listed kind.
+    when: The command runs with the file as its argument.
+    then: >-
+      It prints exactly `{"port":8080,"label":"api"}` and a newline on stdout
+      and exits 0.
+    verify: {automated: [cli.prints]}
+  AC02:
+    covers: [R02]
+    cases: [malformed-json, port-above-highest, unknown-field, missing-file, directory]
+    given: >-
+      A file holding the listed invalid configuration, a path that does not
+      exist, or a directory.
+    when: The command runs with the path as its argument.
+    then: >-
+      It prints a diagnostic on stderr and nothing on stdout, exits nonzero
+      and leaves the path as it was.
+    verify: {automated: [cli.refuses]}
+  AC03:
+    covers: [R03]
+    given: The command source and the accepted library.
+    when: A reviewer inspects them.
+    then: >-
+      The command validates only by calling the library's parseConfig and
+      restates none of the library's rules.
+    verify: {review: [cli.single-validation]}

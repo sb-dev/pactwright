@@ -1,13 +1,13 @@
 # Pactwright — Checkpoint 1 — Self-Hosted Delivery
 
-**Version:** 17  
-**Entry condition:** No installable Pactwright runtime exists.  
-**Release:** `0.0.2` (corrective; `0.0.1` was published against version 14 of this runbook and remains the released baseline)  
+**Version:** 31\
+**Entry condition:** No installable Pactwright runtime exists.\
+**Release:** `0.0.2` (corrective; `0.0.1` was published against version 12 of this runbook, the version tagged `v0.0.1`, and remains the released baseline)\
 **Exit capability:** Pactwright is installable, upgradeable, can govern one complete Contract-driven Delivery in its own repository and in Kakeibo, can compare an Agent Pack candidate against a released baseline, and requires no manual Project Graph coherence work.
 
 ## 1. Goal
 
-Bootstrap the smallest installable Pactwright core, prove it in a clean consumer, adopt it in Pactwright, publish `0.0.1`, then install the same release in Kakeibo and complete one real external Delivery.
+Bootstrap the smallest installable Pactwright core, prove it in a clean consumer, adopt it in Pactwright, publish the corrective `0.0.2`, then install the same release in Kakeibo and complete one real external Delivery.
 
 The Kakeibo proof is deliberately narrow: create the first executable deterministic financial-domain foundation. CSV ingestion, application/API infrastructure, UI, Kei, analytics and provider integration remain later checkpoints.
 
@@ -38,6 +38,7 @@ docs/specs/README.md
 docs/specs/02-financial-domain-model-spec.md
 docs/specs/05-system-architecture-and-data-spec.md
 docs/specs/06-engineering-delivery-and-operations-spec.md
+docs/specs/07-open-source-project-organisation-spec.md
 ```
 
 For this checkpoint:
@@ -46,6 +47,7 @@ For this checkpoint:
 02 → financial-domain semantics
 05 → package/layer boundary only
 06 → deterministic test expectations only
+07 → repository, licence and security foundation only
 ```
 
 `00-kakeibo-acceptance-profile.md` §5 is the shared System-Level Acceptance cross-check for this slice, and §§2–5 carry the wider Kakeibo System-Level Acceptance requirements.
@@ -56,7 +58,9 @@ This runbook defines implementation order, not new Pactwright semantics.
 
 ## 3. Execution contract
 
-Every implementation action follows:
+A converted step is defined by its YAML contract in [`01-self-hosted-delivery/`](./01-self-hosted-delivery/), in the format owned by [Spec 00](../specs/00-checkpoint-step-contract-and-delivery-tasks.md). The step section here links the contract and summarises its deliverables; the contract holds the requirements and acceptance criteria. Every contract inherits the settings and shared requirements in [`checkpoint.yml`](./01-self-hosted-delivery/checkpoint.yml), and [`crosswalk.yml`](./01-self-hosted-delivery/crosswalk.yml) records where each obligation of the replaced step prose went: version 17 for Stage 1, version 20 for Stage 2, version 21 for Stage 3, version 22 for Stage 4 and version 23 for Stage 5.
+
+Stages 1–5 are converted to contracts. Stage 1 contracts are amended against Core v3 through the Q01–Q20 resolution pass, accepted by independent review 5298715756 and its correction review 5301803981 at `87bd3eb`, and reviewed as a whole under methodology §7 in [the Stage 1 exit record](../research-logs/2026-09-25-cp01-stage-1-exit-review.md). That record lists the corrections it applied, including the owner-directed Distribution §3 and pg1-fixture decisions, and the remaining non-blocking specification recommendations; independent review 5318255407 accepted those corrections at `f5e75db` and the record states Stage 1 requirement-ready. Stage 2 contracts are amended against Core v5 through the Q21–Q33 resolution pass, recorded in five [batch records](../research-logs/2026-09-25-cp01-stage-2-b7-shapes-and-identity.md) (B7–B11). The owner approved the Core §§27, 28, 32, 52, 53, 55 and 57 clauses, the two §4 scope lines and the Step 24 lifecycle-command obligation, and three further decisions from the stage-level exit review recorded in [the Stage 2 exit record](../research-logs/2026-09-25-cp01-stage-2-exit-review.md); independent review 5322976729 accepted that record's corrections at `ac370f2` and the record states Stage 2 requirement-ready. Stage 3 contracts are amended against Core v6 and Distribution v4 through the Q34–Q40 resolution pass, recorded in three [batch records](../research-logs/2026-09-25-cp01-stage-3-b12-agent-pack-format-and-selection.md) (B12–B14); the owning clauses are Distribution §§5, 8, 15, 21, 24 and Core §§35, 46, 55, and this pass added the Step 24 evaluation sentence below. The methodology §7 whole-stage review is recorded in [the Stage 3 exit record](../research-logs/2026-09-25-cp01-stage-3-exit-review.md), whose corrections X1–X19 were accepted by fresh independent review, and the record states Stage 3 requirement-ready. Stage 4 contracts are amended against Distribution v5 through the Q41–Q51 resolution pass, recorded in four [batch records](../research-logs/2026-09-26-cp01-stage-4-b15-init-and-scaffold.md) (B15–B18); the owning clauses are Distribution §§3, 10, 11, 12, 15, 16 and 27 and Implementation Guide command ownership, and this pass added the Step 29 selection command below and the env1 lock-hash grammar to CP01-S09/R06 and the version-listing request to CP01-S11/R08. The methodology §7 whole-stage review is recorded in [the Stage 4 exit record](../research-logs/2026-09-26-cp01-stage-4-exit-review.md). Stage 5 contracts are amended against Implementation Guide v18 through the Q52–Q56 resolution pass, recorded in three [batch records](../research-logs/2026-09-26-cp01-stage-5-b19-ci-coverage-and-triggers.md) (B19–B21); the owning clauses are the Guide's GitHub Actions, package metadata, npm release model, trusted release workflow and release failure sections. Q54's renumbering of the Guide's version tables and of Checkpoints 2–9 (Checkpoint 2 → `0.0.3` through Checkpoint 9 → `0.0.10`) was authorised by the owner and applied in the same pass. The methodology §7 whole-stage review is recorded in [the Stage 5 exit record](../research-logs/2026-09-26-cp01-stage-5-exit-review.md). Stages 6–11 (Steps 22–31) are unconverted steps under Spec 00 §2: by the owner's decision they keep the version 17 form below, their reviewed hashes are recorded under `prose_steps` in [`checkpoint.yml`](./01-self-hosted-delivery/checkpoint.yml), and each is converted before the harness runs it (Spec 00 §4). They were reviewed under Spec 00 T2 against Implementation Guide v19 and amended in place through the Q57–Q66 resolution pass, recorded in six [batch records](../research-logs/2026-09-27-cp01-stages-6-11-b22-packed-consumer-proofs.md) (B22–B27). The same pass declared the checkpoint-wide self-hosting, graph-boundary, simplicity and exit-gate obligations `CP01/R02`–`R05` in [`checkpoint.yml`](./01-self-hosted-delivery/checkpoint.yml), and its methodology §7 review is recorded in [the Stages 6–11 exit record](../research-logs/2026-09-27-cp01-stages-6-11-exit-review.md). Steps in this form are:
 
 ```text
 Step
@@ -66,7 +70,9 @@ Step
 → Verify before continuing
 ```
 
-For repository/code changes, finish with `pnpm verify`.
+For Pactwright repository/code changes, finish with `pnpm verify` (shared requirement `CP01/R01`).
+
+The Q01–Q20 resolution pass is recorded in six dependency-ordered [batch records](../research-logs/2026-09-23-pr41-b1-loading.md). The crosswalk retains the original questions and replaced-prose quotes; the amended specifications and contracts govern new attempts. These document changes do not establish runtime acceptance or bypass independent review.
 
 Once a deterministic Pactwright responsibility exists, use the runtime rather than asking an agent to emulate it.
 
@@ -118,6 +124,8 @@ Checkpoint 1 must not turn adapter responsibilities such as capture-intent or wr
 - External Production Skills integration manifests, import resolution, Production Extension Packs and their diagnostics: Checkpoint 5. Direct skills contained in an Agent Pack remain in scope. Earlier runtimes must report unsupported external imports rather than silently ignore them or claim to resolve them.
 - Historical environment retention/reacquisition machinery: identity and fail-explicitly semantics are implemented, archival strategy is not.
 - Lifecycle-shape hashing or a universal lifecycle-shape persistence scheme: still unresolved.
+- A persisted lifecycle-shape or extended-policy configuration format beyond lifecycle `version: 1`: Checkpoint 1 exercises richer shapes through runtime fixture definitions only.
+- A capability invoker that lets `pactwright lifecycle run` call an AI provider itself: Checkpoint 2, where workflows continue lifecycle execution through `lifecycle run`. In Checkpoint 1, AI work runs through the adapter commands, and `lifecycle run` stops with an execution failure at a capability-backed responsibility when no invoker is supplied.
 - Kakeibo CSV ingestion, Hono API, Neon persistence, Hyperdrive, R2 and Cloudflare Workflows: Checkpoint 2.
 - Kakeibo mobile/web UI and weekly-review implementation: later product slices.
 - Kakeibo Kei runtime/release/evaluation: Checkpoint 5 onward.
@@ -128,617 +136,280 @@ Checkpoint 1 must not turn adapter responsibilities such as capture-intent or wr
 
 ### Step 1 — Create the runtime/package foundation
 
-**References:** Specs 01–02; Implementation Guide engineering baseline.
+**Contract:** [`CP01-S01`](./01-self-hosted-delivery/CP01-S01.yml)
 
-**Run**
+**Deliverables**
 
-```text
-Create the Pactwright runtime and CLI package foundation.
-
-Implement one canonical loader for Pactwright configuration, lifecycle configuration, .pactwright/lock.yml, core Project Graph records and typed edges.
-
-Make the runtime publishable as `pactwright` with the repository's normal build/prepack/verify discipline and a repository-local `pnpm pactwright ...` path using the same built runtime.
-
-Do not implement optional Extension semantics or GitHub provisioning.
-```
-
-**Expected result**
-
-One buildable, testable and packable Pactwright runtime exists with one canonical loading path.
-
-**Verify before continuing**
-
-Run `pnpm verify`, pack the runtime and inspect the archive.
+- `runtime-package` — The pactwright runtime and CLI package, built, tested and packed through the repository's normal build, prepack and verify discipline.
+- `canonical-loader` — One loading path for Pactwright configuration, lifecycle configuration, .pactwright/lock.yml, core Project Graph records and typed edges.
+- `repository-cli` — A repository-local pnpm pactwright path that runs the same built runtime the package publishes.
 
 ### Step 2 — Implement the five durable core Delivery record types
 
-**References:** Spec 01 core Project Graph model.
+**Contract:** [`CP01-S02`](./01-self-hosted-delivery/CP01-S02.yml)
 
-**Run**
+**Deliverables**
 
-```text
-Implement exactly:
-- Intent
-- Decision
-- Contract
-- Brief
-- Evidence
+- `core-record-model` — The five durable core Delivery record types, Intent, Decision, Contract, Brief and Evidence, with canonical identity, immutability and type-specific validation.
+- `canonical-contribution-registry` — Generic owner/schema/canonical-value and optional node-projection registration for core and Extension-owned records, including non-node records; installed packages reuse this seam.
 
-Enforce canonical identity, immutability and type-specific validation.
-Contract alternatives remain transient.
-Delivery and Review executions remain execution provenance rather than core Project Graph record types.
-```
-
-**Expected result**
-
-The runtime validates the complete core record set without inventing execution nodes.
-
-**Verify before continuing**
-
-Add positive/negative fixtures for every record type and identity mutation.
+Step 2 also owns the generic canonical-contribution registry described in Core §54. Fixture Extension records keep their own schema and identity; they are not forced into the core record envelope. Step 16 repeats this proof through installed packages.
 
 ### Step 3 — Implement the shared typed-edge store
 
-**References:** Spec 01 relationships and supersession.
+**Contract:** [`CP01-S03`](./01-self-hosted-delivery/CP01-S03.yml)
 
-**Run**
+**Deliverables**
 
-```text
-Implement the shared typed-edge registry/store for core lineage and same-type supersession.
-Validate endpoint existence/types, duplicate tuples, self-supersession and supersession cycles.
-Keep the registry extensible for later Pactwright Extension relations.
-```
+- `typed-edge-store` — Shared persistence, validation and relation registration for typed relationships.
 
-**Expected result**
-
-Core relationships are deterministic and extension-ready.
-
-**Verify before continuing**
-
-Run invalid endpoint/type, duplicate, self-supersession and cycle fixtures.
+This step proves relation registration with fixture relations. Installed Extension composition exercises the real integration in Step 16; a fixture does not establish that later capability.
 
 ### Step 4 — Implement current-lineage and authority derivation
 
-**References:** Spec 01 authority and supersession.
+**Contract:** [`CP01-S04`](./01-self-hosted-delivery/CP01-S04.yml)
 
-**Run**
+**Deliverables**
 
-```text
-Derive current Delivery lineage from canonical graph structure.
-Decision changes WHAT authorised outcome is current.
-Gate state controls HOW execution continues and cannot substitute for Decision authority.
-Do not store redundant derived lifecycle state.
-```
+- `lineage-derivation` — Derivation of each Intent's current Delivery lineage, recorded authorised Contract and broad Delivery state from canonical records and typed edges alone.
 
-**Expected result**
-
-The runtime derives authoritative current lineage from Project Graph state.
-
-**Verify before continuing**
-
-Use proceed/reject/defer, supersession and ambiguous-lineage fixtures; invalid ambiguity fails closed.
+Gate state and executable policy arrive with Step 6. Step 4 derives exact recorded Decision/Contract lineage, not permission to execute; Steps 6, 7 and 9 enforce and diagnose actor-kind policy compatibility. Attribution is not identity-provider authentication. Approval outside a Decision cannot act as Decision authority.
 
 ### Step 5 — Implement repository and Project Graph revision identity
 
-**References:** Spec 01 replay/revision semantics; Implementation Guide replay provenance.
+**Contract:** [`CP01-S05`](./01-self-hosted-delivery/CP01-S05.yml)
 
-**Run**
+**Deliverables**
 
-```text
-Implement runtime-provided repository revision and deterministic Project Graph revision.
-Project Graph revision includes registered canonical Delivery records, typed edges and enabled Extension-owned canonical records.
-It excludes generated reports, adapter output, lifecycle execution state, execution provenance, GitHub projections and other derived state.
-Canonicalise ordering before hashing.
-```
+- `repository-revision` — A runtime-provided repository revision identifying the exact committed repository state used as the reconstructible execution input base.
+- `project-graph-revision` — A deterministic Project Graph revision hashed from canonically ordered, registered canonical Project Graph state only.
 
-**Expected result**
-
-Repository revision and Project Graph revision are stable, distinct identities.
-
-**Verify before continuing**
-
-Prove identical state gives identical graph revision; generated-file or execution-state change does not; canonical mutation does. Repeat the inclusion/exclusion proof with an enabled fixture Extension in Step 16 once its registration path exists.
+This step proves inclusion of Extension-owned canonical records, including non-node records with their own schema, and relations with fixture registrations. Step 16 repeats the inclusion/exclusion proof with an enabled fixture Extension installed through its loader. The `pg1` byte/digest vectors in Core §56 are protocol tests, not proof that the runtime implements them.
 
 ## Stage 2 — Implement Contract-driven lifecycle execution
 
 ### Step 6 — Implement the initial direct lifecycle shape and execution policy
 
-**References:** Spec 01 lifecycle shape, execution state, policy and Gate boundaries.
+**Contract:** [`CP01-S06`](./01-self-hosted-delivery/CP01-S06.yml)
 
-**Run**
+**Deliverables**
 
-```text
-Implement the initial built-in direct fulfilment shape:
-Brief → Delivery → Review → Evidence
+- `lifecycle-shape` — The built-in direct fulfilment shape, Brief → Delivery → Review → Evidence, and shape validation over the domain-neutral delivery, review, gate and transition vocabulary.
+- `execution-policy` — Execution policy loaded from lifecycle configuration through the canonical loader, covering automatic or manual execution, allowed actor kinds, Gate authority and iteration bounds, separate from shape topology and Contract authority.
+- `execution-state` — Fine-grained lifecycle execution state for a Brief, held outside the Project Graph, identifying the current Brief, resolved shape, current and completed steps, Gate state, iteration counts and execution status, written through the runtime's serialised mutation boundary that Step 7 extends to canonical mutations.
 
-Keep separate:
-- Contract/Decision authority;
-- lifecycle shape/topology;
-- execution policy such as automatic/manual execution and human Gates;
-- fine-grained lifecycle execution state.
-
-Execution state must identify the current Brief, resolved shape, current/completed steps, Gate state, iteration counts where applicable and execution status.
-Broad Delivery state remains derived from canonical lineage; fine-grained progression is not stored as Delivery Graph truth.
-
-Do not encode capture-intent, propose-contracts, approve-contract or write-brief as shape stages.
-Do not add Deployment, Asset, Publication, Experiment or Observation to the core lifecycle.
-Do not invent lifecycle-shape hashes or make shape identity part of Brief identity.
-Any configured corrective transition must exist in its declared shape and have bounded execution policy; AI cannot invent routes.
-```
-
-**Expected result**
-
-The runtime represents fulfilment topology and execution progress without conflating either with Contract authority or durable graph state.
-
-**Verify before continuing**
-
-Test automatic/manual policy, authorised and unauthorised Gate progression, invalid shape/policy configuration, impossible corrective routes and unbounded-loop rejection. Changing execution progress alone must leave canonical graph records and `project_graph_revision` unchanged.
+Contract-crafting responsibilities such as capture-intent and write-brief remain policy entries, not shape steps. Step 8 exposes progression through the lifecycle commands and Step 9 diagnoses shape and policy configuration.
 
 ### Step 7 — Implement authoritative core mutations and Evidence closure guards
 
-**References:** Spec 01 authority, graph mutation, supersession and `/prepare-evidence`.
+**Contract:** [`CP01-S07`](./01-self-hosted-delivery/CP01-S07.yml)
 
-**Run**
+**Deliverables**
 
-```text
-Implement runtime mutation responsibilities for Intent, Decision, selected Contract, Brief, Evidence, required edges and explicit supersession.
-Contract alternatives remain transient until selection.
-Approval/Gate state never auto-creates a Decision.
-All mutations use plan → validate complete proposed state → atomic write → validate resulting state.
+- `mutation-api` — The runtime canonical mutation API that every public entry point calls, performing plan, complete-state validation, immutability and authority guards, a serialised stored-base check, an atomic write and result validation.
+- `authoritative-mutations` — Authorised mutations creating Intent, Decision with its selected Contract, Brief, Evidence, required edges and explicit supersession, including withdrawal and re-authorisation.
+- `evidence-closure-guards` — Pre-mutation guards that refuse Evidence and its evidences edge until all five closure preconditions hold.
 
-Before creating Evidence or its evidences edge, require:
-- the Brief is current;
-- the latest delivered state has been reviewed;
-- the closing Review permits successful Evidence closure;
-- no required Gate remains unresolved;
-- Contract and Brief lineage is valid.
-
-Enforce these as pre-mutation runtime guards, not only as checks after writing Evidence.
-A delivery change after Review requires Review of the new delivered state before closure.
-```
-
-**Expected result**
-
-Only authorised paths produce canonical structures; successful closing Review of the latest state is required for Evidence, and failed mutation leaves no partial state.
-
-**Verify before continuing**
-
-Exercise authorised/unauthorised Decisions and forced write/validation failure. For each Evidence precondition, provide a failing fixture and require no Evidence or partial edge to be written. Include superseded Brief, unreviewed delivery change, blocking closing Review, pending Gate and invalid-lineage cases, plus successful closure.
+Step 7 proves the guards through the runtime mutation API. Step 8 repeats them through `lifecycle run`, Step 12 through each mutating adapter command and Step 24 through the assembled runtime. The supplied actor is attribution, not identity-provider authentication.
 
 ### Step 8 — Implement lifecycle status, next and run
 
-**References:** Spec 01 lifecycle command surface and execution-state boundary.
+**Contract:** [`CP01-S08`](./01-self-hosted-delivery/CP01-S08.yml)
 
-**Run**
+**Deliverables**
 
-```text
-Implement:
-pactwright lifecycle status
-pactwright lifecycle next
-pactwright lifecycle run
+- `lifecycle-status` — A read-only pactwright lifecycle status reporting current and completed steps, blocking step, required actor, validation problems and current lineage.
+- `lifecycle-next` — A read-only pactwright lifecycle next that determines the next permitted lifecycle action without executing it.
+- `lifecycle-run` — A pactwright lifecycle run that executes automatic responsibilities through the resolved shape and policy until a required Gate, a manual responsibility, a blocked Review outcome, completion, execution failure or validation failure.
 
-`status` reports current/completed steps, blocking step, required actor, validation problems and current lineage.
-`next` determines the next permitted lifecycle action without executing it.
-Both are read-only.
-
-`run` executes automatic responsibilities through the resolved shape/policy until a required Gate, completion, execution failure or validation failure.
-It cannot skip Gates, invent transitions or create Evidence before the Step 7 closure guards pass.
-
-Derive progression from current Contract/Brief lineage, resolved shape, policy, Gate state and repository state.
-Keep execution progress outside the Delivery Graph.
-```
-
-**Expected result**
-
-The runtime owns fulfilment progression and exposes inspection separately from execution.
-
-**Verify before continuing**
-
-Prove status/next perform no writes, report the correct actor/blocker/lineage, and next does not invoke an agent. Prove Gate/failure stopping, no next core fulfilment stage after current Evidence, and execution-state changes do not alter graph truth.
+Agent Pack capabilities arrive in Step 10 and adapter commands in Step 12; Step 24 completes a full Delivery through them. Execution progress stays outside the Delivery Graph.
 
 ### Step 9 — Implement the complete core validation contract and bounded context assembly
 
-**References:** Spec 01 sections 39, 46–57.
+**Contract:** [`CP01-S09`](./01-self-hosted-delivery/CP01-S09.yml)
 
-**Run**
+**Deliverables**
 
-Implement read-only `pactwright validate` with the full minimum detection contract:
+- `validate-command` — A read-only pactwright validate implementing the complete Core §57 minimum detection contract without repairing state.
+- `context-assembly` — A runtime context-assembly API giving Agent Packs and adapters bounded current Contract/Brief lineage context, with a namespaced contribution seam for later Extensions.
 
-```text
-1. malformed core nodes;
-2. invalid core relationships;
-3. missing required lineage;
-4. contradictory current records;
-5. multiple unsuperseded canonical Decisions or Contracts for one active direction;
-6. invalid Brief-to-Contract lineage;
-7. invalid Evidence-to-Brief lineage;
-8. illegal supersession;
-9. missing lifecycle shape;
-10. unresolved or incompatible shape identity;
-11. impossible shape transitions;
-12. Evidence attempted before successful closing Review;
-13. unauthorised Decision;
-14. unauthorised Gate progression;
-15. unbounded configured corrective loops;
-16. Extension state illegally redefining core Delivery semantics;
-17. repository replay provenance that does not derive the recorded Project Graph revision when replay validation is requested.
-```
-
-Use the same validation mechanics before canonical mutation wherever possible. Do not repair graph state as a side effect of validation.
-
-Implement the runtime context-assembly API consumed by Agent Packs/adapters. Default Delivery context contains current relevant Contract/Brief lineage and excludes rejected alternatives, superseded state, execution transcripts and unrelated history unless explicitly required. Keep a namespaced context-contribution seam for later Extensions. Do not introduce `pactwright context` as a required public CLI contract.
-
-**Expected result**
-
-The core semantic contract is machine-enforced and agents receive bounded canonical context rather than reconstructing truth from chat history.
-
-**Verify before continuing**
-
-Maintain valid controls and a failing fixture mapped to each numbered rule. Use a fixture graph contribution for rule 16 now and rerun it through real fixture Extension loading in Step 16. Verify rule 17 on a requested replay check, not by requiring historical reconstruction on every ordinary validation. Test context inclusions/exclusions and prove validation failures perform no writes.
+Rule 16 uses a fixture graph contribution here; Step 16 reruns it through installed fixture Extension loading. Rule 17 runs only when replay validation is requested. Agent Packs and adapters consume context assembly from Steps 10 and 12.
 
 ## Stage 3 — Add replaceable AI execution
 
 ### Step 10 — Implement core capabilities and `@pactwright/standard`
 
-**References:** Spec 02 capabilities and Agent Packs.
+**Contract:** [`CP01-S10`](./01-self-hosted-delivery/CP01-S10.yml)
 
-**Run**
+**Deliverables**
 
-```text
-Implement:
-- delivery-specification
-- delivery-execution
-- delivery-review
+- `core-capabilities` — The core capability identities delivery-specification, delivery-execution and delivery-review, and the runtime capability check that a candidate Agent Pack implements each required capability.
+- `agent-pack-loading` — Runtime loading and validation of an Agent Pack's capability mappings, agents, prompts and direct skills, independent of the pack's identity.
+- `standard-agent-pack` — @pactwright/standard, a separate publishable Agent Pack package that implements the three core capabilities without owning graph or lifecycle semantics.
 
-Create `@pactwright/standard` as a separate publishable Agent Pack package.
-The pack maps capabilities to agents/prompts/skills but does not own graph or lifecycle semantics.
-Do not make Pactwright semantics depend on this specific pack identity.
-```
-
-**Expected result**
-
-Core AI responsibilities are replaceable and capability checked.
-
-**Verify before continuing**
-
-Test complete and incomplete fixture packs; incomplete selection leaves valid state intact.
+Step 11 repeats the incomplete-pack proof through `agent-pack use`. Step 22 packs `@pactwright/standard` for clean consumers and Step 28 publishes it. External Production Skills imports remain unsupported until Checkpoint 5.
 
 ### Step 11 — Implement Agent Pack selection and upgrade
 
-**References:** Spec 02 Agent Pack selection and upgrade.
+**Contract:** [`CP01-S11`](./01-self-hosted-delivery/CP01-S11.yml)
 
-**Run**
+**Deliverables**
 
-```text
-Implement:
-pactwright agent-pack use <source>
-pactwright agent-pack upgrade
+- `agent-pack-use` — A pactwright agent-pack use <source> that explicitly selects one compatible complete Agent Pack from a package name, optionally versioned, or a pack path, obtains a package it needs through the project package manager, and updates configuration and lock only after successful resolution and validation.
+- `agent-pack-upgrade` — A pactwright agent-pack upgrade that upgrades the selected pack within its configured compatibility constraints through the project package manager without changing its identity.
+- `package-manager-delegation` — The runtime's single package-manager delegation seam, detecting the project package manager under the DISTRIBUTION#15 rule and issuing its install, request-at-constraint, exact-restore, removal and isolated-acquisition requests, reused by later steps that need packages.
 
-`agent-pack use` resolves a compatible complete pack, validates all required capabilities, updates configuration only after success, locks exact identity, runs sync and reports later GitHub reconciliation needs.
-Never silently switch packs.
-
-`agent-pack upgrade` upgrades the currently selected pack within its configured compatibility constraints without changing Agent Pack identity.
-It validates the complete required capability set before changing the current lock or generated environment.
-Failure leaves the previous valid configuration, lock and generated environment intact.
-```
-
-**Expected result**
-
-Projects explicitly select one complete Agent Pack and can upgrade it independently from the runtime.
-
-**Verify before continuing**
-
-Select standard, switch to a compatible fixture pack, reject an incompatible pack without state loss, upgrade a selected fixture pack to a compatible newer version, then reject an incompatible upgrade while preserving the previous valid environment. Prove an exact configured target remains selected even when a newer compatible package is available; desired constraints do not authorise silently changing pack identity.
+Step 15 repeats the configuration proof with the real resolved lock and Step 17 the sync, Step 14 reuses this selection path for one-shot init, and Step 23 runs `agent-pack use` against installed packed artefacts; real package replacement by `agent-pack upgrade` is proven at Checkpoint 2's component-upgrade step.
 
 ### Step 12 — Implement the seven canonical Claude Code adapter commands
 
-**References:** Specs 01 sections 46–53 and 02 adapter boundary.
+**Contract:** [`CP01-S12`](./01-self-hosted-delivery/CP01-S12.yml)
 
-**Run**
+**Deliverables**
 
-```text
-Render deterministic Pactwright-managed Claude Code agents and these exact commands:
-/capture-intent
-/propose-contracts
-/approve-contract
-/write-brief
-/deliver-brief
-/review
-/prepare-evidence
+- `claude-code-adapter` — Deterministic rendering of Pactwright-managed Claude Code agents and the seven canonical commands from the resolved environment into Pactwright-owned files under .claude/.
+- `adapter-commands` — The seven commands /capture-intent, /propose-contracts, /approve-contract, /write-brief, /deliver-brief, /review and /prepare-evidence, each invoking runtime responsibilities and the selected pack's capabilities within runtime-enforced mutation boundaries.
+- `runtime-hand-off` — The Pactwright-owned hand-off commands under pactwright lifecycle through which a rendered command dispatches a responsibility and hands its structured result to the runtime, recording dispatch and completion of Delivery and Review steps in execution state.
 
-The commands invoke runtime responsibilities and the selected Agent Pack capabilities:
-- capture-intent creates an Intent through the runtime;
-- propose-contracts is graph-read-only and keeps alternatives transient;
-- approve-contract applies normal Decision authority and, for proceed, creates the selected Contract and required lineage;
-- write-brief inspects current state and creates the Brief under its canonical Contract;
-- deliver-brief executes the active Delivery step without directly mutating the Delivery Graph or independently selecting transitions;
-- review evaluates the latest delivered state without creating Evidence or inventing transitions;
-- prepare-evidence invokes all Step 7 preconditions before creating Evidence and its evidences relationship.
-
-Their decomposition does not define lifecycle topology.
-Do not duplicate graph-transition or authority semantics in prompts.
-```
-
-**Expected result**
-
-The adapter exposes the canonical command surface with explicit, runtime-enforced mutation boundaries.
-
-**Verify before continuing**
-
-Assert the exact seven command names, render twice from identical locked inputs and require byte-identical output. Exercise every command's permitted/forbidden mutations, including graph-read-only alternatives, no direct Delivery graph writes, no Evidence from review, and failed premature prepare-evidence. Then complete one valid command lineage.
+The command decomposition does not define lifecycle topology. Step 12 repeats the Step 7 guard, withdrawal and re-authorisation matrix through each mutating command; Step 24 completes a full Delivery through the generated adapter.
 
 ### Step 13 — Implement Pactwright evaluation and baseline comparison
 
-**References:** Spec 02 evaluation and baseline/regression reporting.
+**Contract:** [`CP01-S13`](./01-self-hosted-delivery/CP01-S13.yml)
 
-**Run**
+**Deliverables**
 
-```text
-Implement `pactwright eval` with core responsibility cases for Contract fidelity, scope discipline, Brief quality, Review quality/defect detection, Evidence accuracy and lifecycle compliance, plus required output structure and forbidden mutation.
+- `eval-command` — A pactwright eval that runs core responsibility evaluation against the resolved AI execution environment, keeping deterministic assertions separate from semantic judgement.
+- `core-eval-cases` — Core-owned evaluation cases for Contract fidelity, scope discipline, Brief quality, Review quality and defect detection, Evidence accuracy and lifecycle compliance, plus required output structure and forbidden mutation.
+- `baseline-comparison` — A pactwright eval --baseline --candidate comparison that resolves both sides exactly and reports regressions by capability, agent, case and changed environment component.
 
-Evidence accuracy cases compare claimed delivered work and verification with actual recorded results.
-Lifecycle compliance cases cover authority, Gate stopping, valid transitions and successful closing Review before Evidence.
-
-Implement the canonical comparison surface:
-pactwright eval --baseline <released-pack-or-baseline> --candidate <candidate-pack-or-environment>
-
-Keep deterministic assertions separate from semantic judgement.
-Report regressions by meaningful dimensions such as capability, agent, evaluation case and changed Agent Pack/prompt/direct-skill environment.
-Do not compute one opaque aggregate score.
-
-Before the first public release, prove comparison mechanics with exact fixture/pinned package inputs. After `0.0.1` is published, Step 28 must prove resolution against the real released baseline.
-```
-
-**Expected result**
-
-The AI execution environment is evaluable independently from a real Delivery and candidate changes can be compared against an exact baseline.
-
-**Verify before continuing**
-
-Run core eval, compare compatible baseline/candidate fixtures and introduce known regressions in Evidence accuracy and lifecycle compliance. Require each to appear at its affected capability/agent/case dimensions rather than being hidden in an aggregate result.
+Step 13 proves comparison with exact fixture and pinned package inputs and exercises the cases through scripted invokers and judges; Checkpoint 1 supplies no provider invoker, so the command-line eval reports its cases as not evaluated. Step 28 resolves the real released `@pactwright/standard@0.0.1` baseline.
 
 ## Stage 4 — Implement exact environment resolution and local composition
 
 ### Step 14 — Implement `pactwright init` with explicit Agent Pack selection
 
-**References:** Spec 02 initialisation/configuration and Agent Pack selection.
+**Contract:** [`CP01-S14`](./01-self-hosted-delivery/CP01-S14.yml)
 
-**Run**
+**Deliverables**
 
-```text
-Implement init so a clean repository receives only Pactwright-owned core configuration/Project Graph structure.
-Checkpoint 1 keeps GitHub disabled and creates no Pactwright-managed GitHub workflow.
-Do not silently select or switch Agent Pack identity.
+- `init-command` — A pactwright init that gives a repository only Pactwright-owned core configuration and Project Graph structure, reported as an incomplete scaffold until an Agent Pack is explicitly selected.
+- `init-pack-selection` — The init --agent-pack <source> option, through which initialisation obtains an explicit compatible Agent Pack choice in the agent-pack use source grammar, resolved and validated through the agent-pack use selection path rather than a second resolver.
 
-A plain init may create the initial scaffold before `agent-pack use` explicitly selects a pack; do not claim that scaffold is a complete activated execution environment.
-For compositional init that activates an Extension or later GitHub integration, obtain an explicit compatible Agent Pack choice through the documented normal init selection interaction/input before activation. Reuse agent-pack selection/resolution, not a second resolver.
-
-Tests must supply the same explicit pack source and target version in both the one-shot and explicit setup paths. With no supplied choice, do not activate dependent features or silently choose standard.
-Exact input ergonomics are implementation details; do not invent an additional canonical CLI flag in this runbook.
-```
-
-**Expected result**
-
-A clean repository can initialise safely, and one-shot activation preserves explicit pack authority.
-
-**Verify before continuing**
-
-Run init in a temporary repository with unrelated files. Test scaffold then explicit `agent-pack use`, explicit selection during one-shot init, missing selection, incompatible selection and preservation of an existing pack choice. Require no Extension activation on missing/incompatible selection and no unrelated writes.
+Step 16 reuses the selection input for one-shot init with a fixture Extension, and Step 23 repeats it with packed artefacts.
 
 ### Step 15 — Implement config/lock agreement and `environment_lock_hash`
 
-**References:** Spec 02 locking; Implementation Guide replay provenance.
+**Contract:** [`CP01-S15`](./01-self-hosted-delivery/CP01-S15.yml)
 
-**Run**
+**Deliverables**
 
-```text
-Resolve and lock the exact Pactwright execution environment: runtime, selected Agent Pack, resolved agents/direct skills and fixture Extensions once Step 16 is available.
-Retain integration seams for the external Production Skills resolver delivered in Checkpoint 5; do not implement or pretend to resolve those imports here.
+- `environment-lock` — Resolution of the exact Pactwright execution environment, covering the runtime, the selected Agent Pack and its resolved agents and direct skills, into the version 1 .pactwright/lock.yml.
+- `lock-agreement` — A check that the package-manager lock and .pactwright/lock.yml agree on every runtime and package-backed component version they both identify, applied before a new environment is accepted.
+- `environment-lock-hash` — A deterministic environment_lock_hash derived from the exact resolved lock state, forming the shared replay base with the repository and Project Graph revisions.
 
-Configuration records desired constraints. The package-manager manifest/lock records installed packages; `.pactwright/lock.yml` records the resolved Pactwright environment.
-The two locks must agree on every runtime and package-backed component version they both identify.
-Record exact package/source, version, content identity and resolved dependencies as applicable.
-Reject lock mismatch or incompatible resolution before accepting a new environment or replacing generated integration.
-
-Derive deterministic `environment_lock_hash` from the exact resolved `.pactwright/lock.yml` state.
-The shared replay base is:
-repository_revision + project_graph_revision + environment_lock_hash
-```
-
-**Expected result**
-
-Identical exact environments produce identical locks/hashes and inconsistent installed/resolved state is not accepted.
-
-**Verify before continuing**
-
-Resolve twice and compare byte-for-byte, then change one resolved identity and require a hash change. Test runtime/Agent Pack lock disagreement and tampered component identity; repeat for package-backed fixture Extensions in Step 16. Failed resolution preserves the previous valid environment.
+Step 16 adds package-backed fixture Extensions to the lock and repeats the agreement proof. External Production Skills resolution remains a Checkpoint 5 capability.
 
 ### Step 16 — Implement transaction-safe Extension mechanics and one-shot init composition
 
-**References:** Spec 02 sections 10–15 and one-shot initialisation.
+**Contract:** [`CP01-S16`](./01-self-hosted-delivery/CP01-S16.yml)
 
-**Run**
+**Deliverables**
 
-```text
-Using fixture Extensions only, implement manifest loading, graph contribution registration, command namespaces, capability contribution and GitHub profile metadata.
+- `extension-loading` — Loading of installed fixture Extension packages through the Distribution §11 manifest, covering graph.format_version, the registration export, declared storage, decoders, schemas and projections, graph contribution registration, command namespaces, capability contribution and GitHub profile metadata.
+- `extension-commands` — pactwright extension add, disable, remove and upgrade, which install, deactivate, remove and upgrade fixture Extensions and their dependencies transactionally, with exact locking, declared versioned migrations and preserved user-authored data.
+- `one-shot-init` — A pactwright init --with <extension> that composes normal init, explicit Agent Pack selection through --agent-pack, normal Extension installation and sync, producing the same state as the equivalent separate operations.
 
-Implement:
-pactwright extension add <id-or-package>
-pactwright extension remove <id>
-pactwright extension upgrade <id>
-
-Installation must:
-- resolve a compatible package and the complete Extension dependency graph;
-- validate runtime/schema compatibility and the selected pack's complete required capability set before activation or canonical mutation;
-- install required dependencies first through the same normal installation path;
-- delegate package installation to the project package manager;
-- register the Extension in project configuration;
-- record exact package/version/hash and resolved dependencies in the Pactwright lock, consistent with the package-manager lock;
-- create owned repository structure only for the valid environment;
-- run normal sync;
-- report any later GitHub provisioning needs without mutating remote state.
-
-On incompatibility or installation/sync failure, preserve or restore the previous valid package/configuration/lock/generated environment and leave no partial canonical graph mutation. Never silently switch Agent Packs.
-
-Upgrade validates every enabled dependent Extension and the complete capability set. Canonical schema changes use explicitly defined versioned migrations, not silent reinterpretation. Protect canonical state from partial migration and preserve recovery to the prior valid environment.
-
-Removal/disable preserves user-authored canonical data. Remove only unambiguously owned generated contributions no enabled component still requires. Reject removal of a required dependency unless the dependent is disabled/removed in the same supported operation. Preserve ambiguous ownership and report it.
-
-Do not implement first-party Extension semantics yet.
-
-One-shot `pactwright init --with <fixture-extension>` composes normal init + explicit Agent Pack selection + normal Extension installation + sync, using Step 14's documented selection input.
-Later first-party Extension ids and `--github` reuse this composition mechanism; they do not create a new setup implementation.
-```
-
-**Expected result**
-
-Later Extensions can compose through one transactional distribution path, and one-shot initialisation uses the same explicit selection and managed operations as separate setup.
-
-**Verify before continuing**
-
-Exercise dependency-first add, exact lock agreement, compatible upgrade/migration, incompatible dependent upgrade, missing capability, blocked removal, safe disable and preserved canonical data. Inject package, migration and sync failures; require no partial graph records and restoration/recoverability of the previous valid environment without a pack switch.
-
-Repeat Steps 5 and 9 through the actual fixture Extension loader: its canonical node/edge mutation changes `project_graph_revision`; its generated files and execution output do not; attempted redefinition of core semantics fails.
-
-Compare clean one-shot and explicit init + `agent-pack use` + `extension add` + sync paths using the same explicitly chosen compatible fixture pack/version. Require equivalent configuration, package locks, resolved environment identity, canonical structure and generated output, not merely successful exit codes.
+Step 16 repeats the Step 2 to 5 and Step 9 proofs through the installed fixture Extension loader. First-party Extensions and `--github` reuse this composition in later checkpoints. Step 23 repeats one-shot init with packed artefacts.
 
 ### Step 17 — Implement deterministic `pactwright sync`
 
-**References:** Spec 02 synchronisation.
+**Contract:** [`CP01-S17`](./01-self-hosted-delivery/CP01-S17.yml)
 
-**Run**
+**Deliverables**
 
-```text
-Implement sync over config + lock + enabled fixture Extensions + selected Agent Pack and its direct skills.
-Validate the complete supported composition and lock agreement before rendering only Pactwright-managed local integration.
-Checkpoint 1 renders no GitHub product workflow.
-External Production Skills imports remain a Checkpoint 5 capability; report them as unsupported rather than silently dropping or resolving them.
-Repeated sync with identical locked inputs must be byte-identical.
-```
+- `sync-command` — A deterministic pactwright sync that validates the configured and locked composition, including enabled fixture Extensions and the selected Agent Pack with its direct skills, and renders only Pactwright-managed local integration.
 
-**Expected result**
-
-Local generated integration converges without claiming later Production Skills support.
-
-**Verify before continuing**
-
-Run sync twice in a fixture and require a clean second run. An unsupported external import or lock mismatch must fail without replacing the previous generated environment; unrelated local files remain unchanged.
+Step 17 repeats the Step 11 selection sync and Step 12 rendering through real sync. Step 23 requires a clean second sync in a packed consumer.
 
 ### Step 18 — Implement `pactwright doctor`
 
-**References:** Spec 02 doctor.
+**Contract:** [`CP01-S18`](./01-self-hosted-delivery/CP01-S18.yml)
 
-**Run**
+**Deliverables**
 
-```text
-Implement read-only diagnostics for runtime/package-manager state, config/lock consistency, capability/dependency compatibility, migrations, generated local drift and validation failures.
-Report available runtime upgrades where determinable.
-Identify configured external Production Skills imports as unsupported by this release, rather than claiming the full dependency diagnostics implemented in Checkpoint 5.
-Report healthy / warning / action required with deterministic remediation commands where known.
-Do not auto-fix or create a second GitHub reconciler.
-```
+- `doctor-command` — A read-only pactwright doctor that diagnoses runtime, package-manager, configuration, lock, capability, migration, generated-drift and validation problems as healthy, warning or action required, with deterministic remediation commands where known.
 
-**Expected result**
-
-Environment problems can be diagnosed without mutation and the reported capability boundary matches the installed release.
-
-**Verify before continuing**
-
-Run healthy, lock-drift, missing-capability, pending-migration and unsupported-import fixtures. Prove doctor performs no writes and gives concrete remediation only when supported and deterministic.
+Step 19 relies on doctor to report released `0.0.1` projects as migration required before upgrade.
 
 ### Step 19 — Implement Pactwright runtime upgrade and rollback-safe failure
 
-**References:** Spec 02 upgrade model; Implementation Guide package/release rules.
+**Contract:** [`CP01-S19`](./01-self-hosted-delivery/CP01-S19.yml)
 
-**Run**
+**Deliverables**
 
-```text
-Implement:
-pactwright upgrade
-pactwright upgrade --to <version>
+- `runtime-upgrade` — pactwright upgrade and pactwright upgrade --to <version>, which replace the runtime through the detected project package manager, re-enter through the new runtime as a child process and, through the upgrade recovery record, leave the environment valid at the target, runtime-ahead of components that pin an older runtime, or recoverable to the previous runtime, except that the entry from a runtime without this protocol, whose package was replaced before any record existed, recovers only the previous stores under the installed runtime.
+- `released-format-migration` — The named released-0.0.1-to-owned-stores-v1 migration, which moves a complete released 0.0.1 project to owner-separated stores and the version 1 lock without partial moves, and writes a legacy-closure execution-state document for each Brief with current Evidence and no execution-state document.
 
-The runtime upgrade flow must:
-- detect the project package manager from explicit declaration or unambiguous lock state;
-- resolve the target Pactwright release;
-- delegate package replacement to that package manager;
-- re-enter through the newly installed Pactwright runtime;
-- validate the complete resolved environment;
-- run explicit versioned migrations where required;
-- update `.pactwright/lock.yml`;
-- run `pactwright sync` and `pactwright validate` using the new runtime.
-
-`pactwright upgrade` upgrades the runtime only. It must not silently change Agent Pack or Extension identity or major-upgrade them.
-`--to` supports explicit forward upgrade or rollback target selection.
-If the target environment cannot complete safely, canonical Project Graph state must not be left partially migrated and enough prior package/config/lock state must remain to recover or explicitly target the previous runtime.
-```
-
-**Expected result**
-
-Pactwright can safely replace its own runtime without becoming a second package manager or corrupting canonical state.
-
-**Verify before continuing**
-
-Use packed fixture runtime versions to prove latest-compatible upgrade, explicit `--to` upgrade/rollback, package-manager detection, new-runtime re-entry, unchanged Agent Pack/Extension identities, migration execution and failed-target recovery with the previous valid Project Graph/config/lock intact.
+Step 19 proves upgrade with packed fixture runtimes. Step 28 publishes the corrective `0.0.2` release.
 
 ## Stage 5 — Establish repository CI and release safety
 
 ### Step 20 — Implement repository verification workflow
 
-**References:** Implementation Guide GitHub Actions baseline.
+**Contract:** [`CP01-S20`](./01-self-hosted-delivery/CP01-S20.yml)
 
-**Run**
+**Deliverables**
 
-```text
-Create repository-owned `.github/workflows/ci.yml` using least privilege, SHA-pinned actions, frozen install, `pnpm verify`, bounded timeout/concurrency and no pull_request_target.
-This is repository engineering infrastructure, not generated Pactwright product integration.
-```
+- `ci-workflow` — A repository-owned .github/workflows/ci.yml that runs the root pnpm verify gate on a clean GitHub-hosted checkout under the Implementation Guide hardening rules.
 
-**Expected result**
-
-A clean checkout proves the same repository gate used locally.
-
-**Verify before continuing**
-
-Run `pnpm verify` and inspect workflow hardening.
+Step 25 requires this CI to pass for the self-hosted repository. `pactwright sync` leaves the workflow untouched (CP01-S17/AC02).
 
 ### Step 21 — Implement trusted release workflow
 
-**References:** Implementation Guide npm release model.
+**Contract:** [`CP01-S21`](./01-self-hosted-delivery/CP01-S21.yml)
 
-**Run**
+**Deliverables**
 
-```text
-Create repository-owned `.github/workflows/release.yml` following the trusted-release contract: exact tagged source, frozen install, verify, publish dry-run, OIDC publishing after bootstrap, registry verification, no npm publish token.
-```
+- `release-workflow` — A repository-owned .github/workflows/release.yml that publishes the accepted tagged source of pactwright and @pactwright/standard through npm trusted publishing and verifies the registry result.
 
-**Expected result**
-
-A version tag can later release accepted source reproducibly.
-
-**Verify before continuing**
-
-Validate workflow syntax, permissions and release assertions.
+Step 21 validates the workflow without publishing. Step 28 runs it on the `v0.0.2` tag, the first publish through trusted publishing, and verifies the registry.
 
 ## Stage 6 — Prove packed consumer behaviour
 
 ### Step 22 — Pack runtime and standard Agent Pack
 
+**References:** Implementation Guide — Package metadata, Test layers; Distribution §5; OSS §§6, 25
+
 **Run**
+
+From a clean checkout of the candidate revision with no prior build output:
 
 ```bash
 pnpm pack --out /tmp/pactwright-checkpoint-1.tgz
 pnpm --filter @pactwright/standard pack --out /tmp/pactwright-standard-checkpoint-1.tgz
 ```
 
+`prepack` builds each package. From the same checkout, also pack the two fixture Extension packages of the repository test suite that later steps install: the fixture Extension used for one-shot init in Step 23 and the defective fixture Extension used for validation rule 16 in Step 24. They are test assets, packed into their own archives and never published. Record the candidate revision and, for each of the four archives, its sorted list of entry paths with the SHA-256 of each entry; that list is the archive's identity. Steps 23 and 24 install exactly these archives. Steps 26 and 27 re-run this procedure on their own candidate revisions and record their own identities; an archive is never reused for a changed revision. Step 28 publishes through the release workflow, which packs the tagged source itself.
+
 **Expected result**
 
-Real consumer artefacts exist for both components.
+Real consumer artefacts exist for both components, packed from one recorded revision, together with the two fixture Extension archives the consumer fixtures need.
 
 **Verify before continuing**
 
-Inspect both archives.
+Inspect the four archives:
+
+- each archive's manifest names its package and version, and the two published archives carry the same version;
+- every declared `main`, `types`, `bin` and `exports` target resolves inside its archive;
+- the runtime archive holds only the built runtime, its manifest, `LICENSE` and `README.md`; the pack archive holds only `dist`, `pack.yml`, `agents`, `skills`, its manifest, `LICENSE` and `README.md`; neither holds a test, fixture, checkpoint contract, Project Graph record, configuration, execution-state or source file;
+- the runtime manifest depends on `@pactwright/standard` at the exact version of the pack archive, rewritten from `workspace:*`, never a range, dist-tag or workspace reference;
+- each fixture Extension archive holds only its own package and declares no dependency outside the runtime, and neither fixture Extension appears in either published archive;
+- repacking the same revision yields the same identity for every archive, and a revision that changes one packaged file changes only that archive's identity.
 
 ### Step 23 — Install and initialise clean consumer fixtures
+
+**References:** Distribution §§3, 5, 10, 14, 16; Implementation Guide — Test layers, Execution location
 
 **Run**
 
@@ -753,7 +424,15 @@ pnpm pactwright validate
 pnpm pactwright lifecycle status
 ```
 
+A clean repository is a fresh Git repository in a temporary directory, created with `pnpm init`, with no workspace link, path dependency or global installation that reaches the source repository. Install the runtime archive as a development dependency. Until Step 28 publishes, the runtime's exact dependency on `@pactwright/standard` cannot resolve from the registry, so the pack archive is supplied through a local-package override; record it; it is the fixture's only deviation from a published consumer. `agent-pack use @pactwright/standard` resolves the pack from the runtime's own dependencies and makes no package-manager request. Every command runs the installed package's entry point from the fixture's `node_modules`, never the source repository's build.
+
 In a second clean fixture, prove one-shot init with a fixture Extension and explicitly supply the same compatible packed Agent Pack source/version through the documented init selection input. Compare against the equivalent explicit operations; pack installation alone is not pack selection.
+
+The one-shot command is `pnpm pactwright init --with <fixture-extension-id> --agent-pack @pactwright/standard@<archive version>`. The fixture Extension is the one-shot fixture Extension archive Step 22 recorded, installed through the same override; it is never part of either published archive. The equivalent explicit operations run in a third clean fixture: `init`, `agent-pack use` with the same source and version, `extension add <fixture-extension-id>` and `sync`.
+
+In a fourth clean fixture with the runtime, pack and fixture Extension installed, prove the negative, in this order: `init --with <fixture-extension-id>` without `--agent-pack` is refused and leaves the fixture byte-identical; plain `init` then selects no pack and reports an unactivated scaffold; `sync` and `lifecycle run` then refuse naming the missing selection.
+
+Keep the explicit-path fixture in its recorded state; Step 24 starts from it.
 
 **Expected result**
 
@@ -761,9 +440,16 @@ A repository becomes a valid Pactwright consumer from packed artefacts only, and
 
 **Verify before continuing**
 
-Doctor has no action-required issue; validation/status pass; second sync is clean; explicit and one-shot composition resolve equivalent state.
+- `init` creates only the scaffold; `agent-pack use` locks the configured source, the archive's exact version and content hash with no package-manager request; `doctor` exits zero reporting healthy; `validate` exits zero; `lifecycle status` reports no lineage, blocked at `capture-intent` with required actor human;
+- a second `sync` in each fixture changes no file;
+- the one-shot and explicit fixtures hold byte-identical configuration, lock, canonical stores and generated files, with the Extension enabled and locked;
+- the negative cases behave as stated;
+- no command loaded a module from the source repository;
+- the evidence records, per fixture, the archive identities, Node and pnpm versions, `.pactwright/lock.yml` and `environment_lock_hash`.
 
 ### Step 24 — Complete one full fixture Delivery
+
+**References:** Core §§3, 8, 9, 27, 44, 46–53, 57; Distribution §§14, 21; Implementation Principles §10
 
 **Run**
 
@@ -773,21 +459,43 @@ Use the generated adapter to complete:
 Intent → Contract alternatives → authorised Decision → Contract → Brief → Delivery → Review → Evidence
 ```
 
-Then run validation/status and the complete core invariant suite through the assembled runtime, adapter and fixture Extension loader.
+In the Step 23 explicit-path fixture, run the seven commands in order through the Claude Code adapter session the run configuration names, recording its provider, model, skill and selected-pack identities. This is Checkpoint 1's first execution of the pack's agents by a real model; no scripted result stands in for an agent. The Intent is "Create one small repository artefact that proves the complete Pactwright Delivery lifecycle." `/approve-contract` runs under the fixture's released policy, manual with actor kind human: the approving human the run configuration names selects the alternative and is recorded unchanged as `decided_by`; the policy is not edited to admit another actor.
+
+Then run validation/status and the complete core invariant suite through the assembled runtime, adapter and fixture Extension loader, including the strengthened Stage 1 cases and Step 12 guard/withdrawal/re-authorisation matrix.
+
+The complete core invariant suite is a fresh execution, on the revision Step 22 packed, of these accepted criteria: CP01-S09/AC01, AC03, AC04 and AC06; CP01-S07/AC12 and AC13; CP01-S12/AC02, AC03, AC04, AC06, AC08 and AC10; CP01-S13/AC01 to AC07; every automated criterion of CP01-S02 to CP01-S05; and CP01-S16/AC10 to AC13 and AC17, which carry the Stage 1 cases through the installed fixture Extension.
 
 **Expected result**
 
 The full canonical Delivery lineage completes with alternatives/execution transcripts remaining non-canonical.
 
+The fixture graph holds exactly one lineage of five records and their `resolves`, `selects`, `decomposes` and `evidences` edges, deriving done. Execution state lives under `.pactwright/`, and `project_graph_revision` changed only when a record or edge was written. The delivered artefact exists, and the Evidence names it and the closing Review.
+
 **Verify before continuing**
 
 Inspect durable Project Graph state. Require all 17 validation cases, Evidence precondition failures, seven adapter mutation-boundary cases and complete core evaluation dimensions to pass before self-hosting.
+
+Run `pactwright lifecycle status`, `next` and `run` on the fixture consumer at each lineage position. `run` must stop cleanly at manual entries and, for capability-backed automatic responsibilities, with the missing-invoker execution failure; it must not simulate any output. The consumer's lifecycle `version: 1` cannot declare Gates, corrective routes or iteration bounds, so validation rules 10, 11, 14 and 15 are proven by the repository test suite against the built runtime through the Step 6 fixture definitions; the packed consumer proves the other validation rules, and the published package exposes no fixture-definition entry point.
+
+Under the released policy the positions and stops are: with no lineage, `run` stops at the manual `capture-intent`; at open, contracted, the Delivery step, the Review step and the closure step after a closing Review with outcome may-progress, it stops with the missing-invoker execution failure at `propose-contracts`, `write-brief`, `deliver-brief`, `review` and `prepare-evidence` respectively; at done it performs no step. With no lineage, `status` reports what the Step 23 verify states and `next` names `capture-intent` with required actor human; at the closure position, `status` reports the closure step as current and `next` names `prepare-evidence`, the shape step, as CP01-S08/AC01's "shape step otherwise" branch gives, although AC01 lists no closure case, and otherwise report everything AC01's `then` requires, with the Delivery and Review steps completed; at every other position `status` and `next` report what CP01-S08/AC01 defines. No position changes a canonical file.
+
+The packed consumer proves validation rules 1–9, 12, 13, 16 and 17 through the installed CLI, each on a copy of the fixture whose only defect is that rule's; rule 16 uses the defective fixture Extension archive Step 22 recorded and rule 17 a replay-base document. The seven mutation-boundary cases are the cases of CP01-S12/AC03, and the Evidence precondition failures are the cases of CP01-S12/AC10 other than `pending-gate`, which version 1 policy cannot express; each runs through the installed CLI's hand-off commands with scripted results.
+
+The complete core evaluation dimensions are proven by the repository test suite against the built runtime through scripted invokers and judges; `pnpm pactwright eval` on the fixture consumer reports every case as not evaluated, names no invoker and exits with failure, since Checkpoint 1 supplies no provider invoker, and it simulates no result.
+
+Rerun the strengthened Stage 1 loading, record, edge, lineage and revision cases through the assembled runtime and installed fixture Extension. Include non-node canonical contributions, withdrawal/re-authorisation, actor-policy denial and no-write failure controls. Neither schema validation of these contract files nor their declared verifier IDs count as execution evidence.
+
+Withdrawal and re-authorisation are CP01-S12/AC06, actor-policy denial CP01-S09/AC04 and CP01-S12/AC04 `disallowed-actor-kind`, and the no-write failure controls CP01-S12/AC04; each result names the revision it ran on. Independent review confirms that the Evidence's statements match the artefact and the Review, and that every result is an executed observation on the packed revision. The fixture Contract's approval is recorded as an approval by the named human.
 
 ## Stage 7 — Adopt Pactwright in Pactwright
 
 ### Step 25 — Initialise the Pactwright repository
 
+**References:** OSS §16; Implementation Principles §§3, 11; Distribution §§3, 5, 12, 14; Core §§54, 56; Implementation Guide — GitHub Actions, Repository changes
+
 **Run**
+
+Start from the candidate revision, which holds no Pactwright project state. The self-hosted records, configuration and unversioned lock on the default branch before the candidate lands are not migrated or copied; they remain Git history. The repository owner approves this project-state boundary before the step runs.
 
 ```bash
 pnpm build
@@ -800,24 +508,39 @@ pnpm pactwright lifecycle status
 pnpm verify
 ```
 
+The repository-local CLI runs the built package entry point. `agent-pack use @pactwright/standard` resolves the workspace package `packages/standard` through the project's installed packages with no package-manager request, and records the pack's exact version and content identity. The `pactwright` package is not added as a dependency of its own repository.
+
+With the pack installed as a workspace link, the package-manager lock identifies no pack version, so lock agreement rests on the runtime version and on the pack's recorded content identity. After any change to `packages/standard`, `doctor` reports action required and `sync` refuses until `agent-pack use @pactwright/standard` re-resolves the pack and records its new identity.
+
 Land self-hosting state through the repository process available before Checkpoint 2 product GitHub integration exists.
+
+That process is a pull request that the repository owner merges with `CI / Verify` succeeding on the pull request and on the resulting default-branch commit, which is the first real default-branch run of the Step 20 workflow. Configuration keeps GitHub disabled and no Pactwright-generated workflow exists; the default branch's required-check state is recorded in the run configuration.
 
 **Expected result**
 
 Pactwright is now a valid Pactwright project.
 
+The acceptance of this step is Checkpoint 1's self-hosting threshold: from it, checkpoint requirement `CP01/R02` applies to every later step and every corrective re-run.
+
 **Verify before continuing**
 
 Second sync is clean and repository CI passes.
 
+- the self-hosting commit adds only Pactwright-owned files: `.pactwright/config.yml`, `lifecycle.yml` and `lock.yml`, `specs/nodes/.gitkeep`, `specs/graph/edges.yml` and the rendered files under `.claude/`, with no execution-state document, report or hand-written Pactwright-owned file;
+- `doctor` exits zero reporting healthy and `validate` exits zero; after the merge, the repository revision resolves to the default-branch commit and the Project Graph revision is the pg1 empty-graph digest;
+- an independent resolution of the environment yields a lock byte-identical to the committed one;
+- in a disposable copy of the initialised repository, never committed, editing one prompt under `packages/standard` makes `doctor` report action required and `sync` refuse, and `agent-pack use @pactwright/standard` then records the new identity, after which `doctor` reports healthy.
+
 ### Step 26 — Deliver a real self-hosted Quick Start improvement
 
-**References:** Spec 08 Core Delivery public milestone.
+**References:** Spec 08 Core Delivery public milestone (OSS §24); OSS §§16–18; Implementation Principles §7; Implementation Guide — Public-content authority before Project Intelligence, npm release model
 
 **Run**
 
 Use Pactwright itself to improve the Quick Start based only on behaviour proven in this checkpoint.
 Before PI exists, identity/positioning/product choices required by this public work must be authorised through Decision + Contract rather than invented.
+
+Run the seven commands through the adapter in the self-hosted project. The repository owner is the approving human: the Decision selects a Contract that states the claims, positioning and proven behaviour the Quick Start may use, and a claim the Contract does not authorise is a Review failure. Proven behaviour is a command or behaviour with an accepted Checkpoint 1 criterion result or Step 23 or 24 packed-consumer evidence; this step's own clean-fixture execution below confirms that proven set on this revision and adds nothing to it. The install instruction names `pactwright@0.0.2` exactly, because `latest` stays at `0.0.1` until `0.1.0` (Implementation Guide — npm release model). The Quick Start documents no Extension, GitHub integration, Project Intelligence or provider-invoking `lifecycle run` as available. The change lands through a pull request the owner merges with `CI / Verify` passing.
 
 **Expected result**
 
@@ -827,9 +550,13 @@ Pactwright completes a real public-product change through itself.
 
 Evidence and public instructions agree with clean-consumer behaviour.
 
-## Stage 8 — Complete the `0.0.1` public learning path
+Follow the Quick Start in a clean fixture built by the Step 23 procedure from archives packed from this revision, with the exact-version install mapped to them: every instruction produces its documented result. Every command the Quick Start names is in the proven set. The lineage validates and derives done, the owner is recorded as decider, the README changed only during the Delivery step, and `pnpm verify` passes.
+
+## Stage 8 — Complete the `0.0.2` public learning path
 
 ### Step 27 — Deliver Core Delivery learning material
+
+**References:** OSS §§3, 11, 14, 24; Implementation Principles §14; Implementation Guide — Public-product progression; Distribution §27
 
 Through normal Pactwright Delivery, produce/update:
 
@@ -839,24 +566,28 @@ Getting Started guide
 one executable Core Delivery example
 ```
 
-Only document proven behaviour, including the core distribution commands shipped in `0.0.1`.
+Only document proven behaviour, including the core distribution commands shipped in `0.0.2`.
+
+Proven behaviour and the approving owner are as in Step 26. The Getting Started guide lives at `docs/getting-started.md`, linked from the README, and the example at `examples/core-delivery/README.md`. Across the three documents the material covers the Distribution §27 surface a core user needs, installation, initialisation by `init --agent-pack` and by `init` followed by `agent-pack use` and `sync`, `doctor`, `validate`, `pactwright upgrade` and `upgrade --to` and `agent-pack upgrade`, together with the Core §46 commands: `lifecycle status`, the seven adapter commands with the mutation each is permitted, and the honest posture of `lifecycle run` and `eval` without an invoker. It documents no Extension, GitHub integration or Project Intelligence as available. Every install instruction names `pactwright@0.0.2` exactly. The material and its lineages land on the default branch through pull requests the owner merges with `CI / Verify` passing, before Step 28 tags the release.
 
 **Expected result**
 
-A new user can understand/install/execute/upgrade `0.0.1` without future Extensions.
+A new user can understand/install/execute/upgrade `0.0.2` without future Extensions.
 
 **Verify before continuing**
 
 Follow the material in a clean packed-consumer fixture.
 
-## Stage 9 — Publish `0.0.1`
+Each lineage validates and derives done with the owner recorded as decider, and the documents changed only during Delivery steps. The fixture is built by the Step 23 procedure from archives packed from this revision, with the exact-version install mapped to them. Every command runs as documented; the example ends with `validate` exiting zero on a done lineage; `pactwright upgrade` reports no compatible newer release and `agent-pack upgrade` reports nothing changed. Every command the material names exists in the shipped CLI, and README, guide and example agree on one command surface. A reviewer given only the shipped material installs, completes one Delivery and upgrades without outside knowledge; any point where outside knowledge was needed is a content gap that fails the step.
+
+## Stage 9 — Publish `0.0.2`
 
 ### Step 28 — Publish the corrective release and prove a real released baseline
 
-**References:** Implementation Guide npm release model; Spec 02 baseline evaluation.
+**References:** Implementation Guide — npm release model, Preparing a development release, Trusted release workflow, Release failure; Spec 02 §§15, 24 (baseline evaluation)
 
-`0.0.1` was published on 2026-09-01 against version 14 of this runbook, before
-the corrections version 15 introduced. npm reserves a version number
+`0.0.1` was published on 2026-09-01 against version 12 of this runbook, the
+version tagged `v0.0.1`, before the corrections later versions introduced. npm reserves a version number
 permanently once used, so `0.0.1` cannot be re-cut; it stays on the registry
 as the released baseline, which is what the comparison below needs.
 
@@ -867,9 +598,16 @@ pactwright@0.0.2
 @pactwright/standard@0.0.2
 ```
 
-The npm trusted-publisher bootstrap was completed for `0.0.1`, so `release.yml`
-already publishes both packages without a token. Tag accepted source as
-`v0.0.2` and verify the tag workflow.
+Both `0.0.1` versions were published interactively on 2026-09-01 and the
+`v0.0.1` run of `release.yml` published nothing, so the `v0.0.2` run is the
+first publish through trusted publishing and its provenance attestations are
+the first evidence of the trusted-publisher entries. Tag accepted source as
+`v0.0.2` and verify the tag workflow, its `npm-release` deployment record and
+each published version's provenance attestation (CP01-S21/R04).
+
+Prepare the release through a release pull request (Implementation Guide — Preparing a development release): every publishable version at `0.0.2`, the lockfile refreshed, `pnpm verify` and the publish dry-run passing, and the `CHANGELOG.md` entry dated and written from accepted work only: work delivered after Step 25's acceptance cites its Evidence in the source that will be tagged, and work accepted up to and including Step 25's acceptance is described from its accepted step or criterion results; the entry cites no Evidence outside the tagged Project Graph. The pull request changes nothing else and the owner merges it with `CI / Verify` passing. The owner's push of `v0.0.2` to the merged release commit is the publish authority. The tagged tree holds the README Quick Start, `docs/getting-started.md`, `examples/core-delivery/README.md` and the Step 26 and 27 Evidence records. Nothing is published interactively.
+
+Before any publication, a failed run is fixed and rerun, and a tag that published nothing may be deleted and recreated by the owner on the corrected commit. After a publication the version is consumed: a defect in the published `0.0.2` is fixed forward with the next unused `0.0.x` under an owner-approved amendment of this checkpoint's Release line, the Implementation Guide's version tables and later checkpoints' Release lines (Implementation Guide — Release failure), never by unpublishing, overwriting or moving `latest`.
 
 **Verify before continuing**
 
@@ -887,15 +625,21 @@ per-capability/agent/case comparison results. A candidate whose behaviour is
 unchanged may correctly report no regressions; the purpose is to prove the
 real released-baseline path, not manufacture a difference.
 
+- the tag run succeeded through registry verification with its `npm-release` deployment record; each published version carries a provenance attestation naming this repository and workflow; each package lists exactly `0.0.1` and `0.0.2`, with `next` at `0.0.2` and `latest` at `0.0.1`;
+- the comparison runs from the Pactwright repository root; it acquires the baseline through the package-manager delegation seam into an isolated location, leaving the project's packages and locks byte-identical; records the baseline's exact version and content hash and the candidate's; reports the baseline's declared runtime `0.0.1` as an incompatible component; with no invoker, reports every candidate-dependent assertion as not comparable and names no invoker or judge; lists the changed agent, prompt and skill components and no regression; exits zero; and writes its report only to standard output or a named path;
+- in a clean fixture outside the workspace, `pnpm add -D pactwright@0.0.2` installs the runtime and pack from the registry with no override, and the Step 23 explicit path passes.
+
 ## Stage 10 — Prove the published release on Kakeibo
 
 Use the final Checkpoint 1 package on the persistent external proving project.
 
 Kakeibo may still be a documentation-first/pre-implementation repository at this point. The only pre-Pactwright bootstrap permitted here is the minimum pnpm package/workspace root required to install a development dependency. Full Turborepo/application infrastructure belongs to Checkpoint 2.
 
+The Kakeibo owner authorises writes to the Kakeibo repository and every commit to its default branch in Steps 29 and 30. The run configuration names the Kakeibo repository and its starting revision, and Step 29 records the revisions of Kakeibo `docs/specs/README.md` and the 02, 05, 06 and 07 specifications, which govern this stage.
+
 ### Step 29 — Establish the minimum Kakeibo consumer root and install `0.0.2`
 
-**References:** Distribution §§2–3; Kakeibo Acceptance Profile §5; current Kakeibo 05 package/layer boundary
+**References:** Distribution §§2–3, 5, 14, 16; Kakeibo Acceptance Profile §§2, 4, 5; current Kakeibo 05 package/layer boundary; current Kakeibo 07 §§20, 35, 37, 49; Implementation Guide — Kakeibo acceptance model, Execution location
 
 **Run**
 
@@ -920,16 +664,23 @@ packages:
 YAML
 fi
 
-pnpm add -D pactwright@0.0.2
+pnpm add -D -w pactwright@0.0.2
 pnpm pactwright init
+pnpm pactwright agent-pack use @pactwright/standard
 pnpm pactwright sync
 pnpm pactwright validate
 pnpm pactwright lifecycle status
 ```
 
+pnpm refuses `pnpm add` at a workspace root without `-w`, which the bootstrap `pnpm-workspace.yaml` makes the Kakeibo root.
+
 If the repository already has `package.json` or `pnpm-workspace.yaml`, preserve the existing files and use their adopted package/workspace configuration rather than replacing them.
 
 This step must not create application packages, Hono services, database code, R2/Workflow infrastructure or a Turborepo pipeline merely to install Pactwright.
+
+`pnpm add -D -w pactwright@0.0.2` installs from the registry with no override; `agent-pack use` resolves the pack from the runtime's dependencies at exactly `0.0.2`. An existing `pnpm-workspace.yaml` stays byte-identical. An existing `package.json` keeps all its content apart from the development-dependency and `packageManager` fields the package manager writes. If `.gitignore` has no rule for `node_modules/`, add one.
+
+Record, without creating any of them, whether the starting revision holds each of the following public-repository foundation items, which Kakeibo Acceptance Profile §5 lists and Kakeibo 07 §§20, 35, 37 and 49 require; the other 07 §49 items, such as CI and Kei assets, belong to later checkpoints: `README.md`, a `LICENSE` with the Apache-2.0 text, `SECURITY.md` with a private disclosure route, `CONTRIBUTING.md`, the canonical `docs/specs/` authority set, working deterministic tests and safe synthetic financial fixtures. If the canonical `docs/specs/` authority set is absent, Stage 10 pauses: specifications are the authority for Step 30, not its output. Step 30 delivers every other absent item.
 
 **Expected result**
 
@@ -940,11 +691,14 @@ Kakeibo has the minimum consumer package root required by its future pnpm/Turbor
 - existing Kakeibo specs and repository-authored files are unchanged except for the intentional minimal package/workspace/bootstrap files and Pactwright-owned files;
 - `pnpm pactwright validate` passes;
 - `pnpm pactwright lifecycle status` passes;
-- no CP2 application/infrastructure concern has been implemented early.
+- no CP2 application/infrastructure concern has been implemented early;
+- `pnpm pactwright doctor` exits zero reporting healthy; `pactwright` and `@pactwright/standard` are installed at exactly `0.0.2` with the published content identities, and the lock records them with an `environment_lock_hash`;
+- the changed or added paths are exactly the bootstrap files where created, the package manifest fields and lockfile the package manager wrote, a `node_modules` ignore rule where absent, and the Pactwright-owned files; configuration enables no Extension and keeps GitHub disabled;
+- the foundation inventory is recorded with the evidence it read, and every command ran the published package from Kakeibo's `node_modules`.
 
 ### Step 30 — Deliver the deterministic Kakeibo financial-domain foundation
 
-**References:** Kakeibo Acceptance Profile §§3–5; current Kakeibo `02-financial-domain-model-spec.md`; current Kakeibo `05-system-architecture-and-data-spec.md` package/layer boundary; current Kakeibo `06-engineering-delivery-and-operations-spec.md` deterministic test expectations; Delivery Graph §19
+**References:** Kakeibo Acceptance Profile §§3–5; current Kakeibo `02-financial-domain-model-spec.md`; current Kakeibo `05-system-architecture-and-data-spec.md` package/layer boundary; current Kakeibo `06-engineering-delivery-and-operations-spec.md` deterministic test expectations; current Kakeibo `07-open-source-project-organisation-spec.md` §§20, 35, 37, 42 repository foundation; Delivery Graph §19
 
 **Run**
 
@@ -969,25 +723,51 @@ pnpm pactwright lifecycle status
 
 Run the Kakeibo repository-defined deterministic domain tests as part of the same acceptance step.
 
+The commands run through the adapter session the run configuration names, and the Kakeibo owner is the approving human. The Kakeibo specifications at the revisions Step 29 recorded govern: 02 for financial-domain semantics, 05 for the package and layer boundary only, 06 for deterministic test expectations only and 07 for the repository foundation only. The Contract cites the specification sections it implements. The invariant set below is Kakeibo 02 §14 at revision `75443233c474a2a4072348078c22d72d15573645` (02 v1.1). If 02 §14 at the revision Step 29 records differs from the block below, the set is re-derived from that revision's §14 through an amendment of this step, reviewed like this one, before Step 30 runs; no invariant is deferred to Step 31.
+
+Before this step is accepted, deliver each foundation item Step 29 recorded absent through a Kakeibo Delivery lineage approved by the Kakeibo owner: the deterministic tests and synthetic fixtures through this step's domain lineage, and each other item except the specifications through its own lineage. Synthetic fixtures contain no real personal financial export (Kakeibo 07 §20), and no private financial or review engine is required for the delivered slice (07 §42). Do not scaffold Academy, Blog, marketplace, registry, parallel self-hosting architecture or speculative package directories.
+
 **Expected result**
 
-The first Kakeibo executable slice represents `FinancialEntry` as the general financial concept rather than treating every entry as spending, and preserves at least these observable invariants:
+The first Kakeibo executable slice represents `FinancialEntry` as the general financial concept rather than treating every entry as spending, and preserves every invariant of Kakeibo 02 §14. At revision `75443233` these are:
 
 ```text
-fixed commitments do not consume flexible envelopes
-plan-funded goal allocations do not also consume a flexible envelope
-transfers do not become spending because cash moved
-credit-card settlement does not double-count tracked purchases
-business activity does not consume personal envelopes
-reviewed totals include only reviewed entries
-preparation state does not create reviewed truth
-rules/suggestions do not create reviewed truth
-sum(split parts) = original amount
-confirmed split parts replace the source amount in aggregates
-source re-import idempotency ≠ financial duplicate resolution
-goal allocation ≠ reviewed goal contribution
-plan/goal/rule changes do not rewrite historical financial truth
+flexible_spending_budget
+  = planning_income
+  - fixed_commitments
+  - plan_funded_goal_allocations
+
+envelope_limits_total = Needs + Wants + Culture + Unexpected
+envelope_limits_total = flexible_spending_budget
+
+fixed commitments never consume flexible envelope limits
+plan-funded goal allocations never also consume a flexible envelope
+transfers never become flexible spending solely because cash left an account
+business activity never consumes personal Kakeibo envelopes
+
+reviewed totals contain only reviewed entries
+needs decision / worth checking / looks safe do not mean reviewed
+review skip does not mean reviewed
+rules, heuristics and assistant suggestions do not create reviewed truth
+first matching active rule wins according to explicit priority
+
+sum(split amounts) = original entry amount
+confirmed split parts replace the original amount in aggregates
+re-importing the same source entry is idempotent
+a duplicate candidate is not automatically excluded
+confirmed duplicates contribute zero to aggregates
+
+plan changes do not rewrite historical reviewed entries
+goal changes do not rewrite historical contributions or targets
+rule edits do not silently rewrite reviewed history
+
+unreviewed activity remains separately visible
+projected values remain explicitly projected
+user-selected targets remain distinct from calculated consequences
+one amount must not be counted twice across spending, transfer and goal aggregates
 ```
+
+In addition to §14, the slice preserves the Kakeibo Acceptance Profile §4 invariants §14 does not state in these words: credit-card settlement does not double-count tracked purchases (02 §9), and goal allocation remains distinct from reviewed goal contribution (02 §§6.2, 6.3, 11).
 
 The package remains deterministic and independent of application/API/storage/UI/provider concerns.
 
@@ -998,7 +778,13 @@ The package remains deterministic and independent of application/API/storage/UI/
 - domain code has no Hono/Neon/Cloudflare/UI/analytics/provider dependency;
 - no research-derived financial target is encoded as a default or recommendation;
 - the approved Contract retains all applicable financial invariants through Brief, Delivery, Review and Evidence;
-- the Kakeibo graph contains one valid Intent → Decision → Contract → Brief → Evidence lineage for the delivered financial-domain foundation.
+- the Kakeibo graph contains one valid Intent → Decision → Contract → Brief → Evidence lineage for the delivered financial-domain foundation;
+- each §14 invariant, and the credit-card and goal-contribution invariants above, has tests that pass on the delivered code and fail on a variant, supplied by the verifier rather than the producer, that violates only that invariant; two test runs give identical results;
+- each Kakeibo 02 §15 acceptance criterion is stated in the Contract and either covered by a test or named as outside this slice with its reason, Kei and UX criteria among them;
+- domain logic reads no clock, randomness, network or filesystem, and its manifest and imports contain none of the excluded dependencies;
+- independent review traces every invariant through the Contract, Brief, Review result and Evidence, and finds a missing link a failure;
+- every foundation item Step 29 recorded absent exists, delivered through a done Kakeibo lineage; the licence is Apache-2.0 and `SECURITY.md` names a private route (07 §§35, 37); the synthetic fixtures hold no real personal financial export and the slice needs no private financial or review engine;
+- the graph holds only core record types and relations, every Pactwright-owned file was written by the runtime, and the Kakeibo commits landed under the Kakeibo owner's authority.
 
 ## Stage 11 — Capture Checkpoint 1 feedback
 
@@ -1006,11 +792,15 @@ Close the checkpoint's learning loop before declaring it complete.
 
 ### Step 31 — Capture Checkpoint 1 findings as future project work
 
-**References:** Implementation Principles §§7, 14; Implementation Guide — Transition rule
+**References:** Implementation Principles §§7, 14, 16; Implementation Guide — Transition rule; Kakeibo Acceptance Profile §17
 
 **Run**
 
 Review the execution of Stages 1–10, including bootstrap-fixture friction, self-hosting friction, Kakeibo installation/workspace bootstrap and onboarding problems, financial-invariant preservation, content gaps and any deviation between specification and implementation.
+
+Also record execution friction, code quality, graph behaviour and model and skill effectiveness, without attributing an improvement to model choice alone. Keep the findings inventory as execution evidence outside the Project Graph, linking each finding to its Intent ID, fix reference or exclusion reason.
+
+Classify each finding once, with its reason. A finding is **blocking** when it falsifies an exit-gate line or an accepted criterion's evidence, or when a documented command of the published release fails as documented. Otherwise it is **material** when it names a Pactwright responsibility failure, a manual intervention the runtime or the material should have made unnecessary, a specification-to-implementation deviation or a content gap. Otherwise it is **excluded**: a Kakeibo-specific domain or product choice exposing no repeatable Pactwright responsibility failure.
 
 From the Pactwright repository root, for each finding worth acting on:
 
@@ -1024,6 +814,8 @@ Blocking failures must instead be fixed within this checkpoint: repeat the affec
 
 Do not generalise a Kakeibo-specific domain/product choice into Pactwright semantics unless it exposes a repeatable Pactwright responsibility failure.
 
+"Each finding worth acting on" is each material finding. A blocking fix re-runs the affected steps and re-verifies every obligation the fix affects; after Step 25 it is delivered under `CP01/R02`, and a defect in the published `0.0.2` follows Step 28's fix-forward rule. The captured Intents land through a pull request the owner merges with `CI / Verify` passing.
+
 **Expected result**
 
 Every material Checkpoint 1 finding exists as an open Intent in the Pactwright graph, and no known blocking failure is carried into Checkpoint 2.
@@ -1032,7 +824,11 @@ Every material Checkpoint 1 finding exists as an open Intent in the Pactwright g
 
 Run `pnpm pactwright validate` and `pnpm pactwright lifecycle status`; captured Intents are valid open lineages. Confirm no blocking failure remains unresolved.
 
+Each captured Intent states an outcome and no plan and has no Decision; every earlier lineage is unchanged. A finding that meets both the blocking and the material definition is classified blocking, fixed and re-verified, and has no open Intent standing in for the fix. Independent review confirms each classification against its reason and that no material finding was excluded.
+
 ## Exit gate
+
+Checkpoint requirement `CP01/R05` binds this gate: every line needs current evidence of the criteria or step verifications that prove it.
 
 Checkpoint 1 closes only when:
 
@@ -1070,4 +866,4 @@ Checkpoint 1 closes only when:
 
 ---
 
-**Pactwright — Checkpoint 1 — Self-Hosted Delivery v17**
+**Pactwright — Checkpoint 1 — Self-Hosted Delivery v31**

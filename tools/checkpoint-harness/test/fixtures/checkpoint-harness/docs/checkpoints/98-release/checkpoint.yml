@@ -1,0 +1,8 @@
+# Checkpoint 98 — a format-2 fixture for runner approval and effect tests. Not a Pactwright checkpoint.
+format: 2
+checkpoint: CP98
+run_model: software-bootstrap
+sources:
+  FIX: ../../specs/fixture-spec.md
+prose_steps:
+  CP98-S02: sha256:29c3e8e1a9b24aad341b4188c47b1755600b81264aeb7b0f1f3b82b6b2da8852

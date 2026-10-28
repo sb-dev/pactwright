@@ -1,0 +1,11 @@
+# Delivered with the banner capability (CP96-S02/AC01); the banner imports
+# the locked dependency.
+id: banner.prints
+method: automated
+version: "1"
+command: [node, verifiers/banner-subject.mjs]
+judge: [node, verifiers/banner-judge.mjs]
+files: [verifiers/banner-judge.mjs, verifiers/banner-subject.mjs]
+timeoutMs: 30000
+observations: [stdout]
+dependencies: true

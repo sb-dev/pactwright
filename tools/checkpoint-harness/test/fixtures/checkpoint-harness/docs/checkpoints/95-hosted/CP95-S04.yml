@@ -1,0 +1,22 @@
+# CP95 Step 4 — Write the welcome module
+id: CP95-S04
+requires: [CP95-S03]
+inputs:
+  greeting: CP95-S01/greeting
+outputs:
+  welcome: >-
+    The welcome module
+    `tools/checkpoint-harness/test/fixtures/checkpoint-harness/hosted/work/welcome.mjs`
+    of HOSTED §4. It exports `welcome(name)`, which returns the greeting
+    module's greeting of the name followed by ` Welcome aboard.`.
+requirements:
+  R01:
+    source: [HOSTED#4]
+    statement: The welcome shall return the greeting module's greeting of a name followed by ` Welcome aboard.`, reusing the greeting module.
+acceptance:
+  AC01:
+    covers: [R01]
+    given: The accepted greeting module.
+    when: The welcome module is reviewed.
+    then: It imports `greet` from the greeting module and returns its greeting followed by ` Welcome aboard.`.
+    verify: {review: [hosted.welcome-review]}

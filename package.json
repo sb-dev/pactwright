@@ -40,18 +40,22 @@
     "README.md"
   ],
   "scripts": {
-    "build": "pnpm --filter @pactwright/standard build && tsc -p tsconfig.build.json",
+    "build": "turbo run build build:root",
+    "build:root": "tsc -p tsconfig.build.json",
+    "verify:build:root": "node --import tsx scripts/build-root.ts",
     "prepack": "pnpm build",
     "pactwright": "node dist/cli.js",
+    "contracts:check": "pnpm --filter @pactwright/checkpoint-harness contracts:check",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
     "lint": "eslint .",
-    "typecheck": "tsc --noEmit",
-    "test": "node --test --import tsx tests/*.test.ts",
-    "verify": "pnpm format:check && pnpm lint && pnpm typecheck && pnpm test && pnpm build"
+    "typecheck": "turbo run typecheck typecheck:root",
+    "typecheck:root": "tsc --noEmit",
+    "test": "turbo run test test:root",
+    "test:root": "node --test --import tsx tests/*.test.ts",
+    "verify": "turbo run format:check lint typecheck typecheck:root test test:root build verify:build:root"
   },
   "dependencies": {
-    "@pactwright/standard": "workspace:*",
     "js-yaml": "^4.1.0"
   },
   "devDependencies": {
@@ -61,6 +65,7 @@
     "eslint": "^9.0.0",
     "prettier": "^3.6.0",
     "tsx": "^4.19.0",
+    "turbo": "^2.11.4",
     "typescript": "^5.8.0",
     "typescript-eslint": "^8.0.0"
   }

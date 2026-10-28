@@ -1,0 +1,54 @@
+{
+  "description": "Known-good CP99-S01 candidate: one validation path. A calibrated common reviewer passes it; an optional nit does not block. The verdict is a recorded fixture, not a live reviewer result.",
+  "step": "CP99-S01",
+  "files": {
+    "src/parser.mjs": "// Parses the fixture configuration through one validation path.\nexport function parseConfig(text) {\n  const value = JSON.parse(text);\n  if (typeof value?.name !== \"string\" || value.name.trim() === \"\") {\n    throw new Error(\"invalid configuration: name must be a non-empty string\");\n  }\n  return { name: value.name.trim() };\n}\n\n// As a program: parse the configuration on stdin and print the result, or\n// exit 1 with the error.\nif (process.argv[1] === new URL(import.meta.url).pathname) {\n  const { readFileSync } = await import(\"node:fs\");\n  try {\n    process.stdout.write(JSON.stringify(parseConfig(readFileSync(0, \"utf8\"))));\n  } catch (e) {\n    process.stderr.write(`${e.message}\\n`);\n    process.exit(1);\n  }\n}\n"
+  },
+  "verdict": {
+    "verdict": "pass",
+    "coverage": [
+      {
+        "subject": "CP99-S01/R01",
+        "result": "satisfied",
+        "basis": "executed",
+        "note": "parser.accepts and parser.rejects pass for both cases"
+      },
+      {
+        "subject": "CP99/R01",
+        "result": "satisfied",
+        "basis": "executed",
+        "note": "repo.verify passed"
+      },
+      {
+        "subject": "CP99-S01/config-parser",
+        "result": "satisfied",
+        "basis": "inspection",
+        "note": "src/parser.mjs exports parseConfig"
+      }
+    ],
+    "targets": [
+      {
+        "owner": "CP99-S01",
+        "criterion": "AC02",
+        "case": null,
+        "binding": "parser.single-path",
+        "result": "passed",
+        "note": "parseConfig is the only validation path"
+      }
+    ],
+    "findings": [
+      {
+        "severity": "optional",
+        "rule": "CP99-S01/R01",
+        "location": "src/parser.mjs:5",
+        "defect": "the message could quote the rejected value",
+        "correction": "include the value in the message",
+        "basis": "inspection"
+      }
+    ],
+    "blockers": []
+  },
+  "expected": {
+    "decision": "accept"
+  }
+}

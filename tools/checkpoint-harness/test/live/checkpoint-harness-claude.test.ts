@@ -1,0 +1,625 @@
+// T3-C acceptance, live part (Task 3 research log §12), and the T3.5 H2 live
+// compatibility proof. Requires a credential in PACTWRIGHT_ANTHROPIC_API_KEY:
+// an Anthropic API key, or a subscription OAuth token with
+// PACTWRIGHT_LIVE_CREDENTIAL_KIND=oauth-token; the producer's model ID in
+// PACTWRIGHT_LIVE_MODEL and its effort in PACTWRIGHT_LIVE_PRODUCER_EFFORT; the
+// reviewer's effort in PACTWRIGHT_LIVE_REVIEWER_EFFORT and, optionally, its
+// own model in PACTWRIGHT_LIVE_REVIEWER_MODEL; a running Linux Docker daemon,
+// and a provider environment with no ambient OAuth token. It spends at most
+// about 2 × LIVE_SPEND_USD. A missing resource fails this file; it is never a
+// pass.
+//
+// It proves one real producer session making a scoped edit through B's
+// containment, a denied write to a protected path, the effective session
+// (tools, MCP server, authentication, model), and a fresh read-only reviewer
+// session on the sealed candidate. Each session runs with its role's admitted
+// model and effort and reports applying exactly them. T3.6 L2 adds fresh
+// reviewer-role sessions of the three learning purposes: a learning proposal,
+// a knowledge review and a guidance review, each with read_evidence limited
+// to the records its packet lists. T3.6 L3 adds the exploration purposes: two
+// diagnostic sessions on the same sealed candidate, the selection review that
+// compares them and the cross-attempt challenge. No outcome here is
+// acceptance.
+
+import assert from "node:assert/strict";
+import { execFileSync } from "node:child_process";
+import { cpSync, mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { dirname, join } from "node:path";
+import { after, before, describe, it } from "node:test";
+import { fileURLToPath } from "node:url";
+
+import {
+  buildPacket,
+  containedOps,
+  DIAGNOSTIC_BRIEFINGS,
+  invokeAgent,
+  recordInvocation,
+  resolveRole,
+  type AgentOutcome,
+  type AgentRole,
+  type DiagnosticSide,
+  type Finding,
+  type ProposalContext,
+  type ReviewContext,
+} from "../../src/claude.js";
+import { prepareRun, sha256, type PreparedRun } from "../../src/contracts.js";
+import {
+  createRun,
+  readEvidence,
+  readRun,
+  releaseRun,
+  type RunHandle,
+} from "../../src/evidence.js";
+import {
+  CHALLENGE_RUBRIC,
+  GUIDANCE_RUBRIC,
+  KNOWLEDGE_RUBRIC,
+  SELECTION_RUBRIC,
+} from "../../src/software-bootstrap.js";
+import { challengeSubjects, checkVerdict, selectionSubjects } from "../../src/verification.js";
+import {
+  createWorkspace,
+  fence,
+  fenceWorkers,
+  importSource,
+  PROFILE,
+  readFile,
+  sealCandidate,
+  type SealedCandidate,
+  type WritePolicy,
+} from "../../src/workspace.js";
+import { calibration } from "../verification-fixtures.js";
+
+const here = dirname(fileURLToPath(import.meta.url));
+const repoRoot = join(here, "../../../..");
+const fixture = join(here, "../fixtures/checkpoint-harness");
+const scratch = mkdtempSync(join(tmpdir(), "pactwright-harness-c-live-"));
+
+const KEY = "PACTWRIGHT_ANTHROPIC_API_KEY";
+const LIVE_SPEND_USD = 1;
+const POLICY: WritePolicy = { writable: ["src"], scratch: [], protected: ["src/verifier.ts"] };
+const VERIFIER = "// approved verifier\n";
+
+const git = (cwd: string, args: string[]): string =>
+  execFileSync(
+    "git",
+    ["-c", "user.name=Fixture", "-c", "user.email=fixture@example.invalid", ...args],
+    { cwd, encoding: "utf8", stdio: ["ignore", "pipe", "pipe"] },
+  ).trim();
+
+function commitAll(root: string): string {
+  git(root, ["init", "-q"]);
+  git(root, ["add", "-A"]);
+  git(root, ["commit", "-q", "--no-gpg-sign", "-m", "fixture"]);
+  return git(root, ["rev-parse", "HEAD"]);
+}
+
+let run: RunHandle;
+let plan: PreparedRun;
+let producer: AgentRole;
+let reviewer: AgentRole;
+let base: { root: string; head: string };
+let produced: AgentOutcome | undefined;
+let candidate: SealedCandidate | undefined;
+
+before(async () => {
+  const missing: string[] = [];
+  if (!process.env[KEY]) missing.push(`${KEY} is not set`);
+  const model = process.env.PACTWRIGHT_LIVE_MODEL ?? "";
+  if (!model) missing.push("PACTWRIGHT_LIVE_MODEL is not set");
+  const reviewerModel = process.env.PACTWRIGHT_LIVE_REVIEWER_MODEL || model;
+  const effort = {
+    producer: process.env.PACTWRIGHT_LIVE_PRODUCER_EFFORT ?? "",
+    reviewer: process.env.PACTWRIGHT_LIVE_REVIEWER_EFFORT ?? "",
+  };
+  for (const [role, level] of Object.entries(effort)) {
+    if (!level) missing.push(`PACTWRIGHT_LIVE_${role.toUpperCase()}_EFFORT is not set`);
+  }
+  try {
+    execFileSync("docker", ["info"], { stdio: "ignore" });
+  } catch {
+    missing.push("no Docker daemon");
+  }
+  if (missing.length > 0) {
+    throw new Error(`live proof not executed: ${missing.join("; ")}`);
+  }
+
+  const config = {
+    roles: {
+      producer: {
+        adapter: "claude-sdk",
+        model,
+        effort: effort.producer,
+        skills: ["karpathy-guidelines"],
+        max_turns: 20,
+      },
+      reviewer: {
+        adapter: "claude-sdk",
+        model: reviewerModel,
+        effort: effort.reviewer,
+        skills: ["code-review-and-quality"],
+        max_turns: 10,
+      },
+    },
+    credentials: {
+      provider: `env:${KEY}`,
+      kind: process.env.PACTWRIGHT_LIVE_CREDENTIAL_KIND ?? "api-key",
+    },
+    budgets: {
+      attempts: 1,
+      wall_time_seconds: 600,
+      provider_spend_limit: { usd: LIVE_SPEND_USD, turn_reservation_usd: LIVE_SPEND_USD / 2 },
+    },
+  };
+  const skillsRoot = join(repoRoot, ".claude/skills");
+  for (const name of ["producer", "reviewer"] as const) {
+    const resolved = resolveRole(config, name, { skillsRoot, env: process.env });
+    assert.ok(resolved.ok, resolved.ok ? "" : resolved.diagnostics.join("\n"));
+    if (name === "producer") producer = resolved.role;
+    else reviewer = resolved.role;
+  }
+
+  const definitions = join(scratch, "definitions");
+  cpSync(fixture, definitions, { recursive: true });
+  cpSync(
+    join(repoRoot, "docs/checkpoints/contract.schema.json"),
+    join(definitions, "docs/checkpoints/contract.schema.json"),
+  );
+  const rev = commitAll(definitions);
+  const prepared = await prepareRun(
+    {
+      repository: { name: "sb-dev/fixture", branch: "fixture", expected_head: rev },
+      checkpoint: "docs/checkpoints/99-fixture/checkpoint.yml",
+      definitions: { revision: rev, review: "fixture review" },
+      selection: { through: "CP99-S01" },
+    },
+    { repoRoot: definitions },
+  );
+  assert.ok(prepared.ok, prepared.ok ? "" : prepared.diagnostics.join("\n"));
+  plan = prepared.plan;
+
+  const source = join(scratch, "source");
+  mkdirSync(join(source, "src"), { recursive: true });
+  mkdirSync(join(source, "docs"));
+  writeFileSync(join(source, "src/lib.ts"), "export const answer = 42;\n");
+  writeFileSync(join(source, "src/verifier.ts"), VERIFIER);
+  // The step's output already exists, so the producer has only the harness
+  // findings below to act on.
+  writeFileSync(
+    join(source, "src/parser.mjs"),
+    calibration("known-good").files["src/parser.mjs"] ?? "",
+  );
+  writeFileSync(join(source, "docs/contract.yml"), "id: CP99-S01\n");
+  base = { root: source, head: commitAll(source) };
+
+  try {
+    execFileSync("docker", ["image", "inspect", PROFILE.image], { stdio: "ignore" });
+  } catch {
+    execFileSync("docker", ["pull", PROFILE.image], { stdio: "inherit" });
+  }
+  run = createRun(join(scratch, "run"));
+});
+
+after(async () => {
+  if (run) {
+    await fenceWorkers(run.run);
+    const read = readRun(run.dir);
+    if (read.ok) {
+      process.stdout.write(
+        `# live evidence: ${JSON.stringify(read.records.events.map((e) => [e.action, e.data]))}\n`,
+      );
+    }
+  }
+  rmSync(scratch, { recursive: true, force: true });
+});
+
+/** Instructions for this compatibility proof, passed as harness findings. */
+const LIVE_FINDINGS: Finding[] = [
+  {
+    rule: "live-compatibility",
+    location: "src/lib.ts",
+    defect: "answer is 42",
+    correction:
+      "Use write_file to replace src/lib.ts with exactly this line followed by a newline: export const answer = 43; Change nothing else.",
+  },
+  {
+    rule: "live-containment",
+    location: "src/verifier.ts",
+    defect: "containment must be demonstrated",
+    correction:
+      "Call write_file exactly once on src/verifier.ts with any content. It is protected and must be refused; do not retry and do not work around it. Then submit.",
+  },
+];
+
+describe("T3-C live: one real producer and a fresh read-only reviewer", () => {
+  it("the producer makes a scoped edit; the protected write is denied by containment", async () => {
+    const imported = await importSource(run, base.root, base.head);
+    assert.ok(imported.ok);
+    const ws = await createWorkspace(run, {
+      base: imported.snapshot,
+      root: join(scratch, "producer-ws"),
+      policy: POLICY,
+    });
+    const built = buildPacket(plan, "CP99-S01", producer, {
+      attempt: 1,
+      accepted: [],
+      policy: POLICY,
+      findings: LIVE_FINDINGS,
+    });
+    assert.ok(built.ok);
+    produced = await invokeAgent(
+      producer,
+      built.packet,
+      containedOps(ws),
+      AbortSignal.timeout(900_000),
+    );
+    recordInvocation(run, produced);
+    process.stdout.write(`# producer: ${JSON.stringify(produced)}\n`);
+
+    const o = produced.observation;
+    assert.equal(
+      o.auth,
+      producer.credentialKind === "api-key" ? "ANTHROPIC_API_KEY" : "CLAUDE_CODE_OAUTH_TOKEN",
+    );
+    assert.equal(o.model.configured, producer.model);
+    assert.equal(o.model.reported, producer.model);
+    assert.deepEqual(o.effort, { configured: producer.effort, reported: [producer.effort] });
+    assert.deepEqual(o.tools, [
+      "StructuredOutput",
+      "mcp__workspace__read_file",
+      "mcp__workspace__run_command",
+      "mcp__workspace__search_files",
+      "mcp__workspace__write_file",
+    ]);
+    assert.ok(o.session);
+    assert.equal(produced.outcome, "submitted", JSON.stringify(produced));
+    assert.ok(
+      o.toolCalls.some((c) => c.tool === "write_file" && c.target === "src/verifier.ts" && !c.ok),
+      "the protected write was attempted and refused",
+    );
+
+    const lib = await readFile(ws, "src/lib.ts");
+    assert.ok(lib.ok);
+    assert.equal(
+      lib.bytes.toString("utf8").replace(/\n$/, ""),
+      "export const answer = 43;",
+      "the requested edit, not just any change",
+    );
+    const verifier = await readFile(ws, "src/verifier.ts");
+    assert.ok(verifier.ok);
+    assert.equal(verifier.bytes.toString("utf8"), VERIFIER);
+    const sealed = await sealCandidate(run, ws);
+    assert.ok(sealed.ok, sealed.ok ? "" : sealed.diagnostics.join("\n"));
+    assert.deepEqual(sealed.candidate.changes, [{ path: "src/lib.ts", kind: "modified" }]);
+    candidate = sealed.candidate;
+  });
+
+  it("a fresh reviewer session reads the sealed candidate and cannot write", async () => {
+    assert.ok(candidate && produced, "the producer step ran");
+    const readOnly: WritePolicy = { writable: [], scratch: [], protected: [] };
+    const ws = await createWorkspace(run, {
+      base: { commit: candidate.commit, tree: candidate.tree },
+      root: join(scratch, "reviewer-ws"),
+      policy: readOnly,
+    });
+    try {
+      const built = buildPacket(plan, "CP99-S01", reviewer, {
+        attempt: 1,
+        accepted: [],
+        policy: readOnly,
+        candidate,
+      });
+      assert.ok(built.ok);
+      assert.ok(!JSON.stringify(built.packet).includes(produced.observation.session ?? "-"));
+      const reviewed = await invokeAgent(
+        reviewer,
+        built.packet,
+        containedOps(ws),
+        AbortSignal.timeout(900_000),
+      );
+      recordInvocation(run, reviewed);
+      process.stdout.write(`# reviewer: ${JSON.stringify(reviewed)}\n`);
+      const o = reviewed.observation;
+      assert.equal(reviewed.outcome, "reviewed", JSON.stringify(reviewed));
+      assert.ok(o.session && o.session !== produced.observation.session, "a fresh session");
+      assert.equal(o.model.configured, reviewer.model);
+      assert.equal(o.model.reported, reviewer.model);
+      assert.deepEqual(o.effort, { configured: reviewer.effort, reported: [reviewer.effort] });
+      assert.deepEqual(o.tools, [
+        "StructuredOutput",
+        "mcp__workspace__read_file",
+        "mcp__workspace__search_files",
+      ]);
+      assert.ok(o.toolCalls.every((c) => c.tool === "read_file" || c.tool === "search_files"));
+      assert.deepEqual(o.skills.selected, ["code-review-and-quality"]);
+    } finally {
+      await fence(ws);
+    }
+  });
+
+  it("fresh learning sessions return each purpose's structured result (T3.6 L2)", async () => {
+    assert.ok(candidate && produced, "the producer step ran");
+    const readOnly: WritePolicy = { writable: [], scratch: [], protected: [] };
+    const read = readRun(run.dir);
+    assert.ok(read.ok);
+    const record = String(
+      read.records.events.find((e) => e.action === "agent-invocation")?.data.record ?? "",
+    );
+    assert.match(record, /^sha256:/, "the producer's session is a committed record");
+    const records = (ref: string): Buffer | null => {
+      try {
+        return readEvidence(run.dir, ref);
+      } catch {
+        return null;
+      }
+    };
+    const entry = sha256("live knowledge entry");
+    const guidance = sha256("live guidance");
+    const proposal: ProposalContext = {
+      evaluation: sha256("live evaluation"),
+      observations: [{ ref: record, action: "agent-invocation", outcome: produced.outcome }],
+      failures: [],
+      knowledge: [],
+      guidance: [],
+      limits: { reminderChars: 300 },
+    };
+    const knowledge: ReviewContext = {
+      kind: "knowledge",
+      rubric: KNOWLEDGE_RUBRIC,
+      subjects: [entry],
+      targets: [],
+      bindings: [],
+      evidence: {
+        proposal: entry,
+        claim: {
+          assertion: "src/lib.ts exports answer as 43.",
+          target: "CP99-S01/R01",
+          kind: "positive",
+        },
+        observations: [
+          { ref: record, basis: "reported", record: "the producer's recorded session" },
+        ],
+        related: [],
+      },
+    };
+    const reminder: ReviewContext = {
+      kind: "guidance",
+      rubric: GUIDANCE_RUBRIC,
+      subjects: [
+        guidance,
+        `${guidance}/authority`,
+        `${guidance}/occurrence/0`,
+        `${guidance}/occurrence/1`,
+      ],
+      targets: [],
+      bindings: [],
+      evidence: {
+        proposal: guidance,
+        guidance: {
+          id: guidance,
+          rule: "CP99-S01/R01",
+          cause: "the exported value was not checked",
+          text: "Before submitting, read src/lib.ts back and check the exported value.",
+        },
+        reason: "two attempts left the value unchecked",
+        occurrences: [0, 1].map((i) => ({
+          subject: `${guidance}/occurrence/${i}`,
+          review: record,
+          finding: i,
+          record: "the producer's recorded session",
+        })),
+        related: [],
+      },
+    };
+    const sessions: { purpose: string; proposal?: ProposalContext; review?: ReviewContext }[] = [
+      { purpose: "learning-proposal", proposal },
+      { purpose: "knowledge-review", review: knowledge },
+      { purpose: "guidance-review", review: reminder },
+    ];
+    const seen = new Set([produced.observation.session]);
+    for (const s of sessions) {
+      const ws = await createWorkspace(run, {
+        base: { commit: candidate.commit, tree: candidate.tree },
+        root: join(scratch, `learning-${s.purpose}`),
+        policy: readOnly,
+      });
+      try {
+        const built = buildPacket(plan, "CP99-S01", reviewer, {
+          attempt: 1,
+          accepted: [],
+          policy: readOnly,
+          candidate,
+          records: [record],
+          ...(s.proposal ? { proposal: s.proposal } : {}),
+          ...(s.review ? { review: s.review } : {}),
+        });
+        assert.ok(built.ok);
+        const outcome = await invokeAgent(
+          reviewer,
+          built.packet,
+          containedOps(ws),
+          AbortSignal.timeout(900_000),
+          { records },
+        );
+        process.stdout.write(`# ${s.purpose}: ${JSON.stringify(outcome)}\n`);
+        const o = outcome.observation;
+        assert.equal(
+          outcome.outcome,
+          s.proposal ? "proposed" : "reviewed",
+          JSON.stringify(outcome),
+        );
+        assert.ok(o.session && !seen.has(o.session), "a fresh session");
+        seen.add(o.session);
+        assert.equal(o.model.reported, reviewer.model);
+        assert.deepEqual(o.effort, { configured: reviewer.effort, reported: [reviewer.effort] });
+        assert.deepEqual(o.tools, [
+          "StructuredOutput",
+          "mcp__workspace__read_evidence",
+          "mcp__workspace__read_file",
+          "mcp__workspace__search_files",
+        ]);
+        assert.ok(
+          o.toolCalls.every((c) => ["read_file", "search_files", "read_evidence"].includes(c.tool)),
+        );
+        if (s.review) {
+          const checked = checkVerdict(outcome, { subjects: s.review.subjects, targets: [] });
+          assert.ok(checked.ok, checked.ok ? "" : checked.issues.join("; "));
+        }
+      } finally {
+        await fence(ws);
+      }
+    }
+  });
+
+  it("fresh exploration sessions return each purpose's structured result (T3.6 L3)", async () => {
+    assert.ok(candidate && produced, "the producer step ran");
+    const sealed = candidate;
+    const readOnly: WritePolicy = { writable: [], scratch: [], protected: [] };
+    const read = readRun(run.dir);
+    assert.ok(read.ok);
+    const record = String(
+      read.records.events.find((e) => e.action === "agent-invocation")?.data.record ?? "",
+    );
+    assert.match(record, /^sha256:/, "the producer's session is a committed record");
+    const records = (ref: string): Buffer | null => {
+      try {
+        return readEvidence(run.dir, ref);
+      } catch {
+        return null;
+      }
+    };
+    const exploration = sha256("live exploration");
+    const trigger = {
+      kind: "repeated",
+      rule: "CP99-S01/R01",
+      cause: "the exported value was not checked before submission",
+      occurrences: [
+        { attempt: 1, review: record, finding: 0 },
+        { attempt: 2, review: record, finding: 0 },
+      ],
+    };
+    const finding: Finding = {
+      rule: "CP99-S01/R01",
+      location: "src/lib.ts:1",
+      defect: "the exported value is not the one the step requires",
+      correction: "export the value the step's requirement names",
+    };
+    const seen = new Set([produced.observation.session]);
+    /** One fresh reviewer-role session on a read-only workspace of the sealed candidate. */
+    const session = async (
+      label: string,
+      options: Parameters<typeof buildPacket>[3],
+    ): Promise<AgentOutcome> => {
+      const ws = await createWorkspace(run, {
+        base: { commit: sealed.commit, tree: sealed.tree },
+        root: join(scratch, `exploration-${label}`),
+        policy: readOnly,
+      });
+      try {
+        const built = buildPacket(plan, "CP99-S01", reviewer, options);
+        assert.ok(built.ok);
+        const outcome = await invokeAgent(
+          reviewer,
+          built.packet,
+          containedOps(ws),
+          AbortSignal.timeout(900_000),
+          { records },
+        );
+        process.stdout.write(`# ${label}: ${JSON.stringify(outcome)}\n`);
+        const o = outcome.observation;
+        assert.ok(o.session && !seen.has(o.session), `${label}: a fresh session`);
+        seen.add(o.session);
+        assert.equal(o.model.reported, reviewer.model);
+        assert.deepEqual(o.effort, { configured: reviewer.effort, reported: [reviewer.effort] });
+        assert.deepEqual(o.tools, [
+          "StructuredOutput",
+          "mcp__workspace__read_evidence",
+          "mcp__workspace__read_file",
+          "mcp__workspace__search_files",
+        ]);
+        assert.ok(
+          o.toolCalls.every((c) => ["read_file", "search_files", "read_evidence"].includes(c.tool)),
+        );
+        return outcome;
+      } finally {
+        await fence(ws);
+      }
+    };
+    const base = {
+      attempt: 1,
+      accepted: [],
+      policy: readOnly,
+      candidate: sealed,
+      records: [record],
+    };
+    const diagnoses: { side: DiagnosticSide; outcome: AgentOutcome }[] = [];
+    for (const side of ["approach", "alternative"] as const) {
+      const outcome = await session(`diagnostic-${side}`, {
+        ...base,
+        findings: [finding],
+        diagnosis: {
+          side,
+          briefing: DIAGNOSTIC_BRIEFINGS[side],
+          exploration,
+          trigger,
+          limits: { checkTimeoutSeconds: 30 },
+        },
+      });
+      assert.equal(outcome.outcome, "diagnosed", JSON.stringify(outcome));
+      assert.ok(outcome.outcome === "diagnosed");
+      assert.ok(outcome.diagnosis.approach.trim() !== "");
+      diagnoses.push({ side, outcome });
+    }
+    const selection: ReviewContext = {
+      kind: "selection",
+      rubric: SELECTION_RUBRIC,
+      subjects: selectionSubjects(exploration),
+      targets: [],
+      bindings: [],
+      evidence: {
+        exploration,
+        trigger,
+        findings: [finding],
+        diagnoses: diagnoses.map((d) => ({
+          side: d.side,
+          invocation: record,
+          outcome: d.outcome.outcome,
+          diagnosis: d.outcome.outcome === "diagnosed" ? d.outcome.diagnosis : null,
+        })),
+        checks: [],
+      },
+    };
+    const selected = await session("exploration-selection", { ...base, review: selection });
+    assert.equal(selected.outcome, "reviewed", JSON.stringify(selected));
+    assert.ok(selected.outcome === "reviewed");
+    assert.ok(
+      ["approach", "alternative", "none"].includes(selected.verdict.recommendation?.select ?? ""),
+      "the selection names its recommendation",
+    );
+    const checkedSelection = checkVerdict(selected, { subjects: selection.subjects, targets: [] });
+    assert.ok(checkedSelection.ok, checkedSelection.ok ? "" : checkedSelection.issues.join("; "));
+    const challenge: ReviewContext = {
+      kind: "challenge",
+      rubric: CHALLENGE_RUBRIC,
+      subjects: challengeSubjects("CP99-S01"),
+      targets: [],
+      bindings: [],
+      evidence: {
+        review: { record, verdict: { verdict: "pass" } },
+        exploration,
+        attempts: [{ attempt: 1, record, findings: [finding] }],
+        explorations: [],
+        pullRequest: [],
+      },
+    };
+    const challenged = await session("cross-attempt-challenge", { ...base, review: challenge });
+    assert.equal(challenged.outcome, "reviewed", JSON.stringify(challenged));
+    const checkedChallenge = checkVerdict(challenged, {
+      subjects: challenge.subjects,
+      targets: [],
+    });
+    assert.ok(checkedChallenge.ok, checkedChallenge.ok ? "" : checkedChallenge.issues.join("; "));
+    releaseRun(run);
+  });
+});

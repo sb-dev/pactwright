@@ -1,0 +1,4017 @@
+// T3-D: verification dispatch and reconciliation, verifier admission,
+// independent review and the acceptance decision (Task 3 research log §§5–7,
+// 9 and §12; Spec 00 §§3–4). Each automated binding runs its subject, the
+// code under test, once per target in its own fresh read-only workspace of
+// the sealed candidate, and its judge in a separate workspace holding only
+// the binding's files; the judge's report is reconciled against the exact
+// targets. Reviews run in a
+// read-only workspace opened from the candidate. A new or changed verifier
+// counts only after a provisional run, an adequacy review, a pin and a fresh
+// acceptance run. Every record is stored as evidence under the digest of its
+// key-ordered JSON and journaled.
+// `decideAcceptance` is pure: it counts only records that are that evidence,
+// are committed to the journal and belong to the current attempt, and returns
+// accept, correct or pause with specific reasons. Only `recordDecision`
+// journals a decision, and it derives the decision itself.
+//
+// T3.5 H1 (production readiness log §3 H1): bindings a candidate declares are
+// admitted through the same route. Repository commands run on the sealed
+// candidate with empty scratch paths for their build output and the run's
+// prepared dependencies mounted read-only, so neither host state nor
+// prebuilt output can satisfy a check. Each evaluation records which
+// inherited targets its applicability rules leave pending.
+
+import { randomUUID } from "node:crypto";
+import { existsSync, mkdirSync, readFileSync, renameSync, rmSync } from "node:fs";
+import { dirname, join } from "node:path";
+
+import { Ajv2020 } from "ajv/dist/2020.js";
+import stringify from "safe-stable-stringify";
+
+import {
+  buildPacket,
+  containedOps,
+  DIAGNOSTIC_BRIEFINGS,
+  invokeAgent,
+  recordInvocation,
+  type AgentOutcome,
+  type AgentRole,
+  type DiagnosticSide,
+  type ExplorationInputs,
+  type Finding,
+  type Provider,
+  type ReviewContext,
+  type ReviewVerdict,
+  type Proposals,
+  type Submission,
+  type ToolCall,
+  type WorkspaceOps,
+} from "./claude.js";
+import {
+  CANDIDATE,
+  definitionOf,
+  exitId,
+  exitStep,
+  lineageOf,
+  plannedContract,
+  sha256,
+  type AcceptedOutput,
+  type ContractStep,
+  type PreparedRun,
+  type VerificationTarget,
+} from "./contracts.js";
+import {
+  appendEvent,
+  evaluationDigest,
+  putEvidence,
+  readEvidence,
+  readRun,
+  type EvaluationManifest,
+  type Json,
+  type JsonObject,
+  type JournalEvent,
+  type Pending,
+  type RunHandle,
+} from "./evidence.js";
+import {
+  admitGuidance,
+  admitKnowledge,
+  applicability,
+  entryId,
+  evaluationDependencies,
+  evaluationScope,
+  guidanceId,
+  guidanceStatus,
+  guidanceSubjects,
+  knowledgeTarget,
+  learningInputs,
+  learningViews,
+  proposeGuidance,
+  proposeKnowledge,
+  relationSubject,
+  scopeSubject,
+  type ContextManifest,
+  type GuidanceAdmission,
+  type GuidanceProposal,
+  type GuidanceTarget,
+  type KnowledgeAdmission,
+  type KnowledgeProposal,
+  type LearningInputs,
+  type Read,
+} from "./knowledge.js";
+import {
+  adequacyRubric,
+  bindingDigests,
+  CHALLENGE_RUBRIC,
+  COMMON_RUBRIC,
+  FEEDBACK_RUBRIC,
+  GUIDANCE_RUBRIC,
+  KNOWLEDGE_RUBRIC,
+  needsAdmission,
+  SELECTION_RUBRIC,
+  type AutomatedBinding,
+  type Registry,
+  type RegistryEntry,
+  type Rejection,
+} from "./software-bootstrap.js";
+import {
+  createWorkspace,
+  exec,
+  fence,
+  linkAncestor,
+  profileDigest,
+  subsetSnapshot,
+  treeEntries,
+  treeFiles,
+  type Mount,
+  type SealedCandidate,
+  type SourceSnapshot,
+  type WritePolicy,
+} from "./workspace.js";
+
+const READ_ONLY: WritePolicy = { writable: [], scratch: [], protected: [] };
+
+/** A record stored as evidence: `ref` is the SHA-256 of its key-ordered JSON. */
+export type Stored<T> = { ref: string; record: T };
+
+export type Stage = "provisional" | "acceptance";
+
+/** Where a record belongs; it counts only for this run, attempt, evaluation and candidate. */
+export type Identity = { run: string; attempt: number; evaluation: string; candidate: string };
+
+/**
+ * The controller's reading of one target in one invocation. `invalid` is a
+ * verifier that ran but broke the report protocol; `unavailable` is one that
+ * never ran, such as a workspace that could not be opened.
+ */
+export type TargetResult =
+  | { target: VerificationTarget; outcome: "passed"; assertions: number; observations: JsonObject }
+  | {
+      target: VerificationTarget;
+      outcome: "failed" | "invalid" | "unavailable";
+      reason: string;
+    };
+
+/** One contained run: its argv, exit status and evidence refs of its output. */
+export type RunRecord = {
+  argv: string[];
+  exit: number | null;
+  timedOut: boolean;
+  stdout: string;
+  stderr: string;
+};
+
+/**
+ * One execution of one binding: one subject run per expected target on the
+ * candidate, each labelled by the controller with its target key, then the
+ * judge run on a snapshot of the binding's files only (`judge.snapshot`),
+ * whose stdout is the report.
+ */
+export type Invocation = Identity & {
+  id: string;
+  stage: Stage;
+  binding: string;
+  /** The binding's declared version; `digest` is its identity. */
+  version: string;
+  digest: string;
+  /** One run per target, each in its own workspace, labelled with its target key. */
+  subjects: (RunRecord & { target: string })[];
+  judge: (RunRecord & { snapshot: SourceSnapshot }) | null;
+  /** The prepared dependencies the subjects ran with: their key and preparation record. */
+  dependencies: { key: string; record: string } | null;
+  /** The checkpoint evidence the judge was given, for the exit evaluation; else null. */
+  checkpoint: string | null;
+  /** Why a run could not start or complete; its targets are then unavailable. */
+  error: string | null;
+  /** A failure to stop a workspace after its run; the run's results still stand. */
+  cleanup: string | null;
+  results: TargetResult[];
+};
+
+export type ReviewRecord = Identity & {
+  kind: ReviewContext["kind"];
+  /** Invocation records whose results the reviewer was shown. */
+  invocations: string[];
+  /** The output inventory the reviewer was shown (candidate reviews). */
+  outputs: OutputProof[];
+  /** A failure to stop the reviewer's workspace after the review. */
+  cleanup: string | null;
+  /** Digest of the rubric the reviewer applied. */
+  rubric: string;
+  /** Digest of the reviewer's packet. */
+  packet: string;
+  /** The checkpoint evidence the reviewer was shown, for the exit evaluation; else null. */
+  checkpoint: string | null;
+  /**
+   * The committed records the reviewer was given and could read, frozen at
+   * dispatch: a cross-attempt challenge's history (T3.6 L3). Absent for
+   * every other review.
+   */
+  records?: string[];
+  outcome: AgentOutcome;
+};
+
+/** The adequacy route's result for one verifier digest; `approved` pins it. */
+export type Admission = Identity & {
+  step: string;
+  binding: string;
+  version: string;
+  digest: string;
+  /** Digest of the adequacy rubric the review applied. */
+  rubric: string;
+  provisional: string | null;
+  review: string | null;
+  outcome: "approved" | "rejected" | "paused" | "invalid";
+  findings: Finding[];
+  reasons: string[];
+};
+
+/** An operator's decision on one approval target, for the exact candidate and evaluation. */
+export type Approval = {
+  run: string;
+  target: VerificationTarget;
+  authority: string;
+  actor: string;
+  decision: "approved" | "denied";
+  candidate: string;
+  evaluation: string;
+};
+
+export type OutputProof = { output: string; paths: { path: string; entry: string }[] };
+
+/** Research log §7: correct automatically, retry the controller step, pause for an owner, or await approval. */
+export type Route = "owner" | "correct" | "retry" | "approval";
+export type Reason = { route: Route; subject: string; detail: string; requirements: string[] };
+
+type DecisionBase = { step: string; attempt: number; evaluation: string; candidate: string };
+export type Decision =
+  | (DecisionBase & {
+      decision: "accept";
+      targets: string[];
+      outputs: OutputProof[];
+      evidence: string[];
+    })
+  | (DecisionBase & { decision: "correct"; reasons: Reason[]; findings: Finding[] })
+  | (DecisionBase & { decision: "pause"; reasons: Reason[] });
+
+/** A contained workspace of `snapshot`; `close` stops and removes it. */
+export type ContainedWorkspace = WorkspaceOps & {
+  snapshot: SourceSnapshot;
+  close(): Promise<void>;
+};
+
+/** A subject workspace's empty writable scratch paths and read-only mounts. */
+export type WorkspaceOptions = { scratch?: readonly string[]; mounts?: readonly Mount[] };
+
+export type OpenWorkspace = (
+  snapshot: SourceSnapshot,
+  options?: WorkspaceOptions,
+) => Promise<ContainedWorkspace>;
+
+/**
+ * How a run prepares dependencies (operator configuration
+ * `verification.dependencies`): `command` runs in a contained workspace
+ * holding only the candidate's `inputs` paths, such as its manifests,
+ * lockfile and vendored packages, with the configured network; the
+ * `outputs` it writes are mounted read-only into subject workspaces of
+ * bindings that declare `dependencies`.
+ */
+export type DependencySpec = {
+  inputs: readonly string[];
+  command: readonly string[];
+  outputs: readonly string[];
+  network: "none" | "bridge";
+  timeoutMs: number;
+};
+
+/** One preparation of dependencies for a candidate, stored as evidence. */
+export type PreparationRecord = {
+  run: string;
+  key: string;
+  candidate: string;
+  /** The snapshot of the candidate's input paths the command ran on. */
+  inputs: SourceSnapshot;
+  spec: DependencySpec;
+  profile: string;
+  ran: RunRecord | null;
+  outcome: "prepared" | "failed" | "unavailable";
+  reason: string | null;
+};
+
+/** Prepared dependencies of one candidate: the mounts when `prepared`, else why not. */
+export type PreparedDependencies = {
+  key: string;
+  record: string;
+  outcome: PreparationRecord["outcome"];
+  reason: string | null;
+  mounts: Mount[];
+};
+
+export type PrepareDependencies = (candidate: SealedCandidate) => Promise<PreparedDependencies>;
+
+/**
+ * What the controller gives the checkpoint exit evaluation (T3.5 H1; CP01
+ * R05/AC05): every planned step's current acceptance as the journal records
+ * it, with the revision it names, its proven targets and outputs, the
+ * evidence it counted and its effects' receipts. It is built from the
+ * controller's own records, stored as evidence and named by digest in the
+ * exit evaluation's manifest, then handed to each exit judge on stdin and to
+ * the exit reviewer, never through the candidate.
+ */
+export type CheckpointEvidence = {
+  checkpoint: string;
+  run: string;
+  definitions: string;
+  steps: {
+    step: string;
+    /** The acceptance record. */
+    decision: string;
+    attempt: number;
+    evaluation: string;
+    candidate: SourceSnapshot;
+    targets: string[];
+    outputs: OutputProof[];
+    evidence: string[];
+    receipts: {
+      record: string;
+      key: string;
+      target: string;
+      reference: string;
+      reconciled: boolean;
+    }[];
+  }[];
+};
+
+/** Checkpoint evidence as given to an exit evaluation: its record and evidence reference. */
+export type GivenCheckpoint = { ref: string; record: CheckpointEvidence };
+
+export type ReviewerAccess = {
+  role: AgentRole;
+  /** Opens a read-only workspace of the snapshot under review. */
+  open: OpenWorkspace;
+  signal: AbortSignal;
+  provider?: Provider;
+};
+
+type ReportEntry = {
+  binding: string;
+  owner: string;
+  criterion: string;
+  case: string | null;
+  outcome: "passed" | "failed" | "skipped";
+  assertions: number;
+  observations: JsonObject;
+  message?: string;
+};
+
+const reportSchema: unknown = JSON.parse(
+  readFileSync(new URL("./verifier-report.schema.json", import.meta.url), "utf8"),
+);
+const validateReport = new Ajv2020({ allErrors: true }).compile<{ results: ReportEntry[] }>(
+  reportSchema as Record<string, unknown>,
+);
+
+/** A target's stable key, e.g. `CP01-S03/AC05/self-loop/automated/edges.supersession-cycles`. */
+export const targetKey = (t: VerificationTarget): string =>
+  [t.owner, t.criterion, t.caseId ?? "-", t.method, t.binding].join("/");
+
+const within = (path: string, prefixes: readonly string[]): boolean =>
+  prefixes.some((p) => path === p || path.startsWith(`${p}/`));
+
+const unique = (values: readonly string[]): string[] => [...new Set(values)].sort();
+
+function store<T extends object>(run: RunHandle, record: T): Stored<T> {
+  return { ref: putEvidence(run, stringify(record)), record };
+}
+
+/**
+ * Journals a stored record: its reference comes first in the event's
+ * evidence and is repeated as `data.record`, where `recordDecision` finds it.
+ */
+function journal(
+  run: RunHandle,
+  action: string,
+  at: { attempt: number; evaluation: string },
+  record: string,
+  more: readonly (string | null)[],
+  data: JsonObject,
+): void {
+  const others = unique(more.flatMap((r) => (r === null || r === record ? [] : [r])));
+  appendEvent(run, {
+    action,
+    attempt: at.attempt,
+    evaluation: at.evaluation,
+    evidence: [record, ...others],
+    data: { ...data, record },
+  });
+}
+
+/**
+ * The stored records the run's committed journal lists under `action`, in
+ * journal order. readRun has checked every evidence digest, and
+ * decideAcceptance checks each record against its reference again, so a
+ * record is what the controller stored.
+ */
+export function journalRecords<T>(
+  run: RunHandle,
+  events: readonly JournalEvent[],
+  action: string,
+  keep: (e: JournalEvent) => boolean,
+): Stored<T>[] {
+  return events
+    .filter((e) => e.action === action && keep(e))
+    .map((e) => {
+      const ref = e.data.record;
+      if (typeof ref !== "string") throw new Error(`event ${e.seq}: ${action} names no record`);
+      return { ref, record: JSON.parse(readEvidence(run.dir, ref).toString("utf8")) as T };
+    });
+}
+
+/** The run's committed journal events; corrupt records throw. */
+export function committedEvents(run: RunHandle): JournalEvent[] {
+  const read = readRun(run.dir);
+  if (!read.ok) throw new Error(read.diagnostics.join("\n"));
+  return read.records.events;
+}
+
+function contractStep(plan: PreparedRun, id: string): ContractStep {
+  const step = plannedContract(plan, id);
+  if (!step) throw new Error(`${id}: not a planned contract step`);
+  return step;
+}
+
+/**
+ * The planned contract steps before `step`, in checkpoint order. The exit
+ * evaluation has none: the integrated acceptance holds their results.
+ */
+const earlierSteps = (plan: PreparedRun, step: ContractStep): ContractStep[] =>
+  step.id === exitId(plan)
+    ? []
+    : plan.steps
+        .slice(
+          0,
+          plan.steps.findIndex((s) => s.id === step.id),
+        )
+        .filter(
+          (s): s is ContractStep => s.kind === "contract" && lineageOf(s) === lineageOf(step),
+        );
+
+/**
+ * Every target a step must satisfy: its own, the checkpoint's inherited ones
+ * that apply (all but `pending`, the evaluation's applicability decision) and
+ * the automated targets of every earlier planned step. A step's candidate
+ * builds on the earlier acceptances, so their executed checks run again on it
+ * (T3 plan §5). Earlier review and approval targets keep their recorded
+ * evidence; approvals and effects are never replayed.
+ */
+export const targetsOf = (
+  plan: PreparedRun,
+  step: ContractStep,
+  pending: readonly Pending[] = [],
+): VerificationTarget[] => {
+  // A procedure in another repository is judged on its own evidence: the
+  // candidate's checks do not apply there.
+  if (lineageOf(step) !== CANDIDATE) return [...step.targets];
+  const deferred = new Set(pending.map((p) => p.target));
+  return [
+    ...step.targets,
+    ...plan.inherited.targets.filter((t) => !deferred.has(targetKey(t))),
+    ...earlierSteps(plan, step).flatMap((s) => s.targets.filter((t) => t.method === "automated")),
+  ];
+};
+
+/**
+ * The applicability decision for an evaluation of `step` (T3.5 H1; Spec 00
+ * §4): the inherited targets whose rule does not apply yet. An `exit` target
+ * waits for the checkpoint exit evaluation; an `after` target waits until its
+ * step has been accepted before the evaluation (`accepted`, the steps with an
+ * acceptance journaled earlier). The exit evaluation leaves nothing pending.
+ */
+export function pendingTargets(
+  plan: PreparedRun,
+  step: ContractStep,
+  accepted: ReadonlySet<string>,
+): Pending[] {
+  if (step.id === exitId(plan) || lineageOf(step) !== CANDIDATE) return [];
+  return plan.inherited.targets.flatMap((t): Pending[] => {
+    const rule = plan.inherited.applicability[t.criterion] ?? { kind: "step" };
+    if (rule.kind === "exit") return [{ target: targetKey(t), rule: "exit" }];
+    if (rule.kind === "after" && !accepted.has(rule.step)) {
+      return [{ target: targetKey(t), rule: `after ${rule.step}` }];
+    }
+    return [];
+  });
+}
+
+/**
+ * Why an evaluation's pending list is not one the plan's rules allow: a
+ * deferred target that is not inherited, a rule other than the target's own,
+ * a `step` target deferred, or anything deferred at the exit.
+ */
+export function pendingIssues(
+  plan: PreparedRun,
+  step: ContractStep,
+  pending: readonly Pending[],
+): string[] {
+  if (step.id === exitId(plan) && pending.length > 0) {
+    return ["the exit evaluation defers no target"];
+  }
+  return pending.flatMap((p) => {
+    const target = plan.inherited.targets.find((t) => targetKey(t) === p.target);
+    if (!target) return [`${p.target} is deferred but is no inherited target`];
+    const rule = plan.inherited.applicability[target.criterion] ?? { kind: "step" };
+    const text = rule.kind === "after" ? `after ${rule.step}` : rule.kind;
+    return rule.kind === "step" || text !== p.rule
+      ? [`${p.target} is deferred as ${p.rule}, but its rule is ${text}`]
+      : [];
+  });
+}
+
+/** The candidate's files: path → `mode sha`, read from the run's source repository. */
+export const candidateTree = (run: RunHandle, snapshot: SourceSnapshot): Map<string, string> =>
+  treeEntries(run.dir, snapshot.tree);
+
+/**
+ * What the candidate holds at the workspace paths `prefixes`: its files at
+ * or below them, and the links on their ancestors that would resolve them
+ * into other source.
+ */
+const heldUnder = (tree: ReadonlyMap<string, string>, prefixes: readonly string[]): string[] =>
+  unique([
+    ...[...tree.keys()].filter((path) => within(path, prefixes)),
+    ...prefixes.flatMap((p) => linkAncestor(tree, p) ?? []),
+  ]);
+
+function identityOf(
+  run: RunHandle,
+  attempt: number,
+  manifest: EvaluationManifest,
+  candidate: SealedCandidate,
+): Identity {
+  if (manifest.source.commit !== candidate.commit || manifest.source.tree !== candidate.tree) {
+    throw new Error(`the evaluation manifest names another candidate than ${candidate.commit}`);
+  }
+  return {
+    run: run.run,
+    attempt,
+    evaluation: evaluationDigest(manifest),
+    candidate: candidate.commit,
+  };
+}
+
+/**
+ * Opens each subject, judge and reviewer run in a fresh B workspace of the
+ * given snapshot: read-only but for its tmpfs, no network, the candidate's
+ * user, one container. Code under test never shares a workspace with a judge.
+ */
+export function containedWorkspaces(run: RunHandle, root: string): OpenWorkspace {
+  mkdirSync(root, { recursive: true });
+  return async (snapshot, options = {}) => {
+    const dir = join(root, randomUUID());
+    const ws = await createWorkspace(run, {
+      base: { commit: snapshot.commit, tree: snapshot.tree },
+      root: dir,
+      policy: { ...READ_ONLY, scratch: [...(options.scratch ?? [])] },
+      mounts: [...(options.mounts ?? [])],
+    }).catch((e: unknown) => {
+      rmSync(dir, { recursive: true, force: true });
+      throw e;
+    });
+    return {
+      ...containedOps(ws),
+      snapshot: ws.base,
+      async close() {
+        if (!ws.fenced) await fence(ws);
+        rmSync(dir, { recursive: true, force: true });
+      },
+    };
+  };
+}
+
+const message = (e: unknown): string => (e instanceof Error ? e.message : String(e));
+
+/**
+ * Prepares a candidate's dependencies under `root`/dependencies (T3.5 H1):
+ * the spec's command runs once per key — the snapshot of the candidate's
+ * input paths, the spec and the containment profile — in a contained
+ * workspace of that snapshot alone, as the candidate's user, with only the
+ * output paths writable and the configured network. Its outputs move to a
+ * directory named by the key, which subject workspaces mount read-only. Each
+ * preparation is journaled as `dependency-preparation` before its outputs
+ * are published, so a published directory always has a record; a later
+ * preparation of the same key reuses both. A candidate holding files at an
+ * output path, a failing command or a missing output fails; a workspace that
+ * could not run or a timeout leaves the dependencies unavailable.
+ */
+export function containedDependencies(
+  run: RunHandle,
+  root: string,
+  spec: DependencySpec,
+): PrepareDependencies {
+  const cache = join(root, "dependencies");
+  return async (candidate) => {
+    const tree = candidateTree(run, candidate);
+    const inputs = subsetSnapshot(
+      run.dir,
+      candidate,
+      [...tree.keys()].filter((path) => within(path, spec.inputs)),
+    );
+    const identity = { inputs: inputs.tree, spec, profile: profileDigest };
+    const key = sha256(stringify(identity));
+    const dir = join(cache, key.slice("sha256:".length));
+    const mounts = spec.outputs.map((path) => ({ path, source: join(dir, path) }));
+    const settle = (
+      outcome: PreparationRecord["outcome"],
+      reason: string | null,
+      ran: RunRecord | null,
+    ): PreparedDependencies => {
+      const stored = store(run, {
+        run: run.run,
+        key,
+        candidate: candidate.commit,
+        inputs: { commit: inputs.commit, tree: inputs.tree },
+        spec,
+        profile: profileDigest,
+        ran,
+        outcome,
+        reason,
+      } satisfies PreparationRecord);
+      appendEvent(run, {
+        action: "dependency-preparation",
+        evidence: [stored.ref, ...unique(ran ? [ran.stdout, ran.stderr] : [])],
+        data: { key, outcome, candidate: candidate.commit, record: stored.ref },
+      });
+      return { key, record: stored.ref, outcome, reason, mounts };
+    };
+    const held = heldUnder(tree, spec.outputs);
+    if (held.length > 0) {
+      return settle(
+        "failed",
+        `the candidate holds ${held.join(", ")} at a dependency output path; dependencies are prepared, never taken from the candidate`,
+        null,
+      );
+    }
+    const prepared = journalRecords<PreparationRecord>(
+      run,
+      committedEvents(run),
+      "dependency-preparation",
+      (e) => e.data.key === key && e.data.outcome === "prepared",
+    ).at(-1);
+    if (prepared && existsSync(dir)) {
+      return { key, record: prepared.ref, outcome: "prepared", reason: null, mounts };
+    }
+    mkdirSync(cache, { recursive: true });
+    const work = join(cache, `${randomUUID()}.work`);
+    try {
+      let ws;
+      try {
+        ws = await createWorkspace(run, {
+          base: inputs,
+          root: work,
+          policy: { writable: [], scratch: [...spec.outputs], protected: [] },
+          network: spec.network,
+        });
+      } catch (e) {
+        return settle(
+          "unavailable",
+          `the preparation workspace did not start: ${message(e)}`,
+          null,
+        );
+      }
+      const result = await exec(ws, spec.command, { timeoutMs: spec.timeoutMs });
+      if (!ws.fenced) await fence(ws);
+      const ran: RunRecord = {
+        argv: [...spec.command],
+        exit: result.exitCode,
+        timedOut: result.timedOut,
+        stdout: putEvidence(run, result.stdout),
+        stderr: putEvidence(run, result.stderr),
+      };
+      const stderr = result.stderr.toString("utf8").trim().slice(-500);
+      if (result.timedOut) {
+        return settle("unavailable", `the preparation timed out after ${spec.timeoutMs} ms`, ran);
+      }
+      if (result.exitCode !== 0) {
+        return settle(
+          "failed",
+          `the preparation exited ${result.exitCode ?? "by a signal"}: ${stderr}`,
+          ran,
+        );
+      }
+      const absent = spec.outputs.filter((o) => !existsSync(join(work, o)));
+      if (absent.length > 0) {
+        return settle("failed", `the preparation produced no ${absent.join(", ")}`, ran);
+      }
+      const partial = `${dir}.partial`;
+      rmSync(partial, { recursive: true, force: true });
+      for (const o of spec.outputs) {
+        mkdirSync(dirname(join(partial, o)), { recursive: true });
+        renameSync(join(work, o), join(partial, o));
+      }
+      const settled = settle("prepared", null, ran);
+      rmSync(dir, { recursive: true, force: true });
+      renameSync(partial, dir);
+      return settled;
+    } finally {
+      rmSync(work, { recursive: true, force: true });
+    }
+  };
+}
+
+const sameSnapshot = (a: SourceSnapshot, b: SourceSnapshot): boolean =>
+  a.commit === b.commit && a.tree === b.tree;
+
+type Ran = { exitCode: number | null; timedOut: boolean; stdout: Buffer; stderr: Buffer };
+
+/**
+ * The controller's reading of one invocation, per expected target, given the
+ * subject runs in target order. A subject run that timed out fails its own
+ * target. Otherwise a subject or judge that never ran leaves the targets
+ * unavailable, and the judge must exit 0 with a report holding exactly one
+ * result per target: a pass needs at least one executed assertion and every
+ * required observation. A judge failure, a missing or malformed report, a
+ * skip or a result the targets do not expect never pass.
+ */
+export function reconcile(
+  binding: AutomatedBinding,
+  targets: readonly VerificationTarget[],
+  observed: { error: string | null; subjects: readonly Ran[]; judge: Ran | null },
+): TargetResult[] {
+  return judged(binding, targets, observed).map((result, i) =>
+    observed.subjects[i]?.timedOut === true
+      ? {
+          target: result.target,
+          outcome: "failed",
+          reason: `the subject timed out after ${binding.timeoutMs} ms`,
+        }
+      : result,
+  );
+}
+
+function judged(
+  binding: AutomatedBinding,
+  targets: readonly VerificationTarget[],
+  observed: { error: string | null; subjects: readonly Ran[]; judge: Ran | null },
+): TargetResult[] {
+  const all = (outcome: "invalid" | "unavailable", reason: string): TargetResult[] =>
+    targets.map((target) => ({ target, outcome, reason }));
+  const { judge } = observed;
+  const unrun = `the verifier did not run: ${observed.error ?? "no workspace"}`;
+  if (observed.subjects.length !== targets.length || judge === null) {
+    return all("unavailable", unrun);
+  }
+  const stderr = judge.stderr.toString("utf8").trim().slice(-500);
+  if (judge.timedOut) return all("invalid", `the judge timed out after ${binding.timeoutMs} ms`);
+  if (judge.exitCode !== 0) {
+    return all("invalid", `the judge exited ${judge.exitCode ?? "by a signal"}: ${stderr}`);
+  }
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(judge.stdout.toString("utf8"));
+  } catch {
+    return all(
+      "invalid",
+      judge.stdout.length === 0 ? "no report was written" : "the report is not JSON",
+    );
+  }
+  if (!validateReport(parsed)) {
+    const [error] = validateReport.errors ?? [];
+    return all(
+      "invalid",
+      `the report is malformed: ${error?.instancePath || "/"} ${error?.message ?? ""}`,
+    );
+  }
+  const entries = parsed.results;
+  const place = (owner: string, criterion: string, caseId: string | null): string =>
+    stringify([owner, criterion, caseId]);
+  const expected = new Set(targets.map((t) => place(t.owner, t.criterion, t.caseId)));
+  const unexpected = entries.filter(
+    (e) => e.binding !== binding.id || !expected.has(place(e.owner, e.criterion, e.case)),
+  );
+  if (unexpected.length > 0) {
+    const names = unexpected.map((e) => `${e.binding} ${e.owner}/${e.criterion}/${e.case ?? "-"}`);
+    return all("invalid", `the report has unexpected results: ${names.join(", ")}`);
+  }
+  return targets.map((t): TargetResult => {
+    const invalid = (reason: string): TargetResult => ({ target: t, outcome: "invalid", reason });
+    const mine = entries.filter(
+      (e) => place(e.owner, e.criterion, e.case) === place(t.owner, t.criterion, t.caseId),
+    );
+    const [entry] = mine;
+    if (mine.length > 1) return invalid(`${mine.length} results for one target`);
+    if (entry === undefined) return invalid("no result was reported");
+    if (entry.outcome === "failed") {
+      return {
+        target: t,
+        outcome: "failed",
+        reason: entry.message ?? "the judge reported a failure",
+      };
+    }
+    if (entry.outcome === "skipped") return invalid("the judge skipped it");
+    if (entry.assertions < 1) return invalid("passed without an executed assertion");
+    const missing = binding.observations.filter((o) => !Object.hasOwn(entry.observations, o));
+    if (missing.length > 0) return invalid(`missing observation ${missing.join(", ")}`);
+    return {
+      target: t,
+      outcome: "passed",
+      assertions: entry.assertions,
+      observations: entry.observations,
+    };
+  });
+}
+
+/**
+ * Runs one binding once: one invocation, even when other bindings share its
+ * commands. The subject runs once per expected target, each time in its own
+ * fresh read-only workspace of the candidate, so runs cannot reach one
+ * another. Its argv is the binding's command alone and its only input is the
+ * target key on stdin. The subject observes the candidate as a program, a
+ * separate process, and no code under test runs in the subject's own
+ * process. A run's exit status and stdout are the behaviour observed: the
+ * controller labels them with the run's target and constructs nothing from
+ * them. The judge runs in a workspace of a snapshot holding only the
+ * binding's files, outside every candidate process: it reads the labelled
+ * runs as JSON on stdin, reduces each to the criterion's primitive facts and
+ * writes the report to stdout.
+ * Workspace and execution errors are recorded, never thrown; a failure to
+ * stop a workspace is recorded apart and never discards a run.
+ *
+ * Repository commands (T3.5 H1): a subject workspace has the binding's
+ * scratch paths empty and writable, for build output, and the prepared
+ * dependencies mounted read-only when the binding declares them. A candidate
+ * holding files under a scratch path fails every target, so prebuilt output
+ * cannot pass; dependencies that failed to prepare fail them too, and
+ * dependencies that could not be prepared leave them unavailable.
+ */
+async function runBinding(
+  run: RunHandle,
+  input: {
+    binding: AutomatedBinding;
+    digest: string;
+    targets: readonly VerificationTarget[];
+    identity: Identity;
+    stage: Stage;
+    candidate: SealedCandidate;
+    open: OpenWorkspace;
+    prepare?: PrepareDependencies | undefined;
+    checkpoint?: GivenCheckpoint | undefined;
+  },
+): Promise<Stored<Invocation>> {
+  const { binding, identity } = input;
+  const checkpoint = input.checkpoint ?? null;
+  if (checkpoint && sha256(stringify(checkpoint.record)) !== checkpoint.ref) {
+    throw new Error(`the checkpoint evidence does not match ${checkpoint.ref}`);
+  }
+  let error: string | null = null;
+  const cleanup: string[] = [];
+  const timeoutMs = binding.timeoutMs;
+  const contained = async <T>(
+    snapshot: SourceSnapshot,
+    use: (ws: ContainedWorkspace) => Promise<T>,
+    options?: WorkspaceOptions,
+  ): Promise<T | null> => {
+    let ws: ContainedWorkspace;
+    try {
+      ws = await input.open(snapshot, options);
+    } catch (e) {
+      error ??= message(e);
+      return null;
+    }
+    try {
+      if (!sameSnapshot(ws.snapshot, snapshot)) {
+        error ??= `the workspace holds ${ws.snapshot.commit}, not ${snapshot.commit}`;
+        return null;
+      }
+      return await use(ws);
+    } catch (e) {
+      error ??= message(e);
+      return null;
+    } finally {
+      await ws.close().catch((e: unknown) => {
+        cleanup.push(message(e));
+      });
+    }
+  };
+
+  // What the candidate and its dependencies decide before any subject runs.
+  let precondition: { outcome: "failed" | "unavailable"; reason: string } | null = null;
+  let dependencies: Invocation["dependencies"] = null;
+  const options: WorkspaceOptions = { scratch: binding.scratch ?? [], mounts: [] };
+  const held = heldUnder(candidateTree(run, input.candidate), binding.scratch ?? []);
+  if (held.length > 0) {
+    precondition = {
+      outcome: "failed",
+      reason: `the candidate holds ${held.join(", ")} under the scratch paths ${(binding.scratch ?? []).join(", ")}; build output is produced from the candidate's source, never taken from it`,
+    };
+  } else if (binding.dependencies === true) {
+    if (!input.prepare) {
+      precondition = { outcome: "unavailable", reason: "no dependency preparation is configured" };
+    } else {
+      try {
+        const prepared = await input.prepare(input.candidate);
+        dependencies = { key: prepared.key, record: prepared.record };
+        if (prepared.outcome === "prepared") options.mounts = prepared.mounts;
+        else {
+          precondition = {
+            outcome: prepared.outcome,
+            reason: `dependencies: ${prepared.reason ?? prepared.outcome}`,
+          };
+        }
+      } catch (e) {
+        precondition = { outcome: "unavailable", reason: `dependencies: ${message(e)}` };
+      }
+    }
+  }
+  const argv = [...binding.command];
+  const subjects: { target: VerificationTarget; ran: Ran }[] = [];
+  for (const target of precondition === null ? input.targets : []) {
+    const stdin = Buffer.from(targetKey(target));
+    const ran = await contained(
+      input.candidate,
+      (ws) => ws.exec(argv, { timeoutMs, stdin }),
+      options,
+    );
+    if (ran === null) break;
+    subjects.push({ target, ran });
+  }
+  const judgeArgv = [...binding.judge];
+  let judge: Ran | null = null;
+  let judged: SourceSnapshot | null = null;
+  if (precondition === null && subjects.length === input.targets.length) {
+    try {
+      judged = subsetSnapshot(run.dir, input.candidate, binding.files);
+    } catch (e) {
+      error ??= message(e);
+    }
+    if (judged !== null) {
+      const runs = subjects.map(({ target, ran }) => ({
+        owner: target.owner,
+        criterion: target.criterion,
+        case: target.caseId,
+        exit: ran.exitCode,
+        timedOut: ran.timedOut,
+        stdout: ran.stdout.toString("utf8"),
+      }));
+      const stdin = Buffer.from(
+        JSON.stringify({
+          binding: binding.id,
+          runs,
+          ...(checkpoint ? { checkpoint: checkpoint.record } : {}),
+        }),
+      );
+      judge = await contained(judged, (ws) => ws.exec(judgeArgv, { timeoutMs, stdin }));
+    }
+  }
+  const record = (argv: string[], ran: Ran): RunRecord => ({
+    argv,
+    exit: ran.exitCode,
+    timedOut: ran.timedOut,
+    stdout: putEvidence(run, ran.stdout),
+    stderr: putEvidence(run, ran.stderr),
+  });
+  const invocation: Invocation = {
+    ...identity,
+    id: randomUUID(),
+    stage: input.stage,
+    binding: binding.id,
+    version: binding.version,
+    digest: input.digest,
+    subjects: subjects.map(({ target, ran }) => ({
+      target: targetKey(target),
+      ...record(argv, ran),
+    })),
+    judge:
+      judge === null || judged === null
+        ? null
+        : { ...record(judgeArgv, judge), snapshot: { commit: judged.commit, tree: judged.tree } },
+    dependencies,
+    checkpoint: checkpoint?.ref ?? null,
+    error: error ?? (precondition?.outcome === "unavailable" ? precondition.reason : null),
+    cleanup: cleanup.length > 0 ? cleanup.join("; ") : null,
+    results:
+      precondition === null
+        ? reconcile(binding, input.targets, {
+            error,
+            subjects: subjects.map((s) => s.ran),
+            judge,
+          })
+        : input.targets.map((target) => ({ target, ...precondition })),
+  };
+  const stored = store(run, invocation);
+  const runs = [
+    ...[...invocation.subjects, invocation.judge].flatMap((r) =>
+      r === null ? [] : [r.stdout, r.stderr],
+    ),
+    ...(dependencies ? [dependencies.record] : []),
+    ...(checkpoint ? [checkpoint.ref] : []),
+  ];
+  journal(run, "verifier-invocation", identity, stored.ref, runs, {
+    binding: binding.id,
+    stage: input.stage,
+    invocation: invocation.id,
+  });
+  return stored;
+}
+
+/**
+ * The admissions of a verifier digest under the current adequacy rubric.
+ * The first complete adequacy review, in journal order, decides the digest
+ * for good: approved, rejected or paused; a revised verifier is a new digest.
+ * A rejection by the provisional completeness check, or an invalid admission,
+ * speaks only for its own evaluation (`pending`, the latest of them).
+ */
+function admissionFor(
+  admissions: readonly Stored<Admission>[],
+  binding: string,
+  digest: string | undefined,
+  evaluation?: string,
+): { decided: Stored<Admission> | undefined; pending: Admission | undefined } {
+  const rubrics = new Set([adequacyRubric("automated").digest, adequacyRubric("review").digest]);
+  const own = admissions.filter(
+    ({ record: a }) => a.binding === binding && a.digest === digest && rubrics.has(a.rubric),
+  );
+  const decides = (a: Admission): boolean => a.review !== null && a.outcome !== "invalid";
+  return {
+    decided: own.find(({ record: a }) => decides(a)),
+    pending: own.filter(({ record: a }) => !decides(a) && a.evaluation === evaluation).at(-1)
+      ?.record,
+  };
+}
+
+const approvedFor = (
+  admissions: readonly Stored<Admission>[],
+  binding: string,
+  digest: string | undefined,
+): Stored<Admission> | undefined => {
+  const { decided } = admissionFor(admissions, binding, digest);
+  return decided?.record.outcome === "approved" ? decided : undefined;
+};
+
+type VerifyInput = {
+  plan: PreparedRun;
+  step: string;
+  registry: Registry;
+  candidate: SealedCandidate;
+  attempt: number;
+  manifest: EvaluationManifest;
+  admissions: readonly Stored<Admission>[];
+  /** Prepares the candidate's dependencies for bindings that declare them. */
+  prepare?: PrepareDependencies | undefined;
+  /** The checkpoint evidence of an exit evaluation, given to every judge. */
+  checkpoint?: GivenCheckpoint | undefined;
+};
+
+/**
+ * The automated bindings `verifyCandidate` runs for acceptance: each one the
+ * step and its inherited requirements need whose current digest, as the
+ * evaluation lists it, has an approved admission. Other bindings are not
+ * run; `decideAcceptance` states why they cannot count.
+ */
+export function runnableBindings(run: RunHandle, input: VerifyInput): string[] {
+  const targets = targetsOf(
+    input.plan,
+    contractStep(input.plan, input.step),
+    input.manifest.pending,
+  ).filter((t) => t.method === "automated");
+  const ids = unique(targets.map((t) => t.binding));
+  const digests = bindingDigests(input.registry, candidateTree(run, input.candidate), ids);
+  return ids.filter((id) => {
+    const digest = digests[id];
+    return (
+      input.registry.get(id)?.binding.method === "automated" &&
+      digest !== undefined &&
+      input.manifest.verifiers[id] === digest &&
+      approvedFor(input.admissions, id, digest) !== undefined
+    );
+  });
+}
+
+/**
+ * Runs, for acceptance, each of the `runnableBindings`, or only those of
+ * them named in `bindings`.
+ */
+export async function verifyCandidate(
+  run: RunHandle,
+  input: VerifyInput & { open: OpenWorkspace; bindings?: readonly string[] },
+): Promise<Stored<Invocation>[]> {
+  const identity = identityOf(run, input.attempt, input.manifest, input.candidate);
+  const targets = targetsOf(
+    input.plan,
+    contractStep(input.plan, input.step),
+    input.manifest.pending,
+  ).filter((t) => t.method === "automated");
+  const ids = runnableBindings(run, input).filter(
+    (id) => input.bindings === undefined || input.bindings.includes(id),
+  );
+  const digests = bindingDigests(input.registry, candidateTree(run, input.candidate), ids);
+  const invocations: Stored<Invocation>[] = [];
+  for (const id of ids) {
+    const binding = input.registry.get(id)?.binding;
+    const digest = digests[id];
+    if (binding?.method !== "automated" || digest === undefined) continue;
+    invocations.push(
+      await runBinding(run, {
+        binding,
+        digest,
+        targets: targets.filter((t) => t.binding === id),
+        identity,
+        stage: "acceptance",
+        candidate: input.candidate,
+        open: input.open,
+        prepare: input.prepare,
+        checkpoint: input.checkpoint,
+      }),
+    );
+  }
+  return invocations;
+}
+
+/** What the reviewer is shown of recorded verification: per target, never a bare exit code. */
+function verificationSummary(invocations: readonly Stored<Invocation>[]): Json {
+  return invocations.flatMap(({ record }) =>
+    record.results.map((r): Json => ({
+      target: targetKey(r.target),
+      invocation: record.id,
+      stage: record.stage,
+      outcome: r.outcome,
+      ...(r.outcome === "passed"
+        ? { assertions: r.assertions, observations: r.observations }
+        : { reason: r.reason }),
+    })),
+  );
+}
+
+/**
+ * Runs one review in a fresh read-only workspace opened here from the sealed
+ * candidate; a workspace of any other snapshot is refused before the
+ * reviewer starts. The record names the invocations and outputs shown.
+ */
+async function runReview(
+  run: RunHandle,
+  input: {
+    plan: PreparedRun;
+    step: ContractStep;
+    identity: Identity;
+    candidate: SealedCandidate;
+    accepted: readonly AcceptedOutput[];
+    context: ReviewContext;
+    /** Invocation records whose results the context shows. */
+    shown: readonly string[];
+    /** The output inventory the context shows. */
+    outputs: readonly OutputProof[];
+    /** The checkpoint evidence the context shows, for the exit evaluation. */
+    checkpoint: string | null;
+    reviewer: ReviewerAccess;
+    /** Committed records the reviewer may read with read_evidence (T3.6 L3); none by default. */
+    records?: readonly string[];
+  },
+): Promise<Stored<ReviewRecord>> {
+  const { identity, reviewer } = input;
+  if (reviewer.role.name !== "reviewer") throw new Error("review needs the reviewer role");
+  // In the given order: a challenge's binding review comes first.
+  const records = input.records ? [...new Set(input.records)] : undefined;
+  const built = buildPacket(input.plan, input.step.id, reviewer.role, {
+    attempt: identity.attempt,
+    accepted: input.accepted,
+    policy: READ_ONLY,
+    candidate: input.candidate,
+    review: input.context,
+    ...(records ? { records } : {}),
+  });
+  if (!built.ok) throw new Error(built.diagnostics.join("\n"));
+  const ws = await reviewer.open(input.candidate);
+  let outcome: AgentOutcome;
+  let cleanup: string | null = null;
+  try {
+    if (!sameSnapshot(ws.snapshot, input.candidate)) {
+      throw new Error(
+        `the reviewer workspace holds ${ws.snapshot.commit}, not the candidate ${input.candidate.commit}`,
+      );
+    }
+    outcome = await invokeAgent(reviewer.role, built.packet, ws, reviewer.signal, {
+      ...(reviewer.provider ? { provider: reviewer.provider } : {}),
+      ...(records ? { records: readRecord(run) } : {}),
+    });
+  } finally {
+    await ws.close().catch((e: unknown) => {
+      cleanup = message(e);
+    });
+  }
+  const stored = store(run, {
+    ...identity,
+    kind: input.context.kind,
+    invocations: [...input.shown],
+    outputs: [...input.outputs],
+    cleanup,
+    rubric: input.context.rubric.digest,
+    packet: built.digest,
+    checkpoint: input.checkpoint,
+    ...(records ? { records } : {}),
+    outcome,
+  } satisfies ReviewRecord);
+  journal(
+    run,
+    "review",
+    identity,
+    stored.ref,
+    [...input.shown, input.checkpoint, ...(records ?? [])],
+    {
+      kind: input.context.kind,
+      outcome: outcome.outcome,
+      session: outcome.observation.session,
+    },
+  );
+  return stored;
+}
+
+type Scope = { subjects: readonly string[]; targets: readonly VerificationTarget[] };
+
+/**
+ * A complete verdict binds, even if it contradicts itself (`conflicts`);
+ * only an incomplete one (`issues`) may be followed by another review.
+ */
+type Checked =
+  { ok: true; verdict: ReviewVerdict; conflicts: string[] } | { ok: false; issues: string[] };
+
+const describeOutcome = (outcome: AgentOutcome): string => {
+  switch (outcome.outcome) {
+    case "failed":
+    case "cancelled":
+      return `${outcome.outcome}: ${outcome.reason}`;
+    case "exhausted":
+      return `exhausted its ${outcome.limit} limit`;
+    case "blocked":
+      return `blocked: ${outcome.blockers.join("; ")}`;
+    default:
+      return outcome.outcome;
+  }
+};
+
+const verdictTargetKey = (t: ReviewVerdict["targets"][number]): string =>
+  targetKey({
+    owner: t.owner,
+    criterion: t.criterion,
+    caseId: t.case,
+    method: "review",
+    binding: t.binding,
+  });
+
+/**
+ * Whether a reviewer returned a complete verdict for the scope: one coverage
+ * entry per subject and one entry per review target, nothing unknown; a
+ * blocked verdict needs blockers only. An incomplete verdict is a protocol
+ * failure. A complete one binds, and its conflicts are listed: a blocking
+ * finding on an item not recorded as unmet or without location, defect and
+ * correction, or a label that does not follow from its entries. A conflicting
+ * verdict never passes, so a later review cannot replace a negative judgement.
+ */
+export function checkVerdict(outcome: AgentOutcome, scope: Scope): Checked {
+  if (outcome.outcome !== "reviewed") {
+    return { ok: false, issues: [`the reviewer ${describeOutcome(outcome)}`] };
+  }
+  const v = outcome.verdict;
+  if (v.verdict === "blocked") {
+    return v.blockers.length > 0
+      ? { ok: true, verdict: v, conflicts: [] }
+      : { ok: false, issues: ["blocked without blockers"] };
+  }
+  const issues: string[] = [];
+  const conflicts: string[] = [];
+  const exactlyOnce = (
+    label: string,
+    expected: readonly string[],
+    actual: readonly string[],
+  ): void => {
+    for (const key of expected) {
+      const n = actual.filter((a) => a === key).length;
+      if (n !== 1) issues.push(`${label} has ${n} entries for ${key}`);
+    }
+    for (const key of unique(actual)) {
+      if (!expected.includes(key)) issues.push(`${label} names unknown ${key}`);
+    }
+  };
+  exactlyOnce(
+    "coverage",
+    scope.subjects,
+    v.coverage.map((c) => c.subject),
+  );
+  exactlyOnce("targets", scope.targets.map(targetKey), v.targets.map(verdictTargetKey));
+  const unmet = new Set([
+    ...v.coverage.filter((c) => c.result === "unsatisfied").map((c) => c.subject),
+    ...v.targets.filter((t) => t.result === "failed").map(verdictTargetKey),
+  ]);
+  const unassessed =
+    v.coverage.some((c) => c.result === "not-assessed") ||
+    v.targets.some((t) => t.result === "not-assessed");
+  const blocking = v.findings.filter((f) => f.severity === "blocking");
+  if (issues.length > 0) return { ok: false, issues };
+  for (const f of blocking) {
+    if (!unmet.has(f.rule)) {
+      conflicts.push(`a blocking finding cites ${f.rule}, which is not recorded as unmet`);
+    }
+    if ([f.location, f.defect, f.correction].some((s) => s.trim() === "")) {
+      conflicts.push(`the blocking finding on ${f.rule} lacks a location, defect or correction`);
+    }
+  }
+  if (v.verdict === "pass" && (unmet.size > 0 || unassessed || blocking.length > 0)) {
+    conflicts.push("the verdict is pass, yet an item is unmet, not assessed or blocking");
+  }
+  if (v.verdict === "changes-required" && blocking.length === 0) {
+    conflicts.push("changes-required without a blocking finding");
+  }
+  if (v.blockers.length > 0) conflicts.push(`blockers on a ${v.verdict} verdict`);
+  return { ok: true, verdict: v, conflicts };
+}
+
+const blockingFindings = (v: ReviewVerdict): Finding[] =>
+  v.findings
+    .filter((f) => f.severity === "blocking")
+    .map(({ rule, location, defect, correction }) => ({ rule, location, defect, correction }));
+
+/** The negative judgements a reviewed verdict records, complete or not. */
+export const negatives = (outcome: AgentOutcome): string[] => {
+  if (outcome.outcome !== "reviewed") return [];
+  const v = outcome.verdict;
+  return unique([
+    ...v.findings.filter((f) => f.severity === "blocking").map((f) => `${f.rule} blocking`),
+    ...v.coverage.filter((c) => c.result !== "satisfied").map((c) => `${c.subject} ${c.result}`),
+    ...v.targets
+      .filter((t) => t.result !== "passed")
+      .map((t) => `${verdictTargetKey(t)} ${t.result}`),
+  ]);
+};
+
+const unassessed = (v: ReviewVerdict): string[] => [
+  ...v.coverage.filter((c) => c.result === "not-assessed").map((c) => c.subject),
+  ...v.targets.filter((t) => t.result === "not-assessed").map(verdictTargetKey),
+];
+
+/**
+ * The §6 route for a verifier digest no complete admission has decided,
+ * whoever wrote it: a provisional run in isolation, a deterministic
+ * completeness check, then an adequacy review by a fresh reviewer. Only
+ * `approved` pins the digest; provisional results never count for
+ * acceptance. `rejected` carries precise test defects for the producer and,
+ * like `paused`, binds the digest. `invalid` (the verifier never ran, or the
+ * review was incomplete) may be followed by another admission. A review
+ * binding a candidate declares (T3.5 H1) has nothing to run: its rubric
+ * alone is reviewed, against the review-binding adequacy rubric.
+ */
+export async function admitVerifier(
+  run: RunHandle,
+  input: {
+    plan: PreparedRun;
+    step: string;
+    registry: Registry;
+    binding: string;
+    candidate: SealedCandidate;
+    attempt: number;
+    manifest: EvaluationManifest;
+    accepted: readonly AcceptedOutput[];
+    open: OpenWorkspace;
+    reviewer: ReviewerAccess;
+    prepare?: PrepareDependencies | undefined;
+    checkpoint?: GivenCheckpoint | undefined;
+  },
+): Promise<Stored<Admission>> {
+  const step = contractStep(input.plan, input.step);
+  const entry = input.registry.get(input.binding);
+  if (!entry || !needsAdmission(entry)) {
+    throw new Error(`${input.binding}: not a registered binding that needs admission`);
+  }
+  const binding = entry.binding;
+  const rubric = adequacyRubric(binding.method);
+  const identity = identityOf(run, input.attempt, input.manifest, input.candidate);
+  const tree = candidateTree(run, input.candidate);
+  const digest = bindingDigests(input.registry, tree, [binding.id])[binding.id];
+  if (digest === undefined) throw new Error(`${binding.id}: no digest`);
+  const targets = targetsOf(input.plan, step, input.manifest.pending).filter(
+    (t) => t.method === binding.method && t.binding === binding.id,
+  );
+  if (targets.length === 0) throw new Error(`${binding.id}: no target of ${step.id} uses it`);
+  const admit = (
+    outcome: Admission["outcome"],
+    refs: { provisional: string | null; review: string | null },
+    findings: Finding[],
+    reasons: string[],
+  ): Stored<Admission> => {
+    const stored = store(run, {
+      ...identity,
+      step: step.id,
+      binding: binding.id,
+      version: binding.version,
+      digest,
+      rubric: rubric.digest,
+      ...refs,
+      outcome,
+      findings,
+      reasons,
+    } satisfies Admission);
+    journal(run, "verifier-admission", identity, stored.ref, [refs.provisional, refs.review], {
+      binding: binding.id,
+      digest,
+      outcome,
+    });
+    return stored;
+  };
+  const declaration = entry.source ?? null;
+  const declared: JsonObject =
+    declaration === null
+      ? {}
+      : { declaration: { path: declaration, entry: tree.get(declaration) ?? null } };
+
+  let provisional: Stored<Invocation> | null = null;
+  let evidence: JsonObject;
+  if (binding.method === "automated") {
+    const absent = binding.files.filter((f) => !tree.has(f));
+    if (absent.length > 0) {
+      const finding = {
+        rule: binding.id,
+        location: absent.join(", "),
+        defect: `verifier files ${absent.join(", ")} of ${binding.id} are not in the candidate`,
+        correction: `add the verifier for ${binding.id} at the binding's files`,
+      };
+      return admit("rejected", { provisional: null, review: null }, [finding], []);
+    }
+    provisional = await runBinding(run, {
+      binding,
+      digest,
+      targets,
+      identity,
+      stage: "provisional",
+      candidate: input.candidate,
+      open: input.open,
+      prepare: input.prepare,
+      checkpoint: input.checkpoint,
+    });
+
+    const location = binding.files.join(", ") || binding.command.join(" ");
+    const incomplete = provisional.record.results.flatMap((r) =>
+      r.outcome === "invalid"
+        ? [
+            {
+              rule: targetKey(r.target),
+              location,
+              defect: `provisional run: ${r.reason}`,
+              correction:
+                "Make the judge report exactly one executed result for this target, for its own binding only, on stdout.",
+            },
+          ]
+        : [],
+    );
+    if (incomplete.length > 0) {
+      return admit("rejected", { provisional: provisional.ref, review: null }, incomplete, []);
+    }
+    // A verifier that never ran has shown nothing to review; admission may be repeated.
+    const unrun = provisional.record.results.flatMap((r) =>
+      r.outcome === "unavailable" ? [`${targetKey(r.target)}: ${r.reason}`] : [],
+    );
+    if (unrun.length > 0) {
+      return admit("invalid", { provisional: provisional.ref, review: null }, [], unrun);
+    }
+    const files: JsonObject = {};
+    for (const f of binding.files) files[f] = tree.get(f) ?? null;
+    evidence = {
+      binding: {
+        id: binding.id,
+        command: [...binding.command],
+        timeoutMs: binding.timeoutMs,
+        observations: [...binding.observations],
+        scratch: [...(binding.scratch ?? [])],
+        dependencies: binding.dependencies === true,
+      },
+      files,
+      provisional: verificationSummary([provisional]),
+      ...declared,
+    };
+  } else if (binding.method === "review") {
+    evidence = {
+      binding: { id: binding.id, version: binding.version, rubric: [...binding.rubric] },
+      ...declared,
+    };
+  } else throw new Error(`${binding.id}: approval bindings are not admitted`);
+
+  const subjects = targets.map(targetKey);
+  const review = await runReview(run, {
+    plan: input.plan,
+    step,
+    identity,
+    candidate: input.candidate,
+    accepted: input.accepted,
+    reviewer: input.reviewer,
+    shown: provisional ? [provisional.ref] : [],
+    outputs: [],
+    checkpoint: null,
+    context: {
+      kind: "adequacy",
+      rubric,
+      subjects,
+      targets: [],
+      bindings: [],
+      evidence,
+    },
+  });
+  const refs = { provisional: provisional?.ref ?? null, review: review.ref };
+  const checked = checkVerdict(review.record.outcome, { subjects, targets: [] });
+  if (!checked.ok) {
+    // An incomplete review that already judged against the verifier binds.
+    const negative = negatives(review.record.outcome);
+    return negative.length > 0
+      ? admit("paused", refs, [], [...checked.issues, ...negative])
+      : admit("invalid", refs, [], checked.issues);
+  }
+  const v = checked.verdict;
+  if (v.verdict === "blocked" || unassessed(v).length > 0 || checked.conflicts.length > 0) {
+    return admit(
+      "paused",
+      refs,
+      [],
+      [...v.blockers, ...unassessed(v).map((s) => `${s} not assessed`), ...checked.conflicts],
+    );
+  }
+  if (v.verdict === "changes-required") return admit("rejected", refs, blockingFindings(v), []);
+  return admit("approved", refs, [], []);
+}
+
+/** The subjects and review targets a step's common review must cover. */
+export function reviewScope(
+  plan: PreparedRun,
+  step: ContractStep,
+  registry: Registry,
+  pending: readonly Pending[] = [],
+): Scope & { bindings: ReviewContext["bindings"] } {
+  const targets = targetsOf(plan, step, pending).filter((t) => t.method === "review");
+  // An inherited requirement every one of whose targets is pending is judged
+  // where those targets apply, not before.
+  const deferred = new Set(pending.map((p) => p.target));
+  const applies = (requirement: string): boolean => {
+    const proving = plan.inherited.targets.filter((t) =>
+      plan.inherited.criteria.some((c) => c.id === t.criterion && c.covers.includes(requirement)),
+    );
+    return proving.length === 0 || proving.some((t) => !deferred.has(targetKey(t)));
+  };
+  // A requirement proved only by approval targets is judged by its approver:
+  // no candidate shows an approval before it is given, so the review leaves it out.
+  const byApproval = (
+    criteria: readonly { id: string; covers: readonly string[] }[],
+    proving: readonly VerificationTarget[],
+    requirement: string,
+  ): boolean => {
+    const covering = proving.filter((t) =>
+      criteria.some((c) => c.id === t.criterion && c.covers.includes(requirement)),
+    );
+    return covering.length > 0 && covering.every((t) => t.method === "approval");
+  };
+  return {
+    subjects: [
+      ...step.requirements
+        .filter((r) => !byApproval(step.criteria, step.targets, r.id))
+        .map((r) => `${step.id}/${r.id}`),
+      ...plan.inherited.requirements
+        .filter((r) => applies(r.id))
+        .filter((r) => !byApproval(plan.inherited.criteria, plan.inherited.targets, r.id))
+        .map((r) => `${plan.checkpoint}/${r.id}`),
+      ...step.outputs.map((o) => `${step.id}/${o.id}`),
+    ],
+    targets,
+    bindings: unique(targets.map((t) => t.binding)).flatMap((id) => {
+      const entry = registry.get(id);
+      return entry?.binding.method === "review"
+        ? [{ id, digest: entry.digest, rubric: entry.binding.rubric }]
+        : [];
+    }),
+  };
+}
+
+/**
+ * Each declared output's claimed paths and their `mode sha` in the
+ * candidate. An output without a claimed path, a claimed path absent from
+ * the candidate and a claim for an undeclared output are issues. A proof
+ * still needs the review to find the output's declared meaning satisfied.
+ */
+export function inventory(
+  step: ContractStep,
+  claims: Submission["outputs"],
+  tree: ReadonlyMap<string, string>,
+): { proofs: OutputProof[]; issues: { output: string; detail: string }[] } {
+  const proofs: OutputProof[] = [];
+  const issues: { output: string; detail: string }[] = [];
+  for (const { id } of step.outputs) {
+    const paths = unique(claims.filter((c) => c.output === id).flatMap((c) => c.paths));
+    const found = paths.flatMap((path) => {
+      const entry = tree.get(path);
+      return entry === undefined ? [] : [{ path, entry }];
+    });
+    if (paths.length === 0) issues.push({ output: id, detail: "no path was produced for it" });
+    else if (found.length < paths.length) {
+      const absent = paths.filter((p) => !tree.has(p));
+      issues.push({ output: id, detail: `${absent.join(", ")} is not in the candidate` });
+    } else proofs.push({ output: id, paths: found });
+  }
+  for (const c of claims) {
+    if (!step.outputs.some((o) => o.id === c.output)) {
+      issues.push({ output: c.output, detail: "it is not an output of the step" });
+    }
+  }
+  return { proofs, issues };
+}
+
+/**
+ * The common independent review of a sealed candidate, required for every
+ * step whether or not a criterion names a review binding. The fresh reviewer
+ * sees the exact requirements, the candidate (read-only), the recorded
+ * acceptance results and the output inventory, never the producer's session.
+ */
+export async function reviewCandidate(
+  run: RunHandle,
+  input: {
+    plan: PreparedRun;
+    step: string;
+    registry: Registry;
+    candidate: SealedCandidate;
+    attempt: number;
+    manifest: EvaluationManifest;
+    accepted: readonly AcceptedOutput[];
+    claims: Submission["outputs"];
+    reviewer: ReviewerAccess;
+    /** The checkpoint evidence of an exit evaluation, shown to the reviewer. */
+    checkpoint?: GivenCheckpoint | undefined;
+  },
+): Promise<Stored<ReviewRecord>> {
+  const step = contractStep(input.plan, input.step);
+  const checkpoint = input.checkpoint ?? null;
+  const identity = identityOf(run, input.attempt, input.manifest, input.candidate);
+  const scope = reviewScope(input.plan, step, input.registry, input.manifest.pending);
+  const { proofs, issues } = inventory(step, input.claims, candidateTree(run, input.candidate));
+  const events = committedEvents(run);
+  // The evidence shown is this attempt's committed acceptance runs, never a caller's selection.
+  const shown = journalRecords<Invocation>(
+    run,
+    events,
+    "verifier-invocation",
+    (e) =>
+      e.attempt === identity.attempt &&
+      e.evaluation === identity.evaluation &&
+      e.data.stage === "acceptance",
+  );
+  return runReview(run, {
+    plan: input.plan,
+    step,
+    identity,
+    candidate: input.candidate,
+    accepted: input.accepted,
+    reviewer: input.reviewer,
+    shown: shown.map((i) => i.ref),
+    outputs: proofs,
+    checkpoint: checkpoint?.ref ?? null,
+    context: {
+      kind: "candidate",
+      rubric: COMMON_RUBRIC,
+      subjects: [...scope.subjects],
+      targets: [...scope.targets],
+      bindings: scope.bindings,
+      evidence: {
+        verification: verificationSummary(shown),
+        outputs: { proofs, issues },
+        ...(checkpoint ? { checkpoint: checkpoint.record } : {}),
+        ...(step.procedure
+          ? {
+              operation: transcript(
+                run,
+                producerInvocation(run, events, step.id, identity.attempt),
+              ),
+            }
+          : {}),
+      },
+    },
+  });
+}
+
+/**
+ * Assesses a pull request's feedback (T3.5 H3): a fresh reviewer in a
+ * read-only workspace of the current candidate judges each feedback item, a
+ * subject, against the pinned requirements of every selected step under the
+ * feedback rubric. It uses the reviewer's own template and verdict rules; the
+ * packet is the checkpoint's integrated view, consuming every accepted output.
+ */
+export async function assessFeedback(
+  run: RunHandle,
+  input: {
+    plan: PreparedRun;
+    identity: Identity;
+    candidate: SealedCandidate;
+    accepted: readonly AcceptedOutput[];
+    feedback: { ref: string; pull: number; url: string | null; items: readonly Json[] };
+    subjects: readonly string[];
+    reviewer: ReviewerAccess;
+  },
+): Promise<Stored<ReviewRecord>> {
+  const step = exitStep(input.plan);
+  return runReview(run, {
+    plan: input.plan,
+    step,
+    identity: input.identity,
+    candidate: input.candidate,
+    accepted: input.accepted,
+    reviewer: input.reviewer,
+    shown: [],
+    outputs: [],
+    checkpoint: null,
+    context: {
+      kind: "feedback",
+      rubric: FEEDBACK_RUBRIC,
+      subjects: [...input.subjects],
+      targets: [],
+      bindings: [],
+      evidence: {
+        pullRequest: {
+          number: input.feedback.pull,
+          url: input.feedback.url,
+          snapshot: input.feedback.ref,
+        },
+        feedback: [...input.feedback.items],
+        requirements: input.plan.steps.map((s) => ({
+          step: s.id,
+          requirements: s.requirements.map((r) => ({
+            id: `${s.id}/${r.id}`,
+            statement: r.statement,
+          })),
+          outputs: s.outputs.map((o) => ({ id: `${s.id}/${o.id}`, meaning: o.meaning })),
+        })),
+        inherited: input.plan.inherited.requirements.map((r) => ({
+          id: `${input.plan.checkpoint}/${r.id}`,
+          statement: r.statement,
+        })),
+      },
+    },
+  });
+}
+
+export type AcceptanceInput = {
+  plan: PreparedRun;
+  step: string;
+  run: string;
+  attempt: number;
+  /** The current evaluation; its digest, candidate, verifier digests and rubric are checked. */
+  manifest: EvaluationManifest;
+  registry: Registry;
+  /** The producer's write policy: a missing verifier it may write is its work. */
+  policy: WritePolicy;
+  /** The sealed candidate's files: `candidateTree` of the manifest's source. */
+  tree: ReadonlyMap<string, string>;
+  /** The producer's output claims, checked against the tree. */
+  claims: Submission["outputs"];
+  /** This attempt's invocations; a record of any other attempt or evaluation pauses. */
+  invocations: readonly Stored<Invocation>[];
+  /** Every admission of the run in journal order: approvals persist across attempts and steps. */
+  admissions: readonly Stored<Admission>[];
+  /** This attempt's reviews in journal order; adequacy reviews are ignored. */
+  reviews: readonly Stored<ReviewRecord>[];
+  /** Approvals of this evaluation; one naming a target the step lacks pauses. */
+  approvals: readonly Stored<Approval>[];
+  /** Evidence refs listed by committed journal events. */
+  journaled: ReadonlySet<string>;
+  /**
+   * Where the candidate declares bindings and the declarations its registry
+   * refused (T3.5 H1); none when the run configures no declarations.
+   */
+  declarations?: { dir: string | null; rejected: readonly Rejection[] };
+  /**
+   * The checkpoint evidence the exit evaluation's manifest names, read from
+   * the run's evidence; null or absent when there is none.
+   */
+  checkpoint?: GivenCheckpoint | null;
+  /**
+   * The attempt's producer invocation, the latest journaled: an operational
+   * step's command and observation evidence (T3.5 H3). Null when none ran.
+   */
+  producer?: Stored<AgentOutcome> | null;
+};
+
+/** The commands a producer invocation ran in its workspace, with their recorded output. */
+export const commandsOf = (outcome: AgentOutcome): ToolCall[] =>
+  outcome.observation.toolCalls.filter((c) => c.tool === "run_command" && c.exit !== undefined);
+
+const TRANSCRIPT_TAIL = 4096;
+
+/**
+ * An operational step's command transcript as the reviewer is shown it: each
+ * recorded command, its exit status and the tail of its recorded output.
+ */
+function transcript(run: RunHandle, producer: Stored<AgentOutcome> | null): Json {
+  const text = (ref: string | undefined): string =>
+    ref === undefined
+      ? "(not recorded)"
+      : readEvidence(run.dir, ref).toString("utf8").slice(-TRANSCRIPT_TAIL);
+  return {
+    invocation: producer?.ref ?? null,
+    commands: (producer ? commandsOf(producer.record) : []).map((c) => ({
+      command: c.target,
+      exit: c.exit ?? null,
+      timedOut: c.timedOut ?? false,
+      stdout: text(c.stdout),
+      stderr: text(c.stderr),
+    })),
+  };
+}
+
+/** The latest producer invocation journaled for an attempt of a step. */
+export function producerInvocation(
+  run: RunHandle,
+  events: readonly JournalEvent[],
+  step: string,
+  attempt: number,
+): Stored<AgentOutcome> | null {
+  return (
+    journalRecords<AgentOutcome>(
+      run,
+      events,
+      "agent-invocation",
+      (e) => e.attempt === attempt && e.data.role === "producer" && e.data.step === step,
+    ).at(-1) ?? null
+  );
+}
+
+/**
+ * Decides one attempt from its evidence. A step is accepted only when every
+ * current target — its own and the inherited ones that apply, of every
+ * method — has a proof,
+ * every declared output is inventoried and found satisfied by the common
+ * review, and nothing else is wrong. Otherwise the decision is `correct`,
+ * with findings for the producer, or `pause`, with each reason's route. An
+ * owner reason pauses even when there is something to correct. There is no
+ * score: every reason names its subject and the requirements it affects.
+ */
+export function decideAcceptance(input: AcceptanceInput): Decision {
+  const { plan, manifest, registry, tree } = input;
+  const step = contractStep(plan, input.step);
+  const evaluation = evaluationDigest(manifest);
+  const candidate = manifest.source.commit;
+  const base: DecisionBase = { step: step.id, attempt: input.attempt, evaluation, candidate };
+  const reasons: Reason[] = [];
+  const findings: Finding[] = [];
+  const proven = new Set<string>();
+  const evidence = new Set<string>();
+  const reason = (
+    route: Route,
+    subject: string,
+    detail: string,
+    requirements: string[] = [],
+  ): void => {
+    reasons.push({ route, subject, detail, requirements: unique(requirements) });
+  };
+  const correct = (finding: Finding, requirements: string[]): void => {
+    reason(
+      "correct",
+      finding.rule,
+      `${finding.defect} (${finding.location}); ${finding.correction}`,
+      requirements,
+    );
+    findings.push(finding);
+  };
+
+  const targets = targetsOf(plan, step, manifest.pending);
+  const byKey = new Map(targets.map((t) => [targetKey(t), t]));
+  const covers = new Map<string, string[]>([
+    ...[step, ...earlierSteps(plan, step)].flatMap((s) =>
+      s.criteria.map((c): [string, string[]] => [
+        `${s.id}/${c.id}`,
+        c.covers.map((r) => `${s.id}/${r}`),
+      ]),
+    ),
+    ...plan.inherited.criteria.map((c): [string, string[]] => [
+      `${plan.checkpoint}/${c.id}`,
+      c.covers.map((r) => `${plan.checkpoint}/${r}`),
+    ]),
+  ]);
+  const linked = (t: VerificationTarget): string[] => covers.get(`${t.owner}/${t.criterion}`) ?? [];
+  const requirementIds = new Set([
+    ...step.requirements.map((r) => `${step.id}/${r.id}`),
+    ...plan.inherited.requirements.map((r) => `${plan.checkpoint}/${r.id}`),
+  ]);
+  const linksOf = (rule: string): string[] => {
+    const target = byKey.get(rule);
+    return requirementIds.has(rule) ? [rule] : target ? linked(target) : [];
+  };
+
+  // The evaluation must be this step's current definition, rubric and binding digests.
+  const ids = unique(targets.map((t) => t.binding));
+  const digests = bindingDigests(registry, tree, ids);
+  if (
+    manifest.step.id !== step.id ||
+    manifest.step.definition !== definitionOf(plan, step.id) ||
+    manifest.definitions !== plan.definitionsDigest
+  ) {
+    reason("retry", "evaluation", "the evaluation is not for this step's current definitions");
+  }
+  for (const issue of pendingIssues(plan, step, manifest.pending)) {
+    reason("retry", "evaluation", `the applicability decision is not the plan's: ${issue}`);
+  }
+  if (manifest.rubric !== COMMON_RUBRIC.digest) {
+    reason("retry", "evaluation", `the evaluation's rubric is not ${COMMON_RUBRIC.digest}`);
+  }
+  for (const id of ids) {
+    if (digests[id] !== undefined && manifest.verifiers[id] !== digests[id]) {
+      reason(
+        "retry",
+        id,
+        `the evaluation lists ${manifest.verifiers[id] ?? "no digest"}, the candidate has ${digests[id]}`,
+      );
+    }
+  }
+  // A record counts only when it is the evidence it claims to be, is
+  // committed to the journal and belongs to this attempt's evaluation.
+  const intact = (label: string, stored: Stored<object>): boolean => {
+    if (sha256(stringify(stored.record)) !== stored.ref) {
+      reason("retry", label, "the record does not match its evidence reference");
+      return false;
+    }
+    if (!input.journaled.has(stored.ref)) {
+      reason("retry", label, "the record is not in the committed journal");
+      return false;
+    }
+    return true;
+  };
+  const current = (label: string, stored: Stored<Identity>): boolean => {
+    if (!intact(label, stored)) return false;
+    const r = stored.record;
+    if (r.run !== input.run) reason("retry", label, `it belongs to run ${r.run}`);
+    else if (r.attempt !== input.attempt) {
+      reason("retry", label, `it belongs to attempt ${r.attempt}, not ${input.attempt}`);
+    } else if (r.evaluation !== evaluation || r.candidate !== candidate) {
+      reason("retry", label, `it is stale: evaluation ${r.evaluation} of ${r.candidate}`);
+    } else return true;
+    return false;
+  };
+
+  // The exit evaluation is given the controller's checkpoint evidence: it
+  // must exist, be committed and hold exactly the current acceptance of every
+  // planned step that the evaluation's inputs name.
+  const exiting = step.id === exitId(plan);
+  if (!exiting && manifest.checkpoint !== null) {
+    reason("retry", "evaluation", "a step evaluation names checkpoint evidence");
+  }
+  if (exiting) {
+    const given = input.checkpoint ?? null;
+    if (manifest.checkpoint === null) {
+      reason("retry", "checkpoint-evidence", "the exit evaluation names no checkpoint evidence");
+    } else if (
+      given === null ||
+      given.ref !== manifest.checkpoint ||
+      sha256(stringify(given.record)) !== given.ref
+    ) {
+      reason(
+        "owner",
+        "checkpoint-evidence",
+        `the checkpoint evidence ${manifest.checkpoint} is missing`,
+      );
+    } else if (!input.journaled.has(given.ref)) {
+      reason(
+        "retry",
+        "checkpoint-evidence",
+        "the checkpoint evidence is not in the committed journal",
+      );
+    } else {
+      const record = given.record;
+      if (record.checkpoint !== plan.checkpoint || record.definitions !== plan.definitionsDigest) {
+        reason("retry", "checkpoint-evidence", "the checkpoint evidence is of other definitions");
+      }
+      const planned = plan.steps.filter((s): s is ContractStep => s.kind === "contract");
+      for (const entry of record.steps) {
+        if (!planned.some((s) => s.id === entry.step)) {
+          reason("retry", `checkpoint-evidence/${entry.step}`, "it is not a planned step");
+        }
+      }
+      for (const s of planned) {
+        const subject = `checkpoint-evidence/${s.id}`;
+        const entries = record.steps.filter((e) => e.step === s.id);
+        const [entry] = entries;
+        const named = unique(
+          manifest.inputs.filter((i) => i.step === s.id).map((i) => i.evaluation),
+        );
+        if (entries.length !== 1 || entry === undefined) {
+          reason(
+            "retry",
+            subject,
+            `the checkpoint evidence holds ${entries.length} acceptances of ${s.id}`,
+          );
+        } else if (!input.journaled.has(entry.decision)) {
+          reason(
+            "retry",
+            subject,
+            `its acceptance ${entry.decision} is not in the committed journal`,
+          );
+        } else if (named.some((e) => e !== entry.evaluation)) {
+          reason(
+            "retry",
+            subject,
+            `it is stale: evaluation ${entry.evaluation}, the exit evaluation names ${named.join(", ")}`,
+          );
+        }
+      }
+    }
+  }
+
+  const admissions = input.admissions.filter((a) => intact(`admission ${a.ref}`, a));
+  const runs = new Map<string, Stored<Invocation>[]>();
+  for (const stored of input.invocations) {
+    const r = stored.record;
+    const label = `invocation ${r.id} of ${r.binding}`;
+    if (!current(label, stored) || r.stage === "provisional") continue;
+    if ((r.checkpoint ?? null) !== manifest.checkpoint) {
+      reason("retry", label, "its judge was not given the evaluation's checkpoint evidence");
+    } else if (!targets.some((t) => t.method === "automated" && t.binding === r.binding)) {
+      reason("retry", label, `${step.id} has no automated target of ${r.binding}`);
+    } else if (r.digest !== digests[r.binding]) {
+      reason(
+        "retry",
+        label,
+        `it ran ${r.digest}, not the candidate's ${digests[r.binding] ?? "binding"}`,
+      );
+    } else runs.set(r.binding, [...(runs.get(r.binding) ?? []), stored]);
+  }
+
+  const inScope = (paths: readonly string[]): boolean =>
+    paths.every((p) => within(p, input.policy.writable) && !within(p, input.policy.protected));
+
+  const declarations = input.declarations ?? { dir: null, rejected: [] };
+  const declarationPath = (id: string): string | null =>
+    declarations.dir === null ? null : `${declarations.dir}/${id}.yml`;
+  // The paths a producer changes to correct a binding: its files and declaration.
+  const ownPaths = (entry: RegistryEntry): string[] => [
+    ...(entry.binding.method === "automated" ? entry.binding.files : []),
+    ...(entry.source === undefined ? [] : [entry.source]),
+  ];
+  for (const r of declarations.rejected) {
+    const subject = r.binding ?? r.path;
+    const uses = targets.filter((t) => t.binding === r.binding);
+    const detail = r.diagnostics.join("; ");
+    if (inScope([r.path])) {
+      correct(
+        {
+          rule: subject,
+          location: r.path,
+          defect: `the binding declaration is refused: ${detail}`,
+          correction: `correct or remove ${r.path}; a declaration is ${declarations.dir ?? "the bindings directory"}/<binding-id>.yml for a binding a planned target names`,
+        },
+        uses.flatMap(linked),
+      );
+    } else
+      reason(
+        "owner",
+        subject,
+        `the binding declaration is refused: ${detail}`,
+        uses.flatMap(linked),
+      );
+  }
+
+  /**
+   * The approved admission that pins the binding's current digest, or
+   * undefined with the reason it cannot count yet. A verifier approved for
+   * another step is protected: only its approved digest may run.
+   */
+  const pinFor = (
+    entry: RegistryEntry,
+    uses: VerificationTarget[],
+  ): Stored<Admission> | undefined => {
+    const { binding } = entry;
+    const digest = digests[binding.id];
+    const requirements = uses.flatMap(linked);
+    const missing = binding.method === "automated" ? binding.files.filter((f) => !tree.has(f)) : [];
+    const protectedPins = admissions.filter(
+      ({ record: a }) => a.outcome === "approved" && a.binding === binding.id && a.step !== step.id,
+    );
+    const changed =
+      protectedPins.length > 0 && !protectedPins.some(({ record: a }) => a.digest === digest);
+    const pin =
+      missing.length > 0 || changed ? undefined : approvedFor(admissions, binding.id, digest);
+    if (pin) return pin;
+    const { decided, pending } = admissionFor(admissions, binding.id, digest, evaluation);
+    const latest = decided?.record ?? pending;
+    if (missing.length > 0) {
+      const defect = `verifier files ${missing.join(", ")} of ${binding.id} are not in the candidate`;
+      if (inScope(missing)) {
+        correct(
+          {
+            rule: binding.id,
+            location: missing.join(", "),
+            defect,
+            correction: `add the verifier for ${binding.id}; it is admitted before its results count`,
+          },
+          requirements,
+        );
+      } else
+        reason(
+          "owner",
+          binding.id,
+          `${defect}, outside the producer's writable paths`,
+          requirements,
+        );
+    } else if (changed) {
+      const steps = unique(protectedPins.map(({ record: a }) => a.step)).join(", ");
+      reason(
+        "owner",
+        binding.id,
+        `the approved verifier of ${steps} changed: ${digest ?? "no digest"} is not its approved digest`,
+        requirements,
+      );
+    } else if (latest?.outcome === "rejected") {
+      if (inScope(ownPaths(entry))) for (const f of latest.findings) correct(f, linksOf(f.rule));
+      else
+        reason(
+          "owner",
+          binding.id,
+          `admission rejected a verifier outside the producer's writable paths`,
+          requirements,
+        );
+    } else if (latest?.outcome === "paused") {
+      reason("owner", binding.id, `admission paused: ${latest.reasons.join("; ")}`, requirements);
+    } else if (latest?.outcome === "invalid") {
+      reason(
+        "retry",
+        binding.id,
+        `admission incomplete: ${latest.reasons.join("; ")}`,
+        requirements,
+      );
+    } else {
+      reason(
+        "retry",
+        binding.id,
+        `${digest ?? "the verifier"} has no approved admission; admit it first`,
+        requirements,
+      );
+    }
+    return undefined;
+  };
+
+  const decideAutomated = (
+    entry: RegistryEntry,
+    binding: AutomatedBinding,
+    uses: VerificationTarget[],
+  ): void => {
+    const pin = pinFor(entry, uses);
+    if (!pin) return;
+    evidence.add(pin.ref);
+    // Per target, an executed failure binds, then an executed protocol
+    // violation; only a verifier that never ran may be run again.
+    const invocations = runs.get(binding.id) ?? [];
+    for (const t of uses) {
+      const key = targetKey(t);
+      const results = invocations.flatMap(({ ref, record }) =>
+        record.results.filter((r) => targetKey(r.target) === key).map((r) => ({ ref, r })),
+      );
+      const reasonOf = (outcome: TargetResult["outcome"]): string | undefined => {
+        const found = results.find((x) => x.r.outcome === outcome)?.r;
+        return found && found.outcome !== "passed" ? found.reason : undefined;
+      };
+      const failed = reasonOf("failed");
+      const invalid = reasonOf("invalid");
+      const passed = results.filter((x) => x.r.outcome === "passed").map((x) => x.ref);
+      if (failed !== undefined) {
+        correct(
+          {
+            rule: key,
+            location: `verifier ${binding.id}`,
+            defect: failed,
+            correction: "change the implementation so that this target passes",
+          },
+          linked(t),
+        );
+      } else if (invalid !== undefined) {
+        const defect = `the verifier ran but broke the report protocol: ${invalid}`;
+        if (inScope(binding.files)) {
+          correct(
+            {
+              rule: key,
+              location: binding.files.join(", ") || `verifier ${binding.id}`,
+              defect,
+              correction:
+                "make the judge report exactly one executed result for this target on stdout; it is admitted again",
+            },
+            linked(t),
+          );
+        } else
+          reason(
+            "owner",
+            key,
+            `${defect}; the verifier is outside the producer's writable paths`,
+            linked(t),
+          );
+      } else if (passed.length > 0) {
+        proven.add(key);
+        for (const ref of passed) evidence.add(ref);
+      } else {
+        reason("retry", key, reasonOf("unavailable") ?? "no acceptance result", linked(t));
+      }
+    }
+  };
+
+  const approvals = input.approvals.filter((a) => intact(`approval ${a.ref}`, a));
+  const decideApproval = (
+    binding: { authority: string; subject: string },
+    t: VerificationTarget,
+  ): void => {
+    const key = targetKey(t);
+    const records = approvals.filter(
+      (a) => a.record.run === input.run && targetKey(a.record.target) === key,
+    );
+    const exact = records.filter(
+      ({ record: a }) =>
+        a.authority === binding.authority &&
+        a.candidate === candidate &&
+        a.evaluation === evaluation,
+    );
+    const denied = exact.find((a) => a.record.decision === "denied");
+    const approved = exact.find((a) => a.record.decision === "approved");
+    if (denied) reason("approval", key, `denied by ${denied.record.actor}`, linked(t));
+    else if (approved) {
+      proven.add(key);
+      evidence.add(approved.ref);
+    } else {
+      reason(
+        "approval",
+        key,
+        records.length > 0
+          ? `no approval by ${binding.authority} of evaluation ${evaluation}; the recorded ones are for another authority, candidate or evaluation`
+          : `awaiting approval by ${binding.authority} of ${binding.subject}`,
+        linked(t),
+      );
+    }
+  };
+  for (const a of approvals) {
+    if (
+      !targets.some((t) => t.method === "approval" && targetKey(t) === targetKey(a.record.target))
+    ) {
+      reason(
+        "approval",
+        targetKey(a.record.target),
+        "the approval names no approval target of this step",
+      );
+    }
+  }
+
+  for (const id of ids) {
+    const uses = targets.filter((t) => t.binding === id);
+    const methods = unique(uses.map((t) => t.method));
+    const entry = registry.get(id);
+    const binding = entry?.binding;
+    const path = declarationPath(id);
+    if (!entry || !binding) {
+      // A refused declaration already has its reason.
+      if (declarations.rejected.some((r) => r.binding === id)) continue;
+      if (path !== null && inScope([path])) {
+        correct(
+          {
+            rule: id,
+            location: path,
+            defect: `no binding defines ${id}`,
+            correction: `declare ${id} at ${path} with the verifier it runs; it is admitted before its results count`,
+          },
+          uses.flatMap(linked),
+        );
+      } else {
+        reason(
+          "owner",
+          id,
+          `the binding registry has no definition of ${id}`,
+          uses.flatMap(linked),
+        );
+      }
+    } else if (methods.length !== 1 || methods[0] !== binding.method) {
+      reason(
+        "owner",
+        id,
+        `${id} is a ${binding.method} binding, used as ${methods.join(", ")}`,
+        uses.flatMap(linked),
+      );
+    } else if (binding.method === "automated") decideAutomated(entry, binding, uses);
+    else if (binding.method === "approval") for (const t of uses) decideApproval(binding, t);
+    else if (needsAdmission(entry)) {
+      // A declared review binding's rubric counts only once admitted; the
+      // common review proves its targets.
+      const pin = pinFor(entry, uses);
+      if (pin) evidence.add(pin.ref);
+    }
+  }
+
+  // An operational step is accepted only on the command and observation
+  // evidence the controller recorded while its producer ran the procedure.
+  if (step.procedure) {
+    const subject = `${step.id}/PROCEDURE`;
+    // The procedure ran where the definitions and configuration declare.
+    const declared = { target: lineageOf(step), revision: step.procedure.target?.revision ?? null };
+    if (stringify(manifest.operation ?? null) !== stringify(declared)) {
+      reason(
+        "owner",
+        subject,
+        `the procedure was evaluated in ${stringify(manifest.operation ?? null)}, not its declared target ${stringify(declared)}`,
+        [subject],
+      );
+    }
+    const producer = input.producer ?? null;
+    const commands =
+      producer && intact(`producer ${producer.ref}`, producer) ? commandsOf(producer.record) : [];
+    const outputs = commands.flatMap((c) => [c.stdout, c.stderr]);
+    // A journaled reference is intact: readRun checks every evidence digest.
+    const recorded = (ref: string | undefined): ref is string =>
+      ref !== undefined && input.journaled.has(ref);
+    if (producer === null || commands.length === 0) {
+      correct(
+        {
+          rule: subject,
+          location: "the step's workspace",
+          defect: "no command of the procedure was executed, so there is no command evidence",
+          correction: "carry out the procedure by running its commands with run_command as written",
+        },
+        [subject],
+      );
+    } else if (!outputs.every(recorded)) {
+      correct(
+        {
+          rule: subject,
+          location: "the step's workspace",
+          defect: "the observation evidence of a command, its recorded output, is missing",
+          correction: "run the procedure's commands again so that their output is recorded",
+        },
+        [subject],
+      );
+    } else {
+      evidence.add(producer.ref);
+      for (const ref of outputs) if (ref !== undefined) evidence.add(ref);
+    }
+  }
+
+  // The common review: the first complete verdict of this attempt binds.
+  const { proofs, issues } = inventory(step, input.claims, tree);
+  for (const i of issues) {
+    correct(
+      {
+        rule: `${step.id}/${i.output}`,
+        location: "submission outputs",
+        defect: i.detail,
+        correction: "produce each declared output and list its paths in the submission",
+      },
+      [],
+    );
+  }
+  const scope = reviewScope(plan, step, registry, manifest.pending);
+  let verdict: ReviewVerdict | null = null;
+  let bound: ReviewRecord | null = null;
+  let boundRef: string | null = null;
+  const protocol: string[] = [];
+  for (const stored of input.reviews) {
+    const label = `review ${stored.ref}`;
+    // Adequacy reviews belong to admissions, not to the common review.
+    if (stored.record.kind !== "candidate" || !current(label, stored)) continue;
+    if (stored.record.rubric !== COMMON_RUBRIC.digest) {
+      reason("retry", label, "it applied another rubric than the common rubric");
+      continue;
+    }
+    const checked = checkVerdict(stored.record.outcome, scope);
+    if (!checked.ok) {
+      // An incomplete verdict may be followed by another, unless it already
+      // recorded a negative judgement: that binds, so it cannot be rerolled.
+      const negative = negatives(stored.record.outcome);
+      if (negative.length === 0) {
+        protocol.push(...checked.issues);
+        continue;
+      }
+      reason("owner", "review", `an incomplete review judged against: ${negative.join("; ")}`);
+    } else {
+      verdict = checked.verdict;
+      if (checked.conflicts.length > 0) {
+        reason("owner", "review", `the review contradicts itself: ${checked.conflicts.join("; ")}`);
+      }
+    }
+    bound = stored.record;
+    boundRef = stored.ref;
+    evidence.add(stored.ref);
+    break;
+  }
+  if (bound !== null && (bound.checkpoint ?? null) !== manifest.checkpoint) {
+    reason("retry", "review", "the review was not shown the evaluation's checkpoint evidence");
+  }
+  if (bound !== null) {
+    // The verdict speaks for the evidence it was shown: exactly the runs counted here.
+    const counted = unique([...runs.values()].flat().map((i) => i.ref));
+    const shown = unique(bound.invocations);
+    if (stringify(counted) !== stringify(shown)) {
+      reason(
+        "retry",
+        "review",
+        `the review was shown runs ${shown.join(", ") || "(none)"}, not the counted ${counted.join(", ") || "(none)"}`,
+      );
+    }
+  }
+  const provenOutputs: OutputProof[] = [];
+  if (bound === null) {
+    reason(
+      "retry",
+      "review",
+      protocol.length > 0
+        ? `no complete common review: ${protocol.join("; ")}`
+        : "the common independent review is missing",
+    );
+  } else if (verdict === null) {
+    // Bound by an incomplete review's negative judgement; reason given above.
+  } else if (verdict.verdict === "blocked") {
+    reason("owner", "review", `the reviewer is blocked: ${verdict.blockers.join("; ")}`);
+  } else {
+    for (const s of unassessed(verdict)) {
+      reason("owner", s, "the reviewer could not assess it", linksOf(s));
+    }
+    const blocking = blockingFindings(verdict);
+    for (const f of blocking) correct(f, linksOf(f.rule));
+    const unmet = [
+      ...verdict.coverage.flatMap((c) =>
+        c.result === "unsatisfied" ? [{ rule: c.subject, note: c.note }] : [],
+      ),
+      ...verdict.targets.flatMap((t) =>
+        t.result === "failed" ? [{ rule: verdictTargetKey(t), note: t.note }] : [],
+      ),
+    ];
+    for (const { rule, note } of unmet) {
+      if (blocking.some((f) => f.rule === rule)) continue;
+      correct(
+        { rule, location: "common review", defect: note || "not met", correction: `meet ${rule}` },
+        linksOf(rule),
+      );
+    }
+    for (const t of verdict.targets) if (t.result === "passed") proven.add(verdictTargetKey(t));
+    const satisfied = new Set(
+      verdict.coverage.filter((c) => c.result === "satisfied").map((c) => c.subject),
+    );
+    for (const p of proofs.filter((q) => satisfied.has(`${step.id}/${q.output}`))) {
+      // The reviewer must have been shown exactly these paths and contents.
+      if (bound.outputs.some((q) => stringify(q) === stringify(p))) provenOutputs.push(p);
+      else reason("retry", `${step.id}/${p.output}`, "the review was shown other paths for it");
+    }
+  }
+
+  // T3.6 L3: an attempt that followed an exploration is accepted only with a
+  // current cross-attempt challenge of this evaluation that was given its
+  // binding review. Its findings correct like the common review's.
+  if (manifest.exploration !== undefined) {
+    const subjects = challengeSubjects(step.id);
+    let challenged: ReviewVerdict | null = null;
+    let found = false;
+    const issues: string[] = [];
+    for (const stored of input.reviews) {
+      const label = `challenge ${stored.ref}`;
+      if (stored.record.kind !== "challenge" || !current(label, stored)) continue;
+      if (stored.record.rubric !== CHALLENGE_RUBRIC.digest) {
+        reason("retry", label, "it applied another rubric than the challenge rubric");
+        continue;
+      }
+      if (boundRef === null || stored.record.records?.[0] !== boundRef) {
+        issues.push(`${label} was not given the binding review`);
+        continue;
+      }
+      const checked = checkVerdict(stored.record.outcome, { subjects, targets: [] });
+      if (!checked.ok) {
+        const negative = negatives(stored.record.outcome);
+        if (negative.length === 0) {
+          issues.push(...checked.issues);
+          continue;
+        }
+        reason(
+          "owner",
+          "challenge",
+          `an incomplete challenge judged against: ${negative.join("; ")}`,
+        );
+      } else {
+        challenged = checked.verdict;
+        if (checked.conflicts.length > 0) {
+          reason(
+            "owner",
+            "challenge",
+            `the challenge contradicts itself: ${checked.conflicts.join("; ")}`,
+          );
+        }
+      }
+      found = true;
+      evidence.add(stored.ref);
+      break;
+    }
+    if (!found) {
+      reason(
+        "retry",
+        "challenge",
+        issues.length > 0
+          ? `no complete cross-attempt challenge: ${issues.join("; ")}`
+          : "the required cross-attempt challenge is missing",
+      );
+    } else if (challenged?.verdict === "blocked") {
+      reason("owner", "challenge", `the challenge is blocked: ${challenged.blockers.join("; ")}`);
+    } else if (challenged) {
+      for (const s of unassessed(challenged)) {
+        reason("owner", s, "the cross-attempt challenge could not assess it");
+      }
+      const blocking = blockingFindings(challenged);
+      for (const f of blocking) correct(f, linksOf(f.rule));
+      for (const c of challenged.coverage) {
+        if (c.result !== "unsatisfied" || blocking.some((f) => f.rule === c.subject)) continue;
+        correct(
+          {
+            rule: c.subject,
+            location: "cross-attempt challenge",
+            defect: c.note || "not met",
+            correction: `meet ${c.subject}`,
+          },
+          [],
+        );
+      }
+    }
+  }
+
+  if (reasons.some((r) => r.route === "owner")) return { ...base, decision: "pause", reasons };
+  if (reasons.some((r) => r.route === "correct"))
+    return { ...base, decision: "correct", reasons, findings };
+  if (reasons.length > 0) return { ...base, decision: "pause", reasons };
+  // Every path above gives each target and output a proof or a reason.
+  const unproven = [
+    ...targets.map(targetKey).filter((k) => !proven.has(k)),
+    ...step.outputs
+      .filter((o) => !provenOutputs.some((p) => p.output === o.id))
+      .map((o) => `${step.id}/${o.id}`),
+  ];
+  if (unproven.length > 0) throw new Error(`accepting without a proof of ${unproven.join(", ")}`);
+  return {
+    ...base,
+    decision: "accept",
+    targets: [...proven].sort(),
+    outputs: provenOutputs,
+    evidence: [...evidence].sort(),
+  };
+}
+
+/**
+ * The acceptance input of an attempt with every part `recordDecision` reads
+ * from the run's committed journal and evidence rather than from its caller.
+ */
+export function journalInput(
+  run: RunHandle,
+  input: Omit<AcceptanceInput, FromJournal>,
+): AcceptanceInput {
+  const events = committedEvents(run);
+  const evaluation = evaluationDigest(input.manifest);
+  const load = <T>(action: string, keep: (e: JournalEvent) => boolean): Stored<T>[] =>
+    journalRecords<T>(run, events, action, keep);
+  const thisAttempt = (e: JournalEvent): boolean =>
+    e.attempt === input.attempt && e.evaluation === evaluation;
+  return {
+    ...input,
+    tree: candidateTree(run, input.manifest.source),
+    invocations: load<Invocation>("verifier-invocation", thisAttempt),
+    admissions: load<Admission>("verifier-admission", () => true),
+    reviews: load<ReviewRecord>("review", thisAttempt),
+    approvals: load<Approval>("approval", (e) => e.evaluation === evaluation),
+    journaled: new Set(events.flatMap((e) => e.evidence)),
+    checkpoint: givenCheckpoint(run.dir, input.manifest.checkpoint),
+    producer: producerInvocation(run, events, input.step, input.attempt),
+  };
+}
+
+/** The checkpoint evidence stored under `ref`, or null when there is none or it is unreadable. */
+export function givenCheckpoint(dir: string, ref: string | null): GivenCheckpoint | null {
+  if (ref === null) return null;
+  try {
+    const record = JSON.parse(readEvidence(dir, ref).toString("utf8")) as CheckpointEvidence;
+    return { ref, record };
+  } catch {
+    return null;
+  }
+}
+
+/** Inputs `recordDecision` reads from the run instead of taking them from its caller. */
+type FromJournal =
+  | "tree"
+  | "invocations"
+  | "admissions"
+  | "reviews"
+  | "approvals"
+  | "journaled"
+  | "checkpoint"
+  | "producer";
+
+/**
+ * Decides an attempt from the run's committed journal and records the
+ * decision. The candidate's files come from the evaluation's source tree.
+ * The attempt's invocations and reviews, the approvals of its evaluation and
+ * every admission are read from their journal events in sequence, so a
+ * caller can neither omit nor reorder them. The checkpoint evidence an exit
+ * evaluation's manifest names is read from the run's evidence. Only an
+ * `accept` is journaled as `acceptance` and returns accepted output
+ * instances; any other decision is journaled as `decision`. The decision is
+ * always derived here.
+ */
+export function recordDecision(
+  run: RunHandle,
+  input: Omit<AcceptanceInput, FromJournal>,
+): { decision: Decision; ref: string; accepted: AcceptedOutput[] } {
+  const decision = decideAcceptance(journalInput(run, input));
+  const ref = putEvidence(run, stringify(decision));
+  const accepted: AcceptedOutput[] =
+    decision.decision === "accept"
+      ? decision.outputs.map((o) => ({
+          step: decision.step,
+          output: o.output,
+          definition: input.manifest.step.definition,
+          definitions: input.manifest.definitions,
+          evidence: [ref],
+        }))
+      : [];
+  appendEvent(run, {
+    action: decision.decision === "accept" ? "acceptance" : "decision",
+    attempt: decision.attempt,
+    evaluation: decision.evaluation,
+    evidence: [ref],
+    data: {
+      step: decision.step,
+      decision: decision.decision,
+      candidate: decision.candidate,
+      outputs: accepted.map((a) => a.output),
+    },
+  });
+  return { decision, ref, accepted };
+}
+
+/**
+ * Journals an operator's decision on one approval target, for the exact
+ * candidate and evaluation, where `recordDecision` counts it. The operator
+ * channel that authenticates the actor is T3-E's.
+ */
+export function recordApproval(
+  run: RunHandle,
+  attempt: number,
+  approval: Approval,
+): Stored<Approval> {
+  const stored = store(run, approval);
+  journal(run, "approval", { attempt, evaluation: approval.evaluation }, stored.ref, [], {
+    target: targetKey(approval.target),
+    decision: approval.decision,
+  });
+  return stored;
+}
+
+/**
+ * The files of verifiers approved for other steps, which a producer of
+ * `step` must not change: changing them needs separate authorised review.
+ * Within a step, a revised verifier is admitted again before it counts.
+ */
+export function protectedVerifierPaths(
+  registry: Registry,
+  admissions: readonly Stored<Admission>[],
+  step: string,
+): string[] {
+  return unique(
+    admissions.flatMap(({ record }) => {
+      const entry = registry.get(record.binding);
+      if (record.outcome !== "approved" || record.step === step || !needsAdmission(entry)) {
+        return [];
+      }
+      return [
+        ...(entry?.binding.method === "automated" ? entry.binding.files : []),
+        ...(entry?.source === undefined ? [] : [entry.source]),
+      ];
+    }),
+  );
+}
+
+// T3.6 L2: the learning purposes' sessions (evidence-backed learning log
+// §§2.1, 2.2 and 2.5). A proposer, with the reviewer's read-only settings,
+// studies a failed attempt's committed records and proposes claims and
+// reminders; the controller journals each well-formed proposal against that
+// evaluation. A separate reviewer session then assesses one proposal, and
+// the controller admits it from the committed records alone. None of these
+// sessions is a `review` record: acceptance never reads them.
+
+/** The rules a reminder may name for a step: its review subjects and every target key it is judged on. */
+export function guidanceRules(plan: PreparedRun, step: ContractStep): string[] {
+  return unique([
+    ...step.requirements.map((r) => `${step.id}/${r.id}`),
+    ...step.outputs.map((o) => `${step.id}/${o.id}`),
+    ...plan.inherited.requirements.map((r) => `${plan.checkpoint}/${r.id}`),
+    ...targetsOf(plan, step).map(targetKey),
+  ]);
+}
+
+/** The step, definitions, rubric and rules guidance of `step` is judged against now. */
+export const guidanceTarget = (plan: PreparedRun, step: ContractStep): GuidanceTarget => ({
+  step: step.id,
+  definitions: plan.definitionsDigest,
+  definition: definitionOf(plan, step.id),
+  rubric: COMMON_RUBRIC.digest,
+  rules: guidanceRules(plan, step),
+});
+
+/**
+ * A record as shown to a learning session: parsed when it is JSON, else its
+ * text, cut at 4 KiB. A reference the store lacks is shown as missing; the
+ * controller's admission refuses it.
+ */
+function shown(run: RunHandle, ref: string): Json {
+  let text: string;
+  try {
+    text = readEvidence(run.dir, ref).toString("utf8");
+  } catch {
+    return "[not in the evidence store]";
+  }
+  try {
+    return JSON.parse(text) as Json;
+  } catch {
+    return text.length > 4096 ? `${text.slice(0, 4096)}\n[truncated]` : text;
+  }
+}
+
+const readRecord =
+  (run: RunHandle) =>
+  (ref: string): Buffer | null => {
+    try {
+      return readEvidence(run.dir, ref);
+    } catch {
+      return null;
+    }
+  };
+
+/** The evaluation event of a step's attempt, and its record. */
+function evaluationRecord(
+  run: RunHandle,
+  events: readonly JournalEvent[],
+  step: string,
+  attempt: number,
+  evaluation: string,
+): { candidate: SealedCandidate; manifest: EvaluationManifest } {
+  const [found] = journalRecords<{ candidate: SealedCandidate; manifest: EvaluationManifest }>(
+    run,
+    events,
+    "evaluation",
+    (e) => e.data.step === step && e.attempt === attempt && e.evaluation === evaluation,
+  );
+  if (!found)
+    throw new Error(`${step} attempt ${attempt} has no committed evaluation ${evaluation}`);
+  return found.record;
+}
+
+/** Runs one read-only learning session on `candidate` and journals it with `data`. */
+async function learningSession(
+  run: RunHandle,
+  input: {
+    plan: PreparedRun;
+    step: string;
+    attempt: number;
+    candidate: SealedCandidate;
+    accepted: readonly AcceptedOutput[];
+    reviewer: ReviewerAccess;
+    review?: ReviewContext;
+    proposal?: Parameters<typeof buildPacket>[3]["proposal"];
+    /** A diagnostic session's context, findings and frozen learning inputs (T3.6 L3). */
+    diagnosis?: Parameters<typeof buildPacket>[3]["diagnosis"];
+    findings?: readonly Finding[];
+    learning?: LearningInputs;
+    records: readonly string[];
+    data: JsonObject;
+  },
+): Promise<{ ref: string; outcome: AgentOutcome }> {
+  const { reviewer } = input;
+  if (reviewer.role.name !== "reviewer")
+    throw new Error("learning sessions need the reviewer role");
+  const built = buildPacket(input.plan, input.step, reviewer.role, {
+    attempt: input.attempt,
+    accepted: input.accepted,
+    policy: READ_ONLY,
+    candidate: input.candidate,
+    records: input.records,
+    ...(input.review ? { review: input.review } : {}),
+    ...(input.proposal ? { proposal: input.proposal } : {}),
+    ...(input.diagnosis ? { diagnosis: input.diagnosis } : {}),
+    ...(input.findings ? { findings: input.findings } : {}),
+    ...(input.learning ? { learning: input.learning } : {}),
+  });
+  if (!built.ok) throw new Error(built.diagnostics.join("\n"));
+  const ws = await reviewer.open(input.candidate);
+  let outcome: AgentOutcome;
+  try {
+    if (!sameSnapshot(ws.snapshot, input.candidate)) {
+      throw new Error(
+        `the learning workspace holds ${ws.snapshot.commit}, not the candidate ${input.candidate.commit}`,
+      );
+    }
+    outcome = await invokeAgent(reviewer.role, built.packet, ws, reviewer.signal, {
+      ...(reviewer.provider ? { provider: reviewer.provider } : {}),
+      records: readRecord(run),
+    });
+  } finally {
+    await ws.close().catch(() => undefined);
+  }
+  const event = recordInvocation(run, outcome, input.data);
+  return { ref: String(event.data.record), outcome };
+}
+
+export type LearningProposals = {
+  /** The proposer's journaled invocation. */
+  invocation: string;
+  outcome: AgentOutcome["outcome"];
+  knowledge: string[];
+  guidance: string[];
+  /** Proposed items the controller refused to journal, with why. */
+  refused: string[];
+};
+
+/**
+ * A learning proposer's session on a failed attempt's sealed candidate (T3.6
+ * L2): it is shown the evaluation's committed observations, the step's
+ * reviewed failures and its knowledge and guidance, and may read each listed
+ * record. Every well-formed proposal is journaled against the evaluation,
+ * with the evaluation's whole scope; admission decides support later.
+ */
+export async function proposeLearning(
+  run: RunHandle,
+  input: {
+    plan: PreparedRun;
+    step: string;
+    attempt: number;
+    evaluation: string;
+    accepted: readonly AcceptedOutput[];
+    controller: string;
+    repository: string;
+    reminderChars: number;
+    reviewer: ReviewerAccess;
+    /** The runner's phase key, journaled with the session (T3.6 L3). */
+    key?: string;
+  },
+): Promise<LearningProposals> {
+  const step = contractStep(input.plan, input.step);
+  const events = committedEvents(run);
+  const { candidate, manifest } = evaluationRecord(
+    run,
+    events,
+    step.id,
+    input.attempt,
+    input.evaluation,
+  );
+  const thisEvaluation = (e: JournalEvent): boolean =>
+    e.attempt === input.attempt && e.evaluation === input.evaluation;
+  const invocations = journalRecords<Invocation>(
+    run,
+    events,
+    "verifier-invocation",
+    (e) => thisEvaluation(e) && e.data.stage === "acceptance",
+  );
+  const reviews = journalRecords<ReviewRecord>(run, events, "review", thisEvaluation);
+  const producer = producerInvocation(run, events, step.id, input.attempt);
+  // The step's reviewed failures: each candidate review's blocking findings, by index.
+  const evaluations = new Set(
+    events
+      .filter((e) => e.action === "evaluation" && e.data.step === step.id && e.attempt !== null)
+      .map((e) => `${e.attempt}/${e.evaluation}`),
+  );
+  const failures = journalRecords<ReviewRecord>(
+    run,
+    events,
+    "review",
+    (e) => evaluations.has(`${e.attempt}/${e.evaluation}`) && (e.attempt ?? 0) <= input.attempt,
+  ).flatMap(({ ref, record }) =>
+    record.kind === "candidate" && record.outcome.outcome === "reviewed"
+      ? [
+          {
+            review: ref,
+            attempt: record.attempt,
+            findings: record.outcome.verdict.findings.flatMap((f, index) =>
+              f.severity === "blocking"
+                ? [{ index, rule: f.rule, location: f.location, defect: f.defect }]
+                : [],
+            ),
+          },
+        ].filter((x) => x.findings.length > 0)
+      : [],
+  );
+  const views = learningViews(run.dir, input.controller, { events });
+  if (!views.ok) throw new Error(views.diagnostics.join("\n"));
+  const target = knowledgeTarget(run.dir, input.repository, manifest);
+  const applies = applicability(views.value.knowledge, target);
+  const statusOf = (entry: string): string =>
+    applies.current.includes(entry)
+      ? "current"
+      : applies.withheld.some((x) => x.entry === entry)
+        ? "withheld"
+        : applies.superseded.some((x) => x.entry === entry)
+          ? "superseded"
+          : applies.historical.some((x) => x.entry === entry)
+            ? "historical"
+            : "unsupported";
+  const knowledge = views.value.knowledge.entries
+    .filter((e) => e.step === step.id)
+    .map((e) => ({
+      entry: e.entry,
+      claim: e.claim,
+      status: statusOf(e.entry),
+      revision: e.revisions.at(-1)?.proposal ?? null,
+    }));
+  const status = guidanceStatus(views.value.guidance, guidanceTarget(input.plan, step));
+  const guidanceState = (id: string): string =>
+    status.current.some((x) => x.guidance === id)
+      ? "current"
+      : status.withheld.some((x) => x.guidance === id)
+        ? "withheld"
+        : status.stale.some((x) => x.guidance === id)
+          ? "stale"
+          : status.withdrawn.some((x) => x.guidance === id)
+            ? "withdrawn"
+            : "unsupported";
+  const guidance = views.value.guidance.entries
+    .filter((e) => e.step === step.id)
+    .map((e) => ({
+      guidance: e.guidance,
+      rule: e.rule,
+      cause: e.cause,
+      text: e.versions.at(-1)?.text ?? null,
+      status: guidanceState(e.guidance),
+      version: e.versions.at(-1)?.proposal ?? null,
+    }));
+  const observations: Json[] = [
+    ...invocations.map(({ ref, record }) => ({
+      ref,
+      action: "verifier-invocation",
+      binding: record.binding,
+      results: verificationSummary([{ ref, record }]),
+    })),
+    ...reviews.map(({ ref, record }) => ({
+      ref,
+      action: "review",
+      kind: record.kind,
+      verdict:
+        record.outcome.outcome === "reviewed" ? (record.outcome.verdict as unknown as Json) : null,
+    })),
+    ...(producer
+      ? [
+          {
+            ref: producer.ref,
+            action: "agent-invocation",
+            outcome: producer.record.outcome,
+            commands: commandsOf(producer.record).map((c) => ({
+              command: c.target,
+              exit: c.exit ?? null,
+            })),
+          },
+        ]
+      : []),
+  ];
+  const records = unique([
+    ...invocations.map((i) => i.ref),
+    ...reviews.map((r) => r.ref),
+    ...(producer ? [producer.ref] : []),
+    ...failures.map((f) => f.review),
+    ...knowledge.flatMap((k) => (k.revision ? [k.revision] : [])),
+    ...guidance.flatMap((g) => (g.version ? [g.version] : [])),
+  ]);
+  const session = await learningSession(run, {
+    plan: input.plan,
+    step: step.id,
+    attempt: input.attempt,
+    candidate,
+    accepted: input.accepted,
+    reviewer: input.reviewer,
+    proposal: {
+      evaluation: input.evaluation,
+      observations,
+      failures,
+      knowledge: knowledge as unknown as Json,
+      guidance,
+      limits: { reminderChars: input.reminderChars },
+    },
+    records,
+    data: {
+      step: step.id,
+      purpose: "learning-proposal",
+      evaluation: input.evaluation,
+      ...(input.key ? { key: input.key } : {}),
+    },
+  });
+  const result: LearningProposals = {
+    invocation: session.ref,
+    outcome: session.outcome.outcome,
+    knowledge: [],
+    guidance: [],
+    refused: [],
+  };
+  if (session.outcome.outcome !== "proposed") return result;
+  const proposals: Proposals = session.outcome.proposals;
+  const base = {
+    format: 1 as const,
+    controller: input.controller,
+    run: run.run,
+    step: step.id,
+    attempt: input.attempt,
+    evaluation: input.evaluation,
+    round: null,
+    proposer: session.ref,
+  };
+  for (const [i, k] of proposals.knowledge.entries()) {
+    const proposal: KnowledgeProposal = {
+      ...base,
+      claim: { assertion: k.assertion, target: k.target, kind: k.kind },
+      observations: k.observations,
+      scope: evaluationScope(input.repository, manifest),
+      contradicts: k.contradicts,
+      supersedes: k.supersedes,
+    };
+    try {
+      result.knowledge.push(proposeKnowledge(run, proposal).ref);
+    } catch (e) {
+      result.refused.push(`knowledge ${i}: ${message(e)}`);
+    }
+  }
+  for (const [i, g] of proposals.guidance.entries()) {
+    const proposal: GuidanceProposal = {
+      ...base,
+      guidance: { rule: g.rule, cause: g.cause, text: g.text },
+      reason: g.reason,
+      occurrences: g.occurrences,
+      contradicts: g.contradicts,
+    };
+    try {
+      result.guidance.push(proposeGuidance(run, proposal).ref);
+    } catch (e) {
+      result.refused.push(`guidance ${i}: ${message(e)}`);
+    }
+  }
+  return result;
+}
+
+export type LearningReview = {
+  /** The reviewer's journaled invocation. */
+  review: string;
+  outcome: AgentOutcome["outcome"];
+  /** The controller's admission, once the session returned a review; null otherwise, so the review can be repeated. */
+  admission: Read<Stored<KnowledgeAdmission | GuidanceAdmission>> | null;
+};
+
+/**
+ * The independent review of one committed knowledge or guidance proposal
+ * (T3.6 L2): a fresh reviewer session on the proposal's candidate, shown the
+ * proposal, its original records and the entries it relates to, under the
+ * knowledge or guidance rubric, with each subject admission needs. A
+ * completed review is admitted by the controller from the committed records.
+ */
+export async function reviewLearning(
+  run: RunHandle,
+  input: {
+    plan: PreparedRun;
+    proposal: string;
+    accepted: readonly AcceptedOutput[];
+    controller: string;
+    reminderChars: number;
+    reviewer: ReviewerAccess;
+    /** The runner's phase key, journaled with the session (T3.6 L3). */
+    key?: string;
+  },
+): Promise<LearningReview> {
+  const events = committedEvents(run);
+  const event = events.find(
+    (e) =>
+      (e.action === "knowledge-proposal" || e.action === "guidance-proposal") &&
+      e.data.record === input.proposal,
+  );
+  if (!event) throw new Error(`${input.proposal} is not a committed proposal`);
+  const views = learningViews(run.dir, input.controller, { events });
+  if (!views.ok) throw new Error(views.diagnostics.join("\n"));
+  const knowledge = event.action === "knowledge-proposal";
+  const record = JSON.parse(readEvidence(run.dir, input.proposal).toString("utf8")) as
+    KnowledgeProposal | GuidanceProposal;
+  const step = contractStep(input.plan, record.step);
+  const { candidate, manifest } = evaluationRecord(
+    run,
+    events,
+    step.id,
+    record.attempt,
+    record.evaluation,
+  );
+  let context: ReviewContext;
+  let records: string[];
+  if (knowledge) {
+    const p = record as KnowledgeProposal;
+    const entry = entryId(p);
+    const omitted = Object.keys(evaluationDependencies(manifest)).some(
+      (name) => !Object.hasOwn(p.scope.dependencies, name),
+    );
+    const narrowed = omitted || "paths" in p.scope.candidate;
+    const relations = [
+      ...p.contradicts.map((id) => ["contradicts", id] as const),
+      ...p.supersedes.map((id) => ["supersedes", id] as const),
+    ];
+    const related = views.value.knowledge.entries.filter((e) =>
+      relations.some(([, id]) => id === e.entry),
+    );
+    context = {
+      kind: "knowledge",
+      rubric: KNOWLEDGE_RUBRIC,
+      subjects: [
+        entry,
+        ...(narrowed ? [scopeSubject(entry)] : []),
+        ...relations.map(([relation, id]) => relationSubject(entry, relation, id)),
+      ],
+      targets: [],
+      bindings: [],
+      evidence: {
+        proposal: input.proposal,
+        claim: p.claim,
+        scope: p.scope as unknown as Json,
+        observations: p.observations.map((o) => ({
+          ref: o.ref,
+          basis: o.basis,
+          record: shown(run, o.ref),
+        })),
+        related: related.map((e) => ({
+          entry: e.entry,
+          claim: e.claim,
+          revisions: e.revisions.map((r) => r.proposal),
+        })),
+      },
+    };
+    records = unique([
+      ...p.observations.map((o) => o.ref),
+      ...related.flatMap((e) => e.revisions.map((r) => r.proposal)),
+    ]);
+  } else {
+    const p = record as GuidanceProposal;
+    const related = views.value.guidance.entries.filter((e) => p.contradicts.includes(e.guidance));
+    context = {
+      kind: "guidance",
+      rubric: GUIDANCE_RUBRIC,
+      subjects: guidanceSubjects(p),
+      targets: [],
+      bindings: [],
+      evidence: {
+        proposal: input.proposal,
+        guidance: { id: guidanceId(p), ...p.guidance },
+        reason: p.reason,
+        occurrences: p.occurrences.map((o, index) => ({
+          subject: `${guidanceId(p)}/occurrence/${index}`,
+          review: o.review,
+          finding: o.finding,
+          record: shown(run, o.review),
+        })),
+        related: related.map((e) => ({
+          guidance: e.guidance,
+          rule: e.rule,
+          cause: e.cause,
+          text: e.versions.at(-1)?.text ?? null,
+        })),
+      },
+    };
+    records = unique([
+      ...p.occurrences.map((o) => o.review),
+      ...related.flatMap((e) => e.versions.map((v) => v.proposal)),
+    ]);
+  }
+  const session = await learningSession(run, {
+    plan: input.plan,
+    step: step.id,
+    attempt: record.attempt,
+    candidate,
+    accepted: input.accepted,
+    reviewer: input.reviewer,
+    review: context,
+    records,
+    data: {
+      step: step.id,
+      purpose: knowledge ? "knowledge-review" : "guidance-review",
+      proposal: input.proposal,
+      ...(input.key ? { key: input.key } : {}),
+    },
+  });
+  if (session.outcome.outcome !== "reviewed") {
+    return { review: session.ref, outcome: session.outcome.outcome, admission: null };
+  }
+  const admission = admitLearning(run, { ...input, review: session.ref });
+  return { review: session.ref, outcome: session.outcome.outcome, admission };
+}
+
+/**
+ * The controller's admission of a committed proposal from its committed
+ * review (T3.6 L2), without a session: a review whose admission was lost
+ * with its runner is admitted from the journal, never reviewed again (T3.6 L3).
+ */
+export function admitLearning(
+  run: RunHandle,
+  input: {
+    plan: PreparedRun;
+    proposal: string;
+    review: string;
+    controller: string;
+    reminderChars: number;
+  },
+): Read<Stored<KnowledgeAdmission | GuidanceAdmission>> {
+  const event = committedEvents(run).find(
+    (e) =>
+      (e.action === "knowledge-proposal" || e.action === "guidance-proposal") &&
+      e.data.record === input.proposal,
+  );
+  if (!event) throw new Error(`${input.proposal} is not a committed proposal`);
+  if (event.action === "knowledge-proposal") {
+    return admitKnowledge(run, {
+      proposal: input.proposal,
+      review: input.review,
+      controller: input.controller,
+    });
+  }
+  const record = JSON.parse(
+    readEvidence(run.dir, input.proposal).toString("utf8"),
+  ) as GuidanceProposal;
+  return admitGuidance(run, {
+    proposal: input.proposal,
+    review: input.review,
+    controller: input.controller,
+    rules: guidanceRules(input.plan, contractStep(input.plan, record.step)),
+    reminderChars: input.reminderChars,
+  });
+}
+
+// T3.6 L3: exploration and cross-attempt review (evidence-backed learning
+// log §§2.3–2.4). Before a production attempt that a reviewed choice or a
+// reviewed failure repeated across two correction attempts calls for, the
+// controller records the trigger and freezes what both diagnoses are shown.
+// Two fresh read-only sessions then study the same sealed candidate in turn,
+// and neither is shown the other's result. A proposed check runs only after
+// the controller validates it, on a fresh read-only copy of that candidate
+// in the existing containment. A separate reviewer compares the diagnoses;
+// the controller validates its recommendation and routes the attempt.
+// Selection accepts nothing. After the independent review of the routed
+// attempt's candidate, a cross-attempt challenge reviews it against the
+// step's history, and its acceptance needs that challenge.
+
+/** One reviewed blocking finding a trigger rests on: its review record and index. */
+export type Occurrence = { attempt: number; review: string; finding: number };
+
+/**
+ * Why a step's next attempt is explored: a reviewed blocking finding naming
+ * an unresolved choice, or one rule's reviewed blocking failure in two
+ * consecutive correction attempts that were correcting it. `cause` is the
+ * latest occurrence's choice or defect, as the review recorded it.
+ */
+export type Trigger = {
+  kind: "choice" | "repeated";
+  rule: string;
+  cause: string;
+  occurrences: Occurrence[];
+};
+
+/** The format of the exploration records (T3.6 L3); another format is refused, never migrated. */
+export const EXPLORATION_FORMAT = 1;
+
+/** An exploration round's opening record, journaled before any of its sessions. */
+export type ExplorationStart = {
+  format: typeof EXPLORATION_FORMAT;
+  controller: string;
+  run: string;
+  step: string;
+  /** The production attempt the exploration precedes. */
+  attempt: number;
+  /** The run's count of exploration rounds, this one included. */
+  round: number;
+  trigger: Trigger;
+  /** The sealed candidate both diagnoses inspect; the attempt starts from it. */
+  candidate: SealedCandidate;
+  /** The findings the attempt corrects. */
+  findings: Finding[];
+  /** The diagnoses' frozen learning context; null when the run selects none. */
+  context: ContextManifest | null;
+  /** Further records both diagnoses may read: the trigger's reviews and the decided attempt's observations. */
+  records: string[];
+  limits: { checkTimeoutSeconds: number };
+};
+
+/**
+ * A diagnosis's check: refused by the controller with its reasons, run in a
+ * fresh read-only workspace of the explored candidate, or unavailable when
+ * that workspace could not run it. No prepared dependencies are mounted.
+ */
+export type ExplorationCheck = {
+  format: typeof EXPLORATION_FORMAT;
+  controller: string;
+  run: string;
+  step: string;
+  attempt: number;
+  exploration: string;
+  side: DiagnosticSide;
+  /** The diagnostic session's journaled invocation. */
+  diagnosis: string;
+  argv: string[];
+  timeoutSeconds: number | null;
+  outcome: "ran" | "refused" | "unavailable";
+  reasons: string[];
+  ran: (RunRecord & { durationMs: number }) | null;
+  cleanup: string | null;
+};
+
+/**
+ * The controller's routing of an explored attempt: the diagnosis the
+ * selection review recommended once its references and scope check out, or
+ * `blocked` with the reasons and no winner.
+ */
+export type ExplorationRouting = {
+  format: typeof EXPLORATION_FORMAT;
+  controller: string;
+  run: string;
+  step: string;
+  attempt: number;
+  exploration: string;
+  /** The selection review's journaled invocation. */
+  selection: string;
+  outcome: "selected" | "blocked";
+  selected: {
+    side: DiagnosticSide;
+    diagnosis: string;
+    approach: string;
+    assumptions: string[];
+    evidence: string[];
+    check: string | null;
+  } | null;
+  reasons: string[];
+};
+
+const EXPLORATION_ACTIONS = ["exploration-start", "exploration-check", "exploration-routing"];
+
+export type ExplorationRecords = {
+  starts: (Stored<ExplorationStart> & { seq: number })[];
+  checks: (Stored<ExplorationCheck> & { seq: number })[];
+  routings: (Stored<ExplorationRouting> & { seq: number })[];
+};
+
+/**
+ * The run's committed exploration records. Another format, another
+ * controller or an unknown `exploration-*` action refuses them all; nothing
+ * is migrated or written.
+ */
+export function explorationRecords(
+  run: RunHandle,
+  events: readonly JournalEvent[],
+  controller: string,
+): Read<ExplorationRecords> {
+  const diagnostics: string[] = [];
+  const value: ExplorationRecords = { starts: [], checks: [], routings: [] };
+  for (const e of events) {
+    if (!e.action.startsWith("exploration-")) continue;
+    if (!EXPLORATION_ACTIONS.includes(e.action)) {
+      diagnostics.push(`event ${e.seq}: unknown exploration record ${e.action}`);
+      continue;
+    }
+    const ref = e.data.record;
+    let record: { format?: unknown; controller?: unknown };
+    try {
+      if (typeof ref !== "string") throw new Error("names no record");
+      record = JSON.parse(readEvidence(run.dir, ref).toString("utf8")) as typeof record;
+    } catch (err) {
+      diagnostics.push(`event ${e.seq}: ${e.action} ${message(err)}`);
+      continue;
+    }
+    if (record.format !== EXPLORATION_FORMAT) {
+      diagnostics.push(
+        `event ${e.seq}: ${e.action} format ${String(record.format)} is not supported`,
+      );
+    } else if (record.controller !== controller) {
+      diagnostics.push(
+        `event ${e.seq}: ${e.action} was written by controller ${String(record.controller)}, not ${controller}`,
+      );
+    } else {
+      const stored = { ref: ref as string, seq: e.seq, record };
+      if (e.action === "exploration-start")
+        value.starts.push(stored as Stored<ExplorationStart> & { seq: number });
+      else if (e.action === "exploration-check")
+        value.checks.push(stored as Stored<ExplorationCheck> & { seq: number });
+      else value.routings.push(stored as Stored<ExplorationRouting> & { seq: number });
+    }
+  }
+  return diagnostics.length > 0 ? { ok: false, diagnostics } : { ok: true, value };
+}
+
+/** Journals an exploration record against the attempt it precedes. */
+function journalExploration(
+  run: RunHandle,
+  action: (typeof EXPLORATION_ACTIONS)[number],
+  record: { step: string; attempt: number },
+  more: readonly string[],
+  data: JsonObject,
+): string {
+  const ref = putEvidence(run, stringify(record));
+  appendEvent(run, {
+    action,
+    attempt: record.attempt,
+    evidence: [ref, ...unique(more.filter((m) => m !== ref))],
+    data: { ...data, step: record.step, record: ref },
+  });
+  return ref;
+}
+
+/** Opens an exploration round: its trigger, candidate and frozen inputs, before any session. */
+export function recordExploration(run: RunHandle, record: ExplorationStart, key: string): string {
+  return journalExploration(run, "exploration-start", record, record.records, {
+    key,
+    round: record.round,
+    trigger: record.trigger.kind,
+  });
+}
+
+/** The subjects of an exploration's selection review: one per diagnosis. */
+export const selectionSubjects = (exploration: string): string[] => [
+  `${exploration}/approach`,
+  `${exploration}/alternative`,
+];
+
+/** The subjects of a step's cross-attempt challenge (CHALLENGE_RUBRIC). */
+export const challengeSubjects = (step: string): string[] => [
+  `${step}/challenge/assumptions`,
+  `${step}/challenge/symptom`,
+  `${step}/challenge/evidence`,
+];
+
+/** The learning inputs an exploration froze, rebuilt from its manifest. */
+function explorationLearning(
+  run: RunHandle,
+  exploration: Stored<ExplorationStart>,
+): LearningInputs | undefined {
+  const { context } = exploration.record;
+  if (!context) return undefined;
+  const inputs = learningInputs(run.dir, context);
+  if (!inputs.ok) throw new Error(inputs.diagnostics.join("\n"));
+  return inputs.value;
+}
+
+/**
+ * One diagnostic session of an exploration round (T3.6 L3): a fresh
+ * reviewer-role session in a fresh read-only workspace of the explored
+ * candidate. Its packet is built from the exploration record alone, so both
+ * sides get the same requirements, findings, learning context and readable
+ * records, and neither can be shown the other's result. Only the side and
+ * its briefing differ.
+ */
+export async function diagnose(
+  run: RunHandle,
+  input: {
+    plan: PreparedRun;
+    exploration: Stored<ExplorationStart>;
+    side: DiagnosticSide;
+    accepted: readonly AcceptedOutput[];
+    reviewer: ReviewerAccess;
+    key: string;
+  },
+): Promise<{ ref: string; outcome: AgentOutcome }> {
+  const { exploration, side } = input;
+  const e = exploration.record;
+  const learning = explorationLearning(run, exploration);
+  return learningSession(run, {
+    plan: input.plan,
+    step: e.step,
+    attempt: e.attempt,
+    candidate: e.candidate,
+    accepted: input.accepted,
+    reviewer: input.reviewer,
+    diagnosis: {
+      side,
+      briefing: DIAGNOSTIC_BRIEFINGS[side],
+      exploration: exploration.ref,
+      trigger: e.trigger as unknown as Json,
+      limits: e.limits,
+    },
+    findings: e.findings,
+    ...(learning ? { learning } : {}),
+    records: e.records,
+    data: {
+      step: e.step,
+      purpose: `diagnostic-${side}`,
+      exploration: exploration.ref,
+      key: input.key,
+    },
+  });
+}
+
+/** The most argv entries and characters per entry a diagnostic check may have. */
+const CHECK_ARGS = 32;
+const CHECK_ARG_CHARS = 4096;
+
+/**
+ * Validates and runs one diagnosis's check (T3.6 L3). The controller refuses
+ * a check whose session did not complete as this exploration's diagnosis of
+ * that side, an argv outside its limits, or a timeout outside the run's
+ * check limit; a refused check never runs. A valid one runs once, in a fresh
+ * read-only workspace of the explored candidate opened with the verifier's
+ * containment — no writable or scratch path, no network, no credential —
+ * and its output is retained as evidence. It never touches the candidate.
+ */
+export async function diagnosticCheck(
+  run: RunHandle,
+  input: {
+    exploration: Stored<ExplorationStart>;
+    side: DiagnosticSide;
+    /** The diagnostic session's committed invocation event. */
+    diagnosis: JournalEvent;
+    open: OpenWorkspace;
+    key: string;
+  },
+): Promise<Stored<ExplorationCheck>> {
+  const { exploration, side, diagnosis } = input;
+  const e = exploration.record;
+  const ref = typeof diagnosis.data.record === "string" ? diagnosis.data.record : "";
+  const reasons: string[] = [];
+  let outcome: AgentOutcome | null = null;
+  try {
+    outcome = JSON.parse(readEvidence(run.dir, ref).toString("utf8")) as AgentOutcome;
+  } catch {
+    reasons.push(`${ref || "the diagnosis"} is not a committed record`);
+  }
+  if (
+    diagnosis.action !== "agent-invocation" ||
+    diagnosis.data.exploration !== exploration.ref ||
+    diagnosis.data.purpose !== `diagnostic-${side}`
+  ) {
+    reasons.push(`the invocation is not this exploration's ${side} diagnosis`);
+  }
+  const check = outcome?.outcome === "diagnosed" ? outcome.diagnosis.check : null;
+  if (outcome && outcome.outcome !== "diagnosed") {
+    reasons.push(`the diagnosis did not complete: ${outcome.outcome}`);
+  } else if (outcome && !check) reasons.push("the diagnosis proposed no check");
+  const argv = check ? [...check.argv] : [];
+  const timeout = check ? check.timeout_seconds : null;
+  if (check) {
+    if (argv.length === 0 || argv.length > CHECK_ARGS) {
+      reasons.push(`argv has ${argv.length} entries; 1 to ${CHECK_ARGS} are allowed`);
+    }
+    if (argv[0] !== undefined && argv[0].trim() === "") reasons.push("argv names no program");
+    for (const [i, arg] of argv.entries()) {
+      if (arg.length > CHECK_ARG_CHARS) {
+        reasons.push(`argv[${i}] has ${arg.length} characters; at most ${CHECK_ARG_CHARS}`);
+      }
+      if (arg.includes("\0")) reasons.push(`argv[${i}] holds a NUL character`);
+    }
+    const limit = e.limits.checkTimeoutSeconds;
+    if (!Number.isInteger(timeout) || timeout === null || timeout < 1 || timeout > limit) {
+      reasons.push(`timeout ${String(timeout)} s is outside 1 to ${limit} s`);
+    }
+  }
+  const base = {
+    format: EXPLORATION_FORMAT,
+    controller: e.controller,
+    run: run.run,
+    step: e.step,
+    attempt: e.attempt,
+    exploration: exploration.ref,
+    side,
+    diagnosis: ref,
+    argv,
+    timeoutSeconds: timeout,
+  } as const;
+  let record: ExplorationCheck;
+  if (reasons.length > 0) {
+    record = { ...base, outcome: "refused", reasons, ran: null, cleanup: null };
+  } else {
+    let ran: (RunRecord & { durationMs: number }) | null = null;
+    let error: string | null = null;
+    let cleanup: string | null = null;
+    let ws: ContainedWorkspace | null = null;
+    try {
+      ws = await input.open(e.candidate);
+      if (!sameSnapshot(ws.snapshot, e.candidate)) {
+        throw new Error(`the workspace holds ${ws.snapshot.commit}, not ${e.candidate.commit}`);
+      }
+      const started = Date.now();
+      const result = await ws.exec(argv, { timeoutMs: (timeout ?? 1) * 1000 });
+      ran = {
+        argv,
+        exit: result.exitCode,
+        timedOut: result.timedOut,
+        stdout: putEvidence(run, result.stdout),
+        stderr: putEvidence(run, result.stderr),
+        durationMs: Date.now() - started,
+      };
+    } catch (err) {
+      error = message(err);
+    } finally {
+      await ws?.close().catch((err: unknown) => {
+        cleanup = message(err);
+      });
+    }
+    record = {
+      ...base,
+      outcome: ran ? "ran" : "unavailable",
+      reasons: error ? [error] : [],
+      ran,
+      cleanup,
+    };
+  }
+  const stored = store(run, record);
+  journalExploration(
+    run,
+    "exploration-check",
+    record,
+    [stored.ref, ...(record.ran ? [record.ran.stdout, record.ran.stderr] : [])],
+    { key: input.key, side, exploration: exploration.ref, outcome: record.outcome },
+  );
+  return stored;
+}
+
+/** A diagnosis as the selection reviewer is shown it. */
+const diagnosisShown = (side: DiagnosticSide, ref: string, outcome: AgentOutcome): Json => ({
+  side,
+  invocation: ref,
+  outcome: outcome.outcome,
+  ...(outcome.outcome === "diagnosed"
+    ? { diagnosis: outcome.diagnosis as unknown as Json }
+    : outcome.outcome === "failed" || outcome.outcome === "cancelled"
+      ? { reason: outcome.reason }
+      : {}),
+});
+
+const CHECK_TAIL = 4096;
+
+/** A check record as the selection and challenge reviewers are shown it. */
+function checkShown(run: RunHandle, check: Stored<ExplorationCheck>): Json {
+  const tail = (r: string): string => readEvidence(run.dir, r).toString("utf8").slice(-CHECK_TAIL);
+  const c = check.record;
+  return {
+    side: c.side,
+    record: check.ref,
+    argv: c.argv,
+    outcome: c.outcome,
+    reasons: c.reasons,
+    ...(c.ran
+      ? {
+          exit: c.ran.exit,
+          timedOut: c.ran.timedOut,
+          stdout: tail(c.ran.stdout),
+          stderr: tail(c.ran.stderr),
+        }
+      : {}),
+  };
+}
+
+/**
+ * The selection review of an exploration round (T3.6 L3): a fresh
+ * reviewer-role session, after both diagnoses and their checks, judging each
+ * diagnosis under the selection rubric and recommending one or none.
+ */
+export async function selectApproach(
+  run: RunHandle,
+  input: {
+    plan: PreparedRun;
+    exploration: Stored<ExplorationStart>;
+    diagnoses: { side: DiagnosticSide; ref: string; outcome: AgentOutcome }[];
+    checks: Stored<ExplorationCheck>[];
+    accepted: readonly AcceptedOutput[];
+    reviewer: ReviewerAccess;
+    key: string;
+  },
+): Promise<{ ref: string; outcome: AgentOutcome; records: string[] }> {
+  const { exploration } = input;
+  const e = exploration.record;
+  const records = selectionRecords(exploration, input.diagnoses, input.checks);
+  const session = await learningSession(run, {
+    plan: input.plan,
+    step: e.step,
+    attempt: e.attempt,
+    candidate: e.candidate,
+    accepted: input.accepted,
+    reviewer: input.reviewer,
+    review: {
+      kind: "selection",
+      rubric: SELECTION_RUBRIC,
+      subjects: selectionSubjects(exploration.ref),
+      targets: [],
+      bindings: [],
+      evidence: {
+        exploration: exploration.ref,
+        trigger: e.trigger as unknown as Json,
+        findings: e.findings as unknown as Json,
+        diagnoses: input.diagnoses.map((d) => diagnosisShown(d.side, d.ref, d.outcome)),
+        checks: input.checks.map((c) => checkShown(run, c)),
+      },
+    },
+    records,
+    data: {
+      step: e.step,
+      purpose: "exploration-selection",
+      exploration: exploration.ref,
+      key: input.key,
+    },
+  });
+  return { ...session, records };
+}
+
+/** What a selection reviewer may read: the exploration's records, both diagnoses and the checks with their output. */
+const selectionRecords = (
+  exploration: Stored<ExplorationStart>,
+  diagnoses: readonly { ref: string }[],
+  checks: readonly Stored<ExplorationCheck>[],
+): string[] =>
+  unique([
+    exploration.ref,
+    ...exploration.record.records,
+    ...diagnoses.map((d) => d.ref),
+    ...checks.flatMap((c) => [
+      c.ref,
+      ...(c.record.ran ? [c.record.ran.stdout, c.record.ran.stderr] : []),
+    ]),
+  ]);
+
+/**
+ * The controller's routing of an explored attempt (T3.6 L3) from the
+ * committed selection review. It selects the recommended diagnosis only when
+ * the verdict is complete and consistent, the recommended side completed its
+ * diagnosis without blockers and its subject is satisfied, and every cited
+ * reference is a record the reviewer was given, a path of the explored
+ * candidate, or such a path with a line (`path:N`) or line range
+ * (`path:N-M`) the file has. Anything else is `blocked`, with the reasons and
+ * no winner.
+ */
+export function routeExploration(
+  run: RunHandle,
+  input: {
+    exploration: Stored<ExplorationStart>;
+    selection: { ref: string; outcome: AgentOutcome };
+    diagnoses: { side: DiagnosticSide; ref: string; outcome: AgentOutcome }[];
+    checks: Stored<ExplorationCheck>[];
+    key: string;
+  },
+): Stored<ExplorationRouting> {
+  const { exploration, selection } = input;
+  const e = exploration.record;
+  const reasons: string[] = [];
+  let selected: ExplorationRouting["selected"] = null;
+  const subjects = selectionSubjects(exploration.ref);
+  const checked = checkVerdict(selection.outcome, { subjects, targets: [] });
+  if (!checked.ok) reasons.push(`the selection review is incomplete: ${checked.issues.join("; ")}`);
+  else if (checked.verdict.verdict === "blocked") {
+    reasons.push(`the selection review is blocked: ${checked.verdict.blockers.join("; ")}`);
+  } else if (checked.conflicts.length > 0) {
+    reasons.push(`the selection review contradicts itself: ${checked.conflicts.join("; ")}`);
+  } else {
+    const rec = checked.verdict.recommendation;
+    if (!rec) reasons.push("the selection review recommends nothing");
+    else if (rec.select === "none") reasons.push(`no diagnosis is selected: ${rec.reason}`);
+    else {
+      const side = rec.select;
+      const diagnosis = input.diagnoses.find((d) => d.side === side);
+      const coverage = checked.verdict.coverage.find(
+        (c) => c.subject === `${exploration.ref}/${side}`,
+      );
+      if (!diagnosis || diagnosis.outcome.outcome !== "diagnosed") {
+        reasons.push(`the ${side} diagnosis did not complete`);
+      } else if (diagnosis.outcome.diagnosis.blockers.length > 0) {
+        reasons.push(
+          `the ${side} diagnosis is blocked: ${diagnosis.outcome.diagnosis.blockers.join("; ")}`,
+        );
+      } else if (coverage?.result !== "satisfied") {
+        reasons.push(`the recommended ${side} diagnosis is ${coverage?.result ?? "not assessed"}`);
+      }
+      const shown = new Set(selectionRecords(exploration, input.diagnoses, input.checks));
+      const tree = candidateTree(run, e.candidate);
+      if (rec.evidence.length === 0) reasons.push("the recommendation cites no evidence");
+      for (const ref of rec.evidence) {
+        if (shown.has(ref) || tree.has(ref)) continue;
+        const lines = /^(.+):([1-9]\d*)(?:-([1-9]\d*))?$/.exec(ref);
+        const path = lines?.[1] ?? "";
+        const file =
+          lines && tree.has(path)
+            ? treeFiles(run.dir, e.candidate.tree, path).get(path)
+            : undefined;
+        if (!lines || !file) {
+          reasons.push(
+            `the recommendation cites ${ref}, which is neither a record it was given nor a path of the candidate`,
+          );
+          continue;
+        }
+        const count =
+          file.length === 0
+            ? 0
+            : file.toString("utf8").split("\n").length - (file.at(-1) === 0x0a ? 1 : 0);
+        const first = Number(lines[2]);
+        const last = Number(lines[3] ?? lines[2]);
+        if (first > last || last > count) {
+          reasons.push(
+            `the recommendation cites ${ref}, but ${path} has no such lines (it has ${count})`,
+          );
+        }
+      }
+      if (reasons.length === 0 && diagnosis?.outcome.outcome === "diagnosed") {
+        const d = diagnosis.outcome.diagnosis;
+        selected = {
+          side,
+          diagnosis: diagnosis.ref,
+          approach: d.approach,
+          assumptions: d.assumptions,
+          evidence: rec.evidence,
+          check: input.checks.find((c) => c.record.side === side)?.ref ?? null,
+        };
+      }
+    }
+  }
+  const record: ExplorationRouting = {
+    format: EXPLORATION_FORMAT,
+    controller: e.controller,
+    run: run.run,
+    step: e.step,
+    attempt: e.attempt,
+    exploration: exploration.ref,
+    selection: selection.ref,
+    outcome: selected ? "selected" : "blocked",
+    selected,
+    reasons,
+  };
+  const stored = store(run, record);
+  journalExploration(run, "exploration-routing", record, [stored.ref, selection.ref], {
+    key: input.key,
+    exploration: exploration.ref,
+    outcome: record.outcome,
+  });
+  return stored;
+}
+
+/** What a producer is shown of the exploration its attempt follows. */
+export function explorationInputs(
+  run: RunHandle,
+  routing: Stored<ExplorationRouting>,
+): ExplorationInputs {
+  const r = routing.record;
+  const check = r.selected?.check
+    ? (JSON.parse(readEvidence(run.dir, r.selected.check).toString("utf8")) as ExplorationCheck)
+    : null;
+  return {
+    routing: routing.ref,
+    outcome: r.outcome,
+    approach: r.selected
+      ? {
+          side: r.selected.side,
+          approach: r.selected.approach,
+          assumptions: r.selected.assumptions,
+          evidence: r.selected.evidence,
+          check: check
+            ? { argv: check.argv, outcome: check.outcome, exit: check.ran?.exit ?? null }
+            : null,
+        }
+      : null,
+    reasons: r.reasons,
+  };
+}
+
+/**
+ * The cross-attempt challenge of a candidate (T3.6 L3; evidence-backed
+ * learning log §2.4): after its binding independent review, a fresh
+ * reviewer judges it under the challenge rubric against the step's earlier
+ * attempts, their original records, the exploration it followed and the
+ * pull request's correction records routed to the step. The records it is
+ * given are frozen in the review record and readable with read_evidence;
+ * the binding review comes first. The review is bound to the evaluation, so
+ * a later evaluation needs a new challenge.
+ */
+export async function challengeCandidate(
+  run: RunHandle,
+  input: {
+    plan: PreparedRun;
+    step: string;
+    candidate: SealedCandidate;
+    attempt: number;
+    manifest: EvaluationManifest;
+    accepted: readonly AcceptedOutput[];
+    reviewer: ReviewerAccess;
+    /** The binding independent review of this evaluation. */
+    review: Stored<ReviewRecord>;
+  },
+): Promise<Stored<ReviewRecord>> {
+  const step = contractStep(input.plan, input.step);
+  const identity = identityOf(run, input.attempt, input.manifest, input.candidate);
+  const events = committedEvents(run);
+  const mine = (e: JournalEvent): boolean => e.data.step === step.id;
+  const earlier = (e: JournalEvent): boolean =>
+    mine(e) && e.attempt !== null && e.attempt < input.attempt;
+  const verdictOf = (outcome: AgentOutcome): Json =>
+    outcome.outcome === "reviewed"
+      ? (outcome.verdict as unknown as Json)
+      : { outcome: outcome.outcome };
+  const evaluations = journalRecords<{ candidate: SealedCandidate }>(
+    run,
+    events,
+    "evaluation",
+    earlier,
+  );
+  const evaluationOf = new Map(
+    events
+      .filter((e) => e.action === "evaluation" && earlier(e))
+      .map((e) => [String(e.data.record), `${e.attempt}/${e.evaluation}`]),
+  );
+  const ofEarlier = (e: JournalEvent): boolean =>
+    e.attempt !== null &&
+    e.attempt < input.attempt &&
+    [...evaluationOf.values()].includes(`${e.attempt}/${e.evaluation}`);
+  const reviews = journalRecords<ReviewRecord>(run, events, "review", ofEarlier);
+  // Decisions journal their record as their evidence.
+  const decisions = events
+    .filter((e) => (e.action === "decision" || e.action === "acceptance") && ofEarlier(e))
+    .flatMap((e) => {
+      const ref = e.evidence[0];
+      return ref === undefined
+        ? []
+        : [{ ref, record: JSON.parse(readEvidence(run.dir, ref).toString("utf8")) as Decision }];
+    });
+  const producers = journalRecords<AgentOutcome>(
+    run,
+    events,
+    "agent-invocation",
+    (e) => earlier(e) && e.data.role === "producer" && e.data.purpose === undefined,
+  );
+  const verifications = journalRecords<Invocation>(
+    run,
+    events,
+    "verifier-invocation",
+    (e) => ofEarlier(e) && e.data.stage === "acceptance",
+  );
+  const explored = events.filter(
+    (e) => mine(e) && EXPLORATION_ACTIONS.includes(e.action) && (e.attempt ?? 0) <= input.attempt,
+  );
+  const diagnoses = events.filter(
+    (e) =>
+      e.action === "agent-invocation" &&
+      typeof e.data.exploration === "string" &&
+      explored.some((x) => x.data.record === e.data.exploration),
+  );
+  const pull = events.filter(
+    (e) => e.action === "pr-feedback" || e.action === "pr-assessment" || e.action === "pr-round",
+  );
+  const assessments = journalRecords<{ correction: { step: string } | null }>(
+    run,
+    events,
+    "pr-assessment",
+    () => true,
+  ).filter((a) => a.record.correction?.step === step.id);
+  const records = [
+    input.review.ref,
+    ...unique([
+      ...evaluations.map((e) => e.ref),
+      ...reviews.map((r) => r.ref),
+      ...decisions.map((d) => d.ref),
+      ...producers.map((p) => p.ref),
+      ...verifications.map((v) => v.ref),
+      ...explored.map((e) => String(e.data.record)),
+      ...diagnoses.map((e) => String(e.data.record)),
+      ...pull.map((e) => String(e.data.record)),
+    ]).filter((r) => r !== input.review.ref),
+  ];
+  return runReview(run, {
+    plan: input.plan,
+    step,
+    identity,
+    candidate: input.candidate,
+    accepted: input.accepted,
+    reviewer: input.reviewer,
+    shown: [],
+    outputs: [],
+    checkpoint: null,
+    records,
+    context: {
+      kind: "challenge",
+      rubric: CHALLENGE_RUBRIC,
+      subjects: challengeSubjects(step.id),
+      targets: [],
+      bindings: [],
+      evidence: {
+        review: { record: input.review.ref, verdict: verdictOf(input.review.record.outcome) },
+        exploration: input.manifest.exploration ?? null,
+        attempts: evaluations.map((ev) => {
+          const at = evaluationOf.get(ev.ref) ?? "";
+          const [attempt, evaluation] = at.split("/");
+          const same = (r: { attempt: number; evaluation: string }): boolean =>
+            String(r.attempt) === attempt && r.evaluation === evaluation;
+          return {
+            attempt: Number(attempt),
+            evaluation: evaluation ?? "",
+            record: ev.ref,
+            candidate: ev.record.candidate.commit,
+            reviews: reviews
+              .filter((r) => same(r.record))
+              .map((r) => ({
+                record: r.ref,
+                kind: r.record.kind,
+                verdict: verdictOf(r.record.outcome),
+              })),
+            decisions: decisions
+              .filter((d) => same(d.record))
+              .map((d) => ({
+                record: d.ref,
+                decision: d.record.decision,
+                findings:
+                  d.record.decision === "correct" ? (d.record.findings as unknown as Json) : [],
+              })),
+          };
+        }),
+        explorations: explored.map((e) => ({
+          action: e.action,
+          attempt: e.attempt,
+          record: String(e.data.record),
+        })),
+        pullRequest: assessments.map((a) => ({
+          record: a.ref,
+          correction: a.record.correction as unknown as Json,
+        })),
+      },
+    },
+  });
+}

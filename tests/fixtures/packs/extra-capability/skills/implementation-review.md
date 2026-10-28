@@ -1,3 +1,0 @@
-# implementation-review
-
-Fixture skill.

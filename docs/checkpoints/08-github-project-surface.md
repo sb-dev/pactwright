@@ -1,8 +1,8 @@
 # Pactwright — Checkpoint 8 — Full Project Operating Surface
 
-**Version:** 12  
-**Entry condition:** Checkpoint 7 is accepted and all first-party graph semantics, including Operations Experiment, exist.  
-**Release:** `0.0.8`  
+**Version:** 14\
+**Entry condition:** Checkpoint 7 is accepted and all first-party graph semantics, including Operations Experiment, exist.\
+**Release:** `0.0.9`\
 **Exit capability:** Pactwright and Kakeibo prove the complete configured operating surface, including the controlled Experiment lineage, through the existing five workflows and one shared Project, with deterministic generation, ownership-safe reconciliation, exact runtime provenance and no transfer of canonical authority to GitHub.
 
 ## 1. Goal
@@ -96,7 +96,7 @@ pnpm build
 
 Land coherent changes through pull requests and required checks. Use Pactwright's available public/runtime mechanisms for work it can represent; do not maintain canonical graph coherence by hand.
 
-Use [Checkpoint 2 — Exact-version upgrade acceptance](./02-remote-delivery.md#exact-version-upgrade-acceptance) for the `0.0.7 → 0.0.8` transition. Prove exact desired targets and compatible intermediate states before release. Do not preinstall target packages, edit either lock, silently switch Agent Packs or invent component upgrade flags.
+Use [Checkpoint 2 — Exact-version upgrade acceptance](./02-remote-delivery.md#exact-version-upgrade-acceptance) for the `0.0.8 → 0.0.9` transition. Prove exact desired targets and compatible intermediate states before release. Do not preinstall target packages, edit either lock, silently switch Agent Packs or invent component upgrade flags.
 
 Use the existing workflow-activation prerequisite handling: land the workflow version capable of producing a required check before enforcing that check, and land changed routes before claiming their remote behaviour works. An unmet managed prerequisite is incomplete activation, not convergence.
 
@@ -382,7 +382,7 @@ Compare fields and cross-Extension Publication → Observation → Source/Knowle
 **Run**
 
 ```text
-Complete managed-path and validation composition for docs/operations/experiments/** in the Operations GitHub profile. Experiment file changes trigger the appropriate deterministic Operations validation/projection refresh. GitHub may validate/project/trigger analysis, but a Project field edit alone cannot create a valid Experiment and there is no GitHub promotion action.
+Complete managed-path and validation composition for specs/extensions/operations/experiments/** in the Operations GitHub profile. Experiment file changes trigger the appropriate deterministic Operations validation/projection refresh. GitHub may validate/project/trigger analysis, but a Project field edit alone cannot create a valid Experiment and there is no GitHub promotion action.
 ```
 
 **Expected result**
@@ -416,7 +416,8 @@ Record the active workspace package/manifest identities and generated-file hashe
 | Input or event | Existing responsibility to exercise |
 |---|---|
 | Core records, `specs/**`, relevant `.pactwright/**` changes | Core and registered owning validators; configured continuation through `lifecycle run`. |
-| `specs/graph/edges.yml` | Validators chosen by registered edge type/endpoints, including multiple owners for cross-graph relationships. |
+| `specs/graph/edges.yml` | Core lineage validation only; non-core placement fails. |
+| `specs/extensions/<id>/edges.yml` | Registered relation owner (node-type owner for `supersedes`) and affected endpoint-owner validators; include removed tuples in routing. |
 | PI Sources, Domain/Knowledge proposals and accepted changes | Source capture, promotion validation, onboard/roadmap/propagation and configured freshness processing. |
 | Graph Review execution/report paths and configured manual/scheduled/event routes | Review execution/provenance validation, Finding hand-off and projection; retry hand-off without rerunning review. |
 | `assets/**` and Asset/Publication canonical paths | Exact hash, approval, grounding and release validation; only configured trusted release/feedback operations. |
@@ -519,7 +520,7 @@ When changes affect Agent Pack/prompt/skill/adapter execution behaviour, record 
 
 ```bash
 pnpm pactwright eval \
-  --baseline @pactwright/standard@0.0.7 \
+  --baseline @pactwright/standard@0.0.8 \
   --candidate <recorded-candidate-pack-or-environment>
 ```
 
@@ -711,17 +712,17 @@ Run the example in a clean supported consumer and in CI where practical, using t
 
 ## Stage 8 — Release and Kakeibo proof
 
-### Step 17 — Publish exact `0.0.8` after cumulative and upgrade acceptance
+### Step 17 — Publish exact `0.0.9` after cumulative and upgrade acceptance
 
 **References:** Implementation Guide release model; Spec 02 upgrades; Checkpoint 2 exact-version upgrade acceptance.
 
 **Run**
 
-Before publication, prove the accepted `0.0.7 → 0.0.8` transition in isolated consumers using built/packed targets through the existing owning upgrade paths. Resolve compatibility metadata and verify every intermediate state, including PI with its enabled dependants and the selected external skills/packs. A resolver fixture with newer available versions must still honour the exact desired targets. Do not use manual preinstallation to bypass the upgrade commands.
+Before publication, prove the accepted `0.0.8 → 0.0.9` transition in isolated consumers using built/packed targets through the existing owning upgrade paths. Resolve compatibility metadata and verify every intermediate state, including PI with its enabled dependants and the selected external skills/packs. A resolver fixture with newer available versions must still honour the exact desired targets. Do not use manual preinstallation to bypass the upgrade commands.
 
 Require cumulative conformance, the live Pactwright surface trace and the executed end-to-end material to pass. If execution behaviour changed, review the applicable baseline comparison from Step 11.
 
-Use the normal release PR, CHANGELOG from accepted Evidence, merged release commit/tag and trusted-publishing flow. No new package or publisher bootstrap is introduced. Release the existing six compatible first-party packages as `0.0.8`; external Production Skills retain their own exact versions/revisions and are not republished as Pactwright packages.
+Use the normal release PR, CHANGELOG from accepted Evidence, merged release commit/tag and trusted-publishing flow. No new package or publisher bootstrap is introduced. Release the existing six compatible first-party packages as `0.0.9`; external Production Skills retain their own exact versions/revisions and are not republished as Pactwright packages.
 
 **Expected result**
 
@@ -730,15 +731,15 @@ The exact compatible first-party family is published under the existing release 
 **Verify before continuing**
 
 ```bash
-pnpm view pactwright@0.0.8 version
-pnpm view @pactwright/standard@0.0.8 version
-pnpm view @pactwright/project-intelligence@0.0.8 version
-pnpm view @pactwright/graph-review@0.0.8 version
-pnpm view @pactwright/assets-publication@0.0.8 version
-pnpm view @pactwright/operations@0.0.8 version
+pnpm view pactwright@0.0.9 version
+pnpm view @pactwright/standard@0.0.9 version
+pnpm view @pactwright/project-intelligence@0.0.9 version
+pnpm view @pactwright/graph-review@0.0.9 version
+pnpm view @pactwright/assets-publication@0.0.9 version
+pnpm view @pactwright/operations@0.0.9 version
 ```
 
-All return `0.0.8`. Verify tagged-source/release-workflow provenance, registry results and exact-target/intermediate-compatibility fixtures. Package existence alone does not prove upgrade or operating-surface acceptance.
+All return `0.0.9`. Verify tagged-source/release-workflow provenance, registry results and exact-target/intermediate-compatibility fixtures. Package existence alone does not prove upgrade or operating-surface acceptance.
 
 ### Step 18 — Upgrade Kakeibo exactly and prove its live complete surface
 
@@ -746,16 +747,16 @@ All return `0.0.8`. Verify tagged-source/release-workflow provenance, registry r
 
 **Run**
 
-Start from Kakeibo's real accepted published `0.0.7` environment. Record package/configuration/both-lock state, selected external dependencies, enabled profiles and historical canonical/execution identities. Use Step 16's proven compatible sequence. Do not preinstall targets, reinitialise the project, change selected pack identity or re-create prior records.
+Start from Kakeibo's real accepted published `0.0.8` environment. Record package/configuration/both-lock state, selected external dependencies, enabled profiles and historical canonical/execution identities. Use Step 16's proven compatible sequence. Do not preinstall targets, reinitialise the project, change selected pack identity or re-create prior records.
 
 Upgrade the runtime and verify the still-compatible environment and new-runtime migration/validation provenance:
 
 ```bash
-pnpm pactwright upgrade --to 0.0.8
+pnpm pactwright upgrade --to 0.0.9
 pnpm pactwright validate
 ```
 
-Set the currently selected standard Agent Pack's desired version to exact `0.0.8` through its existing supported configuration, preserving its source. Then:
+Set the currently selected standard Agent Pack's desired version to exact `0.0.9` through its existing supported configuration, preserving its source. Then:
 
 ```bash
 pnpm pactwright agent-pack upgrade
@@ -763,7 +764,7 @@ pnpm pactwright doctor
 pnpm pactwright validate
 ```
 
-Upgrade each existing Extension separately in the proven dependency-safe order. Immediately before each command, set only that component's desired constraint to exact `0.0.8` through supported configuration; after it completes, verify installed versions, both locks and compatibility before proceeding:
+Upgrade each existing Extension separately in the proven dependency-safe order. Immediately before each command, set only that component's desired constraint to exact `0.0.9` through supported configuration; after it completes, verify installed versions, both locks and compatibility before proceeding:
 
 ```bash
 pnpm pactwright extension upgrade project-intelligence
@@ -799,7 +800,7 @@ Run the current Kakeibo repository-defined tests for any real change. Reuse genu
 
 **Expected result**
 
-Kakeibo runs exact `0.0.8` through the same upgrade and projection model, with real cross-profile navigation and event processing and no Kakeibo-specific GitHub semantics.
+Kakeibo runs exact `0.0.9` through the same upgrade and projection model, with real cross-profile navigation and event processing and no Kakeibo-specific GitHub semantics.
 
 **Verify before continuing**
 
@@ -879,6 +880,10 @@ The complete operating surface has evidence-backed acceptance and governed non-b
 
 Trace each blocker to its correction and passing re-verification. Review the full result map, live Pactwright/Kakeibo traces, example/public-readiness evidence and exact release/upgrade proof. Require no known blocking failure before Checkpoint 9; retain explicit owner, evidence and non-blocking disposition for every open gap carried forward.
 
+## Canonical storage and routing cross-check
+
+Prove the installed `operations` Extension's canonical records use its manifest-declared paths below `specs/extensions/operations/`, with registered relation tuples and its node supersession in `edges.yml` there. Core lineage tuples remain in `specs/graph/edges.yml`. A cross-graph relation routes to its registered owner and endpoint owners, including deletion/old endpoints; wrong-owner placement fails without moving data. Disabling the owner preserves its directory and excludes its contributions; active edges cannot resolve inactive endpoints. Generated reports remain under `docs/<owner>/reports/` only where the owning specification defines them; configuration and execution provenance are not canonical stores.
+
 ## Exit gate
 
 Checkpoint 8 closes only when:
@@ -904,7 +909,7 @@ Checkpoint 8 closes only when:
 - the end-to-end example actually executes, explicitly includes Delivery Review, separates Graph Review and preserves real approval/exposure and PI governance boundaries;
 - the lightweight catalogue distinguishes Agent Packs, Extensions and genuinely supported Production Skills using validated reusable repository metadata;
 - Pactwright and Kakeibo each retain a live cross-profile record-to-projection trace and a verified new governed event without manufactured operational findings;
-- the complete six-package `0.0.8` family is registry/provenance verified and the real `0.0.7 → 0.0.8` consumer transition uses exact desired constraints and owning commands with compatible intermediate states;
+- the complete six-package `0.0.9` family is registry/provenance verified and the real `0.0.8 → 0.0.9` consumer transition uses exact desired constraints and owning commands with compatible intermediate states;
 - the configured Experiments view projects mode, hypothesis, exact control/candidate exposure, primary metric, guardrails, window, derived state, latest Observation and resulting PI or later-Delivery provenance, without raw telemetry, experiment samples, private prompts or grounding;
 - an empty configured Experiments view is valid and does not manufacture Experiment state, and a Project field edit alone cannot create or mutate a canonical Experiment;
 - Deployment or rollout without an Experiment remains representable, and favourable Experiment evidence is never rendered as promotion unless normal PI/Delivery governance actually accepted it;
@@ -917,4 +922,4 @@ Checkpoint 8 closes only when:
 
 ---
 
-**Pactwright — Checkpoint 8 — Full Project Operating Surface v12**
+**Pactwright — Checkpoint 8 — Full Project Operating Surface v14**

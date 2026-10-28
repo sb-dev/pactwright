@@ -1,0 +1,11 @@
+# Checkpoint 95 — the T3.5 H3 hosted-run fixture: a contract step and two
+# reviewed operational steps kept in prose. Not a Pactwright checkpoint.
+format: 2
+checkpoint: CP95
+run_model: software-bootstrap
+sources:
+  CHECKPOINT: ../95-hosted.md
+  HOSTED: ../../specs/hosted-spec.md
+prose_steps:
+  CP95-S02: sha256:3928cc7ba49290274611909bfe111fbd88870fc8828bc237e7a59356eeb7cca1
+  CP95-S03: sha256:e1c48a4759bd930e77c7e8456e3cd63f1101ffa1217fb8fb91241cd20ba33bd3

@@ -1,0 +1,32 @@
+# CP95 Step 1 — Write the greeting module
+id: CP95-S01
+requires: []
+outputs:
+  greeting: >-
+    The greeting module
+    `tools/checkpoint-harness/test/fixtures/checkpoint-harness/hosted/work/greeting.mjs`
+    of HOSTED §1. It exports `greet(name)`, which returns the greeting or
+    throws for a name it rejects. Run as a program with a name argument, it
+    prints the greeting and exits 0, or exits 1 without output for a name it
+    rejects.
+requirements:
+  R01:
+    source: [HOSTED#1]
+    statement: The greeting shall greet a name that is not empty once trimmed as `Hello, <name>!` for the trimmed name and reject any other.
+  R02:
+    source: [HOSTED#2]
+    statement: The greeting shall be released only after the owner approves the exact candidate.
+acceptance:
+  AC01:
+    covers: [R01]
+    cases: [named, blank]
+    given: A name of the listed kind.
+    when: The greeting program runs with it.
+    then: It prints `Hello, Ada!` and exits 0 for the name `  Ada `, and exits 1 without output for a blank name.
+    verify: {automated: [hosted.greets]}
+  AC02:
+    covers: [R02]
+    given: An accepted greeting candidate.
+    when: The owner reviews the exact candidate.
+    then: The owner approves it, and the release, a fixture receipt, happens once.
+    verify: {approval: [hosted.release-approval]}

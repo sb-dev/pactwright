@@ -1,0 +1,7 @@
+# CP96/AC03, evaluated only at the checkpoint exit.
+id: checkpoint.exit-review
+method: review
+version: "1"
+rubric:
+  - The recorded exit check names every step of CP96, and each step's change is in the integrated candidate.
+  - A step missing from the changelog or from the candidate fails the target.

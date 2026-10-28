@@ -1,0 +1,67 @@
+# CP97 Step 1 — Build the configuration library
+id: CP97-S01
+requires: []
+outputs:
+  config-library: >-
+    The configuration library of BOOT §1. `src/config.mjs` exports
+    `parseConfig(text)`, which returns the normalised configuration
+    `{port, label}` or throws a `ConfigError`, also exported, whose message
+    names the problem. `src/config.d.ts` declares that typed API.
+requirements:
+  R01:
+    source: [BOOT#1]
+    statement: >-
+      The library shall return the port and the trimmed label of a
+      configuration whose port is an integer from 1 through 65535 and whose
+      label is not empty once trimmed.
+  R02:
+    source: [BOOT#1]
+    statement: >-
+      The library shall reject malformed JSON, a value that is not an object,
+      a missing field and a field of the wrong type.
+  R03:
+    source: [BOOT#1]
+    statement: The library shall reject a port outside 1 through 65535.
+  R04:
+    source: [BOOT#1]
+    statement: The library shall reject a label that is empty once trimmed.
+  R05:
+    source: [BOOT#1]
+    statement: The library shall reject an unknown field.
+acceptance:
+  AC01:
+    covers: [R01]
+    cases: [lowest-port, highest-port, trimmed-label]
+    given: A valid configuration of the listed kind.
+    when: parseConfig parses it.
+    then: It returns exactly the port and the trimmed label.
+    verify: {automated: [library.accepts]}
+  AC02:
+    covers: [R02]
+    cases:
+      [malformed-json, not-an-object, missing-port, missing-label, port-not-integer, port-string, label-not-string]
+    given: A configuration whose only defect is the listed one.
+    when: parseConfig parses it.
+    then: It throws a ConfigError with a message and returns nothing.
+    verify: {automated: [library.rejects]}
+  AC03:
+    covers: [R03]
+    cases: [port-zero, port-above-highest]
+    given: A configuration whose only defect is the listed port, 0 or 65536.
+    when: parseConfig parses it.
+    then: It throws a ConfigError with a message and returns nothing.
+    verify: {automated: [library.rejects]}
+  AC04:
+    covers: [R04]
+    cases: [empty-label, blank-label]
+    given: A configuration whose only defect is the listed label, empty or only spaces.
+    when: parseConfig parses it.
+    then: It throws a ConfigError with a message and returns nothing.
+    verify: {automated: [library.rejects]}
+  AC05:
+    covers: [R05]
+    cases: [unknown-field]
+    given: A valid configuration with one additional field.
+    when: parseConfig parses it.
+    then: It throws a ConfigError with a message and returns nothing.
+    verify: {automated: [library.rejects]}

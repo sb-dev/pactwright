@@ -1,0 +1,147 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Checkpoint harness dispatch configuration",
+  "description": "The run configuration sections an agent dispatch needs (Task 3 research log §§4, 10 and §12 T3-C; T3.5 H2 adds each role's effort; T3.6 L2 the optional learning limits). Planning accepts any object here; dispatch refuses until these sections are complete. Other sections are validated by run-config.schema.json.",
+  "type": "object",
+  "required": ["roles", "credentials", "budgets"],
+  "properties": {
+    "roles": {
+      "type": "object",
+      "propertyNames": { "enum": ["producer", "reviewer"] },
+      "additionalProperties": { "$ref": "#/$defs/role" }
+    },
+    "credentials": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["provider"],
+      "properties": {
+        "kind": {
+          "description": "How the credential authenticates: a Console API key (default) or a Claude subscription OAuth token from `claude setup-token`.",
+          "enum": ["api-key", "oauth-token"]
+        },
+        "provider": {
+          "description": "Reference to the environment variable holding the credential; never the credential itself.",
+          "type": "string",
+          "pattern": "^env:[A-Z_][A-Z0-9_]*$"
+        }
+      }
+    },
+    "budgets": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["attempts", "wall_time_seconds", "provider_spend_limit"],
+      "properties": {
+        "attempts": { "type": "integer", "minimum": 1 },
+        "wall_time_seconds": { "type": "integer", "minimum": 1 },
+        "retries": {
+          "description": "Protocol retries per step (T3-E): repeated production, admission, verification or review after a malformed result, a temporary fault or an interruption. The runner requires it; the adapter does not read it.",
+          "type": "integer",
+          "minimum": 0
+        },
+        "run_spend_usd": {
+          "description": "Optional spend limit of the whole run (T3.5 H3): an agent session starts only while reported costs, sessions of unknown cost and unresolved invocation allowances leave room for one more provider_spend_limit.usd.",
+          "type": "number",
+          "exclusiveMinimum": 0
+        },
+        "provider_spend_limit": {
+          "description": "Hard spend limit per invocation. The provider checks its estimate only after each turn, so turn_reservation_usd is held back for the turn that crosses the limit.",
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["usd", "turn_reservation_usd"],
+          "properties": {
+            "usd": { "type": "number", "exclusiveMinimum": 0 },
+            "turn_reservation_usd": { "type": "number", "exclusiveMinimum": 0 }
+          }
+        }
+      }
+    },
+    "learning": {
+      "description": "Evidence-backed learning (T3.6 L2, evidence-backed learning log §§2.2 and 2.5). Absent: no knowledge or guidance is selected and every packet and evaluation is as before. Present: each production attempt freezes a bounded selection of the step's current knowledge and guidance before dispatch. The limits bound what the producer sees and can read of it; omissions stay in the frozen manifest, and requirements, criteria, targets and findings are never cut.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["reminder_chars", "context"],
+      "properties": {
+        "reminder_chars": {
+          "description": "The most characters one guidance reminder may have; admission rejects a longer one.",
+          "type": "integer",
+          "minimum": 1
+        },
+        "context": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["entries", "guidance", "bytes"],
+          "properties": {
+            "entries": {
+              "description": "Most knowledge entries one attempt consumes.",
+              "type": "integer",
+              "minimum": 0
+            },
+            "guidance": {
+              "description": "Most guidance reminders one attempt consumes.",
+              "type": "integer",
+              "minimum": 0
+            },
+            "bytes": {
+              "description": "Most bytes of the consumed items and the record references they make readable, serialised. Omitted candidates reach the producer only as a count per reason.",
+              "type": "integer",
+              "minimum": 1
+            }
+          }
+        },
+        "phases": {
+          "description": "The runner's learning phases (T3.6 L3, evidence-backed learning log §§2.3, 2.4 and 2.6). Absent: the runner schedules none, as under L2, and the run cannot satisfy T3.6 feature proof. Present: after an attempt is decided `correct`, a proposal session and an independent review of each proposal; before the next attempt, at most one exploration round when a reviewed choice or a reviewed failure repeated across two correction attempts calls for one; and, after an explored attempt's independent review, the cross-attempt challenge its acceptance then needs. Every session reserves its allowance under the existing budgets. Whether learning and its phases are configured is fixed for the run.",
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["exploration_rounds", "check_timeout_seconds"],
+          "properties": {
+            "exploration_rounds": {
+              "description": "Most exploration rounds the whole run may hold. A trigger once they are used pauses the run as exhausted; it is never skipped.",
+              "type": "integer",
+              "minimum": 0
+            },
+            "check_timeout_seconds": {
+              "description": "Longest time one diagnostic check may run, within run_command's limit.",
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 600
+            }
+          }
+        }
+      }
+    }
+  },
+  "$defs": {
+    "role": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["adapter", "model", "effort", "skills", "max_turns"],
+      "properties": {
+        "adapter": { "const": "claude-sdk" },
+        "model": {
+          "description": "A pinned Claude API model ID this adapter supports: the current lineup of https://platform.claude.com/docs/en/models/overview. Aliases such as claude-haiku-4-5 or claude-sonnet-4-5 resolve to the latest dated snapshot and are refused; adding an ID, with its EFFORT_LEVELS entry, is a reviewed change.",
+          "enum": [
+            "claude-fable-5-1",
+            "claude-opus-5-5",
+            "claude-sonnet-5",
+            "claude-haiku-4-5-20251001"
+          ]
+        },
+        "effort": {
+          "description": "The role's reasoning effort (T3.5 H2), sent with every request of its sessions. Dispatch also refuses a level the model does not accept (EFFORT_LEVELS in claude.ts); Claude Haiku 4.5 accepts none.",
+          "enum": ["low", "medium", "high", "xhigh", "max"]
+        },
+        "skills": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": { "type": "string", "pattern": "^[a-z0-9][a-z0-9-]*$" }
+        },
+        "skill_digests": {
+          "description": "Expected SHA-256 of each selected skill's SKILL.md; a mismatch refuses dispatch.",
+          "type": "object",
+          "additionalProperties": { "type": "string", "pattern": "^sha256:[0-9a-f]{64}$" }
+        },
+        "max_turns": { "type": "integer", "minimum": 1 }
+      }
+    }
+  }
+}

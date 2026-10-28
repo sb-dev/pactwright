@@ -1,0 +1,19 @@
+# CP99 Step 2 — Run the command
+id: CP99-S02
+requires: [CP99-S01]
+inputs:
+  parser: CP99-S01/config-parser
+  rules: FIX#2
+outputs:
+  command: A command that prints the parsed configuration.
+requirements:
+  R01:
+    source: [FIX#2]
+    statement: The command shall print the parsed configuration.
+acceptance:
+  AC01:
+    covers: [R01]
+    given: A valid configuration file.
+    when: The command runs.
+    then: It prints the parsed configuration and exits 0.
+    verify: {automated: [command.prints]}

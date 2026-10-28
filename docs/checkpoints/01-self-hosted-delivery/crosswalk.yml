@@ -1,0 +1,1420 @@
+# Conversion record for Checkpoint 1 → step contracts (Spec 00 §2).
+# Each entry quotes one obligation of the replaced step prose verbatim and names
+# the IDs that carry it; allocated_to names the later step that owns the rest of
+# the proof. `sources` names the checkpoint revision each converted step
+# replaced: Stage 1 replaced version 17, Stage 2 version 20, Stage 3 version 21,
+# Stage 4 version 22 and Stage 5 version 23. Open questions are retained
+# historical inputs to T2, not runtime acceptance evidence.
+#
+# Stage 1 (Q01-Q20) decisions and review/check status:
+# ../../research-logs/2026-09-23-pr41-b1-loading.md
+# B1 Q01-Q04; B2 Q05-Q09,Q18; B3 Q10-Q13,Q19; B4 Q14-Q16; B5 Q17; B6 Q20.
+# Applied clauses: Core v3 / Checkpoint 1 v20. Independent review 5298715756
+# (changes required at 1bcd2ea) and correction review 5301803981 (passed at
+# 87bd3eb) closed the batch reviews. The stage-level exit review is
+# ../../research-logs/2026-09-25-cp01-stage-1-exit-review.md; no question is deleted.
+#
+# Stage 2 (Q21-Q33) decisions and check status:
+# ../../research-logs/2026-09-25-cp01-stage-2-b7-shapes-and-identity.md
+# B7 Q21,Q24; B8 Q22,Q25,Q31; B9 Q23,Q32; B10 Q26,Q27,Q33; B11 Q28,Q29,Q30.
+# Applied clauses: Core v5 (sections 27, 28, 32, 52, 53, 55, 57) and
+# Checkpoint 1 v27 (section 4, Step 24), approved by the owner. Independent
+# reviews and PR #49 owner reviews are recorded in each batch. The section 7
+# stage exit review is
+# ../../research-logs/2026-09-25-cp01-stage-2-exit-review.md (requirement-
+# ready; fresh review 5322976729 accepted at ac370f2); it added S06,
+# S08 and S09 entries to the affects of Q37-Q39 and Q45-Q49. No question is
+# deleted.
+#
+# Stage 3 (Q34-Q40) decisions and check status:
+# ../../research-logs/2026-09-25-cp01-stage-3-b12-agent-pack-format-and-selection.md
+# B12 Q34,Q35,Q36; B13 Q37,Q38; B14 Q39,Q40.
+# Applied clauses: Distribution v4 (sections 5, 8, 15, 21, 24), Core v6
+# (sections 35, 46, 55) and Checkpoint 1 v28 (Steps 11-13 summaries, Step 24).
+# Owner review 5323213273 on PR #50 returned five P2 findings, applied. The
+# section 7 stage exit review is
+# ../../research-logs/2026-09-25-cp01-stage-3-exit-review.md (corrections
+# X1-X19 applied; requirement-ready, accepted by fresh review). This pass
+# added S10/S11/S12 entries to the affects of Q43-Q46, Q48 and Q49. No
+# question is deleted.
+#
+# Stage 4 (Q41-Q51) decisions and check status:
+# ../../research-logs/2026-09-26-cp01-stage-4-b15-init-and-scaffold.md
+# B15 Q41,Q42; B16 Q43,Q44,Q50,Q51; B17 Q45,Q46; B18 Q47,Q48,Q49.
+# Applied clauses: Distribution v5 (sections 3, 10, 11, 12, 15, 16, 27),
+# Implementation Guide v17 (command ownership) and Checkpoint 1 v29 (Steps
+# 14, 16, 19 summaries, Step 29). The section 7 stage exit review is
+# ../../research-logs/2026-09-26-cp01-stage-4-exit-review.md. This pass added
+# S15/AC11 and S16/AC06 entries to the affects of Q45 and Q44. No question is
+# deleted.
+#
+# Stage 5 (Q52-Q56) decisions and check status:
+# ../../research-logs/2026-09-26-cp01-stage-5-b19-ci-coverage-and-triggers.md
+# B19 Q52,Q53; B20 Q54; B21 Q55,Q56.
+# Applied clauses: Implementation Guide v18 (GitHub Actions, package metadata,
+# npm release model, trusted release workflow, release failure) and
+# Checkpoint 1 v30 (section 3, Step 21 summary, Step 28 prose). Q54's version-line
+# renumbering (Guide tables; Checkpoints 2-9, each bumped one version) was
+# authorised by the owner and applied in the same pass. The section 7 stage exit
+# review is ../../research-logs/2026-09-26-cp01-stage-5-exit-review.md. No
+# question is deleted.
+#
+# Stages 6-11 (Q57-Q67) are unconverted steps (Spec 00 v6 section 2): they keep
+# their prose form by the owner's decision, checkpoint.yml records their
+# reviewed hashes under prose_steps, and they have no contracts, sources or
+# entries here until converted. Their T2 review and decisions:
+# ../../research-logs/2026-09-27-cp01-stages-6-11-b22-packed-consumer-proofs.md
+# B22 Q57,Q58,Q59; B23 Q60; B24 Q61; B25 Q62; B26 Q63,Q64; B27 Q65,Q66;
+# B28 Q67 (Spec 00 v6, schema and checker).
+# Applied clauses: Implementation Guide v19 (Preparing a development release,
+# Release failure, Transition rule), Checkpoint 1 v31 (sections 1, 2 and 3,
+# Stage 8, 9 and 10 text, Steps 22-31 prose, exit gate) and checkpoint.yml
+# (CP01/R02-R05, prose_steps). The owner approved the Q60, Q61, Q62/Q65 and Q64
+# decisions in the producing session on 2026-09-27, directed that Steps 22-31
+# stay in prose (Q67), and originally confirmed Spec 00 v6's convert-before-run
+# boundary in review 5331122570. That execution boundary is superseded by
+# Spec 00 v8 sections 4-5 and the 1 October 2026 owner decision:
+# https://github.com/sb-dev/pactwright/pull/60#issuecomment-5938936037
+# B28 v2 records direct execution as reviewed operational/CLI steps, with no
+# prior YAML conversion. Reviewed hashes and shared obligations still apply.
+# T3.5-H3 implements the path; T4 proves it; T5 uses it. The section 7 review is
+# ../../research-logs/2026-09-27-cp01-stages-6-11-exit-review.md. No question
+# is deleted.
+sources:
+  - source: docs/checkpoints/01-self-hosted-delivery.md@26ea12a
+    steps: [CP01-S01, CP01-S02, CP01-S03, CP01-S04, CP01-S05]
+  - source: docs/checkpoints/01-self-hosted-delivery.md@e1c1ea3
+    steps: [CP01-S06, CP01-S07, CP01-S08, CP01-S09]
+  - source: docs/checkpoints/01-self-hosted-delivery.md@cbf1c1b
+    steps: [CP01-S10, CP01-S11, CP01-S12, CP01-S13]
+  - source: docs/checkpoints/01-self-hosted-delivery.md@f5ee66b
+    steps: [CP01-S14, CP01-S15, CP01-S16, CP01-S17, CP01-S18, CP01-S19]
+  - source: docs/checkpoints/01-self-hosted-delivery.md@ef18fa9
+    steps: [CP01-S20, CP01-S21]
+entries:
+  - key: S01.references
+    text: "Specs 01–02; Implementation Guide engineering baseline."
+    covered_by: [CP01-S01/R01, CP01-S01/R02, CP01-S01/R03, CP01-S01/R05, CP01-S20/R05, CP01-S20/AC01]
+    allocated_to: CP01-S23
+    note: "The package-metadata rule against claiming compatibility that CI does not exercise is proven by CP01-S20/AC01, which runs verify on each admitted Node major; the Step 22-23 packed consumers prove packaging only and carry no part of the claim (Q52, B19)."
+  - key: S01.run.1
+    text: "Create the Pactwright runtime and CLI package foundation."
+    covered_by: [CP01-S01/R01, CP01-S01/AC01]
+  - key: S01.run.2
+    text: "Implement one canonical loader for Pactwright configuration, lifecycle configuration, .pactwright/lock.yml, core Project Graph records and typed edges."
+    covered_by: [CP01-S01/R05, CP01-S01/R06, CP01-S01/AC05, CP01-S01/AC06, CP01-S01/AC07, CP01-S01/R09, CP01-S01/AC09, CP01-S01/AC10, CP01-S01/AC11, CP01-S01/AC12, CP01-S01/R10, CP01-S01/AC13, CP01-S03/AC13]
+    note: "The Core section 54 rule for entries inside an enabled owner root needs the Step 2 declaration seam, so it is proven by CP01-S03/AC13 undeclared-entry-in-owner-root rather than at Step 1."
+  - key: S01.run.3
+    text: "Make the runtime publishable as `pactwright` with the repository's normal build/prepack/verify discipline and a repository-local `pnpm pactwright ...` path using the same built runtime."
+    covered_by: [CP01-S01/R01, CP01-S01/R02, CP01-S01/R03, CP01-S01/R04, CP01-S01/AC01, CP01-S01/AC02, CP01-S01/AC03, CP01-S01/AC04, CP01/R01, CP01/AC01]
+  - key: S01.run.4
+    text: "Do not implement optional Extension semantics or GitHub provisioning."
+    covered_by: [CP01-S01/R07, CP01-S01/R08, CP01-S01/AC08]
+  - key: S01.expected.1
+    text: "One buildable, testable and packable Pactwright runtime exists with one canonical loading path."
+    covered_by: [CP01-S01/R01, CP01-S01/R03, CP01-S01/R05, CP01-S01/AC01, CP01-S01/AC03, CP01-S01/AC06]
+  - key: S01.verify.1
+    text: "Run `pnpm verify`, pack the runtime and inspect the archive."
+    covered_by: [CP01/R01, CP01/AC01, CP01-S01/R02, CP01-S01/AC01, CP01-S01/AC02]
+  - key: S02.references
+    text: "Spec 01 core Project Graph model."
+    covered_by: [CP01-S02/R01, CP01-S02/R04, CP01-S02/R06]
+  - key: S02.run.1
+    text: "Implement exactly:"
+    covered_by: [CP01-S02/R01, CP01-S02/AC03]
+  - key: S02.run.2
+    text: "- Intent"
+    covered_by: [CP01-S02/R01, CP01-S02/R04, CP01-S02/AC01, CP01-S02/AC02]
+  - key: S02.run.3
+    text: "- Decision"
+    covered_by: [CP01-S02/R01, CP01-S02/R04, CP01-S02/R05, CP01-S02/AC01, CP01-S02/AC02, CP01-S02/AC13]
+  - key: S02.run.4
+    text: "- Contract"
+    covered_by: [CP01-S02/R01, CP01-S02/R04, CP01-S02/AC01, CP01-S02/AC02]
+  - key: S02.run.5
+    text: "- Brief"
+    covered_by: [CP01-S02/R01, CP01-S02/R04, CP01-S02/AC01, CP01-S02/AC02]
+  - key: S02.run.6
+    text: "- Evidence"
+    covered_by: [CP01-S02/R01, CP01-S02/R04, CP01-S02/AC01, CP01-S02/AC02]
+  - key: S02.run.7
+    text: "Enforce canonical identity, immutability and type-specific validation."
+    covered_by: [CP01-S02/R04, CP01-S02/R06, CP01-S02/R07, CP01-S02/AC01, CP01-S02/AC02, CP01-S02/AC05, CP01-S02/AC06, CP01-S02/AC07, CP01-S02/R08, CP01-S02/AC09, CP01-S02/AC10, CP01-S02/AC11]
+  - key: S02.run.8
+    text: "Contract alternatives remain transient."
+    covered_by: [CP01-S02/R02, CP01-S02/AC03, CP01-S02/AC04, CP01-S02/AC08]
+  - key: S02.run.9
+    text: "Delivery and Review executions remain execution provenance rather than core Project Graph record types."
+    covered_by: [CP01-S02/R03, CP01-S02/AC03, CP01-S02/AC04, CP01-S02/AC08]
+  - key: S02.expected.1
+    text: "The runtime validates the complete core record set without inventing execution nodes."
+    covered_by: [CP01-S02/R01, CP01-S02/R03, CP01-S02/R04, CP01-S02/AC01, CP01-S02/AC02, CP01-S02/AC03, CP01-S02/AC04, CP01-S02/AC08]
+  - key: S02.verify.1
+    text: "Add positive/negative fixtures for every record type and identity mutation."
+    covered_by: [CP01-S02/R04, CP01-S02/R06, CP01-S02/R07, CP01-S02/AC01, CP01-S02/AC02, CP01-S02/AC05, CP01-S02/AC06, CP01-S02/AC07, CP01-S02/AC09, CP01-S02/AC10, CP01-S02/AC11, CP01-S02/AC13]
+    note: "Q05-Q08 are applied in Core sections 6/45 and B2: AC05 rejects identity defects, AC06 in-place rewrites, AC09 removal/rename-plus-add, AC10 tests canonical normalisation and AC11 applies the content-review rubric. Step 7 integrates the proposed-state comparison."
+  - key: S03.references
+    text: "Spec 01 relationships and supersession."
+    covered_by: [CP01-S03/R01, CP01-S03/R02, CP01-S03/R03, CP01-S03/R04, CP01-S03/R05, CP01-S03/R06, CP01-S03/R07]
+  - key: S03.run.1
+    text: "Implement the shared typed-edge registry/store for core lineage and same-type supersession."
+    covered_by: [CP01-S03/R01, CP01-S03/R03, CP01-S03/AC01, CP01-S03/AC03, CP01-S03/R08, CP01-S03/AC10, CP01-S03/AC11]
+  - key: S03.run.2
+    text: "Validate endpoint existence/types, duplicate tuples, self-supersession and supersession cycles."
+    covered_by: [CP01-S03/R02, CP01-S03/R03, CP01-S03/R04, CP01-S03/R05, CP01-S03/AC02, CP01-S03/AC03, CP01-S03/AC04, CP01-S03/AC05, CP01-S03/AC10, CP01-S03/R10, CP01-S03/AC14]
+  - key: S03.run.3
+    text: "Keep the registry extensible for later Pactwright Extension relations."
+    covered_by: [CP01-S03/R06, CP01-S03/R07, CP01-S03/AC06, CP01-S03/AC07, CP01-S03/AC08, CP01-S03/AC09, CP01-S02/R09, CP01-S02/AC12, CP01-S03/R09, CP01-S03/AC12, CP01-S03/AC13, CP01-S16/R09, CP01-S16/AC10, CP01-S16/AC11]
+    note: "Fixture registration proves the mechanism here. CP01-S16/AC11 repeats AC06-AC13 through the installed fixture Extension loader, including ownership cases, and CP01-S16/AC10 the inactive-state cases."
+  - key: S03.expected.1
+    text: "Core relationships are deterministic and extension-ready."
+    covered_by: [CP01-S03/R01, CP01-S03/R06, CP01-S03/R07, CP01-S03/AC01, CP01-S03/AC06, CP01-S03/AC07, CP01-S03/AC08, CP01-S03/AC09]
+  - key: S03.verify.1
+    text: "Run invalid endpoint/type, duplicate, self-supersession and cycle fixtures."
+    covered_by: [CP01-S03/R02, CP01-S03/R03, CP01-S03/R04, CP01-S03/R05, CP01-S03/AC02, CP01-S03/AC03, CP01-S03/AC04, CP01-S03/AC05]
+  - key: S04.references
+    text: "Spec 01 authority and supersession."
+    covered_by: [CP01-S04/R01, CP01-S04/R02, CP01-S04/R04]
+  - key: S04.run.1
+    text: "Derive current Delivery lineage from canonical graph structure."
+    covered_by: [CP01-S04/R01, CP01-S04/R03, CP01-S04/AC01, CP01-S04/AC02, CP01-S04/AC04, CP01-S04/AC07, CP01-S04/AC08, CP01-S04/AC09, CP01-S04/AC10]
+  - key: S04.run.2
+    text: "Decision changes WHAT authorised outcome is current."
+    covered_by: [CP01-S04/R02, CP01-S04/AC01, CP01-S04/AC02, CP01-S04/AC03]
+  - key: S04.run.3
+    text: "Gate state controls HOW execution continues and cannot substitute for Decision authority."
+    covered_by: [CP01-S04/R04, CP01-S04/AC03]
+    allocated_to: CP01-S06
+    note: "Here fixture approval content cannot act as Decision authority; Gate state that controls execution progression arrives with Step 6 execution policy."
+  - key: S04.run.4
+    text: "Do not store redundant derived lifecycle state."
+    covered_by: [CP01-S04/R05, CP01-S04/AC04, CP01-S04/AC05]
+  - key: S04.expected.1
+    text: "The runtime derives authoritative current lineage from Project Graph state."
+    covered_by: [CP01-S04/R01, CP01-S04/R02, CP01-S04/AC01, CP01-S04/AC02]
+  - key: S04.verify.1
+    text: "Use proceed/reject/defer, supersession and ambiguous-lineage fixtures; invalid ambiguity fails closed."
+    covered_by: [CP01-S04/R01, CP01-S04/R02, CP01-S04/R06, CP01-S04/AC01, CP01-S04/AC02, CP01-S04/AC06, CP01-S04/AC07, CP01-S04/AC09, CP01-S04/AC10]
+  - key: S05.references
+    text: "Spec 01 replay/revision semantics; Implementation Guide replay provenance."
+    covered_by: [CP01-S05/R01, CP01-S05/R02, CP01-S05/R03, CP01-S05/R04, CP01-S05/R05, CP01-S05/R06]
+  - key: S05.run.1
+    text: "Implement runtime-provided repository revision and deterministic Project Graph revision."
+    covered_by: [CP01-S05/R07, CP01-S05/R01, CP01-S05/R02, CP01-S05/AC01, CP01-S05/AC02, CP01-S05/AC03, CP01-S05/AC08, CP01-S05/AC11, CP01-S05/AC12, CP01-S05/AC13]
+    note: "Replay validation of recorded revisions is Step 9 validation rule 17."
+  - key: S05.run.2
+    text: "Project Graph revision includes registered canonical Delivery records, typed edges and enabled Extension-owned canonical records."
+    covered_by: [CP01-S05/R03, CP01-S05/AC04, CP01-S02/R09, CP01-S02/AC12, CP01-S16/R09, CP01-S16/AC12]
+    note: "Step 2 owns canonical contribution registration, including non-node records with owner-defined schemas. Step 5 proves record and edge inclusion; CP01-S16/AC12 repeats it through the installed fixture Extension loader. F01 is retained, not deferred away."
+  - key: S05.run.3
+    text: "It excludes generated reports, adapter output, lifecycle execution state, execution provenance, GitHub projections and other derived state."
+    covered_by: [CP01-S05/R04, CP01-S05/AC05]
+    allocated_to: CP01-S06
+    note: "Fixture content stands in here for execution state, adapter output, reports, provenance and GitHub state; Step 6 proves that execution progress alone leaves project_graph_revision unchanged."
+  - key: S05.run.4
+    text: "Canonicalise ordering before hashing."
+    covered_by: [CP01-S05/R05, CP01-S05/AC06, CP01-S05/AC09, CP01-S05/AC10, CP01-S05/AC13]
+    note: "Q18 is applied in Core section 56 and B2: pg1 uses SHA-256 over the defined JCS envelope, with frozen byte/digest vectors and explicit incompatible-protocol handling. Hashing remains mandatory; a serialised graph string is not a revision."
+  - key: S05.expected.1
+    text: "Repository revision and Project Graph revision are stable, distinct identities."
+    covered_by: [CP01-S05/R01, CP01-S05/R02, CP01-S05/R06, CP01-S05/AC01, CP01-S05/AC03, CP01-S05/AC07, CP01-S05/AC08]
+  - key: S05.verify.1
+    text: "Prove identical state gives identical graph revision; generated-file or execution-state change does not; canonical mutation does."
+    covered_by: [CP01-S05/R02, CP01-S05/R03, CP01-S05/R04, CP01-S05/AC03, CP01-S05/AC04, CP01-S05/AC05]
+  - key: S05.verify.2
+    text: "Repeat the inclusion/exclusion proof with an enabled fixture Extension in Step 16 once its registration path exists."
+    covered_by: [CP01-S16/R09, CP01-S16/AC10, CP01-S16/AC12]
+    note: "CP01-S16/AC12 repeats inclusion and exclusion through the installed fixture Extension loader; CP01-S16/AC10 excludes inactive contributions."
+  - key: S06.references
+    text: "Spec 01 lifecycle shape, execution state, policy and Gate boundaries."
+    covered_by: [CP01-S06/R01, CP01-S06/R02, CP01-S06/R03, CP01-S06/R04, CP01-S06/R05, CP01-S06/R08]
+  - key: S06.run.1
+    text: "Implement the initial built-in direct fulfilment shape:"
+    covered_by: [CP01-S06/R01, CP01-S06/AC01]
+  - key: S06.run.2
+    text: "Brief → Delivery → Review → Evidence"
+    covered_by: [CP01-S06/R01, CP01-S06/AC01]
+  - key: S06.run.3
+    text: "Keep separate:"
+    covered_by: [CP01-S06/R03, CP01-S06/AC10]
+  - key: S06.run.4
+    text: "- Contract/Decision authority;"
+    covered_by: [CP01-S06/R03, CP01-S06/AC03, CP01-S06/AC10]
+  - key: S06.run.5
+    text: "- lifecycle shape/topology;"
+    covered_by: [CP01-S06/R02, CP01-S06/R03, CP01-S06/AC04, CP01-S06/AC10]
+  - key: S06.run.6
+    text: "- execution policy such as automatic/manual execution and human Gates;"
+    covered_by: [CP01-S06/R03, CP01-S06/R08, CP01-S06/AC02, CP01-S06/AC03]
+  - key: S06.run.7
+    text: "- fine-grained lifecycle execution state."
+    covered_by: [CP01-S06/R04, CP01-S06/AC07]
+  - key: S06.run.8
+    text: "Execution state must identify the current Brief, resolved shape, current/completed steps, Gate state, iteration counts where applicable and execution status."
+    covered_by: [CP01-S06/R04, CP01-S06/AC01]
+  - key: S06.run.9
+    text: "Broad Delivery state remains derived from canonical lineage; fine-grained progression is not stored as Delivery Graph truth."
+    covered_by: [CP01-S06/R04, CP01-S06/AC07]
+  - key: S06.run.10
+    text: "Do not encode capture-intent, propose-contracts, approve-contract or write-brief as shape stages."
+    covered_by: [CP01-S06/R02, CP01-S06/AC04, CP01-S06/AC10]
+  - key: S06.run.11
+    text: "Do not add Deployment, Asset, Publication, Experiment or Observation to the core lifecycle."
+    covered_by: [CP01-S06/R02, CP01-S06/AC04]
+  - key: S06.run.12
+    text: "Do not invent lifecycle-shape hashes or make shape identity part of Brief identity."
+    covered_by: [CP01-S06/R06, CP01-S06/AC01, CP01-S06/AC10]
+  - key: S06.run.13
+    text: "Any configured corrective transition must exist in its declared shape and have bounded execution policy; AI cannot invent routes."
+    covered_by: [CP01-S06/R05, CP01-S06/AC05, CP01-S06/AC06]
+  - key: S06.expected.1
+    text: "The runtime represents fulfilment topology and execution progress without conflating either with Contract authority or durable graph state."
+    covered_by: [CP01-S06/R03, CP01-S06/R04, CP01-S06/AC07, CP01-S06/AC10]
+  - key: S06.verify.1
+    text: "Test automatic/manual policy, authorised and unauthorised Gate progression, invalid shape/policy configuration, impossible corrective routes and unbounded-loop rejection."
+    covered_by: [CP01-S06/R03, CP01-S06/R05, CP01-S06/R08, CP01-S06/AC02, CP01-S06/AC03, CP01-S06/AC04, CP01-S06/AC05, CP01-S06/AC06]
+    note: "Gate progression and corrective routes need shapes beyond direct; where Checkpoint 1 declares them is Q21, and Gate authority recording is Q22."
+  - key: S06.verify.2
+    text: "Changing execution progress alone must leave canonical graph records and `project_graph_revision` unchanged."
+    covered_by: [CP01-S06/R04, CP01-S06/AC07]
+  - key: S06.verify.3
+    text: "Load the real lifecycle configuration and policy through Step 1's canonical loader, with valid, malformed, missing and unsupported-version controls."
+    covered_by: [CP01-S06/R07, CP01-S06/AC08]
+  - key: S06.verify.4
+    text: "No lifecycle caller may add a fallback parser or default a failed load into permission to run."
+    covered_by: [CP01-S06/R07, CP01-S06/AC08, CP01-S06/AC10]
+  - key: S06.verify.5
+    text: "A structurally valid lineage with a disallowed actor remains inspectable but cannot progress."
+    covered_by: [CP01-S06/R08, CP01-S06/AC09]
+  - key: S07.references
+    text: "Spec 01 authority, graph mutation, supersession and `/prepare-evidence`."
+    covered_by: [CP01-S07/R01, CP01-S07/R02, CP01-S07/R05, CP01-S07/R08, CP01-S07/R09]
+  - key: S07.run.1
+    text: "Implement runtime mutation responsibilities for Intent, Decision, selected Contract, Brief, Evidence, required edges and explicit supersession."
+    covered_by: [CP01-S07/R02, CP01-S07/R04, CP01-S07/AC01]
+  - key: S07.run.2
+    text: "Contract alternatives remain transient until selection."
+    covered_by: [CP01-S07/R02, CP01-S07/AC02]
+  - key: S07.run.3
+    text: "Approval/Gate state never auto-creates a Decision."
+    covered_by: [CP01-S07/R03, CP01-S07/AC03]
+  - key: S07.run.4
+    text: "All mutations use plan → validate complete proposed state → atomic write → validate resulting state."
+    covered_by: [CP01-S07/R01, CP01-S07/AC01, CP01-S07/AC08]
+  - key: S07.run.5
+    text: "Before creating Evidence or its evidences edge, require:"
+    covered_by: [CP01-S07/R09, CP01-S07/AC12]
+  - key: S07.run.6
+    text: "- the Brief is current;"
+    covered_by: [CP01-S07/R09, CP01-S07/AC12]
+  - key: S07.run.7
+    text: "- the latest delivered state has been reviewed;"
+    covered_by: [CP01-S07/R09, CP01-S07/R10, CP01-S07/AC12]
+    note: "How the latest delivered state and the closing Review outcome are identified and recorded is Q25."
+  - key: S07.run.8
+    text: "- the closing Review permits successful Evidence closure;"
+    covered_by: [CP01-S07/R09, CP01-S07/AC12]
+  - key: S07.run.9
+    text: "- no required Gate remains unresolved;"
+    covered_by: [CP01-S07/R09, CP01-S07/AC12]
+  - key: S07.run.10
+    text: "- Contract and Brief lineage is valid."
+    covered_by: [CP01-S07/R09, CP01-S07/AC12]
+  - key: S07.run.11
+    text: "Enforce these as pre-mutation runtime guards, not only as checks after writing Evidence."
+    covered_by: [CP01-S07/R09, CP01-S07/AC12, CP01-S07/AC14]
+  - key: S07.run.12
+    text: "A delivery change after Review requires Review of the new delivered state before closure."
+    covered_by: [CP01-S07/R10, CP01-S07/AC12, CP01-S07/AC13]
+  - key: S07.expected.1
+    text: "Only authorised paths produce canonical structures; successful closing Review of the latest state is required for Evidence, and failed mutation leaves no partial state."
+    covered_by: [CP01-S07/R01, CP01-S07/R02, CP01-S07/R09, CP01-S07/AC08, CP01-S07/AC12, CP01-S07/AC13, CP01-S07/AC14]
+  - key: S07.verify.1
+    text: "Exercise authorised/unauthorised Decisions and forced write/validation failure."
+    covered_by: [CP01-S07/R01, CP01-S07/R07, CP01-S07/AC04, CP01-S07/AC08]
+  - key: S07.verify.2
+    text: "For each Evidence precondition, provide a failing fixture and require no Evidence or partial edge to be written."
+    covered_by: [CP01-S07/R09, CP01-S07/AC12]
+  - key: S07.verify.3
+    text: "Include superseded Brief, unreviewed delivery change, blocking closing Review, pending Gate and invalid-lineage cases, plus successful closure."
+    covered_by: [CP01-S07/R09, CP01-S07/R10, CP01-S07/AC12, CP01-S07/AC13]
+  - key: S07.verify.4
+    text: "Exercise the guards through the runtime mutation API that every later entry point must call."
+    covered_by: [CP01-S07/R01, CP01-S07/AC12, CP01-S07/AC14]
+  - key: S07.verify.5
+    text: "Step 8 repeats them through `lifecycle run`; Step 12 repeats them through each mutating adapter command."
+    covered_by: [CP01-S08/R04, CP01-S08/AC07, CP01-S08/AC08, CP01-S12/R09, CP01-S12/R11, CP01-S12/AC04, CP01-S12/AC10]
+    note: "Step 8 carries the lifecycle run repetition. Step 12 repeats the mutation guards through each mutating command (CP01-S12/AC04) and every Evidence closure guard, with the latest-state closure control, through /prepare-evidence (CP01-S12/AC10)."
+  - key: S07.verify.6
+    text: "Before writing, use the Step 2 record and Step 3 core-edge immutability checks, validate the complete proposed graph and reject a changed stored base under Core §55."
+    covered_by: [CP01-S07/R05, CP01-S07/R06, CP01-S07/AC05, CP01-S07/AC06]
+  - key: S07.verify.7
+    text: "Include valid additions/supersession, unresolved Intent rewrite, deletion, rename-plus-add, core tuple replacement/removal, stale graph, concurrent configuration/lifecycle/lock edit and incomplete-load failures."
+    covered_by: [CP01-S07/R01, CP01-S07/R05, CP01-S07/R06, CP01-S07/AC01, CP01-S07/AC05, CP01-S07/AC06]
+  - key: S07.verify.8
+    text: "Race two Pactwright mutations against the same base: the check-and-write boundary must serialize them, so no accepted write overwrites the other's changed base."
+    covered_by: [CP01-S07/R06, CP01-S07/AC07]
+  - key: S07.verify.9
+    text: "Each failure preserves records, edges and unrelated files, including the concurrent writer's changes."
+    covered_by: [CP01-S07/R01, CP01-S07/R06, CP01-S07/AC05, CP01-S07/AC06, CP01-S07/AC08]
+  - key: S07.verify.10
+    text: "The supplied actor is attribution, not identity-provider authentication."
+    covered_by: [CP01-S07/R07, CP01-S07/AC04]
+  - key: S07.verify.11
+    text: "Check its kind against the actual lifecycle policy and preserve its full `decided_by` value unchanged."
+    covered_by: [CP01-S07/R07, CP01-S07/AC04]
+  - key: S07.verify.12
+    text: "Valid controls include two different identities of the same allowed kind and a human acting through an adapter later; denial is based on a disallowed kind or invalid actor syntax, not an invented Git-identity or allow-list rule."
+    covered_by: [CP01-S07/R07, CP01-S07/AC04, CP01-S12/R05, CP01-S12/AC05]
+    note: "The human-acting-through-an-adapter control is CP01-S12/AC05."
+  - key: S07.verify.13
+    text: "Prove withdrawal separately for reject and defer superseding a current proceed Decision: write no Contract or Contract supersession, preserve the withdrawn records and derive no authorised Contract."
+    covered_by: [CP01-S07/R08, CP01-S07/AC09]
+  - key: S07.verify.14
+    text: "Prove re-authorisation after withdrawal with a new proceed Decision and a fresh Contract superseding the last Contract of the direction, even when the immediately previous Decision selected none."
+    covered_by: [CP01-S07/R08, CP01-S07/AC10]
+  - key: S07.verify.15
+    text: "Refuse re-selection of an existing Contract and omission of required supersession."
+    covered_by: [CP01-S07/R08, CP01-S07/AC11]
+  - key: S07.verify.16
+    text: "Every case validates one complete proposed graph and writes atomically; the released `0.0.1` refusal of withdrawal is not the target behaviour."
+    covered_by: [CP01-S07/R01, CP01-S07/R08, CP01-S07/AC09, CP01-S07/AC10]
+  - key: S08.references
+    text: "Spec 01 lifecycle command surface and execution-state boundary."
+    covered_by: [CP01-S08/R01, CP01-S08/R02, CP01-S08/R03, CP01-S08/R05]
+  - key: S08.run.1
+    text: "Implement:"
+    covered_by: [CP01-S08/R01, CP01-S08/R02, CP01-S08/R03]
+  - key: S08.run.2
+    text: "pactwright lifecycle status"
+    covered_by: [CP01-S08/R01, CP01-S08/AC01]
+  - key: S08.run.3
+    text: "pactwright lifecycle next"
+    covered_by: [CP01-S08/R02, CP01-S08/AC01]
+  - key: S08.run.4
+    text: "pactwright lifecycle run"
+    covered_by: [CP01-S08/R03, CP01-S08/AC02]
+  - key: S08.run.5
+    text: "`status` reports current/completed steps, blocking step, required actor, validation problems and current lineage."
+    covered_by: [CP01-S08/R01, CP01-S08/AC01]
+    note: "Whether status covers one selected Intent or every active direction is Q27."
+  - key: S08.run.6
+    text: "`next` determines the next permitted lifecycle action without executing it."
+    covered_by: [CP01-S08/R02, CP01-S08/AC01]
+    note: "Whether next names Contract-crafting responsibilities alongside shape steps is Q26."
+  - key: S08.run.7
+    text: "Both are read-only."
+    covered_by: [CP01-S08/R02, CP01-S08/AC01]
+  - key: S08.run.8
+    text: "`run` executes automatic responsibilities through the resolved shape/policy until a required Gate, completion, execution failure or validation failure."
+    covered_by: [CP01-S08/R03, CP01-S08/AC02]
+    allocated_to: CP01-S24
+    note: "Step 8 proves dispatch with an instrumented capability invoker (AC02, AC07). Step 24's version 20 prose completes the Delivery through the adapter and does not yet run real Agent Pack capabilities through lifecycle run; that later-step amendment was Q33, resolved in Stage 2 by option A (Step 24 runs status, next and run on the consumer with the missing-invoker stop). What Step 8 may dispatch is Q26."
+  - key: S08.run.9
+    text: "It cannot skip Gates, invent transitions or create Evidence before the Step 7 closure guards pass."
+    covered_by: [CP01-S08/R03, CP01-S08/R04, CP01-S08/AC03, CP01-S08/AC08]
+  - key: S08.run.10
+    text: "Derive progression from current Contract/Brief lineage, resolved shape, policy, Gate state and repository state."
+    covered_by: [CP01-S08/R05, CP01-S08/AC01, CP01-S08/AC02]
+  - key: S08.run.11
+    text: "Keep execution progress outside the Delivery Graph."
+    covered_by: [CP01-S08/R05, CP01-S08/AC05]
+  - key: S08.expected.1
+    text: "The runtime owns fulfilment progression and exposes inspection separately from execution."
+    covered_by: [CP01-S08/R02, CP01-S08/R03, CP01-S08/AC01, CP01-S08/AC02]
+  - key: S08.verify.1
+    text: "Prove status/next perform no writes, report the correct actor/blocker/lineage, and next does not invoke an agent."
+    covered_by: [CP01-S08/R01, CP01-S08/R02, CP01-S08/AC01]
+  - key: S08.verify.2
+    text: "Prove Gate/failure stopping, no next core fulfilment stage after current Evidence, and execution-state changes do not alter graph truth."
+    covered_by: [CP01-S08/R03, CP01-S08/R05, CP01-S08/R06, CP01-S08/AC02, CP01-S08/AC04, CP01-S08/AC05]
+  - key: S08.verify.3
+    text: "Repeat with incomplete canonical loading, a complete graph containing one defective Intent and one unaffected Intent, and policy-denied recorded Decisions."
+    covered_by: [CP01-S08/R07, CP01-S08/AC06]
+  - key: S08.verify.4
+    text: "Status returns the unaffected Intent's exact standalone lineage/Contract/state, but diagnostic availability does not bypass whole-state validation for next/run."
+    covered_by: [CP01-S08/R07, CP01-S08/AC06]
+  - key: S08.verify.5
+    text: "Neither may invoke an agent or mutate state while the complete-state or actor-kind guard fails."
+    covered_by: [CP01-S08/R07, CP01-S08/AC06]
+  - key: S08.verify.6
+    text: "Through real `lifecycle run` dispatch, repeat Step 7's stale-base (including concurrent policy/config/lock changes), immutable-record/edge rewrite/removal, incomplete-load and disallowed-actor-kind failures and their valid controls."
+    covered_by: [CP01-S08/R04, CP01-S08/AC07]
+  - key: S08.verify.7
+    text: "Supply candidate mutations through the runtime API; no separate CLI mutation command is assumed."
+    covered_by: [CP01-S08/R04, CP01-S08/AC07]
+  - key: S08.verify.8
+    text: "Assert exact no-write/no-advance outcomes at the guard that owns each failure, including denial after inspection but before commit."
+    covered_by: [CP01-S08/R04, CP01-S08/AC07]
+  - key: S09.references
+    text: "Spec 01 sections 39, 46–57."
+    covered_by: [CP01-S09/R01, CP01-S09/R02, CP01-S09/R09]
+  - key: S09.run.1
+    text: "Implement read-only `pactwright validate` with the full minimum detection contract:"
+    covered_by: [CP01-S09/R01, CP01-S09/R02, CP01-S09/AC01, CP01-S09/AC02]
+  - key: S09.run.2
+    text: "1. malformed core nodes;"
+    covered_by: [CP01-S09/R01, CP01-S09/AC01]
+  - key: S09.run.3
+    text: "2. invalid core relationships;"
+    covered_by: [CP01-S09/R01, CP01-S09/AC01]
+  - key: S09.run.4
+    text: "3. missing required lineage;"
+    covered_by: [CP01-S09/R01, CP01-S09/AC01]
+  - key: S09.run.5
+    text: "4. contradictory current records;"
+    covered_by: [CP01-S09/R01, CP01-S09/AC01]
+  - key: S09.run.6
+    text: "5. multiple unsuperseded canonical Decisions or Contracts for one active direction;"
+    covered_by: [CP01-S09/R01, CP01-S09/R03, CP01-S09/AC01, CP01-S09/AC03]
+  - key: S09.run.7
+    text: "6. invalid Brief-to-Contract lineage;"
+    covered_by: [CP01-S09/R01, CP01-S09/R03, CP01-S09/AC01, CP01-S09/AC03]
+  - key: S09.run.8
+    text: "7. invalid Evidence-to-Brief lineage;"
+    covered_by: [CP01-S09/R01, CP01-S09/R03, CP01-S09/AC01, CP01-S09/AC03]
+  - key: S09.run.9
+    text: "8. illegal supersession;"
+    covered_by: [CP01-S09/R01, CP01-S09/R03, CP01-S09/AC01, CP01-S09/AC03]
+  - key: S09.run.10
+    text: "9. missing lifecycle shape;"
+    covered_by: [CP01-S09/R01, CP01-S09/R05, CP01-S09/AC01]
+    note: "What rules 9 and 10 check while the shape identity mechanism is unresolved is Q24."
+  - key: S09.run.11
+    text: "10. unresolved or incompatible shape identity;"
+    covered_by: [CP01-S09/R01, CP01-S09/R05, CP01-S09/AC01]
+    note: "What rules 9 and 10 check while the shape identity mechanism is unresolved is Q24."
+  - key: S09.run.12
+    text: "11. impossible shape transitions;"
+    covered_by: [CP01-S09/R01, CP01-S09/R05, CP01-S09/AC01]
+  - key: S09.run.13
+    text: "12. Evidence attempted before successful closing Review;"
+    covered_by: [CP01-S09/R01, CP01-S09/R05, CP01-S09/AC01]
+  - key: S09.run.14
+    text: "13. unauthorised Decision;"
+    covered_by: [CP01-S09/R01, CP01-S09/R04, CP01-S09/AC01, CP01-S09/AC04]
+  - key: S09.run.15
+    text: "14. unauthorised Gate progression;"
+    covered_by: [CP01-S09/R01, CP01-S09/R05, CP01-S09/AC01]
+  - key: S09.run.16
+    text: "15. unbounded configured corrective loops;"
+    covered_by: [CP01-S09/R01, CP01-S09/R05, CP01-S09/AC01]
+  - key: S09.run.17
+    text: "16. Extension state illegally redefining core Delivery semantics;"
+    covered_by: [CP01-S09/R01, CP01-S09/R08, CP01-S09/AC01, CP01-S09/AC07, CP01-S16/R09, CP01-S16/AC12]
+    note: "Proven here with a fixture graph contribution; CP01-S16/AC12 reruns it through installed fixture Extension loading."
+  - key: S09.run.18
+    text: "17. repository replay provenance that does not derive the recorded Project Graph revision when replay validation is requested."
+    covered_by: [CP01-S09/R01, CP01-S09/R06, CP01-S09/AC01, CP01-S09/AC05]
+    note: "Which execution-provenance record rule 17 reads is Q28."
+  - key: S09.run.19
+    text: "Use the same validation mechanics before canonical mutation wherever possible."
+    covered_by: [CP01-S09/R02, CP01-S09/AC10]
+  - key: S09.run.20
+    text: "Do not repair graph state as a side effect of validation."
+    covered_by: [CP01-S09/R02, CP01-S09/AC02]
+  - key: S09.run.21
+    text: "Implement the runtime context-assembly API consumed by Agent Packs/adapters."
+    covered_by: [CP01-S09/R09, CP01-S09/AC08, CP01-S12/R07, CP01-S12/R08, CP01-S12/AC08]
+    allocated_to: CP01-S24
+    note: "Step 9 proves the API directly (AC08-AC09). The Stage 3 conversion requires the adapter to consume it (CP01-S12/AC08) and pack prompts to rely on runtime-supplied context (CP01-S10/R05). Q33 (Stage 2, option A) does not require Step 24 to run real Agent Pack capabilities through lifecycle run; Step 24 re-executes CP01-S12/AC08 on the packed revision (Q59)."
+  - key: S09.run.22
+    text: "Default Delivery context contains current relevant Contract/Brief lineage and excludes rejected alternatives, superseded state, execution transcripts and unrelated history unless explicitly required."
+    covered_by: [CP01-S09/R09, CP01-S09/AC08]
+    note: "Exactly which records form the current relevant lineage is Q29."
+  - key: S09.run.23
+    text: "Keep a namespaced context-contribution seam for later Extensions."
+    covered_by: [CP01-S09/R10, CP01-S09/AC09]
+  - key: S09.run.24
+    text: "Do not introduce `pactwright context` as a required public CLI contract."
+    covered_by: [CP01-S09/R10, CP01-S09/AC10]
+  - key: S09.expected.1
+    text: "The core semantic contract is machine-enforced and agents receive bounded canonical context rather than reconstructing truth from chat history."
+    covered_by: [CP01-S09/R01, CP01-S09/R09, CP01-S09/AC01, CP01-S09/AC08]
+  - key: S09.verify.1
+    text: "Maintain valid controls and a failing fixture mapped to each numbered rule."
+    covered_by: [CP01-S09/R01, CP01-S09/AC01]
+  - key: S09.verify.2
+    text: "Use a fixture graph contribution for rule 16 now and rerun it through real fixture Extension loading in Step 16."
+    covered_by: [CP01-S09/R08, CP01-S09/AC07, CP01-S16/R09, CP01-S16/AC12]
+    note: "CP01-S16/AC12 reruns rule 16 through the installed fixture Extension loader."
+  - key: S09.verify.3
+    text: "Verify rule 17 on a requested replay check, not by requiring historical reconstruction on every ordinary validation."
+    covered_by: [CP01-S09/R06, CP01-S09/AC05]
+  - key: S09.verify.4
+    text: "Test context inclusions/exclusions and prove validation failures perform no writes."
+    covered_by: [CP01-S09/R02, CP01-S09/R09, CP01-S09/AC02, CP01-S09/AC08]
+  - key: S09.verify.5
+    text: "Reuse the Step 1 problem collection and Steps 2–4 structural validators."
+    covered_by: [CP01-S09/R02, CP01-S09/AC10]
+  - key: S09.verify.6
+    text: "Rule 8 includes branching/merging supersession; rules 6–7 include competing current Briefs/Evidence and cross-parent replacements."
+    covered_by: [CP01-S09/R03, CP01-S09/AC03]
+  - key: S09.verify.7
+    text: "Rule 13 checks the current recorded actor kind against real lifecycle policy, separately from pure lineage derivation, and preserves supplied identity as attribution."
+    covered_by: [CP01-S09/R04, CP01-S09/AC04]
+  - key: S09.verify.8
+    text: "Changing current policy alone must not retroactively invalidate withdrawn historical Decisions; a requested historical policy check restores lifecycle configuration from the recorded repository revision in execution provenance and reports unavailable when that evidence is absent or unreconstructible."
+    covered_by: [CP01-S09/R04, CP01-S09/AC04]
+  - key: S09.verify.9
+    text: "Test partial loads without a false whole-graph pass."
+    covered_by: [CP01-S09/R07, CP01-S09/AC06]
+  - key: S09.verify.10
+    text: "For requested replay, exercise the Step 5 typed Git identity and fixed stored-byte `pg1` vectors, unknown/legacy revision protocols, unavailable/dirty input bases and reconstructed-state mismatch."
+    covered_by: [CP01-S09/R06, CP01-S09/AC05]
+  - key: S09.verify.11
+    text: "Resolve the entire replay base before any execution effect; unavailable identity refuses without an attempt or replay record."
+    covered_by: [CP01-S09/R06, CP01-S09/AC05]
+  - key: S09.verify.12
+    text: "Graph-only hashing uses the loaded root, works without Git and reflects uncommitted canonical edits."
+    covered_by: [CP01-S09/R07, CP01-S09/AC06]
+  - key: S09.verify.13
+    text: "Ordinary graph diagnostics need not require Git."
+    covered_by: [CP01-S09/R07, CP01-S09/AC06]
+  - key: S10.references
+    text: "Spec 02 capabilities and Agent Packs."
+    covered_by: [CP01-S10/R01, CP01-S10/R02, CP01-S10/R04, CP01-S10/R05]
+  - key: S10.run.1
+    text: "Implement:"
+    covered_by: [CP01-S10/R01, CP01-S10/AC01]
+  - key: S10.run.2
+    text: "- delivery-specification"
+    covered_by: [CP01-S10/R01, CP01-S10/AC01]
+  - key: S10.run.3
+    text: "- delivery-execution"
+    covered_by: [CP01-S10/R01, CP01-S10/AC01]
+  - key: S10.run.4
+    text: "- delivery-review"
+    covered_by: [CP01-S10/R01, CP01-S10/AC01]
+  - key: S10.run.5
+    text: "Create `@pactwright/standard` as a separate publishable Agent Pack package."
+    covered_by: [CP01-S10/R04, CP01-S10/AC04]
+    allocated_to: CP01-S22
+    note: "Step 10 proves the separate package by building and packing it in the workspace; Step 22 packs it for clean consumers and Step 28 publishes it. The Agent Pack content format is Q36."
+  - key: S10.run.6
+    text: "The pack maps capabilities to agents/prompts/skills but does not own graph or lifecycle semantics."
+    covered_by: [CP01-S10/R02, CP01-S10/R05, CP01-S10/AC01, CP01-S10/AC06]
+  - key: S10.run.7
+    text: "Do not make Pactwright semantics depend on this specific pack identity."
+    covered_by: [CP01-S10/R06, CP01-S10/AC03, CP01-S10/AC06]
+  - key: S10.expected.1
+    text: "Core AI responsibilities are replaceable and capability checked."
+    covered_by: [CP01-S10/R02, CP01-S10/R06, CP01-S10/AC01, CP01-S10/AC02, CP01-S10/AC03]
+  - key: S10.verify.1
+    text: "Test complete and incomplete fixture packs; incomplete selection leaves valid state intact."
+    covered_by: [CP01-S10/R02, CP01-S10/R03, CP01-S10/AC01, CP01-S10/AC02, CP01-S11/R02, CP01-S11/AC02]
+    note: "Step 10 has no selection command, so it proves that a failed capability check leaves state intact; CP01-S11/AC02 repeats the proof through agent-pack use."
+  - key: S11.references
+    text: "Spec 02 Agent Pack selection and upgrade."
+    covered_by: [CP01-S11/R01, CP01-S11/R03, CP01-S11/R04, CP01-S11/R08]
+  - key: S11.run.1
+    text: "Implement:"
+    covered_by: [CP01-S11/R01, CP01-S11/R04]
+  - key: S11.run.2
+    text: "pactwright agent-pack use <source>"
+    covered_by: [CP01-S11/R01, CP01-S11/AC01]
+    note: "Which source forms agent-pack use accepts and how packages are obtained is Q35."
+  - key: S11.run.3
+    text: "pactwright agent-pack upgrade"
+    covered_by: [CP01-S11/R04, CP01-S11/AC04]
+  - key: S11.run.4
+    text: "`agent-pack use` resolves a compatible complete pack, validates all required capabilities, updates configuration only after success, locks exact identity, runs sync and reports later GitHub reconciliation needs."
+    covered_by: [CP01-S11/R01, CP01-S11/R02, CP01-S11/R07, CP01-S11/AC01, CP01-S11/AC02, CP01-S11/AC08, CP01-S15/AC07, CP01-S17/AC06]
+    note: "CP01-S15/AC07 repeats the lock recording through the real resolved lock and CP01-S17/AC06 the sync through deterministic sync. What Step 11 locks and runs as sync before them remains Q34."
+  - key: S11.run.5
+    text: "Never silently switch packs."
+    covered_by: [CP01-S11/R03, CP01-S11/R05, CP01-S11/AC02, CP01-S11/AC03, CP01-S11/AC06]
+  - key: S11.run.6
+    text: "`agent-pack upgrade` upgrades the currently selected pack within its configured compatibility constraints without changing Agent Pack identity."
+    covered_by: [CP01-S11/R04, CP01-S11/R08, CP01-S11/AC04, CP01-S11/AC05]
+  - key: S11.run.7
+    text: "It validates the complete required capability set before changing the current lock or generated environment."
+    covered_by: [CP01-S11/R04, CP01-S11/AC05]
+  - key: S11.run.8
+    text: "Failure leaves the previous valid configuration, lock and generated environment intact."
+    covered_by: [CP01-S11/R02, CP01-S11/AC02, CP01-S11/AC05]
+  - key: S11.expected.1
+    text: "Projects explicitly select one complete Agent Pack and can upgrade it independently from the runtime."
+    covered_by: [CP01-S11/R01, CP01-S11/R03, CP01-S11/R04, CP01-S11/R08, CP01-S11/AC01, CP01-S11/AC04, CP01-S11/AC09]
+  - key: S11.verify.1
+    text: "Select standard, switch to a compatible fixture pack, reject an incompatible pack without state loss, upgrade a selected fixture pack to a compatible newer version, then reject an incompatible upgrade while preserving the previous valid environment."
+    covered_by: [CP01-S11/AC01, CP01-S11/AC02, CP01-S11/AC04, CP01-S11/AC05]
+  - key: S11.verify.2
+    text: "Prove an exact configured target remains selected even when a newer compatible package is available; desired constraints do not authorise silently changing pack identity."
+    covered_by: [CP01-S11/R05, CP01-S11/AC06]
+  - key: S11.verify.3
+    text: "Read and round-trip the actual selected-pack configuration through the Step 1 loader."
+    covered_by: [CP01-S11/R06, CP01-S11/AC07]
+  - key: S11.verify.4
+    text: "Missing or malformed configuration must not trigger silent pack selection, a second parser or replacement of the previous valid environment; repeat with the real resolved lock once Step 15 exists."
+    covered_by: [CP01-S11/R06, CP01-S11/AC07, CP01-S11/AC09, CP01-S15/R06, CP01-S15/AC06]
+    note: "CP01-S15/AC06 repeats the refusals with the real resolved lock."
+  - key: S12.references
+    text: "Specs 01 sections 46–53 and 02 adapter boundary."
+    covered_by: [CP01-S12/R01, CP01-S12/R02, CP01-S12/R03, CP01-S12/R04, CP01-S12/R05, CP01-S12/R06, CP01-S12/R07, CP01-S12/R08, CP01-S12/R09, CP01-S12/R10]
+  - key: S12.run.1
+    text: "Render deterministic Pactwright-managed Claude Code agents and these exact commands:"
+    covered_by: [CP01-S12/R01, CP01-S12/R02, CP01-S12/AC01]
+  - key: S12.run.2
+    text: "/capture-intent"
+    covered_by: [CP01-S12/R01, CP01-S12/AC01]
+  - key: S12.run.3
+    text: "/propose-contracts"
+    covered_by: [CP01-S12/R01, CP01-S12/AC01]
+  - key: S12.run.4
+    text: "/approve-contract"
+    covered_by: [CP01-S12/R01, CP01-S12/AC01]
+  - key: S12.run.5
+    text: "/write-brief"
+    covered_by: [CP01-S12/R01, CP01-S12/AC01]
+  - key: S12.run.6
+    text: "/deliver-brief"
+    covered_by: [CP01-S12/R01, CP01-S12/AC01]
+  - key: S12.run.7
+    text: "/review"
+    covered_by: [CP01-S12/R01, CP01-S12/AC01]
+  - key: S12.run.8
+    text: "/prepare-evidence"
+    covered_by: [CP01-S12/R01, CP01-S12/AC01]
+  - key: S12.run.9
+    text: "The commands invoke runtime responsibilities and the selected Agent Pack capabilities:"
+    covered_by: [CP01-S12/R07, CP01-S12/R08, CP01-S12/AC02]
+    note: "Which capability each command invokes and how a command reaches the runtime mutation API is Q38."
+  - key: S12.run.10
+    text: "- capture-intent creates an Intent through the runtime;"
+    covered_by: [CP01-S12/R03, CP01-S12/AC02]
+  - key: S12.run.11
+    text: "- propose-contracts is graph-read-only and keeps alternatives transient;"
+    covered_by: [CP01-S12/R04, CP01-S12/AC02, CP01-S12/AC03]
+  - key: S12.run.12
+    text: "- approve-contract applies normal Decision authority and, for proceed, creates the selected Contract and required lineage;"
+    covered_by: [CP01-S12/R05, CP01-S12/AC02, CP01-S12/AC05, CP01-S12/AC06]
+  - key: S12.run.13
+    text: "- write-brief inspects current state and creates the Brief under its canonical Contract;"
+    covered_by: [CP01-S12/R06, CP01-S12/AC02]
+  - key: S12.run.14
+    text: "- deliver-brief executes the active Delivery step without directly mutating the Delivery Graph or independently selecting transitions;"
+    covered_by: [CP01-S12/R07, CP01-S12/AC02, CP01-S12/AC03]
+    note: "How the runtime keeps an executing agent from writing canonical storage directly is Q37."
+  - key: S12.run.15
+    text: "- review evaluates the latest delivered state without creating Evidence or inventing transitions;"
+    covered_by: [CP01-S12/R08, CP01-S12/AC02, CP01-S12/AC03]
+  - key: S12.run.16
+    text: "- prepare-evidence invokes all Step 7 preconditions before creating Evidence and its evidences relationship."
+    covered_by: [CP01-S12/R09, CP01-S12/AC02, CP01-S12/AC03, CP01-S12/AC04, CP01-S12/AC10]
+  - key: S12.run.17
+    text: "Their decomposition does not define lifecycle topology."
+    covered_by: [CP01-S12/R10, CP01-S12/AC09]
+  - key: S12.run.18
+    text: "Do not duplicate graph-transition or authority semantics in prompts."
+    covered_by: [CP01-S12/R10, CP01-S12/AC09]
+  - key: S12.expected.1
+    text: "The adapter exposes the canonical command surface with explicit, runtime-enforced mutation boundaries."
+    covered_by: [CP01-S12/R01, CP01-S12/R11, CP01-S12/AC01, CP01-S12/AC02, CP01-S12/AC04]
+  - key: S12.verify.1
+    text: "Assert the exact seven command names, render twice from identical locked inputs and require byte-identical output."
+    covered_by: [CP01-S12/R01, CP01-S12/R02, CP01-S12/AC01, CP01-S17/AC06]
+    note: "Step 12 renders from a fixture resolved lock; CP01-S17/AC06 repeats convergence through real sync over the real lock."
+  - key: S12.verify.2
+    text: "Exercise every command's permitted/forbidden mutations, including graph-read-only alternatives, no direct Delivery graph writes, no Evidence from review, and failed premature prepare-evidence."
+    covered_by: [CP01-S12/AC02, CP01-S12/AC03, CP01-S12/AC10]
+  - key: S12.verify.3
+    text: "Then complete one valid command lineage."
+    covered_by: [CP01-S12/AC07]
+    allocated_to: CP01-S24
+    note: "Step 12 uses scripted capabilities; Step 24 completes a full Delivery through the generated adapter of the packed runtime."
+  - key: S12.verify.4
+    text: "Repeat the Step 7 guard matrix through each mutating command (`/capture-intent`, `/approve-contract`, `/write-brief`, `/prepare-evidence`): stale graph or policy/config/lock base, record rewrite/removal/re-identification, core-edge replacement/removal, incomplete load and disallowed actor kind must not commit or partially write."
+    covered_by: [CP01-S12/R11, CP01-S12/AC04]
+  - key: S12.verify.5
+    text: "Exercise the relevant valid control for each command through the same runtime API, rather than only asserting prompt text."
+    covered_by: [CP01-S12/AC04]
+  - key: S12.verify.6
+    text: "An adapter running on behalf of an allowed human records that human attribution unchanged; a different well-formed identity of that allowed kind remains permitted."
+    covered_by: [CP01-S12/R05, CP01-S12/AC05]
+  - key: S12.verify.7
+    text: "For `/approve-contract`, repeat reject/defer withdrawal, fresh re-authorisation over the last Contract in the withdrawn chain, existing-Contract re-selection refusal and missing-supersession refusal."
+    covered_by: [CP01-S12/R05, CP01-S12/AC06]
+  - key: S12.verify.8
+    text: "No public API or adapter may bypass the checks already proved at Step 7."
+    covered_by: [CP01-S12/R11, CP01-S12/AC04, CP01-S12/AC06, CP01-S12/AC09, CP01-S12/AC10]
+  - key: S13.references
+    text: "Spec 02 evaluation and baseline/regression reporting."
+    covered_by: [CP01-S13/R01, CP01-S13/R02, CP01-S13/R06, CP01-S13/R07]
+  - key: S13.run.1
+    text: "Implement `pactwright eval` with core responsibility cases for Contract fidelity, scope discipline, Brief quality, Review quality/defect detection, Evidence accuracy and lifecycle compliance, plus required output structure and forbidden mutation."
+    covered_by: [CP01-S13/R01, CP01-S13/AC01, CP01-S13/AC04]
+    note: "Who performs semantic judgement and how capabilities are executed during eval is Q39."
+  - key: S13.run.2
+    text: "Evidence accuracy cases compare claimed delivered work and verification with actual recorded results."
+    covered_by: [CP01-S13/R03, CP01-S13/AC02]
+  - key: S13.run.3
+    text: "Lifecycle compliance cases cover authority, Gate stopping, valid transitions and successful closing Review before Evidence."
+    covered_by: [CP01-S13/R04, CP01-S13/AC03]
+  - key: S13.run.4
+    text: "Implement the canonical comparison surface:"
+    covered_by: [CP01-S13/R06, CP01-S13/AC06]
+  - key: S13.run.5
+    text: "pactwright eval --baseline <released-pack-or-baseline> --candidate <candidate-pack-or-environment>"
+    covered_by: [CP01-S13/R06, CP01-S13/AC06]
+    note: "Which inputs --baseline and --candidate accept and what counts as a regression is Q40."
+  - key: S13.run.6
+    text: "Keep deterministic assertions separate from semantic judgement."
+    covered_by: [CP01-S13/R05, CP01-S13/AC05]
+  - key: S13.run.7
+    text: "Report regressions by meaningful dimensions such as capability, agent, evaluation case and changed Agent Pack/prompt/direct-skill environment."
+    covered_by: [CP01-S13/R07, CP01-S13/AC07, CP01-S13/AC08]
+  - key: S13.run.8
+    text: "Do not compute one opaque aggregate score."
+    covered_by: [CP01-S13/R07, CP01-S13/AC07, CP01-S13/AC08]
+  - key: S13.run.9
+    text: "Before the first public release, prove comparison mechanics with exact fixture/pinned package inputs. After `0.0.1` is published, Step 28 must prove resolution against the real released baseline."
+    covered_by: [CP01-S13/R06, CP01-S13/AC06]
+    allocated_to: CP01-S28
+    note: "Step 13 uses packed fixture packs; Step 28 resolves the real released @pactwright/standard@0.0.1 baseline."
+  - key: S13.expected.1
+    text: "The AI execution environment is evaluable independently from a real Delivery and candidate changes can be compared against an exact baseline."
+    covered_by: [CP01-S13/R01, CP01-S13/R06, CP01-S13/AC01, CP01-S13/AC06]
+  - key: S13.verify.1
+    text: "Run core eval, compare compatible baseline/candidate fixtures and introduce known regressions in Evidence accuracy and lifecycle compliance."
+    covered_by: [CP01-S13/AC01, CP01-S13/AC06, CP01-S13/AC07]
+  - key: S13.verify.2
+    text: "Require each to appear at its affected capability/agent/case dimensions rather than being hidden in an aggregate result."
+    covered_by: [CP01-S13/R07, CP01-S13/AC07]
+  - key: S14.references
+    text: "Spec 02 initialisation/configuration and Agent Pack selection."
+    covered_by: [CP01-S14/R01, CP01-S14/R03, CP01-S14/R04]
+  - key: S14.run.1
+    text: "Implement init so a clean repository receives only Pactwright-owned core configuration/Project Graph structure."
+    covered_by: [CP01-S14/R01, CP01-S14/AC01, CP01-S14/AC07]
+  - key: S14.run.2
+    text: "Checkpoint 1 keeps GitHub disabled and creates no Pactwright-managed GitHub workflow."
+    covered_by: [CP01-S14/R02, CP01-S14/AC01]
+  - key: S14.run.3
+    text: "Do not silently select or switch Agent Pack identity."
+    covered_by: [CP01-S14/R03, CP01-S14/R05, CP01-S14/AC04, CP01-S14/AC05]
+  - key: S14.run.4
+    text: "A plain init may create the initial scaffold before `agent-pack use` explicitly selects a pack; do not claim that scaffold is a complete activated execution environment."
+    covered_by: [CP01-S14/R03, CP01-S14/AC01, CP01-S14/AC02]
+    note: "Whether a plain scaffold carries a lock, and so whether it can load completely, is Q42."
+  - key: S14.run.5
+    text: "For compositional init that activates an Extension or later GitHub integration, obtain an explicit compatible Agent Pack choice through the documented normal init selection interaction/input before activation. Reuse agent-pack selection/resolution, not a second resolver."
+    covered_by: [CP01-S14/R04, CP01-S14/AC03, CP01-S14/AC04, CP01-S14/AC08, CP01-S16/R10, CP01-S16/AC15]
+    note: "Step 14 proves explicit selection through the init selection input. Extension activation arrives with Step 16, whose one-shot init activates nothing without a compatible choice (CP01-S16/AC15). Which compositional init Step 14 can exercise before Step 16 is Q41."
+  - key: S14.run.6
+    text: "Tests must supply the same explicit pack source and target version in both the one-shot and explicit setup paths. With no supplied choice, do not activate dependent features or silently choose standard."
+    covered_by: [CP01-S14/R03, CP01-S14/R04, CP01-S14/AC03, CP01-S14/AC04, CP01-S16/AC14, CP01-S16/AC15]
+  - key: S14.run.7
+    text: "Exact input ergonomics are implementation details; do not invent an additional canonical CLI flag in this runbook."
+    covered_by: [CP01-S14/R04]
+    note: "The contract names no flag. Which document owns the selection input's form is Q41."
+  - key: S14.expected.1
+    text: "A clean repository can initialise safely, and one-shot activation preserves explicit pack authority."
+    covered_by: [CP01-S14/R01, CP01-S14/R03, CP01-S14/R04, CP01-S14/AC01, CP01-S14/AC03, CP01-S14/AC04, CP01-S16/AC15]
+  - key: S14.verify.1
+    text: "Run init in a temporary repository with unrelated files."
+    covered_by: [CP01-S14/AC01, CP01-S14/AC04]
+  - key: S14.verify.2
+    text: "Test scaffold then explicit `agent-pack use`, explicit selection during one-shot init, missing selection, incompatible selection and preservation of an existing pack choice."
+    covered_by: [CP01-S14/AC03, CP01-S14/AC04, CP01-S14/AC05, CP01-S16/AC15]
+  - key: S14.verify.3
+    text: "Require no Extension activation on missing/incompatible selection and no unrelated writes."
+    covered_by: [CP01-S14/AC04, CP01-S14/AC07, CP01-S16/AC15]
+    note: "Step 14 has no Extension installation, so CP01-S16/AC15 proves that one-shot init activates no Extension on a missing or incompatible choice."
+  - key: S14.verify.4
+    text: "Round-trip the created Core §54 paths and actual configuration through Step 1."
+    covered_by: [CP01-S14/R06, CP01-S14/AC02]
+  - key: S14.verify.5
+    text: "A plain scaffold without a selected/resolved environment remains explicitly incomplete; it is not a healthy executable environment."
+    covered_by: [CP01-S14/R03, CP01-S14/AC01, CP01-S14/AC02]
+  - key: S14.verify.6
+    text: "An empty graph uses `specs/nodes/.gitkeep` (empty) and `edges: []`."
+    covered_by: [CP01-S14/R01, CP01-S14/AC01, CP01-S14/AC02]
+  - key: S14.verify.7
+    text: "Init creates the placeholder but never stages or commits it; the owner commits the scaffold, including `.gitkeep` and every required input, before requesting a reconstructible repository revision."
+    covered_by: [CP01-S14/R07, CP01-S14/AC06]
+  - key: S14.verify.8
+    text: "An untracked empty directory is not reconstructible merely because git status is clean."
+    covered_by: [CP01-S14/R07, CP01-S14/AC06]
+  - key: S15.references
+    text: "Spec 02 locking; Implementation Guide replay provenance."
+    covered_by: [CP01-S15/R01, CP01-S15/R03, CP01-S15/R05]
+  - key: S15.run.1
+    text: "Resolve and lock the exact Pactwright execution environment: runtime, selected Agent Pack, resolved agents/direct skills and fixture Extensions once Step 16 is available."
+    covered_by: [CP01-S15/R01, CP01-S15/AC01, CP01-S16/R04, CP01-S16/AC04]
+    note: "Fixture Extension lock entries are CP01-S16/R04."
+  - key: S15.run.2
+    text: "Retain integration seams for the external Production Skills resolver delivered in Checkpoint 5; do not implement or pretend to resolve those imports here."
+    covered_by: [CP01-S15/R07, CP01-S15/R08, CP01-S15/AC08, CP01-S15/AC10]
+    note: "How a pack declares an external import in Checkpoint 1 is Q46."
+  - key: S15.run.3
+    text: "Configuration records desired constraints. The package-manager manifest/lock records installed packages; `.pactwright/lock.yml` records the resolved Pactwright environment."
+    covered_by: [CP01-S15/R02, CP01-S15/AC01, CP01-S15/AC09]
+  - key: S15.run.4
+    text: "The two locks must agree on every runtime and package-backed component version they both identify."
+    covered_by: [CP01-S15/R03, CP01-S15/AC04, CP01-S16/AC04]
+  - key: S15.run.5
+    text: "Record exact package/source, version, content identity and resolved dependencies as applicable."
+    covered_by: [CP01-S15/R01, CP01-S15/AC01, CP01-S16/R04]
+  - key: S15.run.6
+    text: "Reject lock mismatch or incompatible resolution before accepting a new environment or replacing generated integration."
+    covered_by: [CP01-S15/R03, CP01-S15/R04, CP01-S15/AC04]
+  - key: S15.run.7
+    text: "Derive deterministic `environment_lock_hash` from the exact resolved `.pactwright/lock.yml` state."
+    covered_by: [CP01-S15/R05, CP01-S15/AC01, CP01-S15/AC02]
+    note: "The hash algorithm and canonical form are Q45."
+  - key: S15.run.8
+    text: "The shared replay base is:"
+    covered_by: [CP01-S15/R05, CP01-S15/AC03]
+  - key: S15.run.9
+    text: "repository_revision + project_graph_revision + environment_lock_hash"
+    covered_by: [CP01-S15/R05, CP01-S15/AC03]
+  - key: S15.expected.1
+    text: "Identical exact environments produce identical locks/hashes and inconsistent installed/resolved state is not accepted."
+    covered_by: [CP01-S15/R03, CP01-S15/R05, CP01-S15/AC01, CP01-S15/AC04]
+  - key: S15.verify.1
+    text: "Resolve twice and compare byte-for-byte, then change one resolved identity and require a hash change."
+    covered_by: [CP01-S15/AC01, CP01-S15/AC02]
+  - key: S15.verify.2
+    text: "Test runtime/Agent Pack lock disagreement and tampered component identity; repeat for package-backed fixture Extensions in Step 16."
+    covered_by: [CP01-S15/AC04, CP01-S16/AC04]
+  - key: S15.verify.3
+    text: "Failed resolution preserves the previous valid environment."
+    covered_by: [CP01-S15/R04, CP01-S15/AC04, CP01-S15/AC05]
+  - key: S15.verify.4
+    text: "Load the actual lock and configuration formats through Step 1."
+    covered_by: [CP01-S15/R06, CP01-S15/AC05]
+  - key: S15.verify.5
+    text: "Exercise malformed, absent and unsupported-version inputs and require explicit incomplete diagnostics, no successful environment identity and no replacement of valid generated state."
+    covered_by: [CP01-S15/R06, CP01-S15/AC05, CP01-S15/AC06]
+  - key: S15.verify.6
+    text: "This proves the real lock integration rather than only the Step 1 parse fixture."
+    covered_by: [CP01-S15/R06, CP01-S15/AC05, CP01-S15/AC06, CP01-S15/AC07]
+    note: "AC06 repeats the CP01-S11/AC07 refusals and AC07 the CP01-S11 lock recording through the real lock."
+  - key: S16.references
+    text: "Spec 02 sections 10–15 and one-shot initialisation."
+    covered_by: [CP01-S16/R01, CP01-S16/R03, CP01-S16/R04, CP01-S16/R06, CP01-S16/R07, CP01-S16/R10]
+  - key: S16.run.1
+    text: "Using fixture Extensions only, implement Spec 02 §11 manifest loading (including graph.format_version, registration export and declared storage/decoder/schema/projections), graph contribution registration, command namespaces, capability contribution and GitHub profile metadata. Do not invent a second installed-only declaration format."
+    covered_by: [CP01-S16/R01, CP01-S16/R02, CP01-S16/AC01, CP01-S16/AC02, CP01-S16/AC16]
+  - key: S16.run.2
+    text: "Implement:"
+    covered_by: [CP01-S16/R03, CP01-S16/R06, CP01-S16/R07]
+  - key: S16.run.3
+    text: "pactwright extension add <id-or-package>"
+    covered_by: [CP01-S16/R03, CP01-S16/AC01, CP01-S16/AC03]
+  - key: S16.run.4
+    text: "pactwright extension remove <id>"
+    covered_by: [CP01-S16/R07, CP01-S16/AC09]
+    note: "How disable differs from remove, and which command disables and re-enables, is Q50."
+  - key: S16.run.5
+    text: "pactwright extension upgrade <id>"
+    covered_by: [CP01-S16/R06, CP01-S16/AC07]
+  - key: S16.run.6
+    text: "Installation must:"
+    covered_by: [CP01-S16/R03]
+  - key: S16.run.7
+    text: "- resolve a compatible package and the complete Extension dependency graph;"
+    covered_by: [CP01-S16/R03, CP01-S16/AC03, CP01-S16/AC06]
+  - key: S16.run.8
+    text: "- validate runtime/schema compatibility and the selected pack's complete required capability set before activation or canonical mutation;"
+    covered_by: [CP01-S16/R03, CP01-S16/AC02, CP01-S16/AC06]
+  - key: S16.run.9
+    text: "- install required dependencies first through the same normal installation path;"
+    covered_by: [CP01-S16/R03, CP01-S16/AC03]
+  - key: S16.run.10
+    text: "- delegate package installation to the project package manager;"
+    covered_by: [CP01-S16/R12, CP01-S16/AC03, CP01-S16/AC16]
+    note: "Which step owns package-manager detection is Q44."
+  - key: S16.run.11
+    text: "- register the Extension in project configuration;"
+    covered_by: [CP01-S16/R03, CP01-S16/AC01]
+  - key: S16.run.12
+    text: "- record exact package/version/hash and resolved dependencies in the Pactwright lock, consistent with the package-manager lock;"
+    covered_by: [CP01-S16/R04, CP01-S16/AC04]
+  - key: S16.run.13
+    text: "- create owned repository structure only for the valid environment;"
+    covered_by: [CP01-S16/R03, CP01-S16/AC01, CP01-S16/AC06]
+  - key: S16.run.14
+    text: "- run normal sync;"
+    covered_by: [CP01-S16/R03, CP01-S16/AC01, CP01-S16/AC03]
+    note: "Deterministic sync arrives with Step 17; what Step 16 runs as sync before it is Q43."
+  - key: S16.run.15
+    text: "- report any later GitHub provisioning needs without mutating remote state."
+    covered_by: [CP01-S16/R03, CP01-S16/AC01]
+  - key: S16.run.16
+    text: "On incompatibility or installation/sync failure, preserve or restore the previous valid package/configuration/lock/generated environment and leave no partial canonical graph mutation. Never silently switch Agent Packs."
+    covered_by: [CP01-S16/R05, CP01-S16/AC06, CP01-S16/AC08]
+  - key: S16.run.17
+    text: "Upgrade validates every enabled dependent Extension and the complete capability set. Canonical schema changes use explicitly defined versioned migrations, not silent reinterpretation. Protect canonical state from partial migration and preserve recovery to the prior valid environment."
+    covered_by: [CP01-S16/R05, CP01-S16/R06, CP01-S16/AC07, CP01-S16/AC08]
+    note: "How an Extension package declares a versioned migration is Q51."
+  - key: S16.run.18
+    text: "Removal/disable preserves user-authored canonical data. Remove only unambiguously owned generated contributions no enabled component still requires. Reject removal of a required dependency unless the dependent is disabled/removed in the same supported operation. Preserve ambiguous ownership and report it."
+    covered_by: [CP01-S16/R07, CP01-S16/AC09]
+  - key: S16.run.19
+    text: "Do not implement first-party Extension semantics yet."
+    covered_by: [CP01-S16/R11, CP01-S16/AC16]
+  - key: S16.run.20
+    text: "One-shot `pactwright init --with <fixture-extension>` composes normal init + explicit Agent Pack selection + normal Extension installation + sync, using Step 14's documented selection input."
+    covered_by: [CP01-S16/R10, CP01-S16/AC14, CP01-S16/AC15]
+  - key: S16.run.21
+    text: "Later first-party Extension ids and `--github` reuse this composition mechanism; they do not create a new setup implementation."
+    covered_by: [CP01-S16/R10, CP01-S16/AC16]
+    note: "The first-party Extensions and --github arrive in later checkpoints; R10 binds them to this composition."
+  - key: S16.expected.1
+    text: "Later Extensions can compose through one transactional distribution path, and one-shot initialisation uses the same explicit selection and managed operations as separate setup."
+    covered_by: [CP01-S16/R03, CP01-S16/R05, CP01-S16/R10, CP01-S16/AC06, CP01-S16/AC14]
+  - key: S16.verify.1
+    text: "Exercise dependency-first add, exact lock agreement, compatible upgrade/migration, incompatible dependent upgrade, missing capability, blocked removal, safe disable and preserved canonical data."
+    covered_by: [CP01-S16/AC03, CP01-S16/AC04, CP01-S16/AC06, CP01-S16/AC07, CP01-S16/AC08, CP01-S16/AC09]
+  - key: S16.verify.2
+    text: "Inject package, migration and sync failures; require no partial graph records and restoration/recoverability of the previous valid environment without a pack switch."
+    covered_by: [CP01-S16/R05, CP01-S16/AC06, CP01-S16/AC08]
+  - key: S16.verify.3
+    text: "Repeat Steps 5 and 9 through the actual fixture Extension loader: its canonical node/edge mutation changes `project_graph_revision`; its generated files and execution output do not; attempted redefinition of core semantics fails."
+    covered_by: [CP01-S16/R09, CP01-S16/AC12]
+  - key: S16.verify.4
+    text: "Repeat S02/AC12–AC13 contribution controls through installed declarations: core/Extension and cross-owner endpoint collisions, duplicate node or relation ownership, reserved `core`, unsafe owner values and non-node canonical records."
+    covered_by: [CP01-S16/R09, CP01-S16/AC11]
+  - key: S16.verify.5
+    text: "Repeat S03/AC06–AC13, including Extension cross-type supersession, all reverse/wrong-owner placements and a valid cross-graph tuple in its relation owner's `specs/extensions/<id>/edges.yml`."
+    covered_by: [CP01-S16/R09, CP01-S16/AC11]
+  - key: S16.verify.6
+    text: "Missing decoder/schema/projection exports, escaping/overlapping storage declarations, unknown graph format versions and tampered graph implementation bytes must fail before activation, preserving the prior registry, lock and generated state."
+    covered_by: [CP01-S16/R02, CP01-S16/AC02]
+  - key: S16.verify.7
+    text: "A changed implementation hash must affect environment identity; equal graph meaning still yields the same pg1."
+    covered_by: [CP01-S16/R04, CP01-S16/AC05]
+  - key: S16.verify.8
+    text: "Repeat S04 exact-lineage and unaffected-Intent controls through the installed fixture loader."
+    covered_by: [CP01-S16/R09, CP01-S16/AC13]
+  - key: S16.verify.9
+    text: "Also repeat the Step 2 contribution-registration proof with an Extension-owned non-node canonical record lacking core envelope fields, plus a separately registered node projection."
+    covered_by: [CP01-S16/R09, CP01-S16/AC11, CP01-S16/AC17]
+  - key: S16.verify.10
+    text: "Repeat CP01-S03/AC06–AC13 through the installed loader, including core-name/constraint protection, valid two-way additional relations, wrong endpoint types, linear supersession, unknown active relations and ownership failures."
+    covered_by: [CP01-S16/R09, CP01-S16/AC11]
+  - key: S16.verify.11
+    text: "Exercise Step 4 current lineage, competing records and withdrawn Contract behaviour with that composition; the Extension must not change core authority or lineage meaning."
+    covered_by: [CP01-S16/R09, CP01-S16/AC13]
+  - key: S16.verify.12
+    text: "Disable/remove and then re-enable the fixture: preserve inactive user-authored bytes, exclude inactive canonical contributions from the active graph revision, reject active references to inactive endpoints and validate all preserved state before reactivation."
+    covered_by: [CP01-S16/R08, CP01-S16/AC10]
+  - key: S16.verify.13
+    text: "Do not infer unknown core-store data to be an inactive Extension."
+    covered_by: [CP01-S16/R08, CP01-S16/AC10]
+  - key: S16.verify.14
+    text: "Any legacy Extension layout with ambiguous ownership requires an explicit migration disposition, never automatic deletion."
+    covered_by: [CP01-S16/R08, CP01-S16/AC10]
+  - key: S16.verify.15
+    text: "These are installed-package integration results, not repeats of a mocked registry call."
+    covered_by: [CP01-S16/R01, CP01-S16/AC11, CP01-S16/AC12, CP01-S16/AC13, CP01-S16/AC17]
+  - key: S16.verify.16
+    text: "Compare clean one-shot and explicit init + `agent-pack use` + `extension add` + sync paths using the same explicitly chosen compatible fixture pack/version."
+    covered_by: [CP01-S16/R10, CP01-S16/AC14]
+  - key: S16.verify.17
+    text: "Require equivalent configuration, package locks, resolved environment identity, canonical structure and generated output, not merely successful exit codes."
+    covered_by: [CP01-S16/R10, CP01-S16/AC14]
+  - key: S17.references
+    text: "Spec 02 synchronisation."
+    covered_by: [CP01-S17/R01, CP01-S17/R02]
+  - key: S17.run.1
+    text: "Implement sync over config + lock + enabled fixture Extensions + selected Agent Pack and its direct skills."
+    covered_by: [CP01-S17/R01, CP01-S17/AC01]
+  - key: S17.run.2
+    text: "Validate the complete supported composition and lock agreement before rendering only Pactwright-managed local integration."
+    covered_by: [CP01-S17/R01, CP01-S17/R03, CP01-S17/AC03]
+  - key: S17.run.3
+    text: "Checkpoint 1 renders no GitHub product workflow."
+    covered_by: [CP01-S17/R05, CP01-S17/AC05]
+  - key: S17.run.4
+    text: "External Production Skills imports remain a Checkpoint 5 capability; report them as unsupported rather than silently dropping or resolving them."
+    covered_by: [CP01-S17/R06, CP01-S17/AC04]
+  - key: S17.run.5
+    text: "Repeated sync with identical locked inputs must be byte-identical."
+    covered_by: [CP01-S17/R02, CP01-S17/AC01, CP01-S17/AC06]
+  - key: S17.expected.1
+    text: "Local generated integration converges without claiming later Production Skills support."
+    covered_by: [CP01-S17/R02, CP01-S17/R06, CP01-S17/AC01, CP01-S17/AC04]
+  - key: S17.verify.1
+    text: "Run sync twice in a fixture and require a clean second run."
+    covered_by: [CP01-S17/AC01]
+  - key: S17.verify.2
+    text: "An unsupported external import or lock mismatch must fail without replacing the previous generated environment; unrelated local files remain unchanged."
+    covered_by: [CP01-S17/R03, CP01-S17/R06, CP01-S17/AC02, CP01-S17/AC03, CP01-S17/AC04]
+  - key: S18.references
+    text: "Spec 02 doctor."
+    covered_by: [CP01-S18/R01]
+  - key: S18.run.1
+    text: "Implement read-only diagnostics for runtime/package-manager state, config/lock consistency, capability/dependency compatibility, migrations, generated local drift and validation failures."
+    covered_by: [CP01-S18/R01, CP01-S18/R06, CP01-S18/AC01, CP01-S18/AC02, CP01-S18/AC03, CP01-S18/AC08]
+  - key: S18.run.2
+    text: "Report available runtime upgrades where determinable."
+    covered_by: [CP01-S18/R02, CP01-S18/AC07]
+  - key: S18.run.3
+    text: "Identify configured external Production Skills imports as unsupported by this release, rather than claiming the full dependency diagnostics implemented in Checkpoint 5."
+    covered_by: [CP01-S18/R03, CP01-S18/AC06]
+  - key: S18.run.4
+    text: "Report healthy / warning / action required with deterministic remediation commands where known."
+    covered_by: [CP01-S18/R04, CP01-S18/R05, CP01-S18/AC01, CP01-S18/AC02]
+    note: "The severity of each finding other than repository revision and migration, and doctor's output contract, are Q47."
+  - key: S18.run.5
+    text: "Do not auto-fix or create a second GitHub reconciler."
+    covered_by: [CP01-S18/R05, CP01-S18/R06, CP01-S18/AC08, CP01-S18/AC09]
+  - key: S18.expected.1
+    text: "Environment problems can be diagnosed without mutation and the reported capability boundary matches the installed release."
+    covered_by: [CP01-S18/R03, CP01-S18/R06, CP01-S18/AC06, CP01-S18/AC08]
+  - key: S18.verify.1
+    text: "Run healthy, lock-drift, missing-capability, pending-migration and unsupported-import fixtures."
+    covered_by: [CP01-S18/AC01, CP01-S18/AC02, CP01-S18/AC03, CP01-S18/AC06]
+  - key: S18.verify.2
+    text: "Prove doctor performs no writes and gives concrete remediation only when supported and deterministic."
+    covered_by: [CP01-S18/R05, CP01-S18/R06, CP01-S18/AC02, CP01-S18/AC08, CP01-S18/AC09]
+  - key: S18.verify.3
+    text: "Include partial-input diagnostics, preserved inactive Extension data, recognised migration-required formats and unavailable repository revision."
+    covered_by: [CP01-S18/R07, CP01-S18/R08, CP01-S18/AC03, CP01-S18/AC04, CP01-S18/AC05]
+  - key: S18.verify.4
+    text: "The last is a warning for otherwise valid local graph inspection, but action required for a requested pinned execution/replay."
+    covered_by: [CP01-S18/R07, CP01-S18/AC05]
+  - key: S18.verify.5
+    text: "An incomplete active load or required migration is action required for activation, never healthy."
+    covered_by: [CP01-S18/R08, CP01-S18/AC03]
+  - key: S18.verify.6
+    text: "Prove each severity separately, with no repair, Git mutation or replay record from a preflight refusal."
+    covered_by: [CP01-S18/R06, CP01-S18/R07, CP01-S18/AC01, CP01-S18/AC03, CP01-S18/AC05, CP01-S18/AC08]
+    note: "AC01 proves healthy, AC05 warning and action required for repository revision, and AC03 action required; AC08 proves no write for every fixture."
+  - key: S19.references
+    text: "Spec 02 upgrade model; Implementation Guide package/release rules."
+    covered_by: [CP01-S19/R01, CP01-S19/R03, CP01-S19/R05]
+    note: "Guide package rules apply through the packed fixture runtimes of AC01 to AC05."
+  - key: S19.run.1
+    text: "Implement:"
+    covered_by: [CP01-S19/R01, CP01-S19/R04]
+  - key: S19.run.2
+    text: "pactwright upgrade"
+    covered_by: [CP01-S19/R04, CP01-S19/AC01]
+  - key: S19.run.3
+    text: "pactwright upgrade --to <version>"
+    covered_by: [CP01-S19/R04, CP01-S19/AC02]
+  - key: S19.run.4
+    text: "The runtime upgrade flow must:"
+    covered_by: [CP01-S19/R01]
+  - key: S19.run.5
+    text: "- detect the project package manager from explicit declaration or unambiguous lock state;"
+    covered_by: [CP01-S19/R02, CP01-S19/AC03]
+  - key: S19.run.6
+    text: "- resolve the target Pactwright release;"
+    covered_by: [CP01-S19/R01, CP01-S19/R04, CP01-S19/AC01]
+  - key: S19.run.7
+    text: "- delegate package replacement to that package manager;"
+    covered_by: [CP01-S19/R01, CP01-S19/R03, CP01-S19/AC01, CP01-S19/AC12]
+  - key: S19.run.8
+    text: "- re-enter through the newly installed Pactwright runtime;"
+    covered_by: [CP01-S19/R01, CP01-S19/AC01, CP01-S19/AC12]
+    note: "The re-entry mechanism is Q48."
+  - key: S19.run.9
+    text: "- validate the complete resolved environment;"
+    covered_by: [CP01-S19/R01, CP01-S19/AC01]
+  - key: S19.run.10
+    text: "- run explicit versioned migrations where required;"
+    covered_by: [CP01-S19/R01, CP01-S19/AC07]
+  - key: S19.run.11
+    text: "- update `.pactwright/lock.yml`;"
+    covered_by: [CP01-S19/R01, CP01-S19/AC01]
+  - key: S19.run.12
+    text: "- run `pactwright sync` and `pactwright validate` using the new runtime."
+    covered_by: [CP01-S19/R01, CP01-S19/AC01]
+  - key: S19.run.13
+    text: "`pactwright upgrade` upgrades the runtime only. It must not silently change Agent Pack or Extension identity or major-upgrade them."
+    covered_by: [CP01-S19/R03, CP01-S19/AC04]
+  - key: S19.run.14
+    text: "`--to` supports explicit forward upgrade or rollback target selection."
+    covered_by: [CP01-S19/R04, CP01-S19/AC02]
+  - key: S19.run.15
+    text: "If the target environment cannot complete safely, canonical Project Graph state must not be left partially migrated and enough prior package/config/lock state must remain to recover or explicitly target the previous runtime."
+    covered_by: [CP01-S19/R05, CP01-S19/AC05]
+    note: "Where the preserved prior state is kept is Q48."
+  - key: S19.expected.1
+    text: "Pactwright can safely replace its own runtime without becoming a second package manager or corrupting canonical state."
+    covered_by: [CP01-S19/R03, CP01-S19/R05, CP01-S19/AC05, CP01-S19/AC12]
+  - key: S19.verify.1
+    text: "Use packed fixture runtime versions to prove latest-compatible upgrade, explicit `--to` upgrade/rollback, package-manager detection, new-runtime re-entry, unchanged Agent Pack/Extension identities, migration execution and failed-target recovery with the previous valid Project Graph/config/lock intact."
+    covered_by: [CP01-S19/AC01, CP01-S19/AC02, CP01-S19/AC03, CP01-S19/AC04, CP01-S19/AC05, CP01-S19/AC07]
+  - key: S19.verify.2
+    text: "Use a released `0.0.1` project with core records, an enabled fixture Extension's records in `specs/nodes/`, its tuples in `specs/graph/edges.yml`, configuration v1, lifecycle v1/stages and the unversioned lock."
+    covered_by: [CP01-S19/R06, CP01-S19/AC06]
+  - key: S19.verify.3
+    text: "Exercise Spec 02 §15's named `released-0.0.1-to-owned-stores-v1` migration through new-runtime re-entry."
+    covered_by: [CP01-S19/R06, CP01-S19/AC07]
+  - key: S19.verify.4
+    text: "Before explicit upgrade, ordinary load/validate/doctor report the recognised native/migration-required dispositions without writes."
+    covered_by: [CP01-S19/R06, CP01-S19/AC06]
+  - key: S19.verify.5
+    text: "Migration preserves core IDs/content/actor attribution, moves only unambiguously owned Extension data to its declared owner root, preserves tuples, retains chosen component constraints and actor-kind settings, and writes an exact version-1 lock."
+    covered_by: [CP01-S19/R07, CP01-S19/AC07]
+  - key: S19.verify.6
+    text: "A complete legacy source is permitted as migration input; arbitrary partial/current parse failures are not."
+    covered_by: [CP01-S19/R06, CP01-S19/AC08]
+  - key: S19.verify.7
+    text: "Require separate results for disabled/removed/ambiguous ownership, target collision, missing declared owner migration, malformed source, stale policy/base and forced write/validation/sync failure: each leaves no partial graph move and preserves recovery to the complete source environment."
+    covered_by: [CP01-S19/R08, CP01-S19/AC08]
+  - key: S19.verify.8
+    text: "Include intentional empty/null-edge migration to `edges: []`, and non-Markdown core-store entries such as `.DS_Store` preserved with a prerequisite for explicit owner remediation, never silently discarded."
+    covered_by: [CP01-S19/R09, CP01-S19/AC09]
+  - key: S19.verify.9
+    text: "Include a legacy scalar requiring value-preserving representation under the pinned YAML profile."
+    covered_by: [CP01-S19/R09, CP01-S19/AC09]
+  - key: S19.verify.10
+    text: "Prove explicit rollback restores the recognised original layout/lock or fails recoverably before exposing new-format stores to the older runtime."
+    covered_by: [CP01-S19/R10, CP01-S19/AC10]
+    note: "Whether rollback uses a reverse migration or restores preserved bytes is Q49."
+  - key: S19.verify.11
+    text: "Preserve historical `sha256:` provenance unchanged; do not relabel it `pg1:`."
+    covered_by: [CP01-S19/R10, CP01-S19/AC11]
+  - key: S19.verify.12
+    text: "No old acceptance result is carried forward across a changed definition or revision protocol."
+    covered_by: [CP01-S19/R10, CP01-S19/AC11]
+  - key: S20.references
+    text: "Implementation Guide GitHub Actions baseline."
+    covered_by: [CP01-S20/R01, CP01-S20/R02, CP01-S20/R03, CP01-S20/R04, CP01-S20/R05, CP01-S20/R06]
+  - key: S20.run.1
+    text: "Create repository-owned `.github/workflows/ci.yml` using least privilege, SHA-pinned actions, frozen install, `pnpm verify`, bounded timeout/concurrency and no pull_request_target."
+    covered_by: [CP01-S20/R01, CP01-S20/R02, CP01-S20/AC01, CP01-S20/AC03, CP01-S20/AC04]
+    note: "Which events trigger the workflow and whether it is a required status check are Q53."
+  - key: S20.run.2
+    text: "This is repository engineering infrastructure, not generated Pactwright product integration."
+    covered_by: [CP01-S20/R04, CP01-S20/AC06, CP01-S17/AC02]
+    note: "CP01-S17/AC02 proves sync leaves a user workflow under .github/workflows/ unchanged."
+  - key: S20.expected.1
+    text: "A clean checkout proves the same repository gate used locally."
+    covered_by: [CP01-S20/R01, CP01-S20/R06, CP01-S20/AC01, CP01-S20/AC02, CP01-S20/AC05]
+    allocated_to: CP01-S25
+    note: "The local gate checks crosswalk quotes against Git history, so R06 requires the CI checkout to hold it. Step 25 requires this CI to pass for the self-hosted repository."
+  - key: S20.verify.1
+    text: "Run `pnpm verify` and inspect workflow hardening."
+    covered_by: [CP01/R01, CP01/AC01, CP01-S20/AC03, CP01-S20/AC04, CP01-S20/AC06]
+  - key: S21.references
+    text: "Implementation Guide npm release model."
+    covered_by: [CP01-S21/R01, CP01-S21/R02, CP01-S21/R03, CP01-S21/R04, CP01-S21/R05, CP01-S21/R06, CP01-S21/R07]
+  - key: S21.run.1
+    text: "Create repository-owned `.github/workflows/release.yml` following the trusted-release contract: exact tagged source, frozen install, verify, publish dry-run, OIDC publishing after bootstrap, registry verification, no npm publish token."
+    covered_by: [CP01-S21/R01, CP01-S21/R03, CP01-S21/R04, CP01-S21/R07, CP01-S21/AC01, CP01-S21/AC02, CP01-S21/AC04, CP01-S21/AC05, CP01-S21/AC07]
+    note: "The npm trusted-publisher bootstrap was completed for 0.0.1. How the npm-release environment and trusted-publisher configuration are evidenced is Q56."
+  - key: S21.expected.1
+    text: "A version tag can later release accepted source reproducibly."
+    covered_by: [CP01-S21/R01, CP01-S21/R02, CP01-S21/R06, CP01-S21/AC03, CP01-S21/AC04, CP01-S21/AC06]
+    allocated_to: CP01-S28
+    note: "Step 21 proves the workflow without publishing; Step 28 runs it on the v0.0.2 tag. Which checkpoint-to-version mapping governs is Q54, and whether a rerun may resume recursive publishing is Q55."
+  - key: S21.verify.1
+    text: "Validate workflow syntax, permissions and release assertions."
+    covered_by: [CP01-S21/R02, CP01-S21/R03, CP01-S21/AC01, CP01-S21/AC02, CP01-S21/AC03, CP01-S21/AC04, CP01-S21/AC07]
+open_questions:
+  - id: Q01
+    affects: [CP01-S01/R05, CP01-S02/R06, CP01-S03/R01]
+    question: "Where does the loader find Pactwright configuration, lifecycle configuration, core records and typed edges, and in which serialisations? Must the layout stay readable by the released 0.0.1 runtime?"
+  - id: Q02
+    affects: [CP01-S01/R06, CP01-S02/AC05, CP01-S05/R02]
+    question: "When an input cannot be parsed, does loading fail as a whole or return the parseable remainder with problems for validate (Step 9) and doctor (Step 18) to report? How are absent inputs and unrecognised files in graph storage treated?"
+  - id: Q03
+    affects: [CP01-S01/R05, CP01-S01/R07, CP01-S01/R08, CP01-S01/R09, CP01-S01/AC10]
+    question: "Should the Step 1 loader accept configuration that declares Extensions or enables GitHub as inert data, reject it, or report it as unsupported?"
+  - id: Q04
+    affects: [CP01-S01/R01]
+    question: "Does the runtime package stay at the repository root or move to packages/pactwright/ as Spec 08 §4 and §6 describe?"
+  - id: Q05
+    affects: [CP01-S02/R06, CP01-S02/R07, CP01-S02/AC05]
+    question: "What is a core record's canonical identity: how is it represented and assigned, is the record type part of it, and what makes one malformed? How is a changed identity of an existing record told apart from removing one record and adding another, and must it be rejected?"
+  - id: Q06
+    affects: [CP01-S02/R07, CP01-S03/R01]
+    question: "What does immutability cover and what is it checked against: every stored record, including an unresolved Intent? The current stored graph or Git history? May a record or typed edge be removed or changed in place?"
+  - id: Q07
+    affects: [CP01-S02/R07, CP01-S05/R02]
+    question: "Is a record's canonical content its stored bytes or a normalised form? Does a formatting-only edit count as an in-place change or change the Project Graph revision?"
+  - id: Q08
+    affects: [CP01-S02/R04]
+    question: "Which items that Spec 01 says Intent, Contract, Brief and Evidence own are mandatory schema rules, and is each a structured field or prose? Are the content exclusions and qualities in Spec 01 §§7, 9, 10, 11 and 14 (what a record must not contain, a concise rationale) schema rules or review judgements?"
+  - id: Q09
+    affects: [CP01-S02/R05]
+    question: "Does a Decision record only the kind of its authorised actor (human, agent, automation) or an actor identity as well?"
+  - id: Q10
+    affects: [CP01-S03/R03, CP01-S03/R05, CP01-S04/R01]
+    question: "Does the core same-type supersedes relation apply to Intents and to Extension-owned node types, or do Extensions register their own supersession relations?"
+  - id: Q11
+    affects: [CP01-S03/R05, CP01-S04/R06]
+    question: "Is branching supersession (one record superseded by several, or superseding several) illegal, and is it rejected by edge validation (Step 3), failed as ambiguous lineage (Step 4) or left to validation rule 8 (Step 9)?"
+  - id: Q12
+    affects: [CP01-S03/R06]
+    question: "Beyond replacing a core relation's endpoint constraints, which registrations count as weakening core constraints, such as relaxing same-type or acyclicity rules or reusing a core relation name?"
+  - id: Q13
+    affects: [CP01-S03/R03, CP01-S05/R03]
+    question: "How are stored edges of an unregistered relation treated, including preserved edges of a disabled or removed Extension: rejected, retained and excluded from the Project Graph revision, or reported?"
+  - id: Q14
+    affects: [CP01-S04/R01, CP01-S04/R06]
+    question: "Are several unsuperseded Briefs for one current Contract, or several Evidence records for one current Brief, an ambiguous lineage or legitimate concurrent work?"
+  - id: Q15
+    affects: [CP01-S04/R02, CP01-S04/R06]
+    question: "May a reject or defer Decision supersede a proceed Decision, and what is the status of the withdrawn proceed Decision's Contract, which has no same-type replacement?"
+  - id: Q16
+    affects: [CP01-S04/R02]
+    question: "Must lineage derivation check a Decision's recorded actor against lifecycle policy, or is unauthorised-Decision detection left to Step 7 guards and Step 9 validation?"
+  - id: Q17
+    affects: [CP01-S05/R01, CP01-S05/AC01, CP01-S05/AC02]
+    question: "Which repository state does the repository revision identify (commit, tree, or commit plus working tree), and how must it behave with uncommitted, untracked or ignored changes or without Git?"
+  - id: Q18
+    affects: [CP01-S05/R02, CP01-S05/R05]
+    question: "Which hash algorithm and canonical serialisation does the Project Graph revision use, and must it be stable across runtime versions and platforms?"
+  - id: Q19
+    affects: [CP01-S05/R03]
+    question: "Step 5 now needs a fixture registration seam for Extension-owned record types. Which step owns that seam (the Step 2 record model or Step 5), and how does Step 16 replace the fixture with installed Extensions?"
+  - id: Q20
+    affects: [CP01-S01/R05, CP01-S02/R07, CP01-S03/R06, CP01-S04/R01]
+    question: "Should the later contracts carry these obligations, which v17 does not state at the named steps: Step 7 mutations refuse in-place rewrites through the Step 2 check; Step 16 re-runs CP01-S03/AC06 to AC09 and exercises Step 4 derivation through the fixture Extension loader, beyond the graph contribution registration and core-redefinition failure its v17 text already requires; Steps 6, 11, 14 and 15 load their real formats through the Step 1 loader?"
+  - id: Q21
+    affects: [CP01-S06/R02, CP01-S06/R05, CP01-S06/R07, CP01-S06/R10, CP01-S06/AC03, CP01-S06/AC04, CP01-S06/AC05,
+      CP01-S06/AC06, CP01-S06/AC07, CP01-S06/AC08, CP01-S06/AC10, CP01-S07/AC03, CP01-S07/AC12, CP01-S08/AC01,
+      CP01-S08/AC02, CP01-S08/AC03, CP01-S08/AC08, CP01-S09/R05, CP01-S09/AC01]
+    question: "Core §27 recognises only the released lifecycle `version: 1` / `stages` policy format and treats an unreleased `version: 2` draft as unsupported, and the built-in direct shape (Core §20) has no Gate or corrective route. Where and in what format does Checkpoint 1 declare lifecycle shapes, Gates, corrective transitions, iteration limits and any escalation at an exhausted limit, so that the Gate, corrective-route and bounded-loop criteria of Steps 6-8 and validation rules 9-11 and 15 have configuration to exercise: built-in shapes only, test-only fixture shapes, or a new explicitly versioned lifecycle schema with its migration?"
+  - id: Q22
+    affects: [CP01-S06/R03, CP01-S06/R08, CP01-S06/AC03, CP01-S06/AC04, CP01-S06/AC07, CP01-S07/R09, CP01-S07/AC03,
+      CP01-S07/AC12, CP01-S08/AC01, CP01-S08/AC02, CP01-S08/AC08, CP01-S09/R05, CP01-S09/AC01]
+    question: "How does lifecycle policy declare the authority a Gate requires, and how are a Gate resolution and its actor recorded in execution state? Does a Gate resolution use the Decision actor syntax `<kind>:<identity>` with kind-only authorisation, or another authority model?"
+  - id: Q23
+    affects: [CP01-S06/R04, CP01-S06/R07, CP01-S06/AC07, CP01-S06/AC10, CP01-S06/AC13, CP01-S08/R05, CP01-S08/AC05]
+    question: "Core §28 leaves the storage path of lifecycle execution state to the implementation, but Core §56 makes the repository revision unavailable while non-ignored untracked files exist and requires written provenance to be committed before the next pinned run. Must execution state be ignored, committed or kept outside the repository so that ordinary lifecycle progress does not make the repository revision unavailable?"
+  - id: Q24
+    affects: [CP01-S06/R06, CP01-S06/AC01, CP01-S06/AC10, CP01-S09/R05, CP01-S09/AC01]
+    question: "Core §§23 and 28 leave the resolved-shape identity mechanism unresolved. What must execution state record to identify the resolved direct shape, and what do validation rules 9 (missing lifecycle shape) and 10 (unresolved or incompatible shape identity) check in Checkpoint 1?"
+  - id: Q25
+    affects: [CP01-S06/R09, CP01-S06/AC05, CP01-S06/AC11, CP01-S07/R09, CP01-S07/R10, CP01-S07/AC12, CP01-S09/R05]
+    question: "How does the runtime identify the latest delivered state and detect a delivery change after Review (for example by repository revision, working-tree content or an execution-state counter), and where is the closing Review outcome recorded so that the closure guard can read it? Core §§32 and 52 fix no Review-result vocabulary."
+  - id: Q26
+    affects: [CP01-S08/R01, CP01-S08/R02, CP01-S08/R03, CP01-S08/AC01, CP01-S08/AC02]
+    question: "Step 8 precedes Agent Pack capabilities (Step 10) and adapter commands (Step 12). What may `lifecycle run` dispatch at Step 8, and through which invocation seam? Do `status` and `next` name the Contract-crafting responsibilities (capture-intent, propose-contracts, approve-contract, write-brief) as lifecycle actions alongside shape steps, given that they are policy entries but not shape steps?"
+  - id: Q27
+    affects: [CP01-S08/R01, CP01-S08/R02, CP01-S08/R03, CP01-S08/R07, CP01-S08/AC09]
+    question: "Do `lifecycle status`, `next` and `run` operate on one selected Intent or Brief, or across every active direction? What is reported and run when several independent Intent directions are active at once?"
+  - id: Q28
+    affects: [CP01-S09/R04, CP01-S09/R06, CP01-S09/AC04, CP01-S09/AC05, CP01-S19/AC11]
+    question: "Which execution-provenance record, location and format do rule 17 and the historical policy check read? No Checkpoint 1 step before Step 9 writes execution provenance: do Step 9 fixtures define it, or does a later step own it? For a read-only `validate` of recorded provenance, what do a dirty input base and refusing without an attempt or replay record mean, given that validate performs no execution?"
+  - id: Q29
+    affects: [CP01-S09/R09, CP01-S09/R10, CP01-S09/AC08, CP01-S09/AC09]
+    question: "Which records make up the default Delivery context's current relevant Contract/Brief lineage (for example the Intent, the current Decision and its rationale, or earlier Evidence)? How does a caller explicitly require excluded history, and how is included non-current history distinguished from current lineage? What namespace, ordering and size rules apply to Extension context contributions?"
+  - id: Q30
+    affects: [CP01-S09/R01, CP01-S09/R04, CP01-S09/R07, CP01-S09/R11, CP01-S09/AC04, CP01-S09/AC06, CP01-S09/AC11]
+    question: "What exit status and output contract does `pactwright validate` have: how are errors, warnings, inactive or unsupported components and unavailable verification (such as a historical policy or replay check) distinguished, and is machine-readable output required? Is a historical actor-kind incompatibility of a withdrawn Decision a validation failure or only a reported compatibility result? Core §57 names unavailable execution authority as a distinct diagnostic category: what makes authority unavailable, as distinct from an incomplete load of the lifecycle configuration?"
+  - id: Q31
+    affects: [CP01-S06/R08, CP01-S06/AC02, CP01-S06/AC08, CP01-S07/R07, CP01-S07/AC04, CP01-S08/R01, CP01-S08/AC02]
+    question: "Lifecycle `version: 1` defines `actor` only for approve-contract. What does `execution: manual` mean for deliver-brief, review and prepare-evidence, and what required actor does `lifecycle status` report for them? Do reject and defer Decisions use the approve-contract entry, as CP01-S07/AC04 assumes?"
+  - id: Q32
+    affects: [CP01-S06/R04, CP01-S06/R11, CP01-S06/AC12, CP01-S07/R06, CP01-S07/AC06, CP01-S08/R03, CP01-S08/R05,
+      CP01-S08/AC10]
+    question: "Core §55 serialises canonical mutations only. How are writes to lifecycle execution state serialised when two `lifecycle run` invocations or Gate resolutions for the same Brief race, so that neither loses the other's progress or double-counts an iteration?"
+  - id: Q33
+    affects: [CP01-S08/R03, CP01-S09/R09, CP01-S10/R05, CP01-S12, CP01-S24]
+    question: "Should the later contracts carry these obligations, which their version 20 prose does not state: Step 24 (or another later step) runs real Agent Pack capabilities through `lifecycle run`, beyond Step 8's instrumented invoker; and Agent Packs (Step 10) and the adapter (Step 12) consume the Step 9 context-assembly API rather than assembling context themselves?"
+  - id: Q34
+    affects: [CP01-S11/R01, CP01-S11/R09, CP01-S11/AC01, CP01-S11/AC04, CP01-S15/AC07, CP01-S17/AC06]
+    question: "Step 11 requires `agent-pack use` to lock exact identity and run sync, but the resolved lock and `environment_lock_hash` arrive with Step 15, adapter rendering with Step 12 and deterministic sync with Step 17. What does Step 11 write to `.pactwright/lock.yml` and run as sync before those steps exist, and must Steps 15 and 17 repeat the selection and upgrade proofs through the real lock and sync?"
+  - id: Q35
+    affects: [CP01-S11/R01, CP01-S11/R02, CP01-S11/R04, CP01-S11/R08, CP01-S11/AC01, CP01-S11/AC02, CP01-S11/AC04, CP01-S11/AC05, CP01-S11/AC06, CP01-S11/AC09, CP01-S11/AC10, CP01-S11/AC11, CP01-S11/AC12, CP01-S13/R06]
+    question: "Which source forms does `agent-pack use <source>` accept (package name, name with version or range, local path or tarball)? Must the package already be installed, as Step 23 installs packed artefacts first, or do `use` and `upgrade` delegate installation to the project package manager under Spec 02 section 15, whose package-manager detection is specified only at Step 19?"
+  - id: Q36
+    affects: [CP01-S10/R02, CP01-S10/R04, CP01-S10/R07, CP01-S10/R08, CP01-S10/AC01, CP01-S10/AC02, CP01-S10/AC04, CP01-S10/AC05, CP01-S10/AC07, CP01-S11/AC02, CP01-S11/AC05]
+    question: "Spec 02 section 5 describes Agent Pack content only conceptually. What format declares a pack's capability mappings, agents, prompts, direct skills and evaluation cases, and how does a pack declare its compatible runtime versions, so that the incompatible-runtime and capability-check criteria have a defined input?"
+  - id: Q37
+    affects: [CP01-S12/R07, CP01-S12/R08, CP01-S12/R13, CP01-S12/AC03, CP01-S12/AC11, CP01-S06/R09, CP01-S12/AC07]
+    question: "The agent executing `/deliver-brief` or `/review` has write access to the repository. How does the runtime keep it from mutating the Delivery Graph directly: prevent the write, detect an out-of-band canonical change and refuse progression, or leave the change to `pactwright validate`? CP01-S12/AC03 assumes detection and refusal to advance."
+  - id: Q38
+    affects: [CP01-S12/R03, CP01-S12/R04, CP01-S12/R05, CP01-S12/R06, CP01-S12/R07, CP01-S12/R08, CP01-S12/R09, CP01-S12/R11, CP01-S12/R12, CP01-S12/AC02, CP01-S12/AC04, CP01-S12/AC08, CP01-S12/AC09, CP01-S12/AC11, CP01-S06/R09, CP01-S08/R03, CP01-S12/AC03, CP01-S12/AC07]
+    question: "Which capability does each adapter command invoke? Core section 35 assigns delivery-specification to Intent, alternatives, selection, Contract and Brief work, but names none for `/prepare-evidence`. How does a Claude Code command reach the runtime mutation API, given that CP01-S08 assumes no separate CLI mutation command and Principles section 11 lists no mutating runtime command for these responsibilities?"
+  - id: Q39
+    affects: [CP01-S13/R01, CP01-S13/R05, CP01-S13/AC01, CP01-S13/AC05, CP01-S13/AC08, CP01-S08/R03, CP01-S24]
+    question: "How does `pactwright eval` execute capabilities and semantic judgement: live model calls through the adapter, a runtime-invoked provider, or recorded outputs? Which judge performs semantic assertions, how is it identified and pinned so that baseline and candidate results are comparable, and what does eval need when no model is available, as in CI?"
+  - id: Q40
+    affects: [CP01-S13/R02, CP01-S13/R06, CP01-S13/R07, CP01-S13/AC01, CP01-S13/AC06, CP01-S13/AC07, CP01-S13/AC08, CP01-S28]
+    question: "What do `--baseline <released-pack-or-baseline>` and `--candidate <candidate-pack-or-environment>` accept (a package specifier, a stored evaluation result or a resolved lock/environment)? When is a case a regression, particularly for semantic results that vary between runs? Where are evaluation results written, and are they committed?"
+  - id: Q41
+    affects: [CP01-S14/R04, CP01-S14/R05, CP01-S14/R08, CP01-S14/AC03, CP01-S14/AC04, CP01-S14/AC05, CP01-S14/AC08, CP01-S16/R10, CP01-S16/AC14, CP01-S16/AC15, CP01-S17/AC06]
+    question: "Step 14 requires a documented init selection input but forbids the runbook from inventing a canonical CLI flag, and Spec 02 section 3 names only `--with` and `--github`. Which document owns the input's form? Before Step 16 delivers Extension installation, which compositional init does Step 14's explicit selection during one-shot init exercise? When one-shot init is refused for a missing or incompatible choice, does the plain scaffold remain or is the repository left unchanged?"
+  - id: Q42
+    affects: [CP01-S14/R01, CP01-S14/R03, CP01-S14/AC01, CP01-S14/AC02, CP01-S15/R01, CP01-S15/R06, CP01-S15/AC06, CP01-S15/AC11, CP01-S17/R06, CP01-S17/AC03, CP01-S18/R04, CP01-S18/AC02]
+    question: "Core section 54 lists `.pactwright/lock.yml` as a required input, and Core section 56 gives no Project Graph revision when a required input fails, but a plain scaffold has no selected pack to resolve. Does plain init write a lock, and with what content? Is a missing lock in an unactivated scaffold an incomplete load, and is the empty scaffold's graph hashable?"
+  - id: Q43
+    affects: [CP01-S16/R03, CP01-S16/R06, CP01-S16/AC01, CP01-S16/AC03, CP01-S16/AC07, CP01-S17/AC06, CP01-S11/R09]
+    question: "Extension add and upgrade must run `pactwright sync`, but deterministic sync is Step 17 and `requires` can name only earlier steps. What does Step 16 run as sync before Step 17 exists, and must Step 17 repeat the Extension add and upgrade proofs through real sync, as CP01-S17/AC06 does for agent-pack use and upgrade?"
+  - id: Q44
+    affects: [CP01-S16/R12, CP01-S16/AC03, CP01-S16/AC06, CP01-S19/R02, CP01-S19/AC03, CP01-S11/R08, CP01-S11/AC10]
+    question: "Spec 02 section 15 specifies package-manager detection for runtime upgrade, which is Step 19, but Step 16 already delegates Extension installation to the project package manager, and Q35 asks the same for agent-pack use. Which step owns detection, and must Step 16 apply the Step 19 rule?"
+  - id: Q45
+    affects: [CP01-S15/R05, CP01-S15/AC01, CP01-S15/AC02, CP01-S15/AC03, CP01-S15/AC11, CP01-S09/R06, CP01-S09/AC05, CP01-S12/R13]
+    question: "Spec 02 section 12 requires a deterministic `environment_lock_hash` from the exact resolved lock state but defines no algorithm, canonical form or prefix, unlike pg1 for the graph revision. Which hash protocol does it use, must it be stable across runtime versions and platforms, and does it hash the lock bytes or their parsed meaning, so that a formatting-only lock change does or does not change it?"
+  - id: Q46
+    affects: [CP01-S15/R07, CP01-S15/AC08, CP01-S17/R06, CP01-S17/AC04, CP01-S18/R03, CP01-S18/AC06, CP01-S10/R07, CP01-S10/R08, CP01-S10/AC05]
+    question: "Spec 02 sections 5 to 7 do not say how a Checkpoint 1 Agent Pack or configuration declares an external Production Skills import. Which field identifies one, so that Steps 15, 17 and 18 can report it as unsupported? Does an unsupported import block the whole environment, as these contracts assume, or only the capabilities bound to it?"
+  - id: Q47
+    affects: [CP01-S18/R01, CP01-S18/R02, CP01-S18/R04, CP01-S18/R05, CP01-S18/R07, CP01-S18/AC02, CP01-S18/AC04, CP01-S18/AC05, CP01-S18/AC07, CP01-S18/AC10, CP01-S17/AC03, CP01-S06/R04]
+    question: "Spec 02 section 16 names three severities but assigns one only to an unavailable repository revision and a required migration. Which severity does each other finding have, such as lock drift, generated drift, a missing capability, preserved inactive data and an available upgrade? What exit status and machine-readable output does doctor have (compare Q30 for validate)?"
+  - id: Q48
+    affects: [CP01-S19/R01, CP01-S19/R05, CP01-S19/R06, CP01-S19/R12, CP01-S19/AC01, CP01-S19/AC05, CP01-S19/AC07, CP01-S19/AC12, CP01-S19/AC14, CP01-S18/R05, CP01-S18/AC02, CP01-S11/R04, CP01-S16/R06, CP01-S06/R04, CP01-S12/R13, CP01-S10/R08]
+    question: "How does the old runtime re-enter the newly installed runtime, and what hand-off state lets the new runtime or `upgrade --to` recover when a step after package replacement fails? Where is the preserved previous package, configuration, lock and graph state kept, and is it committed, ignored or removed after success?"
+  - id: Q49
+    affects: [CP01-S19/R10, CP01-S19/AC10, CP01-S06/R04, CP01-S10/R08]
+    question: "Spec 02 section 15 requires rollback to restore or migrate back to the recognised original format, but defines only the forward `released-0.0.1-to-owned-stores-v1` migration. Does rollback restore preserved original bytes or run a reverse migration, and is rollback to 0.0.1 supported after new canonical records were written in the owner-separated format?"
+  - id: Q50
+    affects: [CP01-S16/R07, CP01-S16/R08, CP01-S16/AC09, CP01-S16/AC10, CP01-S17/AC06]
+    question: "Spec 02 section 3 keeps an enabled or disabled state for each configured Extension, and section 10 requires disable to preserve data, but the command surface lists only `extension add`, `remove` and `upgrade`. Which command disables and re-enables an Extension, and how do disable and remove differ in configuration, lock and package state?"
+  - id: Q51
+    affects: [CP01-S16/R06, CP01-S16/AC07, CP01-S16/AC08, CP01-S19/R07, CP01-S19/R10]
+    question: "Spec 02 section 11 requires a new `graph.format_version` with explicit compatibility or migration, and section 15 an owner's declared source-to-target format migration, but neither defines how an Extension package declares a migration. Which manifest field and registration export declare it, and how is a migration's identity locked?"
+  - id: Q52
+    affects: [CP01-S20/R05, CP01-S20/AC01, CP01-S20/AC03, CP01-S20/AC04, CP01-S01/R02]
+    question: "The Implementation Guide forbids claiming compatibility that CI or package smoke tests do not exercise, and the runtime's engines range claims Node 22 and 24. Must CI run `pnpm verify` on every claimed Node major, or may the Step 22-23 packed-consumer smoke tests carry part of the claim? Which operating systems must CI cover?"
+  - id: Q53
+    affects: [CP01-S20/R01, CP01-S20/R02, CP01-S20/R07, CP01-S20/AC01, CP01-S20/AC02, CP01-S20/AC03, CP01-S20/AC04, CP01-S20/AC06, CP01-S25]
+    question: "Which events trigger ci.yml (pull requests, pushes to the default branch, a merge queue)? Must it be a required status check before merge? Branch protection is repository configuration outside the committed files; who configures it and how is it evidenced?"
+  - id: Q54
+    affects: [CP01-S21/R02, CP01-S21/AC01, CP01-S21/AC02, CP01-S28]
+    question: "The Implementation Guide maps Checkpoint 1 to 0.0.1 and Checkpoint 2 to 0.0.2, but this checkpoint publishes the corrective 0.0.2. Which version does Checkpoint 2 publish, and should the Guide's mapping be amended?"
+  - id: Q55
+    affects: [CP01-S21/R05, CP01-S21/R06, CP01-S21/AC01, CP01-S21/AC02, CP01-S21/AC05, CP01-S21/AC06, CP01-S21/AC08, CP01-S28]
+    question: "The Guide allows recursive publishing to resume only where skipping already published immutable versions has been verified safe. Does `pnpm publish -r` skip them safely under trusted publishing, and must Step 21 prove that with a fixture registry, or is review sufficient until the Step 28 release?"
+  - id: Q56
+    affects: [CP01-S21/R03, CP01-S21/R04, CP01-S21/R07, CP01-S21/AC05, CP01-S21/AC07, CP01-S28]
+    question: "The npm-release environment's protection rules and each package's npm trusted-publisher configuration live outside the repository. Must each publish have a human approval binding through the environment, and how are the environment and trusted-publisher configuration evidenced for acceptance?"
+  - id: Q57
+    affects: [CP01-S22, CP01-S23, CP01-S26, CP01-S27, CP01-S28]
+    question: "Step 22 says only \"Inspect both archives\" and \"Real consumer artefacts exist for both components\". What must the inspection establish, how are the archives identified so that later steps install exactly the same bytes, which later steps must repack their own revision, and in what form does the packed runtime manifest pin its dependency on @pactwright/standard once pnpm rewrites the workspace protocol?"
+  - id: Q58
+    affects: [CP01-S23, CP01-S24]
+    question: "Before Step 28 publishes, the runtime archive's exact dependency on @pactwright/standard cannot resolve from the registry. Which override supplies the standard archive, is it the fixture's only deviation from a published consumer, what negative cases prove that installation is not selection, and where do the packed fixture Extension for one-shot init and the defective Extension for rule 16 come from when the published archives expose no fixture entry point?"
+  - id: Q59
+    affects: [CP01-S24, CP01-S12/AC03, CP01-S12/AC08, CP01-S12/AC10, CP01-S08/R03]
+    question: "Step 24 is the first step in which real Agent Pack agents execute. Who runs the seven commands and how are provider, model and pack identities recorded; who authorises the fixture Contract under the released manual human policy; which accepted criteria does \"the complete core invariant suite through the assembled runtime\" re-execute, on which revision; where exactly does lifecycle run stop at each position under the released policy; and which validation rules, closure guards and mutation boundaries can the packed consumer itself exercise?"
+  - id: Q60
+    affects: [CP01-S25, CP01/R02, CP01/AC02, CP01-S19/R07, CP01-S15/R03]
+    question: "The candidate branch holds no Pactwright project state while the default branch holds self-hosted state in the unversioned lock format. Does Step 25 start from a fresh init or migrate that state through Step 19's released-format migration; how does lock agreement treat the pack installed as a workspace link and a later edit to it; what is \"the repository process available before Checkpoint 2\" and who lands the self-hosting state; and from which acceptance does the checkpoint's self-hosting obligation apply?"
+  - id: Q61
+    affects: [CP01-S26, CP01-S27]
+    question: "Who is the human actor whose Decision authorises the public-content Contracts of Steps 26 and 27; what makes \"behaviour proven in this checkpoint\" and \"only document proven behaviour\" verifiable; which core distribution commands must the learning material cover; must install instructions name the exact version before 0.0.2 is published; and what do the headings \"Complete the 0.0.1 public learning path\" and \"Publish 0.0.1\" and Step 27's \"install/execute/upgrade 0.0.1\" mean when the release is 0.0.2?"
+  - id: Q62
+    affects: [CP01-S28, CP01-S13/AC06, CP01-S13/AC07, CP01-S21/R06]
+    question: "Step 28 has no release-preparation instructions and the Guide's release-PR procedure starts \"From Checkpoint 2 onwards\". Which procedure prepares 0.0.2, what governs the CHANGELOG entry, what must the baseline comparison report without an invoker, is a registry-installed consumer smoke test required before Kakeibo, and how is a defect found after publication handled when 0.0.3 belongs to Checkpoint 2?"
+  - id: Q63
+    affects: [CP01-S29, CP01-S30]
+    question: "Stage 10 permits only the pnpm package/workspace root as pre-Pactwright bootstrap, while Kakeibo Acceptance Profile section 5 also asks to establish or verify README, LICENSE, SECURITY.md, CONTRIBUTING.md, the canonical specs, deterministic tests and synthetic fixtures. Which step establishes that foundation and how; who authorises writes to the Kakeibo repository; and which Kakeibo specification revisions govern Stage 10?"
+  - id: Q64
+    affects: [CP01-S30]
+    question: "Who decides the Kakeibo Contract; what happens when the checkpoint's invariant list and the current Kakeibo financial-domain specification differ; how are explicit numeric assertions, the domain-package dependency boundary, determinism and the no-research-target rule verified rather than asserted; and how is preservation of every invariant through Contract, Brief, Review and Evidence checked?"
+  - id: Q65
+    affects: [CP01-S31]
+    question: "Step 31 requires every material finding to become an open Intent and every blocking failure to be fixed, but defines neither term. What makes a finding material or blocking, which takes precedence, where does the findings inventory live if it is not a graph record, and where are the T5 observations on execution friction, code quality, graph behaviour and model and skill effectiveness captured?"
+  - id: Q66
+    affects: [CP01/R02, CP01/R03, CP01/R04, CP01/R05, CP01/AC02, CP01/AC03, CP01/AC04, CP01/AC05]
+    question: "Spec 00 T2 requires checkpoint-wide simplicity, graph-boundary and self-hosting obligations, and the exit gate lists thirty-one closing conditions with no named owners. What are those obligations, where are they declared and inherited, and how is each exit-gate line bound to what proves it without maintaining a second acceptance registry?"
+  # Disposition: resolved by B28 v2 and Spec 00 v8 sections 2, 4-5. The owner
+  # superseded convert-before-run; S22-S31 stay reviewed prose operational steps.
+  # Original question retained verbatim as the historical input.
+  - id: Q67
+    affects: [CP01-S22, CP01-S23, CP01-S24, CP01-S25, CP01-S26, CP01-S27, CP01-S28, CP01-S29, CP01-S30, CP01-S31]
+    question: "Spec 00 section 2 replaces every step's prose with a YAML contract, and T2 reviews the converted contract. By the owner's decision Steps 22-31 keep their prose form. How does Spec 00 admit a step kept in prose, how do pnpm contracts:check and the harness detect such a step rather than miss it, how is its reviewed prose protected from unreviewed edits, and when is it converted so that it can run?"

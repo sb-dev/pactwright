@@ -1,0 +1,9 @@
+# Delivered with the greeting capability (CP96-S01/AC01).
+id: greet.behaves
+method: automated
+version: "1"
+command: [node, verifiers/greet-subject.mjs]
+judge: [node, verifiers/greet-judge.mjs]
+files: [verifiers/greet-judge.mjs, verifiers/greet-subject.mjs]
+timeoutMs: 30000
+observations: [exit, stdout]

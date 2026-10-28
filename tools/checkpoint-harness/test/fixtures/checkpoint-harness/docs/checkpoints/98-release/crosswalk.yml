@@ -1,0 +1,5 @@
+# Minimal conversion record: planning does not read crosswalk quotes.
+sources:
+  - source: docs/checkpoints/98-release.md@0000000
+    steps: [CP98-S01]
+entries: []
