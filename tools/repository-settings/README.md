@@ -10,7 +10,7 @@ pnpm github:settings apply            ask before each change, apply it, read it 
 pnpm github:settings apply --yes      apply every change without asking
 ```
 
-Options (both commands): `--repo OWNER/NAME`, `--integration-branch NAME`, `--required-check NAME` (repeatable), `--allow-owner-push`, `--live-environment NAME`, `--release-environment NAME`, `--secret-name NAME`, `--allow-action PATTERN` (repeatable). `apply` adds `--backup DIR` for the before-state file.
+Options (both commands): `--repo OWNER/NAME`, `--integration-branch NAME` (default: none), `--required-check NAME` (repeatable; default: none; name only checks that report on every pull request), `--allow-owner-push`, `--live-environment NAME`, `--release-environment NAME`, `--secret-name NAME`, `--allow-action PATTERN` (repeatable). `apply` adds `--backup DIR` for the before-state file.
 
 Each finding is marked `=` already set, `~` to change, `!` for a person to do, `?` unreadable. `audit` exits 0 when nothing would change; `apply` exits 0 when every change applied and read back as desired. Both exit 2 on a usage or access error.
 

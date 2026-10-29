@@ -6,7 +6,7 @@
 
 import assert from "node:assert/strict";
 import { spawnSync } from "node:child_process";
-import { chmodSync, mkdtempSync, readFileSync, writeFileSync } from "node:fs";
+import { chmodSync, mkdtempSync, readdirSync, readFileSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { delimiter, dirname, join } from "node:path";
 import { describe, it } from "node:test";
@@ -25,6 +25,8 @@ import {
 const here = dirname(fileURLToPath(import.meta.url));
 
 const POLICY: Policy = { owner: "sb-dev", repo: "pactwright", ...DEFAULT_POLICY };
+/** The policy with the optional integration branch and a required check. */
+const FULL: Policy = { ...POLICY, integrationBranch: "develop", requiredChecks: ["verify"] };
 
 type Json = Record<string, unknown>;
 
@@ -206,7 +208,21 @@ async function applyAll(gh: Gh, policy: Policy = POLICY): Promise<Finding[]> {
 }
 
 const byState = (findings: Finding[], state: Finding["state"]): string[] =>
-  findings.filter((f) => f.state === state).map((f) => f.resource);
+  findings
+    .filter((f) => f.state === state)
+    .map((f) => f.resource)
+    .sort();
+
+const ruleTypes = (ruleset: Json): string[] =>
+  (ruleset.rules as Json[]).map((r) => String(r.type)).sort();
+
+/** `gh` answering `status` to one method and path, and as `gh` otherwise. */
+const failing = (gh: Gh, method: Method, path: string, status: number): Gh => ({
+  api: (m, p, body) =>
+    m === method && p === path
+      ? Promise.resolve({ ok: false, status, message: "Resource not accessible by integration" })
+      : gh.api(m, p, body),
+});
 
 const rulesetNamed = (gh: ReturnType<typeof fakeGitHub>, name: string): Json => {
   const found = gh.state.rulesets.find((r) => r.name === name);
@@ -233,25 +249,27 @@ describe("an unprotected repository is brought to the policy", () => {
     const gh = fakeGitHub();
     const first = await audit(gh, POLICY);
     assert.equal(gh.writes.length, 0, "audit writes nothing");
-    assert.deepEqual(byState(first, "change"), [
-      "repository settings",
-      "vulnerability alerts",
-      "Dependabot security updates",
-      "private vulnerability reporting",
-      "ruleset protect-main",
-      "ruleset protect-integration",
-      "ruleset protect-release-tags",
-      "environment claude-live",
-      "environment npm-release",
-      "environment npm-release deployment tags",
-      "actions permissions",
-      "actions allowed",
-      "workflow token",
-      "fork pull request approval",
-    ]);
+    assert.deepEqual(
+      byState(first, "change"),
+      [
+        "repository settings",
+        "vulnerability alerts",
+        "Dependabot security updates",
+        "private vulnerability reporting",
+        "ruleset protect-main",
+        "ruleset protect-release-tags",
+        "environment claude-live",
+        "environment npm-release",
+        "environment npm-release deployment tags",
+        "actions permissions",
+        "actions allowed",
+        "workflow token",
+        "fork pull request approval",
+      ].sort(),
+    );
     assert.deepEqual(byState(first, "manual"), [
-      "environment secret CLAUDE_CODE_OAUTH_TOKEN",
       "GitHub Apps",
+      "environment secret CLAUDE_CODE_OAUTH_TOKEN",
     ]);
     assert.deepEqual(byState(first, "unreadable"), []);
 
@@ -264,38 +282,42 @@ describe("an unprotected repository is brought to the policy", () => {
     assert.equal(gh.writes.length, writesAfter, "nothing is written again");
   });
 
-  it("protects the default and integration branches through pull requests and locks release tags", async () => {
+  it("by default protects only the default branch, requires no check and locks release tags", async () => {
     const gh = fakeGitHub();
     await applyAll(gh);
+    assert.deepEqual(gh.state.rulesets.map((r) => r.name).sort(), [
+      "protect-main",
+      "protect-release-tags",
+    ]);
     const main = rulesetNamed(gh, "protect-main");
     assert.deepEqual(main.conditions, { ref_name: { include: ["~DEFAULT_BRANCH"], exclude: [] } });
     assert.deepEqual(main.bypass_actors, [
       { actor_id: 5, actor_type: "RepositoryRole", bypass_mode: "pull_request" },
     ]);
-    assert.deepEqual(
-      (main.rules as Json[]).map((r) => r.type),
-      ["deletion", "non_fast_forward", "pull_request", "required_status_checks"],
-    );
-    const checks = (main.rules as Json[]).find((r) => r.type === "required_status_checks")
-      ?.parameters as Json;
-    assert.deepEqual(checks, {
-      strict_required_status_checks_policy: true,
-      required_status_checks: [{ context: "Verify", integration_id: 15368 }],
-    });
-    const integration = rulesetNamed(gh, "protect-integration");
-    assert.deepEqual(integration.conditions, {
-      ref_name: { include: ["refs/heads/refactor/pactwright-v2"], exclude: [] },
-    });
-    assert.ok(!(integration.rules as Json[]).some((r) => r.type === "required_status_checks"));
+    assert.deepEqual(ruleTypes(main), ["deletion", "non_fast_forward", "pull_request"]);
     const tags = rulesetNamed(gh, "protect-release-tags");
     assert.equal(tags.target, "tag");
     assert.deepEqual(tags.bypass_actors, [
       { actor_id: 5, actor_type: "RepositoryRole", bypass_mode: "always" },
     ]);
-    assert.deepEqual(
-      (tags.rules as Json[]).map((r) => r.type),
-      ["creation", "update", "deletion", "non_fast_forward"],
-    );
+    assert.deepEqual(ruleTypes(tags), ["creation", "deletion", "non_fast_forward", "update"]);
+  });
+
+  it("an integration branch and a required check, when given, are protected and required", async () => {
+    const gh = fakeGitHub();
+    await applyAll(gh, FULL);
+    const checks = (rulesetNamed(gh, "protect-main").rules as Json[]).find(
+      (r) => r.type === "required_status_checks",
+    )?.parameters;
+    assert.deepEqual(checks, {
+      strict_required_status_checks_policy: true,
+      required_status_checks: [{ context: "verify", integration_id: 15368 }],
+    });
+    const integration = rulesetNamed(gh, "protect-integration");
+    assert.deepEqual(integration.conditions, {
+      ref_name: { include: ["refs/heads/develop"], exclude: [] },
+    });
+    assert.deepEqual(ruleTypes(integration), ["deletion", "non_fast_forward", "pull_request"]);
   });
 
   it("gates both environments on the owner's review without admin bypass; the release deploys from v* tags only", async () => {
@@ -348,7 +370,7 @@ describe("an unprotected repository is brought to the policy", () => {
 
   it("--allow-owner-push lets admins bypass the branch rulesets always", async () => {
     const gh = fakeGitHub();
-    await applyAll(gh, { ...POLICY, ownerPush: true });
+    await applyAll(gh, { ...FULL, ownerPush: true });
     for (const name of ["protect-main", "protect-integration"]) {
       assert.deepEqual(rulesetNamed(gh, name).bypass_actors, [
         { actor_id: 5, actor_type: "RepositoryRole", bypass_mode: "always" },
@@ -413,7 +435,7 @@ describe("existing settings are kept, never loosened or deleted", () => {
         patterns_allowed: ["docker/*"],
       },
     });
-    await applyAll(gh);
+    await applyAll(gh, FULL);
     const main = rulesetNamed(gh, "protect-main");
     assert.deepEqual(main.bypass_actors, [
       { actor_id: 42, actor_type: "Integration", bypass_mode: "always" },
@@ -426,16 +448,13 @@ describe("existing settings are kept, never loosened or deleted", () => {
       },
     });
     const rules = main.rules as Json[];
-    assert.deepEqual(
-      rules.map((r) => r.type),
-      [
-        "required_linear_history",
-        "pull_request",
-        "deletion",
-        "non_fast_forward",
-        "required_status_checks",
-      ],
-    );
+    assert.deepEqual(ruleTypes(main), [
+      "deletion",
+      "non_fast_forward",
+      "pull_request",
+      "required_linear_history",
+      "required_status_checks",
+    ]);
     assert.deepEqual(rules.find((r) => r.type === "pull_request")?.parameters, {
       required_approving_review_count: 2,
       allowed_merge_methods: ["squash"],
@@ -465,11 +484,12 @@ describe("existing settings are kept, never loosened or deleted", () => {
       5,
     );
     assert.equal(live.can_admins_bypass, false);
-    assert.deepEqual(gh.state.selectedActions, {
-      github_owned_allowed: true,
-      verified_allowed: true,
-      patterns_allowed: ["docker/*", "pnpm/action-setup@*"],
-    });
+    const selected = gh.state.selectedActions;
+    assert.equal(selected?.verified_allowed, true);
+    assert.deepEqual([...(selected?.patterns_allowed as string[])].sort(), [
+      "docker/*",
+      "pnpm/action-setup@*",
+    ]);
     assert.equal(
       gh.state.actions.sha_pinning_required,
       undefined,
@@ -502,6 +522,72 @@ describe("existing settings are kept, never loosened or deleted", () => {
         require_last_push_approval: true,
         required_review_thread_resolution: true,
       },
+    );
+  });
+});
+
+describe("review regressions (#63 review 5691186294)", () => {
+  it("an existing required check is kept beside the policy's check", async () => {
+    const gh = fakeGitHub({
+      rulesets: [
+        {
+          id: 7,
+          name: "protect-main",
+          target: "branch",
+          enforcement: "active",
+          bypass_actors: [],
+          conditions: { ref_name: { include: ["~DEFAULT_BRANCH"], exclude: [] } },
+          rules: [
+            {
+              type: "required_status_checks",
+              parameters: {
+                strict_required_status_checks_policy: false,
+                required_status_checks: [{ context: "Security scan", integration_id: 99 }],
+              },
+            },
+          ],
+        },
+      ],
+    });
+    const change = (await audit(gh, FULL)).find((f) => f.resource === "ruleset protect-main");
+    assert.equal(change?.state, "change");
+    if (change?.state !== "change") return;
+    const sent = ((change.change.after as Json).rules as Json[]).find(
+      (r) => r.type === "required_status_checks",
+    )?.parameters as Json;
+    const contexts = (sent.required_status_checks as Json[]).map((c) => c.context).sort();
+    assert.deepEqual(contexts, ["Security scan", "verify"], "the planned PUT keeps the check");
+    await applyAll(gh, FULL);
+    const kept = (rulesetNamed(gh, "protect-main").rules as Json[]).find(
+      (r) => r.type === "required_status_checks",
+    )?.parameters as Json;
+    assert.ok(
+      (kept.required_status_checks as Json[]).some(
+        (c) => c.context === "Security scan" && c.integration_id === 99,
+      ),
+    );
+    assert.equal(kept.strict_required_status_checks_policy, true);
+  });
+
+  it("a failed read of the allowed actions, other than 409, is unreadable and schedules no write", async () => {
+    const gh = fakeGitHub({
+      actions: { enabled: true, allowed_actions: "selected" },
+      selectedActions: {
+        github_owned_allowed: true,
+        verified_allowed: false,
+        patterns_allowed: ["docker/*"],
+      },
+    });
+    const path = "repos/sb-dev/pactwright/actions/permissions/selected-actions";
+    const findings = await applyAll(failing(gh, "GET", path, 403), POLICY);
+    const allowed = findings.find((f) => f.resource === "actions allowed");
+    assert.equal(allowed?.state, "unreadable");
+    assert.match(allowed?.detail ?? "", /HTTP 403/);
+    assert.ok(!gh.writes.includes(`PUT ${path}`), "the allowed actions are not written");
+    assert.deepEqual(gh.state.selectedActions?.patterns_allowed, ["docker/*"]);
+    assert.ok(
+      findings.some((f) => f.resource === "workflow token"),
+      "the rest of the section still runs",
     );
   });
 });
@@ -548,16 +634,14 @@ describe("secrets and people are reported, never changed", () => {
 
   it("a read failure other than 404 is reported as unreadable, not applied over", async () => {
     const gh = fakeGitHub();
-    const failing: Gh = {
-      api: (method, path, body) =>
-        path === "repos/sb-dev/pactwright/rulesets" && method === "GET"
-          ? Promise.resolve({ ok: false, status: 403, message: "Resource not accessible" })
-          : gh.api(method, path, body),
-    };
-    const findings = await audit(failing, POLICY);
+    const findings = await audit(
+      failing(gh, "GET", "repos/sb-dev/pactwright/rulesets", 403),
+      POLICY,
+    );
     const unreadable = findings.find((f) => f.state === "unreadable");
     assert.equal(unreadable?.resource, "rulesets");
     assert.match(unreadable?.detail ?? "", /403 Resource not accessible/);
+    assert.ok(!gh.writes.some((w) => w.includes("/rulesets")), "no ruleset is written");
     assert.ok(
       findings.some((f) => f.resource === "environment claude-live"),
       "later sections still run",
@@ -688,5 +772,45 @@ describe("command line", () => {
       calls.every((c) => c.startsWith("repo view") || c.startsWith("api -X GET ")),
       calls.join("\n"),
     );
+  });
+
+  it("apply --yes backs up before writing, reports a rejected write and a read-back that differs, and exits 1", () => {
+    // A `gh` on PATH whose writes succeed but change nothing, except the
+    // vulnerability alerts write, which GitHub refuses.
+    const dir = mkdtempSync(join(tmpdir(), "pactwright-fake-gh-"));
+    const backup = mkdtempSync(join(tmpdir(), "pactwright-backup-"));
+    writeFileSync(
+      join(dir, "gh"),
+      [
+        "#!/usr/bin/env node",
+        "const args = process.argv.slice(2);",
+        'if (args[0] === "repo") { process.stdout.write("sb-dev/pactwright\\n"); process.exit(0); }',
+        'if (args[0] === "api" && args[1] === "user") { process.stdout.write("sb-dev\\n"); process.exit(0); }',
+        "const [, , method, path] = args;",
+        "const answer = (status, body) => { process.stdout.write(`HTTP/2.0 ${status} X\\r\\n\\r\\n${JSON.stringify(body)}`); process.exit(status < 300 ? 0 : 1); };",
+        'if (method !== "GET") answer(path.endsWith("/vulnerability-alerts") ? 403 : 200, path.endsWith("/vulnerability-alerts") ? { message: "Forbidden" } : {});',
+        'if (path === "repos/sb-dev/pactwright") answer(200, { pull_request_creation_policy: "everyone", delete_branch_on_merge: false, security_and_analysis: {} });',
+        'answer(404, { message: "Not Found" });',
+        "",
+      ].join("\n"),
+    );
+    chmodSync(join(dir, "gh"), 0o755);
+    const result = run(["apply", "--yes", "--backup", backup], {
+      ...process.env,
+      PATH: `${dir}${delimiter}${process.env.PATH ?? ""}`,
+    });
+    assert.equal(result.status, 1, result.stderr);
+    assert.match(result.stdout, /^authenticated as sb-dev$/m);
+    assert.match(result.stdout, /^ {2}repository settings: applied, but read back differs: /m);
+    assert.match(
+      result.stdout,
+      /^ {2}vulnerability alerts: rejected: PUT repos\/sb-dev\/pactwright\/vulnerability-alerts: HTTP 403 Forbidden$/m,
+    );
+    const files = readdirSync(backup);
+    assert.equal(files.length, 1, "one backup file");
+    const saved = JSON.parse(readFileSync(join(backup, files[0] ?? ""), "utf8")) as Json;
+    assert.equal(saved.repository, "sb-dev/pactwright");
+    const repository = (saved.before as Json[]).find((b) => b.resource === "repository settings");
+    assert.equal((repository?.before as Json).pull_request_creation_policy, "everyone");
   });
 });

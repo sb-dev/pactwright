@@ -28,7 +28,7 @@ const USAGE_ERROR = 2;
 
 type Options = {
   repo?: string;
-  integrationBranch: string;
+  integrationBranch?: string;
   requiredCheck: string[];
   allowOwnerPush: boolean;
   liveEnvironment: string;
@@ -50,12 +50,11 @@ function policyOptions(command: Command): Command {
     .option("--repo <owner/name>", "repository; default: the one gh resolves here")
     .option(
       "--integration-branch <name>",
-      "branch protected like the default branch, without required checks",
-      DEFAULT_POLICY.integrationBranch,
+      "branch protected like the default branch, without required checks; default: none",
     )
     .option(
       "--required-check <name>",
-      "check the default branch requires (repeatable)",
+      "check the default branch requires (repeatable); it must report on every pull request; default: none",
       collect(DEFAULT_POLICY.requiredChecks),
       DEFAULT_POLICY.requiredChecks,
     )
@@ -96,7 +95,7 @@ async function policyFor(options: Options): Promise<Policy> {
   return {
     owner,
     repo,
-    integrationBranch: options.integrationBranch,
+    integrationBranch: options.integrationBranch ?? DEFAULT_POLICY.integrationBranch,
     requiredChecks: options.requiredCheck,
     ownerPush: options.allowOwnerPush,
     liveEnvironment: options.liveEnvironment,

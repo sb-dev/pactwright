@@ -1,12 +1,12 @@
 # Pactwright — GitHub Repository Governance
 
-**Version:** 1
+**Version:** 2
 
 **Date:** 3 October 2026
 
 **Branch analysed:** `refactor/pactwright-v2`
 
-**Inspected revision:** `0da7b7113563bde3ed2c080ed87ab4d5306cbda6`
+**Inspected revision:** `0da7b7113563bde3ed2c080ed87ab4d5306cbda6` (audit); `main` at `d402a8837a81f0b65c2366397da02e66963bf9d3` (Version 2 policy defaults)
 
 **Authority:** [GitHub Integration](../specs/07-github-integration.md) §3 (sync owns remote desired state), §34 (managed ownership and reconciliation) and §36 (security boundary); [Open-Source Project Organisation](../specs/08-open-source-project-organisation.md) §23 (contribution model) and §26 (repository task graph and CI). This log is an operator guide and bootstrap tooling. It is not a product capability: the `pactwright github sync` command of GitHub Integration §3 later owns repository settings, and this tooling must then be retired or adopted by it.
 
@@ -19,7 +19,7 @@ The repository is public, one person owns it, and AI agent sessions work in it a
 - a secret or a publication needs a human approval that an agent cannot give;
 - a contributor or a fork cannot reach a secret or a write-capable token.
 
-Section 5 gives the rules. Section 6 gives the tool that applies them. Section 7 lists the practices that need a person, not a setting.
+Section 2 records the audit as found on 2 October. Pactwright v2 has since been merged into `main` (#78) and `refactor/pactwright-v2` deleted; `main` keeps only the two checkpoint-harness workflows, so no `Verify` check and no `release.yml` remain. Section 5 gives the rules for the repository as it is now. Section 6 gives the tool that applies them. Section 7 lists the practices that need a person, not a setting.
 
 ## 2. Audit of 2 October 2026
 
@@ -61,11 +61,11 @@ The desired state of each GitHub resource. The tool applies it without loosening
 | Resource | Desired state |
 | --- | --- |
 | Repository | Pull requests from collaborators only. Head branches deleted after merge. Secret scanning and push protection on. Dependabot alerts, Dependabot security updates and private vulnerability reporting on. |
-| Ruleset `protect-main` (default branch) | No deletion, no force push. Pull request required, with a code-owner review, stale approvals dismissed on push and conversations resolved. The `Verify` check must pass on an up-to-date branch. Administrators bypass only through pull requests. |
-| Ruleset `protect-integration` (`refactor/pactwright-v2`) | As `protect-main`, without required checks: the harness checks are path-filtered and would block documentation-only pull requests. |
+| Ruleset `protect-main` (default branch) | No deletion, no force push. Pull request required, with a code-owner review, stale approvals dismissed on push and conversations resolved. Administrators bypass only through pull requests. No check is required by default: the only verification job, `verify`, is path-filtered, so a required `verify` would stay pending on pull requests that change no filtered path. `--required-check NAME` adds a check that reports on every pull request; existing required checks are kept. |
+| Ruleset `protect-integration` (only with `--integration-branch NAME`) | As `protect-main`, without required checks. There is no integration branch by default. |
 | Ruleset `protect-release-tags` (`v*`) | Only administrators create, move or delete release tags. |
 | Environment `claude-live` | Required reviewer `sb-dev`, no admin bypass, any branch may deploy (the reviewer is the gate). |
-| Environment `npm-release` | Required reviewer `sb-dev`, no admin bypass, deployment only from `v*` tags. Existing reviewers and rules kept. |
+| Environment `npm-release` | Required reviewer `sb-dev`, no admin bypass, deployment only from `v*` tags. Existing reviewers and rules kept. No workflow on `main` uses it since #78; it stays protected for a release workflow that returns. |
 | Actions | Workflow token read-only; workflows cannot create or approve pull requests; runs from outside contributors need approval; only GitHub-owned actions and the listed third-party patterns (`pnpm/action-setup@*`); actions pinned to a full commit SHA where the API exposes the setting. |
 
 The admin pull-request bypass exists because the sole code owner cannot approve their own pull request. It applies to merging only, never to a direct push. `--allow-owner-push` changes the bypass to `always`, which lets the owner, and so every agent acting as the owner, push directly. It is not the default.
@@ -87,7 +87,7 @@ Each finding is marked `=` already set, `~` to change, `!` for a person to do, `
 What a person does after `apply`:
 
 1. Set the secret in your own terminal: `gh secret set CLAUDE_CODE_OAUTH_TOKEN --env claude-live --repo sb-dev/pactwright`. Delete any repository-level secret of that name.
-2. In pull request #62, the `live-claude` job must declare `environment: claude-live`.
+2. Check that every job that reads the secret declares `environment: claude-live` (both checkpoint-harness workflows do on `main` at `d402a88`).
 3. Review the installed GitHub Apps the tool lists. Remove the permission to change workflow files from any app an agent uses. An agent then cannot change what reads a secret; the owner lands workflow changes instead.
 4. Approve each `claude-live` and `npm-release` run in the web UI, after reading its workflow diff.
 5. Run `audit` again after any manual change in the GitHub UI, and before each checkpoint task that adds a credential or a workflow.
@@ -101,7 +101,7 @@ Settings alone do not make a repository safe to contribute to. These follow Open
 | `SECURITY.md` with a private channel | Present; names a private advisory and an email. | Keep private vulnerability reporting on (§5) so the advisory route works. |
 | `CONTRIBUTING.md` and `CODE_OF_CONDUCT.md` | Present. | Add the intent-first rule to a pull-request template so every pull request names its intent or brief. |
 | Issue templates | None. | Add `bug` and `intent` forms under `.github/ISSUE_TEMPLATE/`, matching the Delivery lifecycle. |
-| `CHANGELOG.md` | Present. | Require an entry in the release procedure; `release.yml` asserts versions, not changelog entries. |
+| `CHANGELOG.md` | Present. | `main` has no release workflow since #78. When one returns, have it require a changelog entry, not only versions. |
 | Release tags | Protected by §5. | Sign tags, and record each release's provenance link in the changelog. |
 | Dependabot | Version updates on `main`. | Security updates are enabled by §5; review grouped updates weekly. |
 | Discussions or a support route | Off. | Enable Discussions, or name a channel in the README, so support questions stay out of the intent queue. |
@@ -112,10 +112,13 @@ Settings alone do not make a repository safe to contribute to. These follow Open
 - Agents act as `sb-dev` and inherit the admin pull-request bypass. Only the environment approval stops them from using a secret or publishing.
 - An API token with the owner's identity could approve a deployment. Give approvals only in the web UI.
 - `pull_request_creation_policy` and `sha_pinning_required` may not be settable on a user-owned repository through the API. The tool reports a rejection; set them in the web UI.
+- With no required check, a pull request can merge before `verify` finishes. The code-owner review is the gate; read the checks before merging.
 - The tool was verified against an in-memory GitHub and a fake `gh`, not against the live repository. The first live `apply` is the proof; keep its backup file.
 
 ## 9. Revision record
 
 Version 1 records the 2 October 2026 audit, the policy, the operator tool and the follow-up practices. It claims no change to repository settings.
 
-**Pactwright — GitHub Repository Governance, Version 1**
+Version 2 (28 October 2026) follows the merge of Pactwright v2 into `main` and review 5691186294 on #63: no integration branch and no required check by default, existing required checks kept by identity, and an unreadable allowed-actions list reported instead of written over. The §2 audit is unchanged. It claims no change to repository settings.
+
+**Pactwright — GitHub Repository Governance, Version 2**

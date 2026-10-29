@@ -10,9 +10,13 @@ import type { Gh, Method } from "./github.js";
 export type Policy = {
   owner: string;
   repo: string;
-  /** The branch pull requests merge into besides the default branch. */
-  integrationBranch: string;
-  /** Check names the default branch requires; the integration branch requires none. */
+  /** A branch pull requests merge into besides the default branch, protected like it; null for none. */
+  integrationBranch: string | null;
+  /**
+   * Check names the default branch requires; the integration branch requires
+   * none. A required check must report on every pull request, so a
+   * path-filtered workflow's job does not qualify.
+   */
   requiredChecks: string[];
   /** Whether admins (the code owner) may push to protected branches directly. */
   ownerPush: boolean;
@@ -27,8 +31,9 @@ export type Policy = {
 };
 
 export const DEFAULT_POLICY: Omit<Policy, "owner" | "repo"> = {
-  integrationBranch: "refactor/pactwright-v2",
-  requiredChecks: ["Verify"],
+  integrationBranch: null,
+  // The repository's only verification job, `verify`, is path-filtered.
+  requiredChecks: [],
   ownerPush: false,
   liveEnvironment: "claude-live",
   releaseEnvironment: "npm-release",
@@ -272,19 +277,41 @@ const tagRuleset = (name: string): Ruleset => ({
 });
 
 /**
- * Rule parameters with `desired` applied over `prior` without loosening it:
- * a higher existing count and a `true` existing flag are kept.
+ * Required status checks with `desired` added to `prior`, identified by
+ * context: every existing check stays, and a desired check replaces an
+ * existing one of the same context only to add the reporting app.
  */
-function stricter(prior: Json, desired: Json): Json {
+function unionChecks(prior: unknown, desired: Json[]): Json[] {
+  const checks = (Array.isArray(prior) ? prior : []).filter(
+    (c): c is Json => isObject(c) && typeof c.context === "string",
+  );
+  for (const want of desired) {
+    const index = checks.findIndex((c) => c.context === want.context);
+    if (index === -1) checks.push(want);
+    else if (checks[index]?.integration_id === undefined) checks[index] = want;
+  }
+  return checks;
+}
+
+/**
+ * Rule parameters with `desired` applied over `prior` without loosening it.
+ * Each parameter the policy sets has its own rule: a higher existing review
+ * count is kept, an existing `true` flag is kept, and existing required
+ * checks are kept. Parameters the policy does not set are left as they are.
+ */
+function preserve(prior: Json, desired: Json): Json {
   const merged = { ...prior };
   for (const [key, value] of Object.entries(desired)) {
     const have = prior[key];
-    merged[key] =
-      typeof value === "number" && typeof have === "number"
-        ? Math.max(have, value)
-        : typeof value === "boolean" && have === true
-          ? true
-          : value;
+    if (key === "required_status_checks" && Array.isArray(value)) {
+      merged[key] = unionChecks(have, value.filter(isObject));
+    } else if (typeof value === "number") {
+      merged[key] = typeof have === "number" ? Math.max(have, value) : value;
+    } else if (typeof value === "boolean") {
+      merged[key] = have === true || value;
+    } else {
+      throw new Error(`no preservation rule for rule parameter ${key}`);
+    }
   }
   return merged;
 }
@@ -311,7 +338,7 @@ function mergeRuleset(desired: Ruleset, existing: unknown): Ruleset {
     rules.set(r.type, {
       type: r.type,
       ...(r.parameters || prior?.parameters
-        ? { parameters: stricter({ ...prior?.parameters }, r.parameters ?? {}) }
+        ? { parameters: preserve({ ...prior?.parameters }, r.parameters ?? {}) }
         : {}),
     });
   }
@@ -343,7 +370,9 @@ async function rulesets(gh: Gh, p: Policy): Promise<Finding[]> {
   }));
   const wanted: Ruleset[] = [
     branchRuleset("protect-main", ["~DEFAULT_BRANCH"], checks, p),
-    branchRuleset("protect-integration", [`refs/heads/${p.integrationBranch}`], [], p),
+    ...(p.integrationBranch === null
+      ? []
+      : [branchRuleset("protect-integration", [`refs/heads/${p.integrationBranch}`], [], p)]),
     tagRuleset("protect-release-tags"),
   ];
   const findings: Finding[] = [];
@@ -478,9 +507,19 @@ async function actions(gh: Gh, p: Policy): Promise<Finding[]> {
     settle(gh, "actions permissions", base, permissions, desired, { method: "PUT", body: desired }),
   );
 
-  // GitHub answers 409 here while allowed_actions is not "selected".
+  // GitHub answers 409 here while allowed_actions is not "selected", so no
+  // list exists yet. Any other failure leaves the list unknown, and writing
+  // over it could drop existing entries.
   const selectedPath = `${base}/selected-actions`;
   const selectedResult = await gh.api("GET", selectedPath);
+  if (!selectedResult.ok && selectedResult.status !== 409) {
+    findings.push({
+      resource: "actions allowed",
+      state: "unreadable",
+      detail: `GET ${selectedPath}: HTTP ${selectedResult.status} ${selectedResult.message}`,
+    });
+    return [...findings, ...(await actionsWorkflow(gh, base))];
+  }
   const selected = selectedResult.ok ? selectedResult.body : null;
   const existingPatterns =
     isObject(selected) && Array.isArray(selected.patterns_allowed)
@@ -501,7 +540,12 @@ async function actions(gh: Gh, p: Policy): Promise<Finding[]> {
       { method: "PUT", body: selectedBody },
     ),
   );
+  return [...findings, ...(await actionsWorkflow(gh, base))];
+}
 
+// The workflow token and the approval of runs from outside contributors.
+async function actionsWorkflow(gh: Gh, base: string): Promise<Finding[]> {
+  const findings: Finding[] = [];
   for (const [resource, suffix, desiredValue] of [
     [
       "workflow token",
