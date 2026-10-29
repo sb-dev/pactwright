@@ -1,8 +1,8 @@
 # Checkpoint 1 Task 5 — GitHub Actions Run Guide
 
-**Version:** 15
+**Version:** 16
 
-**Date:** 2 October 2026
+**Date:** 29 October 2026
 
 **Status:** Execution plan; requires accepted T3.5 harness production readiness and a passing T4 proof.
 
@@ -152,7 +152,7 @@ credentials:
   provider: env:ANTHROPIC_API_KEY
 ```
 
-The complete template also holds the checkpoint path, candidate repository/branch, definitions, write policy, approvers, selected skills and budgets. Use `sb-dev/pactwright` and `refactor/pactwright-v2` as the initial candidate source. H3 resolves and records exact revisions at run start and generates runner-local paths.
+The complete template also holds the checkpoint path, candidate repository/branch, definitions, write policy, approvers, selected skills and budgets. For a new post-merge run, use `sb-dev/pactwright` and `main` as the initial candidate source. The committed template still names `refactor/pactwright-v2`; align that field through a reviewed configuration change before dispatch. Existing saved runs retain their pinned identities and supported amendment/restart rules. H3 resolves and records exact revisions at run start and generates runner-local paths.
 
 Review the complete configuration in GitHub before the first dispatch. Later jobs restore its saved version. A configuration edit takes effect only through the workflow's `amend` action.
 
@@ -276,6 +276,8 @@ The guide uses the repository revision in the header and the official references
 
 ## Revision record
 
+Version 16 uses `main` as the candidate source and requires the T5 template to be aligned through a reviewed configuration change before a new dispatch. Pinned controller identities and existing saved runs are unchanged.
+
 Version 15 adds authorised submitted-review triggers, the manual `address-comments` fallback and PR correction-round operation using the initial harness run. It does not claim that the workflow or correction capability has been implemented.
 
-**Checkpoint 1 Task 5 — GitHub Actions Run Guide, Version 15**
+**Checkpoint 1 Task 5 — GitHub Actions Run Guide, Version 16**

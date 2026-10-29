@@ -1,6 +1,6 @@
 # Pactwright — Checkpoint 9 — Hardened Closed Loop
 
-**Version:** 12\
+**Version:** 13\
 **Entry condition:** Checkpoint 8 is accepted.\
 **Release:** `0.0.10`\
 **Exit capability:** The complete first-party Pactwright system is evaluated, failure-hardened, publicly documented and repeatedly proven in closed loops on Pactwright and Kakeibo, including permanent Experiment regression coverage and a production Kei defect learning loop, without expanding semantics beyond observed need.
@@ -537,21 +537,45 @@ Run this stage from the Kakeibo repository root unless explicitly stated otherwi
 
 **Run**
 
-```bash
-pnpm add -D \
-  pactwright@0.0.10 \
-  @pactwright/project-intelligence@0.0.10 \
-  @pactwright/review-creative@0.0.10 \
-  @pactwright/creative@0.0.10 \
-  @pactwright/operations@0.0.10
+Start from Kakeibo's accepted `0.0.9` environment. Record its package/configuration/both-lock state and historical canonical identities. Use the ownership-specific upgrade procedure proved in Checkpoint 8 Step 18, targeting exact `0.0.10`. Do not preinstall target packages or reinitialise the project.
 
+Upgrade the runtime first through the existing migration and validation path:
+
+```bash
+pnpm pactwright upgrade --to 0.0.10
+pnpm pactwright validate
+```
+
+Set the selected standard Agent Pack's desired version to exact `0.0.10` through supported configuration, preserving its source. Then run:
+
+```bash
+pnpm pactwright agent-pack upgrade
+pnpm pactwright doctor
+pnpm pactwright validate
+```
+
+For each enabled Extension, set only its desired constraint to exact `0.0.10` immediately before its upgrade. Use the proven dependency-safe order and verify installed versions, both locks and compatibility after each operation:
+
+```bash
 pnpm pactwright extension upgrade project-intelligence
-pnpm pactwright extension upgrade review-creative
+pnpm pactwright extension upgrade graph-review
+pnpm pactwright extension upgrade assets-publication
 pnpm pactwright extension upgrade operations
-pnpm pactwright upgrade
+```
+
+Activate and check the updated generated integration:
+
+```bash
 pnpm pactwright sync
+pnpm pactwright doctor
 pnpm pactwright github sync --dry-run
+```
+
+Land changed workflows through normal Kakeibo repository authority before relying on new remote behaviour. Then:
+
+```bash
 pnpm pactwright github sync
+pnpm pactwright github sync --dry-run
 ```
 
 **Expected result**
@@ -565,7 +589,8 @@ Run:
 ```bash
 pnpm pactwright validate
 pnpm pactwright intelligence validate
-pnpm pactwright creative validate
+pnpm pactwright graph-review validate
+pnpm pactwright assets validate
 pnpm pactwright operations validate
 pnpm pactwright eval
 ```
@@ -859,4 +884,4 @@ Checkpoint 9 closes only when:
 
 ---
 
-**Pactwright — Checkpoint 9 — Hardened Closed Loop v12**
+**Pactwright — Checkpoint 9 — Hardened Closed Loop v13**

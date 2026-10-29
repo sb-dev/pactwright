@@ -1,6 +1,6 @@
 # Pactwright — Checkpoint 3 — Project Intelligence
 
-**Version:** 14\
+**Version:** 15\
 **Entry condition:** Checkpoint 2 is accepted.\
 **Release:** `0.0.4`\
 **Exit capability:** Project Intelligence can cold-start Pactwright and Kakeibo, govern durable project knowledge, contribute bounded context, compose into the established GitHub integration and derive one dependency-aware Intent roadmap without automatically creating Delivery work.
@@ -164,9 +164,9 @@ Do not invent:
 - canonical PI Agent Pack capability names.
 
 - **Real extension-originated internal Sources.** Graph Review findings arrive in Checkpoint 4 and Operations Observations in Checkpoint 6. Checkpoint 3 implements and fixture-tests internal-Source semantics (`source_type: internal`, origin provenance, validation of originating provenance) so those hand-offs have a working boundary, but no real extension contributes Sources yet.
-- **`@pactwright/creative`.** The creative-capable agent pack is Checkpoint 4 work. Checkpoint 3 extends only `@pactwright/standard`.
-- **`agent-pack use` and `eval --baseline`.** These remain deferred as recorded in Checkpoint 1.
-- **`go-to-market` at Covered.** Full go-to-market coverage is required only for acquisition/positioning/campaign work and is deferred to the creative checkpoints. Checkpoint 3 requires `go-to-market` at least Seeded so `content` can be covered without violating the core dependency chain.
+- **External Production Skills and Assets / Publication.** These belong to Checkpoint 5 and use normal Delivery through the selected Agent Pack. Checkpoint 3 extends `@pactwright/standard`; no separate creative Agent Pack is introduced.
+- **New `agent-pack use` or `eval --baseline` interfaces.** Checkpoint 3 reuses the selection and baseline-evaluation interfaces established in Checkpoint 1 and does not replace them.
+- **`go-to-market` at Covered.** Full go-to-market coverage is required only for acquisition/positioning/campaign work and is deferred to Checkpoint 5. Checkpoint 3 requires `go-to-market` at least Seeded so `content` can be covered without violating the core dependency chain.
 - **GTM-driven launch sequencing.** `launch_tranche` and go-to-market influence on discretionary roadmap ordering are exercised only through fixtures in this checkpoint; real GTM sequencing waits for accepted go-to-market strategy.
 - **Automatic research and ingestion adapters.** Listed as future improvements in the Project Intelligence spec §19; not implemented here.
 - **Kakeibo future/planned capabilities becoming current through ingestion.** PI records source-declared maturity; it must not turn Salt Edge, optional agentic Kei capabilities, open implementation choices or non-goals into current product truth merely because they are mentioned in an authoritative Source.
@@ -1307,4 +1307,4 @@ Checkpoint 3 closes only when:
 
 ---
 
-**Pactwright — Checkpoint 3 — Project Intelligence v14**
+**Pactwright — Checkpoint 3 — Project Intelligence v15**
