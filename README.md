@@ -48,7 +48,11 @@ The overview describes the specified system. This checkout contains the harness,
 | Hosted harness execution | GitHub Actions, durable run artifacts and isolated Docker workspaces. |
 | Current harness agent execution | Claude Agent SDK, with separate producer and reviewer sessions. This is the bootstrap execution adapter, not the product's semantic boundary. |
 
-## Work with the current checkout
+## Quick Start
+
+Checkpoint 1 delivers runtime installation and the first accepted Delivery. Follow its [release and acceptance gates](docs/checkpoints/01-self-hosted-delivery.md) before using the runtime walkthrough.
+
+### Work with the current checkout
 
 Use the pnpm version declared in `package.json`. From the repository root:
 
@@ -61,7 +65,11 @@ pnpm --filter @pactwright/checkpoint-harness harness --help
 
 `contracts:check` validates checkpoint definitions and their source references. Use a full Git checkout to check historical crosswalk sources. `verify` runs the workspace checks; the root build explicitly reports when no runtime source exists.
 
-For hosted execution, approvals, recovery and PR correction rounds, follow the [harness operator procedure](tools/checkpoint-harness/README.md) and its linked T5 prerequisites. The [core Delivery walkthrough](examples/core-delivery/README.md) describes the intended runtime interaction and its acceptance checks.
+For hosted execution, approvals, recovery and PR correction rounds, follow the [harness operator procedure](tools/checkpoint-harness/README.md) and its linked T5 prerequisites.
+
+## Examples
+
+The [core Delivery walkthrough](examples/core-delivery/README.md) describes the intended Checkpoint 1 runtime interaction and acceptance checks. It is a planned walkthrough, not an executed result for this checkout.
 
 Explore the [documentation index](docs/README.md), [checkpoint runbooks](docs/checkpoints/README.md) and [contribution guide](CONTRIBUTING.md). Guides, examples and Academy material advance with their owning checkpoints.
 

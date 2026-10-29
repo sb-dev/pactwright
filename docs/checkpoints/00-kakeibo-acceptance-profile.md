@@ -1,8 +1,8 @@
 # Pactwright — Kakeibo System-Level Acceptance Profile
 
 **Version:** 3\
-**Status:** Cross-owner checkpoint acceptance profile  
-**Date:** 2026-09-02
+**Status:** Cross-owner checkpoint acceptance profile\
+**Date:** 2026-10-29
 
 ## 1. Purpose
 
@@ -620,7 +620,7 @@ At least one accepted finding must complete Review → PI → governed Delivery.
 
 ---
 
-## 9. Checkpoint 5 — Creative Production / Versioned Kei Foundation
+## 9. Checkpoint 5 — Production Skills Delivery / Versioned Kei Foundation
 
 ### Goal
 

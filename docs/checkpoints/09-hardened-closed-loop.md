@@ -561,9 +561,21 @@ pnpm pactwright extension upgrade project-intelligence
 pnpm pactwright extension upgrade graph-review
 pnpm pactwright extension upgrade assets-publication
 pnpm pactwright extension upgrade operations
+```
+
+Activate and check the updated generated integration:
+
+```bash
 pnpm pactwright sync
+pnpm pactwright doctor
 pnpm pactwright github sync --dry-run
+```
+
+Land changed workflows through normal Kakeibo repository authority before relying on new remote behaviour. Then:
+
+```bash
 pnpm pactwright github sync
+pnpm pactwright github sync --dry-run
 ```
 
 **Expected result**

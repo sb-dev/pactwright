@@ -2,7 +2,7 @@
 
 **Version:** 16
 
-**Date:** 2 October 2026
+**Date:** 29 October 2026
 
 **Status:** Execution plan; requires accepted T3.5 harness production readiness and a passing T4 proof.
 
@@ -275,6 +275,8 @@ The guide uses the repository revision in the header and the official references
 [claude-effort]: https://platform.claude.com/docs/en/build-with-claude/effort
 
 ## Revision record
+
+Version 16 uses `main` as the candidate source and requires the T5 template to be aligned through a reviewed configuration change before a new dispatch. Pinned controller identities and existing saved runs are unchanged.
 
 Version 15 adds authorised submitted-review triggers, the manual `address-comments` fallback and PR correction-round operation using the initial harness run. It does not claim that the workflow or correction capability has been implemented.
 
