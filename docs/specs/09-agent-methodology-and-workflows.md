@@ -10,7 +10,7 @@ The contract applies to software delivery, research, business advice and creativ
 
 This specification owns agent responsibilities, method descriptions, routing, handoffs, review separation and Toolsmith's pack-authoring responsibilities. It does not own runtime transitions, canonical records, package formats, provider routing or domain techniques. Implementation checkpoints determine when these requirements are supported; this document is not evidence that they have shipped.
 
-This document defines the target methodology contract. Follow-on amendments must align [Core lifecycle semantics](./01-pactwright-core-system-and-lifecycle.md) and [Distribution's Agent Pack definition, exposure and evaluation interfaces](./02-distribution-agent-packs-extensions-and-evaluation.md), and register this specification in [Open-Source Project Organisation, section 9](./08-open-source-project-organisation.md). Until those amendments are adopted, this document does not override the existing owners or imply that advisory entry and pack-case discovery are supported. Sections 5 and 10 state their current limits.
+This document defines the target methodology contract. [Core v7](./01-pactwright-core-system-and-lifecycle.md) defines its Delivery, authority and dispatch-freshness requirements. [Distribution v6](./02-distribution-agent-packs-extensions-and-evaluation.md) defines its packaging, exposure, evaluation and adoption requirements. These specification amendments do not establish runtime support or checkpoint acceptance. Registration in [Open-Source Project Organisation, section 9](./08-open-source-project-organisation.md) remains follow-on work. Sections 5 and 10 retain the current limits on advisory entry and pack-case discovery.
 
 ## 2. Terms and Ownership
 
@@ -146,7 +146,7 @@ Each handoff must give the receiver enough information to continue:
 
 This information can be part of an existing artefact or invocation result. It does not require a new persistent handoff store. A conversation summary alone is insufficient when the receiver needs the delivered artefacts or verification output.
 
-The receiver must check that the handoff applies to its current target. A changed target or missing governing input requires reconciliation before the result is used. Agents must respect the runtime's actual mutation and revision guards. They must not claim that configuration, lifecycle policy or lock changes are checked across dispatch when the runtime does not provide those checks; [Core, sections 55–56](./01-pactwright-core-system-and-lifecycle.md) owns that boundary.
+The receiver must check that the handoff applies to its current target. A changed target or missing governing input requires reconciliation before the result is used. Agents must respect the runtime's actual mutation and revision guards. [Core, sections 55–56](./01-pactwright-core-system-and-lifecycle.md) owns dispatch freshness and replay identity. Core's methodology amendment requires checks for configuration, lifecycle and lock changes across dispatch. Packs must not claim that guarantee until the runtime and checkpoint evidence demonstrate it.
 
 Delivery Review remains distinct from [Graph Review](./04-graph-review.md). Specialist graph findings do not substitute for review of a delivered change or directly authorise canonical mutations.
 
@@ -282,4 +282,4 @@ The following BMAD material informs the design but does not define Pactwright be
 
 ---
 
-**Pactwright Agent Methodology and Workflows v1**
+**Pactwright Agent Methodology and Workflows v2**
