@@ -10,7 +10,7 @@ The contract applies to software delivery, research, business advice and creativ
 
 This specification owns agent responsibilities, method descriptions, routing, handoffs, review separation and Toolsmith's pack-authoring responsibilities. It does not own runtime transitions, canonical records, package formats, provider routing or domain techniques. Implementation checkpoints determine when these requirements are supported; this document is not evidence that they have shipped.
 
-This S01 document defines the target methodology contract. S02 aligns Core lifecycle semantics; S03 aligns Distribution's Agent Pack definition, exposure and evaluation interfaces; S07 registers this specification in Spec 08's canonical authority map. Until those amendments are adopted, this document does not override the existing owners or imply that advisory entry and pack-case discovery are supported. Sections 5 and 10 state their current limits.
+This document defines the target methodology contract. Follow-on amendments must align [Core lifecycle semantics](./01-pactwright-core-system-and-lifecycle.md) and [Distribution's Agent Pack definition, exposure and evaluation interfaces](./02-distribution-agent-packs-extensions-and-evaluation.md), and register this specification in [Open-Source Project Organisation, section 9](./08-open-source-project-organisation.md). Until those amendments are adopted, this document does not override the existing owners or imply that advisory entry and pack-case discovery are supported. Sections 5 and 10 state their current limits.
 
 ## 2. Terms and Ownership
 
@@ -88,7 +88,7 @@ The pack must help users choose a useful next action from their goal and current
 
 For governed work, routing guidance belongs in the selected agent's prompt and direct skills behind the existing adapter commands. `/capture-intent` remains the entry for a requested outcome that is to become a canonical Intent; it is not an advisory-only command. The other commands retain their Core sections 46–53 responsibilities.
 
-Pre-Delivery advice requires a host surface that can invoke the pack's agent and skills without submitting a canonical responsibility result. The seven-command adapter contract does not define that entry surface. S03 must specify its exposure under Distribution; C01 must allocate its implementation and invocation proof. Until that surface is supported and verified, packs must describe pre-Delivery advice as unavailable on that adapter path. They must not repurpose `/capture-intent`, add a command implicitly or claim that ordinary conversation already invokes the resolved pack.
+Pre-Delivery advice requires a host surface that can invoke the pack's agent and skills without submitting a canonical responsibility result. The seven-command adapter contract does not define that entry surface. A [Distribution](./02-distribution-agent-packs-extensions-and-evaluation.md) amendment must specify its exposure; a [Checkpoint 1](../checkpoints/01-self-hosted-delivery.md) amendment must allocate its implementation and invocation proof. Until that surface is supported and verified, packs must describe pre-Delivery advice as unavailable on that adapter path. They must not repurpose `/capture-intent`, add a command implicitly or claim that ordinary conversation already invokes the resolved pack.
 
 Routing must:
 
@@ -176,7 +176,7 @@ The pack describes behaviour, not a second execution engine. Scheduling, process
 
 ## 9. Toolsmith and the Agent Pack Lifecycle
 
-Toolsmith is the role accountable for researching, designing, implementing, evaluating and maintaining Agent Packs. `@pactwright/standard` is the reference pack and must provide this role when its methodology implementation is delivered. C01 allocates the initial direct-skill implementation; C06 adds external Production Skills integration and specialist-pack proof. Other packs may provide the role when relevant to their users.
+Toolsmith is the role accountable for researching, designing, implementing, evaluating and maintaining Agent Packs. `@pactwright/standard` is the reference pack and must provide this role when its methodology implementation is delivered. The initial direct-skill implementation belongs in a [Checkpoint 1](../checkpoints/01-self-hosted-delivery.md) amendment. External Production Skills integration and specialist-pack proof belong in a [Checkpoint 5](../checkpoints/05-production-skills-and-assets-publication.md) amendment. Other packs may provide the role when relevant to their users.
 
 Toolsmith is not a new core capability. Pack-authoring work under governed Delivery uses the existing specification, execution and review capabilities. Toolsmith may coordinate specialist contributions, but capability accountability and independent review remain as defined in section 3.
 
@@ -221,7 +221,7 @@ Do not treat learning as permission to change active policy or rewrite accepted 
 Pack evaluation must test conduct and useful results, not only file structure or prompt style. Cases must cover the behaviours the pack claims to support, including:
 
 - Correct method selection, including similar requests for which the method should not run.
-- Missing inputs, unavailable skills and unsupported execution modes.
+- Missing inputs, unavailable skills and unsupported interactive or unattended work.
 - Authority limits, scope discipline and truthful output status.
 - Specialist handoffs and independent review.
 - Corrections, interruption, resumption and exhausted limits.
@@ -231,7 +231,7 @@ A valid manifest proves structural compatibility, not behavioural or domain qual
 
 These are coverage requirements, not a new runtime case format. For now, pack-owned cases are versioned test instructions or tests in the pack's source workspace. They identify the candidate, entry surface, inputs, expected result and observed result. They run through an explicitly supported test path; merely listing them does not establish execution.
 
-Distribution section 5 declares no evaluation cases in the recognised manifest. Section 24's `pactwright eval --baseline --candidate` uses the running runtime's case set; it does not discover these pack-owned cases. S03 owns any later case declaration, discovery and runner contract in Distribution. Until that support exists, reports must distinguish runtime CLI results from separately executed pack-method cases and identify missing coverage.
+Distribution section 5 declares no evaluation cases in the recognised manifest. Section 24's `pactwright eval --baseline --candidate` uses the running runtime's case set; it does not discover these pack-owned cases. Any later case declaration, discovery and runner contract requires a [Distribution](./02-distribution-agent-packs-extensions-and-evaluation.md) amendment. Until that support exists, reports must distinguish runtime CLI results from separately executed pack-method cases and identify missing coverage.
 
 Capability-backed cases in the runtime case set use the actual candidate through the invocation and judgement interfaces defined by [Distribution, sections 21–24](./02-distribution-agent-packs-extensions-and-evaluation.md). Advisory methods and other pack-owned cases use a documented test path supplied by their owning pack or Production Skills, with the actual candidate. A case without a supported entry or test path is **not evaluated** and cannot support a claim that the method is available. This does not add a Pactwright runtime invocation interface.
 
