@@ -10,6 +10,8 @@ The contract applies to software delivery, research, business advice and creativ
 
 This specification owns agent responsibilities, method descriptions, routing, handoffs, review separation and Toolsmith's pack-authoring responsibilities. It does not own runtime transitions, canonical records, package formats, provider routing or domain techniques. Implementation checkpoints determine when these requirements are supported; this document is not evidence that they have shipped.
 
+This S01 document defines the target methodology contract. S02 aligns Core lifecycle semantics; S03 aligns Distribution's Agent Pack definition, exposure and evaluation interfaces; S07 registers this specification in Spec 08's canonical authority map. Until those amendments are adopted, this document does not override the existing owners or imply that advisory entry and pack-case discovery are supported. Sections 5 and 10 state their current limits.
+
 ## 2. Terms and Ownership
 
 The terms below have distinct meanings:
@@ -27,12 +29,14 @@ One agent may fulfil several roles. A public persona is a presentation choice, n
 | Pactwright Core | Delivery semantics, authority, legal transitions, canonical mutations and Evidence closure. |
 | Pactwright Extensions | Their optional semantics, records, capabilities and validation. |
 | Agent Pack | Agent responsibilities, cross-agent coordination, method routing and skill composition. |
-| Production Skills | Reusable domain methods, production workflows, tools, artifacts and domain evaluation. |
+| Production Skills | Reusable domain methods, production workflows, tools, artefacts and domain evaluation. |
 | Production Extension Packs | Specialised knowledge for their owning Production Skills family. |
 | Execution host and adapter | Supported execution facilities and projection of the resolved Pactwright environment. |
 | Checkpoint harness and run model | Checkpoint acceptance and the configured agents, skills and review cooperation, as separated in Spec 00. |
 
-These boundaries follow [Core, sections 35–40](./01-pactwright-core-system-and-lifecycle.md), [Distribution, sections 5–9 and 18–20](./02-distribution-agent-packs-extensions-and-evaluation.md), and [Spec 00, sections 1–4](./00-checkpoint-step-contract-and-delivery-tasks.md).
+These boundaries follow [Core, sections 35–43](./01-pactwright-core-system-and-lifecycle.md), [Distribution, sections 4–11, 14 and 18–20](./02-distribution-agent-packs-extensions-and-evaluation.md), and [Spec 00, sections 1–4](./00-checkpoint-step-contract-and-delivery-tasks.md).
+
+During checkpoint execution, the approved run model takes precedence over pack methods for agent cooperation, role assignments and review separation. Neither may override the owning specifications or checkpoint acceptance contract.
 
 A pack composes domain methods; it does not move their ownership into Pactwright. For example, a pack can route a pricing question to a business research skill. That skill owns the pricing technique. The pack owns which role uses it and how the result reaches its consumer.
 
@@ -66,7 +70,7 @@ Each method offered by a pack must describe the following information. This is a
 | Inputs | Required context, source provenance, governing records and missing-input handling. |
 | Availability | Required skills, tools, Extensions and host facilities. |
 | Approach | The smallest useful sequence, its decisions and any specialist delegation. |
-| Outputs | Expected artifacts or results, their status and their destination. |
+| Outputs | Expected artefacts or results, their status and their destination. |
 | Quality criteria | Observable checks that determine whether the result is useful to its consumer. |
 | Authority and stops | Permitted actions, approval points, scope limits and blocking conditions. |
 | Handoff and recovery | What the next actor receives and how interrupted or rejected work continues. |
@@ -74,13 +78,17 @@ Each method offered by a pack must describe the following information. This is a
 
 Descriptions may share common instructions by reference. They must not repeat a full skill, governing specification or project history in every prompt. Load the context needed for the current method and follow relevant references when needed.
 
-A method must state which execution modes it supports. Interactive use does not imply that unattended use is safe or available. If a required facility is unavailable, the agent must report the limitation and offer a supported path without weakening the method's authority or quality requirements.
+A method must state whether it supports interactive work, unattended work or both, as defined in section 8. These are interaction patterns, not new lifecycle policy values. If a required facility is unavailable, the agent must report the limitation and offer a supported path without weakening the method's authority or quality requirements.
 
 Quality criteria must describe the result, not only the steps followed. Reading all inputs, producing a long report or completing every checklist item does not by itself prove that the consumer can use the output.
 
 ## 5. Entry, Routing and Advisory Work
 
 The pack must help users choose a useful next action from their goal and current state. It must not require users to know internal agent names or the full method catalogue.
+
+For governed work, routing guidance belongs in the selected agent's prompt and direct skills behind the existing adapter commands. `/capture-intent` remains the entry for a requested outcome that is to become a canonical Intent; it is not an advisory-only command. The other commands retain their Core sections 46–53 responsibilities.
+
+Pre-Delivery advice requires a host surface that can invoke the pack's agent and skills without submitting a canonical responsibility result. The seven-command adapter contract does not define that entry surface. S03 must specify its exposure under Distribution; C01 must allocate its implementation and invocation proof. Until that surface is supported and verified, packs must describe pre-Delivery advice as unavailable on that adapter path. They must not repurpose `/capture-intent`, add a command implicitly or claim that ordinary conversation already invokes the resolved pack.
 
 Routing must:
 
@@ -92,11 +100,11 @@ Routing must:
 
 A small correction may need one focused Delivery. A large or uncertain goal may need research, alternatives and several separately governed outcomes. Packs must not force a product requirements document, architecture exercise or fixed waterfall sequence onto every request.
 
-Conversation, research, coaching and draft artifacts may precede governed Delivery. An advisor can explore a startup idea or critique a story without creating an Intent for each exchange. These outputs remain advice, research or drafts. They are not authorised Contracts, accepted Knowledge or permission for external actions.
+Conversation, research, coaching and draft artefacts may precede governed Delivery. An advisor can explore a startup idea or critique a story without creating an Intent for each exchange. These outputs remain advice, research or drafts. They are not authorised Contracts, accepted Knowledge or permission for external actions.
 
 When the user commits an outcome to governed Delivery, the pack uses the existing Intent, Decision, Contract and Brief responsibilities. The authorised Contract defines the outcome; the Brief defines the current fulfilment approach. Conversation agreement must not substitute for an operation's required approval.
 
-Reusable expertise belongs in Production Skills. Project-specific material follows [Project Intelligence](./03-project-intelligence.md) when that Extension is enabled, including its distinction between Sources and accepted Knowledge. Without it, packs can use ordinary project artifacts but must not present them as accepted PI records. Basic pack use must not depend on PI.
+Reusable expertise belongs in Production Skills. Project-specific material follows [Project Intelligence](./03-project-intelligence.md) when that Extension is enabled, including its distinction between Sources and accepted Knowledge. Without it, packs can use ordinary project artefacts but must not present them as accepted PI records. Basic pack use must not depend on PI.
 
 ## 6. Reference Method Families
 
@@ -106,7 +114,7 @@ The following families guide pack design. They are not mandatory runtime stages 
 | --- | --- |
 | Explore and research | Sources, assumptions, uncertainties and options that support a named decision. Separate sourced facts from inference. |
 | Plan larger work | Bounded outcomes, dependencies, risks and readiness conditions. Keep each governed outcome tied to its own Delivery records. |
-| Work in an existing project | A focused account of current behavior, conventions and constraints, with links to evidence. Distinguish observed behavior from approved intent. |
+| Work in an existing project | A focused account of current behaviour, conventions and constraints, with links to evidence. Distinguish observed behaviour from approved intent. |
 | Build or produce a change | The result required by the active Brief, verification facts, remaining gaps and the next review target. |
 | Review a change | An independent assessment against the Contract and Brief, with supported findings and a permitted corrective route. |
 | Walk through a change | An explanation for its consumer: what changed, why, how to inspect or use it, and what remains uncertain. |
@@ -114,11 +122,11 @@ The following families guide pack design. They are not mandatory runtime stages 
 | Finish a group of work | Reconciled member outcomes, integration checks, unresolved work and lessons. Report each member's actual closure state. |
 | Develop an Agent Pack | A reviewed candidate pack, evaluation results and an explicit adoption or maintenance decision. |
 
-Planning can coordinate several Deliveries, but it must not create several current Briefs for one Contract or invent a second planning authority. Group plans and summaries use ordinary artifacts or records supported by their owning Extension. This specification adds no epic node, planning record or shared acceptance state.
+Planning can coordinate several Deliveries, but it must not create several current Briefs for one Contract or invent a second planning authority. Group plans and summaries use ordinary artefacts or records supported by their owning Extension. This specification adds no epic node, planning record or shared acceptance state.
 
 Review, testing and walkthroughs serve different purposes. Tests provide verification facts. Review assesses fulfilment and defects. A walkthrough helps the consumer understand the result. None replaces the others when the Contract requires them.
 
-Finishing a group must not hide an unclosed member behind an overall success label. Shared acceptance criteria need their own supporting checks. A retrospective can propose future changes; it cannot rewrite historical Evidence or silently change the remaining Contracts.
+Finishing a group must not hide an unclosed member behind an overall success label. Any shared outcome used for acceptance must be expressed in the authorised member Contracts or in a separately authorised integration Delivery's Contract. Its checks and Evidence follow those Contracts; an ordinary group summary cannot introduce acceptance criteria. A retrospective can propose future changes; it cannot rewrite historical Evidence or silently change the remaining Contracts.
 
 Existing-project work should inspect only the context needed for the goal. Repository code, operational observations and old documentation can disagree. The method must expose that disagreement instead of treating whichever source it read first as canonical truth.
 
@@ -131,12 +139,12 @@ The parent agent must bound each assignment by its goal, inputs, permitted actio
 Each handoff must give the receiver enough information to continue:
 
 - The goal, governing Contract and Brief when applicable, and the target being handed over.
-- Relevant artifacts, source references and available revision or environment identity.
+- Relevant artefacts, source references and available revision or environment identity.
 - Work completed, checks actually run and their results.
 - Assumptions, unresolved findings, blockers and approvals still needed.
 - The receiving role and the next permitted action.
 
-This information can be part of an existing artifact or invocation result. It does not require a new persistent handoff store. A conversation summary alone is insufficient when the receiver needs the delivered artifacts or verification output.
+This information can be part of an existing artefact or invocation result. It does not require a new persistent handoff store. A conversation summary alone is insufficient when the receiver needs the delivered artefacts or verification output.
 
 The receiver must check that the handoff applies to its current target. A changed target or missing governing input requires reconciliation before the result is used. Agents must respect the runtime's actual mutation and revision guards. They must not claim that configuration, lifecycle policy or lock changes are checked across dispatch when the runtime does not provide those checks; [Core, sections 55–56](./01-pactwright-core-system-and-lifecycle.md) owns that boundary.
 
@@ -146,13 +154,17 @@ Delivery Review remains distinct from [Graph Review](./04-graph-review.md). Spec
 
 Interactive work can request decisions as they arise. Unattended work can proceed only within authority, scope and limits established before execution.
 
+These terms describe access to user interaction. Core section 27's `execution: manual|automatic` controls runtime dispatch: a `manual` responsibility is never dispatched automatically, while `automatic` permits dispatch subject to the governing policy. Interactive use does not require every responsibility to be `manual`, and unattended use does not convert a `manual` responsibility to `automatic`. An unattended run must stop when it reaches a required manual action.
+
 A method that supports unattended work must state:
 
 - Which bounded unit a worker may execute.
 - How a coordinator proposes or selects the next unit within the governing policy.
-- Which checks and reviews must precede any progression request.
-- The available time, iteration or resource limits.
-- The conditions for stopping, reporting a blocker and resuming work.
+- Which governing checks and reviews apply before a progression request, by reference to their owner.
+- The applicable policy limits and any stricter local time, iteration or resource budget.
+- How it reports policy stops, local blockers and the owning resume action.
+
+The method operates within Core sections 26–27 and 34 and the governing execution policy. Policy takes precedence on conflict. A method may stop earlier or use a smaller local budget; it may not increase a policy limit, bypass a gate or define lifecycle transitions in prompt content. A method budget of five iterations cannot extend a policy limit of three. Unsupported policy controls must be reported as unavailable, not treated as runtime-enforced because a prompt mentions them.
 
 The runtime owns legal Delivery transitions. For checkpoint execution, the harness/controller owns acceptance under [Spec 00](./00-checkpoint-step-contract-and-delivery-tasks.md). A coordinator's success statement, a worker's exit status, a passing local test or a pull request does not replace that acceptance.
 
@@ -160,28 +172,28 @@ Stop when authority is missing, a required decision is unresolved, a dependency 
 
 Resume against the current governed state and the recorded work target. Report what was preserved and what must be checked again. Do not infer acceptance from an interrupted worker's last message.
 
-The pack describes behavior, not a second execution engine. Scheduling, process supervision and provider/model selection stay with their existing owners. A pack must not advertise an autonomous loop unless its required host and controller facilities are available.
+The pack describes behaviour, not a second execution engine. Scheduling, process supervision and provider/model selection stay with their existing owners. A pack must not advertise an autonomous loop unless its required host and controller facilities are available.
 
 ## 9. Toolsmith and the Agent Pack Lifecycle
 
-Toolsmith is the role accountable for researching, designing, implementing, evaluating and maintaining Agent Packs. The reference pack provides this role. Other packs may provide it when relevant to their users.
+Toolsmith is the role accountable for researching, designing, implementing, evaluating and maintaining Agent Packs. `@pactwright/standard` is the reference pack and must provide this role when its methodology implementation is delivered. C01 allocates the initial direct-skill implementation; C06 adds external Production Skills integration and specialist-pack proof. Other packs may provide the role when relevant to their users.
 
 Toolsmith is not a new core capability. Pack-authoring work under governed Delivery uses the existing specification, execution and review capabilities. Toolsmith may coordinate specialist contributions, but capability accountability and independent review remain as defined in section 3.
 
-### 9.1. Authoring responsibilities
+### Authoring responsibilities
 
 Toolsmith must cover the following lifecycle, scaled to the change:
 
 1. **Research the need.** Identify users, decisions, recurring work, available skills and evidence of current failures. Assess relevant external methods without treating them as Pactwright authority.
 2. **Design the pack.** Define roles, capability mappings, method contracts, context needs, handoffs and authority limits. Reuse Production Skills before adding duplicate expertise.
 3. **Implement the candidate.** Create or change pack prompts, direct skills, composition and supporting examples. Keep reusable domain logic with its owning Production Skills family.
-4. **Exercise and review it.** Try representative work, blocked paths and misuse cases. Obtain an independent assessment where required. Inspect actual artifacts and consumer usability, not only prompt wording.
+4. **Exercise and review it.** Try representative work, blocked paths and misuse cases. Obtain an independent assessment where required. Inspect actual artefacts and consumer usability, not only prompt wording.
 5. **Evaluate and prepare adoption.** Validate compatibility and compare the candidate with a relevant released baseline when one exists. Otherwise, report initial case results without a comparison. Report regressions, missing checks and the exact candidate identity. An accepted release can establish the baseline for later candidates.
 6. **Maintain it.** Investigate failures, assess upstream changes, update affected methods and evaluation cases, and document compatibility or migration needs.
 
-For each material change, Toolsmith must connect the observed need to the changed instructions and the checks used to assess the result. Routine evaluation reports remain artifacts, not canonical project truth.
+For each material change, Toolsmith must connect the observed need to the changed instructions and the checks used to assess the result. Routine evaluation reports remain artefacts, not canonical project truth.
 
-### 9.2. Bootstrap and adoption
+### Bootstrap and adoption
 
 Toolsmith uses the currently selected complete pack to develop a candidate in its source workspace. It does not need the unfinished candidate to be active before it can author or test it.
 
@@ -191,7 +203,7 @@ Toolsmith must not silently replace installed pack content, generated adapters o
 
 Toolsmith owns the preparation and maintenance work, not automatic release approval. Candidate promotion must satisfy the applicable policy and evaluation requirements.
 
-### 9.3. Learning and correction
+### Learning and correction
 
 Route a problem to its owner:
 
@@ -206,7 +218,7 @@ Do not treat learning as permission to change active policy or rewrite accepted 
 
 ## 10. Quality and Evaluation
 
-Pack evaluation must test conduct and useful results, not only file structure or prompt style. Cases must cover the behaviors the pack claims to support, including:
+Pack evaluation must test conduct and useful results, not only file structure or prompt style. Cases must cover the behaviours the pack claims to support, including:
 
 - Correct method selection, including similar requests for which the method should not run.
 - Missing inputs, unavailable skills and unsupported execution modes.
@@ -215,15 +227,19 @@ Pack evaluation must test conduct and useful results, not only file structure or
 - Corrections, interruption, resumption and exhausted limits.
 - Results that a consumer can inspect and use without hidden conversational context.
 
-A valid manifest proves structural compatibility, not behavioral or domain quality. Pactwright and pack cases test responsibility fulfilment and coordination. Production Skills own domain benchmarks. Do not run a whole external benchmark suite implicitly or present its domain scores as Pactwright acceptance.
+A valid manifest proves structural compatibility, not behavioural or domain quality. Pactwright and pack cases test responsibility fulfilment and coordination. Production Skills own domain benchmarks. Do not run a whole external benchmark suite implicitly or present its domain scores as Pactwright acceptance.
 
-Capability-backed cases use the actual candidate through the invocation and judgment interfaces defined by [Distribution, sections 21–24](./02-distribution-agent-packs-extensions-and-evaluation.md). Advisory methods use a supported test path supplied by their owning pack or Production Skills, with the actual candidate. This does not add a Pactwright runtime invocation interface.
+These are coverage requirements, not a new runtime case format. For now, pack-owned cases are versioned test instructions or tests in the pack's source workspace. They identify the candidate, entry surface, inputs, expected result and observed result. They run through an explicitly supported test path; merely listing them does not establish execution.
+
+Distribution section 5 declares no evaluation cases in the recognised manifest. Section 24's `pactwright eval --baseline --candidate` uses the running runtime's case set; it does not discover these pack-owned cases. S03 owns any later case declaration, discovery and runner contract in Distribution. Until that support exists, reports must distinguish runtime CLI results from separately executed pack-method cases and identify missing coverage.
+
+Capability-backed cases in the runtime case set use the actual candidate through the invocation and judgement interfaces defined by [Distribution, sections 21–24](./02-distribution-agent-packs-extensions-and-evaluation.md). Advisory methods and other pack-owned cases use a documented test path supplied by their owning pack or Production Skills, with the actual candidate. A case without a supported entry or test path is **not evaluated** and cannot support a claim that the method is available. This does not add a Pactwright runtime invocation interface.
 
 Reports identify the resolved components, invoker, judge and cases that ran. Record the actual model and effort when the host exposes them; otherwise state that they are unavailable rather than guess. For checkpoint runs, Spec 00 requires model and effort to be resolved before dispatch. Reporting them as unavailable does not permit execution.
 
-Without an invoker, behavior-dependent results are **not evaluated**. Without a judge, semantic results are **unjudged**. Scripted stand-ins cannot count as the candidate's behavior. A successful comparison exit status does not prove that unevaluated behavior passed; the owning specification defines result and exit-status semantics.
+Without an invoker, behaviour-dependent results are **not evaluated**. Without a judge, semantic results are **unjudged**. Scripted stand-ins cannot count as the candidate's behaviour. A successful comparison exit status does not prove that unevaluated behaviour passed; the owning specification defines result and exit-status semantics.
 
-Report regressions by affected capability, agent and case. Keep deterministic failures separate from semantic judgments and missing checks. Do not use one aggregate score as release approval.
+Report regressions by affected capability, agent and case. Keep deterministic failures separate from semantic judgements and missing checks. Do not use one aggregate score as release approval.
 
 ## 11. Cross-Domain Examples
 
@@ -245,7 +261,7 @@ The pack must still satisfy all required capabilities. One visible advisor does 
 
 ### Creative production
 
-A creative pack can compose research, narrative, design and production skills. Its methods may move from a creative brief through drafts, critique and final artifacts without adopting software-specific stages.
+A creative pack can compose research, narrative, design and production skills. Its methods may move from a creative brief through drafts, critique and final artefacts without adopting software-specific stages.
 
 The Contract defines the commissioned outcome and quality criteria. Domain skills supply the production and evaluation techniques. Delivery closure does not itself approve an Asset or publish it; [Assets and Publication](./05-assets-and-publication.md) owns those semantics. Real-world performance belongs to [Operations](./06-operations.md), not a predicted outcome in the final report.
 
@@ -255,9 +271,9 @@ This contract does not add `pack.yml` keys, capability identifiers, adapter comm
 
 Direct skills can support a pack without external imports. A pack that needs external Production Skills must use a release that supports their resolution. Unsupported imports must not be ignored or described as active. A complete specialist pack remains an alternative selected pack, not a partial overlay onto another active pack.
 
-The reference pack demonstrates this contract. It is not a special runtime identity, and other packs need not copy its persona names or role count. Repository packaging, documentation and examples remain owned by [Open-Source Project Organisation](./08-open-source-project-organisation.md).
+`@pactwright/standard` is the reference implementation target for this contract. It is not a special runtime identity, and other packs need not copy its persona names or role count. Repository packaging, documentation and examples remain owned by [Open-Source Project Organisation](./08-open-source-project-organisation.md).
 
-The following BMAD material informs the design but does not define Pactwright behavior:
+The following BMAD material informs the design but does not define Pactwright behaviour:
 
 - [Build a change](https://docs.bmad-method.org/build/build-a-change/), [review a change](https://docs.bmad-method.org/build/review-a-change/), [walk through a change](https://docs.bmad-method.org/build/walk-through-a-change/) and [test completed work](https://docs.bmad-method.org/build/test-completed-work/).
 - [Finish an epic](https://docs.bmad-method.org/build/finish-an-epic/) and [autonomous development loops](https://docs.bmad-method.org/build/autonomous-development-loops/).
