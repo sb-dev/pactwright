@@ -59,6 +59,8 @@ This specification owns:
 - package-manager integration;
 - locking and reproducibility;
 - Agent Packs;
+- packaging and discovery of pack-defined methodology;
+- candidate evaluation and explicit Agent Pack adoption;
 - capability resolution;
 - Pactwright Extension installation, removal and upgrade;
 - Production Skills integration;
@@ -80,6 +82,8 @@ It does not own:
 - Production Skill commands;
 - Production Extension Pack internals;
 - domain-specific benchmarks.
+
+[Agent Methodology and Workflows](./09-agent-methodology-and-workflows.md) owns roles, method contracts, coordination and Toolsmith's authoring responsibilities. This specification owns how that content is packaged, resolved, exposed, evaluated and adopted. Core retains lifecycle and authority semantics.
 
 ---
 
@@ -201,6 +205,8 @@ when an existing Pactwright responsibility plus specialised skills is sufficient
 
 An Agent Pack defines how AI performs Pactwright responsibilities.
 
+It also defines the agents and methodology through which users reach useful outcomes, under Spec 09. Packs may serve software, business, research or creative work. Their roles and method names do not change required capability identities or grant authority.
+
 It may contain:
 
 ```text
@@ -222,6 +228,8 @@ capabilities:
 ```
 
 Agent identity is not capability identity.
+
+Each required capability resolves to one accountable agent. That agent may use specialist roles and bounded delegation as described in Spec 09 section 3. The pack's internal collaboration does not create a second capability-resolution system. A complete pack must satisfy core and enabled-Extension responsibilities even if it presents one main advisor to the user.
 
 ## Recognised Agent Pack manifest
 
@@ -259,6 +267,32 @@ pactwright agent-pack upgrade
 ```
 
 This upgrades the selected pack within its configured compatibility constraints without changing Agent Pack identity.
+
+## Methodology content and discovery
+
+Agent prompts and their attached direct skills carry executable method instructions under the existing manifest. They may share instructions by reference to other resolved content. Supporting documentation supplies examples and explanations; it is not an untracked execution configuration. No new manifest field, method registry or adapter command is introduced here.
+
+For governed work, entry guidance belongs in the prompt and attached direct skills of the agent mapped to the invoked capability. It helps users choose a method from their goal and current state without knowing internal agent keys. It identifies the expected result, accountable role, dependencies, supported interaction patterns and missing-input handling under Spec 09 sections 4–5. Its usefulness is checked by method evaluation, not inferred from manifest validation or successful `sync`. Section 14 states the current advisory-entry limit.
+
+Any instructions required during execution must be carried by a resolved agent prompt, attached direct skill or supported imported skill. Do not depend on mutable documentation outside that resolved content for behaviour that the environment claims to reproduce. A pack may link to background documentation without claiming that those links are locked execution inputs.
+
+`@pactwright/standard` must provide the reference methodology, including Toolsmith, when that methodology implementation is delivered under Spec 09 section 9. This is a target requirement, not a claim about the released pack. Other complete packs may use different roles, personas and methods. Direct skills support the initial path; external Production Skills require a runtime release that supports the declared imports. At invocation, a method must check its required facilities and report unavailable dependencies instead of treating them as active.
+
+## Pack development and adoption
+
+The pack maintainer is accountable for candidate evidence, whether a human author performs the work or a pack delegates it to a role such as Toolsmith. Spec 09 section 9 defines Toolsmith's authoring responsibilities where that role is provided. Agent-assisted authoring uses a complete selected pack to develop the candidate. The candidate need not be active in a consumer to be tested; section 24 defines first-release evaluation in a disposable evaluation project.
+
+Distribution separates three results:
+
+| Result | Meaning |
+| --- | --- |
+| Candidate | Versioned source whose exact content can be resolved and evaluated. |
+| Release | A distributed pack version. Publication alone does not prove approval or evaluation quality. |
+| Adoption | A consumer explicitly selects or upgrades to a compatible complete pack. |
+
+Candidate evaluation does not release or adopt the pack. The publishing repository's owner determines release permissions and any required approval through that repository's release process. The maintainer identifies that process and retains any required approval there; Distribution adds no release-approval record or approver role. Authoring work grants no publication or consumer-change authority. Selection and upgrade use the existing operations in this section and section 15. They retain one selected complete pack and do not overlay a partial candidate onto the active environment.
+
+For a material change, retain the observed need, affected methods, exact candidate identity, compatibility constraints, representative evaluation results and known limits. Use the released baseline when one exists; report initial results without a comparison when none exists. Sections 21–24 define evaluation meaning. Reports remain ordinary artefacts, not a new release record in the Project Graph.
 
 ---
 
@@ -696,6 +730,14 @@ They must agree on the installed Pactwright and package-backed component version
 
 Configuration expresses intent. The locks record exact resolved state at their respective layers.
 
+Methodology uses the same identity boundary. Agent prompts and attached direct skills retain their existing content hashes; supported Production Skills retain their owning exact dependency identities. A method change to that resolved content must change the corresponding identity even if the pack version string is unchanged. Ordinary background documentation does not acquire executable status merely because a prompt links to it. Section 5 defines where required instructions belong; this adds no method-level lock schema.
+
+Candidate evaluation must not silently replace a consumer's selected pack, configuration, lock or generated adapters. Prefer a separate source worktree or copy and a disposable evaluation project when the current authoring pack must remain usable. Selecting a candidate in that disposable project is test setup, not consumer adoption.
+
+Editing a selected path-sourced or workspace-linked pack is permitted, including Checkpoint 1 Step 25 self-hosting. The edit makes the recorded content identity stale: `doctor` reports action required and `sync` refuses. Stop work that depends on the old resolved environment; do not continue as though its identity were unchanged. Once the edited pack is complete and compatible, explicitly run `pactwright agent-pack use <source>` to re-resolve that same source, record its new identity and synchronise. Then deliberately restart or hand off work under the new environment. An incomplete candidate cannot be reselected; use a separate valid authoring environment to finish it.
+
+Other consumer environment changes use the owning selection or upgrade operation and the deliberate handoff in [Spec 09, Bootstrap and adoption](./09-agent-methodology-and-workflows.md#bootstrap-and-adoption). Core owns dispatch freshness; the existence of an environment lock does not itself prove that every dispatch guard is implemented.
+
 ## Recognised lock formats and graph implementation identity
 
 The current resolved lock has top-level `version: 1`. It retains the runtime, Extension, selected Agent Pack, agent/direct-skill and applicable Production Skills identities described above. `runtime.version` and `extensions` (an empty mapping when no Extension is enabled) are always present; `agent_pack`, `agents` and `skills` are present exactly when a pack is selected, so the lock of an unactivated scaffold (section 3) records the runtime alone. Only an enabled Extension has a lock entry. `agent_pack.source` is the configured source identity, not an implicitly chosen package. `agents` and `skills` maps retain the resolved content hashes for direct pack content. A recognised released `0.0.1` lock has **no top-level version key**, has `runtime.version`, `agent_pack.name/version/hash`, `agents`, `skills` and `extensions`, and is labelled **migration required**, not unsupported. Its `agent_pack.name` is matched to the explicitly configured source during section 15 migration; missing or conflicting identity blocks migration instead of inventing a source or choosing a newer component. A document with an unknown explicit version is unsupported. Missing, malformed and unsupported documents are distinct diagnoses.
@@ -808,6 +850,10 @@ Claude Code adapter
 ```
 
 Adapters do not define Pactwright semantics.
+
+Adapters expose governed method guidance through the resolved agents and attached skills behind the existing commands. A method name is not a command registration. `/capture-intent` retains its canonical Intent responsibility; it is not an advisory-only entry. The seven-command adapter contract provides no pre-Delivery advisory entry. This amendment adds none, so packs must describe pre-Delivery advice as unavailable on that path. A future exposure contract must define and verify the host entry before a pack claims support; ordinary conversation is not proof that the resolved pack was invoked.
+
+Generated guidance reflects the resolved pack and states method prerequisites. `sync` must not probe mutable host facilities to vary that output. The method checks tool access and interactive or unattended facilities at invocation and reports unsupported use then, under Spec 09 sections 4–5 and 8. This preserves deterministic generation without claiming that a prompt makes a host facility available. Synchronisation does not choose a different methodology or activate a candidate on the user's behalf.
 
 Pactwright may regenerate only files or managed regions it explicitly owns.
 
@@ -1023,6 +1069,8 @@ Examples:
 - a Production Extension Pack cannot register Project Graph semantics;
 - an Extension cannot redefine core Evidence meaning.
 
+An Agent Pack owns role assignment, method selection and cross-agent handoffs. Production Skills own the reusable specialist methods it composes. Toolsmith's maintenance responsibility changes neither boundary. A correction to pack routing belongs in a candidate pack; a correction to domain expertise belongs with the owning Production Skills family. Project-specific learning follows section 19.
+
 ---
 
 # 19. Project Knowledge Boundary
@@ -1099,6 +1147,10 @@ Extension evaluations cover the responsibilities owned by each Extension.
 
 Production-domain quality remains owned by Production Skills benchmarks.
 
+Pack methodology evaluation follows Spec 09 section 10. Cases in the runtime case set invoke the actual candidate through the existing runtime seam. Pack-owned method cases, including advisory cases, run separately through the documented test path required by section 23. This does not add a `pactwright eval` invocation interface, case-discovery mechanism or capability. An advisory test cannot establish adapter availability where section 14 provides no advisory entry.
+
+Reports distinguish structural validity, behaviour actually exercised, deterministic assertions, semantic judgements and missing checks. A valid manifest, successful package installation or zero comparison exit status does not prove that a method worked. A pack-owned case without a supported entry or test path is recorded as **not evaluated** in the separate pack-method report specified in section 23. It cannot support a method-availability claim. These separate results do not enter the CLI's case set or its exit calculation above; they remain visible gaps in release evidence. Scripted outputs cannot stand in for candidate behaviour.
+
 ---
 
 # 22. Production Benchmark Ownership
@@ -1131,6 +1183,14 @@ Production Skill behaviour
 
 Cases are versioned with their owning component.
 
+Pack-owned cases must cover the behaviours in Spec 09 section 10 for the methods the pack claims to support. That section owns the coverage list. An interactive-only method still needs a case for refusing unsupported unattended use. Where no supported test path can exercise that refusal, record the gap as not evaluated rather than omit the case or claim it passed.
+
+For now, pack-owned cases are versioned test instructions or tests in the pack's source workspace. The maintainer documents each case's candidate, supported entry surface, inputs, expected result and exact steps or command needed to run it. The path must actually invoke the candidate through the stated host or runner. An unspecified runner, an unimplemented entry or merely shipping a case beside `pack.yml` does not establish execution. Selection, `sync` and `pactwright eval` do not discover or register these cases. A future case-discovery contract requires an explicit compatible format amendment.
+
+The maintainer records the separately executed cases in a pack-method report, an ordinary artefact with no prescribed storage schema. It identifies the exact resolved candidate, case versions, entry/test path, inputs, expected and observed results, evidence and invoker/judge identities. If an identity or model/effort is unavailable, state that limit; checkpoint runs retain Spec 00's stricter pre-dispatch requirements. Record deterministic checks as pass or fail when executed, behaviour-dependent checks as **not evaluated** when they could not run, and semantic checks as **unjudged** without a judge. Neither missing result counts as a pass.
+
+Release evidence includes this report alongside runtime CLI reports and identifies uncovered methods. A zero CLI exit cannot hide a failed or unevaluated pack case. For separate pack-method comparisons, identify both exact environments and run the same case versions with the same invoker and judge. Keep deterministic regressions, semantic differences and non-comparable checks distinct. These reports do not change the CLI's result or exit rules in sections 21 and 24; domain benchmarks remain with Production Skills.
+
 Pactwright evaluation may combine deterministic and semantic assertions.
 
 Prefer deterministic validation where possible, including:
@@ -1150,7 +1210,18 @@ Routine evaluation results and reports are generated artefacts, not Project Grap
 
 # 24. Baselines and Regression Reporting
 
-A released Agent Pack establishes a baseline that can be compared with a candidate environment.
+A released Agent Pack is the usual baseline for assessing a later candidate. The comparison interface below also accepts an exactly resolvable pack directory, whether released or not. Report its actual status and why it was chosen. Technical eligibility as a baseline neither proves release approval nor authorises publication or adoption. An unreleased comparator is not a released baseline.
+
+For a first release with no released baseline, initialise a disposable evaluation project through section 3, separate from any consumer and active authoring environment. In that project, use the existing selection and standalone evaluation operations:
+
+```text
+pactwright agent-pack use <candidate-source>
+pactwright eval
+```
+
+The selection must resolve a compatible complete candidate and record its exact identity in the evaluation project's lock. Freeze that source for the run. Supply the supported invoker and judge under section 21; selection alone provides neither. The standalone run evaluates that project's resolved candidate with the runtime case set. Its exit rule is section 21's no-baseline rule: a failed evaluated deterministic assertion or any not-evaluated runtime case makes the run fail. Unjudged semantic results remain disclosed gaps, not passes. This procedure does not define `--candidate` without `--baseline`.
+
+Also execute and report the pack-owned method cases under section 23. Report initial results without claiming improvement over a released pack. An explicitly labelled unreleased comparison may be additional evidence; it does not replace the initial results. Neither test-project selection nor evaluation changes a consumer's selected pack or proves release approval. A later release can serve as the baseline for subsequent candidates.
 
 The supported interface is:
 
@@ -1177,6 +1248,10 @@ model adaptation
 Do not rely on one opaque aggregate score to decide whether a candidate is better.
 
 A regression report must make the affected capability/case visible so a release decision is reviewable.
+
+Release preparation must identify the candidate and baseline when applicable, changed methods and dependencies, cases run, regressions, semantic differences, not-comparable results, unjudged results and missing checks. Record the actual invoker and judge identities. Record model and effort when the host exposes them; otherwise state the limitation. Checkpoint execution remains subject to Spec 00's pre-dispatch model and effort requirements.
+
+These facts support the applicable release decision; they do not make it automatically. Candidate adoption must still pass selection or upgrade compatibility checks. Maintenance evaluates affected cases again after changes to prompts, methods or dependencies. Production Skills benchmark results remain separately owned evidence rather than implicit Pactwright acceptance.
 
 `--baseline` and `--candidate` each accept a pack as `<package-name>@<exact-version>` or a filesystem path to a pack directory; `--candidate` also accepts a project root, whose resolved lock supplies the candidate environment. Each side resolves to exact identities, the pack source, version and content hash and every agent, prompt and direct-skill hash, through the same resolution as selection, acquiring a package version that is not installed through the project's package manager into an isolated location; an input that cannot be resolved exactly fails the comparison, naming the input, without substituting another version. Resolution for comparison establishes identity, manifest validity and completeness but does not refuse a side whose declared compatible runtime excludes the running runtime: that mismatch is reported as an incompatible component of that side, so a released pack that declares an older runtime remains a valid baseline; whether such a side's cases are evaluated when an invoker exists belongs to the owner of the first invoker. Both sides are evaluated by the running runtime's case set with the same invoker and judge. A regression is a deterministic assertion that passed on the baseline and fails on the candidate, reported at its capability, agent and case together with the pack, prompt and direct-skill components whose identities changed between the sides. An assertion not evaluated on either side is reported as not comparable, not as a regression, and a semantic verdict that differs between the sides is reported as a difference for review, never as a regression, since judgement varies between runs. Changed components are reported even when no case was evaluated. A comparison exits with failure only when it reports a regression or a side cannot be resolved; not-comparable and unjudged results do not fail it. Reports are written to standard output or an explicitly named path, never below `.pactwright/`, a canonical store or generated adapter output; whether a project commits a report is its own choice, outside Pactwright semantics.
 
@@ -1262,6 +1337,10 @@ Add more machinery only when real integrations demonstrate that this model is in
 36. Production-domain benchmarks remain owned by Production Skills.
 37. Project-specific learned knowledge belongs in Project Intelligence.
 38. Provider and model routing remain outside Pactwright where Production Skills already own them.
+39. Pack methodology uses resolved prompt and skill content without adding an implicit manifest or command surface.
+40. Candidate evaluation does not adopt a pack in a consumer; explicit selection in a disposable evaluation project is permitted.
+41. Pack authoring and maintenance grant no release or adoption authority, regardless of the maintainer's role name.
+42. First-release evaluation uses the standalone exit rule; comparisons retain their existing result and exit-status semantics. Separate pack-method reports do not alter either CLI rule.
 
 ---
 
@@ -1321,6 +1400,8 @@ The reproducibility target additionally requires deterministic `environment_lock
 
 It extends the Agent Pack model rather than introducing a second AI composition system.
 
+The methodology amendment adds packaging, discovery and pack-lifecycle obligations from sections 5, 12, 14 and 21–24. Their checkpoint updates must demonstrate user-goal routing, exact candidate identity, isolated evaluation, explicit adoption and truthful reports. This specification does not establish that those behaviours have shipped. Historical evaluations remain attributable to the component and case versions they actually exercised.
+
 ---
 
 # 28. Relationship to Other Canonical Specifications
@@ -1349,6 +1430,9 @@ It extends the Agent Pack model rather than introducing a second AI composition 
 
 08 Open-Source Project Organisation
 → repository and ecosystem structure
+
+09 Agent Methodology and Workflows
+→ pack-defined agents, method contracts, handoffs and Toolsmith responsibilities
 ```
 
 Extension-specific semantics remain in their owning specifications.
@@ -1363,4 +1447,4 @@ Production-specific semantics remain in independent Production Skills repositori
 
 ---
 
-**Pactwright Distribution, Agent Packs, Extensions and Evaluation v5**
+**Pactwright Distribution, Agent Packs, Extensions and Evaluation v6**
