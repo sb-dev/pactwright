@@ -91,6 +91,8 @@ This specification does not define:
 
 Those concerns belong to their owning canonical specifications or external Production Skills projects.
 
+[Agent Methodology and Workflows](./09-agent-methodology-and-workflows.md) owns pack-defined roles, methods, routing and handoffs. Core defines how those methods enter and use governed Delivery. Method names and personas do not add runtime authority.
+
 ---
 
 # 3. Core Principle: Pactwright Crafts Contracts
@@ -964,6 +966,8 @@ execution status
 dispatch record (revision at dispatch of the current step)
 ```
 
+The dispatch record must also retain the governing-input identity required by section 55. This is execution provenance, not a new graph record or an extension of the Project Graph revision protocol.
+
 The exact representation of `resolved shape identity`, including whether it uses a version or hash, remains part of the lifecycle-shape storage and locking design.
 
 Execution state is Pactwright-owned ordinary repository content below `.pactwright/`, one versioned document per Brief, read through the canonical loader (section 54) and written within the serialised mutation boundary (section 55). It is excluded from the Project Graph revision (section 56) and is never a canonical record. Like other provenance Pactwright writes, it is committed with the work it accompanies. Its exact path and serialisation are implementation concerns.
@@ -992,6 +996,10 @@ No domain phase names or separate `/gate` command are defined by this specificat
 
 The Pactwright command remains domain-neutral. Production Skills determine what work the active Delivery step requires.
 
+Pack methods may conduct advisory work before governed Delivery through a supported entry, as defined in Spec 09 section 5. The current adapter command surface provides no such pre-Delivery entry; Distribution section 14 states that limit. Advice, research and draft artefacts are not canonical records or permission to act. When an outcome enters governed Delivery, use the existing Intent, Decision, Contract and Brief operations. Conversation agreement does not replace their authority checks. This boundary adds no lifecycle stage or advisory runtime command.
+
+One Delivery may contain several internal tasks when they serve one authorised outcome and one final acceptance. Internal task completion does not advance the lifecycle by itself. Outcomes that need independent authorisation or acceptance use separate Intent, Decision, Contract and Brief lineages. A group plan cannot authorise its members or create competing current Briefs for one Contract. Grouping uses ordinary planning artefacts or records supported by its owning Extension; it adds no core group state. Any shared outcome used for acceptance must be expressed in the authorised member Contracts or in a separately authorised integration Delivery's Contract, under Spec 09 section 6. A group plan or summary cannot introduce acceptance criteria.
+
 ---
 
 # 30. Phase-Aware Review
@@ -1009,6 +1017,8 @@ Closing Review determines whether the latest delivered state satisfies the Contr
 All Review steps use the same core semantic responsibility.
 
 Different review needs should normally be satisfied by current context, the Agent Pack and appropriate Production Skills rather than by creating new Pactwright Review capabilities.
+
+Formal Delivery Review uses a separate invocation in the review role, as defined in Spec 09 section 3. It assesses the governing Contract and Brief, the delivered target and relevant verification evidence. A producer's self-check, standalone advisory review, test result or walkthrough does not substitute for this Review. A different model or provider is required only when governing policy requires one.
 
 ---
 
@@ -1071,6 +1081,17 @@ When correction is required, Review may identify the relevant Delivery step or r
 
 AI must not invent lifecycle transitions.
 
+Corrective routing must distinguish the source of the problem:
+
+| Problem | Structured Review outcome | Owning route |
+| --- | --- | --- |
+| A defect within the current Contract and Brief | Requires correction at a named declared Delivery step. | A declared corrective Delivery transition. |
+| A changed fulfilment approach under the same Contract | Cannot currently progress. | A new Brief through section 45. |
+| A changed authorised outcome | Cannot currently progress. | A new Decision and Contract through section 45. |
+| Missing authority, dependency or required decision | Cannot currently progress. | Report a blocker; do not advance until it is resolved through its owning operation. |
+
+Review reports the need for a new Brief or Contract; it does not perform that canonical change or treat it as an undeclared shape transition. Preserve valid work where it still applies, then reassess it against the current lineage before reuse.
+
 ---
 
 # 33. Smallest Sufficient Correction
@@ -1096,6 +1117,14 @@ A Review may route back to Delivery through a declared transition, but policy de
 Pactwright should not create separate retry, revision or repair shapes for this purpose.
 
 A backward transition plus bounded policy is sufficient.
+
+A result refused for staleness under section 55 makes no corrective transition and does not consume a corrective iteration under this section. It stops automatic execution; it must not trigger an automatic redispatch loop. A fresh dispatch requires explicit restart after the governing inputs and current lineage have been validated. The refusal does not reset any consumed lifecycle or host budget. These rules also apply when the worker intentionally changed its governing inputs.
+
+For unattended work, the pack describes the bounded assignment, required inputs, permitted actions, checks and handoff under Spec 09 sections 7–8. The execution host owns process supervision and host resource limits. Core owns lifecycle bounds, authority checks and legal transitions. A method cannot extend either owner's limits by retrying or delegating.
+
+Stop when required authority or a decision is missing, a dependency is unavailable, scope would be exceeded or a configured limit is reached. Report the current target, completed work, checks actually run, blocker and next permitted action. A worker exit or coordinator summary is not acceptance.
+
+Resume by loading current lineage, execution state and governing inputs. Check whether the recorded work target still applies. An interrupted dispatch is not a completed step; do not infer completion from partial artefacts or its last message. Reconcile stale work before a fresh dispatch. The runtime remains responsible for any resulting transition, and section 55 governs whether a returned result can be applied.
 
 ---
 
@@ -1144,6 +1173,8 @@ Responsible for:
 The selected Agent Pack determines which agent implements each responsibility.
 
 Production Skills provide specialised techniques.
+
+Each required capability maps to one accountable agent. That agent may delegate bounded work, but it must check and integrate the results and return the capability result. Specialist roles and Toolsmith do not add capability mappings or approval rights. Spec 09 owns their method contracts; Distribution owns pack resolution and exposure.
 
 ---
 
@@ -1263,6 +1294,8 @@ Production Skills
 Contract
 → remains authoritative for the current Delivery outcome
 ```
+
+A method handoff identifies the target, governing lineage, relevant artefacts, available revision/environment identity, verification facts, unresolved findings and next permitted action. The receiving agent checks that these inputs apply to its current target. A summary cannot replace required artefacts or runtime-provided governing context. Spec 09 section 7 defines the content contract; it adds no persistent handoff store.
 
 ---
 
@@ -1395,6 +1428,8 @@ execution state
 `done` means core Contract fulfilment is complete.
 
 It does not imply deployed, published or successful in production.
+
+A group summary must report each member's derived state without overriding it. Completion of all members does not prove a shared integration outcome. Where that outcome needs independent authorisation or acceptance, govern it through its own Delivery. Core defines no aggregate `done` state for a group.
 
 For each non-superseded Intent, derive at most one current Decision; a current proceeding Decision selects exactly one current Contract. Each Contract is selected by exactly one Decision. A later Decision of the same or another Intent cannot select an existing Contract, whether current, withdrawn or superseded. An Intent direction comprises its linear Intent-supersession chain. Re-authorisation, Contract change and Intent replacement create a new Contract that supersedes the last Contract of that direction when one exists; omitting that supersession is invalid lineage. Independent Intent directions may progress concurrently; competing current Briefs or Evidence for the same parent are ambiguity, not parallel execution. Records reached only through a non-current ancestor are not current merely because they have no direct supersession edge.
 
@@ -1727,7 +1762,15 @@ This prevents prompts and model behaviour from becoming an implicit state machin
 
 Every public mutation entry point, including CLI, API and adapter-driven calls, uses the same plan, complete-state validation, section 45 immutability check and authority guards. The stored base is the exact bytes and existence/inventory of all required configuration, lifecycle, lock and active canonical-storage inputs used by the plan, together with the resolved registry/decoder identities. It is not just `project_graph_revision`; a concurrent policy edit or newly added input makes the plan stale even if pg1 is unchanged. Recheck that complete base and perform the write/result validation in one serialised mutation boundary, indivisible with respect to other Pactwright mutations. A stale base or failed guard leaves records, edges and unrelated files unchanged; do not overwrite a concurrent input change. The locking/transaction implementation is internal, not a second state database. Lifecycle execution-state writes (section 28) use the same serialised boundary, and a plan that reads execution state includes it in its stored base. Validate the resulting state before reporting success. A prompt instruction or an early fixture does not substitute for this integrated guard.
 
-A dispatched Delivery or Review step completes only against the canonical state it was dispatched against. Dispatch records the Project Graph revision in the Brief's execution state; a result that arrives after any canonical change, whether made by the executing agent or by anyone else, is refused as an execution failure reporting that canonical state changed since dispatch. The step stays current for a fresh dispatch, execution state does not advance, and the change is reported, never reverted. Across the dispatch gap only canonical change is checked; configuration, lifecycle and lock changes are not detected across it, and the result is planned and validated against the state current at result time under the result command's own stored base. Execution-state documents are written only through this boundary; a hand edit of one has the same standing as a hand edit of a canonical record, visible in repository history and checked by validation, not prevented by the runtime.
+A dispatched Delivery or Review step completes only against the canonical state and governing inputs it was dispatched against. Dispatch records the Project Graph revision and the governing-input identity in the Brief's execution state. The latter covers the exact bytes and existence of `.pactwright/config.yml`, `.pactwright/lifecycle.yml` and `.pactwright/lock.yml`, plus the resolved registry/decoder identities used for dispatch. At dispatch, before invoking the step, the runtime must verify that resolved components match their locked identities under [Distribution, section 12](./02-distribution-agent-packs-extensions-and-evaluation.md#12-resolution-versioning-and-locking). It must repeat that check within the serialised result boundary before applying a result. This extends the dispatch guard; it does not change `pg1` or `env1` meaning.
+
+Before applying a result, compare these inputs within the section 55 serialised mutation boundary. A changed graph revision or governing input, whether changed by the worker or another actor, makes the result stale. A missing or invalid required input, or a resolved component that no longer matches its locked identity, also prevents completion. Refuse the result as an execution failure and identify the changed or unavailable input or component. Do not advance execution state, apply proposed canonical effects or revert the concurrent change. If the Brief remains current, its step remains eligible for fresh dispatch after validation and the explicit restart in section 34. Otherwise, resolve the current lineage before continuing. A legacy dispatch record without the required governing-input identity cannot establish freshness and requires fresh dispatch.
+
+An intentional edit to the selected pack or another governing input is subject to the same rule. Distribution section 12 permits self-hosting edits and explicit reselection; it does not permit a result dispatched under the old identity to complete. Preserve the authorised edit, re-resolve the environment through its owning operation where required, and deliberately restart or hand off. Fresh dispatch reassesses the retained work under the new valid inputs; it does not require repeating the environment edit. Section 34 defines the stale-result stop and iteration accounting.
+
+The result command must still validate its complete current stored base and authority. Dispatch freshness does not authorise a result, detect arbitrary edits to production artefacts, or guarantee continuous observation of inputs that changed and were restored between checks. Review still identifies the delivered state it assessed. Execution-state documents are written only through this boundary; a hand edit of one has the same standing as a hand edit of a canonical record, visible in repository history and checked by validation, not prevented by the runtime.
+
+This governing-input guard is a target requirement introduced by the methodology amendment. The earlier dispatch contract checked only canonical graph changes. Runtime and checkpoint acceptance must demonstrate the stronger guard before a pack or host claims it is supported. Historical dispatch evidence remains attributable to the earlier contract.
 
 ---
 
@@ -1879,6 +1922,10 @@ The following are canonical Pactwright invariants.
 21. Repository revision and Project Graph revision are distinct identities.
 22. Replayable execution provenance uses `repository_revision + project_graph_revision + environment_lock_hash` as its shared replay base.
 23. Pinned replay fails rather than silently substituting current repository, graph or environment state.
+24. Pack roles and delegated assignments do not grant runtime authority or create additional capability mappings.
+25. Advisory work, internal task completion and group summaries cannot establish canonical Delivery acceptance.
+26. Formal Delivery Review uses a separate review invocation against the governed delivered target.
+27. A dispatched result must satisfy section 55 freshness and current authority checks before progression.
 
 ---
 
@@ -1977,6 +2024,10 @@ The canonical target adds:
 - support for richer domain-neutral shapes without adding domain-specific stages;
 - shared replay identity across repository state, Project Graph state and the resolved execution environment.
 
+The methodology amendment also requires governing-input freshness across dispatch (section 55). Its implementation proof must cover unchanged inputs, graph/configuration/lifecycle/lock changes, invalid inputs, component identity drift at dispatch and result, and legacy dispatch records. A stale result must preserve changes and must not advance the step. Proof must include an intentional self-hosting edit, explicit reselection and restart, and section 34's stop and iteration accounting.
+
+[Checkpoint 1](../checkpoints/01-self-hosted-delivery.md) owns this runtime proof and the amendments to its execution and dispatch contracts, including [CP01-S12](../checkpoints/01-self-hosted-delivery/CP01-S12.yml) and the corresponding [source crosswalk](../checkpoints/01-self-hosted-delivery/crosswalk.yml). Its current graph-only dispatch contract and historical crosswalk entries do not prove the stronger guard. Those amendments and their acceptance remain follow-on work; this specification change establishes neither implementation nor checkpoint acceptance.
+
 The replay tuple resolves the cross-spec identity contract but deliberately leaves historical repository/package retention and lifecycle-shape representation to their existing owners and implementation evidence.
 
 These are evolutions of the existing lifecycle architecture rather than a replacement for it.
@@ -2013,10 +2064,13 @@ The surrounding canonical system is:
 
 08 Open-Source Project Organisation
 → repository, ecosystem and public project structure
+
+09 Agent Methodology and Workflows
+→ pack-defined roles, methods, handoffs and Toolsmith responsibilities
 ```
 
 No neighbouring specification may redefine the Contract, Delivery Graph or core lifecycle semantics established here.
 
 ---
 
-**Pactwright Core System and Lifecycle v6**
+**Pactwright Core System and Lifecycle v7**
