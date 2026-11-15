@@ -1,5 +1,5 @@
-# Checkpoint harness verification (T3.5): the Docker integration tests, the
-# contract check and the repository gate, whose tests include the H1, H2 and
+# Checkpoint harness verification (T3.5): the Docker integration tests and
+# repository gate, whose tests include the H1, H2 and
 # H3 tests, on a GitHub-hosted runner, the H2 live Claude
 # compatibility proof and, on request, the H3 or T3.6 L4 hosted-proof
 # assertions over a hosted run's saved state. A pull request runs on its head commit, so the
@@ -10,10 +10,15 @@ name: Checkpoint harness verification
 on:
   pull_request:
     paths:
-      - ".github/workflows/**"
+      - ".github/workflows/checkpoint-harness.yml"
+      - ".github/workflows/checkpoint-harness-verify.yml"
       - ".github/checkpoint-harness/**"
       - ".claude/skills/**"
-      - "docs/**"
+      # Executable inputs for the repository and harness tests.
+      - "docs/checkpoints/01-self-hosted-delivery.md"
+      - "docs/checkpoints/01-self-hosted-delivery/**"
+      - "docs/checkpoints/contract.schema.json"
+      - "docs/specs/fixtures/**"
       - "src/**"
       - "scripts/**"
       - "tests/**"
@@ -81,7 +86,7 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           ref: ${{ github.event.pull_request.head.sha || github.sha }}
-          # The contract check reads replaced prose from earlier revisions.
+          # The repository tests and the contract check read earlier revisions.
           fetch-depth: 0
           persist-credentials: false
       - uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413 # v6.1.0
@@ -96,6 +101,8 @@ jobs:
       - name: Docker integration tests
         run: pnpm --filter @pactwright/checkpoint-harness test:integration
       - name: Contract check
+        # Pull requests run this in checkpoint-contracts.yml.
+        if: github.event_name == 'workflow_dispatch'
         run: pnpm contracts:check
       # T3.6 §4: the repository gate without cached results, and the pull
       # request's whitespace check.
