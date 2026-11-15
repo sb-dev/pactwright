@@ -1,0 +1,53 @@
+name: Checkpoint contract validation
+
+on:
+  pull_request:
+    paths:
+      - ".github/workflows/checkpoint-contracts.yml"
+      - "docs/checkpoints/**"
+      # Sources outside docs/checkpoints/ declared in checkpoint.yml.
+      - "docs/specs/00-checkpoint-step-contract-and-delivery-tasks.md"
+      - "docs/specs/01-pactwright-core-system-and-lifecycle.md"
+      - "docs/specs/02-distribution-agent-packs-extensions-and-evaluation.md"
+      - "docs/specs/08-open-source-project-organisation.md"
+      - "tools/checkpoint-harness/src/checkpoint-contracts.ts"
+      - "tools/checkpoint-harness/package.json"
+      - "tools/checkpoint-harness/tsconfig.json"
+      - "package.json"
+      - "pnpm-lock.yaml"
+      - "pnpm-workspace.yaml"
+      - ".npmrc"
+      - "tsconfig.json"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: checkpoint-contracts-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  contracts:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          # The crosswalk quotes checkpoint prose from earlier revisions.
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413 # v6.1.0
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: 22
+          cache: pnpm
+      - name: Install
+        run: pnpm install --frozen-lockfile
+      - name: Contract check
+        run: pnpm contracts:check
+      - name: Whitespace check
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+        run: git diff --check "$BASE_SHA...$HEAD_SHA"
