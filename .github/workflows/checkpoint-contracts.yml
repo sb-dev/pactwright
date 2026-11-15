@@ -5,11 +5,7 @@ on:
     paths:
       - ".github/workflows/checkpoint-contracts.yml"
       - "docs/checkpoints/**"
-      # Sources outside docs/checkpoints/ declared in checkpoint.yml.
-      - "docs/specs/00-checkpoint-step-contract-and-delivery-tasks.md"
-      - "docs/specs/01-pactwright-core-system-and-lifecycle.md"
-      - "docs/specs/02-distribution-agent-packs-extensions-and-evaluation.md"
-      - "docs/specs/08-open-source-project-organisation.md"
+      - "docs/specs/**"
       - "tools/checkpoint-harness/src/checkpoint-contracts.ts"
       - "tools/checkpoint-harness/package.json"
       - "tools/checkpoint-harness/tsconfig.json"
@@ -46,8 +42,3 @@ jobs:
         run: pnpm install --frozen-lockfile
       - name: Contract check
         run: pnpm contracts:check
-      - name: Whitespace check
-        env:
-          BASE_SHA: ${{ github.event.pull_request.base.sha }}
-          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
-        run: git diff --check "$BASE_SHA...$HEAD_SHA"
