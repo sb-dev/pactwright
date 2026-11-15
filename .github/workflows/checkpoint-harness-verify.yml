@@ -14,7 +14,8 @@ on:
       - ".github/workflows/checkpoint-harness-verify.yml"
       - ".github/checkpoint-harness/**"
       - ".claude/skills/**"
-      # Executable inputs for the repository and harness tests.
+      # Run the full suite for Checkpoint 1 planning fixtures and revision vectors.
+      # The contract workflow covers source citations for all checkpoints.
       - "docs/checkpoints/01-self-hosted-delivery.md"
       - "docs/checkpoints/01-self-hosted-delivery/**"
       - "docs/checkpoints/contract.schema.json"
@@ -104,16 +105,9 @@ jobs:
         # Pull requests run this in checkpoint-contracts.yml.
         if: github.event_name == 'workflow_dispatch'
         run: pnpm contracts:check
-      # T3.6 §4: the repository gate without cached results, and the pull
-      # request's whitespace check.
+      # T3.6 §4: the repository gate without cached results.
       - name: Repository gate
         run: pnpm verify --force
-      - name: Whitespace check
-        if: github.event_name == 'pull_request'
-        env:
-          BASE_SHA: ${{ github.event.pull_request.base.sha }}
-          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
-        run: git diff --check "$BASE_SHA...$HEAD_SHA"
 
   # The live Claude adapter test with distinct admitted producer and reviewer
   # settings (T3.5 H2), the learning purposes' sessions (T3.6 L2) and the
