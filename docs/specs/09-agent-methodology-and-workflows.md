@@ -8,9 +8,9 @@ An Agent Pack defines who does the work, how agents cooperate and how they use P
 
 The contract applies to software delivery, research, business advice and creative work. It supports useful work before a governed Delivery, as well as work under an authorised Contract and Brief.
 
-This specification owns agent responsibilities, method descriptions, routing, handoffs, review separation and Toolsmith's pack-authoring responsibilities. It does not own runtime transitions, canonical records, package formats, provider routing or domain techniques. Implementation checkpoints determine when these requirements are supported; this document is not evidence that they have shipped.
+This specification owns agent responsibilities, continuing project direction, method descriptions, routing, handoffs, review separation and Toolsmith's pack-authoring responsibilities. It does not own runtime transitions, canonical records, package formats, provider routing or domain techniques. Implementation checkpoints determine when these requirements are supported; this document is not evidence that they have shipped.
 
-This document defines the target methodology contract. [Core v7](./01-pactwright-core-system-and-lifecycle.md) defines its Delivery, authority and dispatch-freshness requirements. [Distribution v6](./02-distribution-agent-packs-extensions-and-evaluation.md) defines its packaging, exposure, evaluation and adoption requirements. These specification amendments do not establish runtime support or checkpoint acceptance. Registration in [Open-Source Project Organisation, section 9](./08-open-source-project-organisation.md) remains follow-on work. Sections 5 and 10 retain the current limits on advisory entry and pack-case discovery.
+This document defines the target methodology contract. [Core v8](./01-pactwright-core-system-and-lifecycle.md) defines its Delivery, authority and dispatch-freshness requirements. [Distribution v6](./02-distribution-agent-packs-extensions-and-evaluation.md) defines its packaging, exposure, evaluation and adoption requirements. These specification amendments do not establish runtime support or checkpoint acceptance. Registration in [Open-Source Project Organisation, section 9](./08-open-source-project-organisation.md) remains follow-on work. Sections 5 and 10 retain the current limits on advisory entry and pack-case discovery.
 
 ## 2. Terms and Ownership
 
@@ -21,6 +21,8 @@ The terms below have distinct meanings:
 - A **role** is an agent's responsibility within a method, such as researcher or coordinator.
 - A **method** describes how to achieve one useful result, including its inputs, outputs and checks.
 - A **methodology** combines roles and methods into an approach to work.
+- A **Project Director** is a pack-defined role accountable for maintaining project direction and coordinating progress across activities and Deliveries.
+- **Project direction** describes the project's purpose, desired outcomes and current strategy. It may span several Intent directions. An **Intent direction** retains Core section 44's meaning: one linear Intent-supersession chain.
 
 One agent may fulfil several roles. A public persona is a presentation choice, not an authority boundary or a requirement for a separate agent.
 
@@ -58,6 +60,14 @@ Role ownership does not grant decision authority. A coordinator cannot approve a
 The pack must distinguish producing work, checking work and accepting work. A producer's self-check is useful but is not independent review. Where independent review is required, it uses a separate invocation in the review role. That invocation receives the governing requirements, delivered result and relevant evidence. It must reach its own assessment rather than adopt the producer's conclusion.
 
 Review independence does not require a different provider or model unless the governing policy requires one. One public advisor may coordinate both production and review, but the pack must preserve the separate review invocation and report its actual result.
+
+### Project Director responsibility
+
+A pack offering continuing project coordination must identify its Project Director and the scope it coordinates. The director maintains direction with the user, selects useful work within current authority, coordinates specialists, integrates their results and assesses progress. It reports blockers, decisions needed and the next permitted action. It proposes changes when evidence challenges the current direction or approach.
+
+The initial reference arrangement is one director supported by specialists. Packs may use other arrangements, including workstream leads, if they preserve clear accountability and the same handoff rules. Persona names and role counts remain pack choices. `@pactwright/standard` must provide the reference director method when its methodology implementation is delivered. This requirement does not establish that it is available today.
+
+Project accountability does not transfer capability accountability or approval authority. The director need not map to `delivery-specification`. When another agent owns a capability, that agent still checks and integrates its delegated work and returns the capability result. The director coordinates across those results without replacing required review or runtime acceptance.
 
 ## 4. Method Contract
 
@@ -106,12 +116,17 @@ When the user commits an outcome to governed Delivery, the pack uses the existin
 
 Reusable expertise belongs in Production Skills. Project-specific material follows [Project Intelligence](./03-project-intelligence.md) when that Extension is enabled, including its distinction between Sources and accepted Knowledge. Without it, packs can use ordinary project artefacts but must not present them as accepted PI records. Basic pack use must not depend on PI.
 
+For continuing coordination, route the next activity through advice, research, planning, production, review or a decision as needed. With PI enabled, use its single roadmap and its readiness and precedence rules for Delivery candidates, under PI sections 21–23. The director may explain a choice among eligible work but must not create a separate priority engine or treat raw Sources as accepted obligations. Without PI, use current governing records and ordinary planning documents, identify unresolved dependencies and state the limits of that view. In either mode, selecting work is not authorising it.
+
+Select methods and skills from the resolved environment and check their required facilities. Record the chosen skill and available resolved identity in the assignment or result. Load detailed instructions when needed through supported resolved content, as required by Distribution section 5. Discovery of a skill does not make it active. If a required skill, family, specialisation or version is missing, report the gap and route it to Toolsmith or the owning Production Skills family. Use the resulting environment only after evaluation and explicit selection or upgrade under Distribution. Section 9 owns the pack-development handoff.
+
 ## 6. Reference Method Families
 
 The following families guide pack design. They are not mandatory runtime stages or a universal sequence. A pack selects and names the methods that serve its users, while satisfying its required capabilities.
 
 | Family | Useful result and handoff |
 | --- | --- |
+| Maintain project direction | Current direction, an evidence-based progress assessment and a next activity, change proposal, decision request or stop. |
 | Explore and research | Sources, assumptions, uncertainties and options that support a named decision. Separate sourced facts from inference. |
 | Plan larger work | Bounded outcomes, dependencies, risks and readiness conditions. Keep each governed outcome tied to its own Delivery records. |
 | Work in an existing project | A focused account of current behaviour, conventions and constraints, with links to evidence. Distinguish observed behaviour from approved intent. |
@@ -130,6 +145,61 @@ Finishing a group must not hide an unclosed member behind an overall success lab
 
 Existing-project work should inspect only the context needed for the goal. Repository code, operational observations and old documentation can disagree. The method must expose that disagreement instead of treating whichever source it read first as canonical truth.
 
+### Continuing project direction
+
+The director follows this decision cycle, scaled to the work:
+
+1. Load the current direction, governing records and relevant evidence. Identify their versions, source status and any conflicts. If direction is missing, draft it from available context and identify decisions needed from the user. Keep assumptions explicit until resolved through the applicable authority.
+2. Identify changes, gaps and blockers that affect the intended outcome.
+3. Select the next useful activity under section 5's routing and readiness rules.
+4. Assign bounded work with an accountable owner, required inputs, permitted actions, expected output and checks.
+5. Inspect the result and obtain the required independent review through the owning capability or method.
+6. Assess progress against the intended outcome, using the distinctions below.
+7. Continue within current authority, propose a correction, request a decision or stop with a reason and next permitted action.
+
+The cycle may span conversations and Deliveries. Each invocation remains bounded under section 8. A small request may need only a short response and a next action; the cycle does not require a new report or Delivery for every exchange. Advisory use still requires the supported entry described in section 5.
+
+For continuing project coordination, maintain a versioned direction document, or an identified section of an existing project document, with the following content:
+
+| Content | Required meaning |
+| --- | --- |
+| Purpose and desired outcomes | What the project seeks to achieve and for whom. |
+| Success measures and review conditions | What evidence would show progress, when to assess it and what would trigger reconsideration. |
+| Constraints and commitments | The limits and existing obligations that bound choices, with their governing references. |
+| Assumptions, sources and uncertainties | What supports the current approach, what is inferred and what remains unverified. |
+| Current strategy and unresolved decisions | The approach being followed, alternatives still under consideration and the owner of each required decision. |
+
+Retain the document's revision and references to the records that support it. Distinguish proposed content from approved requirements or accepted conclusions. With PI enabled, ingest supporting material through Sources and use normal Knowledge governance for conclusions used as accepted project knowledge. New canonical Knowledge and changed conclusions require the human review and approval defined in PI section 11. The document is a working view, not a second Knowledge authority. Without PI, it remains an ordinary project artefact with explicit source and approval status.
+
+This is a content contract, not a new canonical record or storage schema. The direction document cannot authorise work, override a Contract or replace PI's roadmap. Conversation summaries can point to it and the governing records; they cannot replace those sources. On resumption, reload current records and reconcile changes under sections 7–8.
+
+### Progress assessment and adaptation
+
+The director reports three distinct results where they apply:
+
+| Assessment | Required basis |
+| --- | --- |
+| Delivery fulfilment | The governing Contract, current Evidence and derived Delivery state under Core section 44. |
+| Release or use | Applicable approval status and evidence of actual publication, deployment or use. Approval alone does not prove release. Human Asset approval and Publication semantics remain with Spec 05. |
+| Observed effect | The measure, observation period, sources, uncertainty and limits on attributing the result to the delivered work. Supported operational feedback follows Spec 06. |
+
+State when an assessment is not applicable, pending or unsupported by evidence. A completed Delivery does not establish release or real-world success. Planned requirement coverage does not prove fulfilment. Individually accepted members do not prove their combined outcome; the governing Contracts and Evidence must establish it as described above.
+
+Route findings to their existing owners:
+
+| Finding | Required route |
+| --- | --- |
+| Defect within the current Contract and Brief | Required Review and a declared corrective transition under Core sections 32–34. |
+| Changed approach under a valid Contract | A new Brief under Core section 45. |
+| Changed authorised outcome | A new Decision and Contract under Core section 45. |
+| Changed project conclusion or strategy | A proposal through PI governance when enabled, including required approval and propagation. Without PI, record the proposal and use the applicable project decision authority. Neither route silently changes a Contract. |
+| Missing evidence | Bounded research or an experiment within the applicable authority, followed by reassessment. |
+| Missing or defective reusable method | Toolsmith or the owning Production Skills family under section 9. |
+
+The director identifies the route and affected work. It does not invent a transition or perform an approval merely because it identified the problem. Preserve unaffected work and reassess reusable results against current requirements. Preserve historical Evidence even when later observations show weak results.
+
+With PI enabled, operational feedback follows Observation → Source → accepted Knowledge → Intent candidate. Research outside supported operational exposure may enter as an ordinary Source. Raw observations do not directly authorise Delivery. For recurring obligations, distinguish the closed occurrence from the continuing recurrence policy under PI section 23. Scheduling and durable execution remain host responsibilities.
+
 ## 7. Delegation and Handoffs
 
 Delegate when a specialist method, an independent assessment or separable work improves the result. More agents are not a quality criterion.
@@ -145,6 +215,8 @@ Each handoff must give the receiver enough information to continue:
 - The receiving role and the next permitted action.
 
 This information can be part of an existing artefact or invocation result. It does not require a new persistent handoff store. A conversation summary alone is insufficient when the receiver needs the delivered artefacts or verification output.
+
+For work coordinated by the director, also identify the relevant direction revision and the intended contribution to the project outcome. Apply the handoff contract to specialists, people and external services. A request sent or acknowledged is not a completed result. Identify who will inspect the returned work and report a blocker when the required result cannot be obtained or verified. External actions still require their applicable authority.
 
 The receiver must check that the handoff applies to its current target. A changed target or missing governing input requires reconciliation before the result is used. Agents must respect the runtime's actual mutation and revision guards. [Core, sections 55–56](./01-pactwright-core-system-and-lifecycle.md) owns dispatch freshness and replay identity. Core's methodology amendment requires checks for configuration, lifecycle and lock changes across dispatch. Packs must not claim that guarantee until the runtime and checkpoint evidence demonstrate it.
 
@@ -172,6 +244,8 @@ Stop when authority is missing, a required decision is unresolved, a dependency 
 
 Resume against the current governed state and the recorded work target. Report what was preserved and what must be checked again. Do not infer acceptance from an interrupted worker's last message.
 
+The director's continuing responsibility does not imply continuous execution. Its decision cycle runs only through available, supported host facilities. Stale-result refusal ends the current invocation under Core section 34. A fresh invocation may restart where current policy permits, after reconciliation; consumed lifecycle and host budgets remain consumed. The director must not add a permanent restart-approval gate or use successive invocations to evade configured limits. Durable host state, trigger receipts and external-effect recovery require their owning host contracts and implementation proof; this method introduces none.
+
 The pack describes behaviour, not a second execution engine. Scheduling, process supervision and provider/model selection stay with their existing owners. A pack must not advertise an autonomous loop unless its required host and controller facilities are available.
 
 ## 9. Toolsmith and the Agent Pack Lifecycle
@@ -193,6 +267,8 @@ Toolsmith must cover the following lifecycle, scaled to the change:
 
 For each material change, Toolsmith must connect the observed need to the changed instructions and the checks used to assess the result. Routine evaluation reports remain artefacts, not canonical project truth.
 
+When the director identifies a capability gap, its handoff states the intended outcome, missing capability, active environment identity and blocking impact. Toolsmith determines whether the change belongs to the pack or an upstream Production Skills family. The returned result identifies the candidate, evaluation evidence, remaining gaps and required adoption action. The director must not treat that result as an update to the active environment.
+
 ### Bootstrap and adoption
 
 Toolsmith uses the currently selected complete pack to develop a candidate in its source workspace. It does not need the unfinished candidate to be active before it can author or test it.
@@ -205,14 +281,7 @@ Toolsmith owns the preparation and maintenance work, not automatic release appro
 
 ### Learning and correction
 
-Route a problem to its owner:
-
-- A delivery defect follows the existing review and correction route.
-- A changed fulfilment approach follows Brief revision rules.
-- A changed authorised outcome follows Decision and Contract revision rules.
-- Project-specific learning follows PI when enabled.
-- Reusable domain expertise belongs in Production Skills.
-- A role, routing or coordination defect becomes a candidate Agent Pack change.
+Use section 6's corrective routes for Delivery defects, changed approaches, changed outcomes and project-specific learning. Reusable domain expertise belongs in Production Skills. A role, routing or coordination defect becomes a candidate Agent Pack change.
 
 Do not treat learning as permission to change active policy or rewrite accepted history. [Core, sections 24 and 44–45](./01-pactwright-core-system-and-lifecycle.md) governs Delivery lineage.
 
@@ -226,6 +295,21 @@ Pack evaluation must test conduct and useful results, not only file structure or
 - Specialist handoffs and independent review.
 - Corrections, interruption, resumption and exhausted limits.
 - Results that a consumer can inspect and use without hidden conversational context.
+
+Packs offering continuing project coordination must also cover these cases:
+
+| Case | Required result |
+| --- | --- |
+| Small advisory request | Proportionate advice without canonical Delivery mutations or implied authority. An unsupported entry is reported as unavailable. |
+| Several related Deliveries | Explicit owners and dependencies, actual member states and governing acceptance evidence for any claimed shared outcome. Individually accepted parts that fail integration remain a reported gap. |
+| Missing skill | A named gap and owning next action. Discovered or candidate content is not treated as active. |
+| Changed strategy | A proposal through the correct decision route, with affected work identified and unaffected work preserved. |
+| Delivered output with weak results | Fulfilment and observed effect are reported separately. The next action follows evidence without rewriting historical Evidence. |
+| Interrupted work | Current state and work target are reconciled before permitted resumption. Consumed limits remain consumed and partial output is not acceptance. |
+| Recurring work | Closure of one occurrence does not cancel its recurrence policy or imply that the next occurrence ran. |
+| Coordination without PI | Ordinary direction and planning documents remain usable, with explicit limits and no claim of accepted PI Knowledge or a derived PI roadmap. |
+
+These cases extend coverage requirements. They do not establish execution evidence or allocate checkpoint acceptance by themselves.
 
 A valid manifest proves structural compatibility, not behavioural or domain quality. Pactwright and pack cases test responsibility fulfilment and coordination. Production Skills own domain benchmarks. Do not run a whole external benchmark suite implicitly or present its domain scores as Pactwright acceptance.
 
@@ -251,6 +335,8 @@ A software pack routes a small defect to a focused change method. A larger featu
 
 The execution agent produces the change and verification facts. A separate review invocation assesses the delivered target. The walkthrough explains the change to its consumer. Runtime operations retain Delivery and Evidence authority.
 
+For a feature spanning several Deliveries, the director coordinates their dependencies and reports their individual states. If accepted components fail a required integration check, it identifies the owning correction or integration Delivery. It cannot replace that failure with an aggregate success claim.
+
 ### Founder advice
 
 A founder-advisor pack may present one advisor, such as Nadia, while composing business research, pricing and fundraising skills. The advisor can coach an uncertain founder before any governed Delivery begins.
@@ -259,11 +345,15 @@ A committed pricing study can use a Contract covering research scope, assumption
 
 The pack must still satisfy all required capabilities. One visible advisor does not remove review separation or grant permission to contact investors, spend money or publish material.
 
+Nadia may also serve as the Project Director while another agent owns `delivery-specification`. She maintains the founder's direction document and selects research or production work within current authority. A missing pricing skill becomes a capability-gap handoff. Later customer evidence may challenge the strategy even though the study fulfilled its Contract. She proposes the appropriate Knowledge and Delivery changes while preserving the study's historical Evidence.
+
 ### Creative production
 
 A creative pack can compose research, narrative, design and production skills. Its methods may move from a creative brief through drafts, critique and final artefacts without adopting software-specific stages.
 
 The Contract defines the commissioned outcome and quality criteria. Domain skills supply the production and evaluation techniques. Delivery closure does not itself approve an Asset or publish it; [Assets and Publication](./05-assets-and-publication.md) owns those semantics. Real-world performance belongs to [Operations](./06-operations.md), not a predicted outcome in the final report.
+
+For a recurring publication, the director assesses each commissioned output, its publication status and available audience evidence separately. Closing one occurrence preserves the recurrence policy. After an interruption, it reconciles current work and publication evidence before requesting the next permitted action; the method alone does not supply scheduling or safe external-effect retries.
 
 ## 12. Compatibility and Design References
 
@@ -282,4 +372,4 @@ The following BMAD material informs the design but does not define Pactwright be
 
 ---
 
-**Pactwright Agent Methodology and Workflows v2**
+**Pactwright Agent Methodology and Workflows v3**

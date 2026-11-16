@@ -1124,6 +1124,8 @@ Explicit restart means a new `pactwright lifecycle run` invocation or a fresh ad
 
 For unattended work, the pack describes the bounded assignment, required inputs, permitted actions, checks and handoff under Spec 09 sections 7–8. The execution host owns process supervision and host resource limits. Core owns lifecycle bounds, authority checks and legal transitions. A method cannot extend either owner's limits by retrying or delegating.
 
+The Project Director's continuing decision cycle is defined in [Spec 09, section 6](./09-agent-methodology-and-workflows.md#continuing-project-direction). It may coordinate several Deliveries, but every invocation remains subject to these bounds. Continuing responsibility adds no scheduler, host persistence or lifecycle transition.
+
 Stop when required authority or a decision is missing, a dependency is unavailable, scope would be exceeded or a configured limit is reached. Report the current target, completed work, checks actually run, blocker and next permitted action. A worker exit or coordinator summary is not acceptance.
 
 Resume by loading current lineage, execution state and governing inputs. Check whether the recorded work target still applies. An interrupted dispatch is not a completed step; do not infer completion from partial artefacts or its last message. Reconcile stale work before a fresh dispatch. The runtime remains responsible for any resulting transition, and section 55 governs whether a returned result can be applied.
@@ -1176,7 +1178,7 @@ The selected Agent Pack determines which agent implements each responsibility.
 
 Production Skills provide specialised techniques.
 
-Each required capability maps to one accountable agent. That agent may delegate bounded work, but it must check and integrate the results and return the capability result. Specialist roles and Toolsmith do not add capability mappings or approval rights. Spec 09 owns their method contracts; Distribution owns pack resolution and exposure.
+Each required capability maps to one accountable agent. That agent may delegate bounded work, but it must check and integrate the results and return the capability result. Specialist roles, the Project Director and Toolsmith do not add capability mappings or approval rights. The director need not own `delivery-specification` and cannot replace another capability's accountable agent. [Spec 09, section 3](./09-agent-methodology-and-workflows.md#project-director-responsibility) owns these role boundaries; Distribution owns pack resolution and exposure.
 
 ---
 
@@ -1299,6 +1301,8 @@ Contract
 
 A method handoff identifies the target, governing lineage, relevant artefacts, available revision/environment identity, verification facts, unresolved findings and next permitted action. The receiving agent checks that these inputs apply to its current target. A summary cannot replace required artefacts or runtime-provided governing context. Spec 09 section 7 defines the content contract; it adds no persistent handoff store.
 
+The director's direction document supplies project context under [Spec 09, section 6](./09-agent-methodology-and-workflows.md#continuing-project-direction). Its revision, sources and approval status must be identifiable. It cannot replace the governing lineage or turn a conversation summary into canonical authority.
+
 ---
 
 # 40. Core vs Project Intelligence
@@ -1324,6 +1328,8 @@ Project Intelligence must not silently:
 - alter lifecycle transitions.
 
 New project knowledge that requires changed authorised behaviour must enter normal Delivery semantics.
+
+With PI enabled, the director uses its roadmap and Knowledge governance under [Spec 09, sections 5–6](./09-agent-methodology-and-workflows.md#5-entry-routing-and-advisory-work). Without PI, ordinary direction and planning documents remain usable with their limits stated. Neither path creates a second planning authority or changes Contract approval requirements.
 
 ---
 
@@ -1430,6 +1436,8 @@ execution state
 `done` means core Contract fulfilment is complete.
 
 It does not imply deployed, published or successful in production.
+
+The director reports fulfilment, release or use, and observed effect separately under [Spec 09, section 6](./09-agent-methodology-and-workflows.md#progress-assessment-and-adaptation). Project direction in that method may span several Intent directions; it does not change the lineage meaning of Intent direction below or create a project-wide `done` state.
 
 A group summary must report each member's derived state without overriding it. Completion of all members does not prove a shared integration outcome. Where that outcome needs independent authorisation or acceptance, govern it through its own Delivery. Core defines no aggregate `done` state for a group.
 
@@ -2068,11 +2076,11 @@ The surrounding canonical system is:
 → repository, ecosystem and public project structure
 
 09 Agent Methodology and Workflows
-→ pack-defined roles, methods, handoffs and Toolsmith responsibilities
+→ pack-defined roles, continuing project direction, methods, handoffs and Toolsmith responsibilities
 ```
 
 No neighbouring specification may redefine the Contract, Delivery Graph or core lifecycle semantics established here.
 
 ---
 
-**Pactwright Core System and Lifecycle v7**
+**Pactwright Core System and Lifecycle v8**
