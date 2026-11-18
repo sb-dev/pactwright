@@ -64,6 +64,22 @@ requirements:
       review, never as a regression. Changed components are reported even when no case was evaluated. The comparison
       exits with failure only when it reports a regression or a side cannot be resolved; not-comparable and
       unjudged results do not fail it. No single opaque aggregate score decides the result.
+  R08:
+    source: [DISTRIBUTION#21, DISTRIBUTION#23, DISTRIBUTION#24, METHODOLOGY#9, METHODOLOGY#10]
+    statement: Keep the running runtime's cases and exit rules in R01–R07. Pack maintainers version method
+      cases in the pack workspace and document the candidate, entry or test path, inputs, expected result and
+      exact invocation steps. Cover the applicable Spec 09 section 10 cases for each claimed method, including
+      refusal of unsupported unattended use. Run them separately against the actual resolved candidate.
+      Selection, sync and the eval CLI do not discover pack cases. Domain benchmarks stay with Production Skills.
+  R09:
+    source: [DISTRIBUTION#23, DISTRIBUTION#24, METHODOLOGY#10]
+    statement: Supply a separate pack-method report alongside the CLI report. Identify resolved components,
+      case versions, path, inputs, expected and observed results, evidence, invoker and judge. Record model and
+      effort when available and enforce checkpoint pre-dispatch configuration. Report executed deterministic
+      checks as pass or fail, absent behavioural evidence as not evaluated, and semantic results without a judge
+      as unjudged. Identify uncovered methods. Compare exact environments with the same case versions, invoker
+      and judge, distinguishing deterministic regressions, semantic differences and non-comparable results.
+      Evaluation never adopts a candidate or changes the active environment.
 acceptance:
   AC01:
     covers: [R01, R02]
@@ -160,3 +176,28 @@ acceptance:
       and makes each regression reviewable by dimension without relying on an aggregate score.
     verify:
       review: [eval.report-review]
+  AC09:
+    covers: [R01, R02, R08, R09]
+    given: Two complete packs with different accountable agents and methods. Each supplies versioned source
+      cases for its claimed methods. Include Director advice, a current-context specialist handoff, independent
+      review and a missing skill routed to Toolsmith or the pack maintainer without activation.
+    when: Inspect the pack cases against Spec 09 section 10, run the supported candidate paths and compare
+      their reports with the runtime CLI report and the active environment before evaluation.
+    then: Each claimed method has an applicable case with a reproducible path or an explicit coverage gap.
+      Evidence identifies the candidate's actual method and accountable role. The CLI uses only its runtime case
+      set. Neither report changes selection, configuration, lock or generated adapter files. Scripted runner
+      tests demonstrate reporting mechanics only.
+    verify:
+      review: [eval.pack-method-coverage]
+  AC10:
+    covers: [R05, R07, R08, R09]
+    cases: [deterministic-regression, semantic-difference, missing-entry-path, no-judge, unsupported-unattended]
+    given: Baseline and candidate method reports for the same case version and invoker and judge conditions,
+      and a separate CLI comparison with no runtime regression.
+    when: Review the evidence and result classifications for each listed case.
+    then: A previously passing deterministic check that fails is a method regression. A changed semantic verdict
+      is a difference for review. A missing path leaves behaviour not evaluated and non-comparable. No judge
+      leaves semantics unjudged. The unattended case records the actual refusal or identifies its untested
+      path. Each gap or failure remains visible alongside the CLI result, whose exit rules stay unchanged.
+    verify:
+      review: [eval.method-report-comparison]
