@@ -1,6 +1,6 @@
-# Pactwright Implementation Runbooks v7
+# Pactwright Implementation Runbooks v8
 
-Canonical Pactwright semantics live in the Pactwright specifications under `../specs/01–08`. The checkpoint runbooks are the executable implementation sequence used to reach and prove that canonical system through progressive self-hosting, proving each released capability on Pactwright itself and on Kakeibo as the persistent external acceptance project.
+Canonical Pactwright semantics live in the Pactwright specifications under `../specs/01–09`. The checkpoint runbooks are the executable implementation sequence used to reach and prove that canonical system through progressive self-hosting, proving each released capability on Pactwright itself and on Kakeibo as the persistent external acceptance project.
 
 ## Runbook sequence
 
@@ -35,6 +35,7 @@ Pactwright semantics are owned by the canonical Pactwright specifications in thi
 ../specs/06-operations.md
 ../specs/07-github-integration.md
 ../specs/08-open-source-project-organisation.md
+../specs/09-agent-methodology-and-workflows.md
 ```
 
 Kakeibo semantics are owned by the current canonical specification set in the **Kakeibo repository**, addressed at execution time by its own `docs/specs/` paths and authority map:
@@ -50,7 +51,7 @@ docs/specs/06-engineering-delivery-and-operations-spec.md
 docs/specs/07-open-source-project-organisation-spec.md
 ```
 
-Those paths resolve in the Kakeibo repository, not in this one. Where a runbook cites `Spec 01`–`Spec 08` without qualification it means the Pactwright specifications listed above.
+Those paths resolve in the Kakeibo repository, not in this one. Where a runbook cites `Spec 01`–`Spec 09` without qualification it means the Pactwright specifications listed above.
 
 `00-kakeibo-acceptance-profile.md` defines the cross-checks that must hold when the Kakeibo owner specifications are exercised through Checkpoints 1–9 and Graduation. It is an acceptance profile, not a replacement product specification.
 

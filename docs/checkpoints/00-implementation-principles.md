@@ -1,6 +1,6 @@
 # Pactwright — Implementation Principles
 
-**Version:** 4  
+**Version:** 5\
 **Status:** Implementation guidance
 
 ## 1. Purpose
@@ -12,7 +12,7 @@ It is intentionally separate from canonical system semantics.
 Authority is:
 
 ```text
-docs/specs/01–08
+docs/specs/01–09
 → canonical Pactwright semantics
 
 Implementation Principles
@@ -1019,4 +1019,4 @@ build everything
 
 ---
 
-**Pactwright — Implementation Principles v4**
+**Pactwright — Implementation Principles v5**
