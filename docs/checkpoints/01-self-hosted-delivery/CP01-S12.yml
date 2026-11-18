@@ -90,7 +90,9 @@ requirements:
     source: [DISTRIBUTION#5, DISTRIBUTION#12, DISTRIBUTION#14, DISTRIBUTION#23]
     statement: Render the optional locked entry as .claude/agents/pactwright-entry.md with native name
       pactwright-entry and an advisory description. Include the exact bound prompt, attached direct skills in
-      manifest order, resolved shared instructions, pack source and exact version, bound key and environment_lock_hash.
+      manifest order, resolved shared instructions, pack source, exact version and bound agent key.
+      When Step 15 supplies environment_lock_hash, render that value in the guidance. Step 17 verifies the
+      generated alias against the resolved hash during sync.
       Reserve both the path and name. On collision with user content or another rendered agent, report the conflict
       before writing. An omitted binding produces no alias and removes only a previously owned alias. Preserve
       the user's default agent, permissions and the seven governed command mappings. Generation uses locked
@@ -250,8 +252,8 @@ acceptance:
     given: Two complete packs with distinct mappings, prompts and ordered direct skills, a complete pack without
       entry, and a prior generated environment. The collision fixtures occupy the reserved path or name.
     when: Render the selected fixture twice or switch the selected inputs to the pack without entry.
-    then: Each declared entry produces byte-identical rerenders with its own R14 identity, prompt and ordered
-      skills. Each command retains its selected capability agent. Switching removes the prior owned alias only.
+    then: Each declared entry produces byte-identical rerenders with its Step 11 pack source, exact version, bound
+      agent key, prompt and ordered skills. Step 12 exercises the Step 11 lock without environment_lock_hash. Each command retains its selected capability agent. Switching removes the prior owned alias only.
       A collision identifies the conflict and leaves the previous output and user files byte-identical.
     verify:
       automated: [adapter.entry-rendering]
