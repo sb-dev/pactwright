@@ -42,6 +42,7 @@ Project Intelligence owns:
 Source
 Domain Definition
 Knowledge
+Plan composition
 ```
 
 plus:
@@ -623,6 +624,8 @@ knowledge gap
 
 Coverage is regenerated after accepted Knowledge changes, staleness, domain changes, supersessions and retractions.
 
+When adopting an existing project, inspect its direction document, relevant code, tests and project documents at identifiable revisions. Capture material through the Source rules, retaining its origin and version. Record contradictions and unknowns. Review proposed conclusions under section 11 before grounding a plan in them. For example, an existing payment adapter can support an inference about intended coverage. Its presence alone cannot satisfy a payment requirement. Link fulfilment to Evidence under the governing Contract, or report the proof still needed.
+
 Missing knowledge is not automatically a Delivery Intent.
 
 ---
@@ -724,6 +727,22 @@ The exact scheduler or event mechanism that determines when a recurrence becomes
 
 The roadmap proposes Intents. It does not create them.
 
+## Plan composition
+
+A reviewed PI plan groups work needed to deliver accepted project direction. A group names a shared outcome grounded in accepted Knowledge. A slice identifies a bounded contribution, its accountable owner and the requirements it is intended to cover. Use these fields in each canonical plan:
+
+| Record | Required fields | Optional references |
+| --- | --- | --- |
+| Plan | Stable `id`, `direction_source` identifying a captured Source version, `groups`, `slices` | |
+| Group | Stable `id`, `outcome`, `grounding` (nonempty list of accepted Knowledge IDs) | `integration_contract` for combined acceptance |
+| Slice | Stable `id`, `group` ID, `contribution`, one accountable role or person in `owner`, `coverage` (nonempty list of accepted requirement, constraint or decision IDs), `depends_on` (slice IDs in this plan) | `intents` linking captured Delivery Intents |
+
+Keep group and slice IDs stable across reviewed edits. Qualify references outside a plan by plan ID. Resolve historical references against their recorded revision. Capture a revised direction document as a new Source version and review its conclusions before changing the plan. Without PI, a pack may refer to a versioned project document under Spec 09.
+
+Derive a group's progress by following its slices to captured Intents, current governing Contracts and fulfilment Evidence. Report planned coverage, outstanding dependencies and verified contributions separately. For a shared outcome, identify the member Contracts covering combined acceptance or the separate integration Contract. If those checks have no owner or Evidence, report combined acceptance outstanding even when each component has passed. Plan membership grants no execution authority.
+
+A slice can explain or constrain an existing roadmap candidate. It cannot put work on the roadmap without section 21 provenance. Apply section 22 readiness and precedence, including unsatisfied hard dependencies. Do not store a second rank, queue or completion flag. Section 23 closes a recurring occurrence on its own Evidence. Its durable recurrence policy remains eligible to produce future occurrences.
+
 ---
 
 # 22. Candidate Provenance, Readiness and Ordering
@@ -817,6 +836,8 @@ Typical consequences:
 
 Retraction always requires direct dependant revalidation.
 
+For an approved pivot, locate affected groups and slices through their grounding, coverage and dependency references. Propose the smallest affected plan edit and identify linked Deliveries that require an owning decision. Keep other slices, closed occurrences and historical Evidence. Flag affected references pending review and withhold readiness where a prerequisite no longer holds. For example, if an approved launch constraint changes the release region, flag the slices grounded in that constraint and their dependants. Preserve a verified shared component whose Contract and grounding still apply. Regenerate the roadmap after the reviewed change.
+
 Propagation never directly mutates Delivery, Graph Review, Assets / Publication or Operations records.
 
 ---
@@ -887,6 +908,7 @@ specs/extensions/project-intelligence/
 ├── sources/
 ├── domains/
 ├── knowledge/<domain>/
+├── plans/
 └── edges.yml
 
 docs/project-intelligence/reports/
@@ -897,7 +919,7 @@ docs/project-intelligence/reports/
 └── failed-ingestion.md
 ```
 
-Canonical records are Sources, Domain Definitions, Knowledge and typed relationships.
+Canonical records include Sources, Domain Definitions, Knowledge, plan compositions and typed relationships. Store one plan in `plans/<id>.yml` under the PI root. Use a lower-case plan ID matching `^[a-z][a-z0-9-]*$` and the filename stem. Register the directory under Distribution §11 with its decoder, schema and canonical projection. Emit one contribution of kind `plan` keyed by plan ID, containing the full decoded plan. Omit node projection. References within this record are validated by PI. Core §§54–56 include the enabled canonical contribution in the ordinary graph revision and exclude generated reports. Version the registration and provide the required migration for a prior stored format. An existing project with no plans starts with an empty plan collection.
 
 Reports are deterministic derived views over a Project Graph revision and must not become hand-maintained second sources of truth.
 
@@ -931,6 +953,8 @@ Idempotency rules:
 - mutations validate against current graph state before application.
 
 Concurrency uses normal repository isolation. Conflicting promotions must rebase and rerun validation against current state. No application-level lease system is required initially.
+
+Creating, editing or retiring a plan requires a reviewed proposal with human approval against current inputs. Show the changed coverage, dependencies and affected Deliveries for review. Apply through the normal validated mutation boundary, preserving Git history. If inputs changed during review, revalidate and obtain approval for changed meaning before applying. A failed edit preserves the prior plan and roadmap inputs.
 
 Failure rules:
 
@@ -975,6 +999,8 @@ Failure rules:
 25. Generated onboarding and roadmap reports identify the Project Graph revision they derive from.
 26. Extension-specific roadmap projections do not introduce candidates absent from Project Intelligence roadmap derivation.
 27. Coverage states obey the exact Missing/Seeded/Covered rules, including that domains without coverage slots stop at Seeded.
+28. Plan, group and slice IDs are nonempty and unique in their respective scopes. Resolve group membership, Source version, Knowledge kind, Intent and Contract references against their declared scopes. Each slice identifies one nonempty accountable owner. Reject malformed records, dangling references, self-dependencies and dependency cycles. Require current accepted grounding on adoption or changed plans. Later Knowledge supersession follows section 24 and preserves the historical plan.
+29. A semantic plan edit changes the Project Graph revision. Regenerating the group view alone preserves it. A plan with outstanding combined proof reports the gap even if every member Delivery has closed.
 
 Core `pactwright validate` may invoke Project Intelligence validation when the Extension is enabled.
 
@@ -1093,4 +1119,4 @@ while updating integration boundaries:
 
 ---
 
-**Pactwright Project Intelligence v2**
+**Pactwright Project Intelligence v3**
