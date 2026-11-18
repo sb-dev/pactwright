@@ -132,6 +132,17 @@ Publication means that approved Asset was released through a defined channel or 
 
 These are distinct claims.
 
+When reporting progress on a shared outcome, cite the record that supports each claim. For the trial campaign in [Graph Review §15](./04-graph-review.md#reviewing-a-shared-requirement), the records support the following sequence.
+
+| Claim | Evidence for the campaign report |
+| --- | --- |
+| Delivery fulfilled | The integration Contract's Evidence identifies the corrected page and verifies the trial-offer walkthrough. |
+| Asset approved | A human approves the exact page content hash. The Asset records the approver, time and provenance to the Delivery Evidence. |
+| Publication occurred | The Publication names the approved Asset and hash, the channel and the actual release time. |
+| Outcome observed | Operations links a supported Observation to that Publication and describes the measure, evidence window and uncertainty. |
+
+After approval and scheduling, report the page as fulfilled and approved, with release pending. After confirmed release, report the Publication and identify the outcome as unknown until evidence supports a conclusion. If Operations is unavailable, state that limit. A weak measured outcome leaves the historical Evidence, Asset approval and Publication intact.
+
 ---
 
 # 5. Candidate Outputs Are Not Assets
@@ -674,6 +685,8 @@ Useful cases include:
 
 Production quality remains evaluated before Evidence through Delivery Review and relevant Production Skills.
 
+Exercise the same approved campaign before release, after release with no outcome evidence, and after a supported weak result. Verify each reported claim against its own record and preserve the release and approval history across all three cases.
+
 ---
 
 # 28. Core Invariants
@@ -819,4 +832,4 @@ Assets / Publication is therefore a small post-Delivery semantic layer rather th
 
 ---
 
-**Pactwright Assets and Publication v2**
+**Pactwright Assets and Publication v3**
