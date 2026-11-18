@@ -154,11 +154,13 @@ The alias column preserves the earlier planning labels and defines their mapping
 
 Specification tasks supply the design and ownership work for Spec 00 T6–T7. Checkpoint amendments allocate implementation and adoption under T7–T9. PDI-VERIFY01 checks consistency without replacing checkpoint acceptance.
 
-### PDI-FOUND01 — Define Agent Pack methodology
+### PDI-FOUND01 — Define the Agent Pack methodology contract
 
 **Owner:** [Spec 09](../specs/09-agent-methodology-and-workflows.md).
 
 **Dependencies:** Core capability and authority boundaries; Distribution pack and Production Skills ownership.
+
+**Preserve:** The role, method, handoff, review and Toolsmith boundaries in [Spec 09 §§2–10][methodology]. Reconcile changes with the current canonical text.
 
 1. Define pack-owned agents, responsibilities, methods, routing, outputs and handoffs.
 2. Define interactive work, autonomous work, specialist delegation and independent review.
@@ -168,11 +170,13 @@ Specification tasks supply the design and ownership work for Spec 00 T6–T7. Ch
 
 **Acceptance:** Different complete packs can define different teams and methods. Each method identifies its inputs, outputs, dependencies, accountable owner and checks. Delegation preserves capability accountability and independent review. Methods introduce no lifecycle transitions or approval rights.
 
-### PDI-FOUND02 — Align Core lifecycle semantics
+### PDI-FOUND02 — Align Core lifecycle and authority semantics
 
 **Owner:** [Core §§27–39 and 44–55](../specs/01-pactwright-core-system-and-lifecycle.md), coordinated with [Spec 09](../specs/09-agent-methodology-and-workflows.md).
 
 **Dependencies:** PDI-FOUND01.
+
+**Preserve:** The lifecycle, corrective-routing, capability and freshness boundaries in [Core §§27–39 and 44–55][core]. This task owns their specification alignment; host continuation applies them through PDI-SPEC04.
 
 1. Define the boundary between advisory work and governed Delivery.
 2. Explain when one Delivery suffices and when related Deliveries need separate Contracts and combined acceptance.
@@ -183,11 +187,15 @@ Specification tasks supply the design and ownership work for Spec 00 T6–T7. Ch
 
 **Acceptance:** Advice cannot advance Delivery state. Worker results pass current authority and freshness checks before use. A stale invocation ends; restart follows current policy without resetting budgets. Related Deliveries retain their own Contracts and Evidence. Combined acceptance has an explicit governing Contract.
 
+Preserve [Core §34][core] exactly in meaning: a stale result ends that invocation; it cannot redispatch the step. A fresh invocation may restart under current policy after validation. Consumed lifecycle and host budgets remain. Do not add a permanent restart-approval gate. Useful prior work may be retained, but only current, accepted results may advance governed state.
+
 ### PDI-FOUND03 — Define the Agent Pack lifecycle and Toolsmith ownership
 
 **Owner:** [Distribution §§5–8, 12–18 and 21–24](../specs/02-distribution-agent-packs-extensions-and-evaluation.md), coordinated with [Spec 09 §9](../specs/09-agent-methodology-and-workflows.md).
 
 **Dependencies:** PDI-FOUND01. Reconcile authority and freshness boundaries with PDI-FOUND02.
+
+**Preserve:** The packaging, exact-locking, evaluation and adoption boundaries in [Distribution §§5–8, 12–18 and 21–24][distribution]. Reconcile changes with the current canonical text.
 
 1. Define packaging and discovery of agents, methods, direct skills and external skill composition.
 2. Assign research, design, implementation, evaluation and maintenance to Toolsmith where provided, with pack-maintainer accountability.
@@ -213,7 +221,7 @@ Specification tasks supply the design and ownership work for Spec 00 T6–T7. Ch
 
 **Acceptance:** Trace a small request, a multi-Delivery project and an ongoing operation. Each action identifies its owner, authority and observable check. Missing authority, dependency or required decision produces a blocker and no advancement. Basic use works without PI where its dependencies permit. The existing authority and review boundaries remain intact.
 
-### PDI-SPEC02 — Define and expose the pack entry agent
+### PDI-SPEC02 — Define the pack entry agent and host invocation
 
 **Owner:** [Distribution §§5, 12 and 14](../specs/02-distribution-agent-packs-extensions-and-evaluation.md), coordinated with [Spec 09 §5](../specs/09-agent-methodology-and-workflows.md).
 
@@ -227,11 +235,11 @@ Specification tasks supply the design and ownership work for Spec 00 T6–T7. Ch
 6. Define compatibility, migration and unsupported-host behavior before claiming support.
 7. Preserve the seven adapter commands. Without the field, capability mappings remain usable but no advisory entry is declared.
 
-The historical baseline explicitly lacks a pre-Delivery advisory entry. Prompt text alone cannot supply the missing host contract. Do not repurpose `/capture-intent` or infer that ordinary conversation invoked the resolved pack.
+[Distribution §14 at the historical baseline][distribution] explicitly lacks a pre-Delivery advisory entry. Prompt text alone cannot supply the missing host contract. Do not repurpose `/capture-intent` or infer that ordinary conversation invoked the resolved pack.
 
 **Acceptance:** Use two packs with distinct agent names and mappings. Show that a real host invocation loads the correct resolved instructions. Show that advisory work leaves canonical Delivery records unchanged. Invalid references and unsupported hosts report their actual limits.
 
-### PDI-SPEC03 — Define PI direction and plan composition
+### PDI-SPEC03 — Define PI direction, planning and existing-project adoption
 
 **Owner:** [Project Intelligence](../specs/03-project-intelligence.md), especially §§11, 19–24 and 27–30.
 
@@ -254,7 +262,7 @@ The historical baseline explicitly lacks a pre-Delivery advisory entry. Prompt t
 
 1. Define trigger inputs, saved state, budgets and ownership of continuation.
 2. Record duplicate events and external-effect receipts.
-3. Restore consumed budgets and reconcile current authority after restart.
+3. Persist and restore consumed host budgets, retain consumed lifecycle budgets and reconcile current authority after restart. Apply the Core freshness and restart contract owned by PDI-FOUND02; do not redefine it.
 4. Prevent replay of a confirmed external effect. Check an uncertain effect before retry.
 5. Preserve the host/runtime boundary: the host cannot authorise work or declare acceptance.
 6. Define bounded remote assignments, dispatch identity, worker results, blockers, failure reports and reconciliation with current governing records.
@@ -262,9 +270,7 @@ The historical baseline explicitly lacks a pre-Delivery advisory entry. Prompt t
 
 **Acceptance:** Another worker resumes from durable state without losing budget use or replaying a confirmed effect. Irrelevant or duplicate events do not advance work. Interrupted effects are reconciled before retry. Worker results retain assignment and replay identity. Blockers and failures reach the accountable owner. GitHub projections cannot bypass runtime checks.
 
-Preserve [Core §34][core] exactly in meaning: a stale result ends that invocation; it cannot redispatch the step. A fresh invocation may restart under current policy after validation. Consumed lifecycle and host budgets remain. Do not add a permanent restart-approval gate. Useful prior work may be retained, but only current, accepted results may advance governed state.
-
-### PDI-SPEC05 — Define Extension ownership and outcome feedback
+### PDI-SPEC05 — Align Extension ownership and outcome feedback
 
 **Owner:** [Graph Review](../specs/04-graph-review.md), [Assets and Publication](../specs/05-assets-and-publication.md) and [Operations](../specs/06-operations.md).
 
@@ -277,7 +283,7 @@ Preserve [Core §34][core] exactly in meaning: a stale result ends that invocati
 
 **Acceptance:** A fulfilled Delivery can remain unpublished or produce a weak outcome. Reports show those states separately. A failed combination is not hidden by individually accepted components. The next action has an owner and the required authority.
 
-### PDI-SPEC06 — Align organisation and implementation guidance
+### PDI-SPEC06 — Align authority and implementation guidance
 
 **Owner:** [Spec 08](../specs/08-open-source-project-organisation.md), [Spec 00](../specs/00-checkpoint-step-contract-and-delivery-tasks.md) and the [shared checkpoint guide](../checkpoints/00-implementation-guide.md).
 
@@ -297,29 +303,29 @@ These IDs are planning labels for amendments to the existing checkpoint steps. T
 
 | Task | Owning checkpoint steps | Required amendment and proof |
 | --- | --- | --- |
-| PDI-CP01 | [CP01](../checkpoints/01-self-hosted-delivery.md) CP01-S08–CP01-S13, plus affected early Core contracts. | Reference roles, Director and Toolsmith methods through direct skills, current-context handoff and method evaluation. Allocate `entry_agent` validation and reference binding to CP01-S10, resolution and locking to CP01-S11, and adapter generation and invocation to CP01-S12. Preserve one accountable agent per capability and all seven commands. Amend earlier identity or mutation contracts only where required by the owning semantics. |
-| PDI-CP02 | [CP01](../checkpoints/01-self-hosted-delivery.md) CP01-S24–CP01-S27 and CP01-S30–CP01-S31. | Exercise the real generated adapter from advice to committed work, delegation, correction, walkthrough and truthful report. Show proportionate handling of a small request. Exercise self-hosted Pactwright use and Kakeibo reuse, including recovery. Write user guides from the observed journeys. |
-| PDI-CP03 | [CP02](../checkpoints/02-remote-delivery.md) CP02-S04–CP02-S07 and CP02-S12–CP02-S15. | Prove actual runtime invocation, bounded remote assignments, worker-result integration, authority stops, failure reporting and durable continuation. Recover with another worker, retain budgets, select relevant events and reconcile duplicates and effects. Implement and accept the first Pactwright-backed run model under T8. |
+| PDI-CP01 | [CP01](../checkpoints/01-self-hosted-delivery.md) CP01-S08–CP01-S13, CP01-S15, CP01-S17–CP01-S18, plus affected early Core contracts. | Reference roles, Director and Toolsmith methods through direct skills, current-context handoff and method evaluation. Allocate `entry_agent` validation and reference binding to CP01-S10, selection and lock recording to CP01-S11, and adapter generation and invocation to CP01-S12. CP01-S15 must prove that changing only the entry binding changes `environment_lock_hash` and that unadopted changes trigger drift handling. CP01-S17 must prove deterministic sync and truthful unsupported-host reporting; CP01-S18 must diagnose entry availability and adapter drift without treating diagnostics as real invocation evidence. Preserve one accountable agent per capability and all seven commands. Amend earlier identity or mutation contracts only where required by the owning semantics. |
+| PDI-CP02 | [CP01](../checkpoints/01-self-hosted-delivery.md) CP01-S24–CP01-S27 and CP01-S30–CP01-S31. | Exercise the real generated adapter from advice to committed work, delegation, correction, walkthrough and truthful report. Show proportionate handling of a small request. Exercise self-hosted Pactwright use and Kakeibo reuse, including correction and rechecking after a failed check. Durable interrupted-run continuation belongs to PDI-CP03. Write user guides from the observed journeys. |
+| PDI-CP03 | [CP02](../checkpoints/02-remote-delivery.md) CP02-S04–CP02-S08 and CP02-S12–CP02-S15. | Prove actual runtime invocation, bounded remote assignments, worker-result integration, authority stops, failure reporting and durable continuation. Recover with another worker, retain budgets, select relevant events and reconcile duplicates and effects. CP02-S08 must project owners, blockers and results from governing records and prove that GitHub field changes cannot authorise or complete Delivery. Implement and accept the first Pactwright-backed run model under T8. |
 | PDI-CP04 | [CP03](../checkpoints/03-project-intelligence.md) CP03-S02–CP03-S12, CP03-S18–CP03-S20 and CP03-S25–CP03-S26. | Prove PI plan storage and validation, direction ingestion, coverage, hard dependencies, one roadmap, combined proof, targeted replanning and human approval of Knowledge. Adopt an existing codebase using sourced documents and reviewed conclusions; propagate Knowledge changes to affected work. |
 | PDI-CP05 | [CP04](../checkpoints/04-graph-review.md) affected CP04-S02–CP04-S12; proof in CP04-S15–CP04-S17 and CP04-S20–CP04-S21. | Supply the right project and Delivery context. Detect an integration failure despite individually accepted components. Retain independent review and a retryable Finding → Source handoff. |
 | PDI-CP06 | [CP05](../checkpoints/05-production-skills-and-assets-publication.md) CP05-S01–CP05-S04, CP05-S16, CP05-S19–CP05-S21 and CP05-S24–CP05-S26. | Resolve exact external skill composition. Exercise Toolsmith research, design, implementation, evaluation, release and explicit adoption. Add the proposed clean-consumer proof to CP05-S16. Prove real non-software output and Kakeibo reuse through the existing public-output and consumer exercises. |
 | PDI-CP07 | [CP06](../checkpoints/06-operations.md) feedback; [CP07](../checkpoints/07-publication-feedback.md) CP07-S07–CP07-S11 and CP07-S14–CP07-S15; [CP08](../checkpoints/08-github-project-surface.md) operating surfaces; [CP09](../checkpoints/09-hardened-closed-loop.md) recovery and repeated-loop proofs; [CP10](../checkpoints/10-graduation-connected-banking.md) consumption. | Govern learning and future work. Report owners, blockers and next actions. Exercise repeated corrections, exhausted budgets, stale inputs, interrupted effects and pivots. Add methodology regression cases and failure drills with an accountable owner. Align public documentation with supported behaviour. Consume the accepted facilities at graduation. |
 
-The owning checkpoint steps above own the contract amendments. Each row's required proof defines its acceptance criteria. Amend both the prose and YAML contracts while preserving requirement IDs and historical evidence. Use these documentation dependencies:
+The owning checkpoint steps above own the contract amendments. Each row's required proof defines its acceptance criteria. Amend each step in its existing form: its YAML contract and prose summary where converted, or its full prose contract where unconverted. Preserve requirement IDs, reviewed prose hashes and historical evidence through the required amendment process. This work does not require conversion to YAML. Use these documentation dependencies:
 
 | Task | Dependencies |
 | --- | --- |
 | PDI-CP01 | PDI-FOUND01–PDI-FOUND03; PDI-SPEC01–PDI-SPEC02; applicable dispatch and host boundaries from PDI-SPEC04; PDI-SPEC06. |
 | PDI-CP02 | PDI-CP01 and the routing and reporting contracts in PDI-SPEC01–PDI-SPEC02. |
 | PDI-CP03 | PDI-CP01; PDI-SPEC04; run-model allocation in PDI-SPEC06. |
-| PDI-CP04 | PDI-CP01; PDI-SPEC03. |
+| PDI-CP04 | PDI-CP01; PDI-SPEC03; combined-acceptance and pivot contracts in PDI-SPEC05. |
 | PDI-CP05 | PDI-CP04; combined-review ownership in PDI-SPEC05. |
 | PDI-CP06 | PDI-CP01; PDI-FOUND03; PDI-SPEC02 and PDI-SPEC05. External skill proof requires accepted compatible upstream revisions. |
 | PDI-CP07 | PDI-CP02–PDI-CP06; feedback and recovery contracts in PDI-SPEC03–PDI-SPEC05. |
 
 ### 6.1 Preserve the CP01/CP02 invocation boundary
 
-CP01 proves real-model work through the generated adapter, with an instrumented runtime seam. [CP01-S08 R03 and AC02](../checkpoints/01-self-hosted-delivery/CP01-S08.yml) supplies no provider invoker. A run without an invoker stops and simulates nothing.
+CP01 proves real-model work through the generated adapter, with an instrumented runtime seam. [CP01-S08 R03 and AC02][cp01-s08] supplies no provider invoker. A run without an invoker stops and simulates nothing.
 
 CP02 owns real unattended runtime invocation and durable continuation. Do not bring that responsibility into CP01 merely to demonstrate the Director. Keep actual model use, instrumented runtime checks and later unattended invocation distinguishable in evidence.
 
@@ -334,7 +340,7 @@ Extend the existing CP05 public-output exercise rather than inventing an unrelat
 5. The owning Asset approval and Publication operations govern release.
 6. Later outcome feedback follows Operations and PI governance.
 
-Use Pactwright and Kakeibo under the existing [CP05](../checkpoints/05-production-skills-and-assets-publication.md) public-output and consumer exercises (CP05-S19–CP05-S21 and CP05-S24–CP05-S26). Add a clean-consumer proof as a **proposed CP05-S16 amendment**, not an existing CP05 obligation: install the candidate pack in a separate repository without the author's local configuration, resolve its declared dependencies and exercise the supported entry and skill composition. This extends CP05-S16's existing isolated conformance work.
+Use Pactwright and Kakeibo under the [CP05 public-output and consumer exercises at the historical baseline][cp05] (CP05-S19–CP05-S21 and CP05-S24–CP05-S26). Add a clean-consumer proof as a **proposed CP05-S16 amendment**, not an existing CP05 obligation: install the candidate pack in a separate repository without the author's local configuration, resolve its declared dependencies and exercise the supported entry and skill composition. This extends CP05-S16's existing isolated conformance work.
 
 Use accepted, compatible external skills with exact identities. If a skill or integration is absent, record an explicit upstream blocker. Do not substitute a simulated success for the missing proof.
 
@@ -357,12 +363,14 @@ Allocate these acceptance cases to the owning specification and checkpoint tasks
 
 | Case | Observable result | Primary allocation |
 | --- | --- | --- |
+| Pack methodology and delegation | Two complete packs use different roles and methods while retaining one accountable agent per capability, bounded handoffs and independent review. | PDI-FOUND01, PDI-CP01–PDI-CP02. |
+| Pack candidate adoption | Candidate evaluation leaves the active environment unchanged; explicit selection or upgrade adopts the evaluated identities in a clean consumer. | PDI-FOUND03, PDI-CP01, PDI-CP06. |
 | Advice entry | The actual host loads the resolved entry agent; advisory work creates no canonical Delivery records. | PDI-SPEC02, PDI-CP01–PDI-CP02. |
-| Missing skill | The report names the gap and owner; discovery does not activate the skill or change the worker environment. | PDI-SPEC01, PDI-CP01, PDI-CP06. |
+| Missing skill | The report names the gap and owner; discovery does not activate the skill or change the worker environment. | PDI-SPEC01 for gap routing; PDI-FOUND03 for activation and adoption; PDI-CP01, PDI-CP06. |
 | Combined component failure | Independent review identifies the failed combined requirement and routes governed corrective work. | PDI-SPEC03 and PDI-SPEC05, PDI-CP04–PDI-CP06. |
-| Changed approach | A new Brief replaces the approach while the authorised Contract remains valid. | PDI-SPEC01, PDI-CP02. |
+| Changed approach | A new Brief replaces the approach while the authorised Contract remains valid. | PDI-FOUND02 for corrective semantics; PDI-SPEC01 for Director routing; PDI-CP02. |
 | Strategic pivot | Affected conclusions and obligations change through approval; valid work and historical Evidence remain. | PDI-SPEC03 and PDI-SPEC05, PDI-CP04, PDI-CP07. |
-| Concurrent stale work | A stale result cannot advance state; the invocation ends. Current-policy restart preserves consumed budgets and reconciles useful work. | PDI-SPEC04, PDI-CP01, PDI-CP03, PDI-CP07. |
+| Concurrent stale work | A stale result cannot advance state; the invocation ends. Current-policy restart preserves consumed budgets and reconciles useful work. | PDI-FOUND02 for Core freshness and restart semantics; PDI-SPEC04 for host persistence and recovery; PDI-CP01, PDI-CP03, PDI-CP07. |
 | Interrupted external effect | Resume checks the effect's actual state before retry; a confirmed effect is not replayed. | PDI-SPEC04, PDI-CP03, PDI-CP07. |
 | Fulfilled output, weak outcome | Delivery fulfilment and observed effect are reported separately, with a governed next action. | PDI-SPEC05, PDI-CP06–PDI-CP07; CP07-S07–CP07-S11 provide the Publication Feedback proof. |
 | Recurring obligation | Evidence closes the current occurrence while the recurrence policy remains in force. | PDI-SPEC03, PDI-CP04, PDI-CP07. |
@@ -370,6 +378,8 @@ Allocate these acceptance cases to the owning specification and checkpoint tasks
 [Spec 09 §10][methodology] requires truthful evaluation status. Distinguish executed checks, cases not evaluated and semantic outcomes not judged. At the baseline, `pactwright eval` does not automatically discover pack-owned method cases. A documented, supported execution path is required. A standalone advisory test cannot prove that the adapter exposes advisory entry.
 
 ## 8. Execution order and delivery milestones
+
+The order below expresses documentation dependencies. For each task, compare its scope with the current canonical definitions, preserve matching contracts and amend only the gaps. The order does not instruct an author to recreate those definitions.
 
 The documentation dependency order is:
 
@@ -395,7 +405,7 @@ Parallelism here concerns document work with clear ownership. Runtime execution 
 | CP06–CP09 | Operational feedback, publication feedback, project surfaces and recovery hardening. |
 | CP10 | Graduation using the accepted system and prior-feature obligations. |
 
-## 9. PDI-VERIFY01 — Final consistency and verification
+## 9. PDI-VERIFY01 — Verify the complete amendment set
 
 **Owner:** [Spec 00](../specs/00-checkpoint-step-contract-and-delivery-tasks.md) and the [shared checkpoint guide](../checkpoints/00-implementation-guide.md), coordinated with each semantic owner.
 
@@ -425,22 +435,9 @@ Research citations and their section numbers refer to these source snapshots. Re
 [core]: https://github.com/sb-dev/pactwright/blob/4e78f174e6c148e7c45ec463d9d9b347bb2ce407/docs/specs/01-pactwright-core-system-and-lifecycle.md
 [distribution]: https://github.com/sb-dev/pactwright/blob/4e78f174e6c148e7c45ec463d9d9b347bb2ce407/docs/specs/02-distribution-agent-packs-extensions-and-evaluation.md
 [pi]: https://github.com/sb-dev/pactwright/blob/4e78f174e6c148e7c45ec463d9d9b347bb2ce407/docs/specs/03-project-intelligence.md
-[graph-review]: https://github.com/sb-dev/pactwright/blob/4e78f174e6c148e7c45ec463d9d9b347bb2ce407/docs/specs/04-graph-review.md
 [assets]: https://github.com/sb-dev/pactwright/blob/4e78f174e6c148e7c45ec463d9d9b347bb2ce407/docs/specs/05-assets-and-publication.md
 [operations]: https://github.com/sb-dev/pactwright/blob/4e78f174e6c148e7c45ec463d9d9b347bb2ce407/docs/specs/06-operations.md
-[github]: https://github.com/sb-dev/pactwright/blob/4e78f174e6c148e7c45ec463d9d9b347bb2ce407/docs/specs/07-github-integration.md
-[organisation]: https://github.com/sb-dev/pactwright/blob/4e78f174e6c148e7c45ec463d9d9b347bb2ce407/docs/specs/08-open-source-project-organisation.md
 [methodology]: https://github.com/sb-dev/pactwright/blob/4e78f174e6c148e7c45ec463d9d9b347bb2ce407/docs/specs/09-agent-methodology-and-workflows.md
-[guide]: https://github.com/sb-dev/pactwright/blob/4e78f174e6c148e7c45ec463d9d9b347bb2ce407/docs/checkpoints/00-implementation-guide.md
-[cp01]: https://github.com/sb-dev/pactwright/blob/4e78f174e6c148e7c45ec463d9d9b347bb2ce407/docs/checkpoints/01-self-hosted-delivery.md
 [cp01-s08]: https://github.com/sb-dev/pactwright/blob/4e78f174e6c148e7c45ec463d9d9b347bb2ce407/docs/checkpoints/01-self-hosted-delivery/CP01-S08.yml
-[cp02]: https://github.com/sb-dev/pactwright/blob/4e78f174e6c148e7c45ec463d9d9b347bb2ce407/docs/checkpoints/02-remote-delivery.md
-[cp03]: https://github.com/sb-dev/pactwright/blob/4e78f174e6c148e7c45ec463d9d9b347bb2ce407/docs/checkpoints/03-project-intelligence.md
-[cp04]: https://github.com/sb-dev/pactwright/blob/4e78f174e6c148e7c45ec463d9d9b347bb2ce407/docs/checkpoints/04-graph-review.md
 [cp05]: https://github.com/sb-dev/pactwright/blob/4e78f174e6c148e7c45ec463d9d9b347bb2ce407/docs/checkpoints/05-production-skills-and-assets-publication.md
-[cp06]: https://github.com/sb-dev/pactwright/blob/4e78f174e6c148e7c45ec463d9d9b347bb2ce407/docs/checkpoints/06-operations.md
-[cp07]: https://github.com/sb-dev/pactwright/blob/4e78f174e6c148e7c45ec463d9d9b347bb2ce407/docs/checkpoints/07-publication-feedback.md
-[cp08]: https://github.com/sb-dev/pactwright/blob/4e78f174e6c148e7c45ec463d9d9b347bb2ce407/docs/checkpoints/08-github-project-surface.md
-[cp09]: https://github.com/sb-dev/pactwright/blob/4e78f174e6c148e7c45ec463d9d9b347bb2ce407/docs/checkpoints/09-hardened-closed-loop.md
-[cp10]: https://github.com/sb-dev/pactwright/blob/4e78f174e6c148e7c45ec463d9d9b347bb2ce407/docs/checkpoints/10-graduation-connected-banking.md
 [production-skills]: https://github.com/sb-dev/production-skills/blob/165f00af9256268f1dfbd3432cf9d0cad2de3639/docs/specs/04-cross-domain-orchestration-and-integration.md
