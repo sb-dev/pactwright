@@ -1130,6 +1130,12 @@ Stop when required authority or a decision is missing, a dependency is unavailab
 
 Resume by loading current lineage, execution state and governing inputs. Check whether the recorded work target still applies. An interrupted dispatch is not a completed step; do not infer completion from partial artefacts or its last message. Reconcile stale work before a fresh dispatch. The runtime remains responsible for any resulting transition, and section 55 governs whether a returned result can be applied.
 
+## Remote dispatch and result integration
+
+For governed remote work, associate the bounded assignment and each dispatch attempt with the current Intent, Contract, Brief, responsibility, target and dispatch identity. Retain the applicable governing inputs under section 55. A returned result identifies the assignment and attempt, work target, produced artefacts, checks actually run, outcome, blockers and remaining decisions. For pinned execution it also carries the verified replay base from section 56. The accountable receiver checks the result against the outstanding dispatch and current authority before requesting a transition. Duplicate completion cannot advance the step twice. A result from an earlier attempt cannot complete a later dispatch.
+
+Distribution section 14 owns durable host continuation. On recovery, read the runtime's current execution state and consumed lifecycle budget through its owning interface. An exhausted bound, failed authority check or unresolved blocker stops progression and names the accountable owner and next permitted action. A stale result ends its invocation under this section. A new worker may retain useful artefacts for inspection under a fresh authorised dispatch.
+
 ---
 
 # 35. Core Capability Boundary
@@ -2083,4 +2089,4 @@ No neighbouring specification may redefine the Contract, Delivery Graph or core 
 
 ---
 
-**Pactwright Core System and Lifecycle v8**
+**Pactwright Core System and Lifecycle v9**

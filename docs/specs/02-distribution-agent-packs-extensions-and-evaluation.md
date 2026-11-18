@@ -916,6 +916,21 @@ User-authored source, unrelated workflows and external Production Skills reposit
 
 `pactwright sync` changes local generated integration only. Remote GitHub reconciliation remains owned by `pactwright github sync` and the GitHub Integration specification.
 
+## Remote host continuation
+
+A host offering durable remote work must support recovery by a different worker. Before dispatch, save a bounded assignment with a stable identity, its accountable receiver, goal, target, permitted actions, expected output, checks and stop conditions. Include the governing references required by Core §34. When direction informs the work, include its source and revision. With a PI plan, identify the plan, group and slice at their Project Graph revision. Without PI, identify the versioned project document used. A changed direction requires reconciliation of the intended contribution before reuse.
+
+Keep the following durable execution state outside canonical graph inputs:
+
+- Trigger source, scoped event identity, target, relevance decision and processing progress.
+- Assignment and attempt identities, governing references, result or failure, artefact references and next permitted action.
+- Host policy limits and consumption across workers and retries. Reserve the applicable allowance durably before starting charged work. Read lifecycle consumption from the runtime.
+- A stable identity for each intended external effect, its target and expected change, the attempt and its read-back receipt.
+
+Serialise claims and progress updates for the same assignment or effect. A repeated event resumes unfinished reconciliation or returns the recorded disposition. An irrelevant event cannot dispatch work. Persist intent before an external write. After the write, read the target back and record the confirmed outcome. A crash between those operations leaves an uncertain effect. A replacement worker checks the destination using the recorded identity before acting. Reuse a confirmed effect. Retry only when absence is established and current authority, limits and destination concurrency guarantees make retry safe. If the outcome cannot be established safely, stop and report the blocker to the accountable owner.
+
+On takeover, fence the previous worker's outstanding writes or establish that it can no longer perform them. Reload current authority, runtime state, budget use and effect receipts before another dispatch. Missing state, exhausted budgets and unverifiable results stop the assignment with its owner and recovery action. Apply Core §§34 and 55 to result integration. The host reports execution progress and leaves acceptance to the runtime or checkpoint controller. Report durable continuation as unavailable on hosts without these facilities. CP02 owns remote recovery proof.
+
 ---
 
 # 15. Upgrade Model
@@ -1510,4 +1525,4 @@ Production-specific semantics remain in independent Production Skills repositori
 
 ---
 
-**Pactwright Distribution, Agent Packs, Extensions and Evaluation v7**
+**Pactwright Distribution, Agent Packs, Extensions and Evaluation v8**

@@ -307,6 +307,8 @@ active production findings
 corrective origin
 ```
 
+For remote assignments, project the accountable owner, current target, verified result or blocker, and next permitted action. Link the governing Delivery records and the host receipt for execution details. Show the source revision and refresh the projection when its inputs change. A worker failure goes to the accountable owner even if the optional Project update fails.
+
 Fields are derived and regenerable. Editing them does not silently mutate canonical Pactwright state.
 
 ---
@@ -1104,9 +1106,11 @@ not semantic YAML duplication.
 
 Headless Graph Review, Project Intelligence promotion and Operations hand-offs may require Pactwright-managed branch or pull-request mutation.
 
-The source architecture establishes those repository mutations but does not define how concurrent automation targeting the same canonical files is serialised, rebased or deduplicated.
+For remote Delivery, route only configured events whose repository, target, action and actor satisfy policy. Re-read the actual target and governing state before dispatch. Treat event payloads and PR content as untrusted input under section 36. An event may wake a worker. Any request to exercise authority must pass the separately configured authority operation in section 7.
 
-This remains an explicit implementation gap. Implementations must preserve canonical validation against current Project Graph state and must not use last-writer-wins behaviour that can silently discard another accepted mutation.
+Bind the GitHub delivery identity to the repository and event source. Track the logical operation separately so that equivalent notifications with different delivery IDs cannot repeat a completed effect. For example, a review and its inline-comment event may reference the same comment. A later edit with different substantive input requires a fresh assessment. Record duplicate or irrelevant dispositions under Distribution §14.
+
+For a managed branch edit, condition the write on the observed head. If it moves, reload the target and revalidate the proposed change against current canonical state and policy. Preserve intervening work. Report conflicts that need the accountable owner. For PRs, replies and field updates, retain the target, logical operation identity and resulting GitHub reference. After interrupted writes inspect the actual resource before retry under Distribution §14. A confirmed reply is reused. An ambiguous outcome blocks further writes. A field edit or successful GitHub check can never complete a Delivery by itself.
 
 ---
 
@@ -1196,7 +1200,7 @@ profiles
 Open implementation gaps remain:
 
 - stable ownership/adoption identity for managed GitHub resources and rename/collision behaviour;
-- concurrency/rebase/idempotency policy for automation-generated branches and PRs;
+- the implementation of conditional writes and effect reconciliation required by section 38;
 - exact GitHub check conclusion mapping between execution failure, stale derived state and canonical invalidity;
 - the concrete repository configuration that maps a safe GitHub human-authority event to canonical Pactwright operations such as Asset approval.
 
@@ -1268,4 +1272,4 @@ while preserving the sourced GitHub behaviours under their new owners.
 
 ---
 
-**Pactwright GitHub Integration v2**
+**Pactwright GitHub Integration v3**
