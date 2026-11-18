@@ -38,6 +38,8 @@ Pactwright semantics are owned by the canonical Pactwright specifications in thi
 ../specs/09-agent-methodology-and-workflows.md
 ```
 
+As each Director amendment updates a numbered Pactwright runbook, add Spec 09 to its canonical reference list. Update any path list or specification range in the affected steps that is meant to identify the full Pactwright specification set. Apply the [Spec 00 amendment procedure](../specs/00-checkpoint-step-contract-and-delivery-tasks.md#2-checkpoint-organisation) when a change touches reviewed step prose.
+
 Kakeibo semantics are owned by the current canonical specification set in the **Kakeibo repository**, addressed at execution time by its own `docs/specs/` paths and authority map:
 
 ```text
