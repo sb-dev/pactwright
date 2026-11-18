@@ -155,8 +155,8 @@ acceptance:
       automated: [capabilities.entry-binding]
   AC09:
     covers: [R03, R08, R09]
-    cases: [empty-entry, null-entry, non-string-entry, undeclared-agent, missing-entry-prompt,
-      empty-entry-skill, entry-prompt-outside-pack, entry-skill-outside-pack]
+    cases: [empty-entry, null-entry, non-string-entry, undeclared-agent, missing-entry-prompt, empty-entry-prompt,
+      missing-entry-skill, empty-entry-skill, entry-prompt-outside-pack, entry-skill-outside-pack]
     given: A valid prior environment and a candidate with only the listed defect. Content defects affect
       an entry agent outside the capability mappings.
     when: The runtime validates the candidate.
