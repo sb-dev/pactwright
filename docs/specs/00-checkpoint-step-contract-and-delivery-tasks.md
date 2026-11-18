@@ -250,8 +250,10 @@ T1–T2 establish the step definitions; T3 builds the bootstrap executor; T3.5 p
 
 ### Project Director work
 
+Before T5 starts, review and apply PDI-CP01 and PDI-CP02 to the CP01 step contracts under §§2–4. These amendments define the Director, entry and adapter evidence that T5 must produce. They depend on the owning specifications and can take effect before the T6 design. T5 runs against the amended contracts.
+
 - **T6** uses T5's accepted CP01 execution evidence to design how the software run model uses the Director and specialists. Ground the reusable handoffs and review boundaries in observed runs. Identify which domain checks and later capabilities each proposed model needs.
-- **T7** uses the reviewed T6 design to allocate each implementation requirement and its proof to an existing checkpoint step. The [Director integration plan](../research-logs/2026-11-17-project-director-integration-plan.md#6-checkpoint-amendment-allocation) proposes the affected steps. Their contracts own the resulting obligations. Amend each in its existing contract form under §§2–4. Preserve inherited obligations and historical evidence. The specification and allocation work can be prepared before CP01 runs. It cannot supply the execution evidence required by T6 or T8.
+- **T7** uses the reviewed T6 design to confirm or amend the proposed successor allocations for CP02 and later checkpoints. The [Director integration plan](../research-logs/2026-11-17-project-director-integration-plan.md#6-checkpoint-amendment-allocation) identifies the steps. Their contracts own the resulting obligations. Preserve inherited requirements and historical evidence when amending them under §§2–4.
 - **T8** uses the accepted CP01 harness and runtime and the T7 allocation in [CP02](../checkpoints/02-remote-delivery.md) to build and prove the first Pactwright-backed software successor. The current controller must accept the exact candidate on evidence from a real step, including correction, resume and independent review. Until then, the previously accepted model continues to govern execution.
 - **T9** uses each accepted successor for subsequent eligible work. Apply the same predecessor-led proof and acceptance before adopting a further domain model. Checkpoints retain their existing order and exit criteria.
 
