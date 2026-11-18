@@ -65,7 +65,9 @@ Review independence does not require a different provider or model unless the go
 
 A pack offering continuing project coordination must identify its Project Director and the scope it coordinates. The director maintains direction with the user, selects useful work within current authority, coordinates specialists, integrates their results and assesses progress. It reports blockers, decisions needed and the next permitted action. It proposes changes when evidence challenges the current direction or approach.
 
-The initial reference arrangement is one director supported by specialists. Packs may use other arrangements, including workstream leads, if they preserve clear accountability and the same handoff rules. Persona names and role counts remain pack choices. `@pactwright/standard` must provide the reference director method when its methodology implementation is delivered. This requirement does not establish that it is available today.
+The initial reference arrangement is one director supported by specialists. Packs may use other arrangements, including workstream leads, if they preserve clear accountability and the same handoff rules. Persona names and role counts remain pack choices. `@pactwright/standard` must provide the reference director method when its methodology implementation is delivered.
+
+A [Checkpoint 1](../checkpoints/01-self-hosted-delivery.md) amendment must allocate implementation and method evaluation to CP01-S08–CP01-S13, with real-adapter invocation proof in CP01-S24–CP01-S27. Those amendments and their acceptance remain follow-on work. Distribution sections 2, 5 and 28 must be aligned with continuing project direction in the planned pack-entry amendment; section 14 still governs the unavailable advisory entry. This requirement establishes neither runtime availability nor checkpoint acceptance.
 
 Project accountability does not transfer capability accountability or approval authority. The director need not map to `delivery-specification`. When another agent owns a capability, that agent still checks and integrates its delegated work and returns the capability result. The director coordinates across those results without replacing required review or runtime acceptance.
 
@@ -118,7 +120,7 @@ Reusable expertise belongs in Production Skills. Project-specific material follo
 
 For continuing coordination, route the next activity through advice, research, planning, production, review or a decision as needed. With PI enabled, use its single roadmap and its readiness and precedence rules for Delivery candidates, under PI sections 21–23. The director may explain a choice among eligible work but must not create a separate priority engine or treat raw Sources as accepted obligations. Without PI, use current governing records and ordinary planning documents, identify unresolved dependencies and state the limits of that view. In either mode, selecting work is not authorising it.
 
-Select methods and skills from the resolved environment and check their required facilities. Record the chosen skill and available resolved identity in the assignment or result. Load detailed instructions when needed through supported resolved content, as required by Distribution section 5. Discovery of a skill does not make it active. If a required skill, family, specialisation or version is missing, report the gap and route it to Toolsmith or the owning Production Skills family. Use the resulting environment only after evaluation and explicit selection or upgrade under Distribution. Section 9 owns the pack-development handoff.
+Select methods and skills from the resolved environment and check their required facilities. Record the chosen skill and available resolved identity in the assignment or result. Load detailed instructions when needed through supported resolved content, as required by Distribution section 5. Discovery of a skill does not make it active. If a required skill, family, specialisation or version is missing, report the gap and route it to the owner defined in section 9, including the pack-maintainer fallback when Toolsmith is absent. Use the resulting environment only after evaluation and explicit selection or upgrade under Distribution.
 
 ## 6. Reference Method Families
 
@@ -185,20 +187,26 @@ The director reports three distinct results where they apply:
 
 State when an assessment is not applicable, pending or unsupported by evidence. A completed Delivery does not establish release or real-world success. Planned requirement coverage does not prove fulfilment. Individually accepted members do not prove their combined outcome; the governing Contracts and Evidence must establish it as described above.
 
-Route findings to their existing owners:
+With Operations and PI enabled, operational feedback follows Observation → Source → accepted Knowledge → Intent candidate. With PI enabled but Operations absent, research or external feedback may enter as an ordinary Source; it must not be labelled a canonical Operations Observation. Raw observations do not directly authorise Delivery.
+
+For recurring obligations with PI enabled, distinguish the closed occurrence from the continuing recurrence policy under PI section 23. Without PI, ordinary planning documents may describe repeat work, but the director must not claim PI occurrence satisfaction or a canonical recurrence policy. Scheduling and durable execution remain host responsibilities.
+
+### Corrective routing for all packs
+
+These routes apply to every pack, whether or not it provides a Project Director. Route findings to their existing owners:
 
 | Finding | Required route |
 | --- | --- |
 | Defect within the current Contract and Brief | Required Review and a declared corrective transition under Core sections 32–34. |
 | Changed approach under a valid Contract | A new Brief under Core section 45. |
 | Changed authorised outcome | A new Decision and Contract under Core section 45. |
+| Missing authority, dependency or required decision | Report a blocker; do not advance until it is resolved through its owning operation, under Core section 32. |
+| New project-specific learning | Source ingestion and Knowledge governance when PI is enabled, including approval for new canonical Knowledge under PI section 11. Without PI, retain an ordinary project artefact with explicit source and approval status. |
 | Changed project conclusion or strategy | A proposal through PI governance when enabled, including required approval and propagation. Without PI, record the proposal and use the applicable project decision authority. Neither route silently changes a Contract. |
-| Missing evidence | Bounded research or an experiment within the applicable authority, followed by reassessment. |
-| Missing or defective reusable method | Toolsmith or the owning Production Skills family under section 9. |
+| Missing evidence | Bounded research or an experiment only when its authority, dependencies and required decisions are in place. Otherwise, use the blocker route. Reassess after obtaining evidence. |
+| Missing or defective reusable method | The pack or Production Skills owner defined in section 9, including the pack-maintainer fallback when Toolsmith is absent. |
 
-The director identifies the route and affected work. It does not invent a transition or perform an approval merely because it identified the problem. Preserve unaffected work and reassess reusable results against current requirements. Preserve historical Evidence even when later observations show weak results.
-
-With PI enabled, operational feedback follows Observation → Source → accepted Knowledge → Intent candidate. Research outside supported operational exposure may enter as an ordinary Source. Raw observations do not directly authorise Delivery. For recurring obligations, distinguish the closed occurrence from the continuing recurrence policy under PI section 23. Scheduling and durable execution remain host responsibilities.
+The accountable agent identifies the route and affected work. It does not invent a transition or perform an approval merely because it identified the problem. Preserve unaffected work and reassess reusable results against current requirements. Preserve historical Evidence even when later observations show weak results.
 
 ## 7. Delegation and Handoffs
 
@@ -267,7 +275,7 @@ Toolsmith must cover the following lifecycle, scaled to the change:
 
 For each material change, Toolsmith must connect the observed need to the changed instructions and the checks used to assess the result. Routine evaluation reports remain artefacts, not canonical project truth.
 
-When the director identifies a capability gap, its handoff states the intended outcome, missing capability, active environment identity and blocking impact. Toolsmith determines whether the change belongs to the pack or an upstream Production Skills family. The returned result identifies the candidate, evaluation evidence, remaining gaps and required adoption action. The director must not treat that result as an update to the active environment.
+When the director identifies a skill or method gap, its handoff states the intended outcome, missing skill or method, active environment identity and blocking impact. Route pack-level work to Toolsmith where the pack provides it, otherwise to the pack maintainer. Reusable domain methods belong to their owning Production Skills family. The receiving owner confirms the scope and redirects work that belongs elsewhere. The returned result identifies the candidate, evaluation evidence, remaining gaps and required adoption action. The director must not treat that result as an update to the active environment. A missing required capability mapping remains a pack-validation failure under Distribution section 5.
 
 ### Bootstrap and adoption
 
@@ -281,7 +289,7 @@ Toolsmith owns the preparation and maintenance work, not automatic release appro
 
 ### Learning and correction
 
-Use section 6's corrective routes for Delivery defects, changed approaches, changed outcomes and project-specific learning. Reusable domain expertise belongs in Production Skills. A role, routing or coordination defect becomes a candidate Agent Pack change.
+Use section 6's [corrective routes for all packs](#corrective-routing-for-all-packs) for Delivery defects, blockers, changed approaches, changed outcomes and project-specific learning. Reusable domain expertise belongs in Production Skills. A role, routing or coordination defect becomes a candidate Agent Pack change.
 
 Do not treat learning as permission to change active policy or rewrite accepted history. [Core, sections 24 and 44–45](./01-pactwright-core-system-and-lifecycle.md) governs Delivery lineage.
 
@@ -303,10 +311,15 @@ Packs offering continuing project coordination must also cover these cases:
 | Small advisory request | Proportionate advice without canonical Delivery mutations or implied authority. An unsupported entry is reported as unavailable. |
 | Several related Deliveries | Explicit owners and dependencies, actual member states and governing acceptance evidence for any claimed shared outcome. Individually accepted parts that fail integration remain a reported gap. |
 | Missing skill | A named gap and owning next action. Discovered or candidate content is not treated as active. |
+| Missing authority, dependency or required decision | Report a blocker and no advancement, including when evidence is missing. Research starts only after its prerequisites are satisfied. |
+| Changed approach | Preserve the valid Contract and route the changed approach through a new Brief. Do not invent a lifecycle transition. |
 | Changed strategy | A proposal through the correct decision route, with affected work identified and unaffected work preserved. |
 | Delivered output with weak results | Fulfilment and observed effect are reported separately. The next action follows evidence without rewriting historical Evidence. |
 | Interrupted work | Current state and work target are reconciled before permitted resumption. Consumed limits remain consumed and partial output is not acceptance. |
-| Recurring work | Closure of one occurrence does not cancel its recurrence policy or imply that the next occurrence ran. |
+| Stale result and restart | Refusal ends the invocation without redispatch. A fresh invocation follows current policy and reconciles current inputs. It adds no permanent restart-approval gate and cannot evade consumed limits. |
+| Human or external-service handoff | Sending or acknowledging a request does not establish completion. The named receiver's result is inspected; unavailable or unverifiable results remain blockers. |
+| Interrupted external effect | Use the host's supported reconciliation path to check the actual effect before retry. Do not replay a confirmed effect. If that facility is unavailable, report the blocker and mark recovery behaviour not evaluated. |
+| Recurring work with PI | Closure of one occurrence does not cancel its PI section 23 recurrence policy or imply that the next occurrence ran. Without PI, report this canonical facility as unavailable. |
 | Coordination without PI | Ordinary direction and planning documents remain usable, with explicit limits and no claim of accepted PI Knowledge or a derived PI roadmap. |
 
 These cases extend coverage requirements. They do not establish execution evidence or allocate checkpoint acceptance by themselves.
@@ -345,7 +358,7 @@ A committed pricing study can use a Contract covering research scope, assumption
 
 The pack must still satisfy all required capabilities. One visible advisor does not remove review separation or grant permission to contact investors, spend money or publish material.
 
-Nadia may also serve as the Project Director while another agent owns `delivery-specification`. She maintains the founder's direction document and selects research or production work within current authority. A missing pricing skill becomes a capability-gap handoff. Later customer evidence may challenge the strategy even though the study fulfilled its Contract. She proposes the appropriate Knowledge and Delivery changes while preserving the study's historical Evidence.
+Nadia may also serve as the Project Director while another agent owns `delivery-specification`. She maintains the founder's direction document and selects research or production work within current authority. A missing pricing skill becomes a skill-gap handoff. Later customer evidence may challenge the strategy even though the study fulfilled its Contract. She proposes the appropriate Knowledge and Delivery changes while preserving the study's historical Evidence.
 
 ### Creative production
 
@@ -353,7 +366,7 @@ A creative pack can compose research, narrative, design and production skills. I
 
 The Contract defines the commissioned outcome and quality criteria. Domain skills supply the production and evaluation techniques. Delivery closure does not itself approve an Asset or publish it; [Assets and Publication](./05-assets-and-publication.md) owns those semantics. Real-world performance belongs to [Operations](./06-operations.md), not a predicted outcome in the final report.
 
-For a recurring publication, the director assesses each commissioned output, its publication status and available audience evidence separately. Closing one occurrence preserves the recurrence policy. After an interruption, it reconciles current work and publication evidence before requesting the next permitted action; the method alone does not supply scheduling or safe external-effect retries.
+With PI enabled, a recurring-publication method assesses each commissioned output, its publication status and available audience evidence separately. Closing one occurrence preserves the PI recurrence policy. Without PI, the director may use ordinary planning documents for repeat work but cannot claim PI occurrence satisfaction. After an interruption, it reconciles current work and publication evidence before requesting the next permitted action; the method alone does not supply scheduling or safe external-effect retries.
 
 ## 12. Compatibility and Design References
 
