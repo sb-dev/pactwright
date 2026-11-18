@@ -105,6 +105,13 @@ requirements:
       output for execution-state writes and Step 7 reuses and extends to canonical mutations under CORE#55. A write whose inspected execution state
       changed before commit is refused without overwriting the other writer's change; no advance is lost and
       no iteration is counted twice.
+  R12:
+    source: [CORE#28, CORE#55]
+    statement: A Delivery or Review dispatch record in the Brief's execution state shall retain the dispatch
+      project_graph_revision and the identity of the governing inputs. That identity covers exact bytes and
+      existence of .pactwright/config.yml, .pactwright/lifecycle.yml and .pactwright/lock.yml and the resolved
+      registry and decoder identities used for dispatch. A graph-only legacy dispatch cannot establish freshness.
+      Loading it shall not fill in the missing identity from current inputs.
 acceptance:
   AC01:
     covers: [R01, R04, R06]
@@ -284,3 +291,14 @@ acceptance:
       file.
     verify:
       automated: [lifecycle.gate-re-entry]
+  AC15:
+    covers: [R04, R11, R12]
+    cases: [delivery-dispatch, review-dispatch, legacy-graph-only-dispatch]
+    given: A current Brief with a known graph revision and governing inputs. The legacy fixture has a recorded
+      dispatch revision but lacks the governing-input identity.
+    when: The runtime writes and reloads a current dispatch record through the Step 6 boundary, or loads the legacy fixture.
+    then: Each current record reproduces the recorded revision and governing-input identity after reload.
+      Recording dispatch changes neither the current step nor the graph revision. The legacy record loads
+      with freshness unavailable and its bytes remain unchanged.
+    verify:
+      automated: [lifecycle.dispatch-record]
