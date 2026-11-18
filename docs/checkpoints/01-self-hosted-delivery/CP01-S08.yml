@@ -55,6 +55,21 @@ requirements:
       diagnostic and still returns each unaffected Intent's exact standalone lineage, Contract and state. Next
       and run shall not bypass complete-state validation, invoke an agent or mutate state while the complete-state
       or actor-kind guard fails.
+  R08:
+    source: [CORE#28, CORE#34, CORE#55, DISTRIBUTION#12]
+    statement: Before invoking a Delivery or Review step, verify that governing inputs are valid and resolved
+      components match their locked identities. Record the verified dispatch base under Step 6 R12. Before
+      accepting a result, compare that record with current inputs and recheck the locked components inside
+      the shared serialised boundary that applies the result. Enforce this check for execution-state-only
+      progress as well as proposed canonical writes. Step 7 still validates the complete current mutation
+      base and authority. Refuse an unverifiable or stale result as an execution failure naming the affected
+      input or component. Preserve concurrent changes and apply no effects from the refused result.
+  R09:
+    source: [CORE#32, CORE#34, CORE#55]
+    statement: Stale-result refusal ends the invocation without redispatch, a corrective transition or an
+      iteration charge for the refusal. Consumed budgets stay consumed. A fresh invocation under current policy
+      shall reload lineage, execution state and governing inputs, reconcile the target and retained work,
+      and check the permitted next action and remaining budget. Restart adds no persistent approval gate.
 acceptance:
   AC01:
     covers: [R01, R02, R05]
@@ -177,3 +192,33 @@ acceptance:
       The control commits.
     verify:
       automated: [lifecycle.run-race]
+  AC11:
+    covers: [R03, R04, R08]
+    cases: [unchanged, component-drift-before-invocation, other-direction-graph-change, config-bytes-changed,
+      lifecycle-bytes-changed, lock-bytes-changed, required-input-removed, invalid-required-input,
+      registry-identity-changed, decoder-identity-changed, component-drift-at-result, legacy-graph-only-dispatch]
+    given: A Delivery or Review step with an instrumented invoker and locked fixture components. Vary one input
+      from a valid control. For component drift, change the resolved component while retaining the lock bytes.
+      For the graph case another direction commits during dispatch. For the legacy case supply the pending
+      result against the Step 6 graph-only record.
+    when: Run checks the environment before invocation, then checks the applicable dispatch base at result
+      application. Exercise both a step-only advance and a result proposing a canonical effect.
+    then: The unchanged control accepts each permitted result once. Pre-invocation drift fails before any
+      invoker call. Each result-time failure identifies the changed or unverifiable input or component,
+      ends the invocation, preserves the intervening state and applies neither progress nor proposed effects.
+    verify:
+      automated: [lifecycle.dispatch-freshness]
+  AC12:
+    covers: [R08, R09]
+    cases: [restart-permitted, restart-denied, budget-exhausted, target-superseded]
+    given: An instrumented worker intentionally changes its selected pack during a step with a recorded
+      iteration count. Its result fails the lock comparison. The fixture supplies an explicitly reselected
+      valid environment for the subsequent invocation.
+    when: Observe the failed invocation, then request a fresh invocation under the listed current conditions.
+    then: The first invocation ends after one dispatch, retains the edit and records no step completion,
+      corrective transition or additional iteration. The fresh invocation retains consumed allowances.
+      With authority and remaining budget it reassesses the retained work and can dispatch the still-current
+      step without repeating the edit. Denied authority or an exhausted bound stops that action. Supersession
+      selects the current lineage and leaves the old result unapplied.
+    verify:
+      automated: [lifecycle.stale-result-restart]

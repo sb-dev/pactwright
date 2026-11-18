@@ -1,6 +1,6 @@
 # Pactwright — Checkpoint 1 — Self-Hosted Delivery
 
-**Version:** 32\
+**Version:** 33\
 **Entry condition:** No installable Pactwright runtime exists.\
 **Release:** `0.0.2` (corrective; `0.0.1` was published against version 12 of this runbook, the version tagged `v0.0.1`, and remains the released baseline)\
 **Exit capability:** Pactwright is installable, upgradeable, can govern one complete Contract-driven Delivery in its own repository and in Kakeibo, can compare an Agent Pack candidate against a released baseline, and requires no manual Project Graph coherence work.
@@ -62,6 +62,8 @@ This runbook defines implementation order, not new Pactwright semantics.
 A converted step is defined by its YAML contract in [`01-self-hosted-delivery/`](./01-self-hosted-delivery/), in the format owned by [Spec 00](../specs/00-checkpoint-step-contract-and-delivery-tasks.md). The step section here links the contract and summarises its deliverables; the contract holds the requirements and acceptance criteria. Every contract inherits the settings and shared requirements in [`checkpoint.yml`](./01-self-hosted-delivery/checkpoint.yml), and [`crosswalk.yml`](./01-self-hosted-delivery/crosswalk.yml) records where each obligation of the replaced step prose went: version 17 for Stage 1, version 20 for Stage 2, version 21 for Stage 3, version 22 for Stage 4 and version 23 for Stage 5.
 
 Stages 1–5 are converted to contracts. Stage 1 contracts are amended against Core v3 through the Q01–Q20 resolution pass, accepted by independent review 5298715756 and its correction review 5301803981 at `87bd3eb`, and reviewed as a whole under methodology §7 in [the Stage 1 exit record](../research-logs/2026-09-25-cp01-stage-1-exit-review.md). That record lists the corrections it applied, including the owner-directed Distribution §3 and pg1-fixture decisions, and the remaining non-blocking specification recommendations; independent review 5318255407 accepted those corrections at `f5e75db` and the record states Stage 1 requirement-ready. Stage 2 contracts are amended against Core v5 through the Q21–Q33 resolution pass, recorded in five [batch records](../research-logs/2026-09-25-cp01-stage-2-b7-shapes-and-identity.md) (B7–B11). The owner approved the Core §§27, 28, 32, 52, 53, 55 and 57 clauses, the two §4 scope lines and the Step 24 lifecycle-command obligation, and three further decisions from the stage-level exit review recorded in [the Stage 2 exit record](../research-logs/2026-09-25-cp01-stage-2-exit-review.md); independent review 5322976729 accepted that record's corrections at `ac370f2` and the record states Stage 2 requirement-ready. Stage 3 contracts are amended against Core v6 and Distribution v4 through the Q34–Q40 resolution pass, recorded in three [batch records](../research-logs/2026-09-25-cp01-stage-3-b12-agent-pack-format-and-selection.md) (B12–B14); the owning clauses are Distribution §§5, 8, 15, 21, 24 and Core §§35, 46, 55, and this pass added the Step 24 evaluation sentence below. The methodology §7 whole-stage review is recorded in [the Stage 3 exit record](../research-logs/2026-09-25-cp01-stage-3-exit-review.md), whose corrections X1–X19 were accepted by fresh independent review, and the record states Stage 3 requirement-ready.
+
+The PDI-CP01 amendment for Steps 8 and 9 adds Step 6 R12 and AC15, Step 8 R08–R09 and AC11–AC12, and Step 9 R12 and AC12. It also distinguishes the Step 9 R06 replay-base document from the Step 6 dispatch record. Core v9 §§28, 34, 39 and 55, Distribution v8 §12 and Spec 09 v5 §§6–7 govern these additions. They require review with this amendment. The earlier Stage 2 exit record applies to the contracts it reviewed.
 
 [The PDI-CP01 amendment](https://github.com/sb-dev/pactwright/pull/100) adds CP01-S10 R09–R10 and AC08–AC10 under Distribution v8 §§5 and 23 and Spec 09 v5 §§3–6 and 9. Under Distribution v8 §§5 and 12, it adds CP01-S11 R10 and AC13–AC14 and extends AC02 and AC05 with invalid-entry rollback cases. The Stage 3 exit review covered the earlier contracts. The linked amendment records the separate review of these additions.
 
@@ -227,7 +229,7 @@ Step 7 proves the guards through the runtime mutation API. Step 8 repeats them t
 - `lifecycle-next` — A read-only pactwright lifecycle next that determines the next permitted lifecycle action without executing it.
 - `lifecycle-run` — A pactwright lifecycle run that executes automatic responsibilities through the resolved shape and policy until a required Gate, a manual responsibility, a blocked Review outcome, completion, execution failure or validation failure.
 
-Agent Pack capabilities arrive in Step 10 and adapter commands in Step 12; Step 24 completes a full Delivery through them. Execution progress stays outside the Delivery Graph.
+Agent Pack capabilities arrive in Step 10 and adapter commands in Step 12; Step 24 completes a full Delivery through them. Execution progress stays outside the Delivery Graph. The instrumented run checks the Step 6 dispatch record before accepting a Delivery or Review result. A stale result ends that invocation.
 
 ### Step 9 — Implement the complete core validation contract and bounded context assembly
 
@@ -238,7 +240,7 @@ Agent Pack capabilities arrive in Step 10 and adapter commands in Step 12; Step 
 - `validate-command` — A read-only pactwright validate implementing the complete Core §57 minimum detection contract without repairing state.
 - `context-assembly` — A runtime context-assembly API giving Agent Packs and adapters bounded current Contract/Brief lineage context, with a namespaced contribution seam for later Extensions.
 
-Rule 16 uses a fixture graph contribution here; Step 16 reruns it through installed fixture Extension loading. Rule 17 runs only when replay validation is requested. Agent Packs and adapters consume context assembly from Steps 10 and 12.
+Rule 16 uses a fixture graph contribution here; Step 16 reruns it through installed fixture Extension loading. Rule 17 runs only when replay validation is requested. Agent Packs and adapters consume context assembly from Steps 10 and 12. Method handoffs identify the target, governing inputs, actual checks and next permitted action so the receiver can reconcile changes.
 
 ## Stage 3 — Add replaceable AI execution
 
@@ -871,4 +873,4 @@ Checkpoint 1 closes only when:
 
 ---
 
-**Pactwright — Checkpoint 1 — Self-Hosted Delivery v32**
+**Pactwright — Checkpoint 1 — Self-Hosted Delivery v33**
