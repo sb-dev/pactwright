@@ -758,6 +758,8 @@ The following gaps remain explicit rather than being invented here:
 
 # 30. Current Implementation Baseline
 
+The [CP05 amendment](../checkpoints/05-production-skills-and-assets-publication.md) under PDI-CP06 owns proof of human approval and actual publication in the public-output and consumer exercises.
+
 The earlier Graph Review & Creative Delivery research established the surviving durable-output contracts:
 
 - Assets are distinct from transient candidates;

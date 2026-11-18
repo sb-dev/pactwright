@@ -782,6 +782,8 @@ The following gaps remain explicit rather than being invented here:
 
 # 25. Current Implementation Baseline
 
+PDI-CP07 allocates operational feedback proof to [CP06](../checkpoints/06-operations.md) and publication outcome reporting and corrective handoff proof to [CP07](../checkpoints/07-publication-feedback.md).
+
 The original Operations research established the surviving contracts:
 
 - Operations requires Project Intelligence;

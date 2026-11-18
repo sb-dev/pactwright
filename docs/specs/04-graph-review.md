@@ -463,11 +463,11 @@ Project Intelligence remains authoritative for Delivery candidates and readiness
 
 ## Reviewing a shared requirement
 
-For a group of Deliveries, trace the shared requirement to the member Contracts that cover it or to the separate integration Contract. Use the reviewed plan and its grounding where available. Compare the component Evidence with the check on the assembled output at the reviewed revision. Report **combined check failed** when the check ran and its result contradicts the requirement. Report **combined proof missing** when the required result is absent. Cite the available records for either conclusion.
+For a group of Deliveries, trace the shared requirement to the member Contracts that cover it or to the separate integration Contract. Use the reviewed plan and its grounding where available. Compare the component Evidence with the check on the assembled output at the reviewed revision. Report **combined check failed** when the check ran and its result contradicts the requirement. Report **combined proof missing** when the required result is absent. In either case, a successful Graph Review emits a Finding under section 10 and hands it to Project Intelligence as an internal Source under section 11. Cite the records that support the failure or establish the gap in proof.
 
 For example, a campaign's copy and artwork each pass their own checks. The integration Contract requires the assembled page to open the agreed trial offer. A recorded walkthrough that opens a different offer establishes a combined failure. If the only records cover copy and artwork, the next action is to obtain the walkthrough. The integration Delivery owner corrects the link or obtains the missing proof within the current Contract and Brief. Independent Delivery Review verifies the assembled page before Evidence closes that Delivery.
 
-If Graph Review identifies a wider inconsistency, its Finding names the affected requirement, supporting records, accountable owner and next permitted action. Every emitted Finding follows section 11. A gap in Contract coverage requires an owning decision before new work can proceed. The plan supplies the group context under [Project Intelligence §21](./03-project-intelligence.md#plan-composition).
+Each combined-review Finding names the affected requirement, supporting records, accountable owner and next permitted action. The Delivery owner acts under the governing Contract and Brief. That correction or evidence gathering can proceed alongside the Finding handoff. A gap in Contract coverage requires an owning decision before new work can proceed. The plan supplies the group context under [Project Intelligence §21](./03-project-intelligence.md#plan-composition).
 
 ---
 
@@ -626,7 +626,7 @@ It should assess whether `graph-review` can:
 
 Domain expertise remains benchmarked by the relevant Production Skills repositories.
 
-Evaluate the campaign twice with identical component Evidence. Supply the failed walkthrough in one case and omit it in the other. Check that the reported conclusion and the integration owner's next action differ. For a wider Finding, check the internal Source handoff or its recorded retryable failure.
+Evaluate the campaign twice with identical component Evidence. Supply the failed walkthrough in one case and omit it in the other. Check that the reported conclusion and the integration owner's next action differ. In both cases verify the Finding and its internal Source handoff. If ingestion fails, verify that the failure is recorded and that the same Finding can be handed off again without rerunning Graph Review.
 
 ```text
 Production Skill evaluation
@@ -708,6 +708,8 @@ These gaps do not weaken the semantic rule that a pinned rerun uses the recorded
 ---
 
 # 24. Current Implementation Baseline
+
+The [CP04 amendment](../checkpoints/04-graph-review.md) under PDI-CP05 owns proof of combined review and the retryable Finding handoff to Project Intelligence.
 
 The earlier Graph Review & Creative Delivery research established the surviving Graph Review contracts:
 
