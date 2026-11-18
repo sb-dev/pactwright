@@ -61,6 +61,7 @@ This specification owns:
 - Agent Packs;
 - packaging and discovery of pack-defined methodology;
 - optional Agent Pack advisory entry and its adapter exposure;
+- durable remote host continuation and external-effect recovery;
 - candidate evaluation and explicit Agent Pack adoption;
 - capability resolution;
 - Pactwright Extension installation, removal and upgrade;
