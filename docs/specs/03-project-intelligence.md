@@ -878,12 +878,17 @@ pactwright intelligence ingest <path-or-url>
 pactwright intelligence triage <source-id>
 pactwright intelligence promote <source-id>
 pactwright intelligence register-domain <id>
+pactwright intelligence apply-plan <reviewed-proposal>
 pactwright intelligence onboard
 pactwright intelligence derive-intent-roadmap
 pactwright intelligence propagate <knowledge-id>
 pactwright intelligence refresh
 pactwright intelligence validate
 ```
+
+Use `apply-plan` for all three plan mutations. Its input identifies the action (`create`, `replace` or `retire`), the plan ID, the expected base revision and the human review decision for that exact proposal. Create and replace supply the complete proposed plan from section 21. Retire removes the named plan from active storage and preserves its history. Drafts stay outside active PI storage until application.
+
+The runtime verifies approval against the reviewed action, base and content through the repository review mechanism. Within Core §55’s mutation boundary, it checks current inputs, requires absence for create or presence for replace and retire, and validates the complete proposed PI state under section 30. Missing approval, stale inputs, failed preconditions or invalid resulting references stop the operation before it writes. Success reports the plan ID, action and resulting Project Graph revision. Section 29 governs resubmission after a concurrent change.
 
 Enabled Extensions invoke the same ingestion path for internal Sources rather than introducing Extension-specific Knowledge mutation commands.
 
@@ -954,7 +959,7 @@ Idempotency rules:
 
 Concurrency uses normal repository isolation. Conflicting promotions must rebase and rerun validation against current state. No application-level lease system is required initially.
 
-Creating, editing or retiring a plan requires a reviewed proposal with human approval against current inputs. Show the changed coverage, dependencies and affected Deliveries for review. Apply through the normal validated mutation boundary, preserving Git history. If inputs changed during review, revalidate and obtain approval for changed meaning before applying. A failed edit preserves the prior plan and roadmap inputs.
+Creating, editing or retiring a plan requires a reviewed proposal with human approval against current inputs. Show the changed coverage, dependencies and affected Deliveries for review. Apply the reviewed proposal through section 26’s `apply-plan` operation. If its base is stale, prepare the proposal against the current base and obtain approval for that revision before resubmission. A failed edit preserves the prior plan and roadmap inputs.
 
 Failure rules:
 
@@ -1052,6 +1057,8 @@ The following remain deliberately unresolved rather than being invented here:
 # 32. Current Implementation Baseline
 
 Project Intelligence is primarily a canonical target rather than a completed `0.0.1` subsystem.
+
+Plan composition and its reviewed mutation operation are specification targets. The [CP03 amendment](../checkpoints/03-project-intelligence.md) allocated to PDI-CP04 owns implementation and proof.
 
 The existing Pactwright architecture already provides:
 
