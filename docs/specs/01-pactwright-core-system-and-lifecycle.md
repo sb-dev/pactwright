@@ -91,7 +91,7 @@ This specification does not define:
 
 Those concerns belong to their owning canonical specifications or external Production Skills projects.
 
-[Agent Methodology and Workflows](./09-agent-methodology-and-workflows.md) owns pack-defined roles, methods, routing and handoffs. Core defines how those methods enter and use governed Delivery. Method names and personas do not add runtime authority.
+[Agent Methodology and Workflows](./09-agent-methodology-and-workflows.md) owns pack-defined roles, continuing project direction, methods, routing and handoffs. Core defines how those methods enter and use governed Delivery. Method names and personas do not add runtime authority.
 
 ---
 
@@ -1178,7 +1178,7 @@ The selected Agent Pack determines which agent implements each responsibility.
 
 Production Skills provide specialised techniques.
 
-Each required capability maps to one accountable agent. That agent may delegate bounded work, but it must check and integrate the results and return the capability result. Specialist roles, the Project Director and Toolsmith do not add capability mappings or approval rights. The director need not own `delivery-specification` and cannot replace another capability's accountable agent. [Spec 09, section 3](./09-agent-methodology-and-workflows.md#project-director-responsibility) owns these role boundaries; Distribution owns pack resolution and exposure.
+Each required capability maps to one accountable agent. That agent may delegate bounded work, but it must check and integrate the results and return the capability result. Specialist roles, the Project Director and Toolsmith do not add capability mappings or approval rights. The director need not own `delivery-specification` and cannot replace another capability's accountable agent. [Spec 09](./09-agent-methodology-and-workflows.md), sections 3, 4 and 9, owns their role boundaries and method contracts; Distribution owns pack resolution and exposure.
 
 ---
 
