@@ -1,8 +1,8 @@
 # Checkpoint 1 Task 4 — False-Completion Proof
 
-**Version:** 9
+**Version:** 10
 
-**Date:** 15 October 2026
+**Date:** 29 October 2026
 
 ## 1. Objective
 
@@ -24,7 +24,7 @@ T4 PASS is a safety verdict. T3.6 §4 and L4-03 own benefit measurement and defa
 
 Run A first. C uses a fresh session that did not implement B's corrections.
 
-**Working branch:** `feature/cp01-t4-false-completion` in `sb-dev/pactwright`. At A, create it from `refactor/pactwright-v2` if absent; otherwise inspect and continue it. All stages use this branch.
+**Working branch:** `feature/cp01-t4-false-completion` in `sb-dev/pactwright`. At A, create it from `main` if absent; otherwise inspect and continue it. Record the actual base revision; preserve historical proof identities. All stages use this branch.
 
 **Exit-review file:** `docs/research-logs/2026-09-29-cp01-task-4-false-completion-exit-review.md`.
 
@@ -150,4 +150,4 @@ The authority column refers to the linked sources in §1. Apply their required o
 
 Check that the L4-03 benefit report identifies the tested revision. An inconclusive benefit cannot permit default T5 adoption, even with T4 PASS (T3.6 §4).
 
-**Checkpoint 1 Task 4 — False-Completion Proof, Version 9**
+**Checkpoint 1 Task 4 — False-Completion Proof, Version 10**

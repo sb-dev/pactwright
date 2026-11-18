@@ -1,6 +1,10 @@
 # Example: one complete core Delivery
 
-This walkthrough takes a fresh repository from installing Pactwright to a completed Intent → Evidence lineage. Every command below is part of the proven core Delivery surface; run them in order.
+This walkthrough describes the specified Checkpoint 1 runtime interaction, from installation to a completed Intent → Evidence lineage. It is an acceptance walkthrough, not an executed result for the current checkout.
+
+The merged v2 checkout contains the bootstrap harness and has no root runtime source or `@pactwright/standard` package. Use the [current checkout instructions](../../README.md#work-with-the-current-checkout) for executable entry points. Run the sequence below only with the exact Checkpoint 1 release whose clean-consumer and external acceptance evidence you are verifying; the planned corrective target is `0.0.2`. See [Checkpoint 1](../../docs/checkpoints/01-self-hosted-delivery.md) for the release and acceptance gates.
+
+All results below are expected outcomes to verify against [Core](../../docs/specs/01-pactwright-core-system-and-lifecycle.md) and [Distribution](../../docs/specs/02-distribution-agent-packs-extensions-and-evaluation.md), not proof that those outcomes have occurred.
 
 ## 1. Create a repository and install Pactwright
 
@@ -8,7 +12,7 @@ This walkthrough takes a fresh repository from installing Pactwright to a comple
 mkdir my-project && cd my-project
 git init
 pnpm init
-pnpm add -D pactwright
+pnpm add -D pactwright@0.0.2
 pnpm pactwright init --agent-pack @pactwright/standard
 ```
 
@@ -83,4 +87,4 @@ pnpm pactwright context <intent-id>
 
 Expected: `validate` reports 5 nodes, 4 edges and 1 lineage as valid; `lifecycle status` shows the intent with `state: done`, every responsibility completed and no next action; `context` prints the full current lineage — intent, decision, contract, brief and evidence — and nothing else.
 
-That is one complete core Delivery. From here, every further change to the repository can start with a new `/capture-intent`.
+Acceptance requires the actual command results and current review evidence for this lineage. Once verified, further governed changes can start with a new `/capture-intent`.
