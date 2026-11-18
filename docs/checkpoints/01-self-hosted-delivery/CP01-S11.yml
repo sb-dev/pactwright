@@ -4,7 +4,7 @@ requires: [CP01-S01, CP01-S10]
 outputs:
   agent-pack-use: A pactwright agent-pack use <source> that explicitly selects one compatible complete Agent Pack
     from a package name, optionally versioned, or a pack path, obtains a package it needs through the project
-    package manager, and updates configuration and lock only after successful resolution and validation.
+    package manager, and updates configuration and lock only after validation, including the optional entry in the existing lock identities.
   agent-pack-upgrade: A pactwright agent-pack upgrade that upgrades the selected pack within its configured compatibility
     constraints through the project package manager without changing its identity.
   package-manager-delegation: The runtime's single package-manager delegation seam, detecting the project package
@@ -79,6 +79,12 @@ requirements:
       neither of which Step 11 derives. Sync is the runtime''s single sync entry point, which at Step 11 loads
       configuration and lock, validates the composition and assembles agents and skills; its rendering is a
       seam that writes no file until Step 12 supplies the adapter, and Step 17 proves determinism and convergence.'
+  R10:
+    source: [DISTRIBUTION#5, DISTRIBUTION#12]
+    statement: Use and upgrade shall include the entry_agent binding or its absence in agent_pack.hash.
+      Record the entry prompt and attached direct skills in the existing agents and skills hash maps, even
+      for an entry agent outside the capability mappings. A pack without an entry needs no entry-specific
+      lock migration. Step 15 owns environment_lock_hash derivation and drift checks.
 acceptance:
   AC01:
     covers: [R01, R03, R09]
@@ -96,7 +102,7 @@ acceptance:
       automated: [agent-pack.use]
   AC02:
     covers: [R01, R02]
-    cases: [incompatible-runtime, missing-capability, unresolvable-source, malformed-pack, sync-failure]
+    cases: [incompatible-runtime, missing-capability, unresolvable-source, malformed-pack, invalid-entry, sync-failure]
     given: A project with @pactwright/standard selected and a valid generated environment, and a candidate
       source with the listed defect; sync-failure injects a failure into sync after validation passes.
     when: Agent-pack use runs with the candidate source.
@@ -128,12 +134,12 @@ acceptance:
       automated: [agent-pack.upgrade]
   AC05:
     covers: [R02, R04]
-    cases: [missing-capability, incompatible-runtime, sync-failure]
+    cases: [missing-capability, incompatible-runtime, invalid-entry, sync-failure]
     given: 'A fixture pack selected at 1.0.0 under a configured ^1.0.0 constraint and the delegation seam instrumented
       so that the request installs a 1.1.0 with the listed defect; sync-failure installs a valid 1.1.0 and
       sync fails.'
     when: Agent-pack upgrade runs.
-    then: Nothing is upgraded, and the problem names the missing capability, incompatibility or sync failure.
+    then: Nothing is upgraded, and the problem names the missing capability, incompatibility, invalid entry or sync failure.
       Configuration, lock and generated environment are byte-identical, 1.0.0 of the same source remains selected,
       and the package-manager manifest and lock are at the previous installed version and constraint through
       a restore request for exactly 1.0.0.
@@ -217,3 +223,26 @@ acceptance:
       report names 1.0.0 as the exact version to restore and the restore request that failed.
     verify:
       automated: [agent-pack.upgrade-restore-failure]
+  AC13:
+    covers: [R05, R09, R10]
+    cases: [select-entry, change-entry, add-entry, remove-entry]
+    given: Identical projects and complete path packs at the same relative source and exact version.
+      The manifests differ only in the listed binding change. Both possible entry agents have a prompt
+      and direct skill and neither owns a capability. For select-entry use two identical bound packs.
+    when: Each project explicitly selects its pack with agent-pack use and reads back the version 1 lock.
+    then: Identical bindings yield the same agent_pack.hash. Changing, adding or removing only the
+      binding yields different pack hashes with the same source and version. The existing agents and
+      skills maps identify the resolved prompt and skill content, including that of a bound entry.
+      No entry-specific lock field or migration is required.
+    verify:
+      automated: [agent-pack.entry-lock]
+  AC14:
+    covers: [R04, R09, R10]
+    given: A selected package with no declared entry and a compatible newer version in its configured
+      range that adds an entry-only agent with a distinct prompt and direct skill.
+    when: Agent-pack upgrade installs and validates the newer version through the R08 delegation seam.
+    then: The lock retains the configured source, records the new exact version and pack hash, and
+      records the new entry prompt and direct skill hashes in the existing maps. The capability mappings
+      still resolve as declared.
+    verify:
+      automated: [agent-pack.upgrade-entry-lock]

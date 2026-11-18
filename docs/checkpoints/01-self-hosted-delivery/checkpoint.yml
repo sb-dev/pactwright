@@ -9,6 +9,7 @@ sources:
   CORE: ../../specs/01-pactwright-core-system-and-lifecycle.md
   DISTRIBUTION: ../../specs/02-distribution-agent-packs-extensions-and-evaluation.md
   OSS: ../../specs/08-open-source-project-organisation.md
+  METHODOLOGY: ../../specs/09-agent-methodology-and-workflows.md
   PRINCIPLES: ../00-implementation-principles.md
   GUIDE: ../00-implementation-guide.md
   KAKEIBO_PROFILE: ../00-kakeibo-acceptance-profile.md
