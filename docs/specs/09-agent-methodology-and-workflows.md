@@ -10,7 +10,7 @@ The contract applies to software delivery, research, business advice and creativ
 
 This specification owns agent responsibilities, continuing project direction, method descriptions, routing, handoffs, review separation and Toolsmith's pack-authoring responsibilities. It does not own runtime transitions, canonical records, package formats, provider routing or domain techniques. Implementation checkpoints determine when these requirements are supported; this document is not evidence that they have shipped.
 
-This document defines the target methodology contract. [Core v9](./01-pactwright-core-system-and-lifecycle.md) defines its Delivery, authority and dispatch-freshness requirements. [Distribution v8](./02-distribution-agent-packs-extensions-and-evaluation.md) defines its packaging, advisory entry, evaluation and adoption requirements. These specification amendments do not establish runtime support or checkpoint acceptance. Registration in [Open-Source Project Organisation, section 9](./08-open-source-project-organisation.md) remains follow-on work. Sections 5 and 10 distinguish the entry contract from verified availability and retain the limits on pack-case discovery.
+This document defines the target methodology contract. [Core v9](./01-pactwright-core-system-and-lifecycle.md) defines its Delivery, authority and dispatch-freshness requirements. [Distribution v8](./02-distribution-agent-packs-extensions-and-evaluation.md) defines its packaging, advisory entry, evaluation and adoption requirements. These specification amendments do not establish runtime support or checkpoint acceptance. The [specification authority map](./08-open-source-project-organisation.md#9-canonical-specifications-and-document-authority) identifies the owning documents. Sections 5 and 10 distinguish the entry contract from verified availability and retain the limits on pack-case discovery.
 
 ## 2. Terms and Ownership
 
@@ -389,4 +389,4 @@ The following BMAD material informs the design but does not define Pactwright be
 
 ---
 
-**Pactwright Agent Methodology and Workflows v4**
+**Pactwright Agent Methodology and Workflows v5**

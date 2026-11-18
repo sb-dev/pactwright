@@ -1,8 +1,8 @@
 # Pactwright — Checkpoint Step Contract and Delivery Tasks
 
-**Version:** 10
+**Version:** 11
 
-**Date:** 9 October 2026
+**Date:** 18 November 2026
 
 **Purpose:** Replace checkpoint prompts with requirements and acceptance criteria, then execute them through progressively self-hosted run models.
 
@@ -18,6 +18,8 @@ Canonical specifications → checkpoint contracts
                          └── correct ─────┤
                                          └── accept → next eligible step
 ```
+
+The selected Agent Pack supplies methods under [Spec 09](./09-agent-methodology-and-workflows.md). During checkpoint execution, the approved run model governs role assignments, cooperation and independent review. The controller alone accepts a checkpoint step against its contract. A Director may coordinate work and report verified progress. Its recommendation cannot advance a step.
 
 Agent prompts are generated invocation context, not requirements or acceptance authority. The harness accepts outputs only against the approved contract and current evidence.
 
@@ -246,6 +248,13 @@ These are work definitions, not progress records. Execute them in dependency ord
 
 T1–T2 establish the step definitions; T3 builds the bootstrap executor; T3.5 productionises it for CP1 and GitHub Actions; T3.6 adds evidence-backed learning; T4 proves the combined revision; T5 delivers CP1. T6–T9 use that evidence for progressively self-hosted orchestration.
 
+### Project Director work
+
+- **T6** uses T5's accepted CP01 execution evidence to design how the software run model uses the Director and specialists. Ground the reusable handoffs and review boundaries in observed runs. Identify which domain checks and later capabilities each proposed model needs.
+- **T7** uses the reviewed T6 design to allocate each implementation requirement and its proof to an existing checkpoint step. The [Director integration plan](../research-logs/2026-11-17-project-director-integration-plan.md#6-checkpoint-amendment-allocation) proposes the affected steps. Their contracts own the resulting obligations. Amend each in its existing contract form under §§2–4. Preserve inherited obligations and historical evidence. The specification and allocation work can be prepared before CP01 runs. It cannot supply the execution evidence required by T6 or T8.
+- **T8** uses the accepted CP01 harness and runtime and the T7 allocation in [CP02](../checkpoints/02-remote-delivery.md) to build and prove the first Pactwright-backed software successor. The current controller must accept the exact candidate on evidence from a real step, including correction, resume and independent review. Until then, the previously accepted model continues to govern execution.
+- **T9** uses each accepted successor for subsequent eligible work. Apply the same predecessor-led proof and acceptance before adopting a further domain model. Checkpoints retain their existing order and exit criteria.
+
 The [T3.5 harness production-readiness plan](../research-logs/2026-09-30-cp01-task-3-5-harness-production-readiness.md) defines H1 production verification, H2 model/effort control and H3 GitHub Actions operation. Complete T3.5, then the [T3.6 evidence-backed learning plan](../research-logs/2026-10-07-cp01-task-3-6-evidence-backed-learning.md), before T4. The [T4 proof plan](../research-logs/2026-09-29-cp01-task-4-false-completion-proof.md) covers both at the final revision. H1–H3 retain their historical definitions. The [T5 run guide](../research-logs/2026-09-29-cp01-task-5-implementation-and-acceptance.md) owns the operator procedure. The historical T3 plan remains the record of its original implementation.
 
 ## 6. Progressive use and production domains
@@ -274,4 +283,6 @@ Version 9 adds PR correction rounds to the existing harness run, with shared tri
 
 Version 10 adds T3.6 evidence-backed learning between T3.5 and T4. It preserves one candidate, one saved run and one acceptance authority, and adds T4 challenges and a measured-benefit condition for default adoption. This specifies work; it does not claim implementation or acceptance.
 
-**Pactwright — Checkpoint Step Contract and Delivery Tasks v10**
+Version 11 allocates Project Director design, checkpoint amendments, successor proof and adoption across T6–T9.
+
+**Pactwright — Checkpoint Step Contract and Delivery Tasks v11**

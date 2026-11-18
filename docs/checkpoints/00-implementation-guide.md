@@ -1,13 +1,13 @@
 # Pactwright — Implementation Guide
 
-**Version:** 19\
+**Version:** 20\
 **Status:** Checkpoint index, engineering standard and release model
 
 ## Purpose
 
 The checkpoint files are executable engineering runbooks.
 
-Every step uses:
+For converted steps, execute the linked YAML contract and inherited checkpoint requirements. For steps retained in prose, execute the reviewed procedure and its shared requirements under [Spec 00 §§2–4](../specs/00-checkpoint-step-contract-and-delivery-tasks.md#2-checkpoint-organisation). Prose runbooks use this structure:
 
 ```text
 Step
@@ -32,6 +32,7 @@ docs/specs/05-assets-and-publication.md
 docs/specs/06-operations.md
 docs/specs/07-github-integration.md
 docs/specs/08-open-source-project-organisation.md
+docs/specs/09-agent-methodology-and-workflows.md
 ```
 
 Research logs provide rationale and historical design context only.
@@ -325,6 +326,8 @@ Each checkpoint advances the smallest public surface set needed by the newly usa
 0.1.0  first supported public release of the accepted 0.0.10 capability line
 ```
 
+Write or revise task guides from the observed Pactwright and Kakeibo exercises at their owning steps. Identify the tested environment, the entry or command used, the result and any correction that required a recheck. Describe an unavailable entry or an untested path as such. A proposed pack method or a fixture run cannot substantiate a real-adapter walkthrough.
+
 Use the strongest Pactwright capability already available.
 
 Public material must distinguish ordinary production feedback from controlled Experiment workflows. Do not imply every Deployment/rollout requires experimentation.
@@ -609,6 +612,8 @@ Read `README.md`, `00-implementation-principles.md` and the canonical Pactwright
 10. 10-graduation-connected-banking.md  Graduation — Connected Banking
 ```
 
+Use the current accepted run model. Its controller checks the governing step contract, current evidence, independent review and required approvals. The selected pack supplies the Director and specialist methods where available. Follow [Spec 00 §5](../specs/00-checkpoint-step-contract-and-delivery-tasks.md#project-director-work) for the first successor in CP02 and subsequent adoption. Switch only after the predecessor's controller records acceptance of that candidate.
+
 For Checkpoints 6–9, also apply `2026-09-02-pactwright-operations-experiment-semantics.md` wherever the runbook references controlled Experiment semantics.
 
 Graduation starts only after Checkpoint 9 closes, the supported `0.1.0` line is accepted and Kakeibo consumes that supported family.
@@ -645,4 +650,4 @@ A non-blocking open design gap may cross a checkpoint only when:
 
 ---
 
-**Pactwright — Implementation Guide v19**
+**Pactwright — Implementation Guide v20**

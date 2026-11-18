@@ -356,8 +356,11 @@ docs/specs/
 ├── 05-assets-and-publication.md
 ├── 06-operations.md
 ├── 07-github-integration.md
-└── 08-open-source-project-organisation.md
+├── 08-open-source-project-organisation.md
+└── 09-agent-methodology-and-workflows.md
 ```
+
+[Spec 09](./09-agent-methodology-and-workflows.md) owns Agent Pack methodology, including continuing project direction, routing and handoffs. [Spec 00](./00-checkpoint-step-contract-and-delivery-tasks.md) owns the checkpoint execution model, step contract format and delivery tasks. Each numbered checkpoint allocates the implementation and proof of the requirements it consumes.
 
 Authority is:
 
@@ -1172,6 +1175,9 @@ Before Project Intelligence is available, bounded Decision/Contract authority go
 
 08 Open-Source Project Organisation
 → composes these into one repository and public product
+
+09 Agent Methodology and Workflows
+→ owns pack-defined methods, roles and cooperation within Core and Extension authority
 ```
 
 ---
@@ -1182,4 +1188,4 @@ Before Project Intelligence is available, bounded Decision/Contract authority go
 
 ---
 
-**Pactwright Open-Source Project Organisation v2**
+**Pactwright Open-Source Project Organisation v3**
