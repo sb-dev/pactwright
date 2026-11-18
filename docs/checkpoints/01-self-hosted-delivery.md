@@ -1,6 +1,6 @@
 # Pactwright — Checkpoint 1 — Self-Hosted Delivery
 
-**Version:** 31\
+**Version:** 32\
 **Entry condition:** No installable Pactwright runtime exists.\
 **Release:** `0.0.2` (corrective; `0.0.1` was published against version 12 of this runbook, the version tagged `v0.0.1`, and remains the released baseline)\
 **Exit capability:** Pactwright is installable, upgradeable, can govern one complete Contract-driven Delivery in its own repository and in Kakeibo, can compare an Agent Pack candidate against a released baseline, and requires no manual Project Graph coherence work.
@@ -22,6 +22,7 @@ Canonical Pactwright semantics come from:
 - [01 — Core System and Lifecycle](../specs/01-pactwright-core-system-and-lifecycle.md)
 - [02 — Distribution, Agent Packs, Extensions and Evaluation](../specs/02-distribution-agent-packs-extensions-and-evaluation.md)
 - [08 — Open-Source Project Organisation](../specs/08-open-source-project-organisation.md)
+- [09 — Agent Methodology and Workflows](../specs/09-agent-methodology-and-workflows.md)
 - [Implementation Principles](./00-implementation-principles.md)
 - [Implementation Guide](./00-implementation-guide.md)
 - [Kakeibo System-Level Acceptance Profile](./00-kakeibo-acceptance-profile.md)
@@ -244,8 +245,8 @@ Rule 16 uses a fixture graph contribution here; Step 16 reruns it through instal
 **Deliverables**
 
 - `core-capabilities` — The core capability identities delivery-specification, delivery-execution and delivery-review, and the runtime capability check that a candidate Agent Pack implements each required capability.
-- `agent-pack-loading` — Runtime loading and validation of an Agent Pack's capability mappings, agents, prompts and direct skills, independent of the pack's identity.
-- `standard-agent-pack` — @pactwright/standard, a separate publishable Agent Pack package that implements the three core capabilities without owning graph or lifecycle semantics.
+- `agent-pack-loading` — Runtime loading and validation of an Agent Pack's capability mappings, agents, prompts and direct skills, including the optional entry_agent binding and its referenced content, independent of the pack's identity.
+- `standard-agent-pack` — @pactwright/standard, a separate publishable Agent Pack package that implements the three core capabilities and provides Director and Toolsmith methods through direct skills without owning graph or lifecycle semantics.
 
 Step 11 repeats the incomplete-pack proof through `agent-pack use`. Step 22 packs `@pactwright/standard` for clean consumers and Step 28 publishes it. External Production Skills imports remain unsupported until Checkpoint 5.
 
@@ -255,7 +256,7 @@ Step 11 repeats the incomplete-pack proof through `agent-pack use`. Step 22 pack
 
 **Deliverables**
 
-- `agent-pack-use` — A pactwright agent-pack use <source> that explicitly selects one compatible complete Agent Pack from a package name, optionally versioned, or a pack path, obtains a package it needs through the project package manager, and updates configuration and lock only after successful resolution and validation.
+- `agent-pack-use` — A pactwright agent-pack use <source> that explicitly selects one compatible complete Agent Pack from a package name, optionally versioned, or a pack path, obtains a package it needs through the project package manager, and updates configuration and lock only after validation, including the optional entry in the existing lock identities.
 - `agent-pack-upgrade` — A pactwright agent-pack upgrade that upgrades the selected pack within its configured compatibility constraints through the project package manager without changing its identity.
 - `package-manager-delegation` — The runtime's single package-manager delegation seam, detecting the project package manager under the DISTRIBUTION#15 rule and issuing its install, request-at-constraint, exact-restore, removal and isolated-acquisition requests, reused by later steps that need packages.
 
@@ -866,4 +867,4 @@ Checkpoint 1 closes only when:
 
 ---
 
-**Pactwright — Checkpoint 1 — Self-Hosted Delivery v31**
+**Pactwright — Checkpoint 1 — Self-Hosted Delivery v32**

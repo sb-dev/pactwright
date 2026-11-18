@@ -5,9 +5,9 @@ outputs:
   core-capabilities: The core capability identities delivery-specification, delivery-execution and delivery-review,
     and the runtime capability check that a candidate Agent Pack implements each required capability.
   agent-pack-loading: Runtime loading and validation of an Agent Pack's capability mappings, agents, prompts and
-    direct skills, independent of the pack's identity.
+    direct skills, including the optional entry_agent binding and its referenced content, independent of the pack's identity.
   standard-agent-pack: '@pactwright/standard, a separate publishable Agent Pack package that implements the three
-    core capabilities without owning graph or lifecycle semantics.'
+    core capabilities and provides Director and Toolsmith methods through direct skills without owning graph or lifecycle semantics.'
 requirements:
   R01:
     source: [CORE#35, DISTRIBUTION#4]
@@ -56,6 +56,17 @@ requirements:
       or a ^x.y.z caret range with npm semantics; a runtime outside it is an incompatible-runtime problem naming the declared range and the runtime version,
       reported separably from manifest validity so that a consumer other than selection can report rather than
       refuse it. The version of the pack is its manifest version.'
+  R09:
+    source: [DISTRIBUTION#5, METHODOLOGY#3, METHODOLOGY#5]
+    statement: When present, entry_agent shall be a non-empty string exactly matching one key in agents.
+      Resolve its prompt and attached direct skills under R08 even when no capability maps to this agent.
+      Omission declares no advisory entry. Neither presence nor omission changes the required capabilities,
+      their accountable agents or their authority. Packs declaring an entry must exclude runtimes that lack
+      field support from their pactwright compatibility constraint.
+  R10:
+    source: [DISTRIBUTION#5, METHODOLOGY#3, METHODOLOGY#4, METHODOLOGY#6, METHODOLOGY#9]
+    statement: The standard pack shall bind entry_agent to its Project Director. It shall ship the Director
+      and Toolsmith methods in the resolved agent prompts and attached direct skills.
 acceptance:
   AC01:
     covers: [R01, R02, R08]
@@ -131,3 +142,36 @@ acceptance:
       state are byte-identical afterwards.
     verify:
       automated: [capabilities.manifest-format]
+  AC08:
+    covers: [R01, R02, R06, R09]
+    cases: [entry-only-agent, entry-also-mapped, omitted-entry]
+    given: Complete fixture packs with distinct names and agent keys. In the first case the entry agent owns
+      no capability. In the second it also owns a capability. In the third the manifest omits entry_agent.
+    when: The runtime loads the pack and resolves its agents and required capabilities.
+    then: For a declared entry the result identifies exactly the named agent and its resolved prompt and
+      attached skills. Omission yields no entry even if the first agent is named director. All three core
+      capabilities still resolve to their single declared agents in every case.
+    verify:
+      automated: [capabilities.entry-binding]
+  AC09:
+    covers: [R03, R08, R09]
+    cases: [empty-entry, null-entry, non-string-entry, undeclared-agent, missing-entry-prompt,
+      empty-entry-skill, entry-prompt-outside-pack, entry-skill-outside-pack]
+    given: A valid prior environment and a candidate with only the listed defect. Content defects affect
+      an entry agent outside the capability mappings.
+    when: The runtime validates the candidate.
+    then: It refuses the pack and identifies entry_agent and the bad value or referenced path and cause.
+      Configuration, lock, generated environment and canonical state retain their prior bytes.
+    verify:
+      automated: [capabilities.invalid-entry]
+  AC10:
+    covers: [R04, R05, R09, R10]
+    given: The packed standard package from AC04 and its declared runtime compatibility.
+    when: Independent review follows the entry binding to its resolved content and inspects the Toolsmith
+      method in the same archive.
+    then: The entry resolves to the Director. The shipped methods describe the Director's routing and
+      accountable handoffs and the Toolsmith's pack authoring, evaluation and explicit adoption boundaries.
+      Both identify their inputs, outputs and checks. Neither grants approval authority or needs external
+      Production Skills. The declared range excludes runtimes that lack entry support.
+    verify:
+      review: [standard.reference-methods]
