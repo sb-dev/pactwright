@@ -431,6 +431,12 @@ An Observation may state that a signal changed after an exposure when supported 
 
 Stronger causal interpretation requires adequate evidence and may later become Project Intelligence Knowledge.
 
+## Reporting a measured outcome
+
+For the [trial campaign](./05-assets-and-publication.md#4-post-delivery-boundary), identify the Publication and its approved content hash through the referenced Asset. Suppose the agreed business target is a 5% visitor-to-trial conversion rate in the first seven days. Using the analytics source for that page, report the exact window and counting rule. For example, 30 of 1,000 distinct eligible visitors started a trial during the seven days beginning at publication, a measured rate of 3%. Record the source locator, coverage limits and confidence. The result is below target for that window. A change in traffic mix limits attribution to the page design. A claim of improvement or decline also needs a comparable baseline.
+
+Apply the same rule to software using the Deployment as exposure. For example, compare failed checkout requests divided by all checkout requests in the first hour after deployment with the same measure for a stated baseline window in the same environment. Retain counts, source and any material change in load or request mix. A timing correlation alone cannot establish that the deployment caused the change.
+
 ---
 
 # 13. Project Intelligence Hand-Off
@@ -464,6 +470,8 @@ reprioritise Delivery work
 ```
 
 A failed Project Intelligence hand-off leaves the Observation valid and retryable without rerunning collection or analysis.
+
+For a supported shortfall, Operations owns the Observation and its Source handoff. PI triages the Source and routes a proposed new or changed conclusion for human approval. Where accepted Knowledge justifies corrective work, PI derives a candidate on its existing roadmap. The Delivery owner needs the applicable Intent, Decision, Contract and Brief before acting. If the sample is insufficient, record successful analysis with no Observation and report the evidence gap. If collection failed, report the failed execution and identify the owner who can restore access or retry under current authority.
 
 ---
 
@@ -730,6 +738,8 @@ It should cover:
 
 Prefer deterministic assertions for schema, evidence references, edge direction, forbidden mutations and absence of raw telemetry in Project Graph state.
 
+Use the campaign window to distinguish three cases: measured performance below target, a completed analysis with insufficient evidence, and an unavailable analytics source. Check the exposure, measure, window and uncertainty in the first case, the successful no-Observation result in the second, and the failed collection record in the third. Exercise a failed PI handoff from the first case and retry from the same Observation.
+
 Do not collapse semantic quality into one aggregate score.
 
 ---
@@ -827,4 +837,4 @@ The redesign preserves these semantics while separating Graph Review and Assets 
 
 ---
 
-**Pactwright Operations v2**
+**Pactwright Operations v3**
