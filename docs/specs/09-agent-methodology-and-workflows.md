@@ -10,7 +10,7 @@ The contract applies to software delivery, research, business advice and creativ
 
 This specification owns agent responsibilities, continuing project direction, method descriptions, routing, handoffs, review separation and Toolsmith's pack-authoring responsibilities. It does not own runtime transitions, canonical records, package formats, provider routing or domain techniques. Implementation checkpoints determine when these requirements are supported; this document is not evidence that they have shipped.
 
-This document defines the target methodology contract. [Core v8](./01-pactwright-core-system-and-lifecycle.md) defines its Delivery, authority and dispatch-freshness requirements. [Distribution v6](./02-distribution-agent-packs-extensions-and-evaluation.md) defines its packaging, exposure, evaluation and adoption requirements. These specification amendments do not establish runtime support or checkpoint acceptance. Registration in [Open-Source Project Organisation, section 9](./08-open-source-project-organisation.md) remains follow-on work. Sections 5 and 10 retain the current limits on advisory entry and pack-case discovery.
+This document defines the target methodology contract. [Core v8](./01-pactwright-core-system-and-lifecycle.md) defines its Delivery, authority and dispatch-freshness requirements. [Distribution v7](./02-distribution-agent-packs-extensions-and-evaluation.md) defines its packaging, advisory entry, evaluation and adoption requirements. These specification amendments do not establish runtime support or checkpoint acceptance. Registration in [Open-Source Project Organisation, section 9](./08-open-source-project-organisation.md) remains follow-on work. Sections 5 and 10 distinguish the entry contract from verified availability and retain the limits on pack-case discovery.
 
 ## 2. Terms and Ownership
 
@@ -67,7 +67,7 @@ A pack offering continuing project coordination must identify its Project Direct
 
 The initial reference arrangement is one director supported by specialists. Packs may use other arrangements, including workstream leads, if they preserve clear accountability and the same handoff rules. Persona names and role counts remain pack choices. `@pactwright/standard` must provide the reference director method when its methodology implementation is delivered.
 
-A [Checkpoint 1](../checkpoints/01-self-hosted-delivery.md) amendment must allocate implementation and method evaluation to CP01-S08–CP01-S13, with real-adapter invocation proof in CP01-S24–CP01-S27. Those amendments and their acceptance remain follow-on work. Distribution sections 2, 5 and 28 must be aligned with continuing project direction in the planned pack-entry amendment; section 14 still governs the unavailable advisory entry. This requirement establishes neither runtime availability nor checkpoint acceptance.
+A [Checkpoint 1](../checkpoints/01-self-hosted-delivery.md) amendment must allocate implementation and method evaluation to CP01-S08–CP01-S13, with real-adapter invocation proof in CP01-S24–CP01-S27. Distribution sections 5, 12 and 14 define the optional entry binding, its identity and exposure; section 27 assigns the entry-specific implementation and proof to the follow-on CP01 amendments. Those amendments and their acceptance remain follow-on work. This requirement establishes neither runtime availability nor checkpoint acceptance.
 
 Project accountability does not transfer capability accountability or approval authority. The director need not map to `delivery-specification`. When another agent owns a capability, that agent still checks and integrates its delegated work and returns the capability result. The director coordinates across those results without replacing required review or runtime acceptance.
 
@@ -100,7 +100,11 @@ The pack must help users choose a useful next action from their goal and current
 
 For governed work, routing guidance belongs in the selected agent's prompt and direct skills behind the existing adapter commands. `/capture-intent` remains the entry for a requested outcome that is to become a canonical Intent; it is not an advisory-only command. The other commands retain their Core sections 46–53 responsibilities.
 
-Pre-Delivery advice requires a host surface that can invoke the pack's agent and skills without submitting a canonical responsibility result. The seven-command adapter contract does not define that entry surface. A [Distribution](./02-distribution-agent-packs-extensions-and-evaluation.md) amendment must specify its exposure; a [Checkpoint 1](../checkpoints/01-self-hosted-delivery.md) amendment must allocate its implementation and invocation proof. Until that surface is supported and verified, packs must describe pre-Delivery advice as unavailable on that adapter path. They must not repurpose `/capture-intent`, add a command implicitly or claim that ordinary conversation already invokes the resolved pack.
+Pre-Delivery advice uses the optional `entry_agent` binding and host surface defined by [Distribution, sections 5 and 14](./02-distribution-agent-packs-extensions-and-evaluation.md). The binding names an existing declared agent; it is independent of the capability mappings. The reference pack binds its director, while another pack may expose an advisor with different responsibilities. A pack without the binding declares no advisory entry and retains its governed capabilities.
+
+The entry receives the user's request and available context without requiring an Intent, Contract or Brief. Advice returns through the host conversation without submitting a canonical responsibility result or advancing Delivery execution state. No Intent is created merely because the user asks for help. When the user commits an outcome to governed work, use the existing operations and their capability mappings; the entry role cannot authorise a Contract or replace a required review.
+
+Availability requires an implemented and verified host path into the bound prompt and skills. Distribution section 14 defines the initial fresh interactive Claude Code session and its environment checks. Report a missing binding, unsupported host or unavailable prerequisite accurately. Do not repurpose `/capture-intent`, fall back silently to another agent or claim that ordinary conversation proves entry invocation. Checkpoint implementation and real-adapter proof remain required before claiming support.
 
 Routing must:
 
@@ -308,7 +312,7 @@ Packs offering continuing project coordination must also cover these cases:
 
 | Case | Required result |
 | --- | --- |
-| Small advisory request | Proportionate advice without canonical Delivery mutations or implied authority. An unsupported entry is reported as unavailable. |
+| Small advisory request | The declared entry uses its resolved prompt and skills to give proportionate advice without canonical Delivery mutations, execution-state advancement or implied authority. An unsupported entry is reported as unavailable. Distribution section 23 owns the binding, identity and host-entry proof cases. |
 | Several related Deliveries | Explicit owners and dependencies, actual member states and governing acceptance evidence for any claimed shared outcome. Individually accepted parts that fail integration remain a reported gap. |
 | Missing skill | A named gap and owning next action. Discovered or candidate content is not treated as active. |
 | Missing authority, dependency or required decision | Report a blocker and no advancement, including when evidence is missing. Research starts only after its prerequisites are satisfied. |
@@ -370,7 +374,7 @@ With PI enabled, a recurring-publication method assesses each commissioned outpu
 
 ## 12. Compatibility and Design References
 
-This contract does not add `pack.yml` keys, capability identifiers, adapter commands, graph nodes or runtime workflow schemas. The recognised formats and interfaces remain those in Core and Distribution. Method descriptions use supported prompt, skill and documentation content.
+This methodology contract adds no capability identifiers, canonical adapter commands, graph nodes or runtime workflow schemas. Distribution section 5 owns the optional `pack.yml` key `entry_agent`; its sections 12 and 14 own identity and host exposure. The recognised formats and interfaces remain those in Core and Distribution. Method descriptions use supported prompt, skill and documentation content. A documented entry contract does not establish runtime support or checkpoint acceptance.
 
 Direct skills can support a pack without external imports. A pack that needs external Production Skills must use a release that supports their resolution. Unsupported imports must not be ignored or described as active. A complete specialist pack remains an alternative selected pack, not a partial overlay onto another active pack.
 
@@ -385,4 +389,4 @@ The following BMAD material informs the design but does not define Pactwright be
 
 ---
 
-**Pactwright Agent Methodology and Workflows v3**
+**Pactwright Agent Methodology and Workflows v4**

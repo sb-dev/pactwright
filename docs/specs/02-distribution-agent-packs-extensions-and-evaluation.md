@@ -60,6 +60,7 @@ This specification owns:
 - locking and reproducibility;
 - Agent Packs;
 - packaging and discovery of pack-defined methodology;
+- optional Agent Pack advisory entry and its adapter exposure;
 - candidate evaluation and explicit Agent Pack adoption;
 - capability resolution;
 - Pactwright Extension installation, removal and upgrade;
@@ -83,7 +84,7 @@ It does not own:
 - Production Extension Pack internals;
 - domain-specific benchmarks.
 
-[Agent Methodology and Workflows](./09-agent-methodology-and-workflows.md) owns roles, method contracts, coordination and Toolsmith's authoring responsibilities. This specification owns how that content is packaged, resolved, exposed, evaluated and adopted. Core retains lifecycle and authority semantics.
+[Agent Methodology and Workflows](./09-agent-methodology-and-workflows.md) owns roles, continuing project direction, method contracts, coordination and Toolsmith's authoring responsibilities. This specification owns how that content is packaged, resolved, exposed, evaluated and adopted. Core retains lifecycle and authority semantics.
 
 ---
 
@@ -205,7 +206,7 @@ when an existing Pactwright responsibility plus specialised skills is sufficient
 
 An Agent Pack defines how AI performs Pactwright responsibilities.
 
-It also defines the agents and methodology through which users reach useful outcomes, under Spec 09. Packs may serve software, business, research or creative work. Their roles and method names do not change required capability identities or grant authority.
+It also defines the agents and methodology through which users reach useful outcomes and maintain project direction across Deliveries, under Spec 09. Packs may serve software, business, research or creative work. Their roles and method names do not change required capability identities or grant authority.
 
 It may contain:
 
@@ -234,6 +235,34 @@ Each required capability resolves to one accountable agent. That agent may use s
 ## Recognised Agent Pack manifest
 
 The current pack manifest is `pack.yml` at the pack root, in the released `0.0.1` shape: `name`, the npm package name that is the pack's source identity; `version`, an exact `x.y.z`; `pactwright`, the compatible runtime as an exact version or a `^x.y.z` caret range; `capabilities`, capability → agent key, each value naming an entry of `agents`; and `agents`, agent key → `prompt`, a relative file inside the pack, and optional `skills`, direct skill names each resolving to `skills/<name>.md` inside the pack. Every prompt and skill file must exist and be non-empty. A pack distributed as a package exposes `pack.yml` and `package.json` through its `exports`, and its manifest `name` and `version` equal the package's; a path-sourced pack has no package to agree with. An optional `production_skills` mapping, keyed by Production Skills family ID with at least a `source` string per entry, declares external Production Skills imports; it is a compatible addition within this shape, and until external Production Skills resolution is implemented the runtime reports each entry as unsupported by that release, resolving or dropping none, and a pack declaring any entry is not accepted by that release. Unknown keys are rejected with path and cause, as for the other Pactwright documents. The manifest declares no evaluation cases and no adapter content; those remain later compatible additions. A later incompatible manifest change needs an explicit format version and migration, not silent reinterpretation.
+
+## Optional advisory entry
+
+The manifest may declare `entry_agent`, a non-empty string that exactly names one key in `agents`. It selects the agent users enter for advice and routing before a governed Delivery. For example:
+
+```yaml
+entry_agent: advisor
+capabilities:
+  delivery-specification: spec
+  delivery-execution: producer
+  delivery-review: reviewer
+agents:
+  advisor:
+    prompt: prompts/advisor.md
+    skills: [project-direction]
+  spec:
+    prompt: prompts/spec.md
+  producer:
+    prompt: prompts/producer.md
+  reviewer:
+    prompt: prompts/reviewer.md
+```
+
+The entry agent may also own a capability, but need not. Its prompt and attached skills use the same resolution, path containment and non-empty-file checks as other agents, including when no capability maps to it. An empty, null, non-string or undeclared binding is invalid. Report the field and cause before accepting the candidate; preserve the previous configuration, lock and generated environment on failure.
+
+Omission means that the pack declares no advisory entry. Its governed capabilities remain available. Do not infer an entry from a persona name, agent order or the `delivery-specification` mapping. The binding adds no capability, lifecycle stage, method registry or authority. Spec 09 section 5 owns advisory conduct and the transition to governed work. Section 14 owns the host entry.
+
+`entry_agent` is an optional addition to the recognised manifest. Supporting runtimes continue to accept otherwise valid packs that omit it. A pack declaring it must set its `pactwright` compatibility constraint to exclude releases that do not support the field; the first supporting release must be established by implementation and acceptance, not inferred from this specification's version. Earlier decoders reject the unknown field, or report it unsupported if they recognise but cannot implement it. They must not drop it or substitute a capability agent. Runtime support for the field and availability of the host entry are separate checks.
 
 A project selects **one Agent Pack**.
 
@@ -270,13 +299,13 @@ This upgrades the selected pack within its configured compatibility constraints 
 
 ## Methodology content and discovery
 
-Agent prompts and their attached direct skills carry executable method instructions under the existing manifest. They may share instructions by reference to other resolved content. Supporting documentation supplies examples and explanations; it is not an untracked execution configuration. No new manifest field, method registry or adapter command is introduced here.
+Agent prompts and their attached direct skills carry executable method instructions. They may share instructions by reference to other resolved content. Supporting documentation supplies examples and explanations; it is not an untracked execution configuration. The optional `entry_agent` binding selects existing content; it does not define methods or register adapter commands.
 
-For governed work, entry guidance belongs in the prompt and attached direct skills of the agent mapped to the invoked capability. It helps users choose a method from their goal and current state without knowing internal agent keys. It identifies the expected result, accountable role, dependencies, supported interaction patterns and missing-input handling under Spec 09 sections 4–5. Its usefulness is checked by method evaluation, not inferred from manifest validation or successful `sync`. Section 14 states the current advisory-entry limit.
+For governed work, entry guidance belongs in the prompt and attached direct skills of the agent mapped to the invoked capability. Advisory routing guidance belongs in the declared entry agent's resolved content. It helps users choose a method from their goal and current state without knowing internal agent keys. It identifies the expected result, accountable role, dependencies, supported interaction patterns and missing-input handling under Spec 09 sections 4–5. Its usefulness is checked by method evaluation, not inferred from manifest validation or successful `sync`. Section 14 defines advisory exposure and its availability limits.
 
 Any instructions required during execution must be carried by a resolved agent prompt, attached direct skill or supported imported skill. Do not depend on mutable documentation outside that resolved content for behaviour that the environment claims to reproduce. A pack may link to background documentation without claiming that those links are locked execution inputs.
 
-`@pactwright/standard` must provide the reference methodology, including Toolsmith, when that methodology implementation is delivered under Spec 09 section 9. This is a target requirement, not a claim about the released pack. Other complete packs may use different roles, personas and methods. Direct skills support the initial path; external Production Skills require a runtime release that supports the declared imports. At invocation, a method must check its required facilities and report unavailable dependencies instead of treating them as active.
+`@pactwright/standard` must provide the reference methodology, including the Project Director and Toolsmith, when that methodology implementation is delivered under Spec 09 sections 3 and 9. It must bind its advisory entry to its director agent. This is a target requirement, not a claim about the released pack. Other complete packs may use different roles, personas and methods. Direct skills support the initial path; external Production Skills require a runtime release that supports the declared imports. At invocation, a method must check its required facilities and report unavailable dependencies instead of treating them as active.
 
 ## Pack development and adoption
 
@@ -732,6 +761,8 @@ Configuration expresses intent. The locks record exact resolved state at their r
 
 Methodology uses the same identity boundary. Agent prompts and attached direct skills retain their existing content hashes; supported Production Skills retain their owning exact dependency identities. A method change to that resolved content must change the corresponding identity even if the pack version string is unchanged. Ordinary background documentation does not acquire executable status merely because a prompt links to it. Section 5 defines where required instructions belong; this adds no method-level lock schema.
 
+The pack content hash must cover the `entry_agent` binding, including its absence. Resolved agent and skill identities include the entry agent's prompt and attached skills even when no capability maps to it. Changing only the binding, adding it or removing it must change `agent_pack.hash` and therefore `environment_lock_hash`, even when the version and prompt bytes are unchanged. Reuse these existing lock fields; do not add a second entry identity or change the `env1` protocol. Packs without the field need no entry-specific lock migration. A lock mismatch follows the existing drift and explicit reselection rules below.
+
 Candidate evaluation must not silently replace a consumer's selected pack, configuration, lock or generated adapters. Prefer a separate source worktree or copy and a disposable evaluation project when the current authoring pack must remain usable. Selecting a candidate in that disposable project is test setup, not consumer adoption.
 
 Editing a selected path-sourced or workspace-linked pack is permitted, including Checkpoint 1 Step 25 self-hosting. The edit makes the recorded content identity stale: `doctor` reports action required and `sync` refuses. Stop work that depends on the old resolved environment; do not continue as though its identity were unchanged. Once the edited pack is complete and compatible, explicitly run `pactwright agent-pack use <source>` to re-resolve that same source, record its new identity and synchronise. Then deliberately restart or hand off work under the new environment. An incomplete candidate cannot be reselected; use a separate valid authoring environment to finish it.
@@ -786,6 +817,7 @@ Before accepting a resolved environment, Pactwright validates:
 - package-manager and Pactwright lock consistency;
 - Extension dependencies;
 - required Agent Pack capabilities;
+- the optional entry-agent reference and its resolved prompt and skills;
 - Production Skills manifest syntax;
 - Production Skills compatibility;
 - referenced skill existence;
@@ -851,7 +883,30 @@ Claude Code adapter
 
 Adapters do not define Pactwright semantics.
 
-Adapters expose governed method guidance through the resolved agents and attached skills behind the existing commands. A method name is not a command registration. `/capture-intent` retains its canonical Intent responsibility; it is not an advisory-only entry. The seven-command adapter contract provides no pre-Delivery advisory entry. This amendment adds none, so packs must describe pre-Delivery advice as unavailable on that path. A future exposure contract must define and verify the host entry before a pack claims support; ordinary conversation is not proof that the resolved pack was invoked.
+Adapters expose governed method guidance through the resolved agents and attached skills behind the existing seven canonical commands. A method name is not a command registration. `/capture-intent` retains its canonical Intent responsibility; it is not an advisory-only entry. The optional advisory entry below is an adapter-native agent surface, not an eighth canonical command.
+
+## Advisory entry contract
+
+An adapter supporting advisory entry must expose the agent selected by `entry_agent` with its exact resolved prompt and attached skills. Inputs are the user's request and available project context, with no required Intent, Contract or Brief. Outputs are advice, questions, draft artefacts or a proposed next action. They are not canonical responsibility results. The entry must not dispatch or complete a Delivery responsibility, mutate canonical records or advance Delivery execution state as a side effect of starting or answering an advisory request. A host transcript remains host-owned ordinary state.
+
+When the user commits an outcome to governed Delivery, invoke the existing canonical operations with their capability mappings and authority checks. The entry binding does not remap them. Even if one agent serves both entry and capability roles, advisory output cannot be submitted as the result of an undispatched canonical responsibility. A direction document or draft produced during advice remains an ordinary artefact, not accepted PI Knowledge or a Contract.
+
+For the initial Claude Code adapter, `sync` must generate a Pactwright-owned alias at `.claude/agents/pactwright-entry.md`, with native agent name `pactwright-entry` and a description identifying its advisory purpose. The alias contains the bound agent's resolved prompt and attached direct-skill content, plus adapter guidance for advisory use. Direct-skill contents are included in manifest list order so this path does not depend on host skill discovery. Required shared instructions must also resolve under section 5. Do not substitute the specification agent or load mutable background documents as method instructions. The alias does not create another pack agent or capability mapping.
+
+The generated guidance identifies the pack source, exact version, bound agent key and `environment_lock_hash`. It distinguishes advisory invocation from canonical commands and states the normal governed handoff. It leaves model selection and host permission policy with their existing owners; it grants no new tool or external-action permission. The supported initial launch is a fresh interactive session from the project root:
+
+```text
+pnpm pactwright doctor --json
+claude --agent pactwright-entry
+```
+
+Proceed only when `doctor` finds no action-required problem and the host loads the generated `pactwright-entry` definition. The adapter guidance requires this check before advisory work and after a change to the selected environment. Generated drift, a missing alias or a conflicting host definition blocks this entry; do not continue as a generic assistant and report it as pack execution. After explicit pack adoption, regenerate through the owning operation and start a fresh session. Resuming an old conversation is not proof that it loaded the current entry. These instructions are not a process supervisor or a sandbox; ordinary host permissions and runtime mutation guards remain necessary.
+
+The native launch uses Claude Code's documented [`--agent` selection](https://code.claude.com/docs/en/cli-reference) and [custom-agent session entry](https://code.claude.com/docs/en/sub-agents#invoke-subagents-explicitly). Those host documents explain the launch mechanism; they do not establish Pactwright implementation or acceptance. The implementation must record the host version it verifies. An unsupported host or an unverified entry path must be reported as unavailable, with its unmet requirement. Do not claim support from successful rendering or ordinary conversation alone. Unattended invocation and durable continuation are not established by this interactive path.
+
+The alias and its name are reserved adapter output. If an unrelated user-authored file or another rendered agent conflicts with the alias path or name, fail before changing generated output and report the collision. Do not overwrite the file or silently choose another agent. With no `entry_agent`, generate no alias and remove a prior alias only when it is Pactwright-owned. Switching packs replaces only owned output after successful validation. Do not change the user's default agent setting. An adapter that cannot represent advisory entry reports that feature unavailable while retaining otherwise supported governed capabilities; a malformed binding or incomplete pack still fails validation.
+
+Generation must depend only on the configured adapter implementation and locked content. Host-version, tool-access and permission checks occur at invocation and in acceptance tests, not as mutable inputs to `sync`. Method selection remains within the resolved environment; missing skills follow Spec 09's handoff and explicit adoption rules.
 
 Generated guidance reflects the resolved pack and states method prerequisites. `sync` must not probe mutable host facilities to vary that output. The method checks tool access and interactive or unattended facilities at invocation and reports unsupported use then, under Spec 09 sections 4–5 and 8. This preserves deterministic generation without claiming that a prompt makes a host facility available. Synchronisation does not choose a different methodology or activate a candidate on the user's behalf.
 
@@ -979,6 +1034,8 @@ pactwright doctor
 ```
 
 `doctor` diagnoses distribution and execution-environment problems without mutating project state.
+
+For advisory entry, report the declared entry agent or its absence, whether the configured adapter implements section 14's representation, and any entry-content or generated-alias drift. No declared entry is information, not a defect. An adapter that supports governed capabilities but cannot expose the declared advisory entry reports that entry as unavailable with warning severity; it must not label the entry healthy. Invalid bindings and locked-content or generated-output drift remain action required. These checks do not establish that the installed host can invoke the entry. Host invocation is not evaluated by `doctor` and requires separately reported execution evidence under section 23. Do not infer host support from a valid manifest or generated file.
 
 It should report at least:
 
@@ -1183,6 +1240,10 @@ Production Skill behaviour
 
 Cases are versioned with their owning component.
 
+Entry cases must cover two complete packs with different entry agents and capability mappings, including an entry agent with no capability and one that also owns a capability. Check omitted, empty, null, non-string and undeclared bindings; absent or empty entry prompt and skill files; unsupported runtime or host; alias collisions; binding-only identity changes; stale generated output; and switching to a pack without an entry. Invalid candidate selection must preserve the prior environment. Repeated `sync` must be byte-identical. The governed command set remains exactly the seven commands.
+
+Real entry proof must launch the actual resolved candidate through section 14's supported host path. Record the host version, candidate identity, bound agent and evidence that its prompt and attached skills were used. Exercise advice with no Delivery lineage and compare canonical storage and Delivery execution state before and after: both remain unchanged. Then exercise a separately requested governed handoff and verify the original capability mappings and authority checks. A marker response alone does not prove skill use or authority discipline. Structural checks and scripted invocations do not replace this proof; report missing behavioural evidence as **not evaluated** and semantic results without a judge as **unjudged**.
+
 Pack-owned cases must cover the behaviours in Spec 09 section 10 for the methods the pack claims to support. That section owns the coverage list. An interactive-only method still needs a case for refusing unsupported unattended use. Where no supported test path can exercise that refusal, record the gap as not evaluated rather than omit the case or claim it passed.
 
 For now, pack-owned cases are versioned test instructions or tests in the pack's source workspace. The maintainer documents each case's candidate, supported entry surface, inputs, expected result and exact steps or command needed to run it. The path must actually invoke the candidate through the stated host or runner. An unspecified runner, an unimplemented entry or merely shipping a case beside `pack.yml` does not establish execution. Selection, `sync` and `pactwright eval` do not discover or register these cases. A future case-discovery contract requires an explicit compatible format amendment.
@@ -1337,7 +1398,7 @@ Add more machinery only when real integrations demonstrate that this model is in
 36. Production-domain benchmarks remain owned by Production Skills.
 37. Project-specific learned knowledge belongs in Project Intelligence.
 38. Provider and model routing remain outside Pactwright where Production Skills already own them.
-39. Pack methodology uses resolved prompt and skill content without adding an implicit manifest or command surface.
+39. Pack methodology uses resolved prompt and skill content. Optional advisory entry is declared by `entry_agent` and exposed under section 14; it adds no capability or canonical command.
 40. Candidate evaluation does not adopt a pack in a consumer; explicit selection in a disposable evaluation project is permitted.
 41. Pack authoring and maintenance grant no release or adoption authority, regardless of the maintainer's role name.
 42. First-release evaluation uses the standalone exit rule; comparisons retain their existing result and exit-status semantics. Separate pack-method reports do not alter either CLI rule.
@@ -1402,6 +1463,8 @@ It extends the Agent Pack model rather than introducing a second AI composition 
 
 The methodology amendment adds packaging, discovery and pack-lifecycle obligations from sections 5, 12, 14 and 21–24. Their checkpoint updates must demonstrate user-goal routing, exact candidate identity, isolated evaluation, explicit adoption and truthful reports. This specification does not establish that those behaviours have shipped. Historical evaluations remain attributable to the component and case versions they actually exercised.
 
+The advisory-entry amendment adds a target contract, not released support. A CP01 amendment must allocate manifest checks and the standard-pack binding to CP01-S10, resolution and locking to CP01-S11, and deterministic exposure and host handoff to CP01-S12. CP01-S15 must prove binding-only environment-identity changes and drift handling; CP01-S17 must prove deterministic sync and unavailable-entry reporting; CP01-S18 must prove entry diagnostics without treating them as invocation evidence. Step 24 must prove real adapter entry and the transition into governed work; Steps 26–27 must exercise self-hosted use and explain the supported user path. These contract and runbook amendments remain follow-on work. Preserve existing IDs and historical evidence, and review changed prose-step hashes where applicable. Neither this specification nor prior seven-command evidence establishes acceptance of the new entry.
+
 ---
 
 # 28. Relationship to Other Canonical Specifications
@@ -1432,7 +1495,7 @@ The methodology amendment adds packaging, discovery and pack-lifecycle obligatio
 → repository and ecosystem structure
 
 09 Agent Methodology and Workflows
-→ pack-defined agents, method contracts, handoffs and Toolsmith responsibilities
+→ pack-defined agents, continuing project direction, advisory routing, method contracts, handoffs and Toolsmith responsibilities
 ```
 
 Extension-specific semantics remain in their owning specifications.
@@ -1447,4 +1510,4 @@ Production-specific semantics remain in independent Production Skills repositori
 
 ---
 
-**Pactwright Distribution, Agent Packs, Extensions and Evaluation v6**
+**Pactwright Distribution, Agent Packs, Extensions and Evaluation v7**
