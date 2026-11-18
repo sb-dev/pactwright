@@ -1,6 +1,6 @@
 # Pactwright — Checkpoint 1 — Self-Hosted Delivery
 
-**Version:** 33\
+**Version:** 34\
 **Entry condition:** No installable Pactwright runtime exists.\
 **Release:** `0.0.2` (corrective; `0.0.1` was published against version 12 of this runbook, the version tagged `v0.0.1`, and remains the released baseline)\
 **Exit capability:** Pactwright is installable, upgradeable, can govern one complete Contract-driven Delivery in its own repository and in Kakeibo, can compare an Agent Pack candidate against a released baseline, and requires no manual Project Graph coherence work.
@@ -66,6 +66,8 @@ Stages 1–5 are converted to contracts. Stage 1 contracts are amended against C
 [The PDI-CP01 amendment for Steps 8 and 9](https://github.com/sb-dev/pactwright/pull/101) adds Step 6 R12 and AC15, Step 8 R08–R09 and AC11–AC12, and Step 9 R12 and AC12. It also distinguishes the Step 9 R06 replay-base document from the Step 6 dispatch record. Core v9 §§28, 34, 39 and 55, Distribution v8 §12 and Spec 09 v5 §§6–7 govern these additions. They require review with this amendment. The earlier Stage 2 exit record applies to the contracts it reviewed.
 
 [The PDI-CP01 amendment](https://github.com/sb-dev/pactwright/pull/100) adds CP01-S10 R09–R10 and AC08–AC10 under Distribution v8 §§5 and 23 and Spec 09 v5 §§3–6 and 9. Under Distribution v8 §§5 and 12, it adds CP01-S11 R10 and AC13–AC14 and extends AC02 and AC05 with invalid-entry rollback cases. The Stage 3 exit review covered the earlier contracts. The linked amendment records the separate review of these additions.
+
+The [PDI-CP01 amendment for Steps 12 and 13](https://github.com/sb-dev/pactwright/pulls?q=is%3Apr+head%3Adocs%2Fcp01-adapter-methods) revises Step 12 R12–R13 and adds R14–R15 and AC12–AC14 under Core v9 §§28, 34 and 55 and Distribution v8 §§14 and 23. Step 13 adds R08–R09 and AC09–AC10 under Distribution §§21–24 and Spec 09 v5 §§9–10. The Stage 3 exit record covers the earlier contracts. These additions require separate amendment review.
 
 Stage 4 contracts are amended against Distribution v5 through the Q41–Q51 resolution pass, recorded in four [batch records](../research-logs/2026-09-26-cp01-stage-4-b15-init-and-scaffold.md) (B15–B18); the owning clauses are Distribution §§3, 10, 11, 12, 15, 16 and 27 and Implementation Guide command ownership, and this pass added the Step 29 selection command below and the env1 lock-hash grammar to CP01-S09/R06 and the version-listing request to CP01-S11/R08. The methodology §7 whole-stage review is recorded in [the Stage 4 exit record](../research-logs/2026-09-26-cp01-stage-4-exit-review.md). Stage 5 contracts are amended against Implementation Guide v18 through the Q52–Q56 resolution pass, recorded in three [batch records](../research-logs/2026-09-26-cp01-stage-5-b19-ci-coverage-and-triggers.md) (B19–B21); the owning clauses are the Guide's GitHub Actions, package metadata, npm release model, trusted release workflow and release failure sections. Q54's renumbering of the Guide's version tables and of Checkpoints 2–9 (Checkpoint 2 → `0.0.3` through Checkpoint 9 → `0.0.10`) was authorised by the owner and applied in the same pass. The methodology §7 whole-stage review is recorded in [the Stage 5 exit record](../research-logs/2026-09-26-cp01-stage-5-exit-review.md). Stages 6–11 (Steps 22–31) are unconverted steps under Spec 00 §2: by the owner's decision they keep the version 17 form below, their reviewed hashes are recorded under `prose_steps` in [`checkpoint.yml`](./01-self-hosted-delivery/checkpoint.yml), and each is converted before the harness runs it (Spec 00 §4). They were reviewed under Spec 00 T2 against Implementation Guide v19 and amended in place through the Q57–Q66 resolution pass, recorded in six [batch records](../research-logs/2026-09-27-cp01-stages-6-11-b22-packed-consumer-proofs.md) (B22–B27). The same pass declared the checkpoint-wide self-hosting, graph-boundary, simplicity and exit-gate obligations `CP01/R02`–`R05` in [`checkpoint.yml`](./01-self-hosted-delivery/checkpoint.yml), and its methodology §7 review is recorded in [the Stages 6–11 exit record](../research-logs/2026-09-27-cp01-stages-6-11-exit-review.md). Steps in this form are:
 
@@ -278,7 +280,7 @@ Step 15 repeats the configuration proof with the real resolved lock and Step 17 
 - `adapter-commands` — The seven commands /capture-intent, /propose-contracts, /approve-contract, /write-brief, /deliver-brief, /review and /prepare-evidence, each invoking runtime responsibilities and the selected pack's capabilities within runtime-enforced mutation boundaries.
 - `runtime-hand-off` — The Pactwright-owned hand-off commands under pactwright lifecycle through which a rendered command dispatches a responsibility and hands its structured result to the runtime, recording dispatch and completion of Delivery and Review steps in execution state.
 
-The command decomposition does not define lifecycle topology. Step 12 repeats the Step 7 guard, withdrawal and re-authorisation matrix through each mutating command; Step 24 completes a full Delivery through the generated adapter.
+The command decomposition does not define lifecycle topology. Step 12 repeats the Step 7 guard, withdrawal and re-authorisation matrix through each mutating command; Step 12 also defines the optional native advisory entry. Step 24 proves actual host entry and the separate governed handoff, and completes a full Delivery through the generated adapter.
 
 ### Step 13 — Implement Pactwright evaluation and baseline comparison
 
@@ -290,7 +292,7 @@ The command decomposition does not define lifecycle topology. Step 12 repeats th
 - `core-eval-cases` — Core-owned evaluation cases for Contract fidelity, scope discipline, Brief quality, Review quality and defect detection, Evidence accuracy and lifecycle compliance, plus required output structure and forbidden mutation.
 - `baseline-comparison` — A pactwright eval --baseline --candidate comparison that resolves both sides exactly and reports regressions by capability, agent, case and changed environment component.
 
-Step 13 proves comparison with exact fixture and pinned package inputs and exercises the cases through scripted invokers and judges; Checkpoint 1 supplies no provider invoker, so the command-line eval reports its cases as not evaluated. Step 28 resolves the real released `@pactwright/standard@0.0.1` baseline.
+Step 13 proves comparison with exact fixture and pinned package inputs and exercises the cases through scripted invokers and judges; Checkpoint 1 supplies no provider invoker, so the command-line eval reports its cases as not evaluated. Pack maintainers exercise their methods through documented candidate paths and report results separately from CLI cases. Step 28 resolves the real released `@pactwright/standard@0.0.1` baseline.
 
 ## Stage 4 — Implement exact environment resolution and local composition
 
@@ -873,4 +875,4 @@ Checkpoint 1 closes only when:
 
 ---
 
-**Pactwright — Checkpoint 1 — Self-Hosted Delivery v33**
+**Pactwright — Checkpoint 1 — Self-Hosted Delivery v34**

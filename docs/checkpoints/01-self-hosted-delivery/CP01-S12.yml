@@ -70,7 +70,7 @@ requirements:
       lifecycle that the adapter renders: a dispatch command that verifies the responsibility is permitted (the
       permitted next action for the direction, or for /capture-intent always, subject to actor policy), resolves
       the command''s capability to the agent the selected pack maps and returns it with the Step 9 context, and
-      records the dispatch of a Delivery or Review step with the current project_graph_revision in the Brief''s
+      records the dispatch of a Delivery or Review step with the verified CP01-S06/R12 dispatch base in the Brief''s
       execution state through the Step 6 boundary; and a result command that hands the responsibility''s structured
       result to the runtime, which applies the permitted mutation or execution-state write and, for /propose-contracts,
       records nothing. In the adapter path the rendered command delegates the work to the rendered agent; the
@@ -78,13 +78,34 @@ requirements:
       are adapter protocol, not a public contract; rendered prompts perform none of the runtime''s work and never
       write canonical or execution-state files.'
   R13:
-    source: [CORE#51, CORE#53, CORE#55]
-    statement: A Delivery or Review result shall be accepted only against the canonical state recorded at its
-      dispatch. When the project_graph_revision differs at the result command, or canonical loading is then
-      incomplete, the result is refused as an execution failure reporting that canonical state changed since
-      dispatch; execution state does not advance, the step stays current for a fresh dispatch, and the change
-      is reported and not reverted. A result with no recorded dispatch is refused, and a fresh dispatch replaces
-      an earlier dispatch's recorded base.
+    source: [CORE#28, CORE#34, CORE#51, CORE#53, CORE#55, DISTRIBUTION#12]
+    statement: Apply CP01-S08/R08 at adapter dispatch and result. Before returning a Delivery or Review assignment,
+      verify the resolved components against the lock and record the complete Step 6 dispatch base. Compare that
+      base and recheck the locked components inside the serialised result boundary before applying any effect.
+      Missing dispatch, legacy graph-only provenance, incomplete loading or changed governing inputs prevent
+      completion. Name the failed check, preserve concurrent changes and end the invocation without redispatch
+      or a corrective iteration. A fresh authorised dispatch under CP01-S08/R09 replaces the abandoned base,
+      reconciles current work and preserves consumed budgets.
+  R14:
+    source: [DISTRIBUTION#5, DISTRIBUTION#12, DISTRIBUTION#14, DISTRIBUTION#23]
+    statement: Render the optional locked entry as .claude/agents/pactwright-entry.md with native name
+      pactwright-entry and an advisory description. Include the exact bound prompt, attached direct skills in
+      manifest order, resolved shared instructions, pack source and exact version, bound key and environment_lock_hash.
+      Reserve both the path and name. On collision with user content or another rendered agent, report the conflict
+      before writing. An omitted binding produces no alias and removes only a previously owned alias. Preserve
+      the user's default agent, permissions and the seven governed command mappings. Generation uses locked
+      inputs and the configured adapter implementation independently of host availability.
+  R15:
+    source: [CORE#46, DISTRIBUTION#14, DISTRIBUTION#23, METHODOLOGY#5]
+    statement: Provide launch instructions outside the alias and in its guidance. From the project root inspect
+      pactwright doctor --json before starting a fresh interactive claude --agent pactwright-entry session.
+      Require a declared binding, supported representation, no unavailable-entry finding and no action-required
+      problem. Require the host to load the current alias. Report the unmet condition if entry is unavailable
+      or unverified. After adoption regenerate and repeat the checks in a fresh session. Advice accepts a request
+      and available context without requiring Delivery lineage. It may return advice, questions, drafts or a
+      proposed next action. Entry grants no external-action permission and neither dispatches a responsibility
+      nor advances canonical or execution state. A separately requested governed action uses the existing
+      capability mapping and runtime authority checks.
 acceptance:
   AC01:
     covers: [R01, R02]
@@ -223,3 +244,39 @@ acceptance:
       write goes through the Step 6 boundary.
     verify:
       automated: [adapter.execution-state-hand-off]
+  AC12:
+    covers: [R01, R02, R14]
+    cases: [entry-only-agent, entry-also-owns-capability, switch-to-no-entry, user-file-collision, rendered-name-collision]
+    given: Two complete packs with distinct mappings, prompts and ordered direct skills, a complete pack without
+      entry, and a prior generated environment. The collision fixtures occupy the reserved path or name.
+    when: Render the selected fixture twice or switch the selected inputs to the pack without entry.
+    then: Each declared entry produces byte-identical rerenders with its own R14 identity, prompt and ordered
+      skills. Each command retains its selected capability agent. Switching removes the prior owned alias only.
+      A collision identifies the conflict and leaves the previous output and user files byte-identical.
+    verify:
+      automated: [adapter.entry-rendering]
+  AC13:
+    covers: [R14, R15]
+    cases: [valid-entry, unrelated-warning, no-binding, unavailable-warning, action-required, stale-alias, host-cannot-load-alias]
+    given: The launch instructions, fixture doctor reports and host-load outcomes, including zero exit with
+      no binding or unavailable-entry warning. The advisory request has no Intent, Contract or Brief.
+    when: Review the launch path from outside the alias through preflight, host selection, advice and a
+      separately requested governed handoff.
+    then: The instructions allow the valid control and unrelated warning alone. Each blocking case stops
+      before advice and identifies the cause, without a generic-agent fallback. The handoff requires a separate
+      governed operation. Step 24 must verify real prompt and skill use, host version, candidate identity,
+      unchanged canonical and execution state during advice, and the mapped agent and authority at handoff.
+      Fixture results cannot establish actual invocation.
+    verify:
+      review: [adapter.advisory-launch]
+  AC14:
+    covers: [R12, R13]
+    given: The CP01-S08/AC11 fixtures and unchanged controls for Delivery and Review, with the rendered
+      adapter dispatch and result commands as callers. Use the Step 8 AC12 self-edit and reselection fixture for restart.
+    when: Dispatch each responsibility and submit its structured result. After stale refusal request fresh dispatch.
+    then: A pre-dispatch component mismatch yields no assignment. Each result-time mismatch or unverifiable
+      base fails before effects, names the cause and leaves intervening edits in place. The controls advance
+      only as their result permits. The failed invocation makes no corrective transition or retry. Only a fresh
+      permitted dispatch can reuse retained work against current inputs and remaining budget.
+    verify:
+      automated: [adapter.governing-input-freshness]
