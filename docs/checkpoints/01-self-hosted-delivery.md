@@ -1,6 +1,6 @@
 # Pactwright — Checkpoint 1 — Self-Hosted Delivery
 
-**Version:** 35\
+**Version:** 36\
 **Entry condition:** No installable Pactwright runtime exists.\
 **Release:** `0.0.2` (corrective; `0.0.1` was published against version 12 of this runbook, the version tagged `v0.0.1`, and remains the released baseline)\
 **Exit capability:** Pactwright is installable, upgradeable, can govern one complete Contract-driven Delivery in its own repository and in Kakeibo, can compare an Agent Pack candidate against a released baseline, and requires no manual Project Graph coherence work.
@@ -460,7 +460,7 @@ A repository becomes a valid Pactwright consumer from packed artefacts only, and
 
 ### Step 24 — Complete one full fixture Delivery
 
-**References:** Core §§3, 8, 9, 27, 44, 46–53, 57; Distribution §§14, 21; Implementation Principles §10
+**References:** Core §§3, 8, 9, 27, 32, 44–53, 57; Distribution §§14, 16, 21, 23; Agent Methodology §§3–7, 10; Implementation Principles §10
 
 **Run**
 
@@ -470,7 +470,15 @@ Use the generated adapter to complete:
 Intent → Contract alternatives → authorised Decision → Contract → Brief → Delivery → Review → Evidence
 ```
 
-In the Step 23 explicit-path fixture, run the seven commands in order through the Claude Code adapter session the run configuration names, recording its provider, model, skill and selected-pack identities. This is Checkpoint 1's first execution of the pack's agents by a real model; no scripted result stands in for an agent. The Intent is "Create one small repository artefact that proves the complete Pactwright Delivery lifecycle." `/approve-contract` runs under the fixture's released policy, manual with actor kind human: the approving human the run configuration names selects the alternative and is recorded unchanged as `decided_by`; the policy is not edited to admit another actor.
+Start in the Step 23 explicit-path fixture before capturing an Intent. From its root, run `pnpm pactwright doctor --json`. Check the declared binding, supported adapter representation, absence of an unavailable-entry finding and absence of action-required findings. Start a fresh interactive `claude --agent pactwright-entry` session and confirm the host loaded the current generated alias. If preflight or loading fails, stop and record the unmet condition.
+
+Ask for advice about the small artefact below. Record the host version, pack source and exact version, bound agent key and environment lock hash. Link the host's loaded definition to the resolved prompt and direct skills. Identify a concrete action in the interaction that applies an attached skill. Compare canonical storage and Delivery execution state before and after advice: both must be unchanged. A marker response, generated file or doctor result alone cannot establish invocation or skill use.
+
+When the user separately asks to deliver the artefact, start with the governed capture operation. Trace each capability to its original mapped agent and authority check. Use fresh capability results. Keep the advice exchange outside the canonical lineage. For this small request, show why the chosen work is sufficient without adding a planning workflow.
+
+In that fixture, run the seven commands in order through the Claude Code adapter session the run configuration names, recording its provider, model, skill and selected-pack identities. This step is Checkpoint 1's first execution of the pack's agents by a real model; no scripted result stands in for an agent. The Intent is "Create one small repository artefact that proves the complete Pactwright Delivery lifecycle." `/approve-contract` runs under the fixture's released policy, manual with actor kind human: the approving human the run configuration names selects the alternative and is recorded unchanged as `decided_by`; the policy is not edited to admit another actor.
+
+For a separate changed-approach case, use an isolated copy at the authorised Contract and first Brief. Through the real adapter, give a specialist a bounded part of the work with the current target, constraints, expected output and handoff check. The mapped agent integrates the result. Have a separate review invocation identify a concrete defect that requires a different approach within the same Contract. The Review identifies the failed requirement and reports that the current work cannot progress (Core §32). Through the authorised Core §45 operation, create a Brief that supersedes the old Brief and decomposes the same Contract. Deliver against the new Brief and rerun the failed check. Require fresh independent review of the corrected target before Evidence. Keep this case's records outside the primary five-record fixture.
 
 Then run validation/status and the complete core invariant suite through the assembled runtime, adapter and fixture Extension loader, including the strengthened Stage 1 cases and Step 12 guard/withdrawal/re-authorisation matrix.
 
@@ -483,6 +491,8 @@ The full canonical Delivery lineage completes with alternatives/execution transc
 The fixture graph holds exactly one lineage of five records and their `resolves`, `selects`, `decomposes` and `evidences` edges, deriving done. Execution state lives under `.pactwright/`, and `project_graph_revision` changed only when a record or edge was written. The delivered artefact exists, and the Evidence names it and the closing Review.
 
 **Verify before continuing**
+
+Walk the consumer through the delivered artefact and how to check it. Trace the Director's final report to the Contract, current Brief, actual checks, independent Review and Evidence. Distinguish verified delivery, approval and use, and observed effect. Identify any missing evidence and the next permitted action. For the correction case, retain the failed check, replacement Brief and recheck alongside the final result. Report missing behavioural proof as not evaluated and a semantic result without a judge as unjudged.
 
 Inspect durable Project Graph state. Require all 17 validation cases, Evidence precondition failures, seven adapter mutation-boundary cases and complete core evaluation dimensions to pass before self-hosting.
 
