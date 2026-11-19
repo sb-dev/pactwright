@@ -15,9 +15,9 @@ sources:
   KAKEIBO_PROFILE: ../00-kakeibo-acceptance-profile.md
   SPEC00: ../../specs/00-checkpoint-step-contract-and-delivery-tasks.md
 # Steps kept in their reviewed prose form (Spec 00 §2): the SHA-256 of each step
-# section, with the stage introduction before a stage's first step, as reviewed
-# under T2 in PR #53 (Stages 6–11 exit record, B28). A change to the prose needs
-# a reviewed amendment that records the new hash.
+# section, including the stage introduction before a stage's first step. PR #53
+# records the T2 baseline (Stages 6–11 exit record, B28). PR #104 amends CP01-S24.
+# A change to the prose needs a reviewed amendment that records the new hash.
 prose_steps:
   CP01-S22: sha256:010e24d7e282512156e1f205210056b452c9e10fcc29f4149e9a86b56ab139b3
   CP01-S23: sha256:d5ce78c701f384c646d9777a4113b126b108fcf6e658efe7f511c3614bdb6849
