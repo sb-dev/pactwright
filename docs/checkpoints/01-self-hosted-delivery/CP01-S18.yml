@@ -63,6 +63,14 @@ requirements:
     statement: Doctor shall report load problems with path and cause. An incomplete active load or a required migration
       is action required for activation, never healthy, and a recognised legacy format is migration required,
       not an unknown version. Preserved inactive Extension data is reported as inactive.
+  R09:
+    source: [DISTRIBUTION#12, DISTRIBUTION#14, DISTRIBUTION#16, DISTRIBUTION#23]
+    statement: Doctor shall report the bound agent or absence of an entry, whether the configured adapter
+      can represent it, and drift in locked entry content or the owned alias. An omitted optional binding
+      is informational. A valid declared binding with no supported representation is an unavailable-entry
+      warning when the adapter supports the governed commands. Invalid bindings, locked-content mismatch
+      and generated-alias drift require action. Apply the existing R04 exit and R05 remediation rules.
+      Host invocation is not evaluated by doctor.
 acceptance:
   AC01:
     covers: [R01, R04]
@@ -163,3 +171,18 @@ acceptance:
       message, path and remediation, matching the plain report.
     verify:
       automated: [doctor.exit-status]
+  AC11:
+    covers: [R01, R04, R05, R06, R09]
+    cases: [matching-alias, omitted-binding, adapter-without-entry, invalid-binding, entry-content-drift,
+      missing-owned-alias, stale-alias-hash]
+    given: A healthy synced project or one with only the listed change. Omitted-binding selects a valid
+      pack with no entry. Adapter-without-entry has a valid binding and supported governed commands.
+      For stale-alias-hash only the generated alias carries the previous environment's hash.
+    when: Run doctor and doctor --json and compare both reports and the project before and after.
+    then: Both reports agree on the binding, adapter representation and applicable findings. Matching output
+      is healthy. Omission adds information only. Unsupported representation reports entry unavailable with
+      warning severity and a zero exit. Each invalid or drift case reports action required and exits non-zero,
+      naming the affected field or path. Missing or stale generated output identifies pactwright sync as the
+      remedy. Doctor performs no repair or host launch and reports no behavioural acceptance in any case.
+    verify:
+      automated: [doctor.advisory-entry]

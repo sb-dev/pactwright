@@ -1,6 +1,6 @@
 # Pactwright — Checkpoint 1 — Self-Hosted Delivery
 
-**Version:** 34\
+**Version:** 35\
 **Entry condition:** No installable Pactwright runtime exists.\
 **Release:** `0.0.2` (corrective; `0.0.1` was published against version 12 of this runbook, the version tagged `v0.0.1`, and remains the released baseline)\
 **Exit capability:** Pactwright is installable, upgradeable, can govern one complete Contract-driven Delivery in its own repository and in Kakeibo, can compare an Agent Pack candidate against a released baseline, and requires no manual Project Graph coherence work.
@@ -80,6 +80,8 @@ Step
 ```
 
 For Pactwright repository/code changes, finish with `pnpm verify` (shared requirement `CP01/R01`).
+
+The [PDI-CP01 Stage 4 amendment](https://github.com/sb-dev/pactwright/pull/103) adds Step 15 R09 and AC12, Step 17 R07 and AC08–AC09, and Step 18 R09 and AC11 under Distribution v8 §§5, 12, 14, 16 and 23. The earlier Stage 4 exit review covers the pre-amendment contracts. These additions receive separate review.
 
 The Q01–Q20 resolution pass is recorded in six dependency-ordered [batch records](../research-logs/2026-09-23-pr41-b1-loading.md). The crosswalk retains the original questions and replaced-prose quotes; the amended specifications and contracts govern new attempts. These document changes do not establish runtime acceptance or bypass independent review.
 
@@ -317,7 +319,7 @@ Step 16 reuses the selection input for one-shot init with a fixture Extension, a
 - `lock-agreement` — A check that the package-manager lock and .pactwright/lock.yml agree on every runtime and package-backed component version they both identify, applied before a new environment is accepted.
 - `environment-lock-hash` — A deterministic environment_lock_hash derived from the exact resolved lock state, forming the shared replay base with the repository and Project Graph revisions.
 
-Step 16 adds package-backed fixture Extensions to the lock and repeats the agreement proof. External Production Skills resolution remains a Checkpoint 5 capability.
+Step 15 checks binding-only edits before and after explicit reselection. Step 16 adds package-backed fixture Extensions to the lock and repeats the agreement proof. External Production Skills resolution remains a Checkpoint 5 capability.
 
 ### Step 16 — Implement transaction-safe Extension mechanics and one-shot init composition
 
@@ -339,7 +341,7 @@ Step 16 repeats the Step 2 to 5 and Step 9 proofs through the installed fixture 
 
 - `sync-command` — A deterministic pactwright sync that validates the configured and locked composition, including enabled fixture Extensions and the selected Agent Pack with its direct skills, and renders only Pactwright-managed local integration.
 
-Step 17 repeats the Step 11 selection sync and Step 12 rendering through real sync. Step 23 requires a clean second sync in a packed consumer.
+Step 17 repeats the Step 11 selection sync and Step 12 rendering through real sync. The generated advisory alias must identify the exact Step 15 environment after each adoption. Step 23 requires a clean second sync in a packed consumer.
 
 ### Step 18 — Implement `pactwright doctor`
 
@@ -349,7 +351,7 @@ Step 17 repeats the Step 11 selection sync and Step 12 rendering through real sy
 
 - `doctor-command` — A read-only pactwright doctor that diagnoses runtime, package-manager, configuration, lock, capability, migration, generated-drift and validation problems as healthy, warning or action required, with deterministic remediation commands where known.
 
-Step 19 relies on doctor to report released `0.0.1` projects as migration required before upgrade.
+Step 18 distinguishes an omitted entry, an unsupported representation and drift in the bound content or generated alias. Step 24 owns real host invocation evidence. Step 19 relies on doctor to report released `0.0.1` projects as migration required before upgrade.
 
 ### Step 19 — Implement Pactwright runtime upgrade and rollback-safe failure
 
@@ -875,4 +877,4 @@ Checkpoint 1 closes only when:
 
 ---
 
-**Pactwright — Checkpoint 1 — Self-Hosted Delivery v34**
+**Pactwright — Checkpoint 1 — Self-Hosted Delivery v35**

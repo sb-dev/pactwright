@@ -32,6 +32,14 @@ requirements:
     statement: Sync shall report an external Production Skills import declared by the selected pack's installed manifest
       as unsupported by this release and fail without resolving or silently dropping it. An unactivated scaffold with
       no selected pack is refused naming the missing selection.
+  R07:
+    source: [DISTRIBUTION#12, DISTRIBUTION#14, DISTRIBUTION#23]
+    statement: Sync shall apply CP01-S12/R14 to the validated Step 15 environment. Include its exact
+      environment_lock_hash in the owned advisory alias whenever the configured adapter represents the
+      declared entry. If that adapter supports governed commands but lacks entry support, report advisory
+      entry unavailable with the reason and retain the supported commands. Generation depends on the
+      configured representation and locked inputs. It shall neither probe mutable host facilities to vary
+      output nor treat rendering as evidence of a successful launch.
 acceptance:
   AC01:
     covers: [R01, R02]
@@ -102,3 +110,29 @@ acceptance:
       canonical files or remote state.
     verify:
       review: [sync.ownership]
+  AC08:
+    covers: [R01, R02, R03, R04, R07]
+    given: Two valid bindings to different agents in the same pack, as in Step 15 AC12, and a third valid
+      configuration of that pack with no binding. Keep the seven governed mappings fixed and include an
+      unrelated user-authored agent file.
+    when: Explicitly adopt each binding in turn and run sync. Compare the alias with the hash independently
+      derived from the current lock under Step 15 R05. Run sync a second time, then switch to the omitted binding.
+    then: For each bound environment .claude/agents/pactwright-entry.md names the selected agent, carries
+      its prompt and ordered skills and reports exactly that environment's hash. The changed binding replaces
+      the previous identity. The second sync changes no bytes. The switch removes the owned alias. Each
+      environment retains the seven governed mappings and preserves the user file.
+    verify:
+      automated: [sync.entry-alias-identity]
+  AC09:
+    covers: [R01, R02, R03, R07]
+    cases: [adapter-without-entry, changed-host-availability, invalid-binding]
+    given: A valid bound pack and a configured adapter fixture that implements governed commands only.
+      The host-availability control uses the entry-capable adapter with identical locked inputs in two
+      environments differing only in whether the host executable is available. The invalid case uses
+      an undeclared agent binding.
+    when: Sync runs in each fixture.
+    then: The governed-only adapter reports the unavailable entry and its reason, emits no substitute alias
+      and retains all seven commands. The control generates byte-identical output in both environments
+      without claiming invocation. The invalid binding fails validation and leaves prior output untouched.
+    verify:
+      automated: [sync.entry-representation]
