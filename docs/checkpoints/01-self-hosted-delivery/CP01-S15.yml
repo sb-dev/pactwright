@@ -57,6 +57,11 @@ requirements:
     statement: Resolution shall retain an integration point where the Checkpoint 5 external Production Skills resolver
       can later add resolved imports to the environment and lock. This step neither implements that resolution nor
       prescribes the integration mechanism.
+  R09:
+    source: [DISTRIBUTION#5, DISTRIBUTION#12]
+    statement: Use the Step 11 pack identity, which covers the presence and value of entry_agent, in the
+      existing agent_pack.hash. Apply R05 to the resulting lock without adding an entry-specific lock field.
+      A binding edit made after selection is component drift under R03 until explicit reselection adopts it.
 acceptance:
   AC01:
     covers: [R01, R02, R05]
@@ -164,3 +169,16 @@ acceptance:
       differs from the activated lock's hash.
     verify:
       automated: [lock.hash-canonical-form]
+  AC12:
+    covers: [R01, R03, R04, R05, R09]
+    cases: [add-binding, change-bound-agent, remove-binding]
+    given: A selected local pack with two declared agents. Keep its source, version, agent definitions,
+      capability mappings, prompts and direct skills fixed. Change only the binding as listed.
+    when: Check the edited pack against its previous lock. Then explicitly reselect the same source and derive
+      the new environment identity. Repeat resolution without further edits.
+    then: The first check identifies pack content drift, refuses the edited environment and preserves the
+      configuration, lock, generated files and intentional edit. Reselection records a different agent_pack.hash
+      and derives a different environment_lock_hash using R05. Agent and direct-skill identities stay equal.
+      Repeated resolution produces the same new hash. Omitting the binding needs no lock migration.
+    verify:
+      automated: [lock.entry-binding-identity]
