@@ -1,6 +1,6 @@
 # Pactwright — Checkpoint 1 — Self-Hosted Delivery
 
-**Version:** 36\
+**Version:** 37\
 **Entry condition:** No installable Pactwright runtime exists.\
 **Release:** `0.0.2` (corrective; `0.0.1` was published against version 12 of this runbook, the version tagged `v0.0.1`, and remains the released baseline)\
 **Exit capability:** Pactwright is installable, upgradeable, can govern one complete Contract-driven Delivery in its own repository and in Kakeibo, can compare an Agent Pack candidate against a released baseline, and requires no manual Project Graph coherence work.
@@ -84,6 +84,8 @@ For Pactwright repository/code changes, finish with `pnpm verify` (shared requir
 The [PDI-CP01 Stage 4 amendment](https://github.com/sb-dev/pactwright/pull/103) adds Step 15 R09 and AC12, Step 17 R07 and AC08–AC09, and Step 18 R09 and AC11 under Distribution v8 §§5, 12, 14, 16 and 23. The earlier Stage 4 exit review covers the pre-amendment contracts. These additions receive separate review.
 
 The [PDI-CP02 amendment for Step 24](https://github.com/sb-dev/pactwright/pull/104) adds real advisory entry, a separate governed handoff, specialist delegation, correction under the same Contract, a consumer walkthrough and evidence for the Director's report. Core v9 §§32 and 45, Distribution v8 §§14, 16 and 23, and Spec 09 v5 §§3–7 and 10 govern these additions. The Stages 6–11 exit record covers the earlier Step 24 prose. The linked amendment is the review for the revised prose and its hash.
+
+The [PDI-CP02 amendment for Steps 25–27](https://github.com/sb-dev/pactwright/pull/105) covers the self-hosted entry configuration, Quick Start Delivery and clean-reader walkthrough under Distribution v8 §§12, 14, 16, 23 and 27 and Spec 09 v5 §§3–7 and 10. The Stages 6–11 exit record reviewed the earlier prose. This amendment submits the three revised definitions and their hashes for review.
 
 The Q01–Q20 resolution pass is recorded in six dependency-ordered [batch records](../research-logs/2026-09-23-pr41-b1-loading.md). The crosswalk retains the original questions and replaced-prose quotes; the amended specifications and contracts govern new attempts. These document changes do not establish runtime acceptance or bypass independent review.
 
@@ -535,6 +537,8 @@ The repository-local CLI runs the built package entry point. `agent-pack use @pa
 
 With the pack installed as a workspace link, the package-manager lock identifies no pack version, so lock agreement rests on the runtime version and on the pack's recorded content identity. After any change to `packages/standard`, `doctor` reports action required and `sync` refuses until `agent-pack use @pactwright/standard` re-resolves the pack and records its new identity.
 
+Inspect the generated `.claude/agents/pactwright-entry.md` after sync. Its pack source, exact version, bound agent key and `environment_lock_hash` must match the resolved standard pack and current lock. Check that the seven governed commands retain their capability mappings. Run `pnpm pactwright doctor --json` and check that the binding is present, the adapter supports it and there is no unavailable-entry or action-required finding. Record these setup checks separately from Step 26's real host invocation.
+
 Land self-hosting state through the repository process available before Checkpoint 2 product GitHub integration exists.
 
 That process is a pull request that the repository owner merges with `CI / Verify` succeeding on the pull request and on the resulting default-branch commit, which is the first real default-branch run of the Step 20 workflow. Configuration keeps GitHub disabled and no Pactwright-generated workflow exists; the default branch's required-check state is recorded in the run configuration.
@@ -552,7 +556,7 @@ Second sync is clean and repository CI passes.
 - the self-hosting commit adds only Pactwright-owned files: `.pactwright/config.yml`, `lifecycle.yml` and `lock.yml`, `specs/nodes/.gitkeep`, `specs/graph/edges.yml` and the rendered files under `.claude/`, with no execution-state document, report or hand-written Pactwright-owned file;
 - `doctor` exits zero reporting healthy and `validate` exits zero; after the merge, the repository revision resolves to the default-branch commit and the Project Graph revision is the pg1 empty-graph digest;
 - an independent resolution of the environment yields a lock byte-identical to the committed one;
-- in a disposable copy of the initialised repository, never committed, editing one prompt under `packages/standard` makes `doctor` report action required and `sync` refuse, and `agent-pack use @pactwright/standard` then records the new identity, after which `doctor` reports healthy.
+- in a disposable copy of the initialised repository, never committed, editing one prompt under `packages/standard` makes `doctor` report action required and `sync` refuse, and `agent-pack use @pactwright/standard` then records the new identity. Regenerate the owned output with `sync` and verify the updated alias against the new lock before requiring a healthy `doctor` report.
 
 ### Step 26 — Deliver a real self-hosted Quick Start improvement
 
@@ -562,6 +566,8 @@ Second sync is clean and repository CI passes.
 
 Use Pactwright itself to improve the Quick Start based only on behaviour proven in this checkpoint.
 Before PI exists, identity/positioning/product choices required by this public work must be authorised through Decision + Contract rather than invented.
+
+From the self-hosted project root, repeat Step 24's preflight and launch a fresh `claude --agent pactwright-entry` session. Ask the Director to identify one Quick Start improvement from accepted fixture evidence. Record the host version, locked pack and agent identities, and an observed use of the resolved prompt and a direct skill. Compare canonical storage and Delivery execution state before and after advice. Both must stay unchanged. Begin governed capture only on the owner's separate request to deliver the improvement.
 
 Run the seven commands through the adapter in the self-hosted project. The repository owner is the approving human: the Decision selects a Contract that states the claims, positioning and proven behaviour the Quick Start may use, and a claim the Contract does not authorise is a Review failure. Proven behaviour is a command or behaviour with an accepted Checkpoint 1 criterion result or Step 23 or 24 packed-consumer evidence; this step's own clean-fixture execution below confirms that proven set on this revision and adds nothing to it. The install instruction names `pactwright@0.0.2` exactly, because `latest` stays at `0.0.1` until `0.1.0` (Implementation Guide — npm release model). The Quick Start documents no Extension, GitHub integration, Project Intelligence or provider-invoking `lifecycle run` as available. The change lands through a pull request the owner merges with `CI / Verify` passing.
 
@@ -574,6 +580,8 @@ Pactwright completes a real public-product change through itself.
 Evidence and public instructions agree with clean-consumer behaviour.
 
 Follow the Quick Start in a clean fixture built by the Step 23 procedure from archives packed from this revision, with the exact-version install mapped to them: every instruction produces its documented result. Every command the Quick Start names is in the proven set. The lineage validates and derives done, the owner is recorded as decider, the README changed only during the Delivery step, and `pnpm verify` passes.
+
+Walk the owner through the changed instructions using the clean-fixture results. Link each public claim to its authorised Contract and observed behaviour. Record any failed instruction, correct it during Delivery, rerun it and submit the corrected target to independent Review before Evidence. Report Contract fulfilment, actual use and any observed effect separately.
 
 ## Stage 8 — Complete the `0.0.2` public learning path
 
@@ -593,6 +601,8 @@ Only document proven behaviour, including the core distribution commands shipped
 
 Proven behaviour and the approving owner are as in Step 26. The Getting Started guide lives at `docs/getting-started.md`, linked from the README, and the example at `examples/core-delivery/README.md`. Across the three documents the material covers the Distribution §27 surface a core user needs, installation, initialisation by `init --agent-pack` and by `init` followed by `agent-pack use` and `sync`, `doctor`, `validate`, `pactwright upgrade` and `upgrade --to` and `agent-pack upgrade`, together with the Core §46 commands: `lifecycle status`, the seven adapter commands with the mutation each is permitted, and the honest posture of `lifecycle run` and `eval` without an invoker. It documents no Extension, GitHub integration or Project Intelligence as available. Every install instruction names `pactwright@0.0.2` exactly. The material and its lineages land on the default branch through pull requests the owner merges with `CI / Verify` passing, before Step 28 tags the release.
 
+Use the Step 24 fixture and Step 26 self-hosted observations to write the entry instructions. Show the project-root preflight outside the alias, fresh host launch, a small advice request and the user's separate request to start governed capture. Explain how to recognise an absent binding, unavailable entry or stale alias and where to stop. Distinguish the host command from the project-installed Pactwright commands. If the selected environment changes, repeat explicit selection where needed, sync, preflight and launch a fresh session.
+
 **Expected result**
 
 A new user can understand/install/execute/upgrade `0.0.2` without future Extensions.
@@ -601,7 +611,11 @@ A new user can understand/install/execute/upgrade `0.0.2` without future Extensi
 
 Follow the material in a clean packed-consumer fixture.
 
-Each lineage validates and derives done with the owner recorded as decider, and the documents changed only during Delivery steps. The fixture is built by the Step 23 procedure from archives packed from this revision, with the exact-version install mapped to them. Every command runs as documented; the example ends with `validate` exiting zero on a done lineage; `pactwright upgrade` reports no compatible newer release and `agent-pack upgrade` reports nothing changed. Every command the material names exists in the shipped CLI, and README, guide and example agree on one command surface. A reviewer given only the shipped material installs, completes one Delivery and upgrades without outside knowledge; any point where outside knowledge was needed is a content gap that fails the step.
+Each lineage validates and derives done with the owner recorded as decider, and the documents changed only during Delivery steps. The fixture is built by the Step 23 procedure from archives packed from this revision, with the exact-version install mapped to them. Every command runs as documented; the example ends with `validate` exiting zero on a done lineage; `pactwright upgrade` reports no compatible newer release and `agent-pack upgrade` reports nothing changed. Every Pactwright command the material names exists in the shipped CLI, and README, guide and example agree on one command surface. A reviewer given only the shipped material installs, completes one Delivery and upgrades without outside knowledge; any point where outside knowledge was needed is a content gap that fails the step.
+
+In the reader walkthrough, use a bounded specialist assignment during the governed example. Record the assignment, its result, the mapped agent that integrates it and the independent review invocation. Capture which resolved entry the actual host loaded and how the prompt and attached skill affected the advice. Check that advice leaves canonical storage and Delivery execution state unchanged. Trace the separate handoff to the original capability owner and authority check. A failed instruction blocks acceptance until it is corrected and the reader repeats the affected path.
+
+For the integration plan’s §7 pack comparison, use a separate disposable consumer of the same packed runtime. Explicitly select a second compatible complete pack with different entry and capability roles and a different method. Across the two packs, exercise an entry-only agent and an entry that also owns a capability. Repeat the supported sync, preflight and fresh host launch in the comparison consumer. Compare both traces on the same bounded request: identify the loaded prompt and skills, the specialist assignment and its limits, the single accountable capability owner integrating the result, and the separate review invocation. Keep the comparison outside the standard-pack example. Report any unavailable invocation as not evaluated and any semantic result without a judge as unjudged.
 
 ## Stage 9 — Publish `0.0.2`
 
