@@ -32,7 +32,7 @@ Research logs are rationale only.
 | Step | Version 15 prose SHA-256 (Spec 00 §2) |
 | --- | --- |
 | CP03-S02 | `149690331f88dfaea06c79245fd1d801c57d7df5b04447343526a156d651ad12` |
-| CP03-S03 | `8e4dbf7ad3a0ceae8edd08e7750a988150b75bc144685f3ff799817cc146c4f7` |
+| CP03-S03 | `c30bfd13b4a552e196b3e668eb6dee3dc3e77184e0ecf54cf287c53f5f0af143` |
 
 ### Kakeibo
 
@@ -268,6 +268,8 @@ Remove a core domain and require failure; register a valid non-core domain; reje
 
 Use a fixture with a versioned direction Source, accepted Knowledge, two dependent slices and valid Delivery references. Require `pactwright intelligence validate` to accept it without creating an Intent. Vary one input at a time and require a diagnostic identifying the invalid record and cause:
 
+- Use the same invalid plan ID in the record and filename stem (for example, `Plan-a` in `Plan-a.yml`) to exercise the ID pattern independently of the filename match.
+- Omit a group's `outcome`. In a separate case, give a group an empty `grounding` list.
 - Mismatch the filename and ID, duplicate a group or slice ID in its scope, or supply an empty owner or coverage list.
 - Supply an unknown Source version, group, Intent or Contract, or cite Knowledge of the wrong kind for slice coverage.
 - Make a dependency point outside the plan, point to itself or close a cycle.
