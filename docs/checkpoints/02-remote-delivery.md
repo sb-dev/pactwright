@@ -1,6 +1,6 @@
 # Pactwright — Checkpoint 2 — Remote Delivery
 
-**Version:** 18\
+**Version:** 19\
 **Entry condition:** Checkpoint 1 is accepted and Pactwright can self-host core Delivery.\
 **Release:** `0.0.3`\
 **Exit capability:** Pactwright and Kakeibo can initialise, execute, evaluate and project Contract-driven Delivery through GitHub using one deterministic profile-composition/reconciliation model while repository canonical state remains authoritative.
@@ -267,7 +267,7 @@ Run reconciliation fixtures for create/update/no-op/owned removal/unowned preser
 
 ### Step 4 — Generate `.github/workflows/pactwright.yml` from the locked environment
 
-**References:** Spec 07 managed workflows/shared execution environment; Spec 02 sync.
+**References:** Core §§34, 46 and 55–56 (dispatch, authority and freshness), Distribution §14 (sync and remote host state), Spec 07 §§5–7 and 36 (managed workflows, shared environment and trust), and Spec 09 §§7–8 (bounded assignments).
 
 **Run**
 
@@ -288,6 +288,10 @@ The workflow must:
 - never infer Pactwright approval or Decision/Gate authority from generic GitHub approval, labels, comments or merge metadata.
 ```
 
+For an authorised automatic responsibility, connect the generated workflow to the runtime's actual unattended model invoker. Before dispatch, persist the bounded assignment outside canonical graph inputs. Record the accountable receiver, goal, target, governing references, permitted actions, expected output, checks and stop conditions. Link the applicable Intent, Contract, Brief, responsibility and governing inputs to the dispatch. If project direction informs the assignment, cite the versioned project document used. Bind each attempt to that assignment and to the runtime's dispatch identity. Reserve the host allowance before starting charged work. Use the runtime's current lifecycle budget.
+
+Return the assignment and attempt identities, target, artefacts, checks actually run, outcome, blockers and remaining decisions to the accountable receiver. For pinned work, carry the verified replay base. The receiver checks the outstanding dispatch and current authority. Only the runtime may apply a current result through its normal transition.
+
 **Expected result**
 
 Core remote execution is a thin runtime surface using the same semantic/AI environment as local execution.
@@ -296,9 +300,13 @@ Core remote execution is a thin runtime surface using the same semantic/AI envir
 
 Run sync twice and require byte-identical managed output on the second run. Compare local and Actions-resolved `environment_lock_hash` for the same lock and require equality. Inspect triggers/permissions to prove untrusted PR execution cannot access privileged credentials. Checkpoint 5 repeats this identity test with real external Production Skills and selected packs.
 
+Run the generated workflow in a trusted, isolated GitHub fixture before activating it in the Pactwright repository. Exercise one permitted responsibility through the configured provider. Link the Actions run, selected responsibility and resolved agent, provider/model identity, dispatch attempt, returned result and runtime state before and after integration. Confirm the receiver matched the returned attempt and the runtime applied the permitted result once. Repeat with the invoker unavailable. Require an execution failure identifying the missing facility and no simulated result or step advancement. If the real provider cannot run, record that proof as outstanding.
+
+Exercise duplicate completion and a late result from an earlier attempt. Neither may advance the step again or satisfy a later dispatch. Change a governing input while work is in flight. The stale result must end that invocation with an execution failure and no redispatch. Verify that the accountable owner receives the failed target, checks completed and next permitted action. A fresh invocation must validate current authority and retain consumed host and lifecycle budgets.
+
 ### Step 5 — Implement semantic trigger and validator routing
 
-**References:** Spec 07 Core Delivery automation/shared graph routing.
+**References:** Spec 07 §§7, 36 and 38 (semantic routing, trust and GitHub event identity) and Distribution §14 (durable event disposition).
 
 **Run**
 
@@ -309,6 +317,10 @@ Implement deterministic routing for relevant changes under:
 - other currently registered canonical paths.
 
 Route changed canonical records to the validators that own their semantics.
+
+For remote work, first check the configured repository, target, action and actor. Re-read the target and its current governing records before dispatch. An eligible notification can wake a worker. Only the configured authority operation may exercise authority.
+
+Keep the event source, repository, delivery ID, target, relevance decision and processing progress in durable host state. Track the logical operation separately from the delivery ID. Serialise claims on the same operation. A duplicate returns the recorded disposition or resumes unfinished reconciliation. An edit that changes the substantive input requires fresh assessment.
 
 Route `specs/graph/edges.yml` to core validation only. Extension canonical records live below `specs/extensions/<id>/`; registered relation tuples and owner-node supersession live in that owner's `edges.yml`. Route those tuple changes through the owning Extension validator and every relevant endpoint-owner validator, considering removed as well as added tuples. The shared graph API does not permit Extension tuples in the core file; invalid placement fails rather than being silently rerouted.
 
@@ -322,6 +334,8 @@ GitHub execution routes validation by registered semantic ownership rather than 
 **Verify before continuing**
 
 Test Core-only node changes, Core edges, fixture Extension records, cross-owner fixture edges, config/lock changes and irrelevant paths. Adding the fixture type must require no workflow-engine branch dedicated to that Extension identity.
+
+Deliver an eligible event, redeliver it, then supply an equivalent notification with a different delivery ID (for example, a submitted review and the event for its inline comment). Inspect the host record and dispatch count. Require one logical operation. After it completes, neither notification may dispatch it again or repeat its effect. Change the comment content and verify a fresh relevance and authority check. Exercise a disallowed actor, an unrelated target and a target that changed after notification. Excluded inputs must record their disposition without dispatch or canonical change. The changed target must be assessed against its current state before any authorised action.
 
 ### Step 6 — Implement the exact Core Delivery checks
 
@@ -915,4 +929,4 @@ The Kakeibo acceptance additionally requires:
 
 ---
 
-**Pactwright — Checkpoint 2 — Remote Delivery v18**
+**Pactwright — Checkpoint 2 — Remote Delivery v19**
