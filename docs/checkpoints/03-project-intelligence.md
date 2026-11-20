@@ -1,6 +1,6 @@
 # Pactwright — Checkpoint 3 — Project Intelligence
 
-**Version:** 14\
+**Version:** 15\
 **Entry condition:** Checkpoint 2 is accepted.\
 **Release:** `0.0.4`\
 **Exit capability:** Project Intelligence can cold-start Pactwright and Kakeibo, govern durable project knowledge, contribute bounded context, compose into the established GitHub integration and derive one dependency-aware Intent roadmap without automatically creating Delivery work.
@@ -18,11 +18,21 @@ Checkpoint 3 must consume the generic Extension, one-shot initialisation and Git
 - [03 — Project Intelligence](../specs/03-project-intelligence.md)
 - [07 — GitHub Integration](../specs/07-github-integration.md)
 - [08 — Open-Source Project Organisation](../specs/08-open-source-project-organisation.md)
+- [09 — Agent Methodology and Workflows](../specs/09-agent-methodology-and-workflows.md)
 - [Implementation Principles](./00-implementation-principles.md)
 - [Implementation Guide](./00-implementation-guide.md)
 - [Kakeibo System-Level Acceptance Profile](./00-kakeibo-acceptance-profile.md)
 
 Research logs are rationale only.
+
+### Version 15 amendment
+
+[PDI-CP04 amendment review (#111)](https://github.com/sb-dev/pactwright/pull/111) covers CP03-S02 and CP03-S03. Project Intelligence v3 §§21, 27 and 30 own the plan record, its storage and its validation. Distribution v8 §§11 and 15 govern registration and migration. Core v9 §§54–56 govern revision identity and replay.
+
+| Step | Version 15 prose SHA-256 (Spec 00 §2) |
+| --- | --- |
+| CP03-S02 | `149690331f88dfaea06c79245fd1d801c57d7df5b04447343526a156d651ad12` |
+| CP03-S03 | `8e4dbf7ad3a0ceae8edd08e7750a988150b75bc144685f3ff799817cc146c4f7` |
 
 ### Kakeibo
 
@@ -207,7 +217,7 @@ Run manifest/Extension-resolution fixtures and prove disabling PI does not reint
 
 ### Step 2 — Implement PI repository layout and nine core domains
 
-**References:** Spec 03 domain registry/repository model.
+**References:** Spec 03 domain registry and §§21 and 27, Distribution §§11 and 15, and Core §§54–56.
 
 **Run**
 
@@ -217,6 +227,8 @@ When PI is enabled, create canonical PI storage and derived-report locations and
 Do not create project-specific Sources or Knowledge automatically.
 ```
 
+Extend the Step 1 registration to decode `specs/extensions/project-intelligence/plans/<id>.yml` through the versioned PI schema. Each file contributes one canonical tuple with kind `plan`, the plan ID as key and the full decoded plan as value. Omit the node projection. Keep generated group and roadmap views outside canonical storage. Enabling PI on an existing project with no plans yields an empty collection. Do not seed a plan or create Delivery work.
+
 **Expected result**
 
 Every PI-enabled project begins with the canonical registry.
@@ -225,9 +237,11 @@ Every PI-enabled project begins with the canonical registry.
 
 Assert all nine domains, dependency acyclicity and required definition fields.
 
+Load a plan fixture through the registered decoder and inspect its contribution. Change one slice contribution and require the ordinary Project Graph revision to change. Change only a derived report and require the same revision. Load an existing project without plan files and check its prior records are intact. For an upgrade from a prior stored format, exercise the declared migration to the new `graph.format_version`. Verify preservation of existing records and rejection before any write when the required migration path is missing.
+
 ### Step 3 — Implement `intelligence validate` and `register-domain`
 
-**References:** Spec 03 commands/validation.
+**References:** Spec 03 commands, §21 (Plan composition), §27 and §30.
 
 **Run**
 
@@ -242,6 +256,8 @@ Non-core domain registration/retirement follows reviewed governance.
 Core domains cannot be silently removed.
 ```
 
+Validate the plan fields and reference scopes defined in Spec 03 §21. Match the plan ID to its filename stem and the §27 ID pattern. Resolve `direction_source` to a captured Source version. Each group has an outcome and nonempty grounding in accepted Knowledge. Each slice belongs to a group, states its contribution, names one accountable owner and covers at least one accepted requirement, constraint or decision. Resolve `depends_on` within that plan and check optional Intent and integration Contract references against their owning records.
+
 **Expected result**
 
 PI has deterministic validation before semantic ingestion starts.
@@ -249,6 +265,13 @@ PI has deterministic validation before semantic ingestion starts.
 **Verify before continuing**
 
 Remove a core domain and require failure; register a valid non-core domain; reject invalid dependency cycles.
+
+Use a fixture with a versioned direction Source, accepted Knowledge, two dependent slices and valid Delivery references. Require `pactwright intelligence validate` to accept it without creating an Intent. Vary one input at a time and require a diagnostic identifying the invalid record and cause:
+
+- Mismatch the filename and ID, duplicate a group or slice ID in its scope, or supply an empty owner or coverage list.
+- Supply an unknown Source version, group, Intent or Contract, or cite Knowledge of the wrong kind for slice coverage.
+- Make a dependency point outside the plan, point to itself or close a cycle.
+- Adopt or edit a plan against superseded grounding. Require current accepted grounding for the new revision. Verify that the earlier plan still resolves against its recorded revision.
 
 ## Stage 2 — Implement Source ingestion and triage
 
@@ -1307,4 +1330,4 @@ Checkpoint 3 closes only when:
 
 ---
 
-**Pactwright — Checkpoint 3 — Project Intelligence v14**
+**Pactwright — Checkpoint 3 — Project Intelligence v15**
