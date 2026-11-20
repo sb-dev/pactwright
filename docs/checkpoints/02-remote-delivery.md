@@ -1,6 +1,6 @@
 # Pactwright — Checkpoint 2 — Remote Delivery
 
-**Version:** 20\
+**Version:** 21\
 **Entry condition:** Checkpoint 1 is accepted and Pactwright can self-host core Delivery.\
 **Release:** `0.0.3`\
 **Exit capability:** Pactwright and Kakeibo can initialise, execute, evaluate and project Contract-driven Delivery through GitHub using one deterministic profile-composition/reconciliation model while repository canonical state remains authoritative.
@@ -46,6 +46,15 @@ Research logs are rationale only.
 | CP02-S06 | `956343eeb4c830b1101434aacbab4bfca4663fa4e726e7c4233876a1114b30a1` |
 | CP02-S07 | `8d046b6c886f8249d69bbb539bfe205acbeec0463e32359ef7754bea270c0031` |
 | CP02-S08 | `f631187116503b91f37da32608debf12b34d8de9b875468519d394c6d92b828b` |
+
+### Version 21 amendment
+
+[PDI-CP03 amendment review (#109)](https://github.com/sb-dev/pactwright/pull/109) covers CP02-S12 and CP02-S13. Step 12 assigns the first software successor's build and acceptance to the website Delivery under Spec 00 v11 §5 (T8). Step 13 requires a different worker to recover an interrupted assignment and reconcile GitHub effects under Core v9 §§34 and 55–56, Distribution v8 §14 and GitHub Integration v3 §§7, 36 and 38.
+
+| Step | Version 21 prose SHA-256 (Spec 00 §2) |
+| --- | --- |
+| CP02-S12 | `2e5c88404f17eb6560eabf5a7827f266a34b69ac9c8d22f89155f1deea01c7ff` |
+| CP02-S13 | `a96cb87528f4e6055ad5defc31048030ecf32693ed10b22a1cca95974982d2ae` |
 
 ### Kakeibo
 
@@ -564,7 +573,7 @@ Final dry-run has no unintended drift. Verify the configured/supported Core Deli
 
 ### Step 12 — Deliver the website foundation through normal Pactwright Delivery
 
-**References:** Spec 08 Remote Delivery milestone; current Pactwright website architecture choices.
+**References:** Spec 08 Remote Delivery milestone, current Pactwright website architecture choices and Spec 00 §§4–5 (controller acceptance and T8).
 
 **Run**
 
@@ -574,6 +583,8 @@ Before Project Intelligence exists, any product identity/positioning choice requ
 
 One meaningful repository-backed Delivery normally uses one branch and one pull request; do not create one PR per lifecycle step.
 
+Use the accepted CP01 harness and runtime to build the first Pactwright-backed software run model from the reviewed T6 design and T7 allocation. Record the candidate revision. Under the predecessor controller, exercise that candidate on this real website step. Route the work through its Contract, Brief and lifecycle. Migrate execution links through supported operations and capture Evidence as the work runs.
+
 **Expected result**
 
 A real Pactwright change is delivered through a GitHub PR with canonical lineage, checks, summary, Intent Issue and shared Project projection.
@@ -582,9 +593,11 @@ A real Pactwright change is delivered through a GitHub PR with canonical lineage
 
 Local runtime status and GitHub projections agree; GitHub edits alone cannot advance the Pactwright lifecycle.
 
+Trace a failed check to the correction, interrupt the candidate run and resume it from saved state. Link the corrected website output, recheck and independent review to the exact candidate and step contract. Verify that the execution links survived resume without manual graph edits or backfilled Evidence. The predecessor controller checks the evidence and required approvals and records its decision for that candidate. Adopt it for subsequent eligible work only after acceptance. If proof is missing or the candidate changes, keep the predecessor in control until the exact candidate meets the contract.
+
 ### Step 13 — Prove Gate, failure and authority boundaries on a real PR
 
-**References:** Specs 01 and 07.
+**References:** Core §§34 and 55–56 (restart, dispatch freshness and replay identity), Distribution §14 (durable host state) and Spec 07 §§7, 36 and 38 (authority, trust and concurrent GitHub writes).
 
 **Run**
 
@@ -596,6 +609,8 @@ Distinguish execution failure from canonical invalidity in the available check/r
 Resolve the underlying Pactwright condition through normal runtime/adapter responsibilities and prove checks recover.
 ```
 
+On the real PR, interrupt a worker after a permitted GitHub write but before it saves the read-back receipt. For example, use a reply with a recorded logical operation identity and target. Start a different worker with access to the durable host record. Fence the first worker's writes or establish that it can no longer write. Reload the assignment, outstanding attempt, current authority and runtime state. Restore consumed host allowances, including reservations, and read the consumed lifecycle budget from the runtime.
+
 **Expected result**
 
 Remote automation fails closed at Pactwright authority boundaries while preserving failure provenance/state distinctions.
@@ -603,6 +618,10 @@ Remote automation fails closed at Pactwright authority boundaries while preservi
 **Verify before continuing**
 
 Check history, PR projection and local runtime state agree before and after resolution.
+
+- Match the recorded effect intent to the actual GitHub resource. Save its reference and confirmed outcome. Redeliver the event and an equivalent notification with a different delivery ID. Verify one external effect and no second transition. Retry an absent effect only after proving absence, current permission, available budget and safe destination concurrency. An ambiguous outcome must stop further writes and identify the owner and recovery action.
+- Change a governing input while an attempt is in flight. Its stale result must end that invocation without advancement, redispatch or an extra corrective iteration. Under current policy, start a fresh invocation, reconcile any reusable artefacts and match the new result to its own dispatch and verified replay base where applicable. Compare budget use across both workers. An exhausted limit must stop work and reach the accountable owner.
+- Retain the run and attempt references, budget readings, GitHub read-back and runtime state before and after recovery. Check that the owner receives the target, checks actually run, result or blocker and next permitted action. If the host cannot demonstrate recovery on another worker, record the missing proof and withhold step acceptance.
 
 ## Stage 5 — Evaluate and publish the Remote Delivery learning path
 
@@ -959,4 +978,4 @@ The Kakeibo acceptance additionally requires:
 
 ---
 
-**Pactwright — Checkpoint 2 — Remote Delivery v20**
+**Pactwright — Checkpoint 2 — Remote Delivery v21**
