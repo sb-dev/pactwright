@@ -1,6 +1,6 @@
 # Pactwright — Checkpoint 2 — Remote Delivery
 
-**Version:** 21\
+**Version:** 22\
 **Entry condition:** Checkpoint 1 is accepted and Pactwright can self-host core Delivery.\
 **Release:** `0.0.3`\
 **Exit capability:** Pactwright and Kakeibo can initialise, execute, evaluate and project Contract-driven Delivery through GitHub using one deterministic profile-composition/reconciliation model while repository canonical state remains authoritative.
@@ -55,6 +55,15 @@ Research logs are rationale only.
 | --- | --- |
 | CP02-S12 | `2e5c88404f17eb6560eabf5a7827f266a34b69ac9c8d22f89155f1deea01c7ff` |
 | CP02-S13 | `a96cb87528f4e6055ad5defc31048030ecf32693ed10b22a1cca95974982d2ae` |
+
+### Version 22 amendment
+
+[PDI-CP03 amendment review (#110)](https://github.com/sb-dev/pactwright/pull/110) covers CP02-S14 and CP02-S15. Step 14 evaluates GitHub Integration against the dispatch, projection and recovery contracts in Steps 4–8 and 12–13. Distribution v8 §§14 and 21–24, GitHub Integration v3 §§38–39 and Agent Methodology and Workflows v5 §10 govern the cases and reporting. Step 15 applies the shared Implementation Guide's observed-use rule to the Spec 08 v3 Remote Delivery milestone.
+
+| Step | Version 22 prose SHA-256 (Spec 00 §2) |
+| --- | --- |
+| CP02-S14 | `fe452deb961ed2bb844a12e72effe92f367932e14161d514d29713bf6c15630f` |
+| CP02-S15 | `3ecb46bfb983c41e93f9f81f05324e0bf20af60d710b7b76804e5181480eced4` |
 
 ### Kakeibo
 
@@ -627,7 +636,7 @@ Check history, PR projection and local runtime state agree before and after reso
 
 ### Step 14 — Add GitHub Integration evaluation cases
 
-**References:** Specs 02 and 07 evaluation.
+**References:** Distribution §§14 and 21–24, Spec 07 §§38–39 and Spec 09 §10. Use the remote execution and recovery contracts in Steps 4–8 and 12–13 as the expected behaviour.
 
 **Run**
 
@@ -654,6 +663,12 @@ Keep Extension-specific business semantics with their owning later Extension eva
 Do not compute one opaque aggregate score.
 ```
 
+Exercise the GitHub surface through its supported evaluation path. Give each case a controlled input and an observable outcome:
+
+- Deliver a relevant event, an irrelevant event and two notifications for the same logical operation. Check the dispatch count and saved dispositions. For the permitted assignment, match the result to its outstanding attempt and verify one runtime transition. A late result for another attempt cannot satisfy it.
+- Change a governing input during dispatch. Inspect the failed invocation and a fresh authorised invocation. Require the stale run to stop, the new run to retain budget use and the accountable owner to receive the blocker. A pending human Gate or a GitHub field edit cannot advance the step.
+- Interrupt an external write before its receipt is saved. Have a different worker recover the assignment. Check the destination, durable receipt and effect count after redelivery. A confirmed write is reused once found. An ambiguous outcome stops further writes. A reset allowance, repeated write or false completion must fail the corresponding assertion.
+
 **Expected result**
 
 The generic GitHub Integration responsibility is independently evaluable before later Extension profiles arrive.
@@ -661,6 +676,8 @@ The generic GitHub Integration responsibility is independently evaluable before 
 **Verify before continuing**
 
 Run `pnpm pactwright eval`, inspect the GitHub cases individually, introduce representative composition/routing/projection failures and require the responsible cases to fail.
+
+Record each case's execution path, candidate identity, inputs, expected and observed results, and evidence. Check that a deliberately repeated effect fails its case even when the final projection looks correct. Report executed deterministic assertions as pass or fail, unavailable behaviour as **not evaluated**, and semantic results without a judge as **unjudged**. Keep pack-owned method cases on their documented pack test path. Link the actual provider run from Step 4 and real-PR receipts from Steps 12–13 for claims about live behaviour.
 
 ### Step 15 — Deliver the GitHub operating guide and Remote Delivery example
 
@@ -678,13 +695,15 @@ one executable Remote Delivery example
 
 Document `pactwright init --github`, explicit pack selection and setup, workflow activation prerequisites, ownership boundaries, checks/projections and safe reconciliation using only behaviour proven in this checkpoint. Include the exact-version upgrade procedure and distinguish incomplete bootstrap from converged remote activation.
 
+Base the example on the website PR from Step 12 and the interruption from Step 13. Identify the tested host and locked environment, the actual entry or command, and the run and PR references. Show how the operator finds the assignment, checks the accountable owner's result or blocker, and follows the permitted correction and recheck. Use the observed takeover to show where the replacement worker checked budget use and the GitHub effect before continuing. Cite the predecessor controller's decision for the exact candidate when describing successor adoption.
+
 **Expected result**
 
 Users can discover and reproduce Remote Delivery without depending on later Extensions.
 
 **Verify before continuing**
 
-Follow the guide against the real Pactwright GitHub setup and a clean test repository. Run the Remote Delivery example in CI where practical.
+Follow the guide against the real Pactwright GitHub setup and a clean test repository. Run the Remote Delivery example in CI where practical. Check that a reader can use the documented references to find the runtime decision, the corrected result and the confirmed external effect. Record what the reader reproduced and any correction to the guide. Mark unavailable facilities and untested paths explicitly. Use live run evidence for claims of unattended invocation or cross-worker recovery.
 
 ## Stage 6 — Release `0.0.3`
 
@@ -978,4 +997,4 @@ The Kakeibo acceptance additionally requires:
 
 ---
 
-**Pactwright — Checkpoint 2 — Remote Delivery v21**
+**Pactwright — Checkpoint 2 — Remote Delivery v22**
