@@ -1,6 +1,6 @@
 # Pactwright — Checkpoint 3 — Project Intelligence
 
-**Version:** 15\
+**Version:** 16\
 **Entry condition:** Checkpoint 2 is accepted.\
 **Release:** `0.0.4`\
 **Exit capability:** Project Intelligence can cold-start Pactwright and Kakeibo, govern durable project knowledge, contribute bounded context, compose into the established GitHub integration and derive one dependency-aware Intent roadmap without automatically creating Delivery work.
@@ -24,6 +24,16 @@ Checkpoint 3 must consume the generic Extension, one-shot initialisation and Git
 - [Kakeibo System-Level Acceptance Profile](./00-kakeibo-acceptance-profile.md)
 
 Research logs are rationale only.
+
+### Version 16 amendment
+
+[PDI-CP04 amendment review (#112)](https://github.com/sb-dev/pactwright/pull/112) covers CP03-S04–S06. Project Intelligence v3 §§5, 11, 14–15, 17 and 21 govern direction Source versions, triage, reviewed promotion and plan grounding.
+
+| Step | Version 16 prose SHA-256 (Spec 00 §2) |
+| --- | --- |
+| CP03-S04 | `1869a5d162d5222011b9335931fda90a8513b430bd6d61f6a82e72e9256b6a2b` |
+| CP03-S05 | `67adaee5d17a58047630cbf42bd300057a05b1a57b619dea72f4350da0a8dcc3` |
+| CP03-S06 | `304547e71052b7e469477e6f77a2439e4f35c8b6e40a270df625b364b78ed975` |
 
 ### Version 15 amendment
 
@@ -316,6 +326,8 @@ Source capture is immutable, traceable and idempotent across external and future
 
 Test duplicate, changed version, reference-only, secret rejection, byte removal/revalidation, valid canonical-origin internal Source and valid non-canonical execution-output internal Source. For both internal forms verify origin/process, hash and originating Project Graph revision are retained.
 
+Capture an existing project's direction document, relevant code, tests and project documents at identifiable revisions. Check each Source's origin and version. Ingest the same direction twice and require one identity. Change its contents under the same canonical ID and verify the new hash and `version_of` link. Both versions must remain resolvable. Capture alone must leave accepted Knowledge, plans and Delivery state unchanged.
+
 ### Step 5 — Implement triage classes 0–3
 
 **References:** Spec 03 ingestion/triage and automatic-mutation boundary.
@@ -348,6 +360,8 @@ Triage stops cheap cases early and routes meaning-changing cases through review.
 **Verify before continuing**
 
 Prove a class-1 Source cannot alter Knowledge conclusions, requirement/constraint/decision meaning, Delivery records or sibling-Extension canonical state; prove no-domain-fit produces a reviewed class-2 proposal. A duplicate or ineligible corroboration must not reset Knowledge freshness.
+
+Triage a revised direction against an accepted requirement and its linked dependants. Include one explicit contradiction and one question the available sources cannot answer. Require a `contradictory` disposition and class 3 for the conflict and identify the affected records. Record the open question without inventing a conclusion. A code path consistent with the proposed direction can support an inference about coverage. Verify that triage cannot mark the requirement fulfilled from code presence.
 
 ### Step 6 — Expose `ingest`, `triage` and `promote`
 
@@ -388,6 +402,8 @@ One ingestion/promotion path serves founding material, research and future Exten
 **Verify before continuing**
 
 Run duplicate/versioned ingestion, class-2 no-preapproval-mutation, failed-ingestion, failed-promotion, stale-promotion/rebase/revalidation and retryable hand-off fixtures. Inject report-generation failure and require canonical state to remain unchanged; verify deterministic failures are not repeatedly retried.
+
+Use the revised direction Source from Step 5 with `promote`. Inspect the proposed Knowledge and edge changes, their Source version and the affected records. Withhold human approval and verify that the Source remains available and the existing conclusions and plan still apply. Approve the reviewed change through the relevant owners. Verify that only the validated PI changes take effect and that class-3 propagation identifies affected work. The accepted conclusion can now ground a reviewed plan edit under Spec 03 §21. Promotion alone must neither rewrite the plan nor create or complete a Delivery Intent.
 
 ## Stage 3 — Implement Knowledge and relationships
 
@@ -1332,4 +1348,4 @@ Checkpoint 3 closes only when:
 
 ---
 
-**Pactwright — Checkpoint 3 — Project Intelligence v15**
+**Pactwright — Checkpoint 3 — Project Intelligence v16**
