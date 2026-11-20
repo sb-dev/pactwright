@@ -19,6 +19,7 @@ The Kakeibo proof extends the deterministic `packages/domain` foundation from Ch
 - [02 — Distribution, Agent Packs, Extensions and Evaluation](../specs/02-distribution-agent-packs-extensions-and-evaluation.md)
 - [07 — GitHub Integration](../specs/07-github-integration.md)
 - [08 — Open-Source Project Organisation](../specs/08-open-source-project-organisation.md)
+- [09 — Agent Methodology and Workflows](../specs/09-agent-methodology-and-workflows.md)
 - [Implementation Principles](./00-implementation-principles.md)
 - [Implementation Guide](./00-implementation-guide.md)
 - [Kakeibo System-Level Acceptance Profile](./00-kakeibo-acceptance-profile.md)
@@ -26,6 +27,15 @@ The Kakeibo proof extends the deterministic `packages/domain` foundation from Ch
 Kakeibo acceptance uses the current canonical Kakeibo specifications from the Kakeibo repository.
 
 Research logs are rationale only.
+
+### Version 19 amendment
+
+[PDI-CP03 amendment review (#107)](https://github.com/sb-dev/pactwright/pull/107) covers CP02-S04 and CP02-S05. Step 4 requires a real unattended provider call and checks that only a current result can advance its assignment. Step 5 requires the host to assess current event inputs and prevent duplicate work. Core v9 §§34, 46 and 55–56, Distribution v8 §14, GitHub Integration v3 §§5–7, 36 and 38, and Agent Methodology and Workflows v5 §§7–8 govern these changes.
+
+| Step | Version 19 prose SHA-256 (Spec 00 §2) |
+| --- | --- |
+| CP02-S04 | `ce0859902c4ad203cb5d2884bc12fb8771a15a43cd5137d76acbcecc607a076f` |
+| CP02-S05 | `326021ff9db62018261bcc6db138c89ed1a9fb213ebf830179b7beaae5e86729` |
 
 ### Kakeibo
 
