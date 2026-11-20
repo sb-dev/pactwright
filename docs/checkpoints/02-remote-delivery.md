@@ -1,6 +1,6 @@
 # Pactwright — Checkpoint 2 — Remote Delivery
 
-**Version:** 19\
+**Version:** 20\
 **Entry condition:** Checkpoint 1 is accepted and Pactwright can self-host core Delivery.\
 **Release:** `0.0.3`\
 **Exit capability:** Pactwright and Kakeibo can initialise, execute, evaluate and project Contract-driven Delivery through GitHub using one deterministic profile-composition/reconciliation model while repository canonical state remains authoritative.
@@ -36,6 +36,16 @@ Research logs are rationale only.
 | --- | --- |
 | CP02-S04 | `ce0859902c4ad203cb5d2884bc12fb8771a15a43cd5137d76acbcecc607a076f` |
 | CP02-S05 | `326021ff9db62018261bcc6db138c89ed1a9fb213ebf830179b7beaae5e86729` |
+
+### Version 20 amendment
+
+[PDI-CP03 amendment review (#108)](https://github.com/sb-dev/pactwright/pull/108) covers CP02-S06–S08. The checks expose authority stops and worker failures. The PR and Project report the accountable owner, current target and result or blocker. Field edits cannot authorise work. Core v9 §§34 and 56, Distribution v8 §14 and GitHub Integration v3 §§3, 7–10, 29, 31–32 and 38 govern these requirements.
+
+| Step | Version 20 prose SHA-256 (Spec 00 §2) |
+| --- | --- |
+| CP02-S06 | `956343eeb4c830b1101434aacbab4bfca4663fa4e726e7c4233876a1114b30a1` |
+| CP02-S07 | `8d046b6c886f8249d69bbb539bfe205acbeec0463e32359ef7754bea270c0031` |
+| CP02-S08 | `f631187116503b91f37da32608debf12b34d8de9b875468519d394c6d92b828b` |
 
 ### Kakeibo
 
@@ -349,7 +359,7 @@ Deliver an eligible event, redeliver it, then supply an equivalent notification 
 
 ### Step 6 — Implement the exact Core Delivery checks
 
-**References:** Spec 07 Core Delivery checks.
+**References:** Core §34 and Spec 07 §§7–8 (Gate stops, execution failures and Core Delivery checks).
 
 **Run**
 
@@ -376,9 +386,11 @@ Checks expose Pactwright truth without becoming its source.
 
 Test valid/invalid graph, shared-edge validation, Gate/lifecycle failure, blocking/non-blocking Review, execution failure versus canonical invalidity, and the currently supported non-Delivery PR behaviour.
 
+Use a valid Delivery with a pending human Gate. Compare all three checks with their owning runtime results. A valid graph and a clear Review must still leave the Gate pending. In a separate case, make a dispatched worker fail against valid canonical records. Require the check output to identify the failed attempt and distinguish it from a graph defect or a blocking Review finding. Read back the lifecycle state and verify that neither case advanced the Delivery. Keep the exact GitHub conclusion mapping open where Spec 07 leaves it open.
+
 ### Step 7 — Implement Delivery PR summary and remote execution provenance
 
-**References:** Specs 01, 02 and 07 PR summary/replay rules; Implementation Guide replay provenance.
+**References:** Core §§34 and 56, Distribution §14, Spec 07 §§9–10 and 31, and the Implementation Guide replay provenance rules.
 
 **Run**
 
@@ -396,6 +408,7 @@ For every replayable GitHub-triggered execution/projection context, carry the ru
 
 GitHub must never derive, replace or reinterpret those identities.
 Projection of provenance is distinct from recording provenance on the underlying runtime execution.
+For a remote assignment, link the governing Delivery records and the host receipt for the reported attempt. Identify the accountable owner, current target, and next permitted action. Report a verified result only when the receiver matched it to the outstanding dispatch and checked it against current authority. Otherwise report the actual pending state, blocker or failure. Show the source revision of the projection.
 
 Where any operation claims pinned replay, invoke the owning Pactwright operation against the recorded replay base and fail explicitly if it cannot be reconstructed; never substitute the workflow's current checkout/environment.
 ```
@@ -408,9 +421,11 @@ Remote executions preserve Pactwright provenance and PRs expose useful progress 
 
 Compare summary fixtures against runtime outputs; prove all replay identities originate from the runtime; prove GitHub-only metadata changes do not change them; and use a replay-capable fixture operation to require explicit failure rather than current-state substitution when a recorded input is unavailable.
 
+Compare summaries for a current verified result and a failed attempt with their respective governing records and host receipts. Then change the governing target and regenerate the summary. Require the new target and source revision. The earlier result must remain attributable to its original attempt and must not appear as fulfilment of the new target.
+
 ### Step 8 — Implement Intent Issue and shared Project runtime projection
 
-**References:** Spec 07 Intent Issue, Delivery fields and shared Project.
+**References:** Spec 07 §§3, 10, 29, 32 and 38 (projection ownership, Intent Issue, shared Project and mutation), Core §34 and Distribution §14.
 
 **Run**
 
@@ -438,6 +453,7 @@ Actions own Project item creation/update and derived field values from runtime s
 
 Issue/Project values are derived collaboration state only.
 Editing them must not mutate canonical Pactwright records.
+For a remote assignment, derive the accountable owner, current target, verified result or blocker, and next permitted action from the governing records and matched host receipt. Show the source revision and link those records. Refresh the shared Project projection when its inputs change. Deliver worker failures to the accountable owner independently of an optional Project update.
 
 Support `github.project.enabled: false` while checks and PR summaries remain usable.
 ```
@@ -449,6 +465,10 @@ One reusable Project foundation exists for later Extension profiles and regenera
 **Verify before continuing**
 
 Run core-only, fixture-profile and project-disabled projection fixtures. Mutate derived Issue/Project values and require Actions projection to restore canonical runtime truth without changing the Project Graph. Prove no fixture Extension creates an independent Project.
+
+With a Gate pending, edit the projected owner, clear the blocker and mark the Project item complete. Before refreshing, compare the canonical records, Gate authority and runtime execution state with their pre-edit values. Require no Decision, Gate satisfaction, accepted result or Delivery completion from the field edits. Refresh through Actions and read back the actual owner, blocker and next permitted action. After a permitted runtime transition, verify that the projection follows the new governing records and links the corresponding result.
+
+Exercise a failed worker with Projects disabled and again with a Project update that fails. In both cases verify receipt of the failure by the accountable owner, including the attempt, target, blocker and next permitted action. A failed projection write must remain distinguishable from the worker failure.
 
 ## Stage 3 — Prove compositional GitHub initialisation and activate Pactwright
 
@@ -939,4 +959,4 @@ The Kakeibo acceptance additionally requires:
 
 ---
 
-**Pactwright — Checkpoint 2 — Remote Delivery v19**
+**Pactwright — Checkpoint 2 — Remote Delivery v20**
