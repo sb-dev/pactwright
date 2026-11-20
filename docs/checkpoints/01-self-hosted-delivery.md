@@ -1,6 +1,6 @@
 # Pactwright — Checkpoint 1 — Self-Hosted Delivery
 
-**Version:** 37\
+**Version:** 38\
 **Entry condition:** No installable Pactwright runtime exists.\
 **Release:** `0.0.2` (corrective; `0.0.1` was published against version 12 of this runbook, the version tagged `v0.0.1`, and remains the released baseline)\
 **Exit capability:** Pactwright is installable, upgradeable, can govern one complete Contract-driven Delivery in its own repository and in Kakeibo, can compare an Agent Pack candidate against a released baseline, and requires no manual Project Graph coherence work.
@@ -86,6 +86,8 @@ The [PDI-CP01 Stage 4 amendment](https://github.com/sb-dev/pactwright/pull/103) 
 The [PDI-CP02 amendment for Step 24](https://github.com/sb-dev/pactwright/pull/104) adds real advisory entry, a separate governed handoff, specialist delegation, correction under the same Contract, a consumer walkthrough and evidence for the Director's report. Core v9 §§32 and 45, Distribution v8 §§14, 16 and 23, and Spec 09 v5 §§3–7 and 10 govern these additions. The Stages 6–11 exit record covers the earlier Step 24 prose. The linked amendment is the review for the revised prose and its hash.
 
 The [PDI-CP02 amendment for Steps 25–27](https://github.com/sb-dev/pactwright/pull/105) covers the self-hosted entry configuration, Quick Start Delivery and clean-reader walkthrough under Distribution v8 §§12, 14, 16, 23 and 27 and Spec 09 v5 §§3–7 and 10. The Stages 6–11 exit record reviewed the earlier prose. This amendment submits the three revised definitions and their hashes for review.
+
+The [PDI-CP02 amendment for Steps 30 and 31](https://github.com/sb-dev/pactwright/pull/106) requires Kakeibo consumer evidence for advisory entry, governed handoff and a failed invariant check followed by correction. The findings review traces entry and method failures to their owners and rechecks blocking fixes. Distribution v8 §§14, 16, 23 and 27 and Spec 09 v5 §§3–7 and 10 govern these additions. The Stages 6–11 exit record applies to the earlier prose. This amendment submits the two revised definitions and their hashes for review.
 
 The Q01–Q20 resolution pass is recorded in six dependency-ordered [batch records](../research-logs/2026-09-23-pr41-b1-loading.md). The crosswalk retains the original questions and replaced-prose quotes; the amended specifications and contracts govern new attempts. These document changes do not establish runtime acceptance or bypass independent review.
 
@@ -739,6 +741,10 @@ Kakeibo has the minimum consumer package root required by its future pnpm/Turbor
 
 **Run**
 
+Before capturing the Intent, follow the shipped entry instructions in the Step 29 Kakeibo installation. Run `pnpm pactwright doctor --json` from the Kakeibo root and apply the Step 24 preflight. Start a fresh `claude --agent pactwright-entry` session. Confirm the host loaded Kakeibo's generated alias for the locked pack. Record the host version, pack source and exact version, bound agent and environment lock hash. If the entry cannot load, record the unmet condition and stop.
+
+Ask the Director which of the recorded Kakeibo specifications governs one invariant below and how to check it with synthetic data. Record how the resolved prompt and an attached direct skill shaped the answer. Compare canonical storage and Delivery execution state before and after advice. Both must be unchanged. Start the following governed operations only when the Kakeibo owner separately asks to deliver the slice. Trace the handoff to the existing capability mappings and authority checks.
+
 From the Kakeibo repository root:
 
 ```text
@@ -761,6 +767,8 @@ pnpm pactwright lifecycle status
 Run the Kakeibo repository-defined deterministic domain tests as part of the same acceptance step.
 
 The commands run through the adapter session the run configuration names, and the Kakeibo owner is the approving human. The Kakeibo specifications at the revisions Step 29 recorded govern: 02 for financial-domain semantics, 05 for the package and layer boundary only, 06 for deterministic test expectations only and 07 for the repository foundation only. The Contract cites the specification sections it implements. The invariant set below is Kakeibo 02 §14 at revision `75443233c474a2a4072348078c22d72d15573645` (02 v1.1). If 02 §14 at the revision Step 29 records differs from the block below, the set is re-derived from that revision's §14 through an amendment of this step, reviewed like this one, before Step 30 runs; no invariant is deferred to Step 31.
+
+During Delivery, run a deterministic check against an unfulfilled invariant on the working implementation. For example, check that a transfer contributes zero to flexible spending. Keep the synthetic input, expected and actual result, failing assertion and target revision or content identity. Correct the implementation within the approved Brief. Rerun the same assertion and the domain suite, then submit the corrected target and both results to the separate review invocation before Evidence. The verifier's deliberately faulty variants below test the assertions themselves and do not supply this correction trace.
 
 Before this step is accepted, deliver each foundation item Step 29 recorded absent through a Kakeibo Delivery lineage approved by the Kakeibo owner: the deterministic tests and synthetic fixtures through this step's domain lineage, and each other item except the specifications through its own lineage. Synthetic fixtures contain no real personal financial export (Kakeibo 07 §20), and no private financial or review engine is required for the delivered slice (07 §42). Do not scaffold Academy, Blog, marketplace, registry, parallel self-hosting architecture or speculative package directories.
 
@@ -823,6 +831,8 @@ The package remains deterministic and independent of application/API/storage/UI/
 - every foundation item Step 29 recorded absent exists, delivered through a done Kakeibo lineage; the licence is Apache-2.0 and `SECURITY.md` names a private route (07 §§35, 37); the synthetic fixtures hold no real personal financial export and the slice needs no private financial or review engine;
 - the graph holds only core record types and relations, every Pactwright-owned file was written by the runtime, and the Kakeibo commits landed under the Kakeibo owner's authority.
 
+Walk the Kakeibo owner through the corrected invariant using the synthetic example. Trace the Director's report to the authorised Contract, Brief, checks, independent Review and Evidence. Identify what the consumer actually used. Report any effect on real users as unmeasured unless supported by separate observations.
+
 ## Stage 11 — Capture Checkpoint 1 feedback
 
 Close the checkpoint's learning loop before declaring it complete.
@@ -836,6 +846,8 @@ Close the checkpoint's learning loop before declaring it complete.
 Review the execution of Stages 1–10, including bootstrap-fixture friction, self-hosting friction, Kakeibo installation/workspace bootstrap and onboarding problems, financial-invariant preservation, content gaps and any deviation between specification and implementation.
 
 Also record execution friction, code quality, graph behaviour and model and skill effectiveness, without attributing an improvement to model choice alone. Keep the findings inventory as execution evidence outside the Project Graph, linking each finding to its Intent ID, fix reference or exclusion reason.
+
+Compare the Step 24 fixture, Steps 25–27 self-hosted and reader results, and Step 30's released Kakeibo consumer trace. Check entry loading and skill use, the boundary between advice and governed work, authority at handoff, independent review, and any failed check and its recheck. Link each entry or method finding to the affected step, environment identity, observed result, accountable owner and next action. Record an unavailable invocation as not evaluated and an unjudged semantic result as unjudged. Missing required proof blocks the affected step.
 
 Classify each finding once, with its reason. A finding is **blocking** when it falsifies an exit-gate line or an accepted criterion's evidence, or when a documented command of the published release fails as documented. Otherwise it is **material** when it names a Pactwright responsibility failure, a manual intervention the runtime or the material should have made unnecessary, a specification-to-implementation deviation or a content gap. Otherwise it is **excluded**: a Kakeibo-specific domain or product choice exposing no repeatable Pactwright responsibility failure.
 
@@ -862,6 +874,8 @@ Every material Checkpoint 1 finding exists as an open Intent in the Pactwright g
 Run `pnpm pactwright validate` and `pnpm pactwright lifecycle status`; captured Intents are valid open lineages. Confirm no blocking failure remains unresolved.
 
 Each captured Intent states an outcome and no plan and has no Decision; every earlier lineage is unchanged. A finding that meets both the blocking and the material definition is classified blocking, fixed and re-verified, and has no open Intent standing in for the fix. Independent review confirms each classification against its reason and that no material finding was excluded.
+
+For each blocking entry or method finding, independently match the original failure to the fix, the corrected revision and the repeated check in the affected environment. Recheck the released Kakeibo path for a consumer-facing fix under Step 28's release rule. A passing self-hosted run alone cannot close a failure observed in Kakeibo.
 
 ## Exit gate
 

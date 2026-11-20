@@ -17,7 +17,7 @@ sources:
 # Steps kept in their reviewed prose form (Spec 00 §2): the SHA-256 of each step
 # section, including the stage introduction before a stage's first step. PR #53
 # records the T2 baseline (Stages 6–11 exit record, B28). PR #104 amends CP01-S24.
-# PR #105 amends CP01-S25–CP01-S27.
+# PR #105 amends CP01-S25–CP01-S27. PR #106 amends CP01-S30 and CP01-S31.
 # A change to the prose needs a reviewed amendment that records the new hash.
 prose_steps:
   CP01-S22: sha256:010e24d7e282512156e1f205210056b452c9e10fcc29f4149e9a86b56ab139b3
@@ -28,8 +28,8 @@ prose_steps:
   CP01-S27: sha256:398a24643557a474aa27a861c38eadf5bb904453be5bd70b9d9890e285466e7f
   CP01-S28: sha256:334a51fa6079d94ead70fd80bd896bc6b34bb31ea5b726326b4a25923e481498
   CP01-S29: sha256:b821a0659cca45c06f25ccba230052184087d17c53fae683f50352c2c96f5098
-  CP01-S30: sha256:c7b0144a6bf9ce98d0c8e4218d02b2766a993b2ba6c2b6474888f7cb86c333af
-  CP01-S31: sha256:bbb8742025eb8e58c89d408740b8c395aecadd2b0d0a1069e119a0bad87532d7
+  CP01-S30: sha256:2fffb5c5acd9862108985f128477eea71d40b04394742516aad72d66ef1ebdd9
+  CP01-S31: sha256:2f2b38b08de622eb08023007edad0c131665d00693ff8ff5a71534a6b0feba8b
 requirements:
   R01:
     source: [GUIDE#verification]
