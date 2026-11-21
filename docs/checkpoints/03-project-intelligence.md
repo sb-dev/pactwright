@@ -31,7 +31,7 @@ Research logs are rationale only.
 
 | Step | Version 17 prose SHA-256 (Spec 00 §2) |
 | --- | --- |
-| CP03-S07 | `08ab9c2c379ad1a78361725908ddb53273414bded6d6719b61159ef38878dbd1` |
+| CP03-S07 | `cc6f304b4743245fd5bd2580828a3bede70fafa256ff46c2e32afe5a557a7c10` |
 | CP03-S08 | `a6e94130064901bd37a3ca54122c10f21ca3d347f7f91621c223fc98372c7473` |
 
 ### Version 16 amendment
@@ -418,7 +418,7 @@ Use the revised direction Source from Step 5 with `promote`. Inspect the propose
 
 ### Step 7 — Implement Knowledge governance
 
-**References:** Spec 03 §§5, 11–12, 16, 21 and 23 (Source provenance, Knowledge governance, supersession, freshness, plan grounding and recurrence).
+**References:** Spec 03 §§5, 7, 10–12, 16, 21 and 23 (Source provenance, trust, Knowledge fields and governance, supersession, freshness, plan grounding and recurrence).
 
 **Run**
 
