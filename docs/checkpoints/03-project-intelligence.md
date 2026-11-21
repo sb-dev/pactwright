@@ -1,6 +1,6 @@
 # Pactwright — Checkpoint 3 — Project Intelligence
 
-**Version:** 16\
+**Version:** 17\
 **Entry condition:** Checkpoint 2 is accepted.\
 **Release:** `0.0.4`\
 **Exit capability:** Project Intelligence can cold-start Pactwright and Kakeibo, govern durable project knowledge, contribute bounded context, compose into the established GitHub integration and derive one dependency-aware Intent roadmap without automatically creating Delivery work.
@@ -24,6 +24,15 @@ Checkpoint 3 must consume the generic Extension, one-shot initialisation and Git
 - [Kakeibo System-Level Acceptance Profile](./00-kakeibo-acceptance-profile.md)
 
 Research logs are rationale only.
+
+### Version 17 amendment
+
+[PDI-CP04 amendment review (#113)](https://github.com/sb-dev/pactwright/pull/113) covers CP03-S07 and CP03-S08. Project Intelligence v3 §§11–13, 21 and 23 govern Knowledge approval, plan grounding and Delivery obligations. Core v9 §§15 and 54 govern supersession and relation ownership.
+
+| Step | Version 17 prose SHA-256 (Spec 00 §2) |
+| --- | --- |
+| CP03-S07 | `08ab9c2c379ad1a78361725908ddb53273414bded6d6719b61159ef38878dbd1` |
+| CP03-S08 | `a6e94130064901bd37a3ca54122c10f21ca3d347f7f91621c223fc98372c7473` |
 
 ### Version 16 amendment
 
@@ -409,7 +418,7 @@ Use the revised direction Source from Step 5 with `promote`. Inspect the propose
 
 ### Step 7 — Implement Knowledge governance
 
-**References:** Spec 03 Knowledge model/governance/evidence/freshness.
+**References:** Spec 03 §§5, 11–12, 16, 21 and 23 (Source provenance, Knowledge governance, supersession, freshness, plan grounding and recurrence).
 
 **Run**
 
@@ -442,9 +451,11 @@ Knowledge represents accepted current project meaning without replacing Source p
 
 Test T0 sufficiency, T1 independent corroboration, T2/T3 insufficiency, shared-origin derivatives, requirement/constraint authority, PI-decision distinction/supersession, recommendation acceptance, forecast expiry, meaningful/no-decay horizons, supersession, retraction and recurrence validation.
 
+Start with the Step 6 fixture before approval. Use its revised direction Source to propose a replacement for an accepted launch constraint. Add corroborating Sources and withhold approval. Verify that the old constraint remains current and that the proposal cannot ground a new or changed plan. After human approval, verify that the replacement identifies its supporting Source version and supersedes the prior constraint. Resolve the old plan against its recorded revision and recover its original grounding and Source. An unrelated accepted requirement must retain its identity and conclusion.
+
 ### Step 8 — Implement PI and cross-graph relationships
 
-**References:** Spec 03 relationships/Delivery obligations.
+**References:** Spec 03 §§13, 21 and 23 (Delivery obligations, plan coverage and satisfaction). Core §§15 and 54 own shared relation validation and storage boundaries.
 
 **Run**
 
@@ -457,10 +468,10 @@ Register and validate:
 - affects
 - requires-delivery
 - satisfied-by
-- supersedes
 - retracts
 - informs-only
 
+Use Core's registered `supersedes` for Knowledge replacements. For two PI Knowledge endpoints, store the tuple in PI's `edges.yml`. Core §54 places supersession with the common endpoint-type owner.
 Preserve ownership across graph boundaries.
 `requires-delivery` targets a Delivery Intent.
 `satisfied-by` targets Delivery Evidence.
@@ -481,6 +492,10 @@ PI connects project meaning to Delivery without owning Delivery records.
 **Verify before continuing**
 
 Run valid/invalid cross-owner relation fixtures and prove no raw Source/Finding/Observation can create `requires-delivery` or a canonical Intent directly.
+
+Validate the Step 7 replacement using the inherited Core relation. Reject a PI attempt to register `supersedes` again and verify that the original definition still accepts a valid same-type replacement. Reject the same tuple in the Core edge store. Reject a split or merge of Knowledge lineages.
+
+Use a plan slice that covers an accepted requirement before any Intent is captured. Its coverage reference creates neither a `requires-delivery` nor a `satisfied-by` edge. After explicit Intent capture, link the motivating Knowledge to that Intent with `requires-delivery`. Verify that the requirement is still outstanding without qualifying Delivery Evidence. Reject a `satisfied-by` edge targeting the Intent instead of Evidence.
 
 ## Stage 4 — Implement onboarding, roadmap, satisfaction, propagation and freshness
 
@@ -1348,4 +1363,4 @@ Checkpoint 3 closes only when:
 
 ---
 
-**Pactwright — Checkpoint 3 — Project Intelligence v16**
+**Pactwright — Checkpoint 3 — Project Intelligence v17**
