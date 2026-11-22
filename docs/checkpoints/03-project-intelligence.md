@@ -1,6 +1,6 @@
 # Pactwright — Checkpoint 3 — Project Intelligence
 
-**Version:** 18\
+**Version:** 19\
 **Entry condition:** Checkpoint 2 is accepted.\
 **Release:** `0.0.4`\
 **Exit capability:** Project Intelligence can cold-start Pactwright and Kakeibo, govern durable project knowledge, contribute bounded context, compose into the established GitHub integration and derive one dependency-aware Intent roadmap without automatically creating Delivery work.
@@ -24,6 +24,15 @@ Checkpoint 3 must consume the generic Extension, one-shot initialisation and Git
 - [Kakeibo System-Level Acceptance Profile](./00-kakeibo-acceptance-profile.md)
 
 Research logs are rationale only.
+
+### Version 19 amendment
+
+[PDI-CP04 amendment review (#115)](https://github.com/sb-dev/pactwright/pull/115) covers CP03-S11 and CP03-S12. Project Intelligence §§19–24 govern context, plan composition, readiness, satisfaction and propagation. Core §39 governs context assembly. Graph Review §15 identifies the records needed to review a shared requirement.
+
+| Step | Version 19 prose SHA-256 (Spec 00 §2) |
+| --- | --- |
+| CP03-S11 | `ce1c8fab01e01a1c583a8515cd0075d6b2d06411822bde4b0d499819225f7430` |
+| CP03-S12 | `a132c09f77ea3c208c31d8f5deb0577e7040012820e0d3d287ba65b98b7ffae0` |
 
 ### Version 18 amendment
 
@@ -603,7 +612,7 @@ Include a third slice whose `coverage` lists only the ID of an accepted constrai
 
 ### Step 11 — Implement Delivery satisfaction, recurrence, propagation and freshness
 
-**References:** Spec 03 satisfaction/recurrence/propagation and section 16 evidence/freshness.
+**References:** Spec 03 §§11, 16, 20–24, 26 and 29 (Knowledge approval, freshness, Delivery authority, plan dependencies, satisfaction, propagation and reviewed plan edits).
 
 **Run**
 
@@ -644,11 +653,15 @@ Test one-off satisfaction removal, recurring-occurrence closure with durable rec
 
 For freshness, provide one positive fixture satisfying all four conditions and separate negative fixtures for old observation/new capture, same-origin derivative, out-of-scope evidence and inadequate trust. Require no refresh in every negative case, unchanged canonical conclusions in every case, idempotent duplicate processing, overdue staleness and preserved no-decay policy. Regenerate coverage after valid freshness changes.
 
+Use a reviewed launch plan with a regional rollout slice, a hard dependant and a verified shared component. Supersede the rollout constraint through human Knowledge approval. Run `pactwright intelligence propagate <knowledge-id>` on the superseded constraint. Check that the proposal identifies the affected group, slices and linked Delivery owner. While the prerequisite is invalid, the dependant must be blocked. Compare the canonical plan, Contracts and Evidence before and after propagation: the proposal alone changes none of them. Apply the smallest reviewed plan edit with human approval against the current revision and regenerate the roadmap. Check that readiness reflects the revised dependencies and that the shared component retains its ID, Contract and Evidence.
+
+For a recurring obligation, link fulfilment Evidence to the current occurrence. Advance the fixture to the next occurrence under the same policy. Only the new occurrence is outstanding. The earlier occurrence stays closed with its original Evidence, including after roadmap regeneration.
+
 ## Stage 5 — Integrate PI with Delivery, GitHub, evaluation and validation
 
 ### Step 12 — Implement bounded PI context contribution
 
-**References:** Spec 03 Delivery context; Spec 01 context assembly.
+**References:** Spec 03 §§19–21 (Delivery context, Contract authority and group progress), Core §39 (context assembly) and Graph Review §15 (shared requirements).
 
 **Run**
 
@@ -673,6 +686,8 @@ Pactwright responsibilities can receive bounded project grounding without recons
 **Verify before continuing**
 
 Use fixture responsibilities needing different domains, including a future Graph Review-style responsibility, and inspect selected/excluded context.
+
+Request context for a Brief covering one member slice, then for a Graph Review fixture covering the shared outcome. For the Brief, check that the governed Delivery lineage and relevant accepted Knowledge are present and unrelated groups are excluded. For the shared review, trace the group outcome through the reviewed plan and accepted Knowledge to the member slices, the Contract covering the combined check and the available Evidence at the reviewed revision. Compare a fixture with passing component checks only to one with a recorded failing check on the assembled output. The first context exposes the missing combined result. The second includes the failing result. Neither context request creates a Finding or changes plan, Delivery or Evidence records.
 
 ### Step 13 — Compose the PI GitHub profile into the established integration
 
@@ -1378,4 +1393,4 @@ Checkpoint 3 closes only when:
 
 ---
 
-**Pactwright — Checkpoint 3 — Project Intelligence v18**
+**Pactwright — Checkpoint 3 — Project Intelligence v19**
