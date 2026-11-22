@@ -1,6 +1,6 @@
 # Pactwright — Checkpoint 5 — Production Skills + Assets / Publication
 
-**Version:** 14\
+**Version:** 15\
 **Entry condition:** Checkpoint 4 is accepted.\
 **Release:** `0.0.6`\
 **Exit capability:** Pactwright and Kakeibo can resolve exact external Production Skills and Production Extension Packs through the selected Agent Pack during normal Delivery, then turn successful Delivery Evidence into exact human-approved Assets and real Publications without introducing a second production lifecycle.
@@ -44,6 +44,7 @@ Canonical Pactwright semantics come from:
 - [05 — Assets and Publication](../specs/05-assets-and-publication.md)
 - [07 — GitHub Integration](../specs/07-github-integration.md)
 - [08 — Open-Source Project Organisation](../specs/08-open-source-project-organisation.md)
+- [09 — Agent Methodology and Workflows](../specs/09-agent-methodology-and-workflows.md)
 - [Implementation Principles](./00-implementation-principles.md)
 - [Implementation Guide](./00-implementation-guide.md)
 - [Kakeibo System-Level Acceptance Profile](./00-kakeibo-acceptance-profile.md)
@@ -53,6 +54,15 @@ Production-domain behaviour comes from the selected external Production Skills r
 Kakeibo acceptance uses the current canonical Kakeibo specifications in its existing repository. Kakeibo denotes the same longitudinal acceptance project as Checkpoints 1–4 and the Implementation Guide; this checkpoint does not rename the project or change its repository identity.
 
 Research logs are rationale only.
+
+### Version 15 amendment
+
+[PDI-CP06 amendment review (#118)](https://github.com/sb-dev/pactwright/pull/118) covers CP05-S01 and CP05-S02. Distribution §§5–9 and 12–15 govern external skill resolution, locking and explicit pack adoption. Agent Methodology §§5 and 9 govern skill selection, gap routing and the handoff after an environment change.
+
+| Step | Version 15 prose SHA-256 (Spec 00 §2) |
+| --- | --- |
+| CP05-S01 | `cacd3c090ed33862b0c8f579d33dac60a9e7907a9ff056359e17caa8827d94f7` |
+| CP05-S02 | `472767b4bfc62e6d6834a1365d73d80f02af5ea59f1875e7f95a53e14b91b6a0` |
 
 ### Kakeibo
 
@@ -197,7 +207,7 @@ Do not silently solve:
 
 ### Step 1 — Implement Production Skills integration manifest resolution and complete environment validation
 
-**References:** Spec 02 Production Skills integration manifest, validation and resolution.
+**References:** Spec 02 §§5–9 and 12–13 (Agent Pack imports, integration manifests and resolution). Spec 09 §§5 and 9 (skill selection and gap routing).
 
 **Run**
 
@@ -224,6 +234,8 @@ Before accepting the resolved environment, validate:
 - package-manager lock ↔ `.pactwright/lock.yml` consistency where both identify package-backed components;
 - deterministic environment-lock derivation.
 
+Start from the selected complete Agent Pack's `production_skills` mapping. For each selected binding, trace the capability and its accountable agent to the family ID, source, exact revision/version, integration manifest identity and referenced skill. Include any selected Production Extension Pack under its owning family. Discovery of an external skill outside these imports does not expose it to the worker.
+
 If two imported families expose an ambiguous skill identity, fail resolution rather than silently selecting one.
 
 Do not allow a Production Skills integration manifest to define:
@@ -244,9 +256,11 @@ Pactwright consumes Production Skills integration metadata and fails closed on a
 
 Use fixtures for valid/invalid compatibility, missing source/revision, missing skill, ambiguous identity, missing required capability, adapter-unrepresentable skill, malformed manifest and invalid Extension Pack references. Every failed resolution preserves the previous valid configuration, lock and generated environment.
 
+In a valid selected environment, give the Director a request that needs a skill outside the resolved imports. Make that skill discoverable in an unselected family. Inspect the handoff for the intended outcome, missing skill, active `environment_lock_hash`, blocking impact and responsible owner. Route a missing pack binding to Toolsmith, or the pack maintainer if the pack has no Toolsmith. Route missing reusable domain expertise to its Production Skills family. Verify that discovery leaves the consumer configuration, lock and generated adapter unchanged. Separately exercise a declared import with a missing referenced skill: resolution must fail before activation.
+
 ### Step 2 — Implement exact Production Skills / Extension Pack locking and deterministic sync
 
-**References:** Spec 02 locking, Production Extension Pack and synchronisation rules.
+**References:** Spec 02 §§5, 9 and 12–15 (selection, locking, sync and upgrade). Spec 09 §9 (candidate isolation and adoption).
 
 **Run**
 
@@ -286,6 +300,10 @@ Prove:
 - external repository hashes remain unchanged before/after sync;
 - repeated sync converges;
 - an unavailable historical skill or pack cannot resolve to a newer substitute merely because that substitute is accessible.
+
+Use two complete compatible fixture packs in separate author and consumer workspaces. Keep the consumer on its selected pack while resolving a candidate with a changed external skill revision in the author workspace. Compare the consumer configuration, lock, environment hash and generated adapter before and after candidate resolution. Require all four to remain unchanged.
+
+Explicitly select the candidate in the consumer with `pactwright agent-pack use <candidate-source>`. Compare the selected pack and its family source, revision, integration identity, referenced skills and selected family packs with the exact candidate inputs. Require the consumer hash to change and the generated bindings to expose the newly locked skills after sync. A worker may use the new bindings only after a deliberate handoff or restart under the new environment. This fixture checks selection and locking. Step 16 owns the clean-consumer exercise with accepted external revisions.
 
 Repeat environment equality and full Graph Review replay conformance with real external imports in Step 16.
 
@@ -1264,4 +1282,4 @@ Checkpoint 5 closes only when:
 
 ---
 
-**Pactwright — Checkpoint 5 — Production Skills + Assets / Publication v14**
+**Pactwright — Checkpoint 5 — Production Skills + Assets / Publication v15**
