@@ -32,7 +32,7 @@ Research logs are rationale only.
 | Step | Version 18 prose SHA-256 (Spec 00 §2) |
 | --- | --- |
 | CP03-S09 | `0153bc9c2e8fb95a37dbf79347196064f3321f443ff4a869890cdb9bc612feb9` |
-| CP03-S10 | `fa2327f485b91deb7ad22b9bed683d696b0a3582a9e0d1247c1533afaae6698f` |
+| CP03-S10 | `5b3658e0094ffde5a394b4dc3863ac8e82566ef58d246699fc88f9238943998e` |
 
 ### Version 17 amendment
 
@@ -599,7 +599,7 @@ Exercise each candidate origin/state, dependency-wave ordering and precedence ti
 
 Derive the roadmap for two unsatisfied accepted requirements in Seeded domains. Give each a slice in a reviewed plan. Make the higher-precedence requirement's slice depend on the other slice as a hard prerequisite. Require one candidate per requirement, with the same motivating Knowledge and supporting Source identities as before adding the plan. The prerequisite is ready. The dependant is blocked and identifies the unsatisfied slice dependency. Capture of the prerequisite Intent alone must leave the dependant blocked. Supply fulfilment Evidence under the prerequisite's governing Contract and derive again. With all other prerequisites met, the dependant becomes ready.
 
-Include a third slice grounded only in an accepted constraint that imposes no Delivery obligation. Verify that the slice adds no candidate. Compare the project roadmap with a filtered view at the same graph revision: every displayed candidate retains its roadmap identity, state and dependencies. Regeneration must leave the canonical plan and Delivery records unchanged and persist no separate rank, work queue or completion flag.
+Include a third slice whose `coverage` lists only the ID of an accepted constraint that imposes no Delivery obligation. Verify that the slice adds no candidate. Compare the project roadmap with a filtered view at the same graph revision: every displayed candidate retains its roadmap identity, state and dependencies. Regeneration must leave the canonical plan and Delivery records unchanged and persist no separate rank, work queue or completion flag.
 
 ### Step 11 — Implement Delivery satisfaction, recurrence, propagation and freshness
 
