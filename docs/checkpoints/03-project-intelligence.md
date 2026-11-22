@@ -1,6 +1,6 @@
 # Pactwright — Checkpoint 3 — Project Intelligence
 
-**Version:** 17\
+**Version:** 18\
 **Entry condition:** Checkpoint 2 is accepted.\
 **Release:** `0.0.4`\
 **Exit capability:** Project Intelligence can cold-start Pactwright and Kakeibo, govern durable project knowledge, contribute bounded context, compose into the established GitHub integration and derive one dependency-aware Intent roadmap without automatically creating Delivery work.
@@ -24,6 +24,15 @@ Checkpoint 3 must consume the generic Extension, one-shot initialisation and Git
 - [Kakeibo System-Level Acceptance Profile](./00-kakeibo-acceptance-profile.md)
 
 Research logs are rationale only.
+
+### Version 18 amendment
+
+[PDI-CP04 amendment review (#114)](https://github.com/sb-dev/pactwright/pull/114) covers CP03-S09 and CP03-S10. Project Intelligence v3 §§11, 17 and 21–23 govern Knowledge approval, domain coverage, plan composition, roadmap readiness and Delivery satisfaction.
+
+| Step | Version 18 prose SHA-256 (Spec 00 §2) |
+| --- | --- |
+| CP03-S09 | `0153bc9c2e8fb95a37dbf79347196064f3321f443ff4a869890cdb9bc612feb9` |
+| CP03-S10 | `fa2327f485b91deb7ad22b9bed683d696b0a3582a9e0d1247c1533afaae6698f` |
 
 ### Version 17 amendment
 
@@ -501,7 +510,7 @@ Use a plan slice that covers an accepted requirement before any Intent is captur
 
 ### Step 9 — Implement exact coverage and onboarding semantics
 
-**References:** Spec 03 coverage/onboarding.
+**References:** Spec 03 §§11, 17 and 21 (approved Knowledge, domain coverage and planned slice coverage).
 
 **Run**
 
@@ -539,9 +548,11 @@ Onboarding answers what the project still needs to know using the exact canonica
 
 Test Missing→Seeded→Covered, canonical-artifact requirements, slot-free Seeded ceiling, dependency unlock and regeneration after staleness/domain change/supersession/retraction.
 
+Use an existing project with code, tests and a direction document captured at known revisions. Seed a domain with one unanswered coverage slot. Include a reviewed slice that covers an accepted requirement but does not answer that slot. Run `pactwright intelligence onboard` and check that the report names the gap and recommends a Source. Adding a relevant Source alone must leave the domain Seeded. After human approval of current Knowledge that answers the last slot, regenerate the report and require Covered at the new revision. Neither the slice nor the domain's Covered state fulfils the requirement. Check that onboarding created no Intent or fulfilment Evidence.
+
 ### Step 10 — Implement the single Intent roadmap derivation and ordering
 
-**References:** Spec 03 Intent roadmap/readiness/ordering.
+**References:** Spec 03 §§17, 21–23 (domain prerequisites, plan composition, candidate provenance, ordering and Delivery satisfaction).
 
 **Run**
 
@@ -585,6 +596,10 @@ The roadmap proposes traceable dependency-aware work while Delivery remains auth
 **Verify before continuing**
 
 Exercise each candidate origin/state, dependency-wave ordering and precedence tier. Prove roadmap generation creates no Intent, blocked candidates point to exact gaps, and Extension-specific filtered fixture views cannot introduce candidates absent from the PI roadmap.
+
+Derive the roadmap for two unsatisfied accepted requirements in Seeded domains. Give each a slice in a reviewed plan. Make the higher-precedence requirement's slice depend on the other slice as a hard prerequisite. Require one candidate per requirement, with the same motivating Knowledge and supporting Source identities as before adding the plan. The prerequisite is ready. The dependant is blocked and identifies the unsatisfied slice dependency. Capture of the prerequisite Intent alone must leave the dependant blocked. Supply fulfilment Evidence under the prerequisite's governing Contract and derive again. With all other prerequisites met, the dependant becomes ready.
+
+Include a third slice grounded only in an accepted constraint that imposes no Delivery obligation. Verify that the slice adds no candidate. Compare the project roadmap with a filtered view at the same graph revision: every displayed candidate retains its roadmap identity, state and dependencies. Regeneration must leave the canonical plan and Delivery records unchanged and persist no separate rank, work queue or completion flag.
 
 ### Step 11 — Implement Delivery satisfaction, recurrence, propagation and freshness
 
@@ -1363,4 +1378,4 @@ Checkpoint 3 closes only when:
 
 ---
 
-**Pactwright — Checkpoint 3 — Project Intelligence v17**
+**Pactwright — Checkpoint 3 — Project Intelligence v18**
