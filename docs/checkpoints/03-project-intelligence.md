@@ -1,6 +1,6 @@
 # Pactwright — Checkpoint 3 — Project Intelligence
 
-**Version:** 20\
+**Version:** 21\
 **Entry condition:** Checkpoint 2 is accepted.\
 **Release:** `0.0.4`\
 **Exit capability:** Project Intelligence can cold-start Pactwright and Kakeibo, govern durable project knowledge, contribute bounded context, compose into the established GitHub integration and derive one dependency-aware Intent roadmap without automatically creating Delivery work.
@@ -24,6 +24,15 @@ Checkpoint 3 must consume the generic Extension, one-shot initialisation and Git
 - [Kakeibo System-Level Acceptance Profile](./00-kakeibo-acceptance-profile.md)
 
 Research logs are rationale only.
+
+### Version 21 amendment
+
+[PDI-CP04 amendment review (#117)](https://github.com/sb-dev/pactwright/pull/117) covers CP03-S25 and CP03-S26. Project Intelligence v3 §§11, 17, 19, 21–23, 26 and 29 govern approved Knowledge, existing-project adoption, bounded context, plan review, readiness and satisfaction. Kakeibo Acceptance Profile §§2–7 govern source ownership, financial truth and the CP1–CP3 acceptance scope.
+
+| Step | Version 21 prose SHA-256 (Spec 00 §2) |
+| --- | --- |
+| CP03-S25 | `1f659cf7b5747b22363f6bab58edf3e326dab68aa83a7aef731c6a1ce8550652` |
+| CP03-S26 | `fd82695eae69710a5d75ab3e224c8c7247853ab6c7dff9553827ff5eafb7b3f0` |
 
 ### Version 20 amendment
 
@@ -1270,6 +1279,10 @@ Inspect accepted Knowledge, `domain-map.md`, onboarding and the roadmap and prov
 07 → public/private traceability and open-source transparency
 ```
 
+Capture the Kakeibo direction document at its reviewed revision. Compare its weekly-review requirements with the owning specifications, the persisted FinancialEntry and CSV implementation, the relevant tests and the existing CP1–CP2 Delivery Evidence. Cite revisions for the material inspected. Record any conflicts or unknowns. Distinguish capabilities supported by Contract and Evidence from proposed conclusions that still need review.
+
+Use human-approved Knowledge to ground a plan group for weekly-review preparation. Give its read model/API slice an owner, coverage IDs and explicit dependencies on the required foundation slices. Apply the plan through its own reviewed proposal. Read back its direction Source version and stable group and slice IDs. On the single roadmap, trace the candidate to its motivating Knowledge and check readiness against the actual prerequisites. Plan membership alone must neither create an Intent nor make the candidate ready.
+
 ### Step 26 — Deliver one real bounded cross-owner Kakeibo slice
 
 **References:** Kakeibo Acceptance Profile §§3–7; current Kakeibo `01`, `02`, `05`, `06`; Delivery lifecycle & context §§19, 22
@@ -1278,6 +1291,8 @@ Use a real cross-owner outcome that is executable from the CP1–CP2 Kakeibo fou
 
 **Run**
 
+Use the ready candidate from S25 for this explicit Intent capture. If a hard prerequisite is outstanding, report the dependency and stop before capture.
+
 ```text
 /capture-intent "Implement Kakeibo's first deterministic weekly-review preparation read model and Hono API contract from persisted FinancialEntry state. Produce the product preparation groups needed for the weekly review, including needs decision, worth checking and looks safe, while preserving that all three are preparation only and never reviewed truth. Use current financial-domain rules and history, expose private state only through the application/API boundary, and keep Kei generation, mobile UI implementation, analytics and connected banking out of scope."
 /propose-contracts <intent-id>
@@ -1285,11 +1300,7 @@ Use a real cross-owner outcome that is executable from the CP1–CP2 Kakeibo fou
 /write-brief <contract-id>
 ```
 
-Inspect PI's bounded contribution before execution:
-
-```bash
-pnpm pactwright context <brief-id>
-```
+Link the captured Intent to the reviewed slice. Before execution, inspect the PI contribution to the Brief through the context-assembly API from S12.
 
 The context should select the owners required by this slice, principally:
 
@@ -1342,6 +1353,8 @@ Also verify:
 - no Kei model call or generated explanation is required to compute deterministic preparation groups;
 - unrelated Kakeibo Sources were not included in Delivery context without a stated relevance reason;
 - the final Intent → Evidence lineage remains traceable to the PI Knowledge/Sources that grounded it.
+
+Exercise the assembled path at the reviewed revision: persist FinancialEntry input, request weekly-review preparation through the Hono API and compare the returned groups with the financial-domain rules. Verify that preparing the response leaves review truth unchanged. Cite the governing Contract and Evidence for this combined check. Separate passing component tests from an observed API mismatch or a missing combined result. In either case, report the affected requirement, owner and next action before claiming fulfilment. After verified fulfilment, regenerate group progress and the roadmap and confirm that only the evidenced obligations are satisfied.
 
 ## Stage 10 — Capture Checkpoint 3 feedback through PI
 
@@ -1409,4 +1422,4 @@ Checkpoint 3 closes only when:
 
 ---
 
-**Pactwright — Checkpoint 3 — Project Intelligence v20**
+**Pactwright — Checkpoint 3 — Project Intelligence v21**
