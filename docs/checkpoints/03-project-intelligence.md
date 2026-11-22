@@ -1,6 +1,6 @@
 # Pactwright — Checkpoint 3 — Project Intelligence
 
-**Version:** 19\
+**Version:** 20\
 **Entry condition:** Checkpoint 2 is accepted.\
 **Release:** `0.0.4`\
 **Exit capability:** Project Intelligence can cold-start Pactwright and Kakeibo, govern durable project knowledge, contribute bounded context, compose into the established GitHub integration and derive one dependency-aware Intent roadmap without automatically creating Delivery work.
@@ -24,6 +24,16 @@ Checkpoint 3 must consume the generic Extension, one-shot initialisation and Git
 - [Kakeibo System-Level Acceptance Profile](./00-kakeibo-acceptance-profile.md)
 
 Research logs are rationale only.
+
+### Version 20 amendment
+
+[PDI-CP04 amendment review (#116)](https://github.com/sb-dev/pactwright/pull/116) covers CP03-S18–CP03-S20. Project Intelligence governs Source capture, approved Knowledge, reviewed plans and Delivery satisfaction. Spec 08 retains the original bootstrap authority.
+
+| Step | Version 20 prose SHA-256 (Spec 00 §2) |
+| --- | --- |
+| CP03-S18 | `3a83bc7f5d0da1f2332063ca6915ed8cf269caa87a976268a1ac3324a77e2793` |
+| CP03-S19 | `07e46a5fdb0a79989567cad7cfb0acc6c250f0bae02098dace41224e4222f3f7` |
+| CP03-S20 | `9d7da8328849998bf65acf2b16f3d7762f6a81696eb2515ef8cb8e84de0e8934` |
 
 ### Version 19 amendment
 
@@ -946,6 +956,8 @@ Current Pactwright truth enters PI through normal Source governance.
 
 Accepted Knowledge remains Source-traceable; class 2/3 changes have approved promotion; no roadmap candidate became an Intent automatically.
 
+For one current Pactwright outcome, capture the versioned direction document and inspect the relevant implementation, tests and governing project documents at identifiable revisions (Spec 03 §§5, 14 and 17). Trace each proposed conclusion to its Sources. Record any contradictions, unknowns and missing proof in the adoption assessment. When reporting existing coverage, cite the governing Contract and fulfilment Evidence for each claim of satisfied work. Code or tests alone justify further investigation.
+
 ### Step 19 — Promote pre-PI bootstrap authority into durable Knowledge where applicable
 
 **References:** Spec 08 PI bootstrap/public-content authority.
@@ -967,6 +979,8 @@ Pre-PI Delivery authority remains historical lineage while accepted PI Knowledge
 
 Sample each promoted strategic item and trace Source → approval → accepted Knowledge.
 
+Use the direction Source from S18 and a relevant bootstrap Decision or Contract to propose a Pactwright plan under Spec 03 §§11, 21, 26 and 29. Before promotion, verify that a proposed conclusion cannot serve as accepted group grounding. After human approval, trace the group’s grounding and each slice’s coverage to the applicable accepted Knowledge IDs. Apply the separately reviewed plan against its approved base revision. Read it back and check its direction Source version, group and slice IDs, owners and dependencies. Confirm that adoption preserved the original Delivery lineage and created no Intent.
+
 ### Step 20 — Deliver and satisfy one real Pactwright roadmap candidate
 
 **Run**
@@ -986,6 +1000,8 @@ PI proposes; Delivery authorises/executes; accepted Evidence can satisfy the mot
 **Verify before continuing**
 
 Trace candidate → motivating Knowledge/Sources → explicit Intent → Evidence → `satisfied-by`; prove the completed one-off obligation is no longer outstanding while unrelated/recurring obligations remain correctly represented.
+
+Select the ready candidate for a slice of the reviewed Pactwright plan from S19. Trace the slice to its explicitly captured Intent, governing Contract and resulting Evidence. Regenerate the single roadmap and group progress under Spec 03 §§21–23. Check that the selected contribution is reported as verified and that planned sibling work retains its own status. For the shared outcome, identify the member Contracts or integration Contract that own the combined check. Cite its result at the reviewed revision, or record the proof still needed and who must supply it. A passing component check alone cannot establish the shared outcome.
 
 ## Stage 7 — Establish Pactwright public-content readiness
 
@@ -1393,4 +1409,4 @@ Checkpoint 3 closes only when:
 
 ---
 
-**Pactwright — Checkpoint 3 — Project Intelligence v19**
+**Pactwright — Checkpoint 3 — Project Intelligence v20**
