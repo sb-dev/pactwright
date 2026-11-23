@@ -61,8 +61,8 @@ Research logs are rationale only.
 
 | Step | Version 16 prose SHA-256 (Spec 00 §2) |
 | --- | --- |
-| CP05-S03 | `28ea7e52a1105d79054a230a65adecae3da5ca8ef8ffd82f3abf279af82a4bff` |
-| CP05-S04 | `39ab1aa93a1f294d7648886eb43efd99de3ce6804d8606379b68abcc7557f101` |
+| CP05-S03 | `cc0fa85a695cee6b28a21b29b460d4a6fc4c46fa4bdf13301f9849afeb373f09` |
+| CP05-S04 | `9d7767b0742e27c4dde07565cff962136a5b571bcaab549f9ed245ee41c57f69` |
 
 ### Version 15 amendment
 
@@ -318,7 +318,7 @@ Repeat environment equality and full Graph Review replay conformance with real e
 
 ### Step 3 — Prove multiple Production Skills on one capability
 
-**References:** Spec 02 multi-Production-Skills composition.
+**References:** Spec 02 §8 (multi-family composition). Spec 09 §§3, 7 and 9 (capability accountability, independent review and Toolsmith authoring).
 
 **Run**
 
@@ -355,7 +355,7 @@ Exercise the exact candidate in an isolated fixture. Trace each contribution fro
 
 ### Step 4 — Diagnose, evaluate and baseline the Production Skills integration boundary
 
-**References:** Spec 02 doctor, evaluation, benchmark ownership and baseline reporting.
+**References:** Spec 02 doctor, evaluation, benchmark ownership and baseline reporting. Spec 09 §§9–10 (Toolsmith evaluation and pack-owned method cases).
 
 **Run**
 
