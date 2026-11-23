@@ -1,6 +1,6 @@
 # Pactwright — Checkpoint 5 — Production Skills + Assets / Publication
 
-**Version:** 16\
+**Version:** 17\
 **Entry condition:** Checkpoint 4 is accepted.\
 **Release:** `0.0.6`\
 **Exit capability:** Pactwright and Kakeibo can resolve exact external Production Skills and Production Extension Packs through the selected Agent Pack during normal Delivery, then turn successful Delivery Evidence into exact human-approved Assets and real Publications without introducing a second production lifecycle.
@@ -54,6 +54,14 @@ Production-domain behaviour comes from the selected external Production Skills r
 Kakeibo acceptance uses the current canonical Kakeibo specifications in its existing repository. Kakeibo denotes the same longitudinal acceptance project as Checkpoints 1–4 and the Implementation Guide; this checkpoint does not rename the project or change its repository identity.
 
 Research logs are rationale only.
+
+### Version 17 amendment
+
+[PDI-CP06 amendment review (#120)](https://github.com/sb-dev/pactwright/pull/120) covers CP05-S16. Distribution §§5, 12–15 and 21–24 govern pack release, explicit selection, environment identity, supported entry and evaluation. Agent Methodology §§5, 9 and 10 govern Director entry, Toolsmith responsibilities and method evidence.
+
+| Step | Version 17 prose SHA-256 (Spec 00 §2) |
+| --- | --- |
+| CP05-S16 | `c926570f70966979de5b37456ba81c374b8681be3069b8095b146f69a539ea55` |
 
 ### Version 16 amendment
 
@@ -804,7 +812,7 @@ For unimplemented optional mechanisms, record them as unsupported, require no ge
 
 ### Step 16 — Integrate real external Production Skills and repeat environment/replay conformance
 
-**References:** Specs 02 and 04; Checkpoint 2 shared environment; Checkpoint 4 replay; selected external repositories.
+**References:** Spec 02 §§5, 12–15 and 21–24 (pack distribution, adoption, adapter and evaluation); Spec 09 §§5, 9–10 (entry, Toolsmith and method evidence); Spec 04 and Checkpoint 4 replay; Checkpoint 2 shared environment; selected external repositories.
 
 **Run**
 
@@ -825,6 +833,13 @@ pnpm pactwright sync
 pnpm pactwright doctor
 pnpm pactwright validate
 ```
+
+Exercise release and adoption with the real bindings above:
+
+1. Initialise a separate consumer repository with a compatible runtime and a known initial environment. Exclude the author’s checkout, local configuration, workspace links and generated adapter files. Record the consumer’s selected pack, lock, environment hash and adapter before candidate evaluation and release.
+2. Have Toolsmith carry the need, design and evaluation from Steps 3–4 into release preparation. Evaluate the exact complete pack with the accepted external revisions. Rerun affected cases if the pack or dependencies differ from the evaluated inputs. Give the publishing owner the candidate identity, results and remaining gaps. Follow that owner’s release process and retain any approval it requires. Record the distributed version and how to retrieve it. A versioned source distribution can supply the pack before Step 22 publishes the first-party npm family. Compare the consumer with its recorded state before adoption. Evaluation and release must leave it unchanged.
+3. Explicitly select the distributed complete pack with `pactwright agent-pack use <source>`, or use the owning upgrade operation for an existing selection. Run sync, doctor and validate in the consumer. Compare the selected pack’s content identity, entry binding and each external family’s source, revision, integration identity, skill and applicable pack selection with the evaluated candidate. Account for any source-location difference when comparing pack identity. If a required upstream revision or integration is unavailable or incompatible, name the missing input and responsible owner. Leave the real exercise blocked.
+4. Launch the resolved Director entry through a supported generated host adapter. Retain the host, bound agent and observed advice. Compare canonical Delivery records and execution state before and after advice. Both must remain unchanged. Then request governed work through the existing commands. Give the accountable agent a Brief requiring both imported families. Trace each exact skill binding to its contribution in the resulting work. Record an unavailable entry or unexecuted behaviour as missing proof.
 
 Repeat the earlier environment/replay guarantees now that external imports exist:
 
@@ -856,6 +871,8 @@ Real external skills work through the selected Agent Pack, and their introductio
 **Verify before continuing**
 
 Inspect exact locked identities, generated adapter output and runtime-supplied hashes from local/Actions execution. Require equality for the same lock, unchanged external repository hashes after sync, successful pinned-A/current-B distinction and explicit missing-skill/missing-pack replay failures locally and remotely. Keep original Review Executions immutable and preserve no-current-substitution semantics.
+
+Inspect the publishing owner’s release evidence, the consumer’s before/after selection and lock, and the actual entry and governed run outputs together. Require the same evaluated pack content and external skill identities in the clean consumer. A lock or successful sync alone cannot establish invocation or skill use.
 
 Include these conformance fixtures in repository verification and the relevant Pactwright integration evaluation, not in copied domain benchmark suites. Restore the intended selected pack/environment after isolated experiments.
 
@@ -1299,4 +1316,4 @@ Checkpoint 5 closes only when:
 
 ---
 
-**Pactwright — Checkpoint 5 — Production Skills + Assets / Publication v16**
+**Pactwright — Checkpoint 5 — Production Skills + Assets / Publication v17**
