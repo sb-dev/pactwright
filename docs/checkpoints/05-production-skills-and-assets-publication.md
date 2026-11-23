@@ -1,6 +1,6 @@
 # Pactwright — Checkpoint 5 — Production Skills + Assets / Publication
 
-**Version:** 15\
+**Version:** 16\
 **Entry condition:** Checkpoint 4 is accepted.\
 **Release:** `0.0.6`\
 **Exit capability:** Pactwright and Kakeibo can resolve exact external Production Skills and Production Extension Packs through the selected Agent Pack during normal Delivery, then turn successful Delivery Evidence into exact human-approved Assets and real Publications without introducing a second production lifecycle.
@@ -54,6 +54,15 @@ Production-domain behaviour comes from the selected external Production Skills r
 Kakeibo acceptance uses the current canonical Kakeibo specifications in its existing repository. Kakeibo denotes the same longitudinal acceptance project as Checkpoints 1–4 and the Implementation Guide; this checkpoint does not rename the project or change its repository identity.
 
 Research logs are rationale only.
+
+### Version 16 amendment
+
+[PDI-CP06 amendment review (#119)](https://github.com/sb-dev/pactwright/pull/119) covers CP05-S03 and CP05-S04. Distribution §§5, 8, 12 and 21–24 govern composition, identity and evaluation. Agent Methodology §§3, 7, 9 and 10 govern accountability, handoffs, Toolsmith and method cases.
+
+| Step | Version 16 prose SHA-256 (Spec 00 §2) |
+| --- | --- |
+| CP05-S03 | `28ea7e52a1105d79054a230a65adecae3da5ca8ef8ffd82f3abf279af82a4bff` |
+| CP05-S04 | `39ab1aa93a1f294d7648886eb43efd99de3ce6804d8606379b68abcc7557f101` |
 
 ### Version 15 amendment
 
@@ -340,6 +349,10 @@ One Delivery uses multiple specialised production domains without changing lifec
 
 Run a fixture Delivery whose Brief genuinely needs two families and prove both are available to one selected agent while the capability remains `delivery-execution` / `delivery-review`.
 
+Use the selected complete pack to have Toolsmith investigate a need that requires both families. Record the shared Brief requirement, the evidence for the gap and the contribution expected from each skill. In the author workspace, implement the candidate composition using the families’ existing methods. Retain one accountable agent per capability.
+
+Exercise the exact candidate in an isolated fixture. Trace each contribution from its locked family revision and skill binding to the resulting artefact. For example, have research and narrative skills produce a cited claim and a public summary for the same audience. Give a separate review invocation both outputs and the shared requirement. Include a case where each output passes its own check but the summary contradicts the cited claim. Require the review to identify the failed requirement and route correction through the existing Delivery process. Repeat the combined check on the corrected output.
+
 ### Step 4 — Diagnose, evaluate and baseline the Production Skills integration boundary
 
 **References:** Spec 02 doctor, evaluation, benchmark ownership and baseline reporting.
@@ -387,6 +400,10 @@ pnpm pactwright eval --baseline <released-pack-or-baseline> --candidate <candida
 ```
 
 Use exact fixture inputs for both changed-skill and changed-pack comparisons and inject known case-level regressions. Confirm doctor performs no writes, each declared failure class has a diagnostic fixture, and regressions identify the responsible dependency/capability/case.
+
+Evaluate the Step 3 candidate through two supported paths. Run the runtime case set through the CLI above. Separately run the versioned pack-method cases through the pack’s documented entry or test command with the actual candidate. Include the combined failure and correction from Step 3. In the method report, record the exact candidate and dependency identities, case version, invocation path, expected and observed results, artefact evidence, invoker and judge. Mark unexecuted behaviour **not evaluated** and semantic results without a judge **unjudged**.
+
+Compare with a relevant released baseline when available. For a first release, select the candidate in a disposable evaluation project and run standalone evaluation under Distribution §24. Report initial results. For method comparisons use the same case versions, invoker and judge on both sides. Distinguish deterministic regressions, semantic differences and checks that could not be compared. Return the evidence, remaining gaps and required adoption action to the Director. Verify that evaluation leaves the consumer’s selected pack, lock and generated adapter unchanged. Step 16 exercises release and explicit adoption in a clean consumer.
 
 ## Stage 2 — Package Assets / Publication
 
@@ -1282,4 +1299,4 @@ Checkpoint 5 closes only when:
 
 ---
 
-**Pactwright — Checkpoint 5 — Production Skills + Assets / Publication v15**
+**Pactwright — Checkpoint 5 — Production Skills + Assets / Publication v16**
