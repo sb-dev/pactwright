@@ -61,8 +61,8 @@ Research logs are rationale only.
 
 | Step | Version 19 prose SHA-256 (Spec 00 §2) |
 | --- | --- |
-| CP05-S20 | `a79809cff406c77fa95d41bc04326ece48dd672a6ab920cd69038225c31baad4` |
-| CP05-S21 | `f66ce7fc930e9ee5e5065c9d3e6a3c9a00428d8364043067b2ef386d6d647a4b` |
+| CP05-S20 | `78ad56e6137f22dc1cb7ef87b6ed39ed800a49256dcbdaef210a2df2d5b508a6` |
+| CP05-S21 | `2862fc5547424bf914df7057517bf5c4fae235775b913ba098fc8a9ab9f01447` |
 
 ### Version 18 amendment
 
@@ -1016,7 +1016,7 @@ Run relevant domain evaluations under their owning repositories and `pnpm pactwr
 
 ### Step 20 — Approve the first grounded public Asset and record its Publication
 
-**References:** Specs 05 and 08 Asset/Publication authority and public milestone.
+**References:** Spec 05 §§7, 10–11 and 13–16 for Asset approval, grounding and Publication. Spec 08 §§18, 20 and 24 for public readiness, grounding and the public milestone.
 
 **Run**
 
@@ -1049,7 +1049,7 @@ Verify approved bytes/hash, required Knowledge ids/hashes, matching Publication 
 
 ### Step 21 — Deliver public guide/example/Academy material
 
-**References:** Spec 08 Production Skills + Assets / Publication milestone.
+**References:** Spec 08 §§13–14, 18, 20 and 24 for the Academy lesson, executable example, public readiness, grounding and the Production Skills + Assets / Publication milestone.
 
 **Run**
 
