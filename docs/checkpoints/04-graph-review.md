@@ -1,6 +1,6 @@
 # Pactwright — Checkpoint 4 — Graph Review
 
-**Version:** 19\
+**Version:** 20\
 **Entry condition:** Checkpoint 3 is accepted.\
 **Release:** `0.0.5`\
 **Exit capability:** Pactwright and Kakeibo can run reproducible specialist Graph Reviews over registered Project Graph state, retain immutable Review Execution provenance, route every successful Finding through Project Intelligence, and turn accepted Project Intelligence consequences motivated by Findings into normal governed Delivery.
@@ -83,6 +83,14 @@ Research logs are rationale only.
 | CP04-S09 | `4437067707574981f8140b8d7957772c23c930775b997a8a4d37638a045df214` |
 | CP04-S10 | `d54801b33541fa35b31d180a814bfd78a9e4f27eff6090ba76f728fbce349266` |
 | CP04-S11 | `fc8c29cf5f695e0c9e4d9f24e8923924baa809d3192137465dc114e2fd5c7c82` |
+
+### Version 20 amendment
+
+[PDI-CP05 amendment review (#128)](https://github.com/sb-dev/pactwright/pull/128) covers CP04-S12. Graph Review §21 owns the paired campaign evaluation. Distribution §§21 and 23 govern execution, result status and case ownership.
+
+| Step | Version 20 prose SHA-256 (Spec 00 §2) |
+| --- | --- |
+| CP04-S12 | `8a225c04a46dd3ae2905d80221165b003f69f41b4f650eeb678febe0553a5e2f` |
 
 ### Kakeibo
 
@@ -647,7 +655,7 @@ Give the missing-proof fixture an external reference describing the expected beh
 
 ### Step 12 — Add Graph Review evaluation cases
 
-**References:** Specs 02 and 04 evaluation.
+**References:** Distribution §§21 and 23 govern the runner, case ownership and result status. Graph Review §§10–11, 15, 19 and 21 govern shared-requirement Findings, hand-off, retry and the paired campaign cases.
 
 **Run**
 
@@ -675,6 +683,14 @@ The Pactwright Graph Review responsibility is measurable independently of specia
 **Verify before continuing**
 
 Run `pnpm pactwright eval` and inspect Graph Review cases individually, including the resolved multi-direct-skill fixture and deterministic report-failure cases. External Production Skills integration remains a Checkpoint 5 conformance extension, not a prerequisite hidden here.
+
+Run the two campaign cases from Graph Review §21 through the resolved independent Graph Review responsibility. Give both the same plan, shared requirement, covering integration Contract and accepted copy and artwork Evidence. In the first case, supply a walkthrough at the reviewed revision that opens the wrong offer. In the second, omit the walkthrough.
+
+- Expect `combined check failed` in the first case. The Finding cites the contradictory result and directs the integration owner to correct the link under the current Contract and Brief.
+- Expect `combined proof missing` in the second. The Finding cites the component Evidence and identifies the walkthrough the integration owner must obtain. The absent result cannot establish a defective link.
+- For each case, inspect the requirement, supporting records, owner and next action in the Finding. Trace it to one internal PI Source. Exercise the Step 8 failure and retry checks against these Findings. Verify that retry preserves the original execution and Finding, without invoking Graph Review again or duplicating the Source.
+
+Inspect each case result separately. Record behaviour-dependent results as `not evaluated` when the candidate cannot be invoked and semantic results as `unjudged` when no judge is supplied.
 
 ### Step 13 — Implement and prove the Graph Review GitHub profile/workflow
 
@@ -1187,4 +1203,4 @@ Checkpoint 4 closes only when:
 
 ---
 
-**Pactwright — Checkpoint 4 — Graph Review v19**
+**Pactwright — Checkpoint 4 — Graph Review v20**
