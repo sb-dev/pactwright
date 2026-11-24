@@ -58,11 +58,11 @@ Research logs are rationale only.
 
 ### Version 17 amendment
 
-[PDI-CP05 amendment review (#125)](https://github.com/sb-dev/pactwright/pull/125) covers CP04-S05 and CP04-S06. Graph Review §§8, 10–12 and 15 govern execution provenance and the Findings from shared-requirement reviews.
+[PDI-CP05 amendment review (#125)](https://github.com/sb-dev/pactwright/pull/125) covers CP04-S05 and CP04-S06. Graph Review §§7–8, 10–12 and 15 govern the replay base, execution provenance and the Findings from shared-requirement reviews.
 
 | Step | Version 17 prose SHA-256 (Spec 00 §2) |
 | --- | --- |
-| CP04-S05 | `ed91509a839eeb5c2301beb8361eae0c1f30615f3ea17ba18340d6ea296b7234` |
+| CP04-S05 | `722293930a58d434f273f8d21abb2526275e77074a1469cc712ae250c8ec30ab` |
 | CP04-S06 | `71f6c45645034e22585d1a7b1600e1ee4c14ff40b0ac95ef4a3f6b30f0ef90e2` |
 
 ### Kakeibo
@@ -351,7 +351,7 @@ Add a fixture Extension with a registered canonical record/edge type and prove p
 
 ### Step 5 — Implement immutable Review Execution records
 
-**References:** Spec 04 §§8 and 15 for Review Execution and shared requirements; Implementation Guide replay provenance.
+**References:** Spec 04 §§7–8 and 15 for the replay base, Review Execution and shared requirements; Implementation Guide replay provenance.
 
 **Run**
 
