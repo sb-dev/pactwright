@@ -1,6 +1,6 @@
 # Pactwright — Checkpoint 4 — Graph Review
 
-**Version:** 18\
+**Version:** 19\
 **Entry condition:** Checkpoint 3 is accepted.\
 **Release:** `0.0.5`\
 **Exit capability:** Pactwright and Kakeibo can run reproducible specialist Graph Reviews over registered Project Graph state, retain immutable Review Execution provenance, route every successful Finding through Project Intelligence, and turn accepted Project Intelligence consequences motivated by Findings into normal governed Delivery.
@@ -73,6 +73,16 @@ Research logs are rationale only.
 | --- | --- |
 | CP04-S07 | `278f34cbcc2365de8a0c6be1bc3b4aee3f90697e24745fd87327b43046cbd710` |
 | CP04-S08 | `341caf0e83ba3a5ee8dc2fe309b5bba05638aabc3f5cb7c4761c61296b2e4239` |
+
+### Version 19 amendment
+
+[PDI-CP05 amendment review (#127)](https://github.com/sb-dev/pactwright/pull/127) covers CP04-S09–CP04-S11. Graph Review §§7–8, 13, 15–16 and 18–20 define the evidence and revision boundaries for replay, validation and reporting. Core §56 and Distribution §12 own the replay base and environment identity. PI §18 governs research ingestion.
+
+| Step | Version 19 prose SHA-256 (Spec 00 §2) |
+| --- | --- |
+| CP04-S09 | `4437067707574981f8140b8d7957772c23c930775b997a8a4d37638a045df214` |
+| CP04-S10 | `d54801b33541fa35b31d180a814bfd78a9e4f27eff6090ba76f728fbce349266` |
+| CP04-S11 | `fc8c29cf5f695e0c9e4d9f24e8923924baa809d3192137465dc114e2fd5c7c82` |
 
 ### Kakeibo
 
@@ -513,7 +523,7 @@ Exercise both failure points with the Step 7 hand-offs. Interrupt ingestion of t
 
 ### Step 9 — Implement new run and pinned/current rerun
 
-**References:** Specs 01, 02 and 04 replay/rerun semantics.
+**References:** Core §56 for the replay base, Distribution §12 for environment identity, and Graph Review §§7–8, 15–16 and 19 for shared requirements and reruns.
 
 **Run**
 
@@ -554,12 +564,14 @@ Exercise:
 - repository revision that does not derive the recorded Project Graph revision => explicit failure;
 - unavailable historical environment => explicit failure;
 - explicit current-state rerun with a new replay base;
-- every rerun creates a new immutable Review Execution;
+- every rerun attempted after successful preflight creates a new immutable Review Execution; a replay-base refusal creates none;
 - no failed pinned replay silently substitutes current repository/environment state.
+
+Start with the Step 4 missing-proof fixture. At a later committed revision, add a combined check that contradicts the same requirement. Keep the component checks passing. Rerun the original request in both modes from clean inputs. Inspect the resolved scope and supporting records: pinned replay must expose the original proof gap, while `--current` must expose the later contradictory result under its new base. Compare record identities and revisions without requiring identical model wording. Preserve the original execution and Finding.
 
 ### Step 10 — Implement the complete validator and derived-report failure guards
 
-**References:** Spec 04 sections 18–20, derived reports, failure and validation.
+**References:** Spec 04 §§15–16 and 18–20 for shared requirements, reruns, derived reports, failure and validation.
 
 **Run**
 
@@ -580,7 +592,8 @@ Implement `pactwright graph-review validate` to enforce all canonical minimum ru
 12. Graph Review does not directly mutate sibling-owned canonical records;
 13. pinned reruns identify and resolve the original complete replay base;
 14. current-state reruns are explicitly marked and record their new replay base;
-15. generated reports identify their source Project Graph revision and relevant Review Execution provenance.
+15. generated reports identify their source Project Graph revision and relevant Review Execution provenance;
+16. unavailable replay-base identities refuse before invocation or execution effects. An agent failure after preflight records a failed execution without Findings. A second pinned attempt with uncommitted prior provenance refuses without another execution.
 ```
 
 Core `pactwright validate` invokes Graph Review validation when enabled and does not reinterpret Graph Review semantics itself. Validation is read-only. Test skill-environment membership with representative resolved-environment fixtures here and repeat with actual external imports in Checkpoint 5.
@@ -599,9 +612,11 @@ Maintain positive fixtures and a failing fixture mapped to every numbered rule o
 
 For each implemented report path, compare repeated generation from identical inputs; verify current versus explicitly pinned source-revision stamps. Inject render/write failures and compare before/after hashes for Project Graph records, Review Executions, Findings and PI Sources/Knowledge. All must remain unchanged, and retrying only report generation must not rerun specialist analysis or duplicate hand-offs.
 
+Use the Step 9 revisions to validate historical support. The original missing-proof Finding remains valid when the later check exists only at the current revision. In a separate invalid fixture, make a historical Finding cite that later check as evidence at the original revision. Both validators must reject the reference and preserve the fixture state. In a report generated at the current revision, identify the original reviewed revision separately from the report source revision.
+
 ### Step 11 — Keep external research provenance bounded
 
-**References:** Specs 03 and 04 research/external-evidence boundaries.
+**References:** Spec 03 §18 for research ingestion and Spec 04 §§13, 15–16 for external evidence, shared requirements and replay.
 
 **Run**
 
@@ -625,6 +640,8 @@ External research can support a Finding without becoming hidden accepted project
 **Verify before continuing**
 
 Use fixture external-evidence input and verify provenance is recorded. If evidence required by the original review cannot be reconstructed, pinned replay must **fail explicitly** rather than merely warn or substitute a current external source. An explicit `--current` rerun may gather current evidence under a new Review Execution.
+
+Give the missing-proof fixture an external reference describing the expected behaviour, but no result from a check on the assembled output at the reviewed revision. Require the reviewer to report the missing combined proof and distinguish the external claim from the component Evidence. If the Finding relies on the external input, inspect its provenance in the Review Execution. A later version of the reference cannot stand in for the original input on pinned replay.
 
 ## Stage 5 — Evaluation and GitHub integration
 
@@ -1170,4 +1187,4 @@ Checkpoint 4 closes only when:
 
 ---
 
-**Pactwright — Checkpoint 4 — Graph Review v18**
+**Pactwright — Checkpoint 4 — Graph Review v19**
