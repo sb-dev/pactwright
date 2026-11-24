@@ -1,6 +1,6 @@
 # Pactwright — Checkpoint 5 — Production Skills + Assets / Publication
 
-**Version:** 18\
+**Version:** 19\
 **Entry condition:** Checkpoint 4 is accepted.\
 **Release:** `0.0.6`\
 **Exit capability:** Pactwright and Kakeibo can resolve exact external Production Skills and Production Extension Packs through the selected Agent Pack during normal Delivery, then turn successful Delivery Evidence into exact human-approved Assets and real Publications without introducing a second production lifecycle.
@@ -54,6 +54,15 @@ Production-domain behaviour comes from the selected external Production Skills r
 Kakeibo acceptance uses the current canonical Kakeibo specifications in its existing repository. Kakeibo denotes the same longitudinal acceptance project as Checkpoints 1–4 and the Implementation Guide; this checkpoint does not rename the project or change its repository identity.
 
 Research logs are rationale only.
+
+### Version 19 amendment
+
+[PDI-CP06 amendment review (#122)](https://github.com/sb-dev/pactwright/pull/122) covers CP05-S20 and CP05-S21. Assets and Publication §§7, 10–11 and 13–16 govern approval, grounding and release records. Project Organisation §§13–14, 18, 20 and 24 govern the public lesson, executable example and readiness checks.
+
+| Step | Version 19 prose SHA-256 (Spec 00 §2) |
+| --- | --- |
+| CP05-S20 | `a79809cff406c77fa95d41bc04326ece48dd672a6ab920cd69038225c31baad4` |
+| CP05-S21 | `f66ce7fc930e9ee5e5065c9d3e6a3c9a00428d8364043067b2ef386d6d647a4b` |
 
 ### Version 18 amendment
 
@@ -1011,7 +1020,9 @@ Run relevant domain evaluations under their owning repositories and `pnpm pactwr
 
 **Run**
 
-Use Step 19's public output to prove the first **grounded approved Pactwright public Asset**. After a human inspects the exact successful output:
+Use Step 19's public output to prove the first **grounded approved Pactwright public Asset**. Select the release content from the corrected launch or positioning package identified by Step 19's closing Evidence. Trace its public claims to the accepted Knowledge used in the combined review. Exclude the rejected draft. If several outputs have independent approval or release requirements, identify each Asset separately. Before approval, compare the proposed release bytes with the selected output from Evidence. A changed claim or visual must go back through the applicable Delivery correction and review before it can be approved.
+
+After a human inspects the exact successful output:
 
 ```bash
 pnpm pactwright assets approve-asset <evidence-id>
@@ -1032,7 +1043,7 @@ Canonical Evidence leads to a separate grounded human-approved Asset and a real 
 
 **Verify before continuing**
 
-Verify approved bytes/hash, required Knowledge ids/hashes, matching Publication hash, actual publisher/time/channel/locator and candidate exclusion. Existing Evidence remains unchanged; subsequent grounding changes cannot silently rewrite historical Asset/Publication records.
+Verify approved bytes/hash, required Knowledge ids/hashes, matching Publication hash, actual publisher/time/channel/locator and candidate exclusion. Read back the release at its channel locator and match it to the approved content. Report Contract fulfilment, release and observed effect separately. Where outcome evidence is unavailable, report the effect as unknown. Later observations belong to Operations and any change of direction follows PI governance. Existing Evidence remains unchanged; subsequent grounding changes cannot silently rewrite historical Asset/Publication records.
 
 ## Stage 7 — Publish the Production Skills + Assets / Publication learning path
 
@@ -1051,6 +1062,8 @@ Assets / Publication guide/example
 Academy production lesson
 README/website capability summary
 ```
+
+Use the Step 19–20 package as the worked example. Identify the supported entry, accepted external skill revisions and shared inputs needed to reproduce the specialist work. Show how to inspect the combined review, the failed requirement, the corrected output and its closing Evidence. Trace that output through human approval to the actual Publication. Reference the recorded release when demonstrating the trace so readers can check it without publishing again. If a required integration or skill is unavailable, name the missing input and upstream owner and mark that part of the exercise blocked.
 
 The examples may share one end-to-end scenario, but both production and post-Delivery boundaries must be executable and covered in CI where practical. Explain:
 
@@ -1073,7 +1086,7 @@ Users can reproduce specialised production and durable publication without confl
 
 **Verify before continuing**
 
-Run examples and Graph Review over the new public material. Triage all Findings through PI and resolve blocking inconsistencies through normal Delivery. Public claims and supported automation guidance must match actual checkpoint acceptance.
+Run examples and Graph Review over the new public material. Triage all Findings through PI and resolve blocking inconsistencies through normal Delivery. Check the lesson and capability summary against the example's Evidence, Asset and Publication. Claim an audience effect only if supported by an actual observation. Public claims and supported automation guidance must match actual checkpoint acceptance.
 
 ## Stage 8 — Release `0.0.6`
 
@@ -1330,4 +1343,4 @@ Checkpoint 5 closes only when:
 
 ---
 
-**Pactwright — Checkpoint 5 — Production Skills + Assets / Publication v18**
+**Pactwright — Checkpoint 5 — Production Skills + Assets / Publication v19**
