@@ -57,7 +57,7 @@ Research logs are rationale only.
 
 ### Version 18 amendment
 
-[PDI-CP06 amendment review (#121)](https://github.com/sb-dev/pactwright/pull/121) covers CP05-S19. Core governs Delivery Review and corrective transitions. Agent Methodology §§3, 5–7 and 11 govern Director routing, shared specialist inputs and independent review.
+[PDI-CP06 amendment review (#121)](https://github.com/sb-dev/pactwright/pull/121) covers CP05-S19. Core §§13, 30 and 32–34 govern Delivery Review and corrective transitions. Agent Methodology §§3, 5–7 and 11 govern Director routing, shared specialist inputs and independent review.
 
 | Step | Version 18 prose SHA-256 (Spec 00 §2) |
 | --- | --- |
