@@ -1,6 +1,6 @@
 # Pactwright — Checkpoint 4 — Graph Review
 
-**Version:** 16\
+**Version:** 17\
 **Entry condition:** Checkpoint 3 is accepted.\
 **Release:** `0.0.5`\
 **Exit capability:** Pactwright and Kakeibo can run reproducible specialist Graph Reviews over registered Project Graph state, retain immutable Review Execution provenance, route every successful Finding through Project Intelligence, and turn accepted Project Intelligence consequences motivated by Findings into normal governed Delivery.
@@ -55,6 +55,15 @@ Research logs are rationale only.
 | CP04-S02 | `d3dd2681c29cce40dabd431ec68a2d6ea355f2ce386a74b905d2f8b72d67c308` |
 | CP04-S03 | `dc0a0625435f57e9f6036db8cc5e6bd81842812ce8e35cada2a2801035103902` |
 | CP04-S04 | `e66fc9380700b9382345c2a9a19d4f17f8d4352fc029521bfa71197c404431f2` |
+
+### Version 17 amendment
+
+[PDI-CP05 amendment review (#125)](https://github.com/sb-dev/pactwright/pull/125) covers CP04-S05 and CP04-S06. Graph Review §§8, 10–12 and 15 govern execution provenance and the Findings from shared-requirement reviews.
+
+| Step | Version 17 prose SHA-256 (Spec 00 §2) |
+| --- | --- |
+| CP04-S05 | `ed91509a839eeb5c2301beb8361eae0c1f30615f3ea17ba18340d6ea296b7234` |
+| CP04-S06 | `71f6c45645034e22585d1a7b1600e1ee4c14ff40b0ac95ef4a3f6b30f0ef90e2` |
 
 ### Kakeibo
 
@@ -342,7 +351,7 @@ Add a fixture Extension with a registered canonical record/edge type and prove p
 
 ### Step 5 — Implement immutable Review Execution records
 
-**References:** Spec 04 Review Execution/replay base; Implementation Guide replay provenance.
+**References:** Spec 04 §§8 and 15 for Review Execution and shared requirements; Implementation Guide replay provenance.
 
 **Run**
 
@@ -364,6 +373,7 @@ Every execution records at least:
 Store execution provenance in an implementation-owned repository location outside normal Project Graph traversal. A repository-local `.pactwright/executions/graph-reviews/` layout is acceptable as an implementation choice, but is not new canonical semantics.
 
 An attempt starts only after complete replay-base preflight. A missing or unavailable identity refuses before agent invocation and creates no Review Execution or Findings. Failed attempts after successful preflight still create Review Execution provenance against that base.
+For a shared requirement, retain the bounded review question and the resolved scope from Step 4 against the verified replay base. A failed check on the assembled output is evidence for the reviewer. It does not make the Review Execution itself a failed attempt.
 Partial/failed model output remains execution evidence only and never becomes a successful Finding.
 ```
 
@@ -375,11 +385,13 @@ Every attempted review is explainable against an exact replay base without makin
 
 Run deterministic request/config failure, agent failure and successful execution fixtures. All attempts record immutable provenance; failed executions have no Findings; later attempts/reruns create new executions rather than mutate the original.
 
+Exercise both Step 4 fixtures. For each successful review, read back the execution and use its recorded base, request and resolved scope to identify the component Evidence and the combined result or its absence. Check that the execution references the Findings from that attempt. With the same inputs and an agent failure after preflight, require a failed execution with no Findings.
+
 ## Stage 3 — Implement Findings and PI governance
 
 ### Step 6 — Implement Finding output and severity neutrality
 
-**References:** Spec 04 Finding/severity semantics; Spec 03 triage boundary.
+**References:** Spec 04 §§10–12 and 15 for Findings, severity and shared requirements; Spec 03 triage boundary.
 
 **Run**
 
@@ -396,6 +408,8 @@ A Finding records:
 - originating Review Execution.
 
 Findings remain Review Execution outputs, not normal Project Graph nodes and not accepted project truth.
+
+For a shared requirement, name the requirement, cite the supporting records, identify the accountable owner and give the next permitted action. Report "combined check failed" when the recorded check contradicts the requirement and "combined proof missing" when the required result is absent.
 
 Do not suppress duplicate-looking Findings in Graph Review; PI triage owns duplicate/corroboration consequence.
 
@@ -424,6 +438,8 @@ advisory Finding
 ```
 
 PI triage must determine consequence from current project state rather than Finding severity.
+
+Inspect the Findings from the two successful Step 5 fixtures. Both must cite passing component Evidence. The failure Finding must cite the contradictory assembled result at the reviewed revision and identify the correction permitted by the governing Contract and Brief. The missing-proof Finding must identify the gap and direct the owner to obtain the required check. If the Contracts do not cover the requirement, require an owning decision before new work. Confirm that emitting the Findings preserves the member Deliveries, their Evidence and the authority of independent Delivery Review.
 
 ### Step 7 — Implement Finding → Project Intelligence Source hand-off
 
@@ -1141,4 +1157,4 @@ Checkpoint 4 closes only when:
 
 ---
 
-**Pactwright — Checkpoint 4 — Graph Review v16**
+**Pactwright — Checkpoint 4 — Graph Review v17**
