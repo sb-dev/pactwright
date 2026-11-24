@@ -1,6 +1,6 @@
 # Pactwright — Checkpoint 5 — Production Skills + Assets / Publication
 
-**Version:** 17\
+**Version:** 18\
 **Entry condition:** Checkpoint 4 is accepted.\
 **Release:** `0.0.6`\
 **Exit capability:** Pactwright and Kakeibo can resolve exact external Production Skills and Production Extension Packs through the selected Agent Pack during normal Delivery, then turn successful Delivery Evidence into exact human-approved Assets and real Publications without introducing a second production lifecycle.
@@ -54,6 +54,14 @@ Production-domain behaviour comes from the selected external Production Skills r
 Kakeibo acceptance uses the current canonical Kakeibo specifications in its existing repository. Kakeibo denotes the same longitudinal acceptance project as Checkpoints 1–4 and the Implementation Guide; this checkpoint does not rename the project or change its repository identity.
 
 Research logs are rationale only.
+
+### Version 18 amendment
+
+[PDI-CP06 amendment review (#121)](https://github.com/sb-dev/pactwright/pull/121) covers CP05-S19. Core governs Delivery Review and corrective transitions. Agent Methodology §§3, 5–7 and 11 govern Director routing, shared specialist inputs and independent review.
+
+| Step | Version 18 prose SHA-256 (Spec 00 §2) |
+| --- | --- |
+| CP05-S19 | `c9311ec8b42a78430e6be6ac040c3afef3e75b0fbe9cdde4ad3884ab84edbc4d` |
 
 ### Version 17 amendment
 
@@ -954,7 +962,7 @@ Inspect domain-map/onboarding and the exact Knowledge/Sources used by the Brief/
 
 ### Step 19 — Deliver one real cross-domain Pactwright public output
 
-**References:** Specs 01–05 and selected Production Skills.
+**References:** Specs 01–05, Agent Methodology §§3, 5–7 and 11, and selected Production Skills.
 
 **Run**
 
@@ -969,6 +977,12 @@ Intent
 → Delivery Review using relevant skills
 → Evidence
 ```
+
+Use a bounded Pactwright launch or positioning package. Through the supported pack entry, have the Founder-style Director identify the audience, public claim and intended effect. Carry the selected direction into the normal Delivery operations. Give the business and research specialists and the creative specialists the same accepted PI Knowledge references and constraints. In the Contract and Brief, specify how the analysis, narrative and visual must work together for that audience.
+
+Run the business and research work with the accepted external skills and pass the resulting analysis and sources to the creative specialists. Produce the actual narrative and visual. Retain the exact pack and skill revisions, shared inputs, specialist outputs and reviewable combined package. If a required skill or integration is missing, name the input and upstream owner and record the blocked exercise.
+
+Use a separate review invocation to inspect the package against the Contract, Brief, shared inputs and domain evaluations. Exercise a combined failure, such as a visual that implies a stronger claim than the analysis supports even though each component passes its own checks. Require the reviewer to identify the failed requirement and affected output and request correction at a named step in the selected Delivery shape. Preserve unaffected work, correct the conflict and independently review the revised package before recording successful Evidence.
 
 Candidate/draft outputs remain production/execution artefacts. Where useful, follow the owning Production Skills' cheap-to-expensive practice:
 
@@ -989,7 +1003,7 @@ Specialised cross-domain work completes at valid canonical Evidence independentl
 
 **Verify before continuing**
 
-Run relevant domain evaluations under their owning repositories and `pnpm pactwright validate`. Confirm no domain-specific Pactwright nodes/capabilities, no weakened Contract/Brief authority, and valid Evidence before any Asset exists.
+Run relevant domain evaluations under their owning repositories and `pnpm pactwright validate`. Confirm no domain-specific Pactwright nodes/capabilities, no weakened Contract/Brief authority, and valid Evidence before any Asset exists. Trace the combined requirement from the shared direction through the specialist handoffs, failed review, governed correction and successful review to the exact package in Evidence. Record the intended effect separately. Any later observation belongs to Operations and any resulting direction change follows PI governance.
 
 ### Step 20 — Approve the first grounded public Asset and record its Publication
 
@@ -1316,4 +1330,4 @@ Checkpoint 5 closes only when:
 
 ---
 
-**Pactwright — Checkpoint 5 — Production Skills + Assets / Publication v17**
+**Pactwright — Checkpoint 5 — Production Skills + Assets / Publication v18**
