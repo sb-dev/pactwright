@@ -1,6 +1,6 @@
 # Pactwright — Checkpoint 4 — Graph Review
 
-**Version:** 15\
+**Version:** 16\
 **Entry condition:** Checkpoint 3 is accepted.\
 **Release:** `0.0.5`\
 **Exit capability:** Pactwright and Kakeibo can run reproducible specialist Graph Reviews over registered Project Graph state, retain immutable Review Execution provenance, route every successful Finding through Project Intelligence, and turn accepted Project Intelligence consequences motivated by Findings into normal governed Delivery.
@@ -45,6 +45,16 @@ Canonical Pactwright semantics come from:
 - [Kakeibo System-Level Acceptance Profile](./00-kakeibo-acceptance-profile.md)
 
 Research logs are rationale only.
+
+### Version 16 amendment
+
+[PDI-CP05 amendment review (#124)](https://github.com/sb-dev/pactwright/pull/124) covers CP04-S02–CP04-S04. Graph Review §§3–6 and 15 define the review responsibility, request, scope and shared-requirement assessment. PI §21 owns plan composition. Agent Methodology §§3 and 7 govern independent review and specialist handoffs.
+
+| Step | Version 16 prose SHA-256 (Spec 00 §2) |
+| --- | --- |
+| CP04-S02 | `d3dd2681c29cce40dabd431ec68a2d6ea355f2ce386a74b905d2f8b72d67c308` |
+| CP04-S03 | `dc0a0625435f57e9f6036db8cc5e6bd81842812ce8e35cada2a2801035103902` |
+| CP04-S04 | `e66fc9380700b9382345c2a9a19d4f17f8d4352fc029521bfa71197c404431f2` |
 
 ### Kakeibo
 
@@ -230,7 +240,7 @@ Also prove:
 
 ### Step 2 — Add `graph-review` to `@pactwright/standard`
 
-**References:** Spec 02 Agent Pack/capability model; Spec 04 one-capability and Production Skills rules.
+**References:** Spec 02 §§4–6 and 8, Spec 04 §§3–4 and 15, and Spec 09 §§3 and 7.
 
 **Run**
 
@@ -242,6 +252,8 @@ Implement a generic Graph Review agent that consumes:
 - runtime-resolved Graph Review context/scope;
 - accepted relevant Project Intelligence context;
 - one or more relevant skills already resolved from the selected Agent Pack.
+
+For a shared requirement, invoke the selected pack’s graph-review agent separately from the producers. Give that invocation the governing requirement and the resolved project and Delivery records needed to assess the assembled result. The reviewer reaches its own assessment. Only the owning Delivery Review can accept the delivered work for closure at Evidence.
 
 Do not create architecture-review, ux-review, product-review, cost-review or other Pactwright capabilities.
 Do not introduce reviewer identities as canonical configuration.
@@ -260,13 +272,14 @@ Repeat Step 1's successful dependency lifecycle with the built/packed standard A
 - standard supplies the complete capability set;
 - a pack lacking `graph-review` fails activation without mutating the valid environment;
 - a fixture resolved environment exposes multiple relevant direct skills to one Graph Review without additional Pactwright capabilities;
+- with supplied fixture context, a separate graph-review invocation can identify a mismatch between the assembled result and its governing requirement even when both producer reports say their components passed. Inspect the invocation inputs and assessment. Confirm the member Deliveries and their Evidence are unchanged;
 - Production Skill technique quality remains outside Pactwright evaluation ownership.
 
 ## Stage 2 — Implement request, scope and immutable execution provenance
 
 ### Step 3 — Implement Graph Review request input
 
-**References:** Spec 04 review request and no-Review-Definition rule.
+**References:** Spec 04 §§5–6 and 15 for request input, registered scope and shared requirements.
 
 **Run**
 
@@ -279,6 +292,8 @@ Implement Graph Review request parsing for the canonical execution inputs suppor
 - constraints;
 - required output expectations.
 
+Use the existing request inputs to ask whether the assembled output satisfies a named shared requirement. Identify the relevant plan and member or integration Contracts where available. Ask for the supporting records and the result of the combined check. A caller need not know the result to request the review.
+
 The request is execution input, not Project Graph truth.
 
 Provide thin initial CLI input ergonomics for `pactwright graph-review run`; the exact flags/file encoding are implementation interface and must not introduce a persistent Review Definition model.
@@ -290,11 +305,11 @@ A user can request specialist Graph Review without creating a durable reviewer/c
 
 **Verify before continuing**
 
-Test valid, incomplete and malformed requests. Confirm requests create no Project Graph nodes and no persistent reviewer identity.
+Parse a bounded combined-review request and check that its question, targets, constraints and expected output reach scope resolution. Keep ordinary single-target requests valid. Test valid, incomplete and malformed requests. Confirm requests create no Project Graph nodes and no persistent reviewer identity.
 
 ### Step 4 — Implement registered-graph scope resolution
 
-**References:** Spec 04 review scope.
+**References:** Spec 04 §§6–8 and 15 for scope, revision and shared requirements, and Spec 03 §21 for the reviewed plan.
 
 **Run**
 
@@ -313,6 +328,8 @@ Support whole-project and bounded review over applicable:
 
 Do not hard-code the current Extension list.
 Reading sibling Extension state never transfers ownership.
+
+For the requested shared requirement, resolve the reviewed plan and its grounding where available. Trace coverage to the governing member Contracts or separate integration Contract, applicable Briefs and component Evidence. Identify the check on the assembled output at the reviewed revision if one exists. Keep the source record identities with the context so the reviewer can cite what was checked.
 ```
 
 **Expected result**
@@ -321,7 +338,7 @@ Graph Review automatically understands compatible future registered canonical re
 
 **Verify before continuing**
 
-Add a fixture Extension with a registered canonical record/edge type and prove project-wide scope can include it without Graph Review engine changes. Invalid requested scope must fail before specialist analysis begins.
+Add a fixture Extension with a registered canonical record/edge type and prove project-wide scope can include it without Graph Review engine changes. Invalid requested scope must fail before specialist analysis begins. Use paired fixtures with passing component Evidence. In one, the assembled check contradicts the shared requirement. In the other, the check is absent. Inspect the resolved inputs: the first contains the conflicting result and the second exposes the gap. A valid scope with missing proof must reach the reviewer. Neither fixture may substitute a component result or an unrelated revision for the combined check.
 
 ### Step 5 — Implement immutable Review Execution records
 
@@ -1124,4 +1141,4 @@ Checkpoint 4 closes only when:
 
 ---
 
-**Pactwright — Checkpoint 4 — Graph Review v15**
+**Pactwright — Checkpoint 4 — Graph Review v16**
