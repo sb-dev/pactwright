@@ -1,6 +1,6 @@
 # Pactwright — Checkpoint 5 — Production Skills + Assets / Publication
 
-**Version:** 19\
+**Version:** 20\
 **Entry condition:** Checkpoint 4 is accepted.\
 **Release:** `0.0.6`\
 **Exit capability:** Pactwright and Kakeibo can resolve exact external Production Skills and Production Extension Packs through the selected Agent Pack during normal Delivery, then turn successful Delivery Evidence into exact human-approved Assets and real Publications without introducing a second production lifecycle.
@@ -54,6 +54,16 @@ Production-domain behaviour comes from the selected external Production Skills r
 Kakeibo acceptance uses the current canonical Kakeibo specifications in its existing repository. Kakeibo denotes the same longitudinal acceptance project as Checkpoints 1–4 and the Implementation Guide; this checkpoint does not rename the project or change its repository identity.
 
 Research logs are rationale only.
+
+### Version 20 amendment
+
+[PDI-CP06 amendment review (#123)](https://github.com/sb-dev/pactwright/pull/123) covers CP05-S24–CP05-S26. The Kakeibo acceptance profile §9 defines the Kei foundation and its public output. Distribution §§5–8 and 12–16 govern the consumer environment. Agent Methodology §§5–7 govern entry, direction and specialist handoffs. Assets and Publication §§7, 10–11 and 13–16 govern approval and release.
+
+| Step | Version 20 prose SHA-256 (Spec 00 §2) |
+| --- | --- |
+| CP05-S24 | `6eaec9d24dd21d98918f06a43a21cb7a4d535d89a1d642dc638ecbe4cb5bfb88` |
+| CP05-S25 | `1cf55111c1f20a7a7cd60ebc2cbd338449ea99b1dc83837cbb555a12bfb415ac` |
+| CP05-S26 | `21d955f524c0ff8a97567caef5181a92a8f55efca9edfdf868f654990048e06f` |
 
 ### Version 19 amendment
 
@@ -1201,7 +1211,7 @@ Verify intermediate and final package/lock agreement, exact `0.0.6` runtime/stan
 
 ### Step 24 — Resolve skills for one real Kakeibo outcome through the selected Agent Pack
 
-**References:** current Kakeibo owner specs; Spec 02 Production Skills.
+**References:** current Kakeibo owner specs, Kakeibo acceptance profile §9, Distribution §§5–8 and 12–16, and Agent Methodology §§5–7.
 
 **Run**
 
@@ -1215,6 +1225,8 @@ narrative/content + UI/UX
 
 Choose only families required by the owning Kakeibo specs. Use imports/bindings already provided by the published selected pack, or explicitly select another compatible pack with `pactwright agent-pack use <source>` when genuinely needed. Such a later deliberate selection is distinct from the identity-preserving upgrade already verified in Step 23.
 
+Use the selected pack’s supported entry in the upgraded Kakeibo environment. Have the Director scope the two linked Deliveries in the Kakeibo acceptance profile §9: the bounded Kei foundation (A) and a public explanation or demonstration grounded in that foundation (B). Identify the audience, the claim to check and which specialist outputs B needs. Record the accepted external revision and binding for each required skill. If a skill or integration is missing, identify the missing input and its upstream owner and leave the dependent exercise blocked.
+
 Do not introduce a peer-level project Production Skills setting. Resolve/sync/lock exact external revisions and any selected packs through the chosen Agent Pack. Preserve external repositories.
 
 **Expected result**
@@ -1227,11 +1239,15 @@ Run doctor/validation, inspect exact locks and compare the runtime-supplied loca
 
 ### Step 25 — Deliver the Kakeibo outcome through normal Delivery
 
-**References:** current Kakeibo canonical specs; Specs 01–03.
+**References:** current Kakeibo canonical specs, Kakeibo acceptance profile §9, Specs 01–03 and Agent Methodology §§3 and 5–7.
 
 **Run**
 
 Use normal Contract-driven Delivery with the selected skills and current governing specifications. Preserve deterministic financial authority, product/UX constraints, assistant uncertainty/authority boundaries, technical/security/privacy constraints and other applicable invariants.
+
+Complete Delivery A and its required offline gates before producing B. Give B’s specialists the same accepted direction, exact Kei release identity, public source and applicable evaluation results. Exercise the selected skills on the actual public material. Retain their outputs and the revisions used.
+
+Have a separate reviewer assess the combined material against B’s Contract and Brief and A’s accepted capabilities. Exercise a mismatch that component checks can miss, such as accurate explanatory text paired with a visual that presents Kei as a financial adviser. Identify the unsupported claim and its owning output. Route the correction to the declared Delivery step, preserve valid work and review the corrected material against the same inputs before closing B at Evidence.
 
 For public/outbound work, apply the existing readiness gate and current Source-traceable grounding before approval.
 
@@ -1245,9 +1261,11 @@ Run repository-defined tests, relevant independently owned domain evaluations an
 
 ### Step 26 — Create a Kakeibo Asset/Publication where durable identity is useful
 
-**References:** Spec 05; current Kakeibo product/public-surface specs.
+**References:** Spec 05 §§7, 10–11 and 13–16, Kakeibo acceptance profile §9 and current Kakeibo product/public-surface specs.
 
 **Run**
+
+Use Delivery B’s independently reviewed Kei explanation or demonstration for this proof. Trace its claims to A’s accepted implementation and offline evaluations. Check the public/private boundary against Kakeibo’s owning specifications, including the exclusion of raw production financial traces.
 
 For an output that warrants independent durable identity, satisfy applicable public readiness/grounding and human-approve its exact successful output:
 
@@ -1270,7 +1288,7 @@ Kakeibo proves the abstraction on a semantically useful durable output, not mech
 
 **Verify before continuing**
 
-Inspect exact hash, human approval, applicable Knowledge grounding, channel/locator/publisher/time and Publication relationship direction. Require no Evidence→Publication shortcut, no candidate promoted without approval and no rewriting of prior Evidence.
+Inspect exact hash, human approval, applicable Knowledge grounding, channel/locator/publisher/time and Publication relationship direction. Read back the released content at the recorded locator and compare it with the human-approved output. Report B’s fulfilment, its release and any observed audience effect separately. If there is no observation, report the effect as unknown. Route later observations through Operations and any proposed direction change through PI. Require no Evidence→Publication shortcut, no candidate promoted without approval and no rewriting of prior Evidence.
 
 ## Stage 10 — Capture Checkpoint 5 feedback
 
@@ -1343,4 +1361,4 @@ Checkpoint 5 closes only when:
 
 ---
 
-**Pactwright — Checkpoint 5 — Production Skills + Assets / Publication v19**
+**Pactwright — Checkpoint 5 — Production Skills + Assets / Publication v20**
