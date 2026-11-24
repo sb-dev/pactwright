@@ -1,6 +1,6 @@
 # Pactwright — Checkpoint 4 — Graph Review
 
-**Version:** 17\
+**Version:** 18\
 **Entry condition:** Checkpoint 3 is accepted.\
 **Release:** `0.0.5`\
 **Exit capability:** Pactwright and Kakeibo can run reproducible specialist Graph Reviews over registered Project Graph state, retain immutable Review Execution provenance, route every successful Finding through Project Intelligence, and turn accepted Project Intelligence consequences motivated by Findings into normal governed Delivery.
@@ -64,6 +64,15 @@ Research logs are rationale only.
 | --- | --- |
 | CP04-S05 | `722293930a58d434f273f8d21abb2526275e77074a1469cc712ae250c8ec30ab` |
 | CP04-S06 | `71f6c45645034e22585d1a7b1600e1ee4c14ff40b0ac95ef4a3f6b30f0ef90e2` |
+
+### Version 18 amendment
+
+[PDI-CP05 amendment review (#126)](https://github.com/sb-dev/pactwright/pull/126) covers CP04-S07 and CP04-S08. Graph Review §§11 and 15 govern hand-off of shared-requirement Findings. PI §§6, 14, 25 and 29 govern Source provenance, triage and retry.
+
+| Step | Version 18 prose SHA-256 (Spec 00 §2) |
+| --- | --- |
+| CP04-S07 | `278f34cbcc2365de8a0c6be1bc3b4aee3f90697e24745fd87327b43046cbd710` |
+| CP04-S08 | `5f83cd7254727f059c3567f349d322925f351729f473d107b3e9869a13081187` |
 
 ### Kakeibo
 
@@ -443,7 +452,7 @@ Inspect the Findings from the two successful Step 5 fixtures. Both must cite pas
 
 ### Step 7 — Implement Finding → Project Intelligence Source hand-off
 
-**References:** Specs 03 and 04 internal Source boundary.
+**References:** Spec 03 §§6, 14 and 25 for internal Sources and triage, and Spec 04 §§11 and 15 for Finding governance and shared requirements.
 
 **Run**
 
@@ -472,9 +481,11 @@ Every successful Finding enters the same governed PI Source path and no Finding 
 
 Run a successful review with multiple Findings and confirm one internal Source hand-off per Finding with the non-canonical execution-output provenance shape established by Checkpoint 3.
 
+Use the two Step 6 Findings to check the hand-off. From each printed Source id, trace back to the immutable Finding and its Review Execution. Verify that the recipient can recover the shared requirement, supporting records, accountable owner and next permitted action. The Source for "combined check failed" must lead to the contradictory result. The Source for "combined proof missing" must lead to the records that establish the gap. Inspect the member Deliveries and their Evidence after ingestion. They must retain their prior state. PI triage owns any subsequent disposition.
+
 ### Step 8 — Implement retryable hand-off failure
 
-**References:** Specs 03, 04 and 07 failure/idempotency.
+**References:** Spec 03 §29 for Source identity and ingestion failure, Spec 04 §§11 and 15 for retry of a shared-requirement Finding hand-off, and Spec 07 §35 for automation failure.
 
 **Run**
 
@@ -495,6 +506,8 @@ PI availability failure does not invalidate or repeat successful specialist anal
 **Verify before continuing**
 
 Simulate failed acknowledgement/retry and prove the review is not rerun and the Source path converges without duplicate canonical Sources. The retry must use the existing immutable Finding identity/hash.
+
+Exercise both failure points with the Step 7 hand-offs. Interrupt ingestion of the failed-check Finding before its Source is written. For the missing-proof Finding, interrupt acknowledgement after PI writes the Source and retain that Source id for comparison. Inspect the hand-off failure and retry each from its original Finding identity and content hash. The first retry must create the missing Source. The second must recover the existing Source id. Read back one Source per Finding, with the original supporting records and reviewed revision. Verify that both successful executions and their Findings are unchanged and that neither retry invokes the reviewer or changes Delivery state.
 
 ## Stage 4 — Implement replay, validation and external-evidence boundaries
 
@@ -1157,4 +1170,4 @@ Checkpoint 4 closes only when:
 
 ---
 
-**Pactwright — Checkpoint 4 — Graph Review v17**
+**Pactwright — Checkpoint 4 — Graph Review v18**
