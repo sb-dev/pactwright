@@ -67,12 +67,12 @@ Research logs are rationale only.
 
 ### Version 18 amendment
 
-[PDI-CP05 amendment review (#126)](https://github.com/sb-dev/pactwright/pull/126) covers CP04-S07 and CP04-S08. Graph Review §§11 and 15 govern hand-off of shared-requirement Findings. PI §§6, 14, 25 and 29 govern Source provenance, triage and retry.
+[PDI-CP05 amendment review (#126)](https://github.com/sb-dev/pactwright/pull/126) covers CP04-S07 and CP04-S08. Graph Review §§11, 15 and 19 govern hand-off of shared-requirement Findings and retry after failure. PI §§6, 14, 25 and 29 govern Source provenance, triage and retry.
 
 | Step | Version 18 prose SHA-256 (Spec 00 §2) |
 | --- | --- |
 | CP04-S07 | `278f34cbcc2365de8a0c6be1bc3b4aee3f90697e24745fd87327b43046cbd710` |
-| CP04-S08 | `5f83cd7254727f059c3567f349d322925f351729f473d107b3e9869a13081187` |
+| CP04-S08 | `341caf0e83ba3a5ee8dc2fe309b5bba05638aabc3f5cb7c4761c61296b2e4239` |
 
 ### Kakeibo
 
@@ -485,7 +485,7 @@ Use the two Step 6 Findings to check the hand-off. From each printed Source id, 
 
 ### Step 8 — Implement retryable hand-off failure
 
-**References:** Spec 03 §29 for Source identity and ingestion failure, Spec 04 §§11 and 15 for retry of a shared-requirement Finding hand-off, and Spec 07 §35 for automation failure.
+**References:** Spec 03 §29 for Source identity and ingestion failure, Spec 04 §§11, 15 and 19 for retry of a shared-requirement Finding hand-off, and Spec 07 §35 for automation failure.
 
 **Run**
 
