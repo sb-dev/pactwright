@@ -1,6 +1,6 @@
 # Pactwright — Checkpoint 6 — Operations
 
-**Version:** 16\
+**Version:** 17\
 **Entry condition:** Checkpoint 5 is accepted.\
 **Release:** `0.0.7`\
 **Exit capability:** Pactwright and Kakeibo can record real software exposure, predeclare controlled comparisons as immutable Experiments, collect bounded operational evidence, create durable Observations, route every canonical Observation through Project Intelligence, and prove governed corrective candidates without turning Operations into a telemetry store or second roadmap.
@@ -47,6 +47,14 @@ Canonical Pactwright semantics come from:
 The adopted Experiment amendment activates the generic Operations-owned `Experiment` concept for controlled production comparisons. It is optional controlled-evaluation state, not a mandatory Deployment or rollout stage.
 
 Research logs are otherwise rationale only. Kakeibo acceptance uses the current canonical Kakeibo specifications in its repository, not stale embedded copies.
+
+### Version 17 amendment
+
+[PDI-CP07 amendment review (#131)](https://github.com/sb-dev/pactwright/pull/131) covers CP06-S02. Operations §§10, 12–14 and 17 govern measured software outcomes, candidate Observations and the boundary between pack analysis, runtime and Project Intelligence.
+
+| Step | Version 17 prose SHA-256 (Spec 00 §2) |
+| --- | --- |
+| CP06-S02 | `dd43168092a26b0fe5f4e64a8313b8d9fea651a58f87229d158ea1dec9693a6f` |
 
 ### Kakeibo
 
@@ -188,7 +196,7 @@ Test incompatible dependencies and missing capabilities before canonical mutatio
 
 ### Step 2 — Add `operations-analysis` to `@pactwright/standard`
 
-**References:** Specs 02 capability/evaluation rules and 06 §17.
+**References:** Spec 02 capability/evaluation rules and Spec 06 §§10, 12–14 and 17.
 
 **Run**
 
@@ -208,6 +216,8 @@ Deterministic collection, hashing, exposure resolution, schema validation, dupli
 Do not require Production Skills or Deep Research Skills merely because they may help a particular project. Optional skills compose through the selected Agent Pack and cannot override Operations or PI semantics.
 ```
 
+For software outcome analysis, give the capability the exact Deployment identity and bounded evidence for its environment. For a rate, retain the counts, counting rule, window and source locator. Compare the result with the agreed target. Claim a change only when a comparable baseline supports it. Explain any coverage limits and their effect on confidence. Delivery Evidence establishes what was fulfilled. The measurement establishes what happened after exposure.
+
 **Expected result**
 
 The existing first-party pack satisfies Operations without another pack or a capability per operational domain.
@@ -215,6 +225,11 @@ The existing first-party pack satisfies Operations without another pack or a cap
 **Verify before continuing**
 
 Repeat Step 1's positive activation with the updated standard pack. A pack lacking `operations-analysis` must fail without changing the valid environment. Verify existing core and enabled-Extension capabilities still resolve; no silent pack switch or mandatory external skill is introduced.
+
+Exercise the pack responsibility with two labelled fixtures and inspect its proposed analysis before any runtime hand-off:
+
+- A fulfilled checkout Delivery has a Deployment with a first-hour failure-rate target of at most 1%. The source records 30 failed requests out of 1,000 checkout requests. Require a proposed Observation that links the Deployment and source, reports 3% against the target, and preserves the window and confidence limits. A change in request mix limits attribution. Without a comparable baseline, the result cannot establish a regression. The shortfall leaves the Delivery's fulfilment Evidence intact.
+- With the same target and Deployment, give the capability an incomplete sample that cannot establish the rate. Require it to identify the missing coverage and propose no Observation. Neither fixture authorises the capability to change Knowledge, create an Intent or start corrective work.
 
 ## Stage 2 — Implement operational exposure semantics
 
@@ -1319,4 +1334,4 @@ Checkpoint 6 closes only when:
 
 ---
 
-**Pactwright — Checkpoint 6 — Operations v16**
+**Pactwright — Checkpoint 6 — Operations v17**
