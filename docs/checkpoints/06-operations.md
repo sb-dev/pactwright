@@ -1,6 +1,6 @@
 # Pactwright — Checkpoint 6 — Operations
 
-**Version:** 18\
+**Version:** 19\
 **Entry condition:** Checkpoint 5 is accepted.\
 **Release:** `0.0.7`\
 **Exit capability:** Pactwright and Kakeibo can record real software exposure, predeclare controlled comparisons as immutable Experiments, collect bounded operational evidence, create durable Observations, route every canonical Observation through Project Intelligence, and prove governed corrective candidates without turning Operations into a telemetry store or second roadmap.
@@ -64,6 +64,16 @@ Research logs are otherwise rationale only. Kakeibo acceptance uses the current 
 | --- | --- |
 | CP06-S06 | `8339f3aa4a34880fd6979368e21f65cd79771f5210dea7599aa832950ce12c8e` |
 | CP06-S07 | `006fa38ce9028362cc2a5bba627799de002faa0adaf4f2385ad2fcc3829de23c` |
+
+### Version 19 amendment
+
+[PDI-CP07 amendment review (#133)](https://github.com/sb-dev/pactwright/pull/133) covers CP06-S08–CP06-S10. Operations §§9–13 and 21 govern Observation provenance, measured outcomes, supersession and retry. Project Intelligence owns internal Source ingestion and triage.
+
+| Step | Version 19 prose SHA-256 (Spec 00 §2) |
+| --- | --- |
+| CP06-S08 | `9d72612024945c29ccb7fa9d6fb291cf1039689edf1b6037f7302a328ee196b4` |
+| CP06-S09 | `20e81e835d28abb6d9961174953fcae1669f7c39155b2a09b4e952b43c6e35b8` |
+| CP06-S10 | `3bf17b2ef325818a22cc145324666294a180ef6c5f43bc460fbb998ca4c252bb` |
 
 ### Kakeibo
 
@@ -453,6 +463,8 @@ Positive and negative outcomes share one supported factual model without giving 
 
 Test all required fields and enum values, invalid/reversed windows, missing evidence, invalid exposure hash, positive/negative/mixed/neutral outcomes, baseline-dependent comparisons and unsupported causality. Prove `critical` is not automatically PI class 3, `advisory` can still have substantial governed consequences, and high-confidence Operations output is not automatically T0. PI judgement must use claim-relative evidence and current project state.
 
+Use the complete Step 7 checkout input to construct a fixture Observation for the Step 2 shortfall. Trace its exposure id and hash to the Deployment. Check that its finding and supporting evidence recover the first-hour window, counting rule, 30 failures in 1,000 requests, and the 1% target. Record 3% for that window and the request-mix limitation. The target alone cannot support a claim of regression or establish that deployment caused the failures. Check that the fulfilled Delivery retains its original Evidence.
+
 ### Step 9 — Implement bounded deduplication and explicit supersession
 
 **References:** Spec 06 §§9, 11, 21–22.
@@ -488,6 +500,8 @@ Repeated monitoring preserves evidence lineage without uncontrolled duplicate re
 
 Test exact retries, same-meaning/new-evidence matches, distinct exposures/windows, materially changed conditions and later resolution. Verify created/matched identities and additional evidence in new provenance, unchanged old records, valid supersession and rejected self/cyclic/cross-type edges. Report uncertain equivalence rather than silently merging distinct facts.
 
+Give the Step 8 fixture a second locator that corroborates the same first-hour result. Verify that the match retains the original Observation id and content hash. Then supply a comparable, complete later window for the same Deployment with 5 failures in 1,000 checkout requests. For this resolution case, record the later window as a new Observation and link it to the shortfall by explicit supersession. Check both windows independently: the later rate meets the target, the first still missed it, and neither record establishes what caused the change.
+
 ### Step 10 — Implement `observe`, immutable analysis provenance and PI hand-off
 
 **References:** Specs 03 §§5–7, 06 §§9, 13, 18, 21 and 07 concurrency/failure boundaries.
@@ -500,7 +514,7 @@ pactwright operations observe [<source-id>]
 
 Use operations-analysis only for interpretation of the identified bounded input. Runtime owns exposure resolution, validation and authorised atomic Observation/edge mutation.
 
-Every analysis attempt uses the execution-provenance contract from Step 6, including operation/source, graph revision, window, exposures, evidence locators, created/matched Observation identities, creation time and status/failure.
+Every analysis attempt uses the execution-provenance contract from Step 7, including operation/source, graph revision, window, exposures, evidence locators, created/matched Observation identities, creation time and status/failure.
 
 Failed analysis produces failed provenance and no canonical Observation, partial observes/supersedes edge or Source hand-off from failed output.
 Successful insufficient/unimportant evidence produces successful provenance and no Observation.
@@ -528,6 +542,10 @@ Collection failure, analysis failure, successful no-finding, matched finding, ne
 **Verify before continuing**
 
 Exercise each outcome through direct `observe`, not only `refresh`. Inject analysis and Observation-write failures; require failed provenance, unchanged canonical state and no partial edges. For created/matched Observations verify the provenance contract and Source identity. Test failed hand-off, lost acknowledgement and concurrent retry; Source ingestion must converge without duplicate Sources or rerunning analysis, and existing canonical changes must survive.
+
+Run the checkout fixtures through direct `observe`. For the supported shortfall, follow the internal Source back to the exact Observation, Deployment, execution and evidence locator. Interrupt the hand-off, then retry it from the same Observation id and hash. Verify that only one Source exists for that Observation. Operations owns recovery until hand-off succeeds. PI then owns triage. The Source gives PI evidence for a decision. It does not approve Knowledge, reopen the fulfilled Delivery or authorise corrective work.
+
+Use the truncated Step 7 input with coverage too limited to establish the rate. Require successful analysis that reports the missing coverage, with no Observation or internal Source from that attempt. Contrast this with Step 7's access failure: there is no collected input to analyse. Inspect the original failed collection rather than treating it as a successful no-finding analysis.
 
 ## Stage 5 — Implement derived corrective work and validation
 
@@ -1349,4 +1367,4 @@ Checkpoint 6 closes only when:
 
 ---
 
-**Pactwright — Checkpoint 6 — Operations v18**
+**Pactwright — Checkpoint 6 — Operations v19**
