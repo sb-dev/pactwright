@@ -1,6 +1,6 @@
 # Pactwright — Checkpoint 4 — Graph Review
 
-**Version:** 21\
+**Version:** 22\
 **Entry condition:** Checkpoint 3 is accepted.\
 **Release:** `0.0.5`\
 **Exit capability:** Pactwright and Kakeibo can run reproducible specialist Graph Reviews over registered Project Graph state, retain immutable Review Execution provenance, route every successful Finding through Project Intelligence, and turn accepted Project Intelligence consequences motivated by Findings into normal governed Delivery.
@@ -101,6 +101,15 @@ Research logs are rationale only.
 | CP04-S15 | `ab103f70b974ae1cbb892548a06fef3a332644acd6054707fbecda0254cd4779` |
 | CP04-S16 | `98ea8aca4eba209d34eb28215de24d3e78ab314127f9c3f1988fb0114f7be358` |
 | CP04-S17 | `1684519d909443204e5a97a7703981e8f86664967a5442fe894ddde6f5cdacc6` |
+
+### Version 22 amendment
+
+[PDI-CP05 amendment review (#130)](https://github.com/sb-dev/pactwright/pull/130) covers CP04-S20 and CP04-S21. Graph Review §§6–8, 10–11, 15–16 and 19 govern the combined check and retryable hand-off. PI §§21–22 and 25 govern plan and candidate context. Core §§13–14 and 33 govern independent Review, Evidence and correction. Kakeibo System-Level Acceptance Profile §8 owns the cross-spec exercise.
+
+| Step | Version 22 prose SHA-256 (Spec 00 §2) |
+| --- | --- |
+| CP04-S20 | `040e9cfc4f601a79f59585d82137586d5aa5967336dc117034f974b304347e11` |
+| CP04-S21 | `c92bd07b04c9f039dc807cdaae9945802d6644a6a037314ff915e439b7f16527` |
 
 ### Kakeibo
 
@@ -1057,7 +1066,7 @@ Also require compatibility/lock agreement after every operation, preserved ident
 
 ### Step 20 — Run cross-spec Kakeibo Graph Reviews
 
-**References:** current canonical Kakeibo specification corpus.
+**References:** Use the current canonical Kakeibo specification corpus and Kakeibo System-Level Acceptance Profile §8. Graph Review §§6–8, 10–11, 15 and 19 govern scope, revision, Findings and hand-off retry. PI §§21 and 25 govern plan context and Finding ingestion.
 
 **Run**
 
@@ -1115,6 +1124,10 @@ maturity / over-engineering:
 
 Use request perspectives/objectives, not persistent reviewer ids.
 
+Include a shared requirement in one of the bounded reviews. Supply the independent reviewer with the current Kakeibo owner and dependent specifications, the reviewed plan and grounding where available, the covering member Contracts or integration Contract, applicable Briefs and accepted component Evidence. Identify the repository and Project Graph revisions. Compare the accepted parts with a recorded check on the assembled output at those revisions.
+
+For example, an accepted financial-domain description and an accepted public example may disagree when read together about whether a suggested classification has been reviewed. Trace the public example through the owning rule. If the combined check records a contradiction, require a `combined check failed` Finding. If the required check has no result, require `combined proof missing` and identify the check to obtain. Cite the supporting records, accountable owner and next permitted action. A successful check needs no invented Finding. Keep the required failure demonstration outstanding until a recorded result shows it.
+
 **Expected result**
 
 Graph Review tests the seven-owner system as a coherent design while preserving each owner's authority, produces supported findings for real contradictions, omissions or unsafe boundary crossings, and does not flatten Kakeibo into generic Pactwright semantics.
@@ -1130,13 +1143,17 @@ Triage every resulting PI Source. No Finding itself becomes canonical Kakeibo tr
 - findings distinguish actual current defects from planned/future/open design choices;
 - no reviewer recommendation weakens explicit financial truth, privacy, advice or user-confirmation boundaries.
 
+Trace the shared-requirement Finding through its internal Source to the original execution, reviewed revision and supporting records. Exercise a hand-off interruption under Step 8. Retry using the same Finding identity and content hash. Verify one Source for that Finding, no repeat review and no change to the accepted component Evidence.
+
 ### Step 21 — Deliver one Kakeibo correction motivated by a governed Finding consequence
 
-**References:** Specs 01, 03, 04; current Kakeibo owner specs.
+**References:** Use the current Kakeibo owner specs and Kakeibo System-Level Acceptance Profile §8. Core §§13–14 and 33 govern Review, Evidence and correction. PI §§21–22 and 25 govern plan context and the corrective candidate. Graph Review §§11, 15–16 govern the Finding hand-off, combined check and current-state rerun.
 
 **Run**
 
 Select one supported Finding whose governed PI consequence justifies Delivery, then execute a normal explicit Intent → Evidence lineage.
+
+For the Step 20 shared requirement, name the Kakeibo semantic owner and the Delivery owner responsible for the assembled result. If an active Contract and Brief already cover the action, correct the contradiction or obtain the missing proof under that authority while PI handles the Source. If coverage is missing, route it for an owning decision before starting new work. Retain the explicit Intent-to-Evidence exercise for the governed candidate.
 
 **Expected result**
 
@@ -1162,6 +1179,8 @@ Trace the finding provenance end to end, run the Kakeibo repository-defined test
 - dependent specs integrate the corrected meaning without taking ownership;
 - the Kakeibo authority index remains consistent with the resulting authority map;
 - the current-state rerun no longer reports the corrected contradiction, or reports it as explicitly unresolved with evidence rather than silently treating it as fixed.
+
+Repeat the combined check against the resulting owner and dependent outputs. Record the checked revision and result alongside the original Finding, Source and component Evidence. Require independent Delivery Review of the assembled result before Evidence closes the integration Delivery. A clean Graph Review rerun alone cannot establish fulfilment. If the result is absent or still contradicts the requirement, record the open issue, owner and next action.
 
 ## Stage 10 — Capture Checkpoint 4 feedback
 
@@ -1227,4 +1246,4 @@ Checkpoint 4 closes only when:
 
 ---
 
-**Pactwright — Checkpoint 4 — Graph Review v21**
+**Pactwright — Checkpoint 4 — Graph Review v22**
