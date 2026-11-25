@@ -98,9 +98,9 @@ Research logs are rationale only.
 
 | Step | Version 21 prose SHA-256 (Spec 00 §2) |
 | --- | --- |
-| CP04-S15 | `e7b7fa83f3141d3b47e2ddc77b4889286c17acc1196cc946065bdb5f02176a8e` |
-| CP04-S16 | `48ac4469778b2cc7ac085692b207f954d2617c15a43c753c1838aefdb3f2fe7a` |
-| CP04-S17 | `4cd63e85cce62d0f7629508ed6fc8cacacf9110fa85de88b86c90a2d8d01ceea` |
+| CP04-S15 | `ab103f70b974ae1cbb892548a06fef3a332644acd6054707fbecda0254cd4779` |
+| CP04-S16 | `98ea8aca4eba209d34eb28215de24d3e78ab314127f9c3f1988fb0114f7be358` |
+| CP04-S17 | `1684519d909443204e5a97a7703981e8f86664967a5442fe894ddde6f5cdacc6` |
 
 ### Kakeibo
 
@@ -815,7 +815,7 @@ All validation passes, PI remains the recorded dependency, the shared Project re
 
 ### Step 15 — Run real Pactwright Graph Reviews
 
-**References:** Spec 04 review requests/scope; current canonical Pactwright Specs 01–08.
+**References:** Graph Review §§5–8 cover review requests, scope and revision. §§10–11, 15 and 19 cover shared-requirement Findings and hand-off retry. PI §§21–22 supply plan and candidate context. Use the current canonical Pactwright Specs 01–08 for the review subjects.
 
 **Run**
 
@@ -865,7 +865,7 @@ Trace each shared-requirement Finding to its internal Source and back to the rev
 
 ### Step 16 — Deliver one Pactwright correction motivated by Graph Review
 
-**References:** Specs 01, 03 and 04.
+**References:** Graph Review §§3, 11 and 15 define the review boundary and Finding hand-off. PI §§22 and 25 govern the candidate. Core §§13–14 and 33 govern independent Review, Evidence and correction.
 
 **Run**
 
@@ -909,7 +909,7 @@ For the assembled output, retain the original component Evidence and the initial
 
 ### Step 17 — Deliver current Graph Review documentation/example/Academy material
 
-**References:** Specs 03 and 08 Graph Review milestone/public-content readiness.
+**References:** PI §§11, 16–17 and 25 govern Knowledge approval, freshness, coverage and Finding ingestion. Open-Source Project Organisation §§13, 18 and 24 define Academy, public-content readiness and the Graph Review milestone.
 
 **Run**
 
