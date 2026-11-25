@@ -1,6 +1,6 @@
 # Pactwright — Checkpoint 4 — Graph Review
 
-**Version:** 20\
+**Version:** 21\
 **Entry condition:** Checkpoint 3 is accepted.\
 **Release:** `0.0.5`\
 **Exit capability:** Pactwright and Kakeibo can run reproducible specialist Graph Reviews over registered Project Graph state, retain immutable Review Execution provenance, route every successful Finding through Project Intelligence, and turn accepted Project Intelligence consequences motivated by Findings into normal governed Delivery.
@@ -91,6 +91,16 @@ Research logs are rationale only.
 | Step | Version 20 prose SHA-256 (Spec 00 §2) |
 | --- | --- |
 | CP04-S12 | `8a225c04a46dd3ae2905d80221165b003f69f41b4f650eeb678febe0553a5e2f` |
+
+### Version 21 amendment
+
+[PDI-CP05 amendment review (#129)](https://github.com/sb-dev/pactwright/pull/129) covers CP04-S15–CP04-S17. Graph Review §§3, 6–8, 10–11, 15 and 19 govern independent combined review and Finding hand-off. PI §§21–22 and 25 govern plan context and candidate routing. Core §§13–14 and 33 govern correction, Review and Evidence. Open-Source Project Organisation §§13 and 18 govern Academy and public-content readiness.
+
+| Step | Version 21 prose SHA-256 (Spec 00 §2) |
+| --- | --- |
+| CP04-S15 | `e7b7fa83f3141d3b47e2ddc77b4889286c17acc1196cc946065bdb5f02176a8e` |
+| CP04-S16 | `48ac4469778b2cc7ac085692b207f954d2617c15a43c753c1838aefdb3f2fe7a` |
+| CP04-S17 | `4cd63e85cce62d0f7629508ed6fc8cacacf9110fa85de88b86c90a2d8d01ceea` |
 
 ### Kakeibo
 
@@ -827,6 +837,10 @@ Run at least three bounded real reviews using review requests rather than review
 
 Invoke each through `pnpm pactwright graph-review run` using the implemented request-input interface.
 
+Include a shared requirement in a bounded Pactwright review. Use an independent reviewer and record the reviewed revision. Supply the reviewed plan and its grounding where available, the covering member Contracts or integration Contract, the Briefs and the accepted component Evidence. Ask whether the assembled output meets that same requirement. For example, two accepted public guides can still send a user through a sequence that fails when followed end to end.
+
+Retain the check on the assembled output at that revision. When its observed result contradicts the requirement, inspect the `combined check failed` Finding for the supporting records, accountable owner and permitted correction. When the result is absent, require `combined proof missing` and an owner to obtain the check. If the check succeeds, retain that result. Record any outstanding failed-check demonstration explicitly. The Step 12 evaluation cases cannot establish what happened in Pactwright's real review.
+
 **Expected result**
 
 Real Review Executions and supported Findings are created; every Finding from a successful review is handed to PI. Do not manufacture Findings to satisfy a count.
@@ -846,6 +860,8 @@ Confirm:
 - no review command directly changed canonical Knowledge or Delivery;
 - severity did not determine PI triage class;
 - duplicate/corroborating Findings were handled by PI rather than suppressed by Graph Review.
+
+Trace each shared-requirement Finding to its internal Source and back to the reviewed revision. Exercise Step 8's retry path at the ingestion boundary using an actual Finding. Read back one Source for that Finding after retry and verify that the original execution and Finding were preserved without invoking the reviewer again.
 
 ### Step 16 — Deliver one Pactwright correction motivated by Graph Review
 
@@ -868,9 +884,11 @@ explicitly capture Intent
 
 Do not describe the Finding itself as accepted truth. The accepted authority is governed PI meaning and/or the normal Delivery authority that follows it.
 
+For the Step 15 shared requirement, distinguish correction already covered by an active Contract and Brief from work that needs a new decision. The integration Delivery owner can correct a failed check or obtain missing proof under existing authority while PI handles the Source. If coverage is missing, route the gap for decision before starting the uncovered work. Use the Intent-to-Evidence path above for the accepted candidate that requires new Delivery.
+
 **Expected result**
 
-Graph Review affects Pactwright only through Finding → PI governance → explicit normal Delivery.
+The new Pactwright Delivery traces to a governed PI consequence. Existing Delivery work retains its governing Contract and Brief. Graph Review supplies Findings and leaves acceptance to independent Delivery Review.
 
 **Verify before continuing**
 
@@ -884,6 +902,8 @@ Review Execution
 → Intent
 → Evidence
 ```
+
+For the assembled output, retain the original component Evidence and the initial result or documented proof gap. Link the permitted action to its governing lineage. Read back the subsequent combined check, the independent Delivery Review and the Evidence for the reviewed output before reporting fulfilment. An open gap or another failed check keeps the shared requirement open.
 
 ## Stage 7 — Publish the Graph Review learning path
 
@@ -917,6 +937,8 @@ review of the existing public Pactwright corpus
 Ground public claims in accepted current PI Knowledge and actual Checkpoint 4 behaviour.
 Retain the applicable Knowledge used to ground the public Delivery.
 
+Use the Step 15–16 records to teach the shared-requirement case. In the executable example, show the bounded request, component Evidence, assembled-output check and the route from a supported Finding to PI. Explain when the owner corrects a defect and when the owner must first obtain proof. Identify any illustrative inputs separately from observed Pactwright results.
+
 Do not document Review Definitions, reviewer rosters or provider infrastructure.
 
 **Expected result**
@@ -926,6 +948,8 @@ Users can distinguish Delivery Review from Graph Review and execute a review fro
 **Verify before continuing**
 
 Run the executable example in CI where practical, then a fresh Graph Review against public Pactwright material and triage every resulting Finding through PI. Missing applicable readiness blocks approval; challenged/superseded/retracted relied-on Knowledge before approval requires re-grounding.
+
+Follow the published example from its stated starting revision. Compare its claimed outcome, Finding and Source references, and any claimed correction or fulfilment with the records from Steps 15–16. Verify that the guide and Academy lesson assign acceptance to independent Delivery Review. Remove or qualify any outcome the records do not support.
 
 ## Stage 8 — Release `0.0.5`
 
@@ -1203,4 +1227,4 @@ Checkpoint 4 closes only when:
 
 ---
 
-**Pactwright — Checkpoint 4 — Graph Review v20**
+**Pactwright — Checkpoint 4 — Graph Review v21**
