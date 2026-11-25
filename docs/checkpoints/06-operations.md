@@ -1,6 +1,6 @@
 # Pactwright — Checkpoint 6 — Operations
 
-**Version:** 17\
+**Version:** 18\
 **Entry condition:** Checkpoint 5 is accepted.\
 **Release:** `0.0.7`\
 **Exit capability:** Pactwright and Kakeibo can record real software exposure, predeclare controlled comparisons as immutable Experiments, collect bounded operational evidence, create durable Observations, route every canonical Observation through Project Intelligence, and prove governed corrective candidates without turning Operations into a telemetry store or second roadmap.
@@ -55,6 +55,15 @@ Research logs are otherwise rationale only. Kakeibo acceptance uses the current 
 | Step | Version 17 prose SHA-256 (Spec 00 §2) |
 | --- | --- |
 | CP06-S02 | `dd43168092a26b0fe5f4e64a8313b8d9fea651a58f87229d158ea1dec9693a6f` |
+
+### Version 18 amendment
+
+[PDI-CP07 amendment review (#132)](https://github.com/sb-dev/pactwright/pull/132) covers CP06-S06 and CP06-S07. Operations §§6–9, 12–13 and 21 govern collection limits, measured outcomes, provenance and failed collection.
+
+| Step | Version 18 prose SHA-256 (Spec 00 §2) |
+| --- | --- |
+| CP06-S06 | `8339f3aa4a34880fd6979368e21f65cd79771f5210dea7599aa832950ce12c8e` |
+| CP06-S07 | `006fa38ce9028362cc2a5bba627799de002faa0adaf4f2385ad2fcc3829de23c` |
 
 ### Kakeibo
 
@@ -339,7 +348,7 @@ Run fixtures for all four modes plus invalid/missing exposure, same control/cand
 
 ### Step 6 — Implement source/environment configuration and bounded adapters
 
-**References:** Spec 06 §§6–8, 21; Spec 07 permissions.
+**References:** Spec 06 §§6–8, 12 and 21; Spec 07 permissions.
 
 **Run**
 
@@ -362,9 +371,11 @@ Operational integrations collect measurable bounded inputs without a new observa
 
 Run conformance tests for one initial adapter and a second fixture adapter. Assert query-window enforcement, collection/analysis-input limits, pagination/truncation behaviour and its disclosed limitations, retry bounds, immediate deterministic failure and credential handling. High-volume fixtures must not be read without bounds merely because raw events are excluded from the graph.
 
+Use a labelled adapter fixture for the Step 2 checkout measure. Supply a known first-hour window with 30 failed requests among 1,000 checkout requests in the Deployment environment. Include requests from another environment and outside the window. Check that the bounded input identifies the source, window, counting rule, counts and coverage. The extra requests must contribute to neither count. Repeat with a collection limit that cuts off part of the window. Verify that the adapter discloses the missing coverage and does not present partial counts as totals for the whole window.
+
 ### Step 7 — Implement collection provenance and safe `ingest` evidence hand-off
 
-**References:** Spec 06 §§8–9, 18, 20–21.
+**References:** Spec 06 §§8–9, 12–13, 18 and 20–21.
 
 **Run**
 
@@ -398,6 +409,10 @@ Collection is bounded, auditable and usable by a separate analysis command witho
 **Verify before continuing**
 
 Test success, empty collection, authentication/availability failure, bounded retries and high-volume input. Verify immutable provenance for each attempt and no canonical mutation from collection failures. Pass an identified bounded input to an isolated analysis fixture; expire or change it and require an explicit limitation/failure when the required input cannot be established. Raw payloads and credentials must not appear in canonical or GitHub state.
+
+Pass the complete and truncated Step 6 inputs through ingest in separate fixture runs. From each hand-off, recover the originating successful collection, exact Deployment, source locator, window, counting rule, counts and coverage limits. The truncated response must remain distinguishable from a complete window with zero failures. Change the source after collection and verify the hand-off still describes the collected input or explicitly reports that it is unavailable.
+
+Deny access to the source in a third run. Inspect the failed execution and its reported blocker, the owner who can restore access, and the next action permitted under current authority. A failed query supplies no measurement. Verify that none of the three collection attempts creates an Observation or changes Delivery Evidence.
 
 ## Stage 4 — Implement Observation and PI governance
 
@@ -1334,4 +1349,4 @@ Checkpoint 6 closes only when:
 
 ---
 
-**Pactwright — Checkpoint 6 — Operations v17**
+**Pactwright — Checkpoint 6 — Operations v18**
