@@ -1,6 +1,6 @@
 # Pactwright — Checkpoint 9 — Hardened Closed Loop
 
-**Version:** 12\
+**Version:** 13\
 **Entry condition:** Checkpoint 8 is accepted.\
 **Release:** `0.0.10`\
 **Exit capability:** The complete first-party Pactwright system is evaluated, failure-hardened, publicly documented and repeatedly proven in closed loops on Pactwright and Kakeibo, including permanent Experiment regression coverage and a production Kei defect learning loop, without expanding semantics beyond observed need.
@@ -24,11 +24,28 @@ Do not use this checkpoint as a licence to implement speculative future architec
 
 ## 2. Canonical baseline
 
-Use canonical Specs 01–08 plus the Implementation Principles and Implementation Guide. Research logs are rationale only.
+Use canonical Specs 01–09 plus the Implementation Principles and Implementation Guide. Research logs are rationale only.
 
 Checkpoints 6–9 additionally use the adopted Operations amendment in [Pactwright — Operations Experiment Semantics](../research-logs/2026-09-02-pactwright-operations-experiment-semantics.md), and the [Kakeibo System-Level Acceptance Profile](./00-kakeibo-acceptance-profile.md).
 
 Kakeibo acceptance uses its current canonical specifications.
+
+### Version 13 amendment
+
+[PDI-CP07 amendment review (#138)](https://github.com/sb-dev/pactwright/pull/138) covers CP09-S01–S02, S06, S11–S13, S17–S18, S25 and S28. Core §§24, 28, 34, 44–45 and 55 and Distribution §14 govern bounded correction and recovery. Project Intelligence §§11 and 21–24, Assets and Publication §§7–16, and Operations §§8–14 govern approved changes, exposure and outcomes. Agent Methodology §§9–10 governs methodology regression coverage. Open-Source Project Organisation §§14–21 governs public guidance.
+
+| Step | Version 13 prose SHA-256 (Spec 00 §2) |
+| --- | --- |
+| CP09-S01 | `5b94ff8678da94329e7d1cce989d084d16e55b0fc32425cc9ab023c0d4681ada` |
+| CP09-S02 | `46ea84b7d87b79af1e8d93ba6b423e8a75eef4ab3326a6b28ca3bec6e6e48421` |
+| CP09-S06 | `ced7fdbb6c616bc00f815e8bc303906ec11d7a8a3a020d881c7d2978ba3274a6` |
+| CP09-S11 | `9477782b34b412031d86a67edde2713c9a6e439cc5887656c48b5a7b46bd83df` |
+| CP09-S12 | `adc35aafc037cea6fbab7af7e0f7c67ee4c2a5525e597062f68ac1e22922bdbc` |
+| CP09-S13 | `5817d0029b4af973e27820c8fb82c8a533842b9401183701cc02bf5346e60cbc` |
+| CP09-S17 | `f13cec3b4e54ddad1855ec2f7d48c368cead6ba93d7313845f37b3f41f7b39ff` |
+| CP09-S18 | `fc7864bc5cf407282edf0f49dfeaf20d77551288ef4dde9c813d673653b9c1f2` |
+| CP09-S25 | `45dc0040803fac69ec7ed98e7f0886fd7bd620f7b1cb8d267a4d91c68701d216` |
+| CP09-S28 | `8189d746f14238b571d2c3c0bd825c80d70ef34d438c5918764df9c23f91bd5f` |
 
 ### Kakeibo
 
@@ -127,6 +144,8 @@ Each candidate must cite concrete prior evidence. Exclude taste and one-off proj
 
 Every proposed hardening case has evidence and a clear owner.
 
+For each material failure, record the evidence, affected responsibility, accountable owner, blocker or disposition, next permitted action and candidate verification case. Use the CP08 findings and live traces as inputs. Trace a method selection, routing or coordination defect to its owning Agent Pack under Spec 09 §§9–10. Keep project-specific findings on the normal PI path.
+
 ### Step 2 — Implement Delivery and PI regression cases
 
 **Run**
@@ -153,6 +172,8 @@ Project Intelligence
 ```
 
 Prefer deterministic assertions where possible and keep semantic dimensions separate.
+
+Under Core §§24, 34, 44–45 and 55 and PI §§11 and 21–24, exercise an approved direction change that affects one grounded slice and a dependant while another verified slice remains valid. Require human approval of the Knowledge change before its governed effects. Trace the scoped plan and readiness changes and the owning Decision for any changed Delivery obligation. Preserve valid work and historical Evidence. For a recurring obligation, use Evidence to close one occurrence and verify the recurrence policy still governs future occurrences. A changed approach keeps the valid Contract and uses the authorised replacement Brief.
 
 ### Step 3 — Implement Graph Review regression cases
 
@@ -261,6 +282,8 @@ pnpm pactwright eval
 
 Per-capability/per-case results exist across all Pactwright responsibilities.
 
+Run the relevant pack-owned methodology cases under Spec 09 §10 through the documented entry or test path for the resolved pack. Cover bounded correction, stale results and restart, interrupted effects, pivots, truthful weak-outcome reporting and recurring work where supported. Reuse the owning subsystem cases as inputs and check Director routing and reports against their records. Record the pack and environment, entry or test path, inputs, actual invoker and judge, and observed results by responsibility and case. Resolve required model and effort under Spec 00 before dispatch. Mark behaviour without a supported path or invoker **not evaluated** and semantic results without a judge **unjudged**. The runtime CLI reports the runtime case set. Record separately which pack-owned cases ran.
+
 ### Step 7 — Compare a real Agent Pack candidate only when one exists
 
 **Run**
@@ -356,6 +379,8 @@ failed Publication recording
 
 Do not invent Publication retry identity if the canonical gap remains unresolved.
 
+Repeat the CP07 interruption cases against the exact approved output and release destination under Distribution §14 and Assets and Publication §§7–16. In isolated drills, interrupt release acknowledgement after a confirmed release and interrupt recording after the canonical Publication is written. Recover from the channel read-back or matching canonical record and require one release and one corresponding record for the intended effect. Retry only after establishing absence and rechecking authority, remaining limits and destination safeguards. If the result is uncertain, preserve existing records and report the blocker, accountable owner and next permitted verification action. Keep the open Publication recording-identity gap explicit.
+
 ### Step 12 — Run Operations and GitHub failure drills
 
 Prove at least:
@@ -393,6 +418,10 @@ failed experiment execution corrupting compared exposure
 
 At least one actual Experiment failure drill must execute end to end rather than existing only as a schema unit test.
 
+Extend the accepted CP02 remote recovery path in an isolated drill under Core §§28, 34 and 55 and Distribution §14. Change a governing input during a dispatched attempt. Verify that the stale result leaves canonical state and the current step unadvanced, preserves the concurrent change, and ends that invocation without redispatch or a corrective iteration. A fresh invocation may proceed under current policy after reconciling useful work and reloading authority, lineage and consumed host and lifecycle limits. Exercise each exhausted limit and require a stop before further dispatch, with the accountable owner and next permitted action.
+
+Interrupt a supported external effect after the destination accepts the write and before acknowledgement is saved. Have a replacement worker establish that the prior worker can no longer write, then read the intended effect back using its recorded identity. Verify that duplicate notifications reuse a confirmed effect or resume its reconciliation. Exercise verified absence under current retry authority and an ambiguous destination result that blocks further writes. Retain assignment and attempt identity, read-back evidence, consumed limits and the resulting disposition. Report unsupported recovery as unavailable.
+
 ## Stage 4 — Complete the initial public product
 
 ### Step 13 — Audit public surfaces against actual shipped capability
@@ -424,6 +453,8 @@ Discover
 ```
 
 Do not document unimplemented future semantics.
+
+For each material public claim about entry, coordination, recovery, or outcomes, trace it to the exercised configuration and its acceptance evidence under Spec 08 §§14–21. Compare the guide, Quick Start, example and case study with the exercised behaviour. Label fixtures, unsupported facilities and unevaluated behaviour explicitly. Send each blocking mismatch to its accountable owner for correction and re-verification in Step 14.
 
 ### Step 14 — Deliver blocking public-product gaps
 
@@ -500,6 +531,8 @@ For one accepted candidate, capture an explicit Intent and complete normal Deliv
 
 Operational evidence becomes Delivery only through PI governance and explicit authority.
 
+Trace the real Observation and Source to human-approved Knowledge, then to the existing PI roadmap candidate and its current readiness under PI §§11 and 21–23 and Operations §§13–14. Record the accountable owner, verified result or blocker and next permitted action. If the finding does not justify a ready candidate, retain its disposition and continue the required live exercise when a qualifying finding is available. Route a supported correction through the smallest authorised action and retain prior accepted Evidence.
+
 ### Step 18 — Expose the correction and observe again
 
 For software:
@@ -526,6 +559,8 @@ pnpm pactwright operations refresh
 **Expected result**
 
 Second-round evidence validates the correction, provides new learning or explicitly shows no durable new Observation.
+
+Compare the original and later observations under the applicable measure, counting rule, exposure, window, baseline and evidence limits in Operations §§8–14. Report Delivery fulfilment, actual exposure and measured outcome from their own records. A weak or unchanged result keeps the original history and routes qualified new meaning through PI. A successful analysis with insufficient evidence records the gap. A failed collection records the execution failure and its recovery owner. Retain the evidence, current blocker or disposition and next permitted action without claiming improvement beyond the comparable evidence.
 
 ## Stage 6 — Prove Kakeibo regression integrity and production Kei learning
 
@@ -778,6 +813,8 @@ The external product proves the general closed-loop architecture after hardening
 
 Review exact trace ids through the later Observation and run Kakeibo repository tests plus Pactwright validations.
 
+Apply Steps 17–18 to the live Kakeibo loop. Record the original and later exposure identities, the evidence and windows for any result claimed, exact Delivery closure and PI disposition. Retain the earlier records if the later outcome is weak or inconclusive. Identify the accountable owner and next permitted action for any remaining blocker. Use the current Kakeibo authority for product or Kei decisions.
+
 ## Stage 7 — Prepare and publish the supported `0.1.0`
 
 ### Step 26 — Define supported-release acceptance from observed maturity
@@ -827,6 +864,8 @@ project-specific preference
 
 Do not convert every remaining idea into an Intent.
 
+Retain the evidence, accountable owner, non-blocking disposition and next permitted action for every carried finding. A blocking failure requires a correction and passing re-verification before Graduation. Trace both to the owning case.
+
 ## Exit gate
 
 Checkpoint 9 closes only when:
@@ -835,7 +874,8 @@ Checkpoint 9 closes only when:
 - Production Skills own domain-specific quality benchmarks;
 - all observed repeatable Pactwright failures have an owner and regression coverage where justified;
 - failure drills prove Graph Review replay/hand-off, Asset/Publication grounding/hash boundaries, Operations failure semantics and conservative GitHub reconciliation;
-- the full validation matrix passes;
+- the Director recovery drills retain current authority, consumed limits and effect receipts across retries and record an owner and next action for each blocker;
+- the full validation matrix passes, with pack-method coverage and evaluation status recorded under Spec 09 §10;
 - no Creative Delivery, reviewer roster, provider registry or Generation Guidance subsystem has returned;
 - Pactwright public surfaces match implemented behaviour;
 - the Pactwright-building-Pactwright case study is a real governed Publication;
@@ -859,4 +899,4 @@ Checkpoint 9 closes only when:
 
 ---
 
-**Pactwright — Checkpoint 9 — Hardened Closed Loop v12**
+**Pactwright — Checkpoint 9 — Hardened Closed Loop v13**
