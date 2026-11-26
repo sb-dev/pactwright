@@ -1,6 +1,6 @@
 # Pactwright — Checkpoint 6 — Operations
 
-**Version:** 20\
+**Version:** 21\
 **Entry condition:** Checkpoint 5 is accepted.\
 **Release:** `0.0.7`\
 **Exit capability:** Pactwright and Kakeibo can record real software exposure, predeclare controlled comparisons as immutable Experiments, collect bounded operational evidence, create durable Observations, route every canonical Observation through Project Intelligence, and prove governed corrective candidates without turning Operations into a telemetry store or second roadmap.
@@ -83,6 +83,21 @@ Research logs are otherwise rationale only. Kakeibo acceptance uses the current 
 | --- | --- |
 | CP06-S11 | `e27779107e61e96868a47bb7400698697dc7eaa2ce348bd57ad2d3f0694ab3fc` |
 | CP06-S12 | `56846666edce9f5bd4ce8926e69b2094c8c0a2f063e0bc90ce66d57d9a17d56e` |
+
+### Version 21 amendment
+
+[PDI-CP07 amendment review (#135)](https://github.com/sb-dev/pactwright/pull/135) covers the validation fence in CP06-S13 and amends CP06-S15–CP06-S16, CP06-S19–CP06-S20, CP06-S23 and CP06-S27–CP06-S28. Operations §§9, 12–14, 21 and 23 govern outcome interpretation, hand-off and evaluation. GitHub Integration §§24–29, 35 and 39 govern reporting and evaluation on GitHub. Project Intelligence and the Implementation Guide govern learning, corrective work and checkpoint transition.
+
+| Step | Version 21 prose SHA-256 (Spec 00 §2) |
+| --- | --- |
+| CP06-S13 | `5b15f5ed8c231c7f54d2437f03e3e64bbbf545020a67fb9d79d1c81e7e5fb0c8` |
+| CP06-S15 | `044ba364931974b56f660e28ed6fc759d7697f08b2b16860a30f7d74a5aa8686` |
+| CP06-S16 | `d3902dfe197265176e1af4dc54f9967bb74be1d57703d8e472ccb7979e5c7678` |
+| CP06-S19 | `20c285bf8be37a16fa38d94562cce7948eb653efb2b39632b5799c246239ae0d` |
+| CP06-S20 | `1a658df957d178ae793f17227fbc7d2ce7ee1ce208d8231dc103957bba7cc210` |
+| CP06-S23 | `3c5da2392128dcce2791034cd6d3a769a4b62ef13e566d076636fa8a9bec4844` |
+| CP06-S27 | `341837495c1c5dd9a31e5c9b250fd27cd2e9d997e59fc4a87a0af6c71affcf4c` |
+| CP06-S28 | `b1f13b291099477fe8255c4f1abae368af872c8641547628670785119fe957a4` |
 
 ### Kakeibo
 
@@ -678,7 +693,6 @@ Experiment validation must enforce at least:
 - Experiment Observations use `observes`;
 - execution provenance is not Project Graph state.
 ```
-```
 
 ### Step 14 — Add bounded Operations context and Graph Review conformance
 
@@ -710,7 +724,7 @@ Exercise Contract crafting, Brief, Delivery and Review contexts with relevant/un
 
 ### Step 15 — Add Operations responsibility and deterministic evaluation
 
-**References:** Specs 02 evaluation, 06 §23 and 07 §39.
+**References:** Specs 02 evaluation, 06 §§12–13 and 23, 07 §39 and 09 §10.
 
 **Run**
 
@@ -742,6 +756,8 @@ Both AI interpretation and runtime boundary failures are measurable through the 
 **Verify before continuing**
 
 Run `pnpm pactwright eval`, inspect Operations cases individually and inject known factual-grounding, false-positive and failed-analysis mutation regressions. Require each responsible case to fail. Add Step 15's Operations-specific integration cases to the existing GitHub evaluation rather than relying only on workflow inspection.
+
+Evaluate the checkout cases from Steps 7–11 individually. For the measured shortfall, check the fulfilled Delivery and its Evidence separately from the exact Deployment, counting rule, window, measured rate, target and attribution limit. For insufficient coverage, check successful analysis with no Observation or Source. For denied access, check failed collection provenance, no analysis for that attempt and no canonical mutation from that failure. Retry the interrupted PI hand-off from the existing Observation and verify that one Source remains. Report which assertions ran and which semantic outcomes were judged.
 
 Evaluation must also prove the Experiment contract is generic before Kakeibo uses it:
 
@@ -826,6 +842,7 @@ Use generated-workflow, runtime integration and remote test fixtures to prove:
 - both exact checks distinguish invalid records, stale candidates/revision, external failures and successful no-finding results;
 - local and Actions-resolved environment identities agree for the same lock, including any selected external skills/packs;
 - configured PR/Issue/Project projections reproduce runtime state and never expose raw payloads or credentials;
+- for the Step 11 denied source, the applicable configured run or PR summary shows the access blocker, the owner who can address it and the next permitted action from the failed execution and current authority; it keeps the successful checkout result separate. A successful analysis with insufficient coverage reports the gap as a no-Observation outcome. Repeat with Projects disabled to verify the summary where configured;
 - remote failed collection/analysis produces no canonical mutation from that failed attempt;
 - failed or unacknowledged PI hand-off retries the existing Observation without reanalysis or duplicate Sources;
 - report/projection failure leaves canonical and immutable execution state unchanged;
@@ -911,6 +928,7 @@ Inspect collection and analysis provenance separately. For every resulting Obser
 
 ```bash
 pnpm pactwright intelligence triage <internal-source-id>
+```
 
 Where reviewed promotion is required and authorised:
 
@@ -926,7 +944,7 @@ pnpm pactwright operations validate
 pnpm pactwright validate
 ```
 
-Skip Source-specific commands when no Source exists; retain the successful live no-Observation result honestly.
+Run Source-specific commands only when a Source exists. Retain successful live no-Observation results with the reason and any coverage limits. Record a failed collection separately with its blocker and recovery owner.
 
 Separately require one supported positive trace through Observation → Source → reviewed promotion where required → accepted Knowledge → PI candidate → matching corrective-roadmap entry. Use live evidence where justified; otherwise use a clearly labelled controlled fixture in an isolated project through the same public/runtime paths. Do not promote synthetic evidence into Pactwright's real project truth or claim a fixture is production evidence.
 
@@ -939,6 +957,8 @@ Real deployment feedback is exercised and the positive PI-governed consequence p
 **Verify before continuing**
 
 Retain a live exposure/source/execution trace and a positive consequence trace labelled live or fixture. Verify candidate identity/readiness/ordering exactly matches PI, no raw telemetry becomes graph state, and no Observation directly creates an Intent. Any real corrective Delivery retains complete authority/Evidence lineage; a fixture must not be counted as real corrective work.
+
+Report the fulfilled Delivery and its Evidence separately from the deployed exposure and the observed effect. For a measured finding, link the window, measure, applicable target or comparable baseline, and limits on the conclusion. For each path, report the current owner, any blocker and the next permitted action. Operations owns collection recovery and incomplete hand-off. PI owns triage after hand-off. Where a candidate exists, use the Step 12 authority checks before Delivery acts.
 
 ## Stage 8 — Publish Operations learning material
 
@@ -976,7 +996,7 @@ Users can reproduce the shipped Operations behaviour from governed learning mate
 
 **Verify before continuing**
 
-Execute the example in a clean supported environment and in CI where practical; separately verify the actual website update and applicable readiness/claim provenance. Run Graph Review over the resulting public material, triage every Finding through PI and correct blocking issues. Prose review does not replace executing the example.
+Execute the example in a clean supported environment and in CI where practical; separately verify the actual website update and applicable readiness/claim provenance. Use the Step 19 trace to check that the example and guidance show fulfilment separately from observed effect, label the evidence as live or fixture, and explain who owns the next permitted action. Check that the example distinguishes insufficient coverage from failed collection. Run Graph Review over the resulting public material, triage every Finding through PI and correct blocking issues. Prose review does not replace executing the example.
 
 ## Stage 9 — Release `0.0.7`
 
@@ -1098,7 +1118,7 @@ complete one real governed Delivery
 → pactwright operations observe <source-id>
 ```
 
-Triage every resulting Observation Source through PI, use reviewed promotion only where justified/approved, and regenerate both PI and Operations roadmap views using the commands from Step 18. Preserve genuine live no-Observation results.
+Triage every resulting Observation Source through PI, use reviewed promotion only where justified/approved, and regenerate both PI and Operations roadmap views using the commands from Step 19. Preserve genuine live no-Observation results.
 
 Repeat positive consequence-path acceptance with Kakeibo-relevant evidence. Use an explicitly isolated, labelled Kakeibo fixture when live evidence does not justify a positive path; do not inject synthetic observations into the real project. Explicitly deliver a live corrective candidate only when its governed consequence justifies that work.
 
@@ -1108,7 +1128,7 @@ A materially different project proves real software exposure feedback and the sa
 
 **Verify before continuing**
 
-Run current Kakeibo repository-defined tests plus core, PI and Operations validation. Trace actual exposure, bounded evidence and separate collection/analysis results; trace the positive consequence scenario separately with its live/fixture status. Confirm credentials/raw telemetry remain external, PI still controls candidates and any real corrective Delivery has explicit Intent-through-Evidence authority.
+Run current Kakeibo repository-defined tests plus core, PI and Operations validation. Apply the Step 19 reporting checks to the Kakeibo records. Trace actual exposure, bounded evidence and separate collection/analysis results; trace the positive consequence scenario separately with its live/fixture status. Confirm credentials/raw telemetry remain external, PI still controls candidates and any real corrective Delivery has explicit Intent-through-Evidence authority.
 
 ### Step 24 — Configure a privacy-safe Kakeibo evaluation environment/source
 
@@ -1240,11 +1260,11 @@ A canonical immutable Experiment records the comparison contract before outcome 
 
 ### Step 27 — Observe, govern and prove rollback
 
-**References:** Experiment §§9, 12, 14–15; PI hand-off/corrective roadmap §§13–15; Kakeibo Acceptance Profile §10; current Kakeibo `06`
+**References:** Operations §§9–10, 12–14 and 21; Experiment §§9, 12 and 14–15; Kakeibo Acceptance Profile §10; current Kakeibo `06`
 
 **Run**
 
-Use the source configured in Step 25:
+Use the source configured in Step 24 and resolve the exact Experiment recorded in Step 26:
 
 ```bash
 pnpm pactwright operations ingest <source-id>
@@ -1252,7 +1272,7 @@ pnpm pactwright operations observe <source-id>
 pnpm pactwright operations validate
 ```
 
-The durable result, when evidence is sufficient, must be an Observation targeting the Experiment rather than a mutation of the Experiment or candidate. It may be positive, negative, mixed or neutral. Insufficient evidence may legitimately create no outcome Observation or an explicitly insufficient-evidence Observation according to the implemented rules.
+The durable result, when evidence is sufficient, must be an Observation targeting the Experiment rather than a mutation of the Experiment or candidate. It may be positive, negative, mixed or neutral. When the input falls short of the predeclared minimum evidence, record successful analysis with the evidence gap and create no Observation or Source. With sufficient input, report any supported inconclusive comparison with its uncertainty under the recorded decision rule.
 
 For every internal PI Source emitted from the outcome:
 
@@ -1301,6 +1321,8 @@ Delivery Evidence
 - Observation uses `observes` to the exact Experiment id/hash;
 - raw samples/financial prompts/responses are absent from Pactwright graph state;
 - guardrail breaches and uncertainty are preserved;
+- a separate labelled insufficient-input fixture records the unmet minimum and a successful analysis with no Observation or Source. Report a collection failure separately if access fails;
+- report the active and candidate exposure identities, the exact Experiment, the result or evidence gap, any blocker, the accountable owner and the next permitted action. Preserve the predeclared decision rule and any Kakeibo approval needed for a change;
 - a favourable result did not automatically mutate/promote the candidate;
 - any canary/A-B follow-on is a distinct immutable Experiment with stable assignment where required;
 - the rollback drill restores the smallest appropriate layer and leaves core financial workflows usable;
@@ -1329,7 +1351,7 @@ Checkpoint learning reaches the correct owner while all required Operations outc
 
 **Verify before continuing**
 
-Trace every blocker to a correction and passing re-verification. Run repository verification and relevant core/PI/Operations validation/evaluation. Record retained non-blocking dispositions and their provenance; require no known blocking failure before Checkpoint 7.
+For each material finding, record its source, owner, any blocker and the next permitted action. Trace every blocker to a correction and passing re-verification. Run repository verification and relevant core/PI/Operations validation/evaluation. Record retained non-blocking dispositions and their provenance; require no known blocking failure before Checkpoint 7.
 
 ## Canonical storage and routing cross-check
 
@@ -1382,4 +1404,4 @@ Checkpoint 6 closes only when:
 
 ---
 
-**Pactwright — Checkpoint 6 — Operations v20**
+**Pactwright — Checkpoint 6 — Operations v21**
