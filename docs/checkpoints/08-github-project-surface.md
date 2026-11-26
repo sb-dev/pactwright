@@ -1,6 +1,6 @@
 # Pactwright — Checkpoint 8 — Full Project Operating Surface
 
-**Version:** 14\
+**Version:** 15\
 **Entry condition:** Checkpoint 7 is accepted and all first-party graph semantics, including Operations Experiment, exist.\
 **Release:** `0.0.9`\
 **Exit capability:** Pactwright and Kakeibo prove the complete configured operating surface, including the controlled Experiment lineage, through the existing five workflows and one shared Project, with deterministic generation, ownership-safe reconciliation, exact runtime provenance and no transfer of canonical authority to GitHub.
@@ -42,6 +42,23 @@ Canonical semantics come from:
 - [Pactwright — Operations Experiment Semantics](../research-logs/2026-09-02-pactwright-operations-experiment-semantics.md)
 
 Research logs are rationale only. Kakeibo acceptance uses the current canonical specifications in the Kakeibo repository, not stale embedded copies.
+
+### Version 15 amendment
+
+[PDI-CP07 amendment review](https://github.com/sb-dev/pactwright/pulls?q=is%3Apr+head%3Adocs%2Fpdi-cp07-operating-surface) covers CP08-S04–CP08-S08, CP08-S12, CP08-S14, CP08-S16, CP08-S18 and CP08-S20. GitHub Integration §§10, 15–29, 31–32, 35 and 39 govern projection and evaluation. Project Intelligence §§14–15 and 21–23 govern approved meaning, candidates and recurrence. Assets and Publication §4 and Operations §§8–14, 21 and 23 govern outcome reporting. Agent Methodology §§9–10 and Open-Source Project Organisation §§14–21 govern regression evidence and public guidance.
+
+| Step | Version 15 prose SHA-256 (Spec 00 §2) |
+| --- | --- |
+| CP08-S04 | `52965fb03ab5ef568e48670514fbfe7f08eb859fb3d599641bc9ac05c20192c9` |
+| CP08-S05 | `78a23cc6a2027242b7549abbcd15927cc7c1f214a4983c50d743b076d979c5c4` |
+| CP08-S06 | `b0bde8baeac88ba188936aace4e2cc18cbba55bc1a444ecfca5f4311a53ae148` |
+| CP08-S07 | `1de1386dd1e3b177eef4481d868d418802b5e359c177c3dbab0a2779db30dec1` |
+| CP08-S08 | `0a399171058931748b912effaa134213a6f04cc76ea807abbd6ac05633f3c92d` |
+| CP08-S12 | `f0e92503a35b24d9d1f6fe3112c5604df8a3ddaca5de96ec3f9e5f661645075c` |
+| CP08-S14 | `753e45ee6edc588b5e73473d23378913c67a654da68f07578553f4a79a2c2df1` |
+| CP08-S16 | `776b6614bce5c2c0dfc7d9906952100f9fad77d1d2a7f8f4e0d4d54ca974a123` |
+| CP08-S18 | `7e22f50f24d399c65d0e46c9cabb2a2e8c77d47e7d55a08de919e5ce4dcc018a` |
+| CP08-S20 | `7d2b3801f28c8569a152e1a3ce4b4fd933f362217f7021186eed6db3328b6def` |
 
 ### Kakeibo
 
@@ -263,9 +280,11 @@ Users can navigate the current governed lineage and applicable cross-Extension c
 
 Compare each applicable field with runtime output across open, deferred, rejected, contracted, delivering, blocked and completed lineages. Verify canonical links, last-activity derivation and supersession handling. Test Gate stopping and blocking Delivery Review through the runtime. Editing a Project/Issue field, approving a PR or merging must not create a Decision, satisfy a Gate or make Evidence, Deployment or Publication true. Keep unresolved non-Delivery-PR policy explicit rather than inventing it here.
 
+For a supported remote assignment, compare the projected accountable owner, current target, verified result or blocker, next permitted action and source revision with the governing Delivery records and host receipt. Compare a verified result, a blocked assignment and a worker failure. A failed optional Project update still leaves the worker failure reportable to the accountable owner.
+
 ### Step 5 — Verify PI checks, Grounding states, promotion summaries and derived views
 
-**References:** Spec 03 governance/coverage/roadmap and Spec 07 §§11–17, 31.
+**References:** Spec 03 §§14–15 and 21–23 and Spec 07 §§11–17, 31.
 
 **Run**
 
@@ -292,6 +311,8 @@ PI governance and current derived views remain understandable without GitHub acc
 
 Exercise all four Grounding states, stale-but-not-blocking Knowledge, missing required approval and both internal Source origins. Compare configured views with the owning PI derivations, including candidate readiness/dependencies/ordering. Change canonical inputs and detect stale reports; regeneration must restore correct content and revision stamps without rewriting canonical meaning. A stale derived report is not itself evidence of invalid canonical Knowledge. GitHub metadata must not promote Knowledge or turn a candidate into an Intent.
 
+For one accepted recurring obligation, trace the completed occurrence to its closing Evidence and verify the applicable PI projection still shows the governing recurrence policy. Verify that the completed occurrence no longer appears as outstanding. The projection leaves future execution and Intent authorisation to their owners. For a candidate blocked on approval or a hard dependency, trace that blocker to the current PI derivation and use the governing record to identify its owner and next permitted action.
+
 ## Stage 3 — Complete Graph Review and Assets / Publication projections
 
 ### Step 6 — Verify Graph Review projection and hand-off boundaries
@@ -316,11 +337,13 @@ Graph Review is navigable as specialist graph analysis, not a replacement for De
 
 **Verify before continuing**
 
-Project successful, failed, no-Finding and pending/retried-hand-off executions. Compare counts, statuses and Source links with the runtime; lost acknowledgement must not rerun analysis or duplicate Sources. Verify report/projection failure preserves execution/Finding history and PI state. Do not add reviewer rosters, Review Definitions, Next Actions, named reviewer views or a new Graph Review check. Step 12 separately proves actual pinned execution, not only displayed provenance.
+Project successful, failed, no-Finding and pending/retried-hand-off executions. Compare counts, statuses and Source links with the runtime; lost acknowledgement must not rerun analysis or duplicate Sources. Verify report/projection failure preserves execution/Finding history and PI state. Do not add reviewer rosters, Review Definitions, Next Actions, named reviewer views or a new Graph Review check. Step 13 separately proves actual pinned execution, not only displayed provenance.
+
+For a successful review with a pending Source hand-off, report the verified Findings, hand-off blocker, accountable owner and next permitted retry action. Compare the report with immutable execution provenance and the actual PI result. A pending hand-off leaves Knowledge approval and candidate selection to PI governance.
 
 ### Step 7 — Verify approved Asset and actual Publication projections
 
-**References:** Spec 05 and Spec 07 §§20–22, 29; Checkpoint 7 Publication conformance.
+**References:** Spec 05 §§4, 7–16 and 27 and Spec 07 §§20–22, 29; Checkpoint 7 Publication conformance.
 
 **Run**
 
@@ -343,11 +366,13 @@ GitHub exposes approved output and release history without taking over approval,
 
 Compare configured fields with canonical records. Exercise repository-backed byte drift, missing human approval/grounding, mismatched Publication asset hash, candidates, superseded Assets and intentional multiple Publications. Preserve distinct exposure identities when Publications share Asset bytes or a locator. Failed release leaves the approved Asset unchanged; poor performance does not invalidate a valid Publication. Any configured automated release must use an already approved Asset and actual release provenance. Unsupported optional authority/release routes must not be generated or advertised.
 
+Follow one approved output through a pending release, a confirmed release with outcome unknown and a released output with a supported weak outcome. Verify each applicable claim against its own record, including closing Review and Evidence, exact human-approved Asset, actual Publication and the Observation for that exposure. Exercise the configured surface with Operations absent and identify that outcome evidence is unavailable. Use the existing Checkpoint 7 cases for the underlying release and evidence requirements.
+
 ## Stage 4 — Complete Operations projection
 
 ### Step 8 — Verify Operations checks, exact configured views and corrective provenance
 
-**References:** Specs 03 roadmap ownership, 06 and 07 §§23–29, 31–32; Checkpoints 6–7.
+**References:** Specs 03 §§14–15 and 21–22, 06 §§8–14, 21 and 23, and 07 §§23–29 and 31–32; Checkpoints 6–7.
 
 **Run**
 
@@ -374,6 +399,8 @@ GitHub shows durable operational facts and governed corrective work without beco
 **Verify before continuing**
 
 Compare fields and cross-Extension Publication → Observation → Source/Knowledge/candidate links with the owners. Test canonical invalidity, external authentication/analysis failure, successful no-Observation and stale views as distinct outcomes. Change PI candidates while retaining/copying revision stamps and require stale content detection. Significance/confidence must not accept Knowledge or reprioritise work. Failed hand-off retries the existing Observation; failed optional Project/summary/report updates leave valid canonical and immutable execution state unchanged.
+
+For an applicable Production Finding, trace the reported measure, window, coverage and uncertainty to the exact exposure and supporting evidence. Report Delivery fulfilment independently of the observed outcome. Follow accepted operational meaning to the single PI roadmap and verify that the filtered entry retains the same candidate, readiness and dependencies. Report the current accountable owner, blocker and next permitted action from the governing records, including when the evidence or approvals do not justify a candidate. Keep completed analysis with insufficient evidence distinct from failed collection.
 
 ### Step 9 — Complete Experiment path triggers and projection validation
 
@@ -468,7 +495,7 @@ Require no unresolved managed drift or unmet prerequisite needed for acceptance.
 
 ### Step 12 — Run cumulative semantic, GitHub, security and failure conformance
 
-**References:** Specs 01–06 owning validators/evaluation; Spec 07 §§35–40; Spec 02 §§21–24; Implementation Guide verification.
+**References:** Specs 01–06 owning validators/evaluation; Spec 07 §§35–40; Spec 02 §§21–24; Spec 09 §10; Implementation Guide verification.
 
 **Run**
 
@@ -533,6 +560,8 @@ The combined system passes its actual integration contract, detects deliberate r
 **Verify before continuing**
 
 Retain a case-to-requirement result map, not just a single green score. Inject known misrouting, wrong Grounding state, stale-content/fresh-stamp, forbidden-mutation and permission regressions and require the responsible cases to fail. Negative tests must assert expected failure in isolated fixtures, not leave real canonical state broken. Restore valid fixtures and rerun the full suite plus `pnpm verify`. Keep execution failure, canonical invalidity, stale derived state and incomplete activation distinguishable without inventing a universal GitHub conclusion mapping.
+
+Use the owning cases from Steps 4–8 in the cumulative result map. Compare what the surface claims with the canonical record or execution receipt that supports each claim. Reject a misleading completion, approval, release or outcome claim and verify that a failed optional projection cannot hide a blocker from its accountable owner. When a pack method changes, record the documented path for any relevant pack-owned case and compare observed results using the actual candidate. Distinguish CLI evaluation, separately executed pack-method cases, cases not evaluated and semantic results left unjudged under Spec 09 §10.
 
 ### Step 13 — Prove shared execution identity and actual pinned remote replay
 
@@ -599,6 +628,8 @@ Structural convergence and runtime projection freshness are independently demons
 
 Compare before/after managed and unmanaged state at every layer. Repeat local sync and remote dry-run after repair; separately inspect restored summaries/items/values. Require canonical and immutable historical state to remain unchanged by projection edits, failed repair or optional projection failure. Retain the live record-to-projection trace and new event result with normal authority provenance. Synthetic failure fixtures must not be described as real operational outcomes.
 
+In the live trace, compare the current accountable owner, blocker or verified result, and next permitted action with the corresponding governing records for the chosen event. For any claimed approval, release or outcome, cite the exact supporting record. Repeat the applicable projection after the source revision changes and verify the refreshed claims and preserved history.
+
 ### Step 15 — Prove populated-history disablement, re-enablement and optional configuration
 
 **References:** Spec 02 removal/dependencies and Spec 07 §§4–6, 32–34; Checkpoint 7 populated exposure history.
@@ -638,7 +669,7 @@ Run enabled owning validators and core validation at each transition, recording 
 
 ### Step 16 — Deliver and execute the governed end-to-end learning path
 
-**References:** Spec 01 Delivery closure, Spec 03 readiness, Spec 04 Graph Review boundary and Spec 08 §§8, 14–21, 24, 26.
+**References:** Spec 01 Delivery closure, Spec 03 readiness, Spec 04 Graph Review boundary, Spec 05 §4, Spec 06 §§12–14, Spec 07 §§10 and 29, and Spec 08 §§8, 14–21, 24, 26.
 
 **Run**
 
@@ -710,6 +741,8 @@ Users can discover, understand and execute the full configured operating path wi
 
 Run the example in a clean supported consumer and in CI where practical, using the same runtime commands and locked environment. Verify all included lineage, approval, actual-release/deployment and PI boundaries; simulated fixture events must not be presented as live exposure. Validate guide commands, catalogue metadata/links, README capability claims and applicable readiness. Separately run architecture/coherence and public-product Graph Reviews, triage every Finding through PI and resolve blockers through normal Delivery. Prose review does not replace example execution. Retain accepted Evidence and applicable Asset/Publication provenance for the public work.
 
+In the example and public guide, show how to trace an owner, blocker and next permitted action from the configured GitHub surface back to the governing records. Show that Delivery fulfilment, approval, release or deployment, and observed effect each need their own evidence where applicable. Document which paths and checks the exercised configuration supports, and label fixtures and unavailable behaviour. Compare the README, Academy lesson and catalogue claims with the verified example and applicable live evidence before approval.
+
 ## Stage 8 — Release and Kakeibo proof
 
 ### Step 17 — Publish exact `0.0.9` after cumulative and upgrade acceptance
@@ -747,7 +780,7 @@ All return `0.0.9`. Verify tagged-source/release-workflow provenance, registry r
 
 **Run**
 
-Start from Kakeibo's real accepted published `0.0.8` environment. Record package/configuration/both-lock state, selected external dependencies, enabled profiles and historical canonical/execution identities. Use Step 16's proven compatible sequence. Do not preinstall targets, reinitialise the project, change selected pack identity or re-create prior records.
+Start from Kakeibo's real accepted published `0.0.8` environment. Record package/configuration/both-lock state, selected external dependencies, enabled profiles and historical canonical/execution identities. Use Step 17's proven compatible sequence. Do not preinstall targets, reinitialise the project, change selected pack identity or re-create prior records.
 
 Upgrade the runtime and verify the still-compatible environment and new-runtime migration/validation provenance:
 
@@ -806,6 +839,8 @@ Kakeibo runs exact `0.0.9` through the same upgrade and projection model, with r
 
 Record exact versions and compatible package/Pactwright lock agreement after every operation; verify the six-package reference family, unchanged selected identities and preserved historical records/approved content. Explicit migrations, if required, retain their versioned provenance and must not silently reinterpret truth. Require healthy doctor, owner validation, cumulative integration cases, actual configured check execution and live record-to-projection/event evidence. Verify the final structural dry-run, current runtime projections and second local sync separately. Preserve unrelated workflows/resources and external repositories. Use isolated fixtures for destructive/failure tests, never invented live findings.
 
+Apply Step 14's record-to-projection comparison to the chosen live Kakeibo event. Trace the current accountable owner, verified result or blocker, and next permitted action to its governing records. Use real records and execution evidence to support any fulfilment, approval, exposure or outcome claim. Label an unavailable outcome or capability and identify its accountable follow-up.
+
 ### Step 19 — Project the real Kakeibo Experiment lineage from Checkpoint 6
 
 **References:** Kakeibo Acceptance Profile §12; Experiment GitHub projection; Experiment PI lineage
@@ -862,7 +897,7 @@ GitHub exposes the real Kakeibo controlled-evaluation lineage without becoming i
 
 ### Step 20 — Govern failures and close only after blocker re-verification
 
-**References:** Spec 03 governance; Spec 07 open gaps; Implementation Guide transition conditions.
+**References:** Spec 03 governance; Spec 07 open gaps; Spec 09 §§9–10; Implementation Guide transition conditions.
 
 **Run**
 
@@ -879,6 +914,8 @@ The complete operating surface has evidence-backed acceptance and governed non-b
 **Verify before continuing**
 
 Trace each blocker to its correction and passing re-verification. Review the full result map, live Pactwright/Kakeibo traces, example/public-readiness evidence and exact release/upgrade proof. Require no known blocking failure before Checkpoint 9; retain explicit owner, evidence and non-blocking disposition for every open gap carried forward.
+
+For each material failure, retain the evidence and affected responsibility, the accountable owner, the blocker or disposition, the next permitted action and the affected verification case. Route a method or routing defect to the owning Agent Pack's regression cases. Keep a project-specific finding on its normal PI path. Require the owner to show the affected acceptance result and cumulative recheck before reporting a blocker resolved.
 
 ## Canonical storage and routing cross-check
 
@@ -922,4 +959,4 @@ Checkpoint 8 closes only when:
 
 ---
 
-**Pactwright — Checkpoint 8 — Full Project Operating Surface v14**
+**Pactwright — Checkpoint 8 — Full Project Operating Surface v15**
