@@ -1,6 +1,6 @@
 # Pactwright — Checkpoint 7 — Publication Feedback
 
-**Version:** 13\
+**Version:** 14\
 **Entry condition:** Checkpoint 6 is accepted.\
 **Release:** `0.0.8`\
 **Exit capability:** Operations observes canonical Publications through the registered exposure contract, and Pactwright completes a real evidence-supported corrective Delivery, human-approved revised Asset and actual new Publication while preserving every subsystem's ownership and historical records.
@@ -49,6 +49,20 @@ Canonical semantics come from:
 - [Pactwright — Operations Experiment Semantics](../research-logs/2026-09-02-pactwright-operations-experiment-semantics.md)
 
 Research logs are rationale only. Kakeibo acceptance uses the current canonical specifications from the Kakeibo repository, not stale embedded copies.
+
+### Version 14 amendment
+
+[PDI-CP07 amendment review (#136)](https://github.com/sb-dev/pactwright/pull/136) covers CP07-S07–CP07-S11 and CP07-S14–CP07-S15. Assets and Publication §§4, 7–16, 25 and 27 govern progress reporting, approval and release. Operations §§8–14, 21 and 23 govern bounded outcomes and hand-off. Project Intelligence §§11, 14–15 and 21–22 govern approved Knowledge and candidate readiness. Distribution §14 governs external-effect reconciliation.
+
+| Step | Version 14 prose SHA-256 (Spec 00 §2) |
+| --- | --- |
+| CP07-S07 | `dd116de04812ea3f0c16dc4f8977d39722764020184a3fdaff5efb17fb72f5ea` |
+| CP07-S08 | `2457bf3e02c740eda1ec81d1602400175e903a8bf5c0668c8b3f9792fc83398f` |
+| CP07-S09 | `f20b73266c9ee57a5b2b67fa33f47d145dd9fed71482b5af296fd743d10ce441` |
+| CP07-S10 | `c336870b441169bda7780dc271e4a67e9c7df491b3ee169f16b6fd96140f382f` |
+| CP07-S11 | `056da89b3ec01b7e61293d158037e311f830bdd447a8a706129371c9264555e9` |
+| CP07-S14 | `a056187a0143662742b5871c641b41f626aa76646197b354ba769444ad96de00` |
+| CP07-S15 | `e3a4b4859e4cf70b751c66f5ffcd6bbe425343a1aaeb40243962e879a02f57d4` |
 
 ### Kakeibo
 
@@ -386,7 +400,7 @@ Trace the selected Publication to human approval, exact content, Evidence and ac
 
 ### Step 7 — Collect and analyse bounded live Publication evidence
 
-**References:** Spec 06 §§8–13, 18, 21; Checkpoint 6 collection/analysis provenance and evidence hand-off.
+**References:** Spec 05 §§4 and 27; Spec 06 §§8–13, 18, 21 and 23; Checkpoint 6 collection/analysis provenance and evidence hand-off.
 
 **Run**
 
@@ -409,6 +423,10 @@ Live Publication evidence produces either a supported canonical Observation tied
 **Verify before continuing**
 
 Retain actual source/window/execution provenance and external evidence references. For each created or matched Observation, verify Publication exposure ID/hash, window, baseline where needed and supported non-causal wording where causality is unproven. Confirm previous Asset/Publication/Observation records remain unchanged and additional evidence is retained in new provenance rather than rewriting a matched Observation.
+
+Report the fulfilled Delivery, approved Asset, actual Publication and observed outcome separately. Cite the Evidence, approval, actual release and Observation for the corresponding claims. For a live finding, record the measure and counting rule, observed window, applicable target or comparable baseline, evidence locator, coverage limits and uncertainty. If the evidence is insufficient, record the gap and successful analysis without an Observation or Source. If collection fails, record the failed execution and identify the owner and permitted recovery action.
+
+In the isolated Step 3 suite, follow one approved trial campaign through three reports: before release, after release with no outcome evidence, and after a supported shortfall. Use the exact Publication and the Spec 06 §12 example: 30 of 1,000 distinct eligible visitors started a trial in the first seven days against a 5% target. Require the measured 3% result and report the traffic-mix limitation. A comparable baseline is required for a claim of change. Exercise insufficient coverage and denied source access separately. Compare each claim with its governing record and verify that the weak outcome preserves the original Evidence, approval and release history.
 
 A no-finding outcome does not create an invented Source or satisfy the required real revision. Resolve failures through the existing retry path; do not pass to Source-specific commands without a Source ID.
 
@@ -454,6 +472,8 @@ For a candidate, trace Publication → external evidence/execution → Observati
 
 Require no raw/unpromoted evidence to introduce a candidate, no automatic Intent and no Operations-owned priority. Hand-off retries must converge without duplicate Sources. Retain legitimate no-candidate outcomes rather than manufacture project meaning.
 
+Use the supported shortfall from Step 7's fixture to exercise the two authority states. Before human approval of a new Knowledge conclusion, require the existing Source to remain traceable without a corrective candidate from that shortfall. After the normal review approves Knowledge that justifies work, verify the candidate in the one PI roadmap and the matching filtered Operations entry. Report the current hand-off or triage owner, any blocker and the next permitted action in each state.
+
 ## Stage 4 — Close one Pactwright Publication revision loop
 
 ### Step 9 — Select a ready evidence-supported correction
@@ -475,6 +495,8 @@ One real correction is ready for explicit Delivery authorisation with traceable 
 **Verify before continuing**
 
 Check the complete live provenance chain, accepted Knowledge and required approval, current candidate readiness/dependencies and the original Publication identity. Require the evidence to justify the bounded change and clearly distinguish the proposed improvement from any unproven performance claim. A fixture cannot pass this step.
+
+Record the selected candidate, its accountable owner and the next permitted action with its authority. If no candidate qualifies, record the blocker and who can resolve the missing evidence, approval or dependency. Selecting a candidate leaves Delivery authorisation to Step 10.
 
 ### Step 10 — Deliver the correction under current public readiness
 
@@ -512,11 +534,13 @@ Live Publication evidence influences a verified corrective output only through P
 
 Run repository-defined verification, relevant owning Production Skills evaluation and `pnpm pactwright validate`. Trace candidate → Knowledge/Sources → Intent/Decision/Contract/Brief → successful closing Review → factual Evidence. Confirm applicable domains are Covered and relied-on claims are accepted/in-horizon/Source-traceable.
 
+Report the corrective Delivery as fulfilled only after closing Review and canonical Evidence. At this point the revised output still needs the human approval and actual release in Step 11. Record the accountable next owner and the pending action.
+
 Evidence is canonical before and independently of Asset approval. It does not assert the new output has been released or improved operational performance. Preserve the original Evidence, Asset, Publication and Observation history.
 
 ### Step 11 — Approve, actually release and record the revised output
 
-**References:** Spec 05 §§7–16, 19, 22–25; Spec 08 revised Publication milestone; Checkpoint 5 approval/release boundaries.
+**References:** Spec 02 §14; Spec 05 §§7–16, 19 and 22–25; Spec 08 revised Publication milestone; Checkpoint 5 approval/release boundaries.
 
 **Run**
 
@@ -572,6 +596,10 @@ original Publication
 ```
 
 Verify new `Publication.asset_hash == Asset.content_hash`, actual release metadata, valid `Evidence --produces--> Asset`, `Publication --publishes--> Asset` and the applicable new-to-old Asset supersession edge. Compare original Evidence/Asset/Publication/Observation hashes and stored approved content before/after; none may be silently rewritten.
+
+In an isolated fixture, interrupt the release after the channel accepts it and before local acknowledgement is recorded. Apply the existing effect reconciliation for the exact approved revision and destination. Confirm the resumed attempt reads the channel and reuses the verified release evidence without releasing again. In a separate interruption after recording, read current canonical Publications and reuse the matching record when the release provenance and Asset match. Retry only when absence is established and the current authority and channel safeguards permit it. If either outcome remains uncertain, stop and report the blocker, accountable owner and permitted verification action. Keep the open recording-identity gap from Step 15 explicit.
+
+In the live report, cite the closing Review and Evidence, exact human-approved Asset and verified release separately. State whether any later outcome was observed and cite the corresponding Observation only where supported.
 
 Do not add Publication-to-Publication supersession, withdrawal or performance fields. The result proves a justified released revision, not measured performance improvement. Any later improvement claim needs new supported Operations evidence and normal PI governance.
 
@@ -702,6 +730,8 @@ Verify installed runtime and enabled first-party Extension versions are exactly 
 
 Require converged local/remote state, the same shared Project, preserved unrelated workflows and passing owning/Kakeibo repository checks. Retain actual Publication/source/window/collection/analysis evidence. Every created/matched Observation must retain exact release provenance and a valid Source or a resolved hand-off retry before live hand-off is claimed. A live no-finding result must be labelled as such and is not a substitute for Pactwright's mandatory Step 11 revision.
 
+Apply Step 7's reporting checks to the real Kakeibo surface. Trace fulfilment, exact approval and release independently of the outcome. Include the live source, window, measure and uncertainty when supported. Report insufficient coverage and failed collection separately. Give any blocker or resulting action an owner and cite the current Kakeibo authority. Mark any isolated conformance result as a fixture.
+
 Use isolated populated fixtures for disablement checks rather than deleting or disabling production history to satisfy a test. Confirm Assets/Publications remain independently valid without Operations and native Deployment Operations remains usable without Publication registration.
 
 ## Stage 7 — Capture feedback
@@ -724,7 +754,7 @@ Learning reaches the correct owner and declared open gaps remain honest without 
 
 **Verify before continuing**
 
-Trace each blocker to a correction and passing re-verification. Verify retained non-blocking findings have Source/triage provenance and disposition. Require the full real Pactwright revision, exact release/Kakeibo acceptance and all mapped integration tests to pass before Checkpoint 8.
+Record each material finding's governing evidence, accountable owner, any blocker and next permitted action. Trace each blocker to a correction and passing re-verification. Verify retained non-blocking findings have Source/triage provenance and disposition. Require the full real Pactwright revision, exact release/Kakeibo acceptance and all mapped integration tests to pass before Checkpoint 8.
 
 ## Exit gate
 
@@ -758,4 +788,4 @@ Checkpoint 7 closes only when:
 
 ---
 
-**Pactwright — Checkpoint 7 — Publication Feedback v13**
+**Pactwright — Checkpoint 7 — Publication Feedback v14**
