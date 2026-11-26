@@ -1,6 +1,6 @@
 # Pactwright — Checkpoint 6 — Operations
 
-**Version:** 19\
+**Version:** 20\
 **Entry condition:** Checkpoint 5 is accepted.\
 **Release:** `0.0.7`\
 **Exit capability:** Pactwright and Kakeibo can record real software exposure, predeclare controlled comparisons as immutable Experiments, collect bounded operational evidence, create durable Observations, route every canonical Observation through Project Intelligence, and prove governed corrective candidates without turning Operations into a telemetry store or second roadmap.
@@ -74,6 +74,15 @@ Research logs are otherwise rationale only. Kakeibo acceptance uses the current 
 | CP06-S08 | `9d72612024945c29ccb7fa9d6fb291cf1039689edf1b6037f7302a328ee196b4` |
 | CP06-S09 | `20e81e835d28abb6d9961174953fcae1669f7c39155b2a09b4e952b43c6e35b8` |
 | CP06-S10 | `3bf17b2ef325818a22cc145324666294a180ef6c5f43bc460fbb998ca4c252bb` |
+
+### Version 20 amendment
+
+[PDI-CP07 amendment review (#134)](https://github.com/sb-dev/pactwright/pull/134) covers CP06-S11 and CP06-S12. Operations §§9, 13–14, 18 and 21 govern refresh results and the corrective view. Project Intelligence §§14 and 21–22 govern triage and candidate derivation.
+
+| Step | Version 20 prose SHA-256 (Spec 00 §2) |
+| --- | --- |
+| CP06-S11 | `e27779107e61e96868a47bb7400698697dc7eaa2ce348bd57ad2d3f0694ab3fc` |
+| CP06-S12 | `56846666edce9f5bd4ce8926e69b2094c8c0a2f063e0bc90ce66d57d9a17d56e` |
 
 ### Kakeibo
 
@@ -551,7 +560,7 @@ Use the truncated Step 7 input with coverage too limited to establish the rate. 
 
 ### Step 11 — Implement `refresh` through existing collection and analysis operations
 
-**References:** Spec 06 §§18, 21; Spec 07 §24.
+**References:** Spec 06 §§9, 13, 18 and 21; Spec 07 §24.
 
 **Run**
 
@@ -576,9 +585,11 @@ The configured feedback loop has bounded retries and explicit per-attempt result
 
 Test all-success, no-finding, partial-source failure, complete-source failure, analysis failure and hand-off failure. Compare direct commands with composed execution for semantic equivalence. Verify canonical history and successful independent results survive failures; no failed attempt creates partial state or false success.
 
+Run one refresh with the complete checkout fixture from Step 7 and a second eligible source that denies access. Trace the checkout Observation and its PI Source as in Step 10. For the denied source, require a failed collection with no analysis, the access blocker, the owner who can restore access and the permitted next action. Inspect both executions separately. The access failure must leave the checkout result and its hand-off intact. In a separate run, use the checkout sample with insufficient coverage. Its successful analysis must expose the coverage gap and produce no Observation or Source.
+
 ### Step 12 — Implement current PI-derived corrective roadmap and report-failure isolation
 
-**References:** Specs 03 roadmap ownership, 06 §§14, 21 and 07 §§26–27, 31.
+**References:** Spec 03 §§14, 21–22; Spec 06 §§13–14 and 21; Spec 07 §§26–27 and 31.
 
 **Run**
 
@@ -606,6 +617,10 @@ Operations exposes a current, traceable filtered PI view without becoming a seco
 **Verify before continuing**
 
 Mix operational/non-operational candidates and raw/unpromoted evidence; compare the filtered view with the current PI model field by field, including cross-filter dependencies. Change PI candidates and reject a stale view even when its graph-revision stamp has been copied forward. Test deterministic regeneration, current versus explicitly pinned input where supported, report edits, and injected render/write failure. Canonical records, execution history and PI truth must remain unchanged; retry only report generation.
+
+Start with the Step 10 checkout Source and no accepted Knowledge motivating checkout work. Generate the PI roadmap and its Operations view. Verify that neither derives a checkout candidate from the shortfall alone. PI owns triage. If triage proposes a new conclusion, human approval is the next decision.
+
+In a labelled fixture, use PI's normal approval path to accept Knowledge that justifies corrective work. Regenerate both views. Trace the Operations entry through the same PI candidate and accepted Knowledge to the Source, Observation and measured window. Compare readiness, ordering and any blocking dependency with PI. Identify the owner and next permitted action from those governing records. The Delivery owner needs the applicable Intent, Decision, Contract and Brief before implementation. Check that report generation preserves the original fulfilled Delivery and its Evidence.
 
 ### Step 13 — Implement all 17 Operations validation rules
 
@@ -1367,4 +1382,4 @@ Checkpoint 6 closes only when:
 
 ---
 
-**Pactwright — Checkpoint 6 — Operations v19**
+**Pactwright — Checkpoint 6 — Operations v20**
