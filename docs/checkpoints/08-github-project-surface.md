@@ -45,12 +45,12 @@ Research logs are rationale only. Kakeibo acceptance uses the current canonical 
 
 ### Version 15 amendment
 
-[PDI-CP07 amendment review](https://github.com/sb-dev/pactwright/pulls?q=is%3Apr+head%3Adocs%2Fpdi-cp07-operating-surface) covers CP08-S04–CP08-S08, CP08-S12, CP08-S14, CP08-S16, CP08-S18 and CP08-S20. GitHub Integration §§10, 15–29, 31–32, 35 and 39 govern projection and evaluation. Project Intelligence §§14–15 and 21–23 govern approved meaning, candidates and recurrence. Assets and Publication §4 and Operations §§8–14, 21 and 23 govern outcome reporting. Agent Methodology §§9–10 and Open-Source Project Organisation §§14–21 govern regression evidence and public guidance.
+[PDI-CP07 amendment review (#137)](https://github.com/sb-dev/pactwright/pull/137) covers CP08-S04–CP08-S08, CP08-S12, CP08-S14, CP08-S16, CP08-S18 and CP08-S20. GitHub Integration §§10, 15–29, 31–32, 35 and 39 govern projection and evaluation. Project Intelligence §§14–15 and 21–23 govern approved meaning, candidates and recurrence. Assets and Publication §4 and Operations §§8–14, 21 and 23 govern outcome reporting. Agent Methodology §§9–10 and Open-Source Project Organisation §§14–21 govern regression evidence and public guidance.
 
 | Step | Version 15 prose SHA-256 (Spec 00 §2) |
 | --- | --- |
 | CP08-S04 | `52965fb03ab5ef568e48670514fbfe7f08eb859fb3d599641bc9ac05c20192c9` |
-| CP08-S05 | `78a23cc6a2027242b7549abbcd15927cc7c1f214a4983c50d743b076d979c5c4` |
+| CP08-S05 | `de886d11d31a9364089b9122a0f1e5f2b4424d9a297d0042b2f34b71bc8b7486` |
 | CP08-S06 | `b0bde8baeac88ba188936aace4e2cc18cbba55bc1a444ecfca5f4311a53ae148` |
 | CP08-S07 | `1de1386dd1e3b177eef4481d868d418802b5e359c177c3dbab0a2779db30dec1` |
 | CP08-S08 | `0a399171058931748b912effaa134213a6f04cc76ea807abbd6ac05633f3c92d` |
@@ -284,7 +284,7 @@ For a supported remote assignment, compare the projected accountable owner, curr
 
 ### Step 5 — Verify PI checks, Grounding states, promotion summaries and derived views
 
-**References:** Spec 03 §§14–15 and 21–23 and Spec 07 §§11–17, 31.
+**References:** Spec 03 §§11, 14–17 and 21–23 and Spec 07 §§11–17, 31.
 
 **Run**
 
