@@ -1,6 +1,6 @@
 # Pactwright — Graduation — Connected Banking
 
-**Version:** 2  
+**Version:** 3\
 **Entry condition:** Checkpoint 9 is accepted, Kakeibo runs the exact accepted `0.1.0` registry packages, and an accepted Kakeibo connected-banking integration specification exists.  
 **Current provider target:** Salt Edge Account Information  
 **Exit capability:** A second financial-data source is added behind Kakeibo's canonical ingestion boundary without semantic drift, the integration is observed in production, and graduation findings become governed Pactwright evidence.
@@ -47,6 +47,7 @@ Pactwright behaviour is governed by the canonical specifications:
 - [06 — Operations](../specs/06-operations.md)
 - [07 — GitHub Integration](../specs/07-github-integration.md)
 - [08 — Open-Source Project Organisation](../specs/08-open-source-project-organisation.md)
+- [09 — Agent Methodology and Workflows](../specs/09-agent-methodology-and-workflows.md)
 - [Pactwright — Operations Experiment Semantics](../research-logs/2026-09-02-pactwright-operations-experiment-semantics.md)
 - [Pactwright — Implementation Principles](./00-implementation-principles.md)
 - [Pactwright — Implementation Guide](./00-implementation-guide.md)
@@ -86,6 +87,24 @@ The accepted provider-specific connected-banking specification owns Salt Edge-sp
 This runbook does not invent provider mechanics that the accepted Kakeibo spec does not define.
 
 ---
+
+### Version 3 amendment
+
+[PDI-CP07 amendment review (#139)](https://github.com/sb-dev/pactwright/pull/139) covers CP10-S01–S03 and CP10-S05–S10. Spec 00 §§5–6 governs accepted model and prior-feature use. Distribution §§5, 12, 14 and 16 and Agent Methodology §§5, 7–8 and 10 govern resolved entry, coordination, continuation and reporting. PI §§11 and 21–24, Graph Review, Assets and Publication, Operations and GitHub Integration govern the evidence traced through the existing stages.
+
+The hashes use the Spec 00 §2 text normalisation, with the existing Graduation heading levels. Each section starts at its `## Step N —` heading and ends at the next step, stage or exit heading. The first step in each stage includes the `# Stage` heading and its introduction.
+
+| Step | Version 3 prose SHA-256 |
+| --- | --- |
+| CP10-S01 | `dee8defa993bf47185dca7732de5769d8960fef1c9db456f57375bfb48a0c7c0` |
+| CP10-S02 | `c57b5c1e984667e552834149e1fdb009ebb637aa726560b8fcc694adca850112` |
+| CP10-S03 | `faa0eacb6f9b9dbfa35a975eb8cfa44dd7e42a5f5534356f1c777e60762a5381` |
+| CP10-S05 | `fb7bde4c81b315b7dd5f225c8ec561bea6efa42f5c54e30c8627cccbff4489d1` |
+| CP10-S06 | `e3f6697a3b6b70479855c5855bf06ffab7fdd9660d80eb83a868741ed7b5ac9f` |
+| CP10-S07 | `bef232825bc3a9068c9a0d6ffe1dbd0bd3db581ef2c673bd07796a347ee09e76` |
+| CP10-S08 | `9abda375e1fc91f3cdbb4dbbffc645c670e4784ae1d31b9e74669f584b732a91` |
+| CP10-S09 | `b557a4b90f075a1e3d68ceff9150bd9e0b17a8fbeefbf2e463cad0a2cde2dd48` |
+| CP10-S10 | `64ffa227c5c4a82c72ad203afc2ac49e9d0f03b1ed45bb7b6c0fd881b1cee594` |
 
 ## 3. Execution contract
 
@@ -177,6 +196,10 @@ And:
 
 **Run**
 
+Before ingestion, record the CP09 acceptance and supported release evidence, the exact installed `0.1.0` package family, the selected Agent Pack and resolved lock, and the current accepted run model and controller. Use Spec 00 §§5–6 to identify each applicable prior facility, its owning step below, and the expected execution evidence. Record a reason for each facility that does not apply. A missing required facility blocks its dependent work.
+
+Use the installed pack's supported advisory entry for initial scoping. Record the actual host invocation and resolved entry identity under Distribution §§5, 12 and 14 and Spec 09 §5. Verify that advice leaves Delivery records and execution state unchanged. Record the accepted provider specification as a Source and trace reviewed conclusions through human-approved Knowledge to eligibility on the existing PI roadmap. Use the readiness and dependency checks in PI §§11 and 21–23 before selecting work.
+
 ```bash
 pnpm pactwright intelligence ingest "<Kakeibo-connected-banking-spec-path>"
 pnpm pactwright intelligence triage <source-id>
@@ -239,6 +262,8 @@ Architecture/product/UX/privacy/Kei contradictions are surfaced before Delivery.
 
 Every accepted concern traces to Review evidence and PI governance. No reviewer directly mutates Kakeibo truth.
 
+Record independent reviewers, the accepted input revisions and the affected requirements under Graph Review. When the adapter crosses several Deliveries or owners, use the governing combined acceptance requirement to check that both source paths produce consistent downstream meaning. Trace accepted Findings to their PI Sources and any human-approved Knowledge. Keep the responsible owner and next action visible for unresolved findings.
+
 ---
 
 # Stage 2 — Deliver the second ingestion source
@@ -282,6 +307,8 @@ provider outage
 ```
 
 Prove both CSV and Salt Edge converge through `NormalisedSourceRecord` to compatible `FinancialEntry` meaning.
+
+Use the accepted software run model and the existing generated adapter for governed work. Record the accountable capability owners, any active Production Skills and the resolved identities used. Trace specialist assignments, accepted results and independent review to the governing Contract and Brief under Core §§27–39 and Spec 09 §§5 and 7–8. When using accepted remote execution, record the bounded assignment, current authority checks and result integration under Distribution §14. Trace the applicable CP09 correction or continuation path to its observed result or blocker. Preserve accepted Evidence and consumed limits when current-policy restart or reconciliation applies.
 
 ## Step 4 — Prove source equivalence through the product
 
@@ -345,6 +372,8 @@ Exact delivered Evidence is distinguishable from production exposure.
 
 Deployment records contain no provider credentials, tokens or raw provider payloads.
 
+Read back the actual release or deployment at its destination and trace the exact revision to the governing Evidence. For any in-scope public guidance or release Asset, use the accepted Asset approval and Publication path and retain the approved revision, destination and actual Publication. Use accepted GitHub projections where applicable to show the accountable owner, verified outcome or blocker and next permitted action from the governing records.
+
 ## Step 6 — Configure bounded operational evidence
 
 **References:** Operations sources; Kakeibo 06 provider operations/signals/privacy
@@ -368,6 +397,8 @@ Provider reliability is observable without turning Pactwright into a telemetry s
 **Verify before continuing**
 
 Inspect configuration and logging boundaries. Credentials and sensitive payloads remain outside canonical Project Graph state.
+
+Record the intended measure, counting rule, exposure, observation window, comparison baseline where applicable and evidence limits under Operations §§8–14. Use privacy-safe references that allow the result to be checked without copying sensitive input into the graph.
 
 ## Step 7 — Observe and govern production evidence
 
@@ -403,6 +434,8 @@ Provider production behaviour follows the same Operations → PI governance path
 
 At least one meaningful success/failure or explicitly justified no-finding execution is traceable to bounded external evidence. Raw provider events remain outside the Project Graph.
 
+Trace actual Deployment or Publication exposure to the Observation and any PI Source. Report fulfilment, exposure and observed outcome separately. Distinguish insufficient evidence from collection failure. Where Publication Feedback applies, use the accepted CP07 path against the actual Publication. Route qualified new meaning through human Knowledge approval before changing plan readiness or proposing governed Delivery. For recurring work, record the current occurrence's disposition and the continuing policy under PI §23.
+
 ---
 
 # Stage 4 — Isolate provider failure
@@ -424,6 +457,8 @@ Connected banking is an optional source capability rather than a dependency of c
 **Verify before continuing**
 
 Run Kakeibo financial/import tests and Pactwright validations before and after recovery. No reviewed history is silently deleted or reinterpreted.
+
+Record the failure drill, observed isolation and recovery, evidence, accountable owner and next permitted action for any blocker. If recovery crosses an interrupted external write, use the accepted CP09 reconciliation path. Read back the destination before retry, reuse a confirmed effect and stop on an ambiguous result. Report unavailable recovery as a blocker where required by the accepted path.
 
 ---
 
@@ -458,6 +493,8 @@ Graduation teaches Pactwright without turning provider-specific behaviour into P
 
 Every blocking Pactwright finding is represented as governed evidence/candidate, and no mid-graduation Pactwright implementation change occurred.
 
+For each Pactwright finding, retain a privacy-safe link to the observed failure and identify the accountable owner, blocker or disposition and next permitted action. Route reusable domain-method findings to the owning Production Skills family. Route pack-method findings to the pack owner under Spec 09 §9. Project Knowledge and future Delivery remain under normal PI governance. Retain the earlier Evidence when future work changes direction.
+
 ---
 
 ## Step 10 — Assess the six system-level acceptance dimensions
@@ -484,6 +521,8 @@ Feedback
 → operational/generalisation findings entered normal PI governance.
 ```
 
+Attach the entry inventory from Step 1 to the six-dimension evidence. For each applicable facility, record the exact accepted configuration, owning step, actual execution path, Evidence or effect reference, and verified result or blocker. For evaluated pack methods, record the invoker, judge and cases that ran under Spec 09 §10. Record unavailable execution as **not evaluated** and missing semantic judgement as **unjudged**. Verify public claims against exercised paths under Spec 08 §§14–21 and record gaps with an accountable owner and next permitted action.
+
 ## Exit gate
 
 Graduation passes only when:
@@ -501,8 +540,9 @@ Graduation passes only when:
 11. provider outage can be isolated while CSV and trusted history remain usable;
 12. no payment-initiation capability or second financial model was introduced implicitly;
 13. graduation findings are captured as governed Pactwright evidence without changing Pactwright during the exercise;
-14. all six System-Level Acceptance dimensions remain satisfied: semantics, execution, boundaries, installation, content and feedback.
+14. all six System-Level Acceptance dimensions remain satisfied: semantics, execution, boundaries, installation, content and feedback;
+15. every applicable prior facility has current execution evidence under Spec 00 §6, and each blocking gap has been corrected and reverified.
 
 ---
 
-**Pactwright — Graduation — Connected Banking v2**
+**Pactwright — Graduation — Connected Banking v3**
