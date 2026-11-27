@@ -614,6 +614,8 @@ Read `README.md`, `00-implementation-principles.md` and the canonical Pactwright
 
 Use the current accepted run model. Its controller checks the governing step contract, current evidence, independent review and required approvals. The selected pack supplies the Director and specialist methods where available. Follow [Spec 00 §5](../specs/00-checkpoint-step-contract-and-delivery-tasks.md#project-director-work) for the first successor in CP02 and subsequent adoption. Switch only after the predecessor's controller records acceptance of that candidate.
 
+The [Project Director amendment verification record](../research-logs/2026-11-17-project-director-integration-plan.md#amendment-verification-record) maps the specifications to the owning checkpoint steps and records the evidence those steps require.
+
 For Checkpoints 6–9, also apply `2026-09-02-pactwright-operations-experiment-semantics.md` wherever the runbook references controlled Experiment semantics.
 
 Graduation starts only after Checkpoint 9 closes, the supported `0.1.0` line is accepted and Kakeibo consumes that supported family.
