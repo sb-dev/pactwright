@@ -90,7 +90,7 @@ This runbook does not invent provider mechanics that the accepted Kakeibo spec d
 
 ### Version 3 amendment
 
-[PDI-CP07 amendment review (#139)](https://github.com/sb-dev/pactwright/pull/139) covers CP10-S01–S03 and CP10-S05–S10. Spec 00 §§5–6 governs accepted model and prior-feature use. Distribution §§5, 12, 14 and 16 and Agent Methodology §§5, 7–8 and 10 govern resolved entry, coordination, continuation and reporting. PI §§11 and 21–24, Graph Review, Assets and Publication, Operations and GitHub Integration govern the evidence traced through the existing stages.
+[PDI-CP07 amendment review (#139)](https://github.com/sb-dev/pactwright/pull/139) covers CP10-S01–S03 and CP10-S05–S10. Spec 00 §§5–6 governs the accepted run model and prior-feature use. Core §§27–39 and 55 govern Delivery authority and result integration. Agent Methodology §§5 and 7–10 govern entry, delegation, unattended methods, pack ownership and evaluation. Distribution §§5, 12, 14 and 16 govern the resolved environment, adapter entry and durable host state. GitHub Integration §§5–7 and 36 govern managed remote workflows and their trust boundary. PI §§11 and 21–24, Graph Review, Assets and Publication, Operations §§8–14 and GitHub Integration govern the evidence traced through the existing stages. Open-Source Project Organisation §§14–21 governs public claims.
 
 The hashes use the Spec 00 §2 text normalisation, with the existing Graduation heading levels. Each section starts at its `## Step N —` heading and ends at the next step, stage or exit heading. The first step in each stage includes the `# Stage` heading and its introduction.
 
@@ -98,11 +98,11 @@ The hashes use the Spec 00 §2 text normalisation, with the existing Graduation 
 | --- | --- |
 | CP10-S01 | `dee8defa993bf47185dca7732de5769d8960fef1c9db456f57375bfb48a0c7c0` |
 | CP10-S02 | `c57b5c1e984667e552834149e1fdb009ebb637aa726560b8fcc694adca850112` |
-| CP10-S03 | `faa0eacb6f9b9dbfa35a975eb8cfa44dd7e42a5f5534356f1c777e60762a5381` |
-| CP10-S05 | `fb7bde4c81b315b7dd5f225c8ec561bea6efa42f5c54e30c8627cccbff4489d1` |
+| CP10-S03 | `f26b615f9fb1b657c7f10d4180321be2689752b078ec34c8f2dc225d067de708` |
+| CP10-S05 | `f3751967ccc856be11b3c58601c6f20d789d46dee221a2d6ed79a735d3024187` |
 | CP10-S06 | `e3f6697a3b6b70479855c5855bf06ffab7fdd9660d80eb83a868741ed7b5ac9f` |
-| CP10-S07 | `bef232825bc3a9068c9a0d6ffe1dbd0bd3db581ef2c673bd07796a347ee09e76` |
-| CP10-S08 | `9abda375e1fc91f3cdbb4dbbffc645c670e4784ae1d31b9e74669f584b732a91` |
+| CP10-S07 | `8968dc8d720700b7acd9c057d8f0f1fe5799405c9fc416da7e2993c10713a716` |
+| CP10-S08 | `561064456114c764f8df990d037d738cefe8e3cfc041dc151400e34305f761d4` |
 | CP10-S09 | `b557a4b90f075a1e3d68ceff9150bd9e0b17a8fbeefbf2e463cad0a2cde2dd48` |
 | CP10-S10 | `64ffa227c5c4a82c72ad203afc2ac49e9d0f03b1ed45bb7b6c0fd881b1cee594` |
 
@@ -274,6 +274,8 @@ Record independent reviewers, the accepted input revisions and the affected requ
 
 **Run**
 
+Use the accepted software run model and the existing generated adapter for governed work. Record the accountable capability owners, any active Production Skills and the resolved identities used. Trace specialist assignments, accepted results and independent review to the governing Contract and Brief under Core §§27–39 and Spec 09 §§5 and 7–8. For remote work, bound the assignment under Spec 09 §§7–8 and use the managed GitHub workflow under Spec 07 §§5–7 and 36. Retain the assignment and attempt identities in durable host state under Distribution §14. Before integrating the returned result, check its dispatch identity, freshness and current authority under Core §§34 and 55. Trace the applicable CP09 correction or continuation path to its observed result or blocker. Preserve accepted Evidence and consumed limits when current-policy restart or reconciliation applies.
+
 ```text
 /capture-intent "Add Salt Edge Account Information as Kakeibo's first connected financial-data source behind the existing FinancialSource → IngestionAdapter → NormalisedSourceRecord → FinancialEntry boundary. Preserve provider/source lifecycle separately from review truth; keep provider categories as preparation evidence only; preserve source lineage through reconciliation; keep provider credentials server-side; and satisfy the accepted connected-banking integration specification."
 /propose-contracts <intent-id>
@@ -307,8 +309,6 @@ provider outage
 ```
 
 Prove both CSV and Salt Edge converge through `NormalisedSourceRecord` to compatible `FinancialEntry` meaning.
-
-Use the accepted software run model and the existing generated adapter for governed work. Record the accountable capability owners, any active Production Skills and the resolved identities used. Trace specialist assignments, accepted results and independent review to the governing Contract and Brief under Core §§27–39 and Spec 09 §§5 and 7–8. When using accepted remote execution, record the bounded assignment, current authority checks and result integration under Distribution §14. Trace the applicable CP09 correction or continuation path to its observed result or blocker. Preserve accepted Evidence and consumed limits when current-policy restart or reconciliation applies.
 
 ## Step 4 — Prove source equivalence through the product
 
@@ -364,6 +364,8 @@ pnpm pactwright operations record-deployment <evidence-id>
 pnpm pactwright operations validate
 ```
 
+Read back the actual release or deployment at its destination and trace the exact revision to the governing Evidence. For any in-scope public guidance or release Asset, use the accepted Asset approval and Publication path and retain the approved revision, destination and actual Publication. Use accepted GitHub projections where applicable to show the accountable owner, verified outcome or blocker and next permitted action from the governing records.
+
 **Expected result**
 
 Exact delivered Evidence is distinguishable from production exposure.
@@ -371,8 +373,6 @@ Exact delivered Evidence is distinguishable from production exposure.
 **Verify before continuing**
 
 Deployment records contain no provider credentials, tokens or raw provider payloads.
-
-Read back the actual release or deployment at its destination and trace the exact revision to the governing Evidence. For any in-scope public guidance or release Asset, use the accepted Asset approval and Publication path and retain the approved revision, destination and actual Publication. Use accepted GitHub projections where applicable to show the accountable owner, verified outcome or blocker and next permitted action from the governing records.
 
 ## Step 6 — Configure bounded operational evidence
 
@@ -426,6 +426,8 @@ pnpm pactwright intelligence derive-intent-roadmap
 pnpm pactwright operations corrective-roadmap
 ```
 
+Trace actual Deployment or Publication exposure to the Observation and any PI Source. Report fulfilment, exposure and observed outcome separately. Distinguish insufficient evidence from collection failure. Where Publication Feedback applies, use the accepted CP07 path against the actual Publication. Route qualified new meaning through human Knowledge approval before changing plan readiness or proposing governed Delivery. For recurring work, record the current occurrence's disposition and the continuing policy under PI §23.
+
 **Expected result**
 
 Provider production behaviour follows the same Operations → PI governance path as other Kakeibo production evidence.
@@ -433,8 +435,6 @@ Provider production behaviour follows the same Operations → PI governance path
 **Verify before continuing**
 
 At least one meaningful success/failure or explicitly justified no-finding execution is traceable to bounded external evidence. Raw provider events remain outside the Project Graph.
-
-Trace actual Deployment or Publication exposure to the Observation and any PI Source. Report fulfilment, exposure and observed outcome separately. Distinguish insufficient evidence from collection failure. Where Publication Feedback applies, use the accepted CP07 path against the actual Publication. Route qualified new meaning through human Knowledge approval before changing plan readiness or proposing governed Delivery. For recurring work, record the current occurrence's disposition and the continuing policy under PI §23.
 
 ---
 
@@ -450,6 +450,8 @@ Trace actual Deployment or Publication exposure to the Observation and any PI So
 Safely simulate or exercise an accepted provider-outage/reconnect failure path. Disable or isolate connected-provider synchronisation without modifying trusted FinancialEntry history. Demonstrate that CSV ingestion and existing review/history remain usable. Restore normal provider operation using the documented recovery path.
 ```
 
+Record the failure drill, observed isolation and recovery, evidence, accountable owner and next permitted action for any blocker. If recovery crosses an interrupted external write, use the accepted CP09 reconciliation path. Read back the destination before retry, reuse a confirmed effect and stop on an ambiguous result. Report unavailable recovery as a blocker where required by the accepted path.
+
 **Expected result**
 
 Connected banking is an optional source capability rather than a dependency of canonical financial truth.
@@ -457,8 +459,6 @@ Connected banking is an optional source capability rather than a dependency of c
 **Verify before continuing**
 
 Run Kakeibo financial/import tests and Pactwright validations before and after recovery. No reviewed history is silently deleted or reinterpreted.
-
-Record the failure drill, observed isolation and recovery, evidence, accountable owner and next permitted action for any blocker. If recovery crosses an interrupted external write, use the accepted CP09 reconciliation path. Read back the destination before retry, reuse a confirmed effect and stop on an ambiguous result. Report unavailable recovery as a blocker where required by the accepted path.
 
 ---
 
