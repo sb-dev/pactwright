@@ -427,6 +427,76 @@ Before implementing the amended checkpoints:
 
 Repository checks validate their covered properties. They do not replace the live adapter, model, external-effect, skill-composition or outcome proofs assigned above. Report each unavailable proof as unavailable.
 
+### Amendment verification record
+
+Reviewed the owning documents and checkpoint contracts at [`516fb23847c0f56ac55683370e31ee94fd018efd`](https://github.com/sb-dev/pactwright/commit/516fb23847c0f56ac55683370e31ee94fd018efd). The CP10 merge has the same tree as the reviewed [PR #139](https://github.com/sb-dev/pactwright/pull/139) head. The Git references below identify amendment history. The linked specifications and steps govern execution.
+
+| Task | Semantic owner and implementation allocation | Acceptance to verify |
+| --- | --- | --- |
+| PDI-FOUND01 | [Agent Methodology][v-method] §§2–11. [CP01][v-cp01] S10 and S13 define pack roles and evaluation. CP01-S24 and S27 exercise the methods. [Foundation change](https://github.com/sb-dev/pactwright/commit/2401941be9ea1c23d3b2c4bacbc2620f7d8249cb). | Compare two complete packs through their supported paths. Record accountable roles, bounded handoffs, outputs, checks and separate review. |
+| PDI-FOUND02 | [Core][v-core] §§27–39 and 44–55. [CP01][v-cp01] S06, S08–S09, S12 and S24 apply dispatch, handoff and correction. [CP02][v-cp02] S04 and S13 and [CP09][v-cp09] S02 and S12 supply later recovery cases. [Core alignment](https://github.com/sb-dev/pactwright/commit/c41652a7d1ed600b8e53e5f3b7f661d2ad870ded), [stale restart](https://github.com/sb-dev/pactwright/commit/4e78f174e6c148e7c45ec463d9d9b347bb2ce407). | Advisory entry leaves Delivery state intact. A current result passes authority and freshness checks before integration. A stale result ends the invocation. Current-policy restart retains spent limits and reconciles useful work. Shared outcomes have explicit combined acceptance. |
+| PDI-FOUND03 | [Distribution][v-distribution] §§5–8, 12–18 and 21–24 and [Agent Methodology][v-method] §9. [CP01][v-cp01] S10–S11 and S13 define composition and candidate evaluation. [CP05][v-cp05] S01–S04 and S16 cover explicit adoption. [Pack lifecycle change](https://github.com/sb-dev/pactwright/commit/22c603f700c09298f76a06d146f9aeaefdc65b84). | Evaluate the exact candidate, preserve the selected environment during evaluation and require explicit adoption. Route pack and domain gaps to their owners. |
+| PDI-SPEC01 | [Agent Methodology][v-method] §§3, 5, 7–8 and 10 with [Core][v-core] §§28 and 39. [CP01][v-cp01] S24–S27 cover advice and governed handoff. [CP03][v-cp03] and [CP06][v-cp06] cover grouped direction and continuing operation. [Director change](https://github.com/sb-dev/pactwright/commit/3bc321ad3070c5c99eee6f0b47a8001bf8cab0a4), [review fixes](https://github.com/sb-dev/pactwright/commit/27dff2f3cc939ca34b6c80429aa30bbc7fa1baf0). | A small request, related Deliveries and ongoing Operations each expose the owner, current authority and observed result. Missing prerequisites stop the affected action. Basic advice can use ordinary project records without PI. |
+| PDI-SPEC02 | [Distribution][v-distribution] §§5, 12, 14 and 23 and [Agent Methodology][v-method] §5. [CP01][v-cp01] S10–S12, S15, S17–S18, S24 and S27 cover identity and actual entry. [Reviewed entry change](https://github.com/sb-dev/pactwright/commit/5b964d1a8bebec859c034d770ace0add599ef7e7). | The supported fresh host loads the resolved prompt and skills. Advice creates no Delivery records. Invalid and absent bindings and unsupported hosts report the actual limits. The seven governed commands retain their responsibilities. |
+| PDI-SPEC03 | [Project Intelligence][v-pi] §§11, 19–24 and 27–30. [CP03][v-cp03] S02–S12, S18–S20 and S25–S26 cover reviewed plans and adoption. [Planning and recovery change](https://github.com/sb-dev/pactwright/commit/c043566c62659bce218bf14e71e9a7548e5ce4b4), [plan mutation change](https://github.com/sb-dev/pactwright/commit/b04bc029464148faf981d15c905f990b224179d4). | Reject invalid references and cycles. A reviewed edit changes the graph revision. Trace a sourced conclusion through human approval to one roadmap. Comparable records distinguish coverage, fulfilment, scoped propagation and durable recurrence. |
+| PDI-SPEC04 | [Core][v-core] §§34 and 55–56 own current authority and result integration. [Distribution][v-distribution] §14 owns durable host state. [GitHub Integration][v-github] owns GitHub routing and projections. [CP02][v-cp02] S04–S08 and S12–S15 and [CP09][v-cp09] S11–S12 exercise the contracts. [Planning and recovery change](https://github.com/sb-dev/pactwright/commit/c043566c62659bce218bf14e71e9a7548e5ce4b4). | Match assignment, attempt, effect and result. A replacement worker retains budgets and checks the destination before retry. Ignore irrelevant or already reconciled events. GitHub projections cannot confer authority or completion. |
+| PDI-SPEC05 | [Graph Review][v-review] owns shared-requirement findings. [Assets and Publication][v-assets] owns approval and exposure. [Operations][v-ops] owns bounded outcomes and [PI][v-pi] owns reviewed promotion. [CP04][v-cp04] S15–S17 and S20–S21 and [CP06][v-cp06]–[CP07][v-cp07] exercise the boundaries. [Extension change](https://github.com/sb-dev/pactwright/commit/b53cf3caac9ba9911aa1f714d6514d6dd389c4bb), [Source hand-off change](https://github.com/sb-dev/pactwright/commit/2f5b10292951dc0bec9b714be141ff69f5fa127b). | Detect a failed combined result. Trace a finding or Observation to its owner and the permitted next action. Track fulfilment, approved Asset, actual release and measured outcome with their own evidence. |
+| PDI-SPEC06 | [Spec 08][v-oss] §9, [Spec 00][v-tasks] §5 and the [Implementation Guide][v-guide]. CP01 implements under T5. [CP02][v-cp02] S12 supplies T8 successor proof. T9 adopts accepted models for eligible later checkpoints. [PR #99](https://github.com/sb-dev/pactwright/pull/99). | Check the authority map, preserve existing checkpoint obligations, ground guides in observed use and require predecessor acceptance of the exact successor before adoption. |
+| PDI-CP01 | [CP01][v-cp01] S06, S08–S13, S15 and S17–S18. The YAML contracts carry the criterion IDs. Reviews #100–#103 are linked in the checkpoint amendment record. | Verify current dispatch and replay context, manifest validation, lock identity, the real adapter contract and truthful method evaluation. Exercise a binding-only lock change, deterministic sync, unsupported hosts and drift diagnostics. |
+| PDI-CP02 | [CP01][v-cp01] S24–S27 and S30–S31. Reviews #104–#106 and their prose hash records are linked in the checkpoint. | Trace small advice, a separate governed handoff, specialist work, correction and a fresh check. Exercise the supported entry on Pactwright and Kakeibo. Write the guide from the observed journeys. |
+| PDI-CP03 | [CP02][v-cp02] S04–S08 and S12–S15. Reviews #107–#110 are linked in the checkpoint. | Invoke a real unattended provider path, verify bounded assignment and authority stops, and recover on another worker. Project owners and blockers from governing records. Accept the first successor on the real Delivery, review, correction and resume path. |
+| PDI-CP04 | [CP03][v-cp03] S02–S12, S18–S20 and S25–S26. Reviews #111–#117 are linked in the checkpoint. | Validate plan schema, revision and dependencies. Trace sourced onboarding, approved Knowledge, combined satisfaction and recurrence through one roadmap. Exercise a scoped pivot that preserves unaffected Evidence. |
+| PDI-CP05 | [CP04][v-cp04] S02–S12, S15–S17 and S20–S21. Reviews #124–#130 are linked in the checkpoint. | Run a revision-pinned independent combined review and a negative case where individually accepted components fail together. Route one Finding through a retryable PI Source hand-off and verify the authorised correction. |
+| PDI-CP06 | [CP05][v-cp05] S01–S04, S16, S19–S21 and S24–S26. Reviews #118–#123 are linked in the checkpoint. | Resolve exact compatible skill composition. Run the Toolsmith candidate and explicit clean-consumer adoption path. Review the combined launch package independently and trace the approved release and Kakeibo reuse. |
+| PDI-CP07 | [CP06][v-cp06] S02, S06–S13, S15–S16, S19–S20, S23 and S27–S28. [CP07][v-cp07] S07–S11 and S14–S15. [CP08][v-cp08] S04–S08, S12, S14, S16, S18 and S20. [CP09][v-cp09] S01–S02, S06, S11–S13, S17–S18, S25 and S28. [CP10][v-cp10] S01–S03 and S05–S10. Reviews #131–#139 are linked in the respective checkpoints. | Trace feedback from bounded evidence to governed work and report owners and next actions. Exercise stale results, exhausted budgets, interrupted effects, pivots and repeated outcomes. Ground public claims in exercised behaviour and record actual use of applicable accepted facilities at Graduation. |
+| PDI-VERIFY01 | [Spec 00][v-tasks] §§2–6 and the [Implementation Guide][v-guide]. This record traces the documentation to the existing implementation allocation. | Check all 17 rows, the §7 cases, owner authority, step and criterion IDs, historical crosswalk, reviewed hashes and repository gates with full history available. |
+
+#### Integration case checks
+
+| §7 case | Owning execution paths and observable check |
+| --- | --- |
+| Pack methodology and delegation | [CP01][v-cp01] S10, S13 and S27. Compare two complete packs and record the actual selected roles, bounded handoff, accountable result integration and independent review. |
+| Pack candidate adoption | [CP01][v-cp01] S11 and S13 and [CP05][v-cp05] S16. Compare environment identities before evaluation and after explicit adoption in a separate clean consumer. |
+| Advice entry | [CP01][v-cp01] S12, S24, S27 and S30. Record the fresh generated host trace and compare canonical Delivery state before and after advice. |
+| Missing skill | [CP01][v-cp01] S10, S13 and S27 and [CP05][v-cp05] S01–S04. Report the owner and gap. Check the resolved environment for any unapproved activation. |
+| Combined component failure | [CP03][v-cp03] S08, S12 and S26, [CP04][v-cp04] S15–S17 and S20–S21, and [CP05][v-cp05] S19 and S25. The independent result identifies the failed shared requirement and the governed path to correction. |
+| Changed approach | [CP01][v-cp01] S24 and S30 and [CP09][v-cp09] S02. Trace the replacement Brief under the valid Contract and the rechecked result. |
+| Strategic pivot | [CP03][v-cp03] S11 and [CP09][v-cp09] S02. Trace approvals, affected readiness and the owning Decision. Keep valid work and historical Evidence available. |
+| Concurrent stale work | [CP01][v-cp01] S06, S08–S09 and S12 use the instrumented seam. [CP02][v-cp02] S04 and S13 and [CP09][v-cp09] S12 use the accepted remote path. Verify that a stale invocation stops without advancement or redispatch and that a fresh invocation retains consumed limits. |
+| Interrupted external effect | [CP02][v-cp02] S13, [CP07][v-cp07] S11, [CP09][v-cp09] S11–S12 and [CP10][v-cp10] S08 where applicable. Read back the exact destination and effect, reuse a confirmed result, and stop on ambiguity. |
+| Fulfilled output, weak outcome | [CP05][v-cp05] S20–S21 supply approved output and Publication provenance. [CP06][v-cp06] S07–S12 and [CP07][v-cp07] S07–S11 and S14–S15 own the measured result and follow-up. [CP09][v-cp09] S18 repeats the comparison. Report fulfilment, exposure, evidence limits and the governed next action. |
+| Recurring obligation | [CP03][v-cp03] S11, [CP08][v-cp08] S05 and [CP09][v-cp09] S02. Trace the current occurrence to closing Evidence and keep its governing recurrence policy visible. |
+
+#### Verification basis and remaining evidence
+
+- Compared the ten checkpoint step sequences and the CP01 requirement and acceptance IDs against the integration baseline. The historical CP01 crosswalk is unchanged. Its source commits remain available in full history.
+- Checked CP01 prose through `checkpoint.yml` and recomputed all 104 recorded hashes in CP02–CP10. CP10 uses the existing Graduation headings and the normalisation recorded in its amendment. CP06-S13 retains the recorded validation fence.
+- Checked the CP01 contract schema, source links and crosswalk with `pnpm contracts:check`. Reviewed pack binding compatibility, environment identity and unsupported-host paths against Distribution and the owning CP01 and CP05 criteria. Checked that PI and Asset approval remain human decisions, independent review has its own invocation, and current authority and acceptance remain with Core and the checkpoint controller.
+- Ran `TURBO_TELEMETRY_DISABLED=1 DO_NOT_TRACK=1 pnpm verify --concurrency=1` and `git diff --check` on the documentation change in a full checkout.
+- No checkpoint execution evidence is recorded by this verification. The live adapter and pack-method results (CP01), unattended model and interrupted-effect recovery (CP02 and CP07/CP09), exact upstream skill composition and clean-consumer adoption (CP05), and live Publication, Operations outcomes and Graduation (CP06–CP10) are unavailable here. Each requires evidence from its owning path. Report an unavailable invoker or supported path as **not evaluated** and a missing semantic judge as **unjudged** under Spec 09 §10. Historical crosswalk records still apply to the revisions they reviewed.
+
+[v-tasks]: ../specs/00-checkpoint-step-contract-and-delivery-tasks.md
+[v-core]: ../specs/01-pactwright-core-system-and-lifecycle.md
+[v-distribution]: ../specs/02-distribution-agent-packs-extensions-and-evaluation.md
+[v-pi]: ../specs/03-project-intelligence.md
+[v-review]: ../specs/04-graph-review.md
+[v-assets]: ../specs/05-assets-and-publication.md
+[v-ops]: ../specs/06-operations.md
+[v-github]: ../specs/07-github-integration.md
+[v-oss]: ../specs/08-open-source-project-organisation.md
+[v-method]: ../specs/09-agent-methodology-and-workflows.md
+[v-guide]: ../checkpoints/00-implementation-guide.md#execution-order
+[v-cp01]: ../checkpoints/01-self-hosted-delivery.md
+[v-cp02]: ../checkpoints/02-remote-delivery.md
+[v-cp03]: ../checkpoints/03-project-intelligence.md
+[v-cp04]: ../checkpoints/04-graph-review.md
+[v-cp05]: ../checkpoints/05-production-skills-and-assets-publication.md
+[v-cp06]: ../checkpoints/06-operations.md
+[v-cp07]: ../checkpoints/07-publication-feedback.md
+[v-cp08]: ../checkpoints/08-github-project-surface.md
+[v-cp09]: ../checkpoints/09-hardened-closed-loop.md
+[v-cp10]: ../checkpoints/10-graduation-connected-banking.md
+
 ## Source register
 
 Research citations and their section numbers refer to these source snapshots. Relative task-owner links identify the canonical files to amend.
